@@ -47,28 +47,32 @@ struct WorkoutCard: View {
                     }
                     
                     // Metadata
-                    HStack(spacing: 12) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "clock")
-                                .font(.system(size: 12))
-                            Text(workout.formattedDuration)
+                    VStack(alignment: .leading, spacing: 4) {
+                        // First line: Duration and Type
+                        HStack(spacing: 6) {
+                            HStack(spacing: 3) {
+                                Image(systemName: "clock")
+                                    .font(.system(size: 11))
+                                Text(workout.formattedDuration)
+                                    .font(Theme.Typography.caption)
+                                    .lineLimit(1)
+                            }
+                            
+                            Text("•")
+                                .font(.system(size: 9))
+                            
+                            Text(workout.sport.rawValue.capitalized)
                                 .font(Theme.Typography.caption)
+                                .lineLimit(1)
                         }
                         
-                        Text("•")
-                            .font(Theme.Typography.caption)
-                        
-                        Text(workout.sport.rawValue.capitalized)
-                            .font(Theme.Typography.caption)
-                        
-                        Text("•")
-                            .font(Theme.Typography.caption)
-                        
-                        HStack(spacing: 4) {
+                        // Second line: Steps
+                        HStack(spacing: 3) {
                             Image(systemName: "target")
-                                .font(.system(size: 12))
-                            Text("\(workout.intervalCount) steps")
+                                .font(.system(size: 11))
+                            Text("\(workout.intervalCount) step\(workout.intervalCount == 1 ? "" : "s")")
                                 .font(Theme.Typography.caption)
+                                .lineLimit(1)
                         }
                     }
                     .foregroundColor(Theme.Colors.textSecondary)
@@ -86,13 +90,15 @@ struct WorkoutCard: View {
                         .padding(.top, 4)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 
-                Spacer(minLength: 0)
+                Spacer(minLength: 8)
                 
                 // Chevron
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14))
                     .foregroundColor(Theme.Colors.textSecondary)
+                    .padding(.leading, 4)
             }
             .padding(Theme.Spacing.lg)
         }

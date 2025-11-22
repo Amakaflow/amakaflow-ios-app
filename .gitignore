@@ -92,6 +92,9 @@ iOSInjectionProject/
 # macOS
 .DS_Store
 
+# SwiftLint
+.swiftlintcache
+
 # Xcode Patch
 *.xcodeproj/*
 !*.xcodeproj/project.pbxproj

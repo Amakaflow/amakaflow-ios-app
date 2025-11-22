@@ -191,6 +191,20 @@ The app is structured to integrate with the backend APIs:
 
 ## Development
 
+### Code Quality & Linting
+
+This project uses SwiftLint to enforce code style and catch errors. See [LINTING.md](./LINTING.md) for setup instructions.
+
+**Quick setup:**
+```bash
+./scripts/setup-linting.sh
+```
+
+**Run linting:**
+```bash
+./scripts/lint.sh
+```
+
 ### Testing on Device
 
 1. Connect iPhone via USB
