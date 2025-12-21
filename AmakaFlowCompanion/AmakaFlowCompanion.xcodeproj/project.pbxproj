@@ -33,6 +33,14 @@
 		F84E22A12ED0DC2700459747 /* WorkoutKitSync in Frameworks */ = {isa = PBXBuildFile; productRef = F84E22A02ED0DC2700459747 /* WorkoutKitSync */; };
 		F84E22A32ED0E1BB00459747 /* Workout.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22712ED0D56C00459747 /* Workout.swift */; };
 		F84E22A42ED0E68300459747 /* WorkoutKitConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22852ED0D5D100459747 /* WorkoutKitConverter.swift */; };
+		F85C4F6DCDE4544563BA4983 /* WorkoutState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F883912261E9D246979DD881 /* WorkoutState.swift */; };
+		F8654CAC3BB541420480C602 /* FlattenedInterval.swift in Sources */ = {isa = PBXBuildFile; fileRef = F82258553831E24BC9B8C650 /* FlattenedInterval.swift */; };
+		F85318ABF59B874E5BB8013B /* WorkoutEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F856B28A238E234FDAB29478 /* WorkoutEngine.swift */; };
+		F85A0F1D503D8A43A7B52FCC /* AudioCueManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8FC29620578214144920365 /* AudioCueManager.swift */; };
+		F84682B9F2FD8A45578F0E68 /* WorkoutPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */; };
+		F818DA94C6BD4F40EE8313B0 /* StepDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8BFF8D1C38311406C868156 /* StepDisplayView.swift */; };
+		F8B8C2FBBE453C44649F8E94 /* PlayerControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F89DB8A09DD1694C469E6F54 /* PlayerControlsView.swift */; };
+		F87ADA7721B76045D5938EA4 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -116,6 +124,14 @@
 		F84E229A2ED0DC0900459747 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.1.sdk/System/Library/Frameworks/HealthKit.framework; sourceTree = DEVELOPER_DIR; };
 		F84E229C2ED0DC1100459747 /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.1.sdk/System/Library/Frameworks/WatchConnectivity.framework; sourceTree = DEVELOPER_DIR; };
 		F84E229E2ED0DC1B00459747 /* WorkoutKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WorkoutKit.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.1.sdk/System/Library/Frameworks/WorkoutKit.framework; sourceTree = DEVELOPER_DIR; };
+		F883912261E9D246979DD881 /* WorkoutState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutState.swift; path = ../AmakaFlow/Engine/WorkoutState.swift; sourceTree = SOURCE_ROOT; };
+		F82258553831E24BC9B8C650 /* FlattenedInterval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FlattenedInterval.swift; path = ../AmakaFlow/Engine/FlattenedInterval.swift; sourceTree = SOURCE_ROOT; };
+		F856B28A238E234FDAB29478 /* WorkoutEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEngine.swift; path = ../AmakaFlow/Engine/WorkoutEngine.swift; sourceTree = SOURCE_ROOT; };
+		F8FC29620578214144920365 /* AudioCueManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioCueManager.swift; path = ../AmakaFlow/Services/AudioCueManager.swift; sourceTree = SOURCE_ROOT; };
+		F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutPlayerView.swift; path = ../AmakaFlow/Views/WorkoutPlayerView.swift; sourceTree = SOURCE_ROOT; };
+		F8BFF8D1C38311406C868156 /* StepDisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StepDisplayView.swift; path = ../AmakaFlow/Views/Components/StepDisplayView.swift; sourceTree = SOURCE_ROOT; };
+		F89DB8A09DD1694C469E6F54 /* PlayerControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PlayerControlsView.swift; path = ../AmakaFlow/Views/Components/PlayerControlsView.swift; sourceTree = SOURCE_ROOT; };
+		F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutActivityAttributes.swift; path = ../AmakaFlow/LiveActivity/WorkoutActivityAttributes.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -246,10 +262,18 @@
 				F84E22822ED0D5D100459747 /* AuthService.swift */,
 				F84E22832ED0D5D100459747 /* CalendarManager.swift */,
 				F84E22842ED0D5D100459747 /* WatchConnectivityManager.swift */,
+				F883912261E9D246979DD881 /* WorkoutState.swift */,
+				F82258553831E24BC9B8C650 /* FlattenedInterval.swift */,
+				F856B28A238E234FDAB29478 /* WorkoutEngine.swift */,
+				F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */,
 				F84E22852ED0D5D100459747 /* WorkoutKitConverter.swift */,
+				F8FC29620578214144920365 /* AudioCueManager.swift */,
 				F84E227B2ED0D5BF00459747 /* IntervalRow.swift */,
 				F84E227C2ED0D5BF00459747 /* ScheduleCalendarSheet.swift */,
 				F84E227D2ED0D5BF00459747 /* WorkoutCard.swift */,
+				F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */,
+				F8BFF8D1C38311406C868156 /* StepDisplayView.swift */,
+				F89DB8A09DD1694C469E6F54 /* PlayerControlsView.swift */,
 				F84E22752ED0D59B00459747 /* SettingsView.swift */,
 				F84E22762ED0D59B00459747 /* WorkoutDetailView.swift */,
 				F84E22772ED0D59B00459747 /* WorkoutsView.swift */,
@@ -580,6 +604,14 @@
 				F84E22782ED0D59B00459747 /* SettingsView.swift in Sources */,
 				F84E22792ED0D59B00459747 /* WorkoutDetailView.swift in Sources */,
 				F84E227A2ED0D59B00459747 /* WorkoutsView.swift in Sources */,
+				F85C4F6DCDE4544563BA4983 /* WorkoutState.swift in Sources */,
+				F8654CAC3BB541420480C602 /* FlattenedInterval.swift in Sources */,
+				F85318ABF59B874E5BB8013B /* WorkoutEngine.swift in Sources */,
+				F85A0F1D503D8A43A7B52FCC /* AudioCueManager.swift in Sources */,
+				F84682B9F2FD8A45578F0E68 /* WorkoutPlayerView.swift in Sources */,
+				F818DA94C6BD4F40EE8313B0 /* StepDisplayView.swift in Sources */,
+				F8B8C2FBBE453C44649F8E94 /* PlayerControlsView.swift in Sources */,
+				F87ADA7721B76045D5938EA4 /* WorkoutActivityAttributes.swift in Sources */,
 				F84E22742ED0D58300459747 /* WorkoutsViewModel.swift in Sources */,
 				F84E226F2ED0D55600459747 /* AmakaFlowApp.swift in Sources */,
 				F84E22862ED0D5D100459747 /* WorkoutKitConverter.swift in Sources */,
@@ -716,7 +748,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -774,7 +806,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -866,7 +898,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.myamaka.AmakaFlowCompanionTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -888,7 +920,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.myamaka.AmakaFlowCompanionTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";

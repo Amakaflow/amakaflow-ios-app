@@ -10,10 +10,11 @@ import SwiftUI
 struct WorkoutDetailView: View {
     @EnvironmentObject var viewModel: WorkoutsViewModel
     @Environment(\.dismiss) var dismiss
-    
+
     let workout: Workout
-    
+
     @State private var showingCalendarSheet = false
+    @State private var showingWorkoutPlayer = false
     @State private var watchSent = false
     @State private var calendarScheduled = false
     
@@ -63,6 +64,30 @@ struct WorkoutDetailView: View {
                     
                     // Action Buttons
                     VStack(spacing: 12) {
+                        // Start on Phone (Follow-Along)
+                        Button(action: {
+                            WorkoutEngine.shared.start(workout: workout)
+                            showingWorkoutPlayer = true
+                        }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "play.fill")
+                                    .font(.system(size: 16))
+                                Text("Start Follow-Along")
+                                    .font(Theme.Typography.bodyBold)
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 48)
+                            .background(
+                                LinearGradient(
+                                    colors: [Theme.Colors.accentBlue, Theme.Colors.accentGreen],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(Theme.CornerRadius.md)
+                        }
+
                         // Convert to WorkoutKit (Save to Apple Fitness)
                         if #available(iOS 18.0, *) {
                             Button(action: {
@@ -241,6 +266,9 @@ struct WorkoutDetailView: View {
                         }
                     }
                 )
+            }
+            .fullScreenCover(isPresented: $showingWorkoutPlayer) {
+                WorkoutPlayerView()
             }
         }
     }
