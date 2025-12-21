@@ -80,6 +80,9 @@ class WorkoutEngine: ObservableObject {
         broadcastState()
         audioCueManager.announceWorkoutStart(workout.name)
 
+        // Start Live Activity
+        startLiveActivity()
+
         beginBackgroundTask()
     }
 
@@ -154,6 +157,11 @@ class WorkoutEngine: ObservableObject {
 
         if reason == .completed {
             audioCueManager.announceWorkoutComplete()
+        }
+
+        // End Live Activity
+        Task {
+            await LiveActivityManager.shared.endActivity()
         }
 
         endBackgroundTask()
@@ -250,8 +258,44 @@ class WorkoutEngine: ObservableObject {
         // Send to Watch
         WatchConnectivityManager.shared.sendState(state)
 
-        // Update Live Activity (AMA-85)
-        // LiveActivityManager.shared.update(state)
+        // Update Live Activity
+        updateLiveActivity(state)
+    }
+
+    // MARK: - Live Activity Integration
+
+    private func startLiveActivity() {
+        guard let workout = workout else { return }
+
+        let initialState = WorkoutActivityAttributes.ContentState(
+            phase: phase.rawValue,
+            stepName: currentStep?.label ?? "",
+            stepIndex: currentStepIndex + 1,  // 1-based for display
+            stepCount: flattenedSteps.count,
+            remainingSeconds: currentStep?.timerSeconds ?? 0,
+            stepType: currentStep?.stepType.rawValue ?? "reps",
+            roundInfo: currentStep?.roundInfo
+        )
+
+        LiveActivityManager.shared.startActivity(
+            workoutId: workout.id,
+            workoutName: workout.name,
+            initialState: initialState
+        )
+    }
+
+    private func updateLiveActivity(_ state: WorkoutState) {
+        let activityState = WorkoutActivityAttributes.ContentState(
+            phase: state.phase.rawValue,
+            stepName: state.stepName,
+            stepIndex: state.stepIndex + 1,  // 1-based for display
+            stepCount: state.stepCount,
+            remainingSeconds: (state.remainingMs ?? 0) / 1000,
+            stepType: state.stepType.rawValue,
+            roundInfo: state.roundInfo
+        )
+
+        LiveActivityManager.shared.updateActivity(state: activityState)
     }
 
     private func buildCurrentState() -> WorkoutState {
