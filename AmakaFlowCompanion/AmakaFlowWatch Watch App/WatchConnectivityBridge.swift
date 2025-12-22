@@ -86,20 +86,32 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
     // MARK: - Request State
 
     func requestCurrentState() {
-        guard let session = session, session.isReachable else {
-            print("⌚️ Phone not reachable, cannot request state")
+        guard let session = session else {
+            print("⌚️ No WCSession available")
             return
         }
 
-        session.sendMessage(
-            ["action": "requestState"],
-            replyHandler: { reply in
-                print("⌚️ State request response: \(reply)")
-            },
-            errorHandler: { error in
-                print("⌚️ Failed to request state: \(error)")
-            }
-        )
+        // Always check cached applicationContext first
+        let context = session.receivedApplicationContext
+        if !context.isEmpty && workoutState == nil {
+            print("⌚️ Loading state from applicationContext")
+            handleMessage(context)
+        }
+
+        // If phone is reachable, request fresh state
+        if session.isReachable {
+            session.sendMessage(
+                ["action": "requestState"],
+                replyHandler: { reply in
+                    print("⌚️ State request response: \(reply)")
+                },
+                errorHandler: { error in
+                    print("⌚️ Failed to request state: \(error)")
+                }
+            )
+        } else {
+            print("⌚️ Phone not reachable, using cached state only")
+        }
     }
 
     // MARK: - Haptic Feedback
@@ -130,7 +142,26 @@ extension WatchConnectivityBridge: WCSessionDelegate {
             } else {
                 print("⌚️ WCSession activated on watch: \(activationState.rawValue)")
                 self.isPhoneReachable = session.isReachable
+
+                // Check applicationContext for cached state (works even if phone is backgrounded)
+                let context = session.receivedApplicationContext
+                if !context.isEmpty {
+                    print("⌚️ Found cached applicationContext")
+                    self.handleMessage(context)
+                }
+
+                // Also request fresh state if phone is reachable
+                if session.isReachable {
+                    self.requestCurrentState()
+                }
             }
+        }
+    }
+
+    nonisolated func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
+        Task { @MainActor in
+            print("⌚️ Received applicationContext update")
+            self.handleMessage(applicationContext)
         }
     }
 

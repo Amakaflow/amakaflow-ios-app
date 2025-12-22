@@ -10,6 +10,7 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
     @ObservedObject var bridge = WatchConnectivityBridge.shared
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         TabView {
@@ -26,6 +27,16 @@ struct ContentView: View {
                 .tag(1)
         }
         .tabViewStyle(.verticalPage)
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                // Request fresh state when app becomes active
+                bridge.requestCurrentState()
+            }
+        }
+        .onAppear {
+            // Request state when view first appears
+            bridge.requestCurrentState()
+        }
     }
 }
 

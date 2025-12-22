@@ -13,9 +13,11 @@ struct WatchRemoteView: View {
 
     var body: some View {
         Group {
+            // Show workout controls if we have an active workout state
+            // (even if phone isn't immediately reachable - we have cached state)
             if let state = bridge.workoutState, state.isActive {
                 activeWorkoutView(state: state)
-            } else if !bridge.isPhoneReachable {
+            } else if !bridge.isPhoneReachable && bridge.workoutState == nil {
                 disconnectedView
             } else {
                 idleView
@@ -30,7 +32,22 @@ struct WatchRemoteView: View {
 
     @ViewBuilder
     private func activeWorkoutView(state: WatchWorkoutState) -> some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
+            // Connection warning if phone not reachable
+            if !bridge.isPhoneReachable {
+                HStack(spacing: 4) {
+                    Image(systemName: "iphone.slash")
+                        .font(.caption2)
+                    Text("Open app on iPhone")
+                        .font(.caption2)
+                }
+                .foregroundColor(.orange)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
+                .background(Color.orange.opacity(0.2))
+                .cornerRadius(4)
+            }
+
             // Workout name
             Text(state.workoutName)
                 .font(.caption2)
@@ -47,7 +64,7 @@ struct WatchRemoteView: View {
             // Timer or step info
             if state.isTimedStep {
                 Text(state.formattedTime)
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
+                    .font(.system(size: 32, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundColor(state.isPaused ? .orange : .primary)
             }
@@ -68,13 +85,13 @@ struct WatchRemoteView: View {
                 .font(.caption2)
                 .foregroundColor(.secondary)
 
-            Spacer(minLength: 4)
+            Spacer(minLength: 2)
 
             // Controls
             controlsView(state: state)
         }
         .padding(.horizontal, 4)
-        .padding(.vertical, 8)
+        .padding(.vertical, 4)
     }
 
     // MARK: - Controls
