@@ -230,7 +230,8 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 Task { @MainActor in
                     let engine = WorkoutEngine.shared
                     if engine.isActive {
-                        // State will be sent via sendState
+                        // Send current state to watch
+                        engine.sendStateToWatch()
                         replyHandler(["status": "state_available"])
                     } else {
                         replyHandler(["status": "no_active_workout"])

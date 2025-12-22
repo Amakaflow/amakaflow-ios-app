@@ -288,6 +288,13 @@ class WorkoutEngine: ObservableObject {
         updateLiveActivity(state)
     }
 
+    /// Explicitly sends current state to Watch (called when watch requests state)
+    func sendStateToWatch() {
+        guard isActive else { return }
+        let state = buildCurrentState()
+        WatchConnectivityManager.shared.sendState(state)
+    }
+
     // MARK: - Live Activity Integration
 
     private func startLiveActivity() {

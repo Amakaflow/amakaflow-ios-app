@@ -47,10 +47,10 @@
 		F85C4F6DCDE4544563BA4983 /* WorkoutState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F883912261E9D246979DD881 /* WorkoutState.swift */; };
 		F8654CAC3BB541420480C602 /* FlattenedInterval.swift in Sources */ = {isa = PBXBuildFile; fileRef = F82258553831E24BC9B8C650 /* FlattenedInterval.swift */; };
 		F87ADA7721B76045D5938EA4 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */; };
-		F8B356E02EF8C10000E88B51 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */; };
 		F8B356C52EF8BA7B00E88B51 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F8B356C42EF8BA7B00E88B51 /* WidgetKit.framework */; };
 		F8B356C72EF8BA7B00E88B51 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F8B356C62EF8BA7B00E88B51 /* SwiftUI.framework */; };
 		F8B356D82EF8BA7C00E88B51 /* WorkoutLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F8B356C32EF8BA7B00E88B51 /* WorkoutLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		F8B356E02EF8C10000E88B51 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */; };
 		F8B8C2FBBE453C44649F8E94 /* PlayerControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F89DB8A09DD1694C469E6F54 /* PlayerControlsView.swift */; };
 /* End PBXBuildFile section */
 

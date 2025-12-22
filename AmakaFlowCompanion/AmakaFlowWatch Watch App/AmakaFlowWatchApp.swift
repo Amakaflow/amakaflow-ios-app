@@ -10,10 +10,10 @@ import SwiftUI
 @main
 struct AmakaFlowWatchApp: App {
     @StateObject private var workoutManager = WatchWorkoutManager()
-    
+
     var body: some Scene {
         WindowGroup {
-            WorkoutListView()
+            ContentView()
                 .environmentObject(workoutManager)
         }
     }

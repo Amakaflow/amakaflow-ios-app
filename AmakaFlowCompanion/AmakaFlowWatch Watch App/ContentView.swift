@@ -2,23 +2,34 @@
 //  ContentView.swift
 //  AmakaFlowWatch Watch App
 //
-//  Created by DAVID ANDREWS on 11/21/25.
+//  Main content view that switches between workout list and remote control
 //
 
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject var workoutManager: WatchWorkoutManager
+    @ObservedObject var bridge = WatchConnectivityBridge.shared
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView {
+            // Tab 1: Remote Control
+            NavigationStack {
+                WatchRemoteView(bridge: bridge)
+                    .navigationTitle("Remote")
+                    .navigationBarTitleDisplayMode(.inline)
+            }
+            .tag(0)
+
+            // Tab 2: Workout List
+            WorkoutListView()
+                .tag(1)
         }
-        .padding()
+        .tabViewStyle(.verticalPage)
     }
 }
 
 #Preview {
     ContentView()
+        .environmentObject(WatchWorkoutManager())
 }
