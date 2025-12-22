@@ -3,29 +3,52 @@
 //  AmakaFlow
 //
 //  ActivityKit attributes for workout Live Activity (Dynamic Island)
-//  This is a stub for AMA-85 implementation
 //
 
-import Foundation
 import ActivityKit
+import Foundation
 
 struct WorkoutActivityAttributes: ActivityAttributes {
+    // Static content (doesn't change during activity)
     public struct ContentState: Codable, Hashable {
-        // Dynamic data that changes during the workout
-        var stepName: String
-        var stepIndex: Int
-        var totalSteps: Int
-        var remainingSeconds: Int?
-        var isPaused: Bool
-        var roundInfo: String?
+        var phase: String              // "running", "paused", "ended"
+        var stepName: String           // "Squat", "Rest", "Warm Up"
+        var stepIndex: Int             // Current step (1-based for display)
+        var stepCount: Int             // Total steps
+        var remainingSeconds: Int      // Countdown (0 if reps-based)
+        var stepType: String           // "timed", "reps", "distance"
+        var roundInfo: String?         // "Round 2/4" if in repeat block
     }
 
-    // Static data that doesn't change during the workout
+    // Fixed for lifetime of activity
     var workoutId: String
     var workoutName: String
 }
 
-// MARK: - Live Activity Manager (Stub for AMA-85)
+// MARK: - ContentState Helpers
+
+extension WorkoutActivityAttributes.ContentState {
+    var formattedTime: String {
+        let minutes = remainingSeconds / 60
+        let seconds = remainingSeconds % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+
+    var progressPercent: Double {
+        guard stepCount > 0 else { return 0 }
+        return Double(stepIndex) / Double(stepCount)
+    }
+
+    var isTimedStep: Bool {
+        stepType == "timed"
+    }
+
+    var isPaused: Bool {
+        phase == "paused"
+    }
+}
+
+// MARK: - Live Activity Manager
 
 @MainActor
 final class LiveActivityManager {
@@ -37,82 +60,107 @@ final class LiveActivityManager {
 
     // MARK: - Start Activity
 
-    func startActivity(for workout: Workout) {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-            print("Live Activities are not enabled")
+    func startActivity(
+        workoutId: String,
+        workoutName: String,
+        initialState: WorkoutActivityAttributes.ContentState
+    ) {
+        // Check if Live Activities are enabled
+        let authInfo = ActivityAuthorizationInfo()
+        print("🔵 Live Activities authorization:")
+        print("   - areActivitiesEnabled: \(authInfo.areActivitiesEnabled)")
+        print("   - frequentPushesEnabled: \(authInfo.frequentPushesEnabled)")
+
+        guard authInfo.areActivitiesEnabled else {
+            print("🔴 Live Activities NOT enabled - enable in Settings → AmakaFlow → Live Activities")
             return
         }
 
+        // List all existing activities for debugging
+        let existingActivities = Activity<WorkoutActivityAttributes>.activities
+        print("🔵 Existing activities count: \(existingActivities.count)")
+        for activity in existingActivities {
+            print("   - Activity ID: \(activity.id), state: \(activity.activityState)")
+        }
+
+        // End any existing activity synchronously before starting new one
+        if let existing = currentActivity {
+            print("🔵 Ending existing activity: \(existing.id)")
+            Task {
+                await existing.end(nil, dismissalPolicy: .immediate)
+            }
+            currentActivity = nil
+        }
+
         let attributes = WorkoutActivityAttributes(
-            workoutId: workout.id,
-            workoutName: workout.name
+            workoutId: workoutId,
+            workoutName: workoutName
         )
 
-        let initialState = WorkoutActivityAttributes.ContentState(
-            stepName: "",
-            stepIndex: 0,
-            totalSteps: workout.intervalCount,
-            remainingSeconds: nil,
-            isPaused: false,
-            roundInfo: nil
+        let content = ActivityContent(
+            state: initialState,
+            staleDate: nil
         )
+
+        print("🔵 Requesting new Live Activity for workout: \(workoutName)")
+        print("🔵 Initial state: step=\(initialState.stepName), phase=\(initialState.phase)")
 
         do {
             currentActivity = try Activity.request(
                 attributes: attributes,
-                content: .init(state: initialState, staleDate: nil),
-                pushType: nil
+                content: content,
+                pushType: nil  // Local updates only
             )
-            print("Started Live Activity: \(currentActivity?.id ?? "unknown")")
+            print("🟢 Live Activity started successfully!")
+            print("   - Activity ID: \(currentActivity?.id ?? "unknown")")
+            print("   - Activity state: \(String(describing: currentActivity?.activityState))")
+
+            // Verify it's in the activities list
+            let allActivities = Activity<WorkoutActivityAttributes>.activities
+            print("🔵 Total activities after start: \(allActivities.count)")
         } catch {
-            print("Failed to start Live Activity: \(error)")
+            print("🔴 Failed to start Live Activity: \(error)")
+            print("🔴 Error details: \(String(describing: error))")
         }
     }
 
     // MARK: - Update Activity
 
-    func update(state: WorkoutState) {
+    func updateActivity(state: WorkoutActivityAttributes.ContentState) {
         guard let activity = currentActivity else { return }
 
-        let contentState = WorkoutActivityAttributes.ContentState(
-            stepName: state.stepName,
-            stepIndex: state.stepIndex,
-            totalSteps: state.stepCount,
-            remainingSeconds: state.remainingMs.map { $0 / 1000 },
-            isPaused: state.phase == .paused,
-            roundInfo: state.roundInfo
+        let content = ActivityContent(
+            state: state,
+            staleDate: nil
         )
 
         Task {
-            await activity.update(
-                ActivityContent(
-                    state: contentState,
-                    staleDate: Date().addingTimeInterval(60)
-                )
-            )
+            await activity.update(content)
         }
     }
 
     // MARK: - End Activity
 
-    func endActivity(reason: EndReason) {
+    func endActivity() async {
         guard let activity = currentActivity else { return }
 
         let finalState = WorkoutActivityAttributes.ContentState(
-            stepName: reason == .completed ? "Complete!" : "Ended",
+            phase: "ended",
+            stepName: "Workout Complete",
             stepIndex: 0,
-            totalSteps: 0,
-            remainingSeconds: nil,
-            isPaused: false,
+            stepCount: 0,
+            remainingSeconds: 0,
+            stepType: "reps",
             roundInfo: nil
         )
 
-        Task {
-            await activity.end(
-                ActivityContent(state: finalState, staleDate: nil),
-                dismissalPolicy: .after(.now + 5)
-            )
-            currentActivity = nil
-        }
+        let content = ActivityContent(
+            state: finalState,
+            staleDate: nil
+        )
+
+        await activity.end(content, dismissalPolicy: .after(.now + 5))
+        currentActivity = nil
+        print("🟢 Live Activity ended")
     }
 }

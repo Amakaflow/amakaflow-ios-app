@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var selectedTab: Tab = .home
+    @State private var showingWorkoutPlayer = false
 
     enum Tab: String, CaseIterable {
         case home = "Home"
@@ -83,6 +84,18 @@ struct ContentView: View {
                 .tag(Tab.settings)
         }
         .tint(Theme.Colors.accentBlue)
+        .onOpenURL { url in
+            // Handle deep link from Dynamic Island
+            if url.scheme == "amakaflow" && url.host == "workout" {
+                // Only show player if workout is running
+                if WorkoutEngine.shared.phase == .running || WorkoutEngine.shared.phase == .paused {
+                    showingWorkoutPlayer = true
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $showingWorkoutPlayer) {
+            WorkoutPlayerView()
+        }
     }
 }
 

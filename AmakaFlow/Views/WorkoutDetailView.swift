@@ -278,7 +278,10 @@ struct WorkoutDetailView: View {
                         selectedDevice = device
                         showingDeviceSheet = false
                         WorkoutEngine.shared.start(workout: workout)
-                        showingWorkoutPlayer = true
+                        // Small delay to let sheet dismiss before showing player
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            showingWorkoutPlayer = true
+                        }
                     },
                     onClose: {
                         showingDeviceSheet = false

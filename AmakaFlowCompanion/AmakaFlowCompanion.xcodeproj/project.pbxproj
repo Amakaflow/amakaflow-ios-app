@@ -7,13 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E57529578481B8991A91F /* SourcesView.swift */; };
-		521047C38D23474889C39F35 /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AB8DFBA16CE406C95456EAD /* CalendarView.swift */; };
 		43F9F2E9369F4546B3AF005A /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D9B67C13E34BAE804A9359 /* HistoryView.swift */; };
+		521047C38D23474889C39F35 /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AB8DFBA16CE406C95456EAD /* CalendarView.swift */; };
 		67283958B3E2475BA2DA974A /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2192F9A69B4A51B54A138F /* HomeView.swift */; };
-		EB63D5EF54FF452580C70684 /* WorkoutCompleteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B37 /* WorkoutCompleteView.swift */; };
 		9D0C3D8A603340BC8364F188 /* PreWorkoutDeviceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3910753486A542ECAA1E5971 /* PreWorkoutDeviceSheet.swift */; };
+		B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E57529578481B8991A91F /* SourcesView.swift */; };
 		E33FF845EAAD4110B7D87FB0 /* DevicePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89321AF9D21D441198437105 /* DevicePreference.swift */; };
+		EB63D5EF54FF452580C70684 /* WorkoutCompleteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B37 /* WorkoutCompleteView.swift */; };
+		F818DA94C6BD4F40EE8313B0 /* StepDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8BFF8D1C38311406C868156 /* StepDisplayView.swift */; };
+		F84682B9F2FD8A45578F0E68 /* WorkoutPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */; };
 		F84E22182ED0B62000459747 /* AmakaFlowWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = F84E22172ED0B62000459747 /* AmakaFlowWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F84E226F2ED0D55600459747 /* AmakaFlowApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E226D2ED0D55600459747 /* AmakaFlowApp.swift */; };
 		F84E22702ED0D55600459747 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E226E2ED0D55600459747 /* Theme.swift */; };
@@ -40,14 +42,16 @@
 		F84E22A12ED0DC2700459747 /* WorkoutKitSync in Frameworks */ = {isa = PBXBuildFile; productRef = F84E22A02ED0DC2700459747 /* WorkoutKitSync */; };
 		F84E22A32ED0E1BB00459747 /* Workout.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22712ED0D56C00459747 /* Workout.swift */; };
 		F84E22A42ED0E68300459747 /* WorkoutKitConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22852ED0D5D100459747 /* WorkoutKitConverter.swift */; };
-		F85C4F6DCDE4544563BA4983 /* WorkoutState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F883912261E9D246979DD881 /* WorkoutState.swift */; };
-		F8654CAC3BB541420480C602 /* FlattenedInterval.swift in Sources */ = {isa = PBXBuildFile; fileRef = F82258553831E24BC9B8C650 /* FlattenedInterval.swift */; };
 		F85318ABF59B874E5BB8013B /* WorkoutEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F856B28A238E234FDAB29478 /* WorkoutEngine.swift */; };
 		F85A0F1D503D8A43A7B52FCC /* AudioCueManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8FC29620578214144920365 /* AudioCueManager.swift */; };
-		F84682B9F2FD8A45578F0E68 /* WorkoutPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */; };
-		F818DA94C6BD4F40EE8313B0 /* StepDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8BFF8D1C38311406C868156 /* StepDisplayView.swift */; };
-		F8B8C2FBBE453C44649F8E94 /* PlayerControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F89DB8A09DD1694C469E6F54 /* PlayerControlsView.swift */; };
+		F85C4F6DCDE4544563BA4983 /* WorkoutState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F883912261E9D246979DD881 /* WorkoutState.swift */; };
+		F8654CAC3BB541420480C602 /* FlattenedInterval.swift in Sources */ = {isa = PBXBuildFile; fileRef = F82258553831E24BC9B8C650 /* FlattenedInterval.swift */; };
 		F87ADA7721B76045D5938EA4 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */; };
+		F8B356E02EF8C10000E88B51 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */; };
+		F8B356C52EF8BA7B00E88B51 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F8B356C42EF8BA7B00E88B51 /* WidgetKit.framework */; };
+		F8B356C72EF8BA7B00E88B51 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F8B356C62EF8BA7B00E88B51 /* SwiftUI.framework */; };
+		F8B356D82EF8BA7C00E88B51 /* WorkoutLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F8B356C32EF8BA7B00E88B51 /* WorkoutLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		F8B8C2FBBE453C44649F8E94 /* PlayerControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F89DB8A09DD1694C469E6F54 /* PlayerControlsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -86,6 +90,13 @@
 			remoteGlobalIDString = F84E22162ED0B62000459747;
 			remoteInfo = "AmakaFlowWatch Watch App";
 		};
+		F8B356D62EF8BA7C00E88B51 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F84E216C2ED0B0C800459747 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F8B356C22EF8BA7B00E88B51;
+			remoteInfo = WorkoutLiveActivityExtension;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -100,16 +111,28 @@
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F8B356D92EF8BA7C00E88B51 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				F8B356D82EF8BA7C00E88B51 /* WorkoutLiveActivityExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		E79E57529578481B8991A91F /* SourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "SourcesView.swift"; path = "../AmakaFlow/Views/SourcesView.swift"; sourceTree = SOURCE_ROOT; };
-		2AB8DFBA16CE406C95456EAD /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "CalendarView.swift"; path = "../AmakaFlow/Views/CalendarView.swift"; sourceTree = SOURCE_ROOT; };
-		08D9B67C13E34BAE804A9359 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "HistoryView.swift"; path = "../AmakaFlow/Views/HistoryView.swift"; sourceTree = SOURCE_ROOT; };
-		CC2192F9A69B4A51B54A138F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeView.swift; path = ../AmakaFlow/Views/HomeView.swift; sourceTree = SOURCE_ROOT; };
+		08D9B67C13E34BAE804A9359 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HistoryView.swift; path = ../AmakaFlow/Views/HistoryView.swift; sourceTree = SOURCE_ROOT; };
 		0DDF14FDAE6346A5831A6B37 /* WorkoutCompleteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompleteView.swift; path = ../AmakaFlow/Views/WorkoutCompleteView.swift; sourceTree = SOURCE_ROOT; };
+		2AB8DFBA16CE406C95456EAD /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarView.swift; path = ../AmakaFlow/Views/CalendarView.swift; sourceTree = SOURCE_ROOT; };
 		3910753486A542ECAA1E5971 /* PreWorkoutDeviceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PreWorkoutDeviceSheet.swift; path = ../AmakaFlow/Views/Components/PreWorkoutDeviceSheet.swift; sourceTree = SOURCE_ROOT; };
 		89321AF9D21D441198437105 /* DevicePreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DevicePreference.swift; path = ../AmakaFlow/Models/DevicePreference.swift; sourceTree = SOURCE_ROOT; };
+		CC2192F9A69B4A51B54A138F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeView.swift; path = ../AmakaFlow/Views/HomeView.swift; sourceTree = SOURCE_ROOT; };
+		E79E57529578481B8991A91F /* SourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SourcesView.swift; path = ../AmakaFlow/Views/SourcesView.swift; sourceTree = SOURCE_ROOT; };
+		F82258553831E24BC9B8C650 /* FlattenedInterval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FlattenedInterval.swift; path = ../AmakaFlow/Engine/FlattenedInterval.swift; sourceTree = SOURCE_ROOT; };
 		F84E21742ED0B0C800459747 /* AmakaFlowCompanion.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AmakaFlowCompanion.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F84E21832ED0B0CA00459747 /* AmakaFlowCompanionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AmakaFlowCompanionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F84E218D2ED0B0CA00459747 /* AmakaFlowCompanionUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AmakaFlowCompanionUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -138,14 +161,16 @@
 		F84E229A2ED0DC0900459747 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.1.sdk/System/Library/Frameworks/HealthKit.framework; sourceTree = DEVELOPER_DIR; };
 		F84E229C2ED0DC1100459747 /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.1.sdk/System/Library/Frameworks/WatchConnectivity.framework; sourceTree = DEVELOPER_DIR; };
 		F84E229E2ED0DC1B00459747 /* WorkoutKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WorkoutKit.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.1.sdk/System/Library/Frameworks/WorkoutKit.framework; sourceTree = DEVELOPER_DIR; };
-		F883912261E9D246979DD881 /* WorkoutState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutState.swift; path = ../AmakaFlow/Engine/WorkoutState.swift; sourceTree = SOURCE_ROOT; };
-		F82258553831E24BC9B8C650 /* FlattenedInterval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FlattenedInterval.swift; path = ../AmakaFlow/Engine/FlattenedInterval.swift; sourceTree = SOURCE_ROOT; };
 		F856B28A238E234FDAB29478 /* WorkoutEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEngine.swift; path = ../AmakaFlow/Engine/WorkoutEngine.swift; sourceTree = SOURCE_ROOT; };
-		F8FC29620578214144920365 /* AudioCueManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioCueManager.swift; path = ../AmakaFlow/Services/AudioCueManager.swift; sourceTree = SOURCE_ROOT; };
-		F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutPlayerView.swift; path = ../AmakaFlow/Views/WorkoutPlayerView.swift; sourceTree = SOURCE_ROOT; };
-		F8BFF8D1C38311406C868156 /* StepDisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StepDisplayView.swift; path = ../AmakaFlow/Views/Components/StepDisplayView.swift; sourceTree = SOURCE_ROOT; };
+		F883912261E9D246979DD881 /* WorkoutState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutState.swift; path = ../AmakaFlow/Engine/WorkoutState.swift; sourceTree = SOURCE_ROOT; };
 		F89DB8A09DD1694C469E6F54 /* PlayerControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PlayerControlsView.swift; path = ../AmakaFlow/Views/Components/PlayerControlsView.swift; sourceTree = SOURCE_ROOT; };
+		F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutPlayerView.swift; path = ../AmakaFlow/Views/WorkoutPlayerView.swift; sourceTree = SOURCE_ROOT; };
+		F8B356C32EF8BA7B00E88B51 /* WorkoutLiveActivityExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WorkoutLiveActivityExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		F8B356C42EF8BA7B00E88B51 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		F8B356C62EF8BA7B00E88B51 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		F8BFF8D1C38311406C868156 /* StepDisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StepDisplayView.swift; path = ../AmakaFlow/Views/Components/StepDisplayView.swift; sourceTree = SOURCE_ROOT; };
 		F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutActivityAttributes.swift; path = ../AmakaFlow/LiveActivity/WorkoutActivityAttributes.swift; sourceTree = SOURCE_ROOT; };
+		F8FC29620578214144920365 /* AudioCueManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioCueManager.swift; path = ../AmakaFlow/Services/AudioCueManager.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -162,6 +187,13 @@
 				Info.plist,
 			);
 			target = F84E22162ED0B62000459747 /* AmakaFlowWatch Watch App */;
+		};
+		F8B356DD2EF8BA7C00E88B51 /* Exceptions for "WorkoutLiveActivity" folder in "WorkoutLiveActivityExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F8B356C22EF8BA7B00E88B51 /* WorkoutLiveActivityExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -211,6 +243,14 @@
 		F84E22332ED0B62100459747 /* AmakaFlowWatch Watch AppUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "AmakaFlowWatch Watch AppUITests";
+			sourceTree = "<group>";
+		};
+		F8B356C82EF8BA7B00E88B51 /* WorkoutLiveActivity */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F8B356DD2EF8BA7C00E88B51 /* Exceptions for "WorkoutLiveActivity" folder in "WorkoutLiveActivityExtension" target */,
+			);
+			path = WorkoutLiveActivity;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -266,6 +306,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F8B356C02EF8BA7B00E88B51 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F8B356C72EF8BA7B00E88B51 /* SwiftUI.framework in Frameworks */,
+				F8B356C52EF8BA7B00E88B51 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -305,8 +354,10 @@
 				F84E221B2ED0B62000459747 /* AmakaFlowWatch Watch App */,
 				F84E22292ED0B62100459747 /* AmakaFlowWatch Watch AppTests */,
 				F84E22332ED0B62100459747 /* AmakaFlowWatch Watch AppUITests */,
+				F8B356C82EF8BA7B00E88B51 /* WorkoutLiveActivity */,
 				F84E22912ED0D9FA00459747 /* Frameworks */,
 				F84E21752ED0B0C800459747 /* Products */,
+				F8B356932EF8B94000E88B51 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -320,6 +371,7 @@
 				F84E22172ED0B62000459747 /* AmakaFlowWatch Watch App.app */,
 				F84E22262ED0B62100459747 /* AmakaFlowWatch Watch AppTests.xctest */,
 				F84E22302ED0B62100459747 /* AmakaFlowWatch Watch AppUITests.xctest */,
+				F8B356C32EF8BA7B00E88B51 /* WorkoutLiveActivityExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -333,8 +385,20 @@
 				F84E22962ED0DA0F00459747 /* WatchConnectivity.framework */,
 				F84E22942ED0DA0200459747 /* HealthKit.framework */,
 				F84E22922ED0D9FA00459747 /* EventKit.framework */,
+				F8B356C42EF8BA7B00E88B51 /* WidgetKit.framework */,
+				F8B356C62EF8BA7B00E88B51 /* SwiftUI.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		F8B356932EF8B94000E88B51 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				E79E57529578481B8991A91F /* SourcesView.swift */,
+				2AB8DFBA16CE406C95456EAD /* CalendarView.swift */,
+				08D9B67C13E34BAE804A9359 /* HistoryView.swift */,
+			);
+			name = "Recovered References";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -347,10 +411,12 @@
 				F84E21702ED0B0C800459747 /* Sources */,
 				F84E21712ED0B0C800459747 /* Frameworks */,
 				F84E21722ED0B0C800459747 /* Resources */,
+				F8B356D92EF8BA7C00E88B51 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				F8B356D72EF8BA7C00E88B51 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				F84E21762ED0B0C800459747 /* AmakaFlowCompanion */,
@@ -497,6 +563,28 @@
 			productReference = F84E22302ED0B62100459747 /* AmakaFlowWatch Watch AppUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		F8B356C22EF8BA7B00E88B51 /* WorkoutLiveActivityExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F8B356DC2EF8BA7C00E88B51 /* Build configuration list for PBXNativeTarget "WorkoutLiveActivityExtension" */;
+			buildPhases = (
+				F8B356BF2EF8BA7B00E88B51 /* Sources */,
+				F8B356C02EF8BA7B00E88B51 /* Frameworks */,
+				F8B356C12EF8BA7B00E88B51 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F8B356C82EF8BA7B00E88B51 /* WorkoutLiveActivity */,
+			);
+			name = WorkoutLiveActivityExtension;
+			packageProductDependencies = (
+			);
+			productName = WorkoutLiveActivityExtension;
+			productReference = F8B356C32EF8BA7B00E88B51 /* WorkoutLiveActivityExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -532,6 +620,9 @@
 						CreatedOnToolsVersion = 26.1.1;
 						TestTargetID = F84E22162ED0B62000459747;
 					};
+					F8B356C22EF8BA7B00E88B51 = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
 				};
 			};
 			buildConfigurationList = F84E216F2ED0B0C800459747 /* Build configuration list for PBXProject "AmakaFlowCompanion" */;
@@ -558,6 +649,7 @@
 				F84E22162ED0B62000459747 /* AmakaFlowWatch Watch App */,
 				F84E22252ED0B62100459747 /* AmakaFlowWatch Watch AppTests */,
 				F84E222F2ED0B62100459747 /* AmakaFlowWatch Watch AppUITests */,
+				F8B356C22EF8BA7B00E88B51 /* WorkoutLiveActivityExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -612,6 +704,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F8B356C12EF8BA7B00E88B51 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -619,10 +718,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-								B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */,
+				B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */,
 				521047C38D23474889C39F35 /* CalendarView.swift in Sources */,
 				43F9F2E9369F4546B3AF005A /* HistoryView.swift in Sources */,
-F84E22782ED0D59B00459747 /* SettingsView.swift in Sources */,
+				F84E22782ED0D59B00459747 /* SettingsView.swift in Sources */,
 				F84E22792ED0D59B00459747 /* WorkoutDetailView.swift in Sources */,
 				F84E227A2ED0D59B00459747 /* WorkoutsView.swift in Sources */,
 				F85C4F6DCDE4544563BA4983 /* WorkoutState.swift in Sources */,
@@ -689,6 +788,14 @@ F84E22782ED0D59B00459747 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F8B356BF2EF8BA7B00E88B51 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F8B356E02EF8C10000E88B51 /* WorkoutActivityAttributes.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -716,6 +823,11 @@ F84E22782ED0D59B00459747 /* SettingsView.swift in Sources */,
 			isa = PBXTargetDependency;
 			target = F84E22162ED0B62000459747 /* AmakaFlowWatch Watch App */;
 			targetProxy = F84E22312ED0B62100459747 /* PBXContainerItemProxy */;
+		};
+		F8B356D72EF8BA7C00E88B51 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F8B356C22EF8BA7B00E88B51 /* WorkoutLiveActivityExtension */;
+			targetProxy = F8B356D62EF8BA7C00E88B51 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1195,6 +1307,68 @@ F84E22782ED0D59B00459747 /* SettingsView.swift in Sources */,
 			};
 			name = Release;
 		};
+		F8B356DA2EF8BA7C00E88B51 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A9K5QG6YW8;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WorkoutLiveActivity/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = WorkoutLiveActivity;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.myamaka.AmakaFlowCompanion.WorkoutLiveActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F8B356DB2EF8BA7C00E88B51 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A9K5QG6YW8;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WorkoutLiveActivity/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = WorkoutLiveActivity;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.myamaka.AmakaFlowCompanion.WorkoutLiveActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1266,6 +1440,15 @@ F84E22782ED0D59B00459747 /* SettingsView.swift in Sources */,
 			buildConfigurations = (
 				F84E223F2ED0B62100459747 /* Debug */,
 				F84E22402ED0B62100459747 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F8B356DC2EF8BA7C00E88B51 /* Build configuration list for PBXNativeTarget "WorkoutLiveActivityExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F8B356DA2EF8BA7C00E88B51 /* Debug */,
+				F8B356DB2EF8BA7C00E88B51 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

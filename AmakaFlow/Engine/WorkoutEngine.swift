@@ -76,9 +76,19 @@ class WorkoutEngine: ObservableObject {
         self.phase = .running
         self.stateVersion += 1
 
+        print("🏋️ Starting workout: \(workout.name)")
+        print("🏋️ Intervals count: \(workout.intervals.count)")
+        print("🏋️ Flattened steps count: \(flattenedSteps.count)")
+        if let first = flattenedSteps.first {
+            print("🏋️ First step: \(first.label), timerSeconds: \(first.timerSeconds ?? -1)")
+        }
+
         setupCurrentStep()
         broadcastState()
         audioCueManager.announceWorkoutStart(workout.name)
+
+        // Start Live Activity
+        startLiveActivity()
 
         beginBackgroundTask()
     }
@@ -116,7 +126,9 @@ class WorkoutEngine: ObservableObject {
     }
 
     func nextStep() {
+        print("🏋️ nextStep() called. currentStepIndex: \(currentStepIndex), flattenedSteps.count: \(flattenedSteps.count)")
         guard currentStepIndex < flattenedSteps.count - 1 else {
+            print("🏋️ No more steps! Ending workout.")
             end(reason: .completed)
             return
         }
@@ -146,6 +158,10 @@ class WorkoutEngine: ObservableObject {
     }
 
     func end(reason: EndReason) {
+        print("🏋️ END called with reason: \(reason)")
+        print("🏋️ currentStepIndex: \(currentStepIndex), flattenedSteps.count: \(flattenedSteps.count)")
+        Thread.callStackSymbols.prefix(10).forEach { print("🏋️ \($0)") }
+
         timer?.invalidate()
         timer = nil
         phase = .ended
@@ -156,11 +172,22 @@ class WorkoutEngine: ObservableObject {
             audioCueManager.announceWorkoutComplete()
         }
 
+        // End Live Activity
+        Task {
+            await LiveActivityManager.shared.endActivity()
+        }
+
         endBackgroundTask()
 
-        // Cleanup after brief delay
+        // Cleanup after brief delay - but only if still in ended state
+        // (a new workout might have started in the meantime)
+        let endedVersion = stateVersion
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
-            self?.reset()
+            guard let self = self else { return }
+            // Only reset if no new workout started
+            if self.stateVersion == endedVersion && self.phase == .ended {
+                self.reset()
+            }
         }
     }
 
@@ -180,7 +207,12 @@ class WorkoutEngine: ObservableObject {
         timer?.invalidate()
         timer = nil
 
-        guard let step = currentStep else { return }
+        guard let step = currentStep else {
+            print("🏋️ setupCurrentStep: No current step! Index: \(currentStepIndex)")
+            return
+        }
+
+        print("🏋️ setupCurrentStep: \(step.label), timerSeconds: \(step.timerSeconds ?? -1), stepType: \(step.stepType)")
 
         // Announce step
         audioCueManager.announceStep(step.label, roundInfo: step.roundInfo)
@@ -190,9 +222,11 @@ class WorkoutEngine: ObservableObject {
             remainingSeconds = seconds
             if phase == .running {
                 startTimer()
+                print("🏋️ Timer started with \(seconds) seconds")
             }
         } else {
             remainingSeconds = 0
+            print("🏋️ No timer for this step (reps/distance)")
         }
     }
 
@@ -250,8 +284,44 @@ class WorkoutEngine: ObservableObject {
         // Send to Watch
         WatchConnectivityManager.shared.sendState(state)
 
-        // Update Live Activity (AMA-85)
-        // LiveActivityManager.shared.update(state)
+        // Update Live Activity
+        updateLiveActivity(state)
+    }
+
+    // MARK: - Live Activity Integration
+
+    private func startLiveActivity() {
+        guard let workout = workout else { return }
+
+        let initialState = WorkoutActivityAttributes.ContentState(
+            phase: phase.rawValue,
+            stepName: currentStep?.label ?? "",
+            stepIndex: currentStepIndex + 1,  // 1-based for display
+            stepCount: flattenedSteps.count,
+            remainingSeconds: currentStep?.timerSeconds ?? 0,
+            stepType: currentStep?.stepType.rawValue ?? "reps",
+            roundInfo: currentStep?.roundInfo
+        )
+
+        LiveActivityManager.shared.startActivity(
+            workoutId: workout.id,
+            workoutName: workout.name,
+            initialState: initialState
+        )
+    }
+
+    private func updateLiveActivity(_ state: WorkoutState) {
+        let activityState = WorkoutActivityAttributes.ContentState(
+            phase: state.phase.rawValue,
+            stepName: state.stepName,
+            stepIndex: state.stepIndex + 1,  // 1-based for display
+            stepCount: state.stepCount,
+            remainingSeconds: (state.remainingMs ?? 0) / 1000,
+            stepType: state.stepType.rawValue,
+            roundInfo: state.roundInfo
+        )
+
+        LiveActivityManager.shared.updateActivity(state: activityState)
     }
 
     private func buildCurrentState() -> WorkoutState {

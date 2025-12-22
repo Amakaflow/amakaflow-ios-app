@@ -11,6 +11,7 @@ struct HomeView: View {
     @EnvironmentObject var viewModel: WorkoutsViewModel
     @State private var showingQuickStart = false
     @State private var selectedWorkout: Workout?
+    @State private var showingWorkoutPlayer = false
 
     private var today: Date { Date() }
 
@@ -49,6 +50,9 @@ struct HomeView: View {
             }
             .sheet(isPresented: $showingQuickStart) {
                 quickStartSheet
+            }
+            .fullScreenCover(isPresented: $showingWorkoutPlayer) {
+                WorkoutPlayerView()
             }
         }
     }
@@ -211,7 +215,10 @@ struct HomeView: View {
                             Button {
                                 showingQuickStart = false
                                 WorkoutEngine.shared.start(workout: workout)
-                                // Navigate to player
+                                // Small delay to let sheet dismiss before showing player
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    showingWorkoutPlayer = true
+                                }
                             } label: {
                                 WorkoutCard(workout: workout, isPrimary: false)
                             }
