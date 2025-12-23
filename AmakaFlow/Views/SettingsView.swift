@@ -22,12 +22,13 @@ enum AudioBehavior: String, CaseIterable {
 }
 
 struct SettingsView: View {
-    @State private var deviceMode: DevicePreference = .appleWatchPhone
+    @AppStorage("devicePreference") private var deviceMode: DevicePreference = .appleWatchPhone
     @State private var voiceCuesEnabled = true
     @State private var audioBehavior: AudioBehavior = .duck
     @State private var countdownBeepsEnabled = true
     @State private var hapticFeedbackEnabled = true
     @State private var showingSignOutAlert = false
+    @EnvironmentObject private var garminConnectivity: GarminConnectManager
 
     var body: some View {
         NavigationStack {
@@ -100,8 +101,93 @@ struct SettingsView: View {
                         onSelect: { deviceMode = mode }
                     )
                 }
+
+                // Garmin connection UI when Garmin is selected
+                if deviceMode == .garminPhone {
+                    garminConnectionCard
+                }
             }
         }
+    }
+
+    // MARK: - Garmin Connection Card
+
+    private var garminConnectionCard: some View {
+        VStack(spacing: Theme.Spacing.md) {
+            HStack(spacing: Theme.Spacing.md) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                        .fill(Theme.Colors.garminBlue.opacity(0.1))
+                        .frame(width: 48, height: 48)
+
+                    Image(systemName: "applewatch")
+                        .font(.system(size: 22))
+                        .foregroundColor(Theme.Colors.garminBlue)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Text("Garmin Watch")
+                            .font(Theme.Typography.bodyBold)
+                            .foregroundColor(Theme.Colors.textPrimary)
+
+                        if garminConnectivity.isConnected {
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 10, weight: .bold))
+                                Text("Connected")
+                                    .font(Theme.Typography.footnote)
+                            }
+                            .foregroundColor(Theme.Colors.accentGreen)
+                            .padding(.horizontal, Theme.Spacing.sm)
+                            .padding(.vertical, 2)
+                            .background(Theme.Colors.accentGreen.opacity(0.1))
+                            .cornerRadius(Theme.CornerRadius.sm)
+                        }
+                    }
+
+                    Text(garminConnectivity.connectedDeviceName ?? "No device connected")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                }
+
+                Spacer()
+            }
+
+            Button {
+                garminConnectivity.showDeviceSelection()
+            } label: {
+                Text(garminConnectivity.isConnected ? "Change Device" : "Connect Garmin Watch")
+                    .font(Theme.Typography.body)
+                    .foregroundColor(Theme.Colors.textPrimary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Theme.Spacing.sm)
+                    .background(Theme.Colors.garminBlue.opacity(0.2))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                            .stroke(Theme.Colors.garminBlue, lineWidth: 1)
+                    )
+                    .cornerRadius(Theme.CornerRadius.md)
+            }
+
+            // Info text
+            HStack(alignment: .top, spacing: Theme.Spacing.sm) {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 14))
+                    .foregroundColor(Theme.Colors.textTertiary)
+
+                Text("Opens Garmin Connect Mobile to select your watch. Make sure Garmin Connect is installed.")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textTertiary)
+            }
+        }
+        .padding(Theme.Spacing.md)
+        .background(Theme.Colors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                .stroke(Theme.Colors.garminBlue.opacity(0.3), lineWidth: 1)
+        )
+        .cornerRadius(Theme.CornerRadius.md)
     }
 
     // MARK: - Audio Cues Section
@@ -503,5 +589,6 @@ private struct SettingsToggleRow: View {
 
 #Preview {
     SettingsView()
+        .environmentObject(GarminConnectManager.shared)
         .preferredColorScheme(.dark)
 }
