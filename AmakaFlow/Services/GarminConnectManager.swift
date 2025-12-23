@@ -4,15 +4,18 @@
 //
 //  Manages communication between iPhone and Garmin watches via Connect IQ SDK
 //
-//  SDK Integration Required:
-//  1. Add to Podfile: pod 'ConnectIQ', '~> 1.0'
-//  2. Run: pod install
-//  3. Add URL scheme "amakaflow-ciq" to Info.plist
-//  4. Uncomment the ConnectIQ imports and implementation below
+//  To enable ConnectIQ SDK:
+//  1. Add ConnectIQ.framework to the project
+//  2. Add -DCONNECTIQ_ENABLED to Other Swift Flags in Build Settings
+//  3. Or use CocoaPods: pod 'ConnectIQ', '~> 1.0'
 //
 
 import Foundation
 import Combine
+
+#if CONNECTIQ_ENABLED
+import ConnectIQ
+#endif
 
 // MARK: - Garmin Connect Manager
 
@@ -28,16 +31,22 @@ class GarminConnectManager: NSObject, ObservableObject {
     @Published private(set) var isAppInstalled = false
     @Published private(set) var connectedDeviceName: String?
     @Published private(set) var lastError: Error?
+    @Published private(set) var knownDevices: [String] = []
 
+    #if CONNECTIQ_ENABLED
     // MARK: - Connect IQ References
-    // Uncomment when ConnectIQ SDK is integrated:
-    // private var connectIQ: ConnectIQ?
-    // private var connectedDevice: IQDevice?
-    // private var myApp: IQApp?
+    private var connectIQ: ConnectIQ?
+    private var connectedDevice: IQDevice?
+    private var myApp: IQApp?
+    private var availableDevices: [IQDevice] = []
+    #endif
 
     /// AmakaFlow Connect IQ App UUID (must match manifest.xml in Garmin app)
     /// Generate a new UUID for production: https://www.uuidgenerator.net/
     private let appUUID = UUID(uuidString: "A1B2C3D4-E5F6-7890-ABCD-EF1234567890")!
+
+    /// Store UUID for the app in Connect IQ store (same as app UUID for now)
+    private let storeUUID = UUID(uuidString: "A1B2C3D4-E5F6-7890-ABCD-EF1234567890")!
 
     /// URL scheme for handling Garmin Connect IQ callbacks
     static let urlScheme = "amakaflow-ciq"
@@ -54,40 +63,31 @@ class GarminConnectManager: NSObject, ObservableObject {
     // MARK: - Setup
 
     private func setupConnectIQ() {
-        // TODO: Uncomment when ConnectIQ SDK is integrated
-        /*
+        #if CONNECTIQ_ENABLED
         connectIQ = ConnectIQ.sharedInstance()
         connectIQ?.initialize(withUrlScheme: Self.urlScheme, uiOverrideDelegate: nil)
-        connectIQ?.delegate = self
-        */
-
-        print("⌚ GarminConnectManager initialized (SDK integration pending)")
+        print("⌚ GarminConnectManager initialized with ConnectIQ SDK")
+        #else
+        print("⌚ GarminConnectManager initialized (SDK not enabled - add CONNECTIQ_ENABLED flag)")
+        #endif
     }
 
     // MARK: - Device Discovery
 
-    /// Shows the Garmin device selection UI
+    /// Shows the Garmin device selection UI in Garmin Connect Mobile app
     /// User can select which Garmin watch to connect
     func showDeviceSelection() {
-        // TODO: Uncomment when ConnectIQ SDK is integrated
-        /*
+        #if CONNECTIQ_ENABLED
         connectIQ?.showDeviceSelection()
-        */
-
-        print("⌚ Garmin device selection requested (SDK not integrated)")
+        print("⌚ Garmin device selection requested")
+        #else
+        print("⌚ Garmin SDK not enabled")
+        #endif
     }
 
-    /// Returns available Garmin devices
-    func getKnownDevices() -> [String] {
-        // TODO: Uncomment when ConnectIQ SDK is integrated
-        /*
-        guard let devices = connectIQ?.knownDevices() as? [IQDevice] else {
-            return []
-        }
-        return devices.map { $0.friendlyName ?? $0.uuid.uuidString }
-        */
-
-        return []
+    /// Returns names of available Garmin devices
+    func getKnownDeviceNames() -> [String] {
+        return knownDevices
     }
 
     // MARK: - Send State to Watch
@@ -96,36 +96,39 @@ class GarminConnectManager: NSObject, ObservableObject {
     /// - Parameter state: Current workout state from WorkoutEngine
     func sendWorkoutState(_ state: WorkoutState) {
         guard isConnected else {
-            print("⌚ Garmin not connected, skipping state broadcast")
+            return
+        }
+
+        #if CONNECTIQ_ENABLED
+        guard let app = myApp else {
+            print("⌚ Garmin app not available")
             return
         }
 
         let message = buildStateMessage(from: state)
 
-        // TODO: Uncomment when ConnectIQ SDK is integrated
-        /*
-        guard let device = connectedDevice,
-              let app = myApp else {
-            print("⌚ Garmin device or app not available")
-            return
-        }
-
-        connectIQ?.sendMessage(message, to: device, with: app) { result in
-            if result != .success {
-                print("⌚ Failed to send state to Garmin: \(result)")
-                Task { @MainActor in
-                    self.lastError = GarminConnectError.messageFailed
+        connectIQ?.sendMessage(
+            message,
+            to: app,
+            progress: nil,
+            completion: { result in
+                if result != .success {
+                    print("⌚ Failed to send state to Garmin: \(result.rawValue)")
+                    Task { @MainActor in
+                        self.lastError = GarminConnectError.messageFailed
+                    }
                 }
             }
-        }
-        */
-
-        print("⌚ Would send Garmin state: \(message)")
+        )
+        #endif
     }
 
     /// Sends acknowledgment to watch after processing command
     func sendAck(_ ack: CommandAck) {
         guard isConnected else { return }
+
+        #if CONNECTIQ_ENABLED
+        guard let app = myApp else { return }
 
         let message: [String: Any] = [
             "action": "commandAck",
@@ -134,15 +137,13 @@ class GarminConnectManager: NSObject, ObservableObject {
             "errorCode": ack.errorCode ?? ""
         ]
 
-        // TODO: Uncomment when ConnectIQ SDK is integrated
-        /*
-        guard let device = connectedDevice,
-              let app = myApp else { return }
-
-        connectIQ?.sendMessage(message, to: device, with: app, progress: nil) { _ in }
-        */
-
-        print("⌚ Would send Garmin ACK: \(message)")
+        connectIQ?.sendMessage(
+            message,
+            to: app,
+            progress: nil,
+            completion: { _ in }
+        )
+        #endif
     }
 
     // MARK: - Message Building
@@ -231,58 +232,70 @@ class GarminConnectManager: NSObject, ObservableObject {
     func handleURL(_ url: URL) -> Bool {
         guard url.scheme == Self.urlScheme else { return false }
 
-        // TODO: Uncomment when ConnectIQ SDK is integrated
-        /*
-        return connectIQ?.handle(url) ?? false
-        */
+        #if CONNECTIQ_ENABLED
+        // Parse devices returned from Garmin Connect Mobile's device picker
+        if let devices = connectIQ?.parseDeviceSelectionResponse(from: url) as? [IQDevice] {
+            availableDevices = devices
+            knownDevices = devices.map { $0.friendlyName ?? $0.uuid.uuidString }
+            print("⌚ Received \(devices.count) Garmin devices from URL callback")
 
-        print("⌚ Would handle Garmin URL: \(url)")
+            // Automatically connect to first device
+            if let firstDevice = devices.first {
+                connectToDevice(firstDevice)
+            }
+            return true
+        }
+        #endif
         return false
     }
 
     // MARK: - Connection Management
 
-    /// Attempts to connect to a known Garmin device
+    #if CONNECTIQ_ENABLED
+    /// Connects to a specific IQDevice
+    private func connectToDevice(_ device: IQDevice) {
+        connectIQ?.register(forDeviceEvents: device, delegate: self)
+        print("⌚ Registered for device events: \(device.friendlyName ?? device.uuid.uuidString)")
+    }
+    #endif
+
+    /// Attempts to connect to a known Garmin device by name
     func connectToDevice(withName name: String) {
-        // TODO: Uncomment when ConnectIQ SDK is integrated
-        /*
-        guard let devices = connectIQ?.knownDevices() as? [IQDevice],
-              let device = devices.first(where: { $0.friendlyName == name }) else {
+        #if CONNECTIQ_ENABLED
+        guard let device = availableDevices.first(where: { $0.friendlyName == name }) else {
             print("⌚ Device not found: \(name)")
             return
         }
 
-        connectIQ?.register(forDevice: device, delegate: self)
-        */
-
-        print("⌚ Would connect to Garmin device: \(name)")
+        connectToDevice(device)
+        #endif
     }
 
     /// Disconnects from current Garmin device
     func disconnect() {
-        isConnected = false
-        connectedDeviceName = nil
-
-        // TODO: Uncomment when ConnectIQ SDK is integrated
-        /*
+        #if CONNECTIQ_ENABLED
         if let device = connectedDevice {
-            connectIQ?.unregister(forDevice: device)
+            connectIQ?.unregister(forDeviceEvents: device, delegate: self)
+        }
+        if let app = myApp {
+            connectIQ?.unregister(forAppMessages: app, delegate: self)
         }
         connectedDevice = nil
         myApp = nil
-        */
+        #endif
 
+        isConnected = false
+        connectedDeviceName = nil
         print("⌚ Garmin disconnected")
     }
 }
 
 // MARK: - ConnectIQ Delegate Implementation
-// Uncomment when ConnectIQ SDK is integrated
 
-/*
+#if CONNECTIQ_ENABLED
 extension GarminConnectManager: IQDeviceEventDelegate {
 
-    func deviceStatusChanged(_ device: IQDevice, status: IQDeviceStatus) {
+    nonisolated func deviceStatusChanged(_ device: IQDevice!, status: IQDeviceStatus) {
         Task { @MainActor in
             switch status {
             case .connected:
@@ -292,12 +305,12 @@ extension GarminConnectManager: IQDeviceEventDelegate {
                 self.registerForAppMessages(device)
                 print("⌚ Garmin connected: \(self.connectedDeviceName ?? "Unknown")")
 
-            case .notConnected, .bluetoothNotReady, .notFound:
+            case .notConnected, .bluetoothNotReady, .notFound, .invalidDevice:
                 self.isConnected = false
                 self.connectedDeviceName = nil
                 self.connectedDevice = nil
                 self.myApp = nil
-                print("⌚ Garmin disconnected: \(status)")
+                print("⌚ Garmin disconnected: \(status.rawValue)")
 
             @unknown default:
                 print("⌚ Garmin unknown status: \(status.rawValue)")
@@ -306,14 +319,17 @@ extension GarminConnectManager: IQDeviceEventDelegate {
     }
 
     private func registerForAppMessages(_ device: IQDevice) {
-        myApp = IQApp(uuid: appUUID, store: nil, device: device)
+        myApp = IQApp(uuid: appUUID, store: storeUUID, device: device)
 
-        connectIQ?.getAppStatus(myApp) { [weak self] status in
+        connectIQ?.getAppStatus(myApp) { [weak self] appStatus in
             Task { @MainActor in
-                self?.isAppInstalled = (status == .installed)
+                guard let self = self else { return }
 
-                if status == .installed {
-                    self?.connectIQ?.register(forAppMessages: self?.myApp, delegate: self)
+                let installed = appStatus?.isInstalled ?? false
+                self.isAppInstalled = installed
+
+                if installed, let app = self.myApp {
+                    self.connectIQ?.register(forAppMessages: app, delegate: self)
                     print("⌚ Registered for Garmin app messages")
                 } else {
                     print("⌚ AmakaFlow app not installed on Garmin watch")
@@ -325,7 +341,7 @@ extension GarminConnectManager: IQDeviceEventDelegate {
 
 extension GarminConnectManager: IQAppMessageDelegate {
 
-    func receivedMessage(_ message: Any, from device: IQDevice, from app: IQApp) {
+    nonisolated func receivedMessage(_ message: Any!, from app: IQApp!) {
         if let dict = message as? [String: Any] {
             Task { @MainActor in
                 self.handleMessage(dict)
@@ -333,7 +349,7 @@ extension GarminConnectManager: IQAppMessageDelegate {
         }
     }
 }
-*/
+#endif
 
 // MARK: - Errors
 
@@ -347,7 +363,7 @@ enum GarminConnectError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .sdkNotIntegrated:
-            return "Garmin Connect IQ SDK is not integrated. Add ConnectIQ pod and uncomment SDK code."
+            return "Garmin Connect IQ SDK is not integrated. Add ConnectIQ framework and CONNECTIQ_ENABLED flag."
         case .deviceNotConnected:
             return "No Garmin watch is connected. Open Garmin Connect app and ensure your watch is paired."
         case .appNotInstalled:

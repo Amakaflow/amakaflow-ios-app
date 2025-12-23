@@ -37,6 +37,7 @@
 		F84E22952ED0DA0200459747 /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E22942ED0DA0200459747 /* HealthKit.framework */; };
 		F84E22972ED0DA0F00459747 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E22962ED0DA0F00459747 /* WatchConnectivity.framework */; };
 		F84E22992ED0DA1F00459747 /* WorkoutKitSync in Frameworks */ = {isa = PBXBuildFile; productRef = F84E22982ED0DA1F00459747 /* WorkoutKitSync */; };
+		F8C125B22EFAC00000459747 /* ConnectIQ in Frameworks */ = {isa = PBXBuildFile; productRef = F8C125B12EFAC00000459747 /* ConnectIQ */; };
 		F84E229B2ED0DC0900459747 /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E229A2ED0DC0900459747 /* HealthKit.framework */; };
 		F84E229D2ED0DC1100459747 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E229C2ED0DC1100459747 /* WatchConnectivity.framework */; };
 		F84E229F2ED0DC1B00459747 /* WorkoutKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E229E2ED0DC1B00459747 /* WorkoutKit.framework */; };
@@ -299,6 +300,7 @@
 				F84E22932ED0D9FA00459747 /* EventKit.framework in Frameworks */,
 				F84E22952ED0DA0200459747 /* HealthKit.framework in Frameworks */,
 				F84E22992ED0DA1F00459747 /* WorkoutKitSync in Frameworks */,
+				F8C125B22EFAC00000459747 /* ConnectIQ in Frameworks */,
 				F84E22972ED0DA0F00459747 /* WatchConnectivity.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -463,6 +465,7 @@
 			name = AmakaFlowCompanion;
 			packageProductDependencies = (
 				F84E22982ED0DA1F00459747 /* WorkoutKitSync */,
+				F8C125B12EFAC00000459747 /* ConnectIQ */,
 			);
 			productName = AmakaFlowCompanion;
 			productReference = F84E21742ED0B0C800459747 /* AmakaFlowCompanion.app */;
@@ -675,6 +678,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				F84E225F2ED0B84300459747 /* XCLocalSwiftPackageReference "../../../workoutkit-sync" */,
+				F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "Vendor/ConnectIQ" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F84E21752ED0B0C800459747 /* Products */;
@@ -1035,6 +1039,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.myamaka.AmakaFlowCompanion;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "CONNECTIQ_ENABLED $(inherited)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1072,6 +1077,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.myamaka.AmakaFlowCompanion;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "CONNECTIQ_ENABLED $(inherited)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1518,6 +1524,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = "../../../workoutkit-sync";
 		};
+		F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "Vendor/ConnectIQ" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../Vendor/ConnectIQ";
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1530,6 +1540,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F84E225F2ED0B84300459747 /* XCLocalSwiftPackageReference "../../../workoutkit-sync" */;
 			productName = WorkoutKitSync;
+		};
+		F8C125B12EFAC00000459747 /* ConnectIQ */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "Vendor/ConnectIQ" */;
+			productName = ConnectIQ;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
