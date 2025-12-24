@@ -13,10 +13,29 @@
 import Foundation
 import Combine
 import UIKit
+import CoreBluetooth
 
 #if CONNECTIQ_ENABLED
 import ConnectIQ
 #endif
+
+// MARK: - Bluetooth Permission Kick
+/// Forces iOS to request Bluetooth permission early so ConnectIQ SDK can access BT
+final class BluetoothKick: NSObject, CBCentralManagerDelegate {
+    private var mgr: CBCentralManager?
+    var onStateChange: ((CBManagerState) -> Void)?
+
+    func start() {
+        mgr = CBCentralManager(delegate: self, queue: nil)
+    }
+
+    nonisolated func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        Task { @MainActor in
+            print("⌚ [BT] CoreBluetooth state: \(central.state.rawValue)")
+            self.onStateChange?(central.state)
+        }
+    }
+}
 
 // MARK: - Garmin Connect Manager
 
@@ -35,6 +54,10 @@ class GarminConnectManager: NSObject, ObservableObject {
     @Published private(set) var knownDevices: [String] = []
     @Published private(set) var savedDeviceInfo: SavedDeviceInfo?
     @Published private(set) var lastDebugAction: String = "None"
+    @Published private(set) var bluetoothState: CBManagerState = .unknown
+
+    // MARK: - Bluetooth Kick
+    private let bluetoothKick = BluetoothKick()
 
     // MARK: - Saved Device Info
 
@@ -76,10 +99,38 @@ class GarminConnectManager: NSObject, ObservableObject {
     override init() {
         super.init()
         log("GarminConnectManager initializing...")
+
+        // Start Bluetooth kick to trigger iOS permission prompt
+        bluetoothKick.onStateChange = { [weak self] state in
+            Task { @MainActor in
+                self?.bluetoothState = state
+                self?.log("[BT] State changed to: \(state.rawValue) (\(self?.btStateName(state) ?? "?"))")
+
+                // If BT becomes ready and we have saved device, try reconnecting
+                if state == .poweredOn, let saved = self?.savedDeviceInfo, self?.isConnected == false {
+                    self?.log("[BT] Powered on - attempting reconnect to saved device")
+                    self?.connectToSavedDevice()
+                }
+            }
+        }
+        bluetoothKick.start()
+
         setupConnectIQ()
         loadSavedDevice()
         setupNotifications()
         log("Init complete - SDK: \(connectIQAvailable ? "YES" : "NO")")
+    }
+
+    private func btStateName(_ state: CBManagerState) -> String {
+        switch state {
+        case .unknown: return "unknown"
+        case .resetting: return "resetting"
+        case .unsupported: return "unsupported"
+        case .unauthorized: return "unauthorized"
+        case .poweredOff: return "poweredOff"
+        case .poweredOn: return "poweredOn"
+        @unknown default: return "unknown(\(state.rawValue))"
+        }
     }
 
     private var connectIQAvailable: Bool {
@@ -186,6 +237,13 @@ class GarminConnectManager: NSObject, ObservableObject {
     /// Connects to a previously saved device (bypasses device picker)
     func connectToSavedDevice() {
         #if CONNECTIQ_ENABLED
+        // Check if Bluetooth is ready first
+        if bluetoothState != .poweredOn {
+            log("⚠️ Bluetooth not ready (state: \(btStateName(bluetoothState))) - deferring reconnect")
+            lastDebugAction = "BT not ready - waiting"
+            return
+        }
+
         guard let deviceInfo = savedDeviceInfo,
               let uuid = UUID(uuidString: deviceInfo.uuid) else {
             log("No saved device to connect to")
@@ -227,11 +285,11 @@ class GarminConnectManager: NSObject, ObservableObject {
 
         switch status {
         case .connected:
-            log("✅ Device is CONNECTED - setting up app messaging")
+            log("✅ Device is CONNECTED")
             connectedDevice = device
             connectedDeviceName = device.friendlyName ?? "Garmin Watch"
             isConnected = true
-            registerForAppMessages(device)
+            // Note: Don't call registerForAppMessages here - let deviceStatusChanged be the canonical path
             lastDebugAction = "Device connected"
 
         case .notConnected:
@@ -692,6 +750,12 @@ class GarminConnectManager: NSObject, ObservableObject {
         log("Ping timestamp: \(pingTimestamp)")
         log("Pong timestamp: \(pongTimestamp)")
         lastDebugAction = "Pong received!"
+
+        // Now we know the app is truly reachable
+        if !isAppInstalled {
+            log("✅ First successful communication - marking app as installed")
+            isAppInstalled = true
+        }
     }
 
     private func handleCommandMessage(_ message: [String: Any]) {
@@ -910,8 +974,8 @@ extension GarminConnectManager: IQDeviceEventDelegate {
         // Register for messages immediately - don't wait for getAppStatus
         // This is the pattern from Garmin's working examples
         connectIQ?.register(forAppMessages: app, delegate: self)
-        log("Registered for app messages - ready to send/receive")
-        isAppInstalled = true
+        log("Registered for app messages - waiting for first message to confirm app is reachable")
+        // Note: Don't set isAppInstalled = true here - only after successful communication
 
         // Small delay before first message (common workaround per Garmin docs)
         Task {
@@ -930,6 +994,12 @@ extension GarminConnectManager: IQAppMessageDelegate {
             self.log("========== MESSAGE FROM WATCH ==========")
             self.log("App UUID: \(app?.uuid.uuidString ?? "nil")")
             self.log("Message type: \(type(of: message))")
+
+            // Mark app as installed on first successful message
+            if !self.isAppInstalled {
+                self.log("✅ First message received - marking app as installed")
+                self.isAppInstalled = true
+            }
 
             if let dict = message as? [String: Any] {
                 self.log("Message dict: \(dict)")
@@ -1111,6 +1181,11 @@ extension GarminConnectManager {
                 case .success:
                     self?.log("✅ App open request sent successfully!")
                     self?.lastDebugAction = "App opened on watch!"
+                    // Mark app as installed since openAppRequest succeeded
+                    if self?.isAppInstalled == false {
+                        self?.log("✅ openAppRequest succeeded - marking app as installed")
+                        self?.isAppInstalled = true
+                    }
                     // Now try sending a ping
                     self?.log("Waiting 1s then sending ping...")
                     try? await Task.sleep(nanoseconds: 1_000_000_000)
