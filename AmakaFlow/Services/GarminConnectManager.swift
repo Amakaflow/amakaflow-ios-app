@@ -106,10 +106,25 @@ class GarminConnectManager: NSObject, ObservableObject {
                 self?.bluetoothState = state
                 self?.log("[BT] State changed to: \(state.rawValue) (\(self?.btStateName(state) ?? "?"))")
 
-                // If BT becomes ready and we have saved device, try reconnecting
-                if state == .poweredOn, let saved = self?.savedDeviceInfo, self?.isConnected == false {
-                    self?.log("[BT] Powered on - attempting reconnect to saved device")
-                    self?.connectToSavedDevice()
+                switch state {
+                case .poweredOn:
+                    // If BT becomes ready and we have saved device, try reconnecting
+                    if let saved = self?.savedDeviceInfo, self?.isConnected == false {
+                        self?.log("[BT] Powered on - attempting reconnect to saved device")
+                        self?.connectToSavedDevice()
+                    }
+
+                case .unauthorized:
+                    self?.log("❌ Bluetooth permission DENIED")
+                    self?.log("Fix: Settings → Privacy & Security → Bluetooth → Enable AmakaFlowCompanion")
+                    self?.lastDebugAction = "BT permission denied!"
+
+                case .poweredOff:
+                    self?.log("⚠️ Bluetooth is OFF - enable in Control Center or Settings")
+                    self?.lastDebugAction = "BT is OFF"
+
+                default:
+                    break
                 }
             }
         }
@@ -131,6 +146,18 @@ class GarminConnectManager: NSObject, ObservableObject {
         case .poweredOn: return "poweredOn"
         @unknown default: return "unknown(\(state.rawValue))"
         }
+    }
+
+    /// Opens iOS Settings app (user can navigate to Bluetooth permissions)
+    func openIOSSettings() {
+        if let url = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(url)
+        }
+    }
+
+    /// Returns true if Bluetooth permission is denied
+    var isBluetoothUnauthorized: Bool {
+        bluetoothState == .unauthorized
     }
 
     private var connectIQAvailable: Bool {

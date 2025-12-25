@@ -238,6 +238,24 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Theme.Colors.surfaceElevated)
 
+                // Bluetooth permission warning
+                if garminConnectivity.isBluetoothUnauthorized {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                        Text("Bluetooth permission denied")
+                            .font(.caption)
+                        Spacer()
+                        Button("Open Settings") {
+                            garminConnectivity.openIOSSettings()
+                        }
+                        .font(.caption.bold())
+                        .foregroundColor(.blue)
+                    }
+                    .padding(Theme.Spacing.sm)
+                    .background(Color.orange.opacity(0.15))
+                }
+
                 Divider()
 
                 // Log entries
