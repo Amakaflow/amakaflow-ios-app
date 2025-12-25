@@ -4,44 +4,4 @@
    <FileRef
       location = "self:">
    </FileRef>
-   <FileRef
-      location = "group:WorkoutConnectivityModels.swift">
-   </FileRef>
-   <Group
-      location = "container:../AmakaFlowWatch Watch App"
-      name = "AmakaFlowWatch Watch App">
-      <FileRef
-         location = "group:WorkoutConnectivityModels.swift">
-      </FileRef>
-      <FileRef
-         location = "group:WatchConnectivityBridge.swift">
-      </FileRef>
-      <FileRef
-         location = "group:AmakaFlowWatchApp.swift">
-      </FileRef>
-      <FileRef
-         location = "group:WatchWorkoutManager.swift">
-      </FileRef>
-      <FileRef
-         location = "group:Assets.xcassets">
-      </FileRef>
-      <FileRef
-         location = "group:WatchRemoteView.swift">
-      </FileRef>
-      <FileRef
-         location = "group:WorkoutListView.swift">
-      </FileRef>
-      <FileRef
-         location = "group:WatchWorkoutState.swift">
-      </FileRef>
-      <FileRef
-         location = "group:ContentView.swift">
-      </FileRef>
-      <FileRef
-         location = "group:Info.plist">
-      </FileRef>
-      <FileRef
-         location = "group:AmakFlowWatch.entitlements">
-      </FileRef>
-   </Group>
 </Workspace>

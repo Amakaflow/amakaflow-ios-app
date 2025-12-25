@@ -278,21 +278,46 @@ class WorkoutEngine: ObservableObject {
 
     // MARK: - State Broadcasting
 
+    /// Returns the current device preference from UserDefaults
+    private var devicePreference: DevicePreference {
+        guard let rawValue = UserDefaults.standard.string(forKey: "devicePreference"),
+              let preference = DevicePreference(rawValue: rawValue) else {
+            return .appleWatchPhone // Default
+        }
+        return preference
+    }
+
     private func broadcastState() {
         let state = buildCurrentState()
+        let preference = devicePreference
 
-        // Send to Watch
-        WatchConnectivityManager.shared.sendState(state)
+        // Send to appropriate watch based on device preference
+        switch preference {
+        case .appleWatchPhone, .appleWatchOnly:
+            WatchConnectivityManager.shared.sendState(state)
+        case .garminPhone:
+            GarminConnectManager.shared.sendWorkoutState(state)
+        case .phoneOnly, .amazfitPhone:
+            // No watch to broadcast to (Amazfit not yet implemented)
+            break
+        }
 
         // Update Live Activity
         updateLiveActivity(state)
     }
 
-    /// Explicitly sends current state to Watch (called when watch requests state)
+    /// Explicitly sends current state to Apple Watch (called when watch requests state)
     func sendStateToWatch() {
         guard isActive else { return }
         let state = buildCurrentState()
         WatchConnectivityManager.shared.sendState(state)
+    }
+
+    /// Explicitly sends current state to Garmin Watch (called when watch requests state)
+    func sendStateToGarmin() {
+        guard isActive else { return }
+        let state = buildCurrentState()
+        GarminConnectManager.shared.sendWorkoutState(state)
     }
 
     // MARK: - Live Activity Integration
@@ -363,18 +388,30 @@ class WorkoutEngine: ObservableObject {
             end(reason: .userEnded)
         }
 
-        // ACK the command
+        // ACK the command to the appropriate watch based on preference
         let ack = CommandAck(commandId: commandId, status: .success, errorCode: nil)
-        WatchConnectivityManager.shared.sendAck(ack)
+        sendAckToActiveWatch(ack)
     }
 
     func handleRemoteCommand(_ commandString: String, commandId: String) {
         guard let command = RemoteCommand(rawValue: commandString) else {
             let ack = CommandAck(commandId: commandId, status: .error, errorCode: "unknown_command")
-            WatchConnectivityManager.shared.sendAck(ack)
+            sendAckToActiveWatch(ack)
             return
         }
         handleRemoteCommand(command, commandId: commandId)
+    }
+
+    private func sendAckToActiveWatch(_ ack: CommandAck) {
+        let preference = devicePreference
+        switch preference {
+        case .appleWatchPhone, .appleWatchOnly:
+            WatchConnectivityManager.shared.sendAck(ack)
+        case .garminPhone:
+            GarminConnectManager.shared.sendAck(ack)
+        case .phoneOnly, .amazfitPhone:
+            break
+        }
     }
 
     // MARK: - Background Handling

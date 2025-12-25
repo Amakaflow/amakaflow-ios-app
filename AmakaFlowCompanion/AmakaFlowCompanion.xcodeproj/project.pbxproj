@@ -30,12 +30,14 @@
 		F84E22862ED0D5D100459747 /* WorkoutKitConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22852ED0D5D100459747 /* WorkoutKitConverter.swift */; };
 		F84E22872ED0D5D100459747 /* CalendarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22832ED0D5D100459747 /* CalendarManager.swift */; };
 		F84E22882ED0D5D100459747 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22842ED0D5D100459747 /* WatchConnectivityManager.swift */; };
+		F8C125A12EFAB01000459747 /* GarminConnectManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8C125A02EFAB01000459747 /* GarminConnectManager.swift */; };
 		F84E22892ED0D5D100459747 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22812ED0D5D100459747 /* APIService.swift */; };
 		F84E228A2ED0D5D100459747 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22822ED0D5D100459747 /* AuthService.swift */; };
 		F84E22932ED0D9FA00459747 /* EventKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E22922ED0D9FA00459747 /* EventKit.framework */; };
 		F84E22952ED0DA0200459747 /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E22942ED0DA0200459747 /* HealthKit.framework */; };
 		F84E22972ED0DA0F00459747 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E22962ED0DA0F00459747 /* WatchConnectivity.framework */; };
 		F84E22992ED0DA1F00459747 /* WorkoutKitSync in Frameworks */ = {isa = PBXBuildFile; productRef = F84E22982ED0DA1F00459747 /* WorkoutKitSync */; };
+		F8C125B22EFAC00000459747 /* ConnectIQ in Frameworks */ = {isa = PBXBuildFile; productRef = F8C125B12EFAC00000459747 /* ConnectIQ */; };
 		F84E229B2ED0DC0900459747 /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E229A2ED0DC0900459747 /* HealthKit.framework */; };
 		F84E229D2ED0DC1100459747 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E229C2ED0DC1100459747 /* WatchConnectivity.framework */; };
 		F84E229F2ED0DC1B00459747 /* WorkoutKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E229E2ED0DC1B00459747 /* WorkoutKit.framework */; };
@@ -188,6 +190,7 @@
 		F84E22822ED0D5D100459747 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AuthService.swift; path = ../AmakaFlow/Services/AuthService.swift; sourceTree = SOURCE_ROOT; };
 		F84E22832ED0D5D100459747 /* CalendarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarManager.swift; path = ../AmakaFlow/Services/CalendarManager.swift; sourceTree = SOURCE_ROOT; };
 		F84E22842ED0D5D100459747 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchConnectivityManager.swift; path = ../AmakaFlow/Services/WatchConnectivityManager.swift; sourceTree = SOURCE_ROOT; };
+		F8C125A02EFAB01000459747 /* GarminConnectManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminConnectManager.swift; path = ../AmakaFlow/Services/GarminConnectManager.swift; sourceTree = SOURCE_ROOT; };
 		F84E22852ED0D5D100459747 /* WorkoutKitConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutKitConverter.swift; path = ../AmakaFlow/Services/WorkoutKitConverter.swift; sourceTree = SOURCE_ROOT; };
 		F84E22922ED0D9FA00459747 /* EventKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = EventKit.framework; path = System/Library/Frameworks/EventKit.framework; sourceTree = SDKROOT; };
 		F84E22942ED0DA0200459747 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
@@ -297,6 +300,7 @@
 				F84E22932ED0D9FA00459747 /* EventKit.framework in Frameworks */,
 				F84E22952ED0DA0200459747 /* HealthKit.framework in Frameworks */,
 				F84E22992ED0DA1F00459747 /* WorkoutKitSync in Frameworks */,
+				F8C125B22EFAC00000459747 /* ConnectIQ in Frameworks */,
 				F84E22972ED0DA0F00459747 /* WatchConnectivity.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -359,6 +363,7 @@
 				F84E22822ED0D5D100459747 /* AuthService.swift */,
 				F84E22832ED0D5D100459747 /* CalendarManager.swift */,
 				F84E22842ED0D5D100459747 /* WatchConnectivityManager.swift */,
+				F8C125A02EFAB01000459747 /* GarminConnectManager.swift */,
 				F883912261E9D246979DD881 /* WorkoutState.swift */,
 				F82258553831E24BC9B8C650 /* FlattenedInterval.swift */,
 				F856B28A238E234FDAB29478 /* WorkoutEngine.swift */,
@@ -460,6 +465,7 @@
 			name = AmakaFlowCompanion;
 			packageProductDependencies = (
 				F84E22982ED0DA1F00459747 /* WorkoutKitSync */,
+				F8C125B12EFAC00000459747 /* ConnectIQ */,
 			);
 			productName = AmakaFlowCompanion;
 			productReference = F84E21742ED0B0C800459747 /* AmakaFlowCompanion.app */;
@@ -672,6 +678,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				F84E225F2ED0B84300459747 /* XCLocalSwiftPackageReference "../../../workoutkit-sync" */,
+				F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "Vendor/ConnectIQ" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F84E21752ED0B0C800459747 /* Products */;
@@ -776,6 +783,7 @@
 				F84E22862ED0D5D100459747 /* WorkoutKitConverter.swift in Sources */,
 				F84E22872ED0D5D100459747 /* CalendarManager.swift in Sources */,
 				F84E22882ED0D5D100459747 /* WatchConnectivityManager.swift in Sources */,
+				F8C125A12EFAB01000459747 /* GarminConnectManager.swift in Sources */,
 				F84E22892ED0D5D100459747 /* APIService.swift in Sources */,
 				F84E228A2ED0D5D100459747 /* AuthService.swift in Sources */,
 				F84E227E2ED0D5BF00459747 /* IntervalRow.swift in Sources */,
@@ -1010,7 +1018,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = AmakaFlowCompanion/AmakaFlowCompanion.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1031,6 +1039,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.myamaka.AmakaFlowCompanion;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "CONNECTIQ_ENABLED $(inherited)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1047,7 +1056,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = AmakaFlowCompanion/AmakaFlowCompanion.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1068,6 +1077,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.myamaka.AmakaFlowCompanion;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "CONNECTIQ_ENABLED $(inherited)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1082,7 +1092,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
@@ -1104,7 +1114,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
@@ -1125,7 +1135,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
@@ -1145,7 +1155,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
@@ -1167,7 +1177,7 @@
 				CODE_SIGN_ENTITLEMENTS = "";
 				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
 				INFOPLIST_KEY_CFBundleDisplayName = AmakaFlowWatch;
 				MARKETING_VERSION = 1.0;
@@ -1185,7 +1195,7 @@
 				CODE_SIGN_ENTITLEMENTS = "";
 				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
 				INFOPLIST_KEY_CFBundleDisplayName = AmakaFlowWatch;
 				MARKETING_VERSION = 1.0;
@@ -1204,7 +1214,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "AmakaFlowWatch Watch App/AmakFlowWatch.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1241,7 +1251,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "AmakaFlowWatch Watch App/AmakFlowWatch.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1276,7 +1286,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
@@ -1299,7 +1309,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
@@ -1321,7 +1331,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
@@ -1343,7 +1353,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
@@ -1367,7 +1377,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WorkoutLiveActivity/Info.plist;
@@ -1398,7 +1408,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WorkoutLiveActivity/Info.plist;
@@ -1514,6 +1524,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = "../../../workoutkit-sync";
 		};
+		F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "Vendor/ConnectIQ" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../Vendor/ConnectIQ";
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1526,6 +1540,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F84E225F2ED0B84300459747 /* XCLocalSwiftPackageReference "../../../workoutkit-sync" */;
 			productName = WorkoutKitSync;
+		};
+		F8C125B12EFAC00000459747 /* ConnectIQ */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "Vendor/ConnectIQ" */;
+			productName = ConnectIQ;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

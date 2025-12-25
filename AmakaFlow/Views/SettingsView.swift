@@ -22,12 +22,19 @@ enum AudioBehavior: String, CaseIterable {
 }
 
 struct SettingsView: View {
-    @State private var deviceMode: DevicePreference = .appleWatchPhone
+    @AppStorage("devicePreference") private var deviceMode: DevicePreference = .appleWatchPhone
     @State private var voiceCuesEnabled = true
     @State private var audioBehavior: AudioBehavior = .duck
     @State private var countdownBeepsEnabled = true
     @State private var hapticFeedbackEnabled = true
     @State private var showingSignOutAlert = false
+    @State private var showingGarminDebugAlert = false
+    @State private var garminDebugMessage = ""
+    @State private var showingManualUUIDSheet = false
+    @State private var manualUUID = ""
+    @State private var manualDeviceName = ""
+    @State private var showingDebugLog = false
+    @EnvironmentObject private var garminConnectivity: GarminConnectManager
 
     var body: some View {
         NavigationStack {
@@ -71,6 +78,326 @@ struct SettingsView: View {
             } message: {
                 Text("Are you sure you want to sign out?")
             }
+            .alert("Garmin Debug", isPresented: $showingGarminDebugAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(garminDebugMessage)
+            }
+            .sheet(isPresented: $showingManualUUIDSheet) {
+                manualUUIDSheet
+            }
+            .sheet(isPresented: $showingDebugLog) {
+                debugLogSheet
+            }
+        }
+    }
+
+    // MARK: - Debug Log Sheet
+
+    private var debugLogSheet: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Action buttons - Row 1
+                HStack(spacing: Theme.Spacing.sm) {
+                    Button {
+                        garminConnectivity.sendTestPing()
+                    } label: {
+                        VStack {
+                            Image(systemName: "antenna.radiowaves.left.and.right")
+                            Text("Ping")
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Spacing.sm)
+                        .background(Theme.Colors.accentBlue.opacity(0.2))
+                        .cornerRadius(Theme.CornerRadius.sm)
+                    }
+
+                    Button {
+                        garminConnectivity.sendOpenAppRequest()
+                    } label: {
+                        VStack {
+                            Image(systemName: "play.circle")
+                            Text("Wake")
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Spacing.sm)
+                        .background(Theme.Colors.accentGreen.opacity(0.2))
+                        .cornerRadius(Theme.CornerRadius.sm)
+                    }
+
+                    Button {
+                        garminConnectivity.openWatchApp()
+                    } label: {
+                        VStack {
+                            Image(systemName: "bag")
+                            Text("Store")
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Spacing.sm)
+                        .background(Theme.Colors.accentOrange.opacity(0.2))
+                        .cornerRadius(Theme.CornerRadius.sm)
+                    }
+
+                    Button {
+                        garminConnectivity.clearLog()
+                    } label: {
+                        VStack {
+                            Image(systemName: "trash")
+                            Text("Clear")
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Spacing.sm)
+                        .background(Theme.Colors.accentRed.opacity(0.2))
+                        .cornerRadius(Theme.CornerRadius.sm)
+                    }
+                }
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.vertical, Theme.Spacing.sm)
+                .foregroundColor(Theme.Colors.textPrimary)
+
+                // Action buttons - Row 2
+                HStack(spacing: Theme.Spacing.sm) {
+                    Button {
+                        showingManualUUIDSheet = true
+                    } label: {
+                        VStack {
+                            Image(systemName: "keyboard")
+                            Text("Manual")
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Spacing.sm)
+                        .background(Color.gray.opacity(0.2))
+                        .cornerRadius(Theme.CornerRadius.sm)
+                    }
+
+                    Button {
+                        garminConnectivity.tryAlternativeDeviceDiscovery()
+                    } label: {
+                        VStack {
+                            Image(systemName: "magnifyingglass")
+                            Text("Discover")
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Spacing.sm)
+                        .background(Color.purple.opacity(0.2))
+                        .cornerRadius(Theme.CornerRadius.sm)
+                    }
+
+                    Button {
+                        garminConnectivity.reinitializeSDK()
+                    } label: {
+                        VStack {
+                            Image(systemName: "arrow.counterclockwise")
+                            Text("Reset")
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Spacing.sm)
+                        .background(Color.yellow.opacity(0.2))
+                        .cornerRadius(Theme.CornerRadius.sm)
+                    }
+
+                    Button {
+                        garminConnectivity.checkAppStatus()
+                    } label: {
+                        VStack {
+                            Image(systemName: "questionmark.circle")
+                            Text("Status")
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Spacing.sm)
+                        .background(Color.cyan.opacity(0.2))
+                        .cornerRadius(Theme.CornerRadius.sm)
+                    }
+                }
+                .padding(.horizontal, Theme.Spacing.md)
+                .foregroundColor(Theme.Colors.textPrimary)
+
+                Divider()
+
+                // Status summary
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        statusPill("SDK", garminConnectivity.getDetailedStatus()["sdkEnabled"] as? Bool ?? false)
+                        statusPill("GCM", garminConnectivity.isGarminConnectInstalled())
+                        statusPill("Device", garminConnectivity.isConnected)
+                        statusPill("App", garminConnectivity.isAppInstalled)
+                    }
+                    Text("UUID: \(garminConnectivity.getDetailedStatus()["appUUID"] as? String ?? "?")")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                }
+                .padding(Theme.Spacing.sm)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Theme.Colors.surfaceElevated)
+
+                // Bluetooth permission warning
+                if garminConnectivity.isBluetoothUnauthorized {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                        Text("Bluetooth permission denied")
+                            .font(.caption)
+                        Spacer()
+                        Button("Open Settings") {
+                            garminConnectivity.openIOSSettings()
+                        }
+                        .font(.caption.bold())
+                        .foregroundColor(.blue)
+                    }
+                    .padding(Theme.Spacing.sm)
+                    .background(Color.orange.opacity(0.15))
+                }
+
+                Divider()
+
+                // Log entries
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 4) {
+                        if garminConnectivity.debugLog.isEmpty {
+                            Text("No log entries yet. Tap 'Ping' to send a test message.")
+                                .font(Theme.Typography.caption)
+                                .foregroundColor(Theme.Colors.textTertiary)
+                                .padding()
+                        } else {
+                            ForEach(garminConnectivity.debugLog, id: \.self) { entry in
+                                Text(entry)
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundColor(logColor(for: entry))
+                                    .textSelection(.enabled)
+                            }
+                        }
+                    }
+                    .padding(Theme.Spacing.sm)
+                }
+            }
+            .background(Theme.Colors.background.ignoresSafeArea())
+            .navigationTitle("Garmin Debug Log")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        showingDebugLog = false
+                    }
+                }
+            }
+        }
+    }
+
+    private func statusPill(_ label: String, _ isActive: Bool) -> some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(isActive ? Color.green : Color.red)
+                .frame(width: 6, height: 6)
+            Text(label)
+                .font(.system(size: 10))
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .background(Theme.Colors.surface)
+        .cornerRadius(4)
+    }
+
+    private func logColor(for entry: String) -> Color {
+        if entry.contains("ERROR") || entry.contains("❌") || entry.contains("FAILED") {
+            return Theme.Colors.accentRed
+        } else if entry.contains("SUCCESS") || entry.contains("✅") || entry.contains("CONNECTED") {
+            return Theme.Colors.accentGreen
+        } else if entry.contains("WARNING") {
+            return Theme.Colors.accentOrange
+        }
+        return Theme.Colors.textSecondary
+    }
+
+    // MARK: - Manual UUID Entry Sheet
+
+    private var manualUUIDSheet: some View {
+        NavigationStack {
+            VStack(spacing: Theme.Spacing.lg) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Text("This is a workaround for when the Garmin Connect device picker doesn't work properly.")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+
+                    Text("To find your Device UUID:")
+                        .font(Theme.Typography.bodyBold)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                        .padding(.top, Theme.Spacing.md)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("1. Open Garmin Connect app")
+                        Text("2. Go to Settings > Garmin Devices")
+                        Text("3. Select your watch")
+                        Text("4. Look for 'Device ID' or 'Unit ID'")
+                    }
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textSecondary)
+                }
+                .padding(.horizontal, Theme.Spacing.lg)
+
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Text("Device Name")
+                        .font(Theme.Typography.footnote)
+                        .foregroundColor(Theme.Colors.textSecondary)
+
+                    TextField("e.g. Forerunner 265", text: $manualDeviceName)
+                        .textFieldStyle(.roundedBorder)
+                        .autocapitalization(.words)
+                }
+                .padding(.horizontal, Theme.Spacing.lg)
+
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Text("Device UUID")
+                        .font(Theme.Typography.footnote)
+                        .foregroundColor(Theme.Colors.textSecondary)
+
+                    TextField("XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX", text: $manualUUID)
+                        .textFieldStyle(.roundedBorder)
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                        .font(.system(.body, design: .monospaced))
+                }
+                .padding(.horizontal, Theme.Spacing.lg)
+
+                Spacer()
+
+                Button {
+                    let name = manualDeviceName.isEmpty ? "Garmin Watch" : manualDeviceName
+                    if garminConnectivity.manuallyRegisterDevice(uuidString: manualUUID.trimmingCharacters(in: .whitespacesAndNewlines), friendlyName: name) {
+                        showingManualUUIDSheet = false
+                        manualUUID = ""
+                        manualDeviceName = ""
+                    }
+                } label: {
+                    Text("Connect Device")
+                        .font(Theme.Typography.bodyBold)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Spacing.md)
+                        .background(Theme.Colors.accentBlue)
+                        .cornerRadius(Theme.CornerRadius.md)
+                }
+                .padding(.horizontal, Theme.Spacing.lg)
+                .padding(.bottom, Theme.Spacing.lg)
+            }
+            .padding(.top, Theme.Spacing.lg)
+            .background(Theme.Colors.background.ignoresSafeArea())
+            .navigationTitle("Manual Device Entry")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        showingManualUUIDSheet = false
+                    }
+                }
+            }
         }
     }
 
@@ -100,7 +427,215 @@ struct SettingsView: View {
                         onSelect: { deviceMode = mode }
                     )
                 }
+
+                // Garmin connection UI when Garmin is selected
+                if deviceMode == .garminPhone {
+                    garminConnectionCard
+                }
             }
+        }
+    }
+
+    // MARK: - Garmin Connection Card
+
+    private var garminConnectionCard: some View {
+        VStack(spacing: Theme.Spacing.md) {
+            HStack(spacing: Theme.Spacing.md) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                        .fill(Theme.Colors.garminBlue.opacity(0.1))
+                        .frame(width: 48, height: 48)
+
+                    Image(systemName: "applewatch")
+                        .font(.system(size: 22))
+                        .foregroundColor(Theme.Colors.garminBlue)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Text("Garmin Watch")
+                            .font(Theme.Typography.bodyBold)
+                            .foregroundColor(Theme.Colors.textPrimary)
+
+                        if garminConnectivity.isConnected {
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 10, weight: .bold))
+                                Text("Connected")
+                                    .font(Theme.Typography.footnote)
+                            }
+                            .foregroundColor(Theme.Colors.accentGreen)
+                            .padding(.horizontal, Theme.Spacing.sm)
+                            .padding(.vertical, 2)
+                            .background(Theme.Colors.accentGreen.opacity(0.1))
+                            .cornerRadius(Theme.CornerRadius.sm)
+                        }
+                    }
+
+                    Text(garminConnectivity.connectedDeviceName ?? "No device connected")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                }
+
+                Spacer()
+            }
+
+            Button {
+                garminConnectivity.showDeviceSelection()
+            } label: {
+                Text(garminConnectivity.isConnected ? "Change Device" : "Connect Garmin Watch")
+                    .font(Theme.Typography.body)
+                    .foregroundColor(Theme.Colors.textPrimary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Theme.Spacing.sm)
+                    .background(Theme.Colors.garminBlue.opacity(0.2))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                            .stroke(Theme.Colors.garminBlue, lineWidth: 1)
+                    )
+                    .cornerRadius(Theme.CornerRadius.md)
+            }
+
+            // Saved device reconnect (alternative to broken picker)
+            if let savedDevice = garminConnectivity.savedDeviceInfo, !garminConnectivity.isConnected {
+                Button {
+                    garminConnectivity.connectToSavedDevice()
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.clockwise")
+                        Text("Reconnect to \(savedDevice.friendlyName)")
+                    }
+                    .font(Theme.Typography.body)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Theme.Spacing.sm)
+                    .background(Theme.Colors.accentGreen)
+                    .cornerRadius(Theme.CornerRadius.md)
+                }
+            }
+
+            // Action buttons - Row 1
+            HStack(spacing: Theme.Spacing.md) {
+                Button {
+                    garminConnectivity.openGarminConnectApp()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up.forward.app")
+                        Text("Open GCM")
+                    }
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.garminBlue)
+                }
+
+                Button {
+                    showingDebugLog = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "ant")
+                        Text("Debug Log")
+                    }
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.accentOrange)
+                }
+
+                Button {
+                    garminConnectivity.connectToMockDevice()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "ladybug")
+                        Text("Test UI")
+                    }
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.accentGreen)
+                }
+            }
+
+            // Action buttons - Row 2
+            HStack(spacing: Theme.Spacing.md) {
+                if garminConnectivity.savedDeviceInfo != nil {
+                    Button {
+                        garminConnectivity.clearSavedDevice()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "trash")
+                            Text("Forget Device")
+                        }
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.accentRed)
+                    }
+                }
+
+                if garminConnectivity.isConnected {
+                    Button {
+                        garminConnectivity.disconnect()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "xmark.circle")
+                            Text("Disconnect")
+                        }
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.accentRed)
+                    }
+                }
+            }
+
+            // Debug status section - tap to show full status
+            Button {
+                garminDebugMessage = garminConnectivity.getSDKStatus()
+                showingGarminDebugAlert = true
+            } label: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("DEBUG STATUS (tap for details)")
+                        .font(Theme.Typography.footnote)
+                        .foregroundColor(Theme.Colors.textTertiary)
+
+                    HStack(spacing: Theme.Spacing.md) {
+                        statusIndicator("GC App", garminConnectivity.isGarminConnectInstalled())
+                        statusIndicator("Device", garminConnectivity.isConnected)
+                        statusIndicator("CIQ App", garminConnectivity.isAppInstalled)
+                    }
+
+                    if !garminConnectivity.knownDevices.isEmpty {
+                        Text("Known: \(garminConnectivity.knownDevices.joined(separator: ", "))")
+                            .font(Theme.Typography.footnote)
+                            .foregroundColor(Theme.Colors.textTertiary)
+                    }
+                }
+                .padding(Theme.Spacing.sm)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Theme.Colors.surfaceElevated)
+                .cornerRadius(Theme.CornerRadius.sm)
+            }
+            .buttonStyle(.plain)
+
+            // Info text
+            HStack(alignment: .top, spacing: Theme.Spacing.sm) {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 14))
+                    .foregroundColor(Theme.Colors.textTertiary)
+
+                Text("Tap 'Connect Garmin Watch' to pair your watch via Garmin Connect Mobile. Once connected, it will be remembered for future sessions.")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textTertiary)
+            }
+        }
+        .padding(Theme.Spacing.md)
+        .background(Theme.Colors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                .stroke(Theme.Colors.garminBlue.opacity(0.3), lineWidth: 1)
+        )
+        .cornerRadius(Theme.CornerRadius.md)
+    }
+
+    private func statusIndicator(_ label: String, _ isActive: Bool) -> some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(isActive ? Theme.Colors.accentGreen : Theme.Colors.accentRed)
+                .frame(width: 8, height: 8)
+            Text(label)
+                .font(Theme.Typography.footnote)
+                .foregroundColor(Theme.Colors.textTertiary)
         }
     }
 
@@ -503,5 +1038,6 @@ private struct SettingsToggleRow: View {
 
 #Preview {
     SettingsView()
+        .environmentObject(GarminConnectManager.shared)
         .preferredColorScheme(.dark)
 }
