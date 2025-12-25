@@ -368,6 +368,7 @@ class WorkoutEngine: ObservableObject {
             stepType: currentStep?.stepType ?? .reps,
             remainingMs: remainingSeconds * 1000,
             roundInfo: currentStep?.roundInfo,
+            targetReps: currentStep?.targetReps,
             lastCommandAck: nil
         )
     }

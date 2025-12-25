@@ -739,7 +739,8 @@ class GarminConnectManager: NSObject, ObservableObject {
             "stepName": state.stepName,
             "stepType": state.stepType.rawValue,
             "remainingMs": state.remainingMs ?? 0,
-            "roundInfo": state.roundInfo ?? ""
+            "roundInfo": state.roundInfo ?? "",
+            "targetReps": state.targetReps ?? 0
         ]
     }
 

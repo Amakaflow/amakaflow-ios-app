@@ -41,6 +41,7 @@ struct WorkoutState: Codable {
     let stepType: StepType
     let remainingMs: Int?
     let roundInfo: String?
+    let targetReps: Int?
     let lastCommandAck: CommandAck?
 
     init(
@@ -54,6 +55,7 @@ struct WorkoutState: Codable {
         stepType: StepType,
         remainingMs: Int?,
         roundInfo: String?,
+        targetReps: Int? = nil,
         lastCommandAck: CommandAck?
     ) {
         self.stateVersion = stateVersion
@@ -66,6 +68,7 @@ struct WorkoutState: Codable {
         self.stepType = stepType
         self.remainingMs = remainingMs
         self.roundInfo = roundInfo
+        self.targetReps = targetReps
         self.lastCommandAck = lastCommandAck
     }
 }

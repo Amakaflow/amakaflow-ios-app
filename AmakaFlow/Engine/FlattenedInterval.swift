@@ -18,6 +18,7 @@ struct FlattenedInterval: Identifiable {
     let timerSeconds: Int?
     let stepType: StepType
     let followAlongUrl: String?
+    let targetReps: Int?
 
     var formattedTime: String? {
         guard let seconds = timerSeconds else { return nil }
@@ -41,7 +42,7 @@ func flattenIntervals(_ intervals: [WorkoutInterval]) -> [FlattenedInterval] {
             switch interval {
             case .repeat(let reps, let subIntervals):
                 for i in 1...reps {
-                    flatten(subIntervals, roundContext: "Round \(i)/\(reps)")
+                    flatten(subIntervals, roundContext: "Round \(i) of \(reps)")
                 }
             default:
                 counter += 1
@@ -53,7 +54,8 @@ func flattenIntervals(_ intervals: [WorkoutInterval]) -> [FlattenedInterval] {
                     roundInfo: roundContext,
                     timerSeconds: intervalTimer(interval),
                     stepType: intervalStepType(interval),
-                    followAlongUrl: intervalFollowAlongUrl(interval)
+                    followAlongUrl: intervalFollowAlongUrl(interval),
+                    targetReps: intervalTargetReps(interval)
                 ))
             }
         }
@@ -146,6 +148,15 @@ private func intervalFollowAlongUrl(_ interval: WorkoutInterval) -> String? {
     switch interval {
     case .reps(_, _, _, _, let followAlongUrl):
         return followAlongUrl
+    default:
+        return nil
+    }
+}
+
+private func intervalTargetReps(_ interval: WorkoutInterval) -> Int? {
+    switch interval {
+    case .reps(let reps, _, _, _, _):
+        return reps
     default:
         return nil
     }
