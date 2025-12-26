@@ -15,6 +15,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Clone workoutkit-sync dependency
+        run: |
+          # The project references ../../../workoutkit-sync relative to xcodeproj
+          # From AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj, that's 3 levels up
+          git clone https://github.com/supergeri/workoutkit-sync.git ../workoutkit-sync
+
       - name: List available Xcode versions
         run: ls -la /Applications | grep Xcode
 
