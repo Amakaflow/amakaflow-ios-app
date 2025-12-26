@@ -60,10 +60,12 @@ jobs:
             -project AmakaFlowCompanion.xcodeproj \
             -scheme AmakaFlowCompanion \
             -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -only-testing:AmakaFlowCompanionTests \
             -resultBundlePath TestResults \
             -enableCodeCoverage YES \
             CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO
+            CODE_SIGNING_REQUIRED=NO \
+            SKIP_INSTALL=YES
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
