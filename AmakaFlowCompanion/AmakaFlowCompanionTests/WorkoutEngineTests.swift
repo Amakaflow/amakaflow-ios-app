@@ -317,8 +317,8 @@ final class WorkoutEngineTests: XCTestCase {
 
         let flattened = flattenIntervals(intervals)
 
-        XCTAssertEqual(flattened[0].roundInfo, "Round 1/2")
-        XCTAssertEqual(flattened[1].roundInfo, "Round 2/2")
+        XCTAssertEqual(flattened[0].roundInfo, "Round 1 of 2")
+        XCTAssertEqual(flattened[1].roundInfo, "Round 2 of 2")
     }
 
     func testFlattenedIntervalStepType() {
@@ -440,7 +440,8 @@ final class FlattenedIntervalTests: XCTestCase {
             roundInfo: nil,
             timerSeconds: 90,
             stepType: .timed,
-            followAlongUrl: nil
+            followAlongUrl: nil,
+            targetReps: nil
         )
 
         XCTAssertEqual(interval.formattedTime, "1:30")
@@ -455,7 +456,8 @@ final class FlattenedIntervalTests: XCTestCase {
             roundInfo: nil,
             timerSeconds: 45,
             stepType: .timed,
-            followAlongUrl: nil
+            followAlongUrl: nil,
+            targetReps: nil
         )
 
         XCTAssertEqual(interval.formattedTime, "45s")
@@ -470,7 +472,8 @@ final class FlattenedIntervalTests: XCTestCase {
             roundInfo: nil,
             timerSeconds: nil,
             stepType: .reps,
-            followAlongUrl: nil
+            followAlongUrl: nil,
+            targetReps: 10
         )
 
         XCTAssertNil(interval.formattedTime)

@@ -16,7 +16,6 @@
 		EB63D5EF54FF452580C70684 /* WorkoutCompleteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B37 /* WorkoutCompleteView.swift */; };
 		F818DA94C6BD4F40EE8313B0 /* StepDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8BFF8D1C38311406C868156 /* StepDisplayView.swift */; };
 		F84682B9F2FD8A45578F0E68 /* WorkoutPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */; };
-		F84E22182ED0B62000459747 /* AmakaFlowWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = F84E22172ED0B62000459747 /* AmakaFlowWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F84E226F2ED0D55600459747 /* AmakaFlowApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E226D2ED0D55600459747 /* AmakaFlowApp.swift */; };
 		F84E22702ED0D55600459747 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E226E2ED0D55600459747 /* Theme.swift */; };
 		F84E22722ED0D56C00459747 /* Workout.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22712ED0D56C00459747 /* Workout.swift */; };
@@ -30,14 +29,12 @@
 		F84E22862ED0D5D100459747 /* WorkoutKitConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22852ED0D5D100459747 /* WorkoutKitConverter.swift */; };
 		F84E22872ED0D5D100459747 /* CalendarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22832ED0D5D100459747 /* CalendarManager.swift */; };
 		F84E22882ED0D5D100459747 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22842ED0D5D100459747 /* WatchConnectivityManager.swift */; };
-		F8C125A12EFAB01000459747 /* GarminConnectManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8C125A02EFAB01000459747 /* GarminConnectManager.swift */; };
 		F84E22892ED0D5D100459747 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22812ED0D5D100459747 /* APIService.swift */; };
 		F84E228A2ED0D5D100459747 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22822ED0D5D100459747 /* AuthService.swift */; };
 		F84E22932ED0D9FA00459747 /* EventKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E22922ED0D9FA00459747 /* EventKit.framework */; };
 		F84E22952ED0DA0200459747 /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E22942ED0DA0200459747 /* HealthKit.framework */; };
 		F84E22972ED0DA0F00459747 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E22962ED0DA0F00459747 /* WatchConnectivity.framework */; };
 		F84E22992ED0DA1F00459747 /* WorkoutKitSync in Frameworks */ = {isa = PBXBuildFile; productRef = F84E22982ED0DA1F00459747 /* WorkoutKitSync */; };
-		F8C125B22EFAC00000459747 /* ConnectIQ in Frameworks */ = {isa = PBXBuildFile; productRef = F8C125B12EFAC00000459747 /* ConnectIQ */; };
 		F84E229B2ED0DC0900459747 /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E229A2ED0DC0900459747 /* HealthKit.framework */; };
 		F84E229D2ED0DC1100459747 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E229C2ED0DC1100459747 /* WatchConnectivity.framework */; };
 		F84E229F2ED0DC1B00459747 /* WorkoutKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E229E2ED0DC1B00459747 /* WorkoutKit.framework */; };
@@ -53,9 +50,10 @@
 		F8B356C72EF8BA7B00E88B51 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F8B356C62EF8BA7B00E88B51 /* SwiftUI.framework */; };
 		F8B356D82EF8BA7C00E88B51 /* WorkoutLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F8B356C32EF8BA7B00E88B51 /* WorkoutLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F8B356E02EF8C10000E88B51 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */; };
-		F8B358AA2EF9C76E00E88B51 /* AmakaFlowWatch.app in Resources */ = {isa = PBXBuildFile; fileRef = F84E22122ED0B62000459747 /* AmakaFlowWatch.app */; };
 		F8B358AF2EF9C7B000E88B51 /* AmakaFlowWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = F84E22172ED0B62000459747 /* AmakaFlowWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F8B8C2FBBE453C44649F8E94 /* PlayerControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F89DB8A09DD1694C469E6F54 /* PlayerControlsView.swift */; };
+		F8C125A12EFAB01000459747 /* GarminConnectManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8C125A02EFAB01000459747 /* GarminConnectManager.swift */; };
+		F8C125B22EFAC00000459747 /* ConnectIQ in Frameworks */ = {isa = PBXBuildFile; productRef = F8C125B12EFAC00000459747 /* ConnectIQ */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -72,13 +70,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = F84E21732ED0B0C800459747;
 			remoteInfo = AmakaFlowCompanion;
-		};
-		F84E22192ED0B62000459747 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = F84E216C2ED0B0C800459747 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = F84E22162ED0B62000459747;
-			remoteInfo = "AmakaFlowWatch Watch App";
 		};
 		F84E22272ED0B62100459747 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -101,20 +92,6 @@
 			remoteGlobalIDString = F8B356C22EF8BA7B00E88B51;
 			remoteInfo = WorkoutLiveActivityExtension;
 		};
-		F8B358AB2EF9C76E00E88B51 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = F84E216C2ED0B0C800459747 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = F84E22112ED0B62000459747;
-			remoteInfo = AmakaFlowWatch;
-		};
-		F8B358AD2EF9C77C00E88B51 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = F84E216C2ED0B0C800459747 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = F84E22112ED0B62000459747;
-			remoteInfo = AmakaFlowWatch;
-		};
 		F8B358B02EF9C7B000E88B51 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = F84E216C2ED0B0C800459747 /* Project object */;
@@ -125,17 +102,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		F84E223A2ED0B62100459747 /* Embed Watch Content */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
-			dstSubfolderSpec = 16;
-			files = (
-				F84E22182ED0B62000459747 /* AmakaFlowWatch Watch App.app in Embed Watch Content */,
-			);
-			name = "Embed Watch Content";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		F8B356D92EF8BA7C00E88B51 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -190,7 +156,6 @@
 		F84E22822ED0D5D100459747 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AuthService.swift; path = ../AmakaFlow/Services/AuthService.swift; sourceTree = SOURCE_ROOT; };
 		F84E22832ED0D5D100459747 /* CalendarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarManager.swift; path = ../AmakaFlow/Services/CalendarManager.swift; sourceTree = SOURCE_ROOT; };
 		F84E22842ED0D5D100459747 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchConnectivityManager.swift; path = ../AmakaFlow/Services/WatchConnectivityManager.swift; sourceTree = SOURCE_ROOT; };
-		F8C125A02EFAB01000459747 /* GarminConnectManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminConnectManager.swift; path = ../AmakaFlow/Services/GarminConnectManager.swift; sourceTree = SOURCE_ROOT; };
 		F84E22852ED0D5D100459747 /* WorkoutKitConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutKitConverter.swift; path = ../AmakaFlow/Services/WorkoutKitConverter.swift; sourceTree = SOURCE_ROOT; };
 		F84E22922ED0D9FA00459747 /* EventKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = EventKit.framework; path = System/Library/Frameworks/EventKit.framework; sourceTree = SDKROOT; };
 		F84E22942ED0DA0200459747 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
@@ -206,6 +171,7 @@
 		F8B356C42EF8BA7B00E88B51 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		F8B356C62EF8BA7B00E88B51 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		F8BFF8D1C38311406C868156 /* StepDisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StepDisplayView.swift; path = ../AmakaFlow/Views/Components/StepDisplayView.swift; sourceTree = SOURCE_ROOT; };
+		F8C125A02EFAB01000459747 /* GarminConnectManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminConnectManager.swift; path = ../AmakaFlow/Services/GarminConnectManager.swift; sourceTree = SOURCE_ROOT; };
 		F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutActivityAttributes.swift; path = ../AmakaFlow/LiveActivity/WorkoutActivityAttributes.swift; sourceTree = SOURCE_ROOT; };
 		F8FC29620578214144920365 /* AudioCueManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioCueManager.swift; path = ../AmakaFlow/Services/AudioCueManager.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -234,16 +200,6 @@
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
-/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		F84E226A2ED0CF5900459747 /* Exceptions for "AmakaFlowWatch Watch App" folder in "Copy Bundle Resources" phase from "AmakaFlowWatch" target */ = {
-			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
-			buildPhase = F84E22102ED0B62000459747 /* Resources */;
-			membershipExceptions = (
-				AmakFlowWatch.entitlements,
-			);
-		};
-/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		F84E21762ED0B0C800459747 /* AmakaFlowCompanion */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -266,7 +222,6 @@
 		F84E221B2ED0B62000459747 /* AmakaFlowWatch Watch App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				F84E226A2ED0CF5900459747 /* Exceptions for "AmakaFlowWatch Watch App" folder in "Copy Bundle Resources" phase from "AmakaFlowWatch" target */,
 				F84E22A22ED0DF9300459747 /* Exceptions for "AmakaFlowWatch Watch App" folder in "AmakaFlowWatch Watch App" target */,
 			);
 			path = "AmakaFlowWatch Watch App";
@@ -517,25 +472,6 @@
 			productReference = F84E218D2ED0B0CA00459747 /* AmakaFlowCompanionUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
-		F84E22112ED0B62000459747 /* AmakaFlowWatch */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = F84E22422ED0B62100459747 /* Build configuration list for PBXNativeTarget "AmakaFlowWatch" */;
-			buildPhases = (
-				F84E22102ED0B62000459747 /* Resources */,
-				F84E223A2ED0B62100459747 /* Embed Watch Content */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				F84E221A2ED0B62000459747 /* PBXTargetDependency */,
-			);
-			name = AmakaFlowWatch;
-			packageProductDependencies = (
-			);
-			productName = AmakaFlowWatch;
-			productReference = F84E22122ED0B62000459747 /* AmakaFlowWatch.app */;
-			productType = "com.apple.product-type.application.watchapp2-container";
-		};
 		F84E22162ED0B62000459747 /* AmakaFlowWatch Watch App */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = F84E22412ED0B62100459747 /* Build configuration list for PBXNativeTarget "AmakaFlowWatch Watch App" */;
@@ -648,9 +584,6 @@
 						CreatedOnToolsVersion = 17.2.0;
 						TestTargetID = F84E21732ED0B0C800459747;
 					};
-					F84E22112ED0B62000459747 = {
-						CreatedOnToolsVersion = 26.1.1;
-					};
 					F84E22162ED0B62000459747 = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
@@ -678,7 +611,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				F84E225F2ED0B84300459747 /* XCLocalSwiftPackageReference "../../../workoutkit-sync" */,
-				F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "Vendor/ConnectIQ" */,
+				F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "../Vendor/ConnectIQ" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F84E21752ED0B0C800459747 /* Products */;
@@ -712,13 +645,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F84E218B2ED0B0CA00459747 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		F84E22102ED0B62000459747 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -852,11 +778,6 @@
 			target = F84E21732ED0B0C800459747 /* AmakaFlowCompanion */;
 			targetProxy = F84E218E2ED0B0CA00459747 /* PBXContainerItemProxy */;
 		};
-		F84E221A2ED0B62000459747 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = F84E22162ED0B62000459747 /* AmakaFlowWatch Watch App */;
-			targetProxy = F84E22192ED0B62000459747 /* PBXContainerItemProxy */;
-		};
 		F84E22282ED0B62100459747 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = F84E22162ED0B62000459747 /* AmakaFlowWatch Watch App */;
@@ -871,16 +792,6 @@
 			isa = PBXTargetDependency;
 			target = F8B356C22EF8BA7B00E88B51 /* WorkoutLiveActivityExtension */;
 			targetProxy = F8B356D62EF8BA7C00E88B51 /* PBXContainerItemProxy */;
-		};
-		F8B358AC2EF9C76E00E88B51 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = F84E22112ED0B62000459747 /* AmakaFlowWatch */;
-			targetProxy = F8B358AB2EF9C76E00E88B51 /* PBXContainerItemProxy */;
-		};
-		F8B358AE2EF9C77C00E88B51 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = F84E22112ED0B62000459747 /* AmakaFlowWatch */;
-			targetProxy = F8B358AD2EF9C77C00E88B51 /* PBXContainerItemProxy */;
 		};
 		F8B358B12EF9C7B000E88B51 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1171,42 +1082,6 @@
 			};
 			name = Release;
 		};
-		F84E22382ED0B62100459747 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = "";
-				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
-				DEVELOPMENT_TEAM = A9K5QG6YW8;
-				INFOPLIST_KEY_CFBundleDisplayName = AmakaFlowWatch;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.myamaka.AmakaFlowCompanion.watch;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Debug;
-		};
-		F84E22392ED0B62100459747 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = "";
-				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
-				DEVELOPMENT_TEAM = A9K5QG6YW8;
-				INFOPLIST_KEY_CFBundleDisplayName = AmakaFlowWatch;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.myamaka.AmakaFlowCompanion.watch;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Release;
-		};
 		F84E223B2ED0B62100459747 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1481,15 +1356,6 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F84E22422ED0B62100459747 /* Build configuration list for PBXNativeTarget "AmakaFlowWatch" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				F84E22382ED0B62100459747 /* Debug */,
-				F84E22392ED0B62100459747 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		F84E22432ED0B62100459747 /* Build configuration list for PBXNativeTarget "AmakaFlowWatch Watch AppTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1524,9 +1390,9 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = "../../../workoutkit-sync";
 		};
-		F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "Vendor/ConnectIQ" */ = {
+		F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "../Vendor/ConnectIQ" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "../Vendor/ConnectIQ";
+			relativePath = ../Vendor/ConnectIQ;
 		};
 /* End XCLocalSwiftPackageReference section */
 
@@ -1543,7 +1409,7 @@
 		};
 		F8C125B12EFAC00000459747 /* ConnectIQ */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "Vendor/ConnectIQ" */;
+			package = F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "../Vendor/ConnectIQ" */;
 			productName = ConnectIQ;
 		};
 /* End XCSwiftPackageProductDependency section */
