@@ -17,9 +17,11 @@ jobs:
 
       - name: Clone workoutkit-sync dependency
         run: |
-          # The project references ../../../workoutkit-sync relative to xcodeproj
-          # From AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj, that's 3 levels up
-          git clone https://github.com/supergeri/workoutkit-sync.git ../workoutkit-sync
+          # The project references ../../../workoutkit-sync relative to AmakaFlowCompanion/
+          # Checkout is at /Users/runner/work/amakaflow-ios-app/amakaflow-ios-app
+          # Need to clone to /Users/runner/work/workoutkit-sync
+          git clone https://github.com/supergeri/workoutkit-sync.git ../../workoutkit-sync
+          ls -la ../../
 
       - name: List available Xcode versions
         run: ls -la /Applications | grep Xcode
