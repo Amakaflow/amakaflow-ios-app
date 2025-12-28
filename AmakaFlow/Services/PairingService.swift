@@ -33,13 +33,15 @@ class PairingService: ObservableObject {
         // - 6 chars = short_code (manual entry)
         // - > 6 chars = token (from QR code)
         let isShortCode = code.count == 6
+        let modelIdentifier = getDeviceModel()
         let body = PairingRequest(
             token: isShortCode ? nil : code,
             shortCode: isShortCode ? code.uppercased() : nil,
             deviceInfo: DeviceInfo(
-                model: getDeviceModel(),
-                osVersion: UIDevice.current.systemVersion,
-                appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+                device: getDeviceName(for: modelIdentifier),
+                os: "iOS \(UIDevice.current.systemVersion)",
+                appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
+                deviceId: UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
             )
         )
 
@@ -140,6 +142,57 @@ class PairingService: ObservableObject {
             return identifier + String(UnicodeScalar(UInt8(value)))
         }
     }
+
+    private func getDeviceName(for identifier: String) -> String {
+        // Map device identifiers to friendly names
+        // See: https://gist.github.com/adamawolf/3048717
+        let deviceNames: [String: String] = [
+            // iPhone
+            "iPhone14,2": "iPhone 13 Pro",
+            "iPhone14,3": "iPhone 13 Pro Max",
+            "iPhone14,4": "iPhone 13 mini",
+            "iPhone14,5": "iPhone 13",
+            "iPhone14,6": "iPhone SE (3rd gen)",
+            "iPhone14,7": "iPhone 14",
+            "iPhone14,8": "iPhone 14 Plus",
+            "iPhone15,2": "iPhone 14 Pro",
+            "iPhone15,3": "iPhone 14 Pro Max",
+            "iPhone15,4": "iPhone 15",
+            "iPhone15,5": "iPhone 15 Plus",
+            "iPhone16,1": "iPhone 15 Pro",
+            "iPhone16,2": "iPhone 15 Pro Max",
+            "iPhone17,1": "iPhone 16 Pro",
+            "iPhone17,2": "iPhone 16 Pro Max",
+            "iPhone17,3": "iPhone 16",
+            "iPhone17,4": "iPhone 16 Plus",
+            "iPhone17,5": "iPhone 16e",
+            "iPhone18,1": "iPhone 17 Pro",
+            "iPhone18,2": "iPhone 17 Pro Max",
+            "iPhone18,3": "iPhone 17",
+            "iPhone18,4": "iPhone 17 Plus",
+            "iPhone18,5": "iPhone 17 Air",
+            // iPad
+            "iPad13,4": "iPad Pro 11-inch (3rd gen)",
+            "iPad13,5": "iPad Pro 11-inch (3rd gen)",
+            "iPad13,6": "iPad Pro 11-inch (3rd gen)",
+            "iPad13,7": "iPad Pro 11-inch (3rd gen)",
+            "iPad13,8": "iPad Pro 12.9-inch (5th gen)",
+            "iPad13,9": "iPad Pro 12.9-inch (5th gen)",
+            "iPad13,10": "iPad Pro 12.9-inch (5th gen)",
+            "iPad13,11": "iPad Pro 12.9-inch (5th gen)",
+            "iPad14,1": "iPad mini (6th gen)",
+            "iPad14,2": "iPad mini (6th gen)",
+            "iPad14,3": "iPad Pro 11-inch (4th gen)",
+            "iPad14,4": "iPad Pro 11-inch (4th gen)",
+            "iPad14,5": "iPad Pro 12.9-inch (6th gen)",
+            "iPad14,6": "iPad Pro 12.9-inch (6th gen)",
+            // Simulator
+            "x86_64": "Simulator",
+            "arm64": "Simulator"
+        ]
+
+        return deviceNames[identifier] ?? identifier
+    }
 }
 
 // MARK: - Models
@@ -151,9 +204,10 @@ struct PairingRequest: Codable {
 }
 
 struct DeviceInfo: Codable {
-    let model: String
-    let osVersion: String
-    let appVersion: String
+    let device: String      // Friendly name like "iPhone 15 Pro"
+    let os: String          // Formatted like "iOS 17.2"
+    let appVersion: String  // App version like "1.0.17"
+    let deviceId: String    // Unique device identifier
 }
 
 struct PairingResponse: Codable {

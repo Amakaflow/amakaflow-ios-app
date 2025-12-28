@@ -61,7 +61,12 @@ final class PairingTests: XCTestCase {
         let request = PairingRequest(
             token: nil,
             shortCode: "ABC123",
-            deviceInfo: DeviceInfo(model: "iPhone15,2", osVersion: "18.0", appVersion: "1.0")
+            deviceInfo: DeviceInfo(
+                device: "iPhone 14 Pro",
+                os: "iOS 18.0",
+                appVersion: "1.0",
+                deviceId: "test-device-id"
+            )
         )
 
         let encoder = JSONEncoder()
@@ -81,7 +86,12 @@ final class PairingTests: XCTestCase {
         let request = PairingRequest(
             token: longToken,
             shortCode: nil,
-            deviceInfo: DeviceInfo(model: "iPhone15,2", osVersion: "18.0", appVersion: "1.0")
+            deviceInfo: DeviceInfo(
+                device: "iPhone 14 Pro",
+                os: "iOS 18.0",
+                appVersion: "1.0",
+                deviceId: "test-device-id"
+            )
         )
 
         let encoder = JSONEncoder()
@@ -99,7 +109,12 @@ final class PairingTests: XCTestCase {
         let request = PairingRequest(
             token: nil,
             shortCode: "TEST12",
-            deviceInfo: DeviceInfo(model: "iPhone15,2", osVersion: "18.0", appVersion: "1.0")
+            deviceInfo: DeviceInfo(
+                device: "iPhone 14 Pro",
+                os: "iOS 18.0",
+                appVersion: "1.0",
+                deviceId: "test-device-id-123"
+            )
         )
 
         let encoder = JSONEncoder()
@@ -108,10 +123,11 @@ final class PairingTests: XCTestCase {
         let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
         let deviceInfo = json["device_info"] as! [String: Any]
 
-        // Verify snake_case keys
-        XCTAssertEqual(deviceInfo["os_version"] as? String, "18.0")
+        // Verify snake_case keys and new field structure
+        XCTAssertEqual(deviceInfo["device"] as? String, "iPhone 14 Pro")
+        XCTAssertEqual(deviceInfo["os"] as? String, "iOS 18.0")
         XCTAssertEqual(deviceInfo["app_version"] as? String, "1.0")
-        XCTAssertEqual(deviceInfo["model"] as? String, "iPhone15,2")
+        XCTAssertEqual(deviceInfo["device_id"] as? String, "test-device-id-123")
     }
 
     func testCodeLengthDeterminesFieldUsed() {
