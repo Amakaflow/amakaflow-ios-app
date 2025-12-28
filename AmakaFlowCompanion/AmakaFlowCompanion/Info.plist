@@ -14,6 +14,8 @@
 		<string>garminconnect</string>
 		<string>ciqstore</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>AmakaFlow uses the camera to scan QR codes for quick pairing with the web app.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>AmakaFlow uses Bluetooth to communicate with your Garmin watch during workouts, allowing you to control workouts and see real-time progress on your wrist.</string>
 	<key>NSSupportsLiveActivities</key>

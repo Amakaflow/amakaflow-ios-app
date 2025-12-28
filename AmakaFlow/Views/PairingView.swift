@@ -137,19 +137,25 @@ struct PairingView: View {
             errorMessage = nil
         }
 
+        print("[PairingView] Pairing started with code length: \(code.count)")
+
         do {
             // Try to parse QR code JSON if it looks like JSON
             var pairingCode = code
             if code.hasPrefix("{") {
+                print("[PairingView] Parsing QR code JSON")
                 if let data = code.data(using: .utf8),
                    let json = try? JSONDecoder().decode(QRCodeData.self, from: data) {
                     pairingCode = json.token
+                    print("[PairingView] Extracted token from QR JSON")
                 }
             }
 
             _ = try await pairingService.pair(code: pairingCode)
+            print("[PairingView] Pairing successful!")
             // Success - isPaired will update and trigger navigation
         } catch {
+            print("[PairingView] Pairing failed: \(error.localizedDescription)")
             await MainActor.run {
                 errorMessage = error.localizedDescription
             }

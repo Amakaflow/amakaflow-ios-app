@@ -36,20 +36,28 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
 
     private func setupCamera() {
         // Check camera permission
-        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+        print("[QRScanner] Camera auth status = \(status.rawValue)")
+
+        switch status {
         case .authorized:
+            print("[QRScanner] Camera authorized")
             setupCaptureSession()
         case .notDetermined:
+            print("[QRScanner] Requesting camera permission")
             AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
                 DispatchQueue.main.async {
                     if granted {
+                        print("[QRScanner] Camera permission granted")
                         self?.setupCaptureSession()
                     } else {
+                        print("[QRScanner] Camera permission denied")
                         self?.showPermissionDenied()
                     }
                 }
             }
         default:
+            print("[QRScanner] Camera not authorized (status: \(status.rawValue))")
             showPermissionDenied()
         }
     }
@@ -191,6 +199,8 @@ class QRScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsD
 
         hasScanned = true
         captureSession?.stopRunning()
+
+        print("[QRScanner] Code scanned (\(code.count) chars)")
 
         // Haptic feedback
         let generator = UINotificationFeedbackGenerator()

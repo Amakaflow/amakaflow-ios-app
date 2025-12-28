@@ -22,14 +22,20 @@ class PairingService: ObservableObject {
 
     /// Exchange a pairing code (from QR or manual entry) for a JWT
     func pair(code: String) async throws -> PairingResponse {
+        print("[PairingService] Starting pair request to \(baseURL)")
+
         let url = URL(string: "\(baseURL)/mobile/pairing/pair")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
+        // Send code in appropriate field based on length:
+        // - 6 chars = short_code (manual entry)
+        // - > 6 chars = token (from QR code)
+        let isShortCode = code.count == 6
         let body = PairingRequest(
-            token: code.count > 6 ? code : nil,
-            shortCode: code.count == 6 ? code.uppercased() : nil,
+            token: isShortCode ? nil : code,
+            shortCode: isShortCode ? code.uppercased() : nil,
             deviceInfo: DeviceInfo(
                 model: getDeviceModel(),
                 osVersion: UIDevice.current.systemVersion,
@@ -39,13 +45,27 @@ class PairingService: ObservableObject {
 
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
-        request.httpBody = try encoder.encode(body)
+        let bodyData = try encoder.encode(body)
+        request.httpBody = bodyData
+
+        // Log the request body for debugging
+        if let bodyString = String(data: bodyData, encoding: .utf8) {
+            print("[PairingService] Request body: \(bodyString)")
+        }
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
+        // Log the response body for debugging
+        if let responseBody = String(data: data, encoding: .utf8) {
+            print("[PairingService] Response body: \(responseBody)")
+        }
+
         guard let httpResponse = response as? HTTPURLResponse else {
+            print("[PairingService] Invalid response type")
             throw PairingError.invalidResponse
         }
+
+        print("[PairingService] Response status = \(httpResponse.statusCode)")
 
         switch httpResponse.statusCode {
         case 200:
@@ -53,6 +73,7 @@ class PairingService: ObservableObject {
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             let result = try decoder.decode(PairingResponse.self, from: data)
             try storeToken(result.jwt)
+            print("[PairingService] JWT stored successfully")
             if let profile = result.profile {
                 storeProfile(profile)
             }
@@ -63,10 +84,13 @@ class PairingService: ObservableObject {
             return result
         case 400:
             let error = try? JSONDecoder().decode(APIErrorResponse.self, from: data)
+            print("[PairingService] Invalid code: \(error?.detail ?? "unknown")")
             throw PairingError.invalidCode(error?.detail ?? "Invalid code")
         case 410:
+            print("[PairingService] Code expired")
             throw PairingError.codeExpired
         default:
+            print("[PairingService] Server error \(httpResponse.statusCode)")
             throw PairingError.serverError(httpResponse.statusCode)
         }
     }
