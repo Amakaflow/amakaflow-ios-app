@@ -56,6 +56,12 @@ class GarminConnectManager: NSObject, ObservableObject {
     @Published private(set) var lastDebugAction: String = "None"
     @Published private(set) var bluetoothState: CBManagerState = .unknown
 
+    // MARK: - Heart Rate from Garmin Watch
+    @Published var garminHeartRate: Double = 0
+    @Published var isGarminHRAvailable: Bool = false
+    @Published var garminHRUnavailableReason: String?
+    @Published var lastGarminHRUpdate: Date?
+
     // MARK: - Bluetooth Kick
     private let bluetoothKick = BluetoothKick()
 
@@ -766,6 +772,9 @@ class GarminConnectManager: NSObject, ObservableObject {
         case "pong":
             handlePongMessage(message)
 
+        case "heartRate":
+            handleHeartRateMessage(message)
+
         default:
             log("Unknown Garmin action: \(action)")
         }
@@ -821,6 +830,31 @@ class GarminConnectManager: NSObject, ObservableObject {
                 sendWorkoutState(idleState)
             }
         }
+    }
+
+    private func handleHeartRateMessage(_ message: [String: Any]) {
+        let available = message["available"] as? Bool ?? false
+
+        if available, let hr = message["heartRate"] as? Double, hr > 0 {
+            garminHeartRate = hr
+            isGarminHRAvailable = true
+            garminHRUnavailableReason = nil
+            lastGarminHRUpdate = Date()
+            log("Garmin HR update: \(Int(hr)) bpm")
+        } else {
+            isGarminHRAvailable = false
+            garminHRUnavailableReason = message["reason"] as? String
+            log("Garmin HR unavailable: \(garminHRUnavailableReason ?? "unknown reason")")
+        }
+    }
+
+    /// Clears Garmin health metrics (call when workout ends or watch disconnects)
+    func clearHealthMetrics() {
+        garminHeartRate = 0
+        isGarminHRAvailable = false
+        garminHRUnavailableReason = nil
+        lastGarminHRUpdate = nil
+        log("Garmin health metrics cleared")
     }
 
     // MARK: - URL Handling
@@ -984,6 +1018,7 @@ extension GarminConnectManager: IQDeviceEventDelegate {
         connectedDevice = nil
         myApp = nil
         isAppInstalled = false
+        clearHealthMetrics()
     }
 
     private func registerForAppMessages(_ device: IQDevice) {
