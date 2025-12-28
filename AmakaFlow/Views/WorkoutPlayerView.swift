@@ -10,6 +10,7 @@ import SwiftUI
 struct WorkoutPlayerView: View {
     @ObservedObject var engine = WorkoutEngine.shared
     @ObservedObject var watchManager = WatchConnectivityManager.shared
+    @ObservedObject var garminManager = GarminConnectManager.shared
     @Environment(\.dismiss) private var dismiss
 
     @State private var showEndConfirmation = false
@@ -35,6 +36,7 @@ struct WorkoutPlayerView: View {
                         avgHeartRate: nil,
                         onClose: {
                             watchManager.clearHealthMetrics()
+                            garminManager.clearHealthMetrics()
                             dismiss()
                         },
                         onShare: nil,
@@ -80,6 +82,7 @@ struct WorkoutPlayerView: View {
         .onChange(of: engine.phase) { _, newPhase in
             if newPhase == .idle {
                 watchManager.clearHealthMetrics()
+                garminManager.clearHealthMetrics()
                 dismiss()
             } else if newPhase == .ended {
                 // Keep metrics for display in complete view
@@ -117,6 +120,8 @@ struct WorkoutPlayerView: View {
                         .foregroundColor(Theme.Colors.accentRed)
                 } else if watchManager.watchHeartRate > 0 {
                     watchHeartRateView
+                } else if garminManager.isGarminHRAvailable && garminManager.garminHeartRate > 0 {
+                    garminHeartRateView
                 }
             }
 
@@ -164,6 +169,27 @@ struct WorkoutPlayerView: View {
                 }
                 .foregroundColor(.orange)
             }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(Color.red.opacity(0.1))
+        .cornerRadius(Theme.CornerRadius.sm)
+    }
+
+    // MARK: - Garmin Heart Rate View
+
+    private var garminHeartRateView: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 12))
+                .foregroundColor(.red)
+            Text("\(Int(garminManager.garminHeartRate))")
+                .font(Theme.Typography.captionBold)
+                .monospacedDigit()
+            // Small Garmin indicator to differentiate from Apple Watch
+            Text("G")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundColor(Theme.Colors.textTertiary)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
