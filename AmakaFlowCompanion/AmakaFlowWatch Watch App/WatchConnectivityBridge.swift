@@ -25,7 +25,7 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
     @Published var heartRate: Double = 0
     @Published var activeCalories: Double = 0
 
-    private var session: WCSession?
+    private(set) var session: WCSession?
     private var pendingCommandId: String?
     private var healthManager = HealthKitWorkoutManager.shared
     private var hrUpdateTimer: Timer?

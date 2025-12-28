@@ -21,6 +21,9 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     @Published var watchActiveCalories: Double = 0
     @Published var lastHealthUpdate: Date?
 
+    // Standalone workout summaries from watch
+    @Published var lastStandaloneWorkoutSummary: StandaloneWorkoutSummary?
+
     private var session: WCSession?
 
     override init() {
@@ -254,6 +257,11 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 handleHealthMetrics(message)
                 replyHandler(["status": "received"])
 
+            case "workoutSummary":
+                // Standalone workout summary from watch
+                handleWorkoutSummary(message)
+                replyHandler(["status": "received"])
+
             default:
                 replyHandler(["status": "unknown_action"])
             }
@@ -262,8 +270,15 @@ extension WatchConnectivityManager: WCSessionDelegate {
 
     // Also handle messages without reply handler
     func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
-        if let action = message["action"] as? String, action == "healthMetrics" {
-            handleHealthMetrics(message)
+        if let action = message["action"] as? String {
+            switch action {
+            case "healthMetrics":
+                handleHealthMetrics(message)
+            case "workoutSummary":
+                handleWorkoutSummary(message)
+            default:
+                break
+            }
         }
     }
 
@@ -285,6 +300,48 @@ extension WatchConnectivityManager: WCSessionDelegate {
         watchActiveCalories = 0
         lastHealthUpdate = nil
     }
+
+    private func handleWorkoutSummary(_ message: [String: Any]) {
+        guard let summaryDict = message["summary"] as? [String: Any] else {
+            print("⌚️ Invalid workout summary message")
+            return
+        }
+
+        do {
+            let data = try JSONSerialization.data(withJSONObject: summaryDict)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let summary = try decoder.decode(StandaloneWorkoutSummary.self, from: data)
+
+            DispatchQueue.main.async {
+                self.lastStandaloneWorkoutSummary = summary
+                print("⌚️ Received standalone workout summary: \(summary.workoutName)")
+                print("   Duration: \(summary.durationSeconds)s, Calories: \(Int(summary.totalCalories))")
+                if let avgHR = summary.averageHeartRate {
+                    print("   Avg HR: \(Int(avgHR)) bpm")
+                }
+            }
+
+            // TODO: Send to backend API
+            // Task { await APIService.shared.syncWorkoutSummary(summary) }
+
+        } catch {
+            print("⌚️ Failed to decode workout summary: \(error)")
+        }
+    }
+}
+
+// MARK: - Standalone Workout Summary (from Watch)
+struct StandaloneWorkoutSummary: Codable {
+    let workoutId: String
+    let workoutName: String
+    let startDate: Date
+    let endDate: Date
+    let durationSeconds: Int
+    let totalCalories: Double
+    let averageHeartRate: Double?
+    let completedSteps: Int
+    let totalSteps: Int
 }
 
 // MARK: - Errors

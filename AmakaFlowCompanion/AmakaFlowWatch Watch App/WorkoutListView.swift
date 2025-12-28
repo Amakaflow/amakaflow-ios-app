@@ -82,7 +82,7 @@ struct WatchWorkoutRow: View {
 struct WorkoutDetailWatchView: View {
     @EnvironmentObject var manager: WatchWorkoutManager
     let workout: Workout
-    
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -90,13 +90,13 @@ struct WorkoutDetailWatchView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(workout.name)
                         .font(.headline)
-                    
+
                     if let description = workout.description {
                         Text(description)
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    
+
                     HStack {
                         Label(workout.formattedDuration, systemImage: "clock")
                             .font(.caption2)
@@ -105,24 +105,20 @@ struct WorkoutDetailWatchView: View {
                     }
                     .foregroundColor(.secondary)
                 }
-                
+
                 // Intervals Preview
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Steps")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     ForEach(Array(workout.intervals.enumerated()), id: \.offset) { index, interval in
                         WatchIntervalRow(interval: interval, number: index + 1)
                     }
                 }
-                
-                // Start Button
-                Button(action: {
-                    Task {
-                        await manager.startWorkout(workout)
-                    }
-                }) {
+
+                // Start Button - navigates to execution view
+                NavigationLink(destination: StandaloneWorkoutExecutionView(workout: workout)) {
                     Label("Start Workout", systemImage: "play.fill")
                         .frame(maxWidth: .infinity)
                 }
