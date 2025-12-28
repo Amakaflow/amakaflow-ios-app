@@ -182,6 +182,11 @@ struct WatchRemoteView: View {
                     .foregroundColor(.orange)
                 }
 
+                // Heart Rate Display (when available)
+                if bridge.heartRate > 0 || demoState.isEnabled {
+                    heartRateView
+                }
+
                 // Step name (primary focus)
                 Text(state.stepName)
                     .font(.system(size: 16, weight: .bold))
@@ -220,6 +225,39 @@ struct WatchRemoteView: View {
             .padding(.horizontal, 2)
             .padding(.vertical, 2)
         }
+    }
+
+    // MARK: - Heart Rate View
+
+    private var heartRateView: some View {
+        HStack(spacing: 8) {
+            // Heart rate
+            HStack(spacing: 4) {
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(.red)
+                Text(demoState.isEnabled ? "142" : "\(Int(bridge.heartRate))")
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+            }
+
+            // Calories (if available)
+            if bridge.activeCalories > 0 || demoState.isEnabled {
+                HStack(spacing: 2) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.orange)
+                    Text(demoState.isEnabled ? "87" : "\(Int(bridge.activeCalories))")
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                }
+                .foregroundColor(.orange)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+        .background(Color.red.opacity(0.15))
+        .cornerRadius(8)
     }
 
     // MARK: - Controls

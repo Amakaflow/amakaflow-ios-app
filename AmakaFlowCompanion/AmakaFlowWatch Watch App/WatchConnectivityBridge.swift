@@ -21,8 +21,14 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
     @Published private(set) var lastError: Error?
     @Published private(set) var pendingCommand: String?
 
+    // Health metrics from HealthKit
+    @Published var heartRate: Double = 0
+    @Published var activeCalories: Double = 0
+
     private var session: WCSession?
     private var pendingCommandId: String?
+    private var healthManager = HealthKitWorkoutManager.shared
+    private var hrUpdateTimer: Timer?
 
     private override init() {
         super.init()
@@ -32,6 +38,68 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
             session?.delegate = self
             session?.activate()
         }
+
+        // Subscribe to health updates
+        setupHealthKitBindings()
+    }
+
+    // MARK: - HealthKit Integration
+
+    private func setupHealthKitBindings() {
+        healthManager.onHeartRateUpdate = { [weak self] hr, calories in
+            Task { @MainActor in
+                self?.heartRate = hr
+                self?.activeCalories = calories
+            }
+        }
+    }
+
+    func startHealthSession() async {
+        do {
+            try await healthManager.startSession()
+            startHRStreaming()
+        } catch {
+            print("⌚️ Failed to start health session: \(error)")
+        }
+    }
+
+    func endHealthSession() async {
+        stopHRStreaming()
+        await healthManager.endSession()
+        heartRate = 0
+        activeCalories = 0
+    }
+
+    private func startHRStreaming() {
+        // Send HR updates to phone every 5 seconds
+        hrUpdateTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.sendHealthMetricsToPhone()
+            }
+        }
+    }
+
+    private func stopHRStreaming() {
+        hrUpdateTimer?.invalidate()
+        hrUpdateTimer = nil
+    }
+
+    func sendHealthMetricsToPhone() {
+        guard let session = session, session.isReachable else { return }
+        guard healthManager.isSessionActive else { return }
+
+        session.sendMessage(
+            [
+                "action": "healthMetrics",
+                "heartRate": heartRate,
+                "activeCalories": activeCalories,
+                "timestamp": Date().timeIntervalSince1970
+            ],
+            replyHandler: nil,
+            errorHandler: { error in
+                print("⌚️ Failed to send health metrics: \(error)")
+            }
+        )
     }
 
     // MARK: - Connection Status
@@ -225,26 +293,42 @@ extension WatchConnectivityBridge: WCSessionDelegate {
             let data = try JSONSerialization.data(withJSONObject: stateDict)
             let state = try JSONDecoder().decode(WatchWorkoutState.self, from: data)
             let previousPhase = workoutState?.phase
+            let previousStepIndex = workoutState?.stepIndex
             workoutState = state
             print("⌚️ Received state update: \(state.stepName), phase: \(state.phase.rawValue)")
 
             // Haptic feedback for phase changes
-            if let previous = previousPhase, previous != state.phase {
+            if previousPhase != state.phase {
                 switch state.phase {
                 case .running:
                     playHaptic(.start)
+                    // Start health session when workout starts
+                    if previousPhase == nil || previousPhase == .idle {
+                        Task {
+                            await startHealthSession()
+                        }
+                    } else if previousPhase == .paused {
+                        healthManager.resumeSession()
+                    }
                 case .paused:
                     playHaptic(.stop)
+                    healthManager.pauseSession()
                 case .ended:
                     playHaptic(.success)
+                    // End health session when workout ends
+                    Task {
+                        await endHealthSession()
+                    }
                 case .idle:
-                    break
+                    // Also end session if going to idle
+                    Task {
+                        await endHealthSession()
+                    }
                 }
             }
 
             // Haptic for step changes
-            if let previousStep = workoutState?.stepIndex,
-               previousStep != state.stepIndex {
+            if let prevStep = previousStepIndex, prevStep != state.stepIndex {
                 playHaptic(.click)
             }
 

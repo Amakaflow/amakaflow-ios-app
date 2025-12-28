@@ -9,6 +9,7 @@ import SwiftUI
 
 struct WorkoutPlayerView: View {
     @ObservedObject var engine = WorkoutEngine.shared
+    @ObservedObject var watchManager = WatchConnectivityManager.shared
     @Environment(\.dismiss) private var dismiss
 
     @State private var showEndConfirmation = false
@@ -30,9 +31,12 @@ struct WorkoutPlayerView: View {
                         workout: workout,
                         elapsedTime: engine.elapsedSeconds,
                         deviceMode: deviceMode,
-                        calories: nil,
+                        calories: watchManager.watchActiveCalories > 0 ? Int(watchManager.watchActiveCalories) : nil,
                         avgHeartRate: nil,
-                        onClose: { dismiss() },
+                        onClose: {
+                            watchManager.clearHealthMetrics()
+                            dismiss()
+                        },
                         onShare: nil,
                         onViewInHealth: nil
                     )
@@ -75,7 +79,10 @@ struct WorkoutPlayerView: View {
         }
         .onChange(of: engine.phase) { _, newPhase in
             if newPhase == .idle {
+                watchManager.clearHealthMetrics()
                 dismiss()
+            } else if newPhase == .ended {
+                // Keep metrics for display in complete view
             }
         }
     }
@@ -98,7 +105,7 @@ struct WorkoutPlayerView: View {
 
             Spacer()
 
-            // Workout name
+            // Workout name and heart rate
             VStack(spacing: 2) {
                 Text(engine.workout?.name ?? "Workout")
                     .font(Theme.Typography.bodyBold)
@@ -108,6 +115,8 @@ struct WorkoutPlayerView: View {
                     Text("PAUSED")
                         .font(Theme.Typography.captionBold)
                         .foregroundColor(Theme.Colors.accentRed)
+                } else if watchManager.watchHeartRate > 0 {
+                    watchHeartRateView
                 }
             }
 
@@ -127,6 +136,39 @@ struct WorkoutPlayerView: View {
         }
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.vertical, Theme.Spacing.sm)
+    }
+
+    // MARK: - Watch Heart Rate View
+
+    private var watchHeartRateView: some View {
+        HStack(spacing: 8) {
+            // Heart rate
+            HStack(spacing: 4) {
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(.red)
+                Text("\(Int(watchManager.watchHeartRate))")
+                    .font(Theme.Typography.captionBold)
+                    .monospacedDigit()
+            }
+
+            // Calories (if available)
+            if watchManager.watchActiveCalories > 0 {
+                HStack(spacing: 2) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(.orange)
+                    Text("\(Int(watchManager.watchActiveCalories))")
+                        .font(Theme.Typography.caption)
+                        .monospacedDigit()
+                }
+                .foregroundColor(.orange)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(Color.red.opacity(0.1))
+        .cornerRadius(Theme.CornerRadius.sm)
     }
 
     // MARK: - Upcoming Steps Preview

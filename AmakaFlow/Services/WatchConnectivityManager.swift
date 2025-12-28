@@ -11,16 +11,21 @@ import Combine
 
 class WatchConnectivityManager: NSObject, ObservableObject {
     static let shared = WatchConnectivityManager()
-    
+
     @Published var isWatchAppInstalled = false
     @Published var isWatchReachable = false
     @Published var lastError: Error?
-    
+
+    // Health metrics received from watch
+    @Published var watchHeartRate: Double = 0
+    @Published var watchActiveCalories: Double = 0
+    @Published var lastHealthUpdate: Date?
+
     private var session: WCSession?
-    
+
     override init() {
         super.init()
-        
+
         if WCSession.isSupported() {
             session = WCSession.default
             session?.delegate = self
@@ -244,10 +249,41 @@ extension WatchConnectivityManager: WCSessionDelegate {
                     }
                 }
 
+            case "healthMetrics":
+                // Health metrics from watch (heart rate, calories)
+                handleHealthMetrics(message)
+                replyHandler(["status": "received"])
+
             default:
                 replyHandler(["status": "unknown_action"])
             }
         }
+    }
+
+    // Also handle messages without reply handler
+    func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
+        if let action = message["action"] as? String, action == "healthMetrics" {
+            handleHealthMetrics(message)
+        }
+    }
+
+    private func handleHealthMetrics(_ message: [String: Any]) {
+        DispatchQueue.main.async {
+            if let hr = message["heartRate"] as? Double {
+                self.watchHeartRate = hr
+            }
+            if let calories = message["activeCalories"] as? Double {
+                self.watchActiveCalories = calories
+            }
+            self.lastHealthUpdate = Date()
+            print("❤️ Received from watch - HR: \(Int(self.watchHeartRate)) bpm, Cal: \(Int(self.watchActiveCalories))")
+        }
+    }
+
+    func clearHealthMetrics() {
+        watchHeartRate = 0
+        watchActiveCalories = 0
+        lastHealthUpdate = nil
     }
 }
 
