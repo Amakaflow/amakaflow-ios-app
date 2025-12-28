@@ -10,6 +10,7 @@
 		27599809E31D40308DBFA93A /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F86F482904144B39B954F6A /* Environment.swift */; };
 		444EFC17D69346B3B93C9ECA /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11B5892FB68A40CB890E3630 /* KeychainHelper.swift */; };
 		CA268753E918494FAD7CCD56 /* PairingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85D3757E5B284286B341C75C /* PairingService.swift */; };
+		B69E1808FE344A15848A3B67 /* WorkoutCompletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */; };
 		40E350E9B26F4574902587EF /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29B50DC380A44F2D96E6E414 /* PairingView.swift */; };
 		1A7B03C2552441FEB810773A /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */; };
 		43F9F2E9369F4546B3AF005A /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D9B67C13E34BAE804A9359 /* HistoryView.swift */; };
@@ -135,6 +136,7 @@
 		5F86F482904144B39B954F6A /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Environment.swift; path = ../AmakaFlow/Models/Environment.swift; sourceTree = SOURCE_ROOT; };
 		11B5892FB68A40CB890E3630 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainHelper.swift; path = ../AmakaFlow/Services/KeychainHelper.swift; sourceTree = SOURCE_ROOT; };
 		85D3757E5B284286B341C75C /* PairingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingService.swift; path = ../AmakaFlow/Services/PairingService.swift; sourceTree = SOURCE_ROOT; };
+		8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionService.swift; path = ../AmakaFlow/Services/WorkoutCompletionService.swift; sourceTree = SOURCE_ROOT; };
 		29B50DC380A44F2D96E6E414 /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingView.swift; path = ../AmakaFlow/Views/PairingView.swift; sourceTree = SOURCE_ROOT; };
 		1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QRScannerView.swift; path = ../AmakaFlow/Views/QRScannerView.swift; sourceTree = SOURCE_ROOT; };
 		08D9B67C13E34BAE804A9359 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HistoryView.swift; path = ../AmakaFlow/Views/HistoryView.swift; sourceTree = SOURCE_ROOT; };
@@ -699,6 +701,7 @@
 				27599809E31D40308DBFA93A /* Environment.swift in Sources */,
 				444EFC17D69346B3B93C9ECA /* KeychainHelper.swift in Sources */,
 				CA268753E918494FAD7CCD56 /* PairingService.swift in Sources */,
+				B69E1808FE344A15848A3B67 /* WorkoutCompletionService.swift in Sources */,
 				40E350E9B26F4574902587EF /* PairingView.swift in Sources */,
 				1A7B03C2552441FEB810773A /* QRScannerView.swift in Sources */,
 				B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */,

@@ -213,6 +213,62 @@ class APIService {
             throw APIError.serverError(httpResponse.statusCode)
         }
     }
+
+    // MARK: - Workout Completion
+
+    /// Post workout completion to backend
+    /// - Parameter completion: Workout completion request with health metrics
+    /// - Returns: Completion response with ID
+    /// - Throws: APIError if request fails
+    func postWorkoutCompletion(_ completion: WorkoutCompletionRequest) async throws -> WorkoutCompletionResponse {
+        guard PairingService.shared.isPaired else {
+            print("[APIService] Not paired, throwing unauthorized")
+            throw APIError.unauthorized
+        }
+
+        let url = URL(string: "\(baseURL)/workouts/complete")!
+        print("[APIService] Posting workout completion to: \(url)")
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders
+
+        let encoder = JSONEncoder()
+        request.httpBody = try encoder.encode(completion)
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            print("[APIService] Invalid response type")
+            throw APIError.invalidResponse
+        }
+
+        print("[APIService] Response status: \(httpResponse.statusCode)")
+
+        switch httpResponse.statusCode {
+        case 200, 201:
+            let decoder = JSONDecoder()
+            do {
+                let completionResponse = try decoder.decode(WorkoutCompletionResponse.self, from: data)
+                print("[APIService] Workout completion posted, ID: \(completionResponse.completionId)")
+                return completionResponse
+            } catch {
+                print("[APIService] Decoding error: \(error)")
+                if let responseString = String(data: data, encoding: .utf8) {
+                    print("[APIService] Response body: \(responseString.prefix(500))")
+                }
+                throw APIError.decodingError(error)
+            }
+        case 401:
+            print("[APIService] Unauthorized (401)")
+            throw APIError.unauthorized
+        default:
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("[APIService] Error response: \(responseString.prefix(200))")
+            }
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
 }
 
 // MARK: - API Errors

@@ -56,6 +56,7 @@ class WorkoutEngine: ObservableObject {
     private var audioCueManager = AudioCueManager()
     private var cancellables = Set<AnyCancellable>()
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
+    private var workoutStartTime: Date?
 
     private init() {
         setupBackgroundHandling()
@@ -75,6 +76,7 @@ class WorkoutEngine: ObservableObject {
         self.elapsedSeconds = 0
         self.phase = .running
         self.stateVersion += 1
+        self.workoutStartTime = Date()
 
         print("🏋️ Starting workout: \(workout.name)")
         print("🏋️ Intervals count: \(workout.intervals.count)")
@@ -162,6 +164,14 @@ class WorkoutEngine: ObservableObject {
         print("🏋️ currentStepIndex: \(currentStepIndex), flattenedSteps.count: \(flattenedSteps.count)")
         Thread.callStackSymbols.prefix(10).forEach { print("🏋️ \($0)") }
 
+        // Capture workout data before resetting state
+        let workoutData = (
+            id: workout?.id,
+            name: workout?.name,
+            startTime: workoutStartTime,
+            duration: elapsedSeconds
+        )
+
         timer?.invalidate()
         timer = nil
         phase = .ended
@@ -171,6 +181,14 @@ class WorkoutEngine: ObservableObject {
         if reason == .completed {
             audioCueManager.announceWorkoutComplete()
         }
+
+        // Post workout completion to API
+        postWorkoutCompletion(
+            workoutId: workoutData.id,
+            workoutName: workoutData.name,
+            startedAt: workoutData.startTime,
+            durationSeconds: workoutData.duration
+        )
 
         // End Live Activity
         Task {
@@ -199,6 +217,49 @@ class WorkoutEngine: ObservableObject {
         remainingSeconds = 0
         elapsedSeconds = 0
         stateVersion += 1
+        workoutStartTime = nil
+    }
+
+    // MARK: - Workout Completion
+
+    private func postWorkoutCompletion(
+        workoutId: String?,
+        workoutName: String?,
+        startedAt: Date?,
+        durationSeconds: Int
+    ) {
+        guard let workoutId = workoutId,
+              let startedAt = startedAt else {
+            print("🏋️ Cannot post completion - missing workout ID or start time")
+            return
+        }
+
+        let endedAt = Date()
+
+        // Get health metrics from connected watch if available
+        let avgHeartRate: Int? = nil  // Will be populated when we integrate with HealthKit
+        let activeCalories: Int? = {
+            let watchCals = WatchConnectivityManager.shared.watchActiveCalories
+            return watchCals > 0 ? Int(watchCals) : nil
+        }()
+
+        Task {
+            do {
+                _ = try await WorkoutCompletionService.shared.postPhoneWorkoutCompletion(
+                    workoutId: workoutId,
+                    workoutName: workoutName ?? "Workout",
+                    startedAt: startedAt,
+                    endedAt: endedAt,
+                    durationSeconds: durationSeconds,
+                    avgHeartRate: avgHeartRate,
+                    activeCalories: activeCalories
+                )
+                print("🏋️ Workout completion posted successfully")
+            } catch {
+                print("🏋️ Failed to post workout completion: \(error)")
+                // Error is already logged and queued for retry by WorkoutCompletionService
+            }
+        }
     }
 
     // MARK: - Timer Management

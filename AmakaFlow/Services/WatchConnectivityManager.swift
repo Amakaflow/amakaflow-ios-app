@@ -322,8 +322,16 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 }
             }
 
-            // TODO: Send to backend API
-            // Task { await APIService.shared.syncWorkoutSummary(summary) }
+            // Post to backend API
+            Task { @MainActor in
+                do {
+                    _ = try await WorkoutCompletionService.shared.postWatchWorkoutCompletion(summary: summary)
+                    print("⌚️ Watch workout completion posted to API")
+                } catch {
+                    print("⌚️ Failed to post watch workout completion: \(error)")
+                    // WorkoutCompletionService will queue for retry if network unavailable
+                }
+            }
 
         } catch {
             print("⌚️ Failed to decode workout summary: \(error)")
