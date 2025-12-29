@@ -28,19 +28,21 @@ struct WorkoutPlayerView: View {
 
                 // Main content
                 if engine.phase == .ended, let workout = engine.workout {
-                    WorkoutCompleteView(
-                        workout: workout,
-                        elapsedTime: engine.elapsedSeconds,
-                        deviceMode: deviceMode,
-                        calories: watchManager.watchActiveCalories > 0 ? Int(watchManager.watchActiveCalories) : nil,
-                        avgHeartRate: nil,
-                        onClose: {
-                            watchManager.clearHealthMetrics()
-                            garminManager.clearHealthMetrics()
-                            dismiss()
-                        },
-                        onShare: nil,
-                        onViewInHealth: nil
+                    WorkoutCompletionView(
+                        viewModel: WorkoutCompletionViewModel(
+                            workoutName: workout.name,
+                            durationSeconds: engine.elapsedSeconds,
+                            deviceMode: deviceMode,
+                            calories: watchManager.watchActiveCalories > 0 ? Int(watchManager.watchActiveCalories) : nil,
+                            avgHeartRate: calculateAvgHeartRate(),
+                            maxHeartRate: watchManager.watchMaxHeartRate > 0 ? Int(watchManager.watchMaxHeartRate) : nil,
+                            heartRateSamples: watchManager.heartRateSamples,
+                            onDismiss: {
+                                watchManager.clearHealthMetrics()
+                                garminManager.clearHealthMetrics()
+                                dismiss()
+                            }
+                        )
                     )
                 } else {
                     ScrollView {
@@ -339,6 +341,15 @@ struct WorkoutPlayerView: View {
         } else {
             return Theme.Colors.surfaceElevated
         }
+    }
+
+    // MARK: - Heart Rate Helpers
+
+    private func calculateAvgHeartRate() -> Int? {
+        let samples = watchManager.heartRateSamples
+        guard !samples.isEmpty else { return nil }
+        let sum = samples.reduce(0) { $0 + $1.value }
+        return sum / samples.count
     }
 }
 
