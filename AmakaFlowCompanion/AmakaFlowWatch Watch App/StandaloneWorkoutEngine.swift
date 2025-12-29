@@ -327,6 +327,8 @@ final class StandaloneWorkoutEngine: ObservableObject {
             return .yoga
         case .swimming:
             return .swimming
+        case .cardio:
+            return .mixedCardio
         case .other:
             return .other
         }

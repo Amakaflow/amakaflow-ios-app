@@ -123,6 +123,7 @@ enum WorkoutSport: String, Codable {
     case strength
     case mobility
     case swimming
+    case cardio
     case other
 }
 

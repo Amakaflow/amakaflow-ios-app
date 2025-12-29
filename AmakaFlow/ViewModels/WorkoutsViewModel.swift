@@ -145,7 +145,54 @@ class WorkoutsViewModel: ObservableObject {
     func sendToWatch(_ workout: Workout) async {
         await WatchConnectivityManager.shared.sendWorkout(workout)
     }
-    
+
+    /// Check for pending workouts from iOS companion endpoint and sync to Watch + WorkoutKit
+    func checkPendingWorkouts() async {
+        guard PairingService.shared.isPaired else {
+            print("[WorkoutsViewModel] Not paired, skipping pending workout check")
+            return
+        }
+
+        print("[WorkoutsViewModel] Checking for pending workouts...")
+
+        do {
+            let pendingWorkouts = try await apiService.fetchPendingWorkouts()
+
+            guard !pendingWorkouts.isEmpty else {
+                print("[WorkoutsViewModel] No pending workouts found")
+                return
+            }
+
+            print("[WorkoutsViewModel] Found \(pendingWorkouts.count) pending workouts, syncing...")
+
+            for workout in pendingWorkouts {
+                // Sync to Watch
+                await WatchConnectivityManager.shared.sendWorkout(workout)
+                print("[WorkoutsViewModel] Sent '\(workout.name)' to Watch")
+
+                // Save to WorkoutKit (iOS 18+)
+                if #available(iOS 18.0, *) {
+                    do {
+                        try await WorkoutKitConverter.shared.saveToWorkoutKit(workout)
+                        print("[WorkoutsViewModel] Saved '\(workout.name)' to WorkoutKit")
+                    } catch {
+                        print("[WorkoutsViewModel] Failed to save to WorkoutKit: \(error.localizedDescription)")
+                    }
+                }
+
+                // Add to local workouts list if not already present
+                if !incomingWorkouts.contains(where: { $0.id == workout.id }) {
+                    incomingWorkouts.append(workout)
+                    print("[WorkoutsViewModel] Added '\(workout.name)' to incoming workouts")
+                }
+            }
+
+            print("[WorkoutsViewModel] Finished syncing \(pendingWorkouts.count) pending workouts")
+        } catch {
+            print("[WorkoutsViewModel] Failed to fetch pending workouts: \(error.localizedDescription)")
+        }
+    }
+
     func deleteWorkout(_ workout: ScheduledWorkout) {
         upcomingWorkouts.removeAll { $0.id == workout.id }
     }

@@ -68,6 +68,8 @@ class WorkoutKitConverter {
             return "other" // WorkoutKit doesn't have mobility, use other
         case .swimming:
             return "swimming"
+        case .cardio:
+            return "mixedCardio"
         case .other:
             return "other"
         }

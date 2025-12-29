@@ -114,6 +114,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             return .yoga
         case .swimming:
             return .swimming
+        case .cardio:
+            return .mixedCardio
         case .other:
             return .other
         }

@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject var viewModel: WorkoutsViewModel
     @State private var selectedTab: Tab = .home
     @State private var showingWorkoutPlayer = false
 
@@ -84,6 +85,10 @@ struct ContentView: View {
                 .tag(Tab.settings)
         }
         .tint(Theme.Colors.accentBlue)
+        .task {
+            // Check for pending workouts on app open
+            await viewModel.checkPendingWorkouts()
+        }
         .onOpenURL { url in
             // Handle deep link from Dynamic Island
             if url.scheme == "amakaflow" && url.host == "workout" {
