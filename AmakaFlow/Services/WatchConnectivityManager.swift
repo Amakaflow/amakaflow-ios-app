@@ -19,7 +19,11 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     // Health metrics received from watch
     @Published var watchHeartRate: Double = 0
     @Published var watchActiveCalories: Double = 0
+    @Published var watchMaxHeartRate: Double = 0
     @Published var lastHealthUpdate: Date?
+
+    // Heart rate samples for sparkline chart
+    @Published var heartRateSamples: [HeartRateSample] = []
 
     // Standalone workout summaries from watch
     @Published var lastStandaloneWorkoutSummary: StandaloneWorkoutSummary?
@@ -286,6 +290,15 @@ extension WatchConnectivityManager: WCSessionDelegate {
         DispatchQueue.main.async {
             if let hr = message["heartRate"] as? Double {
                 self.watchHeartRate = hr
+
+                // Track max heart rate
+                if hr > self.watchMaxHeartRate {
+                    self.watchMaxHeartRate = hr
+                }
+
+                // Store sample for sparkline chart
+                let sample = HeartRateSample(timestamp: Date(), value: Int(hr))
+                self.heartRateSamples.append(sample)
             }
             if let calories = message["activeCalories"] as? Double {
                 self.watchActiveCalories = calories
@@ -298,7 +311,9 @@ extension WatchConnectivityManager: WCSessionDelegate {
     func clearHealthMetrics() {
         watchHeartRate = 0
         watchActiveCalories = 0
+        watchMaxHeartRate = 0
         lastHealthUpdate = nil
+        heartRateSamples = []
     }
 
     private func handleWorkoutSummary(_ message: [String: Any]) {
@@ -350,6 +365,13 @@ struct StandaloneWorkoutSummary: Codable {
     let averageHeartRate: Double?
     let completedSteps: Int
     let totalSteps: Int
+}
+
+// MARK: - Heart Rate Sample (for sparkline chart)
+struct HeartRateSample: Identifiable {
+    let id = UUID()
+    let timestamp: Date
+    let value: Int
 }
 
 // MARK: - Errors

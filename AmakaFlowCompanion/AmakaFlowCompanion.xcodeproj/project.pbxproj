@@ -19,7 +19,8 @@
 		9D0C3D8A603340BC8364F188 /* PreWorkoutDeviceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3910753486A542ECAA1E5971 /* PreWorkoutDeviceSheet.swift */; };
 		B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E57529578481B8991A91F /* SourcesView.swift */; };
 		E33FF845EAAD4110B7D87FB0 /* DevicePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89321AF9D21D441198437105 /* DevicePreference.swift */; };
-		EB63D5EF54FF452580C70684 /* WorkoutCompleteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B37 /* WorkoutCompleteView.swift */; };
+		EB63D5EF54FF452580C70684 /* WorkoutCompletionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */; };
+		EB63D5EF54FF452580C70685 /* WorkoutCompletionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */; };
 		F818DA94C6BD4F40EE8313B0 /* StepDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8BFF8D1C38311406C868156 /* StepDisplayView.swift */; };
 		F84682B9F2FD8A45578F0E68 /* WorkoutPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */; };
 		F84E226F2ED0D55600459747 /* AmakaFlowApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E226D2ED0D55600459747 /* AmakaFlowApp.swift */; };
@@ -140,7 +141,8 @@
 		29B50DC380A44F2D96E6E414 /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingView.swift; path = ../AmakaFlow/Views/PairingView.swift; sourceTree = SOURCE_ROOT; };
 		1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QRScannerView.swift; path = ../AmakaFlow/Views/QRScannerView.swift; sourceTree = SOURCE_ROOT; };
 		08D9B67C13E34BAE804A9359 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HistoryView.swift; path = ../AmakaFlow/Views/HistoryView.swift; sourceTree = SOURCE_ROOT; };
-		0DDF14FDAE6346A5831A6B37 /* WorkoutCompleteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompleteView.swift; path = ../AmakaFlow/Views/WorkoutCompleteView.swift; sourceTree = SOURCE_ROOT; };
+		0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionView.swift; path = ../AmakaFlow/Views/WorkoutCompletionView.swift; sourceTree = SOURCE_ROOT; };
+		0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionViewModel.swift; path = ../AmakaFlow/ViewModels/WorkoutCompletionViewModel.swift; sourceTree = SOURCE_ROOT; };
 		2AB8DFBA16CE406C95456EAD /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarView.swift; path = ../AmakaFlow/Views/CalendarView.swift; sourceTree = SOURCE_ROOT; };
 		3910753486A542ECAA1E5971 /* PreWorkoutDeviceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PreWorkoutDeviceSheet.swift; path = ../AmakaFlow/Views/Components/PreWorkoutDeviceSheet.swift; sourceTree = SOURCE_ROOT; };
 		89321AF9D21D441198437105 /* DevicePreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DevicePreference.swift; path = ../AmakaFlow/Models/DevicePreference.swift; sourceTree = SOURCE_ROOT; };
@@ -341,7 +343,8 @@
 				F84E227C2ED0D5BF00459747 /* ScheduleCalendarSheet.swift */,
 				F84E227D2ED0D5BF00459747 /* WorkoutCard.swift */,
 				F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */,
-				0DDF14FDAE6346A5831A6B37 /* WorkoutCompleteView.swift */,
+				0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */,
+				0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */,
 				CC2192F9A69B4A51B54A138F /* HomeView.swift */,
 				F8BFF8D1C38311406C868156 /* StepDisplayView.swift */,
 				F89DB8A09DD1694C469E6F54 /* PlayerControlsView.swift */,
@@ -720,7 +723,8 @@
 				F87ADA7721B76045D5938EA4 /* WorkoutActivityAttributes.swift in Sources */,
 				E33FF845EAAD4110B7D87FB0 /* DevicePreference.swift in Sources */,
 				9D0C3D8A603340BC8364F188 /* PreWorkoutDeviceSheet.swift in Sources */,
-				EB63D5EF54FF452580C70684 /* WorkoutCompleteView.swift in Sources */,
+				EB63D5EF54FF452580C70684 /* WorkoutCompletionView.swift in Sources */,
+				EB63D5EF54FF452580C70685 /* WorkoutCompletionViewModel.swift in Sources */,
 				67283958B3E2475BA2DA974A /* HomeView.swift in Sources */,
 				F84E22742ED0D58300459747 /* WorkoutsViewModel.swift in Sources */,
 				F84E226F2ED0D55600459747 /* AmakaFlowApp.swift in Sources */,
