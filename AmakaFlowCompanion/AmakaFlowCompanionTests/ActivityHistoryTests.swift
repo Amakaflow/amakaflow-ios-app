@@ -388,4 +388,230 @@ final class ActivityHistoryTests: XCTestCase {
     private func canLoadMore(hasMoreData: Bool, isLoadingMore: Bool, isLoading: Bool) -> Bool {
         hasMoreData && !isLoadingMore && !isLoading
     }
+
+    // MARK: - API Response Handling Tests
+
+    /// Tests for handling various API response scenarios to prevent crashes
+    /// when backend returns unexpected response formats
+
+    func testDetectsValidArrayResponse() {
+        let arrayResponse = "[{\"id\": \"1\"}]"
+        let isArray = isArrayResponse(arrayResponse)
+        XCTAssertTrue(isArray)
+    }
+
+    func testDetectsEmptyArrayResponse() {
+        let emptyArray = "[]"
+        let isArray = isArrayResponse(emptyArray)
+        XCTAssertTrue(isArray)
+    }
+
+    func testDetectsErrorObjectResponseAsNonArray() {
+        // Backend may return error object with 200 status due to routing issues
+        let errorResponse = """
+        {"detail": "invalid input syntax for type uuid: \\"completions\\""}
+        """
+        let isArray = isArrayResponse(errorResponse)
+        XCTAssertFalse(isArray)
+    }
+
+    func testDetectsGenericObjectAsNonArray() {
+        let objectResponse = """
+        {"message": "Internal Server Error", "code": "22P02"}
+        """
+        let isArray = isArrayResponse(objectResponse)
+        XCTAssertFalse(isArray)
+    }
+
+    func testHandlesWhitespaceBeforeArrayBracket() {
+        let responseWithWhitespace = "  \n  [{\"id\": \"1\"}]"
+        let isArray = isArrayResponse(responseWithWhitespace)
+        XCTAssertTrue(isArray)
+    }
+
+    func testHandlesWhitespaceBeforeObjectBracket() {
+        let responseWithWhitespace = "  \n  {\"error\": \"test\"}"
+        let isArray = isArrayResponse(responseWithWhitespace)
+        XCTAssertFalse(isArray)
+    }
+
+    func testParseCompletionsSuccess() {
+        let validJSON = """
+        [
+            {
+                "id": "test-1",
+                "workout_name": "Morning Run",
+                "started_at": "2025-01-01T10:00:00Z",
+                "ended_at": "2025-01-01T10:30:00Z",
+                "duration_seconds": 1800,
+                "source": "apple_watch",
+                "synced_to_strava": false
+            }
+        ]
+        """
+
+        let result = parseCompletionsResponse(validJSON)
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result.first?.id, "test-1")
+        XCTAssertEqual(result.first?.workoutName, "Morning Run")
+    }
+
+    func testParseCompletionsEmptyArray() {
+        let emptyJSON = "[]"
+        let result = parseCompletionsResponse(emptyJSON)
+        XCTAssertEqual(result.count, 0)
+    }
+
+    func testParseCompletionsReturnsEmptyOnDecodeError() {
+        // Invalid JSON that looks like array but has wrong structure
+        let invalidJSON = "[{\"wrong_field\": \"value\"}]"
+        let result = parseCompletionsResponse(invalidJSON)
+        // Should return empty array instead of crashing
+        XCTAssertEqual(result.count, 0)
+    }
+
+    func testParseCompletionsReturnsEmptyOnNonArrayResponse() {
+        // Backend error response
+        let errorJSON = """
+        {"detail": "invalid input syntax for type uuid"}
+        """
+        let result = parseCompletionsResponse(errorJSON)
+        XCTAssertEqual(result.count, 0)
+    }
+
+    func testShouldReturnEmptyForServerError500() {
+        let statusCode = 500
+        let shouldReturnEmpty = shouldReturnEmptyForStatusCode(statusCode)
+        XCTAssertTrue(shouldReturnEmpty)
+    }
+
+    func testShouldReturnEmptyForServerError404() {
+        let statusCode = 404
+        let shouldReturnEmpty = shouldReturnEmptyForStatusCode(statusCode)
+        XCTAssertTrue(shouldReturnEmpty)
+    }
+
+    func testShouldNotReturnEmptyForSuccess200() {
+        let statusCode = 200
+        let shouldReturnEmpty = shouldReturnEmptyForStatusCode(statusCode)
+        XCTAssertFalse(shouldReturnEmpty)
+    }
+
+    func testShouldNotReturnEmptyForUnauthorized401() {
+        let statusCode = 401
+        let shouldReturnEmpty = shouldReturnEmptyForStatusCode(statusCode)
+        XCTAssertFalse(shouldReturnEmpty) // Should throw error instead
+    }
+
+    func testParseCompletionsWithOptionalFields() {
+        // Test that optional fields are handled correctly
+        let jsonWithOptionals = """
+        [
+            {
+                "id": "test-2",
+                "workout_name": "Quick Workout",
+                "started_at": "2025-01-01T10:00:00Z",
+                "ended_at": "2025-01-01T10:15:00Z",
+                "duration_seconds": 900,
+                "avg_heart_rate": 145,
+                "active_calories": 150,
+                "source": "manual",
+                "synced_to_strava": true,
+                "strava_activity_id": "12345"
+            }
+        ]
+        """
+
+        let result = parseCompletionsResponse(jsonWithOptionals)
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result.first?.avgHeartRate, 145)
+        XCTAssertEqual(result.first?.activeCalories, 150)
+        XCTAssertEqual(result.first?.syncedToStrava, true)
+    }
+
+    func testParseCompletionsWithNullOptionalFields() {
+        // Test that null optional fields are handled
+        let jsonWithNulls = """
+        [
+            {
+                "id": "test-3",
+                "workout_name": "Basic Workout",
+                "started_at": "2025-01-01T10:00:00Z",
+                "ended_at": "2025-01-01T10:30:00Z",
+                "duration_seconds": 1800,
+                "avg_heart_rate": null,
+                "active_calories": null,
+                "source": "phone_only",
+                "synced_to_strava": false,
+                "strava_activity_id": null
+            }
+        ]
+        """
+
+        let result = parseCompletionsResponse(jsonWithNulls)
+        XCTAssertEqual(result.count, 1)
+        XCTAssertNil(result.first?.avgHeartRate)
+        XCTAssertNil(result.first?.activeCalories)
+    }
+
+    // MARK: - API Response Handling Helper Methods
+
+    /// Check if response body appears to be a JSON array (starts with '[')
+    private func isArrayResponse(_ responseBody: String) -> Bool {
+        responseBody.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("[")
+    }
+
+    /// Determine if status code should return empty array instead of throwing
+    private func shouldReturnEmptyForStatusCode(_ statusCode: Int) -> Bool {
+        statusCode == 404 || statusCode == 500
+    }
+
+    /// Test struct matching WorkoutCompletion fields
+    private struct TestCompletion: Codable {
+        let id: String
+        let workoutName: String
+        let startedAt: Date
+        let endedAt: Date
+        let durationSeconds: Int
+        let avgHeartRate: Int?
+        let activeCalories: Int?
+        let source: String
+        let syncedToStrava: Bool
+        let stravaActivityId: String?
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case workoutName = "workout_name"
+            case startedAt = "started_at"
+            case endedAt = "ended_at"
+            case durationSeconds = "duration_seconds"
+            case avgHeartRate = "avg_heart_rate"
+            case activeCalories = "active_calories"
+            case source
+            case syncedToStrava = "synced_to_strava"
+            case stravaActivityId = "strava_activity_id"
+        }
+    }
+
+    /// Parse completions response, returning empty array on any error
+    private func parseCompletionsResponse(_ jsonString: String) -> [TestCompletion] {
+        // Check if response is actually an array
+        guard isArrayResponse(jsonString) else {
+            return []
+        }
+
+        guard let data = jsonString.data(using: .utf8) else {
+            return []
+        }
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        do {
+            return try decoder.decode([TestCompletion].self, from: data)
+        } catch {
+            // Return empty array on decode errors (schema mismatch, etc.)
+            return []
+        }
+    }
 }

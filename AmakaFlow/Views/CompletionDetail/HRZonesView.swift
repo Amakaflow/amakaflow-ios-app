@@ -29,7 +29,7 @@ struct HRZonesView: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Theme.Colors.surface)
         .cornerRadius(12)
     }
 
@@ -54,7 +54,7 @@ struct HRZonesView: View {
                 ZStack(alignment: .leading) {
                     // Background
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Color(.systemGray5))
+                        .fill(Theme.Colors.borderLight)
 
                     // Fill
                     RoundedRectangle(cornerRadius: 4)
@@ -110,5 +110,5 @@ struct HRZonesView: View {
         HRZonesView(zones: [])
     }
     .padding()
-    .background(Color(.systemGroupedBackground))
+    .background(Theme.Colors.background)
 }

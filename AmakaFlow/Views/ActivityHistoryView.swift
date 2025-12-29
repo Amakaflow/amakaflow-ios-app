@@ -32,12 +32,15 @@ struct ActivityHistoryView: View {
                                 Section {
                                     VStack(spacing: Theme.Spacing.sm) {
                                         ForEach(group.completions) { completion in
-                                            CompletionRowView(completion: completion)
-                                                .onAppear {
-                                                    Task {
-                                                        await viewModel.loadMoreIfNeeded(currentItem: completion)
-                                                    }
+                                            NavigationLink(destination: CompletionDetailView(completionId: completion.id)) {
+                                                CompletionRowView(completion: completion)
+                                            }
+                                            .buttonStyle(.plain)
+                                            .onAppear {
+                                                Task {
+                                                    await viewModel.loadMoreIfNeeded(currentItem: completion)
                                                 }
+                                            }
                                         }
                                     }
                                 } header: {

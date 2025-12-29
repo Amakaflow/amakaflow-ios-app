@@ -111,7 +111,7 @@ struct CompletionDetailView: View {
             }
             .padding()
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.background)
     }
 
     // MARK: - Header Section
@@ -130,7 +130,7 @@ struct CompletionDetailView: View {
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(Color(.systemBackground))
+        .background(Theme.Colors.surface)
         .cornerRadius(12)
     }
 
@@ -174,7 +174,7 @@ struct CompletionDetailView: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Theme.Colors.surface)
         .cornerRadius(12)
     }
 
@@ -247,7 +247,7 @@ struct CompletionDetailView: View {
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.background)
     }
 
     // MARK: - Error View
@@ -272,7 +272,7 @@ struct CompletionDetailView: View {
             .buttonStyle(.bordered)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.background)
     }
 
     // MARK: - Empty View
@@ -288,7 +288,7 @@ struct CompletionDetailView: View {
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemGroupedBackground))
+        .background(Theme.Colors.background)
     }
 }
 
