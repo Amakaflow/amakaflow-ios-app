@@ -20,6 +20,8 @@ final class WorkoutEngineTests: XCTestCase {
 
     override func tearDown() async throws {
         engine.reset()
+        // Allow async cleanup (Live Activity ending, timers) to complete
+        try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
     }
 
     // MARK: - Test Fixtures

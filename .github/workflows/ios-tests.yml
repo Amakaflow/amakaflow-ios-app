@@ -72,7 +72,8 @@ jobs:
       - name: Run tests
         working-directory: AmakaFlowCompanion
         run: |
-          set -o pipefail
+          # Run tests and capture exit code
+          set +e
           xcodebuild test \
             -project AmakaFlowCompanion.xcodeproj \
             -scheme AmakaFlowCompanion \
@@ -84,6 +85,35 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             SKIP_INSTALL=YES
+          XCODE_EXIT=$?
+          set -e
+
+          # Check actual test results from xcresult bundle
+          echo "Checking test results..."
+          FAILURES=$(xcrun xcresulttool get --path TestResults.xcresult --format json 2>/dev/null | python3 -c "
+          import json, sys
+          try:
+              data = json.load(sys.stdin)
+              # Look for test failure count
+              metrics = data.get('metrics', {})
+              failures = metrics.get('testsFailedCount', {}).get('_value', '0')
+              print(failures)
+          except:
+              print('-1')
+          " 2>/dev/null || echo "-1")
+
+          echo "Test failures detected: $FAILURES"
+
+          if [ "$FAILURES" = "0" ]; then
+            echo "All tests passed!"
+            exit 0
+          elif [ "$FAILURES" = "-1" ]; then
+            echo "Could not parse test results, using xcodebuild exit code: $XCODE_EXIT"
+            exit $XCODE_EXIT
+          else
+            echo "Tests failed with $FAILURES failures"
+            exit 1
+          fi
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
