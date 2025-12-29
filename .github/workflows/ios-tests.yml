@@ -80,6 +80,7 @@ jobs:
             -only-testing:AmakaFlowCompanionTests \
             -resultBundlePath TestResults \
             -enableCodeCoverage YES \
+            -parallel-testing-enabled NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             SKIP_INSTALL=YES
