@@ -7,6 +7,9 @@
 
 import Foundation
 import Combine
+import os.log
+
+private let logger = Logger(subsystem: "com.myamaka.AmakaFlowCompanion", category: "ActivityHistory")
 
 // MARK: - Filter Options
 
@@ -114,9 +117,17 @@ class ActivityHistoryViewModel: ObservableObject {
         currentOffset = 0
         hasMoreData = true
 
-        // Use demo mode if not paired or explicitly enabled
-        if useDemoMode || !PairingService.shared.isPaired {
+        // Use demo mode only if explicitly enabled
+        if useDemoMode {
             loadMockData()
+            isLoading = false
+            return
+        }
+
+        // If not paired, show empty state (no mock data)
+        if !PairingService.shared.isPaired {
+            completions = []
+            hasMoreData = false
             isLoading = false
             return
         }
@@ -162,7 +173,7 @@ class ActivityHistoryViewModel: ObservableObject {
         isLoadingMore = true
 
         if useDemoMode || !PairingService.shared.isPaired {
-            // No more mock data to load
+            // No more data to load in demo mode or when not paired
             hasMoreData = false
             isLoadingMore = false
             return
@@ -241,19 +252,39 @@ extension APIService {
             throw APIError.invalidResponse
         }
 
+        let responseBody = String(data: data, encoding: .utf8) ?? "empty"
+        logger.info("fetchCompletions - Status: \(httpResponse.statusCode), Body: \(responseBody)")
+
         switch httpResponse.statusCode {
         case 200:
+            // Check if response is actually an array (backend may return error object with 200)
+            // Valid JSON array starts with '[', error responses start with '{'
+            if !responseBody.trimmingCharacters(in: .whitespaces).hasPrefix("[") {
+                logger.warning("fetchCompletions - Backend returned non-array response: \(responseBody)")
+                return [] // Return empty until backend routing is fixed
+            }
+
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             decoder.dateDecodingStrategy = .iso8601
-            return try decoder.decode([WorkoutCompletion].self, from: data)
+            do {
+                return try decoder.decode([WorkoutCompletion].self, from: data)
+            } catch {
+                logger.error("fetchCompletions - Decode error: \(error.localizedDescription)")
+                // Return empty array instead of throwing - backend may have different schema
+                return []
+            }
         case 401:
             throw APIError.unauthorized
-        case 404:
-            // Endpoint may not exist yet, return empty array
+        case 404, 500:
+            // Endpoint may not exist yet or backend error - return empty array for now
+            // TODO: Remove 500 handling once backend is fixed
+            logger.warning("fetchCompletions - Returning empty for status \(httpResponse.statusCode): \(responseBody)")
             return []
         default:
-            throw APIError.serverError(httpResponse.statusCode)
+            // Include response body in error for debugging
+            logger.error("fetchCompletions - Server error \(httpResponse.statusCode): \(responseBody)")
+            throw APIError.serverErrorWithBody(httpResponse.statusCode, responseBody)
         }
     }
 }

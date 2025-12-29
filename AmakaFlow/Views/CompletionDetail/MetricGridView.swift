@@ -56,7 +56,7 @@ struct MetricGridView: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Theme.Colors.surface)
         .cornerRadius(12)
     }
 
@@ -146,5 +146,5 @@ extension MetricGridView {
         )
     }
     .padding()
-    .background(Color(.systemGroupedBackground))
+    .background(Theme.Colors.background)
 }

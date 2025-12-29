@@ -279,7 +279,9 @@ enum APIError: LocalizedError {
     case networkError(Error)
     case decodingError(Error)
     case unauthorized
+    case notFound
     case serverError(Int)
+    case serverErrorWithBody(Int, String)
 
     var errorDescription: String? {
         switch self {
@@ -295,8 +297,12 @@ enum APIError: LocalizedError {
             return "Decoding error: \(error.localizedDescription)"
         case .unauthorized:
             return "Session expired. Please reconnect."
+        case .notFound:
+            return "Resource not found"
         case .serverError(let code):
             return "Server error: \(code)"
+        case .serverErrorWithBody(let code, let body):
+            return "Server error \(code): \(body)"
         }
     }
 }

@@ -9,7 +9,7 @@ import SwiftUI
 import Charts
 
 struct HRChartView: View {
-    let samples: [HRSample]
+    let samples: [HeartRateDataPoint]
     let avgHeartRate: Int?
     let maxHeartRate: Int?
     let minHeartRate: Int?
@@ -51,7 +51,7 @@ struct HRChartView: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Theme.Colors.surface)
         .cornerRadius(12)
     }
 
@@ -172,5 +172,5 @@ struct HRChartView: View {
         )
     }
     .padding()
-    .background(Color(.systemGroupedBackground))
+    .background(Theme.Colors.background)
 }

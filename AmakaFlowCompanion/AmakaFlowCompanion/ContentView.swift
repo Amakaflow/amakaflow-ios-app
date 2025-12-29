@@ -69,7 +69,7 @@ struct ContentView: View {
                 }
                 .tag(Tab.calendar)
 
-            HistoryView()
+            ActivityHistoryView()
                 .tabItem {
                     Image(systemName: Tab.history.icon)
                     Text(Tab.history.rawValue)

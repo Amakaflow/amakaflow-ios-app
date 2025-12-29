@@ -9,6 +9,7 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject var viewModel: WorkoutsViewModel
+    @StateObject private var historyViewModel = ActivityHistoryViewModel()
     @State private var showingQuickStart = false
     @State private var selectedWorkout: Workout?
     @State private var showingWorkoutPlayer = false
@@ -173,7 +174,9 @@ struct HomeView: View {
     // MARK: - Weekly Stats Card
 
     private var weeklyStatsCard: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+        let summary = historyViewModel.weeklySummary
+
+        return VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             HStack(spacing: Theme.Spacing.sm) {
                 Image(systemName: "chart.line.uptrend.xyaxis")
                     .font(.system(size: 16))
@@ -184,10 +187,21 @@ struct HomeView: View {
                     .foregroundColor(Theme.Colors.textPrimary)
             }
 
-            HStack(spacing: Theme.Spacing.md) {
-                StatItem(value: "5", label: "Workouts")
-                StatItem(value: "4.2", label: "Avg Hours")
-                StatItem(value: "95%", label: "Completion")
+            if historyViewModel.isLoading {
+                HStack {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text("Loading...")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                HStack(spacing: Theme.Spacing.md) {
+                    StatItem(value: "\(summary.workoutCount)", label: "Workouts")
+                    StatItem(value: summary.formattedDuration, label: "Time")
+                    StatItem(value: summary.formattedCalories, label: "Calories")
+                }
             }
         }
         .padding(Theme.Spacing.lg)
@@ -197,6 +211,9 @@ struct HomeView: View {
                 .stroke(Theme.Colors.borderLight, lineWidth: 1)
         )
         .cornerRadius(Theme.CornerRadius.lg)
+        .task {
+            await historyViewModel.loadCompletions()
+        }
     }
 
     // MARK: - Quick Start Sheet

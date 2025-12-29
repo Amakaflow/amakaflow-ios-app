@@ -7,9 +7,9 @@
 
 import Foundation
 
-// MARK: - Heart Rate Sample
+// MARK: - Heart Rate Sample (for detail chart)
 
-struct HRSample: Identifiable, Codable, Hashable {
+struct HeartRateDataPoint: Identifiable, Codable, Hashable {
     var id: Date { timestamp }
     let timestamp: Date
     let bpm: Int
@@ -20,9 +20,9 @@ struct HRSample: Identifiable, Codable, Hashable {
     }
 }
 
-// MARK: - Device Info
+// MARK: - Device Info (for completion detail)
 
-struct DeviceInfo: Codable, Hashable {
+struct CompletionDeviceInfo: Codable, Hashable {
     let name: String
     let model: String?
     let manufacturer: String?
@@ -95,8 +95,8 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
     let steps: Int?
     let distanceMeters: Int?
     let source: WorkoutCompletion.CompletionSource
-    let deviceInfo: DeviceInfo?
-    let heartRateSamples: [HRSample]?
+    let deviceInfo: CompletionDeviceInfo?
+    let heartRateSamples: [HeartRateDataPoint]?
     let syncedToStrava: Bool
     let stravaActivityId: String?
 
@@ -285,7 +285,7 @@ extension WorkoutCompletionDetail {
             let baseBPM = 100
             let variation = Int.random(in: -10...50)
             let bpm = min(180, max(85, baseBPM + variation + (i < 5 ? 0 : 40))) // Warmup then higher
-            return HRSample(timestamp: timestamp, bpm: bpm)
+            return HeartRateDataPoint(timestamp: timestamp, bpm: bpm)
         }
 
         return WorkoutCompletionDetail(
@@ -302,7 +302,7 @@ extension WorkoutCompletionDetail {
             steps: 4500,
             distanceMeters: 3200,
             source: .appleWatch,
-            deviceInfo: DeviceInfo(name: "Apple Watch", model: "Series 9", manufacturer: "Apple"),
+            deviceInfo: CompletionDeviceInfo(name: "Apple Watch", model: "Series 9", manufacturer: "Apple"),
             heartRateSamples: samples,
             syncedToStrava: true,
             stravaActivityId: "12345678"
