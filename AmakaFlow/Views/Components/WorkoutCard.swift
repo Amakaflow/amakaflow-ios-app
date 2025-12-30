@@ -145,7 +145,7 @@ struct WorkoutCard: View {
                 duration: 1890,
                 intervals: [
                     .warmup(seconds: 300, target: nil),
-                    .reps(reps: 8, name: "Squat", load: nil, restSec: 90, followAlongUrl: nil)
+                    .reps(sets: 3, reps: 8, name: "Squat", load: nil, restSec: 90, followAlongUrl: nil)
                 ],
                 description: "Complete full body workout",
                 source: .coach

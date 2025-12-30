@@ -12,12 +12,12 @@ enum WorkoutInterval: Codable, Hashable {
     case warmup(seconds: Int, target: String?)
     case cooldown(seconds: Int, target: String?)
     case time(seconds: Int, target: String?)
-    case reps(reps: Int, name: String, load: String?, restSec: Int?, followAlongUrl: String?)
+    case reps(sets: Int?, reps: Int, name: String, load: String?, restSec: Int?, followAlongUrl: String?)
     case distance(meters: Int, target: String?)
     case `repeat`(reps: Int, intervals: [WorkoutInterval])
     
     enum CodingKeys: String, CodingKey {
-        case kind, seconds, target, reps, name, load, restSec, meters, intervals, followAlongUrl
+        case kind, seconds, target, sets, reps, name, load, restSec, meters, intervals, followAlongUrl
     }
     
     init(from decoder: Decoder) throws {
@@ -41,12 +41,13 @@ enum WorkoutInterval: Codable, Hashable {
             self = .time(seconds: seconds, target: target)
             
         case "reps":
+            let sets = try container.decodeIfPresent(Int.self, forKey: .sets)
             let reps = try container.decode(Int.self, forKey: .reps)
             let name = try container.decode(String.self, forKey: .name)
             let load = try container.decodeIfPresent(String.self, forKey: .load)
             let restSec = try container.decodeIfPresent(Int.self, forKey: .restSec)
             let followAlongUrl = try container.decodeIfPresent(String.self, forKey: .followAlongUrl)
-            self = .reps(reps: reps, name: name, load: load, restSec: restSec, followAlongUrl: followAlongUrl)
+            self = .reps(sets: sets, reps: reps, name: name, load: load, restSec: restSec, followAlongUrl: followAlongUrl)
             
         case "distance":
             let meters = try container.decode(Int.self, forKey: .meters)
@@ -86,8 +87,9 @@ enum WorkoutInterval: Codable, Hashable {
             try container.encode(seconds, forKey: .seconds)
             try container.encodeIfPresent(target, forKey: .target)
             
-        case .reps(let reps, let name, let load, let restSec, let followAlongUrl):
+        case .reps(let sets, let reps, let name, let load, let restSec, let followAlongUrl):
             try container.encode("reps", forKey: .kind)
+            try container.encodeIfPresent(sets, forKey: .sets)
             try container.encode(reps, forKey: .reps)
             try container.encode(name, forKey: .name)
             try container.encodeIfPresent(load, forKey: .load)

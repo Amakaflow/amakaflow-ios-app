@@ -243,7 +243,7 @@ struct StandaloneWorkoutExecutionView: View {
         duration: 150,
         intervals: [
             .warmup(seconds: 60, target: "Get ready"),
-            .reps(reps: 10, name: "Push-ups", load: nil, restSec: 30, followAlongUrl: nil),
+            .reps(sets: nil, reps: 10, name: "Push-ups", load: nil, restSec: 30, followAlongUrl: nil),
             .cooldown(seconds: 60, target: "Stretch")
         ],
         description: "A sample workout",

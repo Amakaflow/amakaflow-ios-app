@@ -77,6 +77,7 @@ final class WorkoutModelTests: XCTestCase {
 
     func testRepsIntervalEncodeDecode() throws {
         let interval = WorkoutInterval.reps(
+            sets: 3,
             reps: 15,
             name: "Push-ups",
             load: "Bodyweight",
@@ -87,7 +88,8 @@ final class WorkoutModelTests: XCTestCase {
         let data = try encoder.encode(interval)
         let decoded = try decoder.decode(WorkoutInterval.self, from: data)
 
-        if case .reps(let reps, let name, let load, let restSec, let followAlongUrl) = decoded {
+        if case .reps(let sets, let reps, let name, let load, let restSec, let followAlongUrl) = decoded {
+            XCTAssertEqual(sets, 3)
             XCTAssertEqual(reps, 15)
             XCTAssertEqual(name, "Push-ups")
             XCTAssertEqual(load, "Bodyweight")
@@ -100,6 +102,7 @@ final class WorkoutModelTests: XCTestCase {
 
     func testRepsIntervalWithOptionalNils() throws {
         let interval = WorkoutInterval.reps(
+            sets: nil,
             reps: 10,
             name: "Squats",
             load: nil,
@@ -110,7 +113,8 @@ final class WorkoutModelTests: XCTestCase {
         let data = try encoder.encode(interval)
         let decoded = try decoder.decode(WorkoutInterval.self, from: data)
 
-        if case .reps(let reps, let name, let load, let restSec, let followAlongUrl) = decoded {
+        if case .reps(let sets, let reps, let name, let load, let restSec, let followAlongUrl) = decoded {
+            XCTAssertNil(sets)
             XCTAssertEqual(reps, 10)
             XCTAssertEqual(name, "Squats")
             XCTAssertNil(load)
@@ -139,7 +143,7 @@ final class WorkoutModelTests: XCTestCase {
         let interval = WorkoutInterval.repeat(
             reps: 3,
             intervals: [
-                .reps(reps: 10, name: "Burpees", load: nil, restSec: nil, followAlongUrl: nil),
+                .reps(sets: nil, reps: 10, name: "Burpees", load: nil, restSec: nil, followAlongUrl: nil),
                 .time(seconds: 60, target: "Rest")
             ]
         )
@@ -152,7 +156,7 @@ final class WorkoutModelTests: XCTestCase {
             XCTAssertEqual(intervals.count, 2)
 
             // Check nested intervals
-            if case .reps(let nestedReps, let name, _, _, _) = intervals[0] {
+            if case .reps(_, let nestedReps, let name, _, _, _) = intervals[0] {
                 XCTAssertEqual(nestedReps, 10)
                 XCTAssertEqual(name, "Burpees")
             } else {
@@ -178,7 +182,7 @@ final class WorkoutModelTests: XCTestCase {
                 .repeat(
                     reps: 3,
                     intervals: [
-                        .reps(reps: 5, name: "Pull-ups", load: nil, restSec: nil, followAlongUrl: nil)
+                        .reps(sets: nil, reps: 5, name: "Pull-ups", load: nil, restSec: nil, followAlongUrl: nil)
                     ]
                 )
             ]
@@ -412,7 +416,7 @@ final class WorkoutModelTests: XCTestCase {
         let intervals: [WorkoutInterval] = [
             .repeat(reps: 2, intervals: [
                 .repeat(reps: 3, intervals: [
-                    .reps(reps: 10, name: "Exercise", load: nil, restSec: nil, followAlongUrl: nil)
+                    .reps(sets: nil, reps: 10, name: "Exercise", load: nil, restSec: nil, followAlongUrl: nil)
                 ])
             ])
         ]
@@ -462,7 +466,7 @@ final class WorkoutModelTests: XCTestCase {
             intervals: [
                 .warmup(seconds: 60, target: nil),
                 .repeat(reps: 4, intervals: [
-                    .reps(reps: 10, name: "Ex", load: nil, restSec: nil, followAlongUrl: nil)
+                    .reps(sets: nil, reps: 10, name: "Ex", load: nil, restSec: nil, followAlongUrl: nil)
                 ]),
                 .cooldown(seconds: 60, target: nil)
             ],
