@@ -10,6 +10,7 @@ import SwiftUI
 struct WorkoutDetailView: View {
     @EnvironmentObject var viewModel: WorkoutsViewModel
     @Environment(\.dismiss) var dismiss
+    @AppStorage("devicePreference") private var devicePreference: DevicePreference = .appleWatchPhone
 
     let workout: Workout
 
@@ -18,7 +19,6 @@ struct WorkoutDetailView: View {
     @State private var showingDeviceSheet = false
     @State private var watchSent = false
     @State private var calendarScheduled = false
-    @State private var selectedDevice: DevicePreference = .phoneOnly
     
     var body: some View {
         NavigationStack {
@@ -275,7 +275,7 @@ struct WorkoutDetailView: View {
                     garminConnected: false,
                     amazfitConnected: false,
                     onSelectDevice: { device in
-                        selectedDevice = device
+                        devicePreference = device // Save to UserDefaults
                         showingDeviceSheet = false
                         WorkoutEngine.shared.start(workout: workout)
                         // Small delay to let sheet dismiss before showing player

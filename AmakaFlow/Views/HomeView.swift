@@ -10,9 +10,12 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject var viewModel: WorkoutsViewModel
     @StateObject private var historyViewModel = ActivityHistoryViewModel()
+    @AppStorage("devicePreference") private var devicePreference: DevicePreference = .appleWatchPhone
     @State private var showingQuickStart = false
     @State private var selectedWorkout: Workout?
     @State private var showingWorkoutPlayer = false
+    @State private var showingDeviceSheet = false
+    @State private var pendingQuickStartWorkout: Workout?
 
     private var today: Date { Date() }
 
@@ -54,6 +57,69 @@ struct HomeView: View {
             }
             .fullScreenCover(isPresented: $showingWorkoutPlayer) {
                 WorkoutPlayerView()
+            }
+            .sheet(isPresented: $showingDeviceSheet) {
+                if let workout = pendingQuickStartWorkout {
+                    PreWorkoutDeviceSheet(
+                        workout: workout,
+                        appleWatchConnected: WatchConnectivityManager.shared.isWatchReachable,
+                        garminConnected: false,
+                        amazfitConnected: false,
+                        onSelectDevice: { device in
+                            devicePreference = device
+                            showingDeviceSheet = false
+                            WorkoutEngine.shared.start(workout: workout)
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                showingWorkoutPlayer = true
+                            }
+                        },
+                        onClose: {
+                            showingDeviceSheet = false
+                            pendingQuickStartWorkout = nil
+                        },
+                        onChangeSettings: {
+                            showingDeviceSheet = false
+                            pendingQuickStartWorkout = nil
+                        }
+                    )
+                    .presentationDetents([.medium])
+                    .presentationDragIndicator(.visible)
+                }
+            }
+        }
+    }
+
+    // MARK: - Device Check & Start
+
+    /// Start workout, respecting device preference
+    /// If the preferred device is unavailable, show device selection sheet
+    private func startWorkoutWithDeviceCheck(_ workout: Workout) {
+        let isPreferredDeviceAvailable: Bool
+
+        switch devicePreference {
+        case .appleWatchPhone, .appleWatchOnly:
+            isPreferredDeviceAvailable = WatchConnectivityManager.shared.isWatchReachable
+        case .phoneOnly:
+            isPreferredDeviceAvailable = true
+        case .garminPhone:
+            // TODO: Check Garmin connectivity when available
+            isPreferredDeviceAvailable = false
+        case .amazfitPhone:
+            // TODO: Check Amazfit connectivity when available
+            isPreferredDeviceAvailable = false
+        }
+
+        if isPreferredDeviceAvailable {
+            // Use saved preference directly
+            WorkoutEngine.shared.start(workout: workout)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                showingWorkoutPlayer = true
+            }
+        } else {
+            // Show device selection sheet
+            pendingQuickStartWorkout = workout
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                showingDeviceSheet = true
             }
         }
     }
@@ -231,11 +297,7 @@ struct HomeView: View {
                         ForEach(viewModel.incomingWorkouts) { workout in
                             Button {
                                 showingQuickStart = false
-                                WorkoutEngine.shared.start(workout: workout)
-                                // Small delay to let sheet dismiss before showing player
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                    showingWorkoutPlayer = true
-                                }
+                                startWorkoutWithDeviceCheck(workout)
                             } label: {
                                 WorkoutCard(workout: workout, isPrimary: false)
                             }
