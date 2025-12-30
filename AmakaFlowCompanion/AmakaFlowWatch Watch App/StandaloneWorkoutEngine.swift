@@ -422,7 +422,7 @@ private func watchIntervalLabel(_ interval: WorkoutInterval) -> String {
         return "Cool Down"
     case .time(_, let target):
         return target ?? "Work"
-    case .reps(_, let name, _, _, _):
+    case .reps(_, _, let name, _, _, _):
         return name
     case .distance(let meters, let target):
         return target ?? "\(WorkoutHelpers.formatDistance(meters: meters))"
@@ -437,7 +437,7 @@ private func watchIntervalDetails(_ interval: WorkoutInterval) -> String {
          .cooldown(let seconds, _),
          .time(let seconds, _):
         return formatWatchSeconds(seconds)
-    case .reps(let reps, _, let load, _, _):
+    case .reps(_, let reps, _, let load, _, _):
         var parts: [String] = ["\(reps) reps"]
         if let load = load {
             parts.append(load)
@@ -456,7 +456,7 @@ private func watchIntervalTimer(_ interval: WorkoutInterval) -> Int? {
          .cooldown(let seconds, _),
          .time(let seconds, _):
         return seconds
-    case .reps(_, _, _, let restSec, _):
+    case .reps(_, _, _, _, let restSec, _):
         return restSec
     case .distance, .repeat:
         return nil
@@ -478,7 +478,7 @@ private func watchIntervalStepType(_ interval: WorkoutInterval) -> StepType {
 
 private func watchIntervalTargetReps(_ interval: WorkoutInterval) -> Int? {
     switch interval {
-    case .reps(let reps, _, _, _, _):
+    case .reps(_, let reps, _, _, _, _):
         return reps
     default:
         return nil

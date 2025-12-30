@@ -34,7 +34,7 @@ final class WorkoutEngineTests: XCTestCase {
             duration: 600,
             intervals: intervals ?? [
                 .warmup(seconds: 30, target: "Easy pace"),
-                .reps(reps: 10, name: "Push-ups", load: nil, restSec: 15, followAlongUrl: nil),
+                .reps(sets: nil, reps: 10, name: "Push-ups", load: nil, restSec: 15, followAlongUrl: nil),
                 .time(seconds: 60, target: "Plank hold"),
                 .cooldown(seconds: 30, target: nil)
             ],
@@ -80,7 +80,7 @@ final class WorkoutEngineTests: XCTestCase {
 
     func testStartWithRepsStepHasNoTimer() {
         let workout = createTestWorkout(intervals: [
-            .reps(reps: 10, name: "Squats", load: nil, restSec: nil, followAlongUrl: nil)
+            .reps(sets: nil, reps: 10, name: "Squats", load: nil, restSec: nil, followAlongUrl: nil)
         ])
 
         engine.start(workout: workout)
@@ -299,7 +299,7 @@ final class WorkoutEngineTests: XCTestCase {
     func testFlattenRepeatIntervals() {
         let intervals: [WorkoutInterval] = [
             .repeat(reps: 3, intervals: [
-                .reps(reps: 10, name: "Push-ups", load: nil, restSec: nil, followAlongUrl: nil),
+                .reps(sets: nil, reps: 10, name: "Push-ups", load: nil, restSec: nil, followAlongUrl: nil),
                 .time(seconds: 30, target: "Rest")
             ])
         ]
@@ -313,7 +313,7 @@ final class WorkoutEngineTests: XCTestCase {
     func testFlattenedIntervalHasRoundInfo() {
         let intervals: [WorkoutInterval] = [
             .repeat(reps: 2, intervals: [
-                .reps(reps: 5, name: "Squats", load: nil, restSec: nil, followAlongUrl: nil)
+                .reps(sets: nil, reps: 5, name: "Squats", load: nil, restSec: nil, followAlongUrl: nil)
             ])
         ]
 
@@ -326,7 +326,7 @@ final class WorkoutEngineTests: XCTestCase {
     func testFlattenedIntervalStepType() {
         let intervals: [WorkoutInterval] = [
             .warmup(seconds: 30, target: nil),
-            .reps(reps: 10, name: "Lunges", load: nil, restSec: nil, followAlongUrl: nil),
+            .reps(sets: nil, reps: 10, name: "Lunges", load: nil, restSec: nil, followAlongUrl: nil),
             .distance(meters: 400, target: nil)
         ]
 
@@ -443,7 +443,10 @@ final class FlattenedIntervalTests: XCTestCase {
             timerSeconds: 90,
             stepType: .timed,
             followAlongUrl: nil,
-            targetReps: nil
+            targetReps: nil,
+            setNumber: nil,
+            totalSets: nil,
+            isRestPeriod: false
         )
 
         XCTAssertEqual(interval.formattedTime, "1:30")
@@ -459,7 +462,10 @@ final class FlattenedIntervalTests: XCTestCase {
             timerSeconds: 45,
             stepType: .timed,
             followAlongUrl: nil,
-            targetReps: nil
+            targetReps: nil,
+            setNumber: nil,
+            totalSets: nil,
+            isRestPeriod: false
         )
 
         XCTAssertEqual(interval.formattedTime, "45s")
@@ -467,7 +473,7 @@ final class FlattenedIntervalTests: XCTestCase {
 
     func testFormattedTimeNilForNonTimed() {
         let interval = FlattenedInterval(
-            interval: .reps(reps: 10, name: "Squats", load: nil, restSec: nil, followAlongUrl: nil),
+            interval: .reps(sets: nil, reps: 10, name: "Squats", load: nil, restSec: nil, followAlongUrl: nil),
             index: 1,
             label: "Squats",
             details: "10 reps",
@@ -475,9 +481,172 @@ final class FlattenedIntervalTests: XCTestCase {
             timerSeconds: nil,
             stepType: .reps,
             followAlongUrl: nil,
-            targetReps: 10
+            targetReps: 10,
+            setNumber: nil,
+            totalSets: nil,
+            isRestPeriod: false
         )
 
         XCTAssertNil(interval.formattedTime)
+    }
+
+    // MARK: - Sets Expansion Tests
+
+    func testSetsExpansionCreatesMultipleSteps() {
+        // 3 sets of 10 reps with 60s rest
+        let intervals: [WorkoutInterval] = [
+            .reps(sets: 3, reps: 10, name: "Bench Press", load: "80%", restSec: 60, followAlongUrl: nil)
+        ]
+
+        let flattened = flattenIntervals(intervals)
+
+        // Should create: Set 1, Rest, Set 2, Rest, Set 3 = 5 steps
+        XCTAssertEqual(flattened.count, 5)
+    }
+
+    func testSetsExpansionHasCorrectSetNumbers() {
+        let intervals: [WorkoutInterval] = [
+            .reps(sets: 3, reps: 10, name: "Squat", load: nil, restSec: 60, followAlongUrl: nil)
+        ]
+
+        let flattened = flattenIntervals(intervals)
+
+        // Check set numbers for exercise steps (every other step)
+        XCTAssertEqual(flattened[0].setNumber, 1)
+        XCTAssertEqual(flattened[0].totalSets, 3)
+        XCTAssertFalse(flattened[0].isRestPeriod)
+
+        XCTAssertEqual(flattened[2].setNumber, 2)
+        XCTAssertEqual(flattened[2].totalSets, 3)
+
+        XCTAssertEqual(flattened[4].setNumber, 3)
+        XCTAssertEqual(flattened[4].totalSets, 3)
+    }
+
+    func testSetsExpansionRestPeriodsAreTimed() {
+        let intervals: [WorkoutInterval] = [
+            .reps(sets: 2, reps: 8, name: "Deadlift", load: nil, restSec: 90, followAlongUrl: nil)
+        ]
+
+        let flattened = flattenIntervals(intervals)
+
+        // Should have: Set 1, Rest (90s), Set 2 = 3 steps
+        XCTAssertEqual(flattened.count, 3)
+
+        // Rest period should be timed
+        XCTAssertEqual(flattened[1].timerSeconds, 90)
+        XCTAssertEqual(flattened[1].stepType, .timed)
+        XCTAssertTrue(flattened[1].isRestPeriod)
+        XCTAssertEqual(flattened[1].label, "Rest")
+    }
+
+    func testSetsExpansionNoRestAfterLastSet() {
+        let intervals: [WorkoutInterval] = [
+            .reps(sets: 3, reps: 10, name: "Push-ups", load: nil, restSec: 30, followAlongUrl: nil)
+        ]
+
+        let flattened = flattenIntervals(intervals)
+
+        // Last step should be Set 3 (not a rest)
+        XCTAssertEqual(flattened.last?.setNumber, 3)
+        XCTAssertFalse(flattened.last?.isRestPeriod ?? true)
+    }
+
+    func testSetsExpansionWithNilSetsCreatesSingleStep() {
+        let intervals: [WorkoutInterval] = [
+            .reps(sets: nil, reps: 10, name: "Burpees", load: nil, restSec: nil, followAlongUrl: nil)
+        ]
+
+        let flattened = flattenIntervals(intervals)
+
+        // Should create just 1 step (nil sets defaults to 1)
+        XCTAssertEqual(flattened.count, 1)
+        XCTAssertEqual(flattened[0].setNumber, 1)
+        XCTAssertEqual(flattened[0].totalSets, 1)
+    }
+
+    func testSetsExpansionWithOnlyOneSet() {
+        let intervals: [WorkoutInterval] = [
+            .reps(sets: 1, reps: 15, name: "Lunges", load: nil, restSec: 60, followAlongUrl: nil)
+        ]
+
+        let flattened = flattenIntervals(intervals)
+
+        // Should create 1 step (no rest after single set)
+        XCTAssertEqual(flattened.count, 1)
+        XCTAssertEqual(flattened[0].setNumber, 1)
+        XCTAssertEqual(flattened[0].totalSets, 1)
+    }
+
+    func testSetsExpansionNoRestWhenRestSecIsNil() {
+        let intervals: [WorkoutInterval] = [
+            .reps(sets: 3, reps: 10, name: "Pull-ups", load: nil, restSec: nil, followAlongUrl: nil)
+        ]
+
+        let flattened = flattenIntervals(intervals)
+
+        // Should create 3 steps (no rest periods)
+        XCTAssertEqual(flattened.count, 3)
+        XCTAssertTrue(flattened.allSatisfy { !$0.isRestPeriod })
+    }
+
+    func testDisplayLabelWithSets() {
+        let interval = FlattenedInterval(
+            interval: .reps(sets: 3, reps: 10, name: "Squat", load: nil, restSec: nil, followAlongUrl: nil),
+            index: 1,
+            label: "Squat",
+            details: "10 reps",
+            roundInfo: nil,
+            timerSeconds: nil,
+            stepType: .reps,
+            followAlongUrl: nil,
+            targetReps: 10,
+            setNumber: 2,
+            totalSets: 3,
+            isRestPeriod: false
+        )
+
+        XCTAssertEqual(interval.displayLabel, "Squat - Set 2 of 3")
+    }
+
+    func testDisplayLabelWithoutSets() {
+        let interval = FlattenedInterval(
+            interval: .time(seconds: 60, target: nil),
+            index: 1,
+            label: "Work",
+            details: "60s",
+            roundInfo: nil,
+            timerSeconds: 60,
+            stepType: .timed,
+            followAlongUrl: nil,
+            targetReps: nil,
+            setNumber: nil,
+            totalSets: nil,
+            isRestPeriod: false
+        )
+
+        XCTAssertEqual(interval.displayLabel, "Work")
+    }
+
+    func testSetsExpansionWithMultipleExercises() {
+        let intervals: [WorkoutInterval] = [
+            .reps(sets: 2, reps: 10, name: "Bench Press", load: nil, restSec: 60, followAlongUrl: nil),
+            .reps(sets: 2, reps: 12, name: "Rows", load: nil, restSec: 60, followAlongUrl: nil)
+        ]
+
+        let flattened = flattenIntervals(intervals)
+
+        // Bench: Set 1, Rest, Set 2 = 3 steps
+        // Rows: Set 1, Rest, Set 2 = 3 steps
+        // Total = 6 steps
+        XCTAssertEqual(flattened.count, 6)
+
+        // Verify first exercise
+        XCTAssertEqual(flattened[0].label, "Bench Press")
+        XCTAssertEqual(flattened[0].setNumber, 1)
+
+        // Verify second exercise starts at index 3
+        XCTAssertEqual(flattened[3].label, "Rows")
+        XCTAssertEqual(flattened[3].setNumber, 1)
     }
 }

@@ -19,6 +19,9 @@ struct FlattenedInterval: Identifiable {
     let stepType: StepType
     let followAlongUrl: String?
     let targetReps: Int?
+    let setNumber: Int?      // Current set number (1-based)
+    let totalSets: Int?      // Total number of sets
+    let isRestPeriod: Bool   // Whether this is a rest period between sets
 
     var formattedTime: String? {
         guard let seconds = timerSeconds else { return nil }
@@ -29,6 +32,14 @@ struct FlattenedInterval: Identifiable {
         } else {
             return "\(secs)s"
         }
+    }
+
+    /// Display label including set info if applicable
+    var displayLabel: String {
+        if let setNum = setNumber, let total = totalSets, total > 1 {
+            return "\(label) - Set \(setNum) of \(total)"
+        }
+        return label
     }
 }
 
@@ -44,6 +55,50 @@ func flattenIntervals(_ intervals: [WorkoutInterval]) -> [FlattenedInterval] {
                 for i in 1...reps {
                     flatten(subIntervals, roundContext: "Round \(i) of \(reps)")
                 }
+
+            case .reps(let sets, let reps, let name, let load, let restSec, let followAlongUrl):
+                // Expand sets into individual steps with rest periods
+                let totalSets = sets ?? 1
+
+                for setNum in 1...totalSets {
+                    counter += 1
+
+                    // Create the exercise step for this set
+                    result.append(FlattenedInterval(
+                        interval: interval,
+                        index: counter,
+                        label: name,
+                        details: intervalDetailsForSet(reps: reps, load: load, setNum: setNum, totalSets: totalSets),
+                        roundInfo: roundContext,
+                        timerSeconds: nil, // Reps are not timed
+                        stepType: .reps,
+                        followAlongUrl: followAlongUrl,
+                        targetReps: reps,
+                        setNumber: setNum,
+                        totalSets: totalSets,
+                        isRestPeriod: false
+                    ))
+
+                    // Add rest period after each set (except the last one)
+                    if let restSeconds = restSec, restSeconds > 0, setNum < totalSets {
+                        counter += 1
+                        result.append(FlattenedInterval(
+                            interval: .time(seconds: restSeconds, target: "Rest"),
+                            index: counter,
+                            label: "Rest",
+                            details: formatSeconds(restSeconds),
+                            roundInfo: roundContext,
+                            timerSeconds: restSeconds,
+                            stepType: .timed,
+                            followAlongUrl: nil,
+                            targetReps: nil,
+                            setNumber: nil,
+                            totalSets: nil,
+                            isRestPeriod: true
+                        ))
+                    }
+                }
+
             default:
                 counter += 1
                 result.append(FlattenedInterval(
@@ -55,7 +110,10 @@ func flattenIntervals(_ intervals: [WorkoutInterval]) -> [FlattenedInterval] {
                     timerSeconds: intervalTimer(interval),
                     stepType: intervalStepType(interval),
                     followAlongUrl: intervalFollowAlongUrl(interval),
-                    targetReps: intervalTargetReps(interval)
+                    targetReps: intervalTargetReps(interval),
+                    setNumber: nil,
+                    totalSets: nil,
+                    isRestPeriod: false
                 ))
             }
         }
@@ -63,6 +121,18 @@ func flattenIntervals(_ intervals: [WorkoutInterval]) -> [FlattenedInterval] {
 
     flatten(intervals)
     return result
+}
+
+/// Helper to create details string for a specific set
+private func intervalDetailsForSet(reps: Int, load: String?, setNum: Int, totalSets: Int) -> String {
+    var parts: [String] = ["\(reps) reps"]
+    if let load = load {
+        parts.append(load)
+    }
+    if totalSets > 1 {
+        parts.append("Set \(setNum)/\(totalSets)")
+    }
+    return parts.joined(separator: " | ")
 }
 
 // MARK: - Helper Functions
@@ -75,7 +145,7 @@ private func intervalLabel(_ interval: WorkoutInterval) -> String {
         return "Cool Down"
     case .time(_, let target):
         return target ?? "Work"
-    case .reps(_, let name, _, _, _):
+    case .reps(_, _, let name, _, _, _):
         return name
     case .distance(let meters, let target):
         return target ?? "\(WorkoutHelpers.formatDistance(meters: meters))"
@@ -98,8 +168,13 @@ private func intervalDetails(_ interval: WorkoutInterval) -> String {
         let timeStr = formatSeconds(seconds)
         return target.map { "\(timeStr) - \($0)" } ?? timeStr
 
-    case .reps(let reps, _, let load, let restSec, _):
-        var parts: [String] = ["\(reps) reps"]
+    case .reps(let sets, let reps, _, let load, let restSec, _):
+        var parts: [String] = []
+        if let sets = sets, sets > 1 {
+            parts.append("\(sets) sets x \(reps) reps")
+        } else {
+            parts.append("\(reps) reps")
+        }
         if let load = load {
             parts.append(load)
         }
@@ -123,7 +198,7 @@ private func intervalTimer(_ interval: WorkoutInterval) -> Int? {
          .cooldown(let seconds, _),
          .time(let seconds, _):
         return seconds
-    case .reps(_, _, _, let restSec, _):
+    case .reps(_, _, _, _, let restSec, _):
         // Reps intervals might have rest timer
         return restSec
     case .distance, .repeat:
@@ -146,7 +221,7 @@ private func intervalStepType(_ interval: WorkoutInterval) -> StepType {
 
 private func intervalFollowAlongUrl(_ interval: WorkoutInterval) -> String? {
     switch interval {
-    case .reps(_, _, _, _, let followAlongUrl):
+    case .reps(_, _, _, _, _, let followAlongUrl):
         return followAlongUrl
     default:
         return nil
@@ -155,7 +230,7 @@ private func intervalFollowAlongUrl(_ interval: WorkoutInterval) -> String? {
 
 private func intervalTargetReps(_ interval: WorkoutInterval) -> Int? {
     switch interval {
-    case .reps(let reps, _, _, _, _):
+    case .reps(_, let reps, _, _, _, _):
         return reps
     default:
         return nil
