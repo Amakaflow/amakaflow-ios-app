@@ -114,7 +114,10 @@ struct WatchRemoteView: View {
 
     var body: some View {
         Group {
-            if showComplete {
+            if !bridge.isSessionActivated && !demoState.isEnabled {
+                // Show loading while WCSession is activating
+                loadingView
+            } else if showComplete {
                 completeView
             } else if let state = displayState, state.isResting {
                 restView(state: state)
@@ -384,6 +387,19 @@ struct WatchRemoteView: View {
                     .foregroundColor(.red)
             }
             .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - Loading View
+
+    private var loadingView: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+                .scaleEffect(1.5)
+
+            Text("Connecting...")
+                .font(.headline)
+                .foregroundColor(.secondary)
         }
     }
 

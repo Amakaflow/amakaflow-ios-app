@@ -16,6 +16,7 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
 
     // MARK: - Published State
 
+    @Published private(set) var isSessionActivated = false
     @Published private(set) var isPhoneReachable = false
     @Published private(set) var workoutState: WatchWorkoutState?
     @Published private(set) var lastError: Error?
@@ -204,6 +205,8 @@ extension WatchConnectivityBridge: WCSessionDelegate {
         error: Error?
     ) {
         Task { @MainActor in
+            self.isSessionActivated = true
+
             if let error = error {
                 print("⌚️ WCSession activation failed: \(error.localizedDescription)")
                 self.lastError = error
