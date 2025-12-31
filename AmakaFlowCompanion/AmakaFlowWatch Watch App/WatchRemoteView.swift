@@ -204,12 +204,17 @@ struct WatchRemoteView: View {
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
 
-                // Timer (large and prominent)
+                // Timer (large and prominent) for timed steps
                 if state.isTimedStep {
                     Text(state.formattedTime)
                         .font(.system(size: 36, weight: .bold, design: .rounded))
                         .monospacedDigit()
                         .foregroundColor(state.isPaused ? .orange : .primary)
+                } else if let reps = state.targetReps, reps > 0 {
+                    // Reps display for rep-based steps
+                    Text("\(reps) reps")
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundColor(.blue)
                 }
 
                 // Progress and step count inline
