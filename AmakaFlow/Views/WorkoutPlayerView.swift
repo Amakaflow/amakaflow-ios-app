@@ -19,15 +19,33 @@ struct WorkoutPlayerView: View {
 
     var body: some View {
         ZStack {
-            // Background
+            // Background - always visible
             Theme.Colors.background.ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                // Header
-                header
+            // Debug: Show if no workout loaded
+            if engine.workout == nil {
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.largeTitle)
+                        .foregroundColor(.orange)
+                    Text("No workout loaded")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    Text("Please try starting the workout again")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Button("Go Back") {
+                        dismiss()
+                    }
+                    .buttonStyle(.bordered)
+                }
+            } else {
+                VStack(spacing: 0) {
+                    // Header
+                    header
 
-                // Main content
-                if engine.phase == .ended, let workout = engine.workout {
+                    // Main content
+                    if engine.phase == .ended, let workout = engine.workout {
                     WorkoutCompletionView(
                         viewModel: WorkoutCompletionViewModel(
                             workoutName: workout.name,
@@ -67,6 +85,7 @@ struct WorkoutPlayerView: View {
                     PlayerControlsView(engine: engine) {
                         showEndConfirmation = true
                     }
+                }
                 }
             }
         }
