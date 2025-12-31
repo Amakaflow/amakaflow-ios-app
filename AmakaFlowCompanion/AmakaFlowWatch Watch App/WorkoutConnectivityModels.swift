@@ -21,6 +21,7 @@ public struct WorkoutState: Codable {
     public let stepType: StepType
     public let remainingMs: Int?
     public let roundInfo: String?
+    public let targetReps: Int?
     public let lastCommandAck: CommandAck?
 
     public init(
@@ -34,6 +35,7 @@ public struct WorkoutState: Codable {
         stepType: StepType,
         remainingMs: Int?,
         roundInfo: String?,
+        targetReps: Int? = nil,
         lastCommandAck: CommandAck?
     ) {
         self.stateVersion = stateVersion
@@ -46,6 +48,7 @@ public struct WorkoutState: Codable {
         self.stepType = stepType
         self.remainingMs = remainingMs
         self.roundInfo = roundInfo
+        self.targetReps = targetReps
         self.lastCommandAck = lastCommandAck
     }
 }
@@ -56,6 +59,7 @@ public enum WorkoutPhase: String, Codable {
     case idle
     case running
     case paused
+    case resting    // Rest period between steps (manual or timed)
     case ended
 }
 
@@ -74,6 +78,7 @@ public enum RemoteCommand: String, Codable {
     case resume = "RESUME"
     case nextStep = "NEXT_STEP"
     case previousStep = "PREV_STEP"
+    case skipRest = "SKIP_REST"
     case end = "END"
 }
 

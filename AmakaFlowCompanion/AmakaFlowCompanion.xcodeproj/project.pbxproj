@@ -17,6 +17,7 @@
 		521047C38D23474889C39F35 /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AB8DFBA16CE406C95456EAD /* CalendarView.swift */; };
 		67283958B3E2475BA2DA974A /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2192F9A69B4A51B54A138F /* HomeView.swift */; };
 		9D0C3D8A603340BC8364F188 /* PreWorkoutDeviceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3910753486A542ECAA1E5971 /* PreWorkoutDeviceSheet.swift */; };
+		W41T1NG000000002C0000002 /* WaitingForWatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = W41T1NG000000001B0000001 /* WaitingForWatchView.swift */; };
 		B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E57529578481B8991A91F /* SourcesView.swift */; };
 		E33FF845EAAD4110B7D87FB0 /* DevicePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89321AF9D21D441198437105 /* DevicePreference.swift */; };
 		EB63D5EF54FF452580C70684 /* WorkoutCompletionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */; };
@@ -31,6 +32,7 @@
 		A19401BB00000008C0000008 /* HRZonesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA00000008B0000008 /* HRZonesView.swift */; };
 		A19401BB00000009C0000009 /* MetricGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA00000009B0000009 /* MetricGridView.swift */; };
 		F818DA94C6BD4F40EE8313B0 /* StepDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8BFF8D1C38311406C868156 /* StepDisplayView.swift */; };
+		AA8C7E7D040E462BB1347220 /* RestPeriodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94AE3547CCCD41159C85554B /* RestPeriodView.swift */; };
 		F84682B9F2FD8A45578F0E68 /* WorkoutPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */; };
 		F84E226F2ED0D55600459747 /* AmakaFlowApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E226D2ED0D55600459747 /* AmakaFlowApp.swift */; };
 		F84E22702ED0D55600459747 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E226E2ED0D55600459747 /* Theme.swift */; };
@@ -163,6 +165,7 @@
 		A19401AA00000009B0000009 /* MetricGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MetricGridView.swift; path = ../AmakaFlow/Views/CompletionDetail/MetricGridView.swift; sourceTree = SOURCE_ROOT; };
 		2AB8DFBA16CE406C95456EAD /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarView.swift; path = ../AmakaFlow/Views/CalendarView.swift; sourceTree = SOURCE_ROOT; };
 		3910753486A542ECAA1E5971 /* PreWorkoutDeviceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PreWorkoutDeviceSheet.swift; path = ../AmakaFlow/Views/Components/PreWorkoutDeviceSheet.swift; sourceTree = SOURCE_ROOT; };
+		W41T1NG000000001B0000001 /* WaitingForWatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WaitingForWatchView.swift; path = ../AmakaFlow/Views/Components/WaitingForWatchView.swift; sourceTree = SOURCE_ROOT; };
 		89321AF9D21D441198437105 /* DevicePreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DevicePreference.swift; path = ../AmakaFlow/Models/DevicePreference.swift; sourceTree = SOURCE_ROOT; };
 		CC2192F9A69B4A51B54A138F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeView.swift; path = ../AmakaFlow/Views/HomeView.swift; sourceTree = SOURCE_ROOT; };
 		E79E57529578481B8991A91F /* SourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SourcesView.swift; path = ../AmakaFlow/Views/SourcesView.swift; sourceTree = SOURCE_ROOT; };
@@ -203,6 +206,7 @@
 		F8B356C42EF8BA7B00E88B51 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		F8B356C62EF8BA7B00E88B51 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		F8BFF8D1C38311406C868156 /* StepDisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StepDisplayView.swift; path = ../AmakaFlow/Views/Components/StepDisplayView.swift; sourceTree = SOURCE_ROOT; };
+		94AE3547CCCD41159C85554B /* RestPeriodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RestPeriodView.swift; path = ../AmakaFlow/Views/Components/RestPeriodView.swift; sourceTree = SOURCE_ROOT; };
 		F8C125A02EFAB01000459747 /* GarminConnectManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminConnectManager.swift; path = ../AmakaFlow/Services/GarminConnectManager.swift; sourceTree = SOURCE_ROOT; };
 		F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutActivityAttributes.swift; path = ../AmakaFlow/LiveActivity/WorkoutActivityAttributes.swift; sourceTree = SOURCE_ROOT; };
 		F8FC29620578214144920365 /* AudioCueManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioCueManager.swift; path = ../AmakaFlow/Services/AudioCueManager.swift; sourceTree = SOURCE_ROOT; };
@@ -374,8 +378,10 @@
 				A19401AA00000009B0000009 /* MetricGridView.swift */,
 				CC2192F9A69B4A51B54A138F /* HomeView.swift */,
 				F8BFF8D1C38311406C868156 /* StepDisplayView.swift */,
+				94AE3547CCCD41159C85554B /* RestPeriodView.swift */,
 				F89DB8A09DD1694C469E6F54 /* PlayerControlsView.swift */,
 				3910753486A542ECAA1E5971 /* PreWorkoutDeviceSheet.swift */,
+				W41T1NG000000001B0000001 /* WaitingForWatchView.swift */,
 				F84E22752ED0D59B00459747 /* SettingsView.swift */,
 				F84E22762ED0D59B00459747 /* WorkoutDetailView.swift */,
 				F84E22772ED0D59B00459747 /* WorkoutsView.swift */,
@@ -746,10 +752,12 @@
 				F85A0F1D503D8A43A7B52FCC /* AudioCueManager.swift in Sources */,
 				F84682B9F2FD8A45578F0E68 /* WorkoutPlayerView.swift in Sources */,
 				F818DA94C6BD4F40EE8313B0 /* StepDisplayView.swift in Sources */,
+				AA8C7E7D040E462BB1347220 /* RestPeriodView.swift in Sources */,
 				F8B8C2FBBE453C44649F8E94 /* PlayerControlsView.swift in Sources */,
 				F87ADA7721B76045D5938EA4 /* WorkoutActivityAttributes.swift in Sources */,
 				E33FF845EAAD4110B7D87FB0 /* DevicePreference.swift in Sources */,
 				9D0C3D8A603340BC8364F188 /* PreWorkoutDeviceSheet.swift in Sources */,
+				W41T1NG000000002C0000002 /* WaitingForWatchView.swift in Sources */,
 				EB63D5EF54FF452580C70684 /* WorkoutCompletionView.swift in Sources */,
 				EB63D5EF54FF452580C70685 /* WorkoutCompletionViewModel.swift in Sources */,
 				A19401BB00000001C0000001 /* ActivityHistoryViewModel.swift in Sources */,

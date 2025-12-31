@@ -19,8 +19,12 @@ struct StandaloneWorkoutExecutionView: View {
         Group {
             if engine.phase == .ended {
                 completeView
+            } else if engine.phase == .resting {
+                restView
+                    .id("rest-\(engine.currentStepIndex)")
             } else if engine.isActive {
                 activeWorkoutView
+                    .id("active-\(engine.currentStepIndex)")
             } else {
                 // Starting state
                 ProgressView("Starting...")
@@ -31,6 +35,7 @@ struct StandaloneWorkoutExecutionView: View {
                     }
             }
         }
+        .id("standalone-\(engine.currentStepIndex)-\(engine.phase.rawValue)")
         .navigationBarBackButtonHidden(engine.isActive)
         .confirmationDialog(
             "End Workout?",
@@ -56,8 +61,8 @@ struct StandaloneWorkoutExecutionView: View {
                     heartRateView
                 }
 
-                // Step name (primary focus)
-                Text(engine.currentStep?.label ?? "")
+                // Step name (primary focus) - shows set info if applicable
+                Text(engine.currentStep?.displayLabel ?? "")
                     .font(.system(size: 16, weight: .bold))
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
@@ -190,6 +195,75 @@ struct StandaloneWorkoutExecutionView: View {
             }
             .buttonStyle(.plain)
         }
+    }
+
+    // MARK: - Rest View
+
+    private var restView: some View {
+        ScrollView {
+            VStack(spacing: 8) {
+                // Rest title
+                Text("Rest")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.blue)
+
+                // Timer or manual message
+                if engine.isManualRest {
+                    VStack(spacing: 4) {
+                        Image(systemName: "hand.tap.fill")
+                            .font(.system(size: 32))
+                            .foregroundColor(.blue)
+                        Text("Tap when ready")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                    }
+                } else if engine.restRemainingSeconds > 0 {
+                    Text(engine.formattedRestTime)
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundColor(.blue)
+                }
+
+                // Next exercise preview
+                if let nextStep = nextStep {
+                    VStack(spacing: 2) {
+                        Text("Up Next")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                        Text(nextStep.displayLabel)
+                            .font(.system(size: 14, weight: .semibold))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                    }
+                    .padding(.top, 4)
+                }
+
+                // Continue button
+                Button {
+                    engine.skipRest()
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.right.circle.fill")
+                        Text(engine.isManualRest ? "Continue" : "Skip")
+                    }
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color.green)
+                    .cornerRadius(12)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 8)
+            }
+            .padding(.horizontal, 8)
+        }
+    }
+
+    private var nextStep: WatchFlattenedInterval? {
+        let nextIndex = engine.currentStepIndex + 1
+        guard nextIndex < engine.flattenedSteps.count else { return nil }
+        return engine.flattenedSteps[nextIndex]
     }
 
     // MARK: - Complete View

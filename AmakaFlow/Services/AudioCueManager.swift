@@ -122,6 +122,14 @@ class AudioCueManager: NSObject, ObservableObject {
     func announceResumed() {
         speak("Resuming", priority: .normal)
     }
+
+    func announceRest(isManual: Bool, seconds: Int) {
+        if isManual {
+            speak("Rest. Tap when ready.", priority: .high)
+        } else if seconds > 0 {
+            speak("Rest for \(seconds) seconds", priority: .high)
+        }
+    }
 }
 
 // MARK: - Speech Priority

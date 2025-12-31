@@ -16,6 +16,7 @@ struct HomeView: View {
     @State private var showingWorkoutPlayer = false
     @State private var showingDeviceSheet = false
     @State private var pendingQuickStartWorkout: Workout?
+    @State private var waitingForWatchWorkout: Workout?
 
     private var today: Date { Date() }
 
@@ -86,13 +87,37 @@ struct HomeView: View {
                     .presentationDragIndicator(.visible)
                 }
             }
+            .fullScreenCover(item: $waitingForWatchWorkout) { workout in
+                WaitingForWatchView(
+                    workout: workout,
+                    onWatchConnected: {
+                        waitingForWatchWorkout = nil
+                        WorkoutEngine.shared.start(workout: workout)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            showingWorkoutPlayer = true
+                        }
+                    },
+                    onCancel: {
+                        waitingForWatchWorkout = nil
+                    },
+                    onUsePhoneInstead: {
+                        waitingForWatchWorkout = nil
+                        devicePreference = .phoneOnly
+                        WorkoutEngine.shared.start(workout: workout)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            showingWorkoutPlayer = true
+                        }
+                    }
+                )
+            }
         }
     }
 
     // MARK: - Device Check & Start
 
     /// Start workout, respecting device preference
-    /// If the preferred device is unavailable, show device selection sheet
+    /// If Apple Watch is preferred but not reachable, show waiting screen
+    /// For other unavailable devices, show device selection sheet
     private func startWorkoutWithDeviceCheck(_ workout: Workout) {
         let isPreferredDeviceAvailable: Bool
 
@@ -115,8 +140,13 @@ struct HomeView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 showingWorkoutPlayer = true
             }
+        } else if devicePreference == .appleWatchPhone || devicePreference == .appleWatchOnly {
+            // Apple Watch preferred but not reachable - show waiting screen
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                waitingForWatchWorkout = workout
+            }
         } else {
-            // Show device selection sheet
+            // Other device types - show device selection sheet
             pendingQuickStartWorkout = workout
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 showingDeviceSheet = true
@@ -297,7 +327,10 @@ struct HomeView: View {
                         ForEach(viewModel.incomingWorkouts) { workout in
                             Button {
                                 showingQuickStart = false
-                                startWorkoutWithDeviceCheck(workout)
+                                // Delay to allow sheet to fully dismiss before presenting next screen
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                    startWorkoutWithDeviceCheck(workout)
+                                }
                             } label: {
                                 WorkoutCard(workout: workout, isPrimary: false)
                             }

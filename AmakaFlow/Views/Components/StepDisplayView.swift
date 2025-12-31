@@ -23,8 +23,8 @@ struct StepDisplayView: View {
                     .cornerRadius(Theme.CornerRadius.sm)
             }
 
-            // Step name
-            Text(engine.currentStep?.label ?? "")
+            // Step name - shows set info if applicable (e.g., "Squat - Set 1 of 3")
+            Text(engine.currentStep?.displayLabel ?? "")
                 .font(Theme.Typography.title1)
                 .foregroundColor(Theme.Colors.textPrimary)
                 .multilineTextAlignment(.center)

@@ -168,7 +168,17 @@ class WorkoutsViewModel: ObservableObject {
                 return
             }
 
-            pendingWorkoutsStatus = "Found \(pendingWorkouts.count) workout(s)"
+            // Build debug info about intervals
+            var debugInfo = "Found \(pendingWorkouts.count) workout(s)\n"
+            if let firstWorkout = pendingWorkouts.first {
+                debugInfo += "First: \(firstWorkout.name)\n"
+                for (i, interval) in firstWorkout.intervals.enumerated() {
+                    if case .reps(let sets, let reps, let name, _, let restSec, _) = interval {
+                        debugInfo += "[\(i)] \(name): sets=\(sets ?? -1), reps=\(reps), restSec=\(restSec ?? -999)\n"
+                    }
+                }
+            }
+            pendingWorkoutsStatus = debugInfo
             print("[WorkoutsViewModel] Found \(pendingWorkouts.count) pending workouts, syncing...")
 
             for workout in pendingWorkouts {
@@ -193,7 +203,8 @@ class WorkoutsViewModel: ObservableObject {
                 }
             }
 
-            pendingWorkoutsStatus = "Synced \(pendingWorkouts.count) workout(s)"
+            // Keep debug info visible, just append sync status
+            pendingWorkoutsStatus = debugInfo + "\n✅ Synced!"
             print("[WorkoutsViewModel] Finished syncing \(pendingWorkouts.count) pending workouts")
         } catch {
             // Show more detailed error info including raw response

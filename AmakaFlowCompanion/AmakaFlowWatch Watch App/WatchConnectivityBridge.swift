@@ -16,6 +16,7 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
 
     // MARK: - Published State
 
+    @Published private(set) var isSessionActivated = false
     @Published private(set) var isPhoneReachable = false
     @Published private(set) var workoutState: WatchWorkoutState?
     @Published private(set) var lastError: Error?
@@ -33,10 +34,17 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
     private override init() {
         super.init()
 
+        print("⌚️ WatchConnectivityBridge init: WCSession.isSupported() = \(WCSession.isSupported())")
+
         if WCSession.isSupported() {
             session = WCSession.default
             session?.delegate = self
             session?.activate()
+            print("⌚️ WatchConnectivityBridge init: WCSession activation requested")
+        } else {
+            // WCSession not supported - mark as activated but with error state
+            print("⌚️ WatchConnectivityBridge init: WCSession NOT supported!")
+            isSessionActivated = true  // Allow view to proceed, will show disconnected
         }
 
         // Subscribe to health updates
@@ -204,6 +212,8 @@ extension WatchConnectivityBridge: WCSessionDelegate {
         error: Error?
     ) {
         Task { @MainActor in
+            self.isSessionActivated = true
+
             if let error = error {
                 print("⌚️ WCSession activation failed: \(error.localizedDescription)")
                 self.lastError = error
@@ -294,8 +304,18 @@ extension WatchConnectivityBridge: WCSessionDelegate {
             let state = try JSONDecoder().decode(WatchWorkoutState.self, from: data)
             let previousPhase = workoutState?.phase
             let previousStepIndex = workoutState?.stepIndex
+            let previousVersion = workoutState?.stateVersion ?? 0
+
+            // Explicitly notify SwiftUI observers before updating
+            objectWillChange.send()
             workoutState = state
-            print("⌚️ Received state update: \(state.stepName), phase: \(state.phase.rawValue)")
+
+            print("⌚️ STATE UPDATE: version \(previousVersion) → \(state.stateVersion), step \(previousStepIndex ?? -1) → \(state.stepIndex), phase=\(state.phase.rawValue), name='\(state.stepName)'")
+
+            // Log if this is a meaningful change that should trigger view update
+            if previousVersion != state.stateVersion || previousStepIndex != state.stepIndex || previousPhase != state.phase {
+                print("⌚️ VIEW SHOULD REFRESH: version/step/phase changed")
+            }
 
             // Haptic feedback for phase changes
             if previousPhase != state.phase {
@@ -324,6 +344,9 @@ extension WatchConnectivityBridge: WCSessionDelegate {
                     Task {
                         await endHealthSession()
                     }
+                case .resting:
+                    // Haptic for entering rest phase
+                    playHaptic(.stop)
                 }
             }
 

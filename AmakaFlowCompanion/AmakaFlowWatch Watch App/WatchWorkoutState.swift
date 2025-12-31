@@ -41,6 +41,10 @@ extension WorkoutState {
     }
 
     var isActive: Bool {
-        phase == .running || phase == .paused
+        phase == .running || phase == .paused || phase == .resting
+    }
+
+    var isResting: Bool {
+        phase == .resting
     }
 }

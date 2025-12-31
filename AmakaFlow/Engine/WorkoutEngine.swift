@@ -23,6 +23,10 @@ class WorkoutEngine: ObservableObject {
     @Published private(set) var stateVersion: Int = 0
     @Published private(set) var elapsedSeconds: Int = 0
 
+    // Rest state
+    @Published private(set) var restRemainingSeconds: Int = 0
+    @Published private(set) var isManualRest: Bool = false
+
     // MARK: - Flattened Steps
 
     private(set) var flattenedSteps: [FlattenedInterval] = []
@@ -47,7 +51,7 @@ class WorkoutEngine: ObservableObject {
     }
 
     var isActive: Bool {
-        phase == .running || phase == .paused
+        phase == .running || phase == .paused || phase == .resting
     }
 
     // MARK: - Private
@@ -70,10 +74,16 @@ class WorkoutEngine: ObservableObject {
             end(reason: .userEnded)
         }
 
+        // Reset all state for fresh start
+        timer?.invalidate()
+        timer = nil
         self.workout = workout
         self.flattenedSteps = flattenIntervals(workout.intervals)
         self.currentStepIndex = 0
+        self.remainingSeconds = 0
         self.elapsedSeconds = 0
+        self.restRemainingSeconds = 0
+        self.isManualRest = false
         self.phase = .running
         self.stateVersion += 1
         self.workoutStartTime = Date()
@@ -122,13 +132,28 @@ class WorkoutEngine: ObservableObject {
             pause()
         case .paused:
             resume()
-        case .idle, .ended:
+        case .idle, .ended, .resting:
             break
         }
     }
 
     func nextStep() {
-        print("🏋️ nextStep() called. currentStepIndex: \(currentStepIndex), flattenedSteps.count: \(flattenedSteps.count)")
+        print("🏋️ nextStep() called. currentStepIndex: \(currentStepIndex), flattenedSteps.count: \(flattenedSteps.count), phase: \(phase)")
+
+        // Check if current step has rest after it
+        if let currentStep = currentStep {
+            print("🏋️ Current step: '\(currentStep.label)', hasRestAfter: \(currentStep.hasRestAfter), restAfterSeconds: \(currentStep.restAfterSeconds ?? -1)")
+            if currentStep.hasRestAfter && phase != .resting {
+                print("🏋️ → Entering rest phase because hasRestAfter=true and phase!=resting")
+                enterRestPhase(restSeconds: currentStep.restAfterSeconds)
+                return
+            } else if !currentStep.hasRestAfter {
+                print("🏋️ → Skipping rest because hasRestAfter=false")
+            } else if phase == .resting {
+                print("🏋️ → Already in resting phase, advancing to next step")
+            }
+        }
+
         guard currentStepIndex < flattenedSteps.count - 1 else {
             print("🏋️ No more steps! Ending workout.")
             end(reason: .completed)
@@ -136,9 +161,119 @@ class WorkoutEngine: ObservableObject {
         }
 
         currentStepIndex += 1
+        print("🏋️ Advanced to step \(currentStepIndex): \(currentStep?.label ?? "nil")")
         setupCurrentStep()
         stateVersion += 1
         broadcastState()
+    }
+
+    /// Enter the rest phase between exercises
+    private func enterRestPhase(restSeconds: Int?) {
+        print("🏋️ enterRestPhase() called. phase before: \(phase), restSeconds: \(restSeconds ?? -1)")
+
+        timer?.invalidate()
+        timer = nil
+
+        phase = .resting
+        print("🏋️ enterRestPhase: phase set to .resting")
+
+        if let seconds = restSeconds, seconds > 0 {
+            // Timed rest
+            isManualRest = false
+            restRemainingSeconds = seconds
+            startRestTimer()
+            print("🏋️ enterRestPhase: Starting timed rest of \(seconds)s")
+        } else {
+            // Manual rest (nil or 0 treated as manual "tap when ready")
+            isManualRest = true
+            restRemainingSeconds = 0
+            print("🏋️ enterRestPhase: Manual rest (tap when ready)")
+        }
+
+        stateVersion += 1
+        broadcastState()
+        audioCueManager.announceRest(isManual: isManualRest, seconds: restRemainingSeconds)
+        print("🏋️ enterRestPhase: Complete. phase=\(phase), isManualRest=\(isManualRest)")
+    }
+
+    private func startRestTimer() {
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.restTimerTick()
+            }
+        }
+        if let timer = timer {
+            RunLoop.main.add(timer, forMode: .common)
+        }
+    }
+
+    private func restTimerTick() {
+        guard restRemainingSeconds > 0 else {
+            // Rest complete, advance to next step
+            completeRest()
+            return
+        }
+
+        restRemainingSeconds -= 1
+        elapsedSeconds += 1
+
+        // Countdown audio for last 3 seconds
+        if restRemainingSeconds <= 3 && restRemainingSeconds > 0 {
+            audioCueManager.announceCountdown(restRemainingSeconds)
+        }
+
+        // Auto-advance when timer hits 0
+        if restRemainingSeconds == 0 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.completeRest()
+            }
+        }
+
+        // Throttled state broadcast
+        if elapsedSeconds % 5 == 0 {
+            broadcastState()
+        }
+    }
+
+    /// Complete the rest phase and advance to the next step
+    func completeRest() {
+        print("🏋️ completeRest() called. phase: \(phase), currentStepIndex: \(currentStepIndex)")
+        guard phase == .resting else {
+            print("🏋️ completeRest() returning early - phase is not .resting")
+            return
+        }
+
+        print("🏋️ Completing rest, advancing to next step")
+
+        timer?.invalidate()
+        timer = nil
+        restRemainingSeconds = 0
+        isManualRest = false
+
+        // Check if there are more steps
+        guard currentStepIndex < flattenedSteps.count - 1 else {
+            print("🏋️ No more steps after rest! Ending workout.")
+            end(reason: .completed)
+            return
+        }
+
+        currentStepIndex += 1
+        phase = .running
+        print("🏋️ After completeRest: phase=\(phase), currentStepIndex=\(currentStepIndex), step='\(currentStep?.label ?? "nil")'")
+        setupCurrentStep()
+        stateVersion += 1
+        broadcastState()
+    }
+
+    /// Skip the current rest period and advance immediately
+    func skipRest() {
+        print("🏋️ skipRest() called. phase: \(phase)")
+        guard phase == .resting else {
+            print("🏋️ skipRest() returning early - phase is not .resting")
+            return
+        }
+        completeRest()
     }
 
     func previousStep() {
@@ -454,6 +589,8 @@ class WorkoutEngine: ObservableObject {
             nextStep()
         case .previousStep:
             previousStep()
+        case .skipRest:
+            skipRest()
         case .end:
             end(reason: .userEnded)
         }

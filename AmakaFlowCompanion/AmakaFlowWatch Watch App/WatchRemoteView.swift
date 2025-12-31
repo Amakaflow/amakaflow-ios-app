@@ -100,6 +100,9 @@ struct WatchRemoteView: View {
     @StateObject private var demoState = DemoModeState.shared
     @Environment(\.dismiss) private var dismiss
 
+    // Timeout for loading state - after 5 seconds, show disconnected view
+    @State private var loadingTimedOut = false
+
     // Computed state that uses demo state when in demo mode
     private var displayState: WatchWorkoutState? {
         if demoState.isEnabled {
@@ -112,19 +115,42 @@ struct WatchRemoteView: View {
         demoState.isEnabled && demoState.currentScreen == 4
     }
 
-    var body: some View {
-        Group {
-            if showComplete {
-                completeView
-            } else if let state = displayState, state.isActive {
-                activeWorkoutView(state: state)
-            } else if !demoState.isEnabled && !bridge.isPhoneReachable && bridge.workoutState == nil {
-                disconnectedView
-            } else {
-                idleView
-            }
+    @ViewBuilder
+    private var content: some View {
+        if !bridge.isSessionActivated && !demoState.isEnabled && !loadingTimedOut {
+            // Show loading while WCSession is activating (with timeout)
+            loadingView
+        } else if showComplete {
+            completeView
+        } else if let state = displayState, state.isResting {
+            restView(state: state)
+                .id("rest-\(state.stepIndex)-\(state.stateVersion)")
+        } else if let state = displayState, state.isActive {
+            activeWorkoutView(state: state)
+                .id("active-\(state.stepIndex)-\(state.stateVersion)")
+        } else if !demoState.isEnabled && !bridge.isPhoneReachable && bridge.workoutState == nil {
+            disconnectedView
+        } else {
+            idleView
         }
-        .overlay(alignment: .bottom) {
+    }
+
+    var body: some View {
+        content
+            .id("remote-\(bridge.workoutState?.stateVersion ?? 0)-\(bridge.workoutState?.stepIndex ?? -1)")
+            .onChange(of: bridge.workoutState?.stateVersion) { oldVersion, newVersion in
+                print("⌚️ VIEW: stateVersion changed \(oldVersion ?? 0) → \(newVersion ?? 0), stepIndex=\(bridge.workoutState?.stepIndex ?? -1)")
+            }
+            .onChange(of: bridge.workoutState?.stepIndex) { oldStep, newStep in
+                print("⌚️ VIEW: stepIndex changed \(oldStep ?? -1) → \(newStep ?? -1)")
+            }
+            .onChange(of: bridge.isSessionActivated) { _, activated in
+                print("⌚️ VIEW: isSessionActivated changed to \(activated)")
+            }
+            .onChange(of: bridge.isPhoneReachable) { _, reachable in
+                print("⌚️ VIEW: isPhoneReachable changed to \(reachable)")
+            }
+            .overlay(alignment: .bottom) {
             // Demo mode controls at bottom
             if demoState.isEnabled {
                 HStack(spacing: 20) {
@@ -160,8 +186,19 @@ struct WatchRemoteView: View {
             }
         }
         .onAppear {
+            print("⌚️ VIEW onAppear: isSessionActivated=\(bridge.isSessionActivated), isPhoneReachable=\(bridge.isPhoneReachable), workoutState=\(bridge.workoutState != nil ? "exists" : "nil")")
             if !demoState.isEnabled {
                 bridge.requestCurrentState()
+            }
+
+            // Set a timeout for loading state - if session doesn't activate in 5 seconds, proceed anyway
+            if !bridge.isSessionActivated {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                    if !bridge.isSessionActivated {
+                        print("⌚️ VIEW: Loading timeout - session not activated after 5s")
+                        loadingTimedOut = true
+                    }
+                }
             }
         }
     }
@@ -193,12 +230,17 @@ struct WatchRemoteView: View {
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
 
-                // Timer (large and prominent)
+                // Timer (large and prominent) for timed steps
                 if state.isTimedStep {
                     Text(state.formattedTime)
                         .font(.system(size: 36, weight: .bold, design: .rounded))
                         .monospacedDigit()
                         .foregroundColor(state.isPaused ? .orange : .primary)
+                } else if let reps = state.targetReps, reps > 0 {
+                    // Reps display for rep-based steps
+                    Text("\(reps) reps")
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundColor(.blue)
                 }
 
                 // Progress and step count inline
@@ -224,6 +266,59 @@ struct WatchRemoteView: View {
             }
             .padding(.horizontal, 2)
             .padding(.vertical, 2)
+        }
+    }
+
+    // MARK: - Rest View
+
+    @ViewBuilder
+    private func restView(state: WatchWorkoutState) -> some View {
+        ScrollView {
+            VStack(spacing: 8) {
+                // Rest title
+                Text("Rest")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.blue)
+
+                // Manual rest message
+                VStack(spacing: 4) {
+                    Image(systemName: "hand.tap.fill")
+                        .font(.system(size: 32))
+                        .foregroundColor(.blue)
+                    Text("Tap when ready")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                }
+
+                // Progress
+                HStack {
+                    ProgressView(value: state.progress)
+                        .tint(.blue)
+                    Text("\(state.stepIndex + 1)/\(state.stepCount)")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 4)
+
+                // Continue button
+                Button {
+                    bridge.sendCommand(.skipRest)
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.right.circle.fill")
+                        Text("Continue")
+                    }
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color.green)
+                    .cornerRadius(12)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 8)
+            }
+            .padding(.horizontal, 8)
         }
     }
 
@@ -315,6 +410,19 @@ struct WatchRemoteView: View {
                     .foregroundColor(.red)
             }
             .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - Loading View
+
+    private var loadingView: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+                .scaleEffect(1.5)
+
+            Text("Connecting...")
+                .font(.headline)
+                .foregroundColor(.secondary)
         }
     }
 

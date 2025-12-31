@@ -173,6 +173,12 @@ class APIService {
 
         print("[APIService] Response status: \(httpResponse.statusCode)")
 
+        // Debug: Print raw JSON response
+        if let jsonString = String(data: data, encoding: .utf8) {
+            print("[APIService] Raw JSON response (first 1000 chars):")
+            print(String(jsonString.prefix(1000)))
+        }
+
         switch httpResponse.statusCode {
         case 200:
             let decoder = JSONDecoder()
@@ -181,6 +187,16 @@ class APIService {
             do {
                 let pendingResponse = try decoder.decode(PendingWorkoutsResponse.self, from: data)
                 print("[APIService] Decoded \(pendingResponse.count) pending workouts")
+                // Debug: Print first workout's intervals
+                if let firstWorkout = pendingResponse.workouts.first {
+                    print("[APIService] First workout: \(firstWorkout.name)")
+                    print("[APIService] Intervals: \(firstWorkout.intervals.count)")
+                    for (i, interval) in firstWorkout.intervals.enumerated() {
+                        if case .reps(let sets, let reps, let name, _, let restSec, _) = interval {
+                            print("[APIService]   Interval \(i): reps '\(name)' sets=\(sets ?? -1) reps=\(reps) restSec=\(restSec ?? -999)")
+                        }
+                    }
+                }
                 return pendingResponse.workouts
             } catch {
                 print("[APIService] Decoding error: \(error)")

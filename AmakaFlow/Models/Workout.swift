@@ -136,6 +136,29 @@ enum WorkoutSport: String, Codable {
     case swimming
     case cardio
     case other
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(String.self)
+
+        // Handle alternative values from backend
+        switch rawValue.lowercased() {
+        case "running", "run":
+            self = .running
+        case "cycling", "bike", "biking":
+            self = .cycling
+        case "strength", "strengthtraining", "strength_training", "weights":
+            self = .strength
+        case "mobility", "yoga", "stretching", "flexibility":
+            self = .mobility
+        case "swimming", "swim":
+            self = .swimming
+        case "cardio", "hiit":
+            self = .cardio
+        default:
+            self = .other
+        }
+    }
 }
 
 // MARK: - Workout Model

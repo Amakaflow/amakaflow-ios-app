@@ -23,6 +23,10 @@ final class StandaloneWorkoutEngine: ObservableObject {
     @Published private(set) var workout: Workout?
     @Published private(set) var elapsedSeconds: Int = 0
 
+    // Rest state
+    @Published private(set) var restRemainingSeconds: Int = 0
+    @Published private(set) var isManualRest: Bool = false
+
     // Health metrics (from HealthKitWorkoutManager)
     @Published var heartRate: Double = 0
     @Published var activeCalories: Double = 0
@@ -46,7 +50,7 @@ final class StandaloneWorkoutEngine: ObservableObject {
     }
 
     var isActive: Bool {
-        phase == .running || phase == .paused
+        phase == .running || phase == .paused || phase == .resting
     }
 
     var formattedRemainingTime: String {
@@ -58,6 +62,12 @@ final class StandaloneWorkoutEngine: ObservableObject {
     var formattedElapsedTime: String {
         let minutes = elapsedSeconds / 60
         let seconds = elapsedSeconds % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+
+    var formattedRestTime: String {
+        let minutes = restRemainingSeconds / 60
+        let seconds = restRemainingSeconds % 60
         return String(format: "%d:%02d", minutes, seconds)
     }
 
@@ -95,10 +105,16 @@ final class StandaloneWorkoutEngine: ObservableObject {
             await end(reason: .userEnded)
         }
 
+        // Reset all state for fresh start
+        timer?.invalidate()
+        timer = nil
         self.workout = workout
         self.flattenedSteps = flattenWatchIntervals(workout.intervals)
         self.currentStepIndex = 0
+        self.remainingSeconds = 0
         self.elapsedSeconds = 0
+        self.restRemainingSeconds = 0
+        self.isManualRest = false
         self.averageHeartRateSamples = []
         self.workoutStartDate = Date()
         self.phase = .running
@@ -143,12 +159,18 @@ final class StandaloneWorkoutEngine: ObservableObject {
             pause()
         case .paused:
             resume()
-        case .idle, .ended:
+        case .idle, .ended, .resting:
             break
         }
     }
 
     func nextStep() {
+        // Check if current step has rest after it
+        if let currentStep = currentStep, currentStep.hasRestAfter, phase != .resting {
+            enterRestPhase(restSeconds: currentStep.restAfterSeconds)
+            return
+        }
+
         guard currentStepIndex < flattenedSteps.count - 1 else {
             Task {
                 await end(reason: .completed)
@@ -159,6 +181,92 @@ final class StandaloneWorkoutEngine: ObservableObject {
         currentStepIndex += 1
         setupCurrentStep()
         playHaptic(.click)
+    }
+
+    /// Enter the rest phase between exercises
+    private func enterRestPhase(restSeconds: Int?) {
+        print("⌚️ Entering rest phase. restSeconds: \(restSeconds ?? -1)")
+
+        timer?.invalidate()
+        timer = nil
+
+        phase = .resting
+
+        if let seconds = restSeconds, seconds > 0 {
+            // Timed rest
+            isManualRest = false
+            restRemainingSeconds = seconds
+            startRestTimer()
+        } else {
+            // Manual rest (nil or 0 treated as manual "tap when ready")
+            isManualRest = true
+            restRemainingSeconds = 0
+        }
+
+        playHaptic(.stop)
+    }
+
+    private func startRestTimer() {
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.restTimerTick()
+            }
+        }
+    }
+
+    private func restTimerTick() {
+        guard restRemainingSeconds > 0 else {
+            completeRest()
+            return
+        }
+
+        restRemainingSeconds -= 1
+        elapsedSeconds += 1
+
+        // Haptic for last 3 seconds
+        if restRemainingSeconds <= 3 && restRemainingSeconds > 0 {
+            playHaptic(.click)
+        }
+
+        // Auto-advance when timer hits 0
+        if restRemainingSeconds == 0 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.completeRest()
+            }
+        }
+    }
+
+    /// Complete the rest phase and advance to the next step
+    func completeRest() {
+        guard phase == .resting else { return }
+
+        print("⌚️ Completing rest, advancing to next step")
+
+        timer?.invalidate()
+        timer = nil
+        restRemainingSeconds = 0
+        isManualRest = false
+
+        // Check if there are more steps
+        guard currentStepIndex < flattenedSteps.count - 1 else {
+            print("⌚️ No more steps after rest! Ending workout.")
+            Task {
+                await end(reason: .completed)
+            }
+            return
+        }
+
+        currentStepIndex += 1
+        phase = .running
+        setupCurrentStep()
+        playHaptic(.start)
+    }
+
+    /// Skip the current rest period and advance immediately
+    func skipRest() {
+        guard phase == .resting else { return }
+        completeRest()
     }
 
     func previousStep() {
@@ -194,6 +302,8 @@ final class StandaloneWorkoutEngine: ObservableObject {
         currentStepIndex = 0
         remainingSeconds = 0
         elapsedSeconds = 0
+        restRemainingSeconds = 0
+        isManualRest = false
         heartRate = 0
         activeCalories = 0
         averageHeartRateSamples = []
@@ -368,6 +478,10 @@ struct WatchFlattenedInterval: Identifiable {
     let timerSeconds: Int?
     let stepType: StepType
     let targetReps: Int?
+    let setNumber: Int?      // Current set number (1-based)
+    let totalSets: Int?      // Total number of sets
+    let hasRestAfter: Bool   // Whether this step has a rest period after it
+    let restAfterSeconds: Int?  // Rest duration: nil = manual (tap when ready), 0 = no rest, >0 = timed countdown
 
     var formattedTime: String? {
         guard let seconds = timerSeconds else { return nil }
@@ -379,6 +493,26 @@ struct WatchFlattenedInterval: Identifiable {
             return "\(secs)s"
         }
     }
+
+    /// Formatted rest duration for display
+    var formattedRestTime: String? {
+        guard let seconds = restAfterSeconds, seconds > 0 else { return nil }
+        let minutes = seconds / 60
+        let secs = seconds % 60
+        if minutes > 0 {
+            return String(format: "%d:%02d", minutes, secs)
+        } else {
+            return "\(secs)s"
+        }
+    }
+
+    /// Display label including set info if applicable
+    var displayLabel: String {
+        if let setNum = setNumber, let total = totalSets, total > 1 {
+            return "\(label) - Set \(setNum) of \(total)"
+        }
+        return label
+    }
 }
 
 // MARK: - Interval Flattening for Watch
@@ -387,15 +521,88 @@ func flattenWatchIntervals(_ intervals: [WorkoutInterval]) -> [WatchFlattenedInt
     var result: [WatchFlattenedInterval] = []
     var counter = 0
 
+    print("⌚️ flattenWatchIntervals: Processing \(intervals.count) intervals")
+
     func flatten(_ items: [WorkoutInterval], roundContext: String? = nil) {
         for interval in items {
             switch interval {
-            case .repeat(let reps, let subIntervals):
-                for i in 1...reps {
-                    flatten(subIntervals, roundContext: "Round \(i) of \(reps)")
+            case .repeat(let repeatCount, let subIntervals):
+                print("⌚️ Processing repeat: \(repeatCount)x with \(subIntervals.count) sub-intervals")
+
+                // Check if this is a "sets-style" repeat (single reps interval inside)
+                let isSetsStyleRepeat = subIntervals.count == 1 && {
+                    if case .reps = subIntervals[0] { return true }
+                    return false
+                }()
+
+                if isSetsStyleRepeat, case .reps(_, let reps, let name, let load, let restSec, _) = subIntervals[0] {
+                    // Handle sets-style repeat directly - create exercise steps with rest info
+                    for i in 1...repeatCount {
+                        counter += 1
+
+                        // All sets have rest after them (for transition between sets or to next exercise)
+                        // restSec: nil = manual, 0 = no rest, >0 = timed
+                        let hasRest = restSec != 0  // Has rest unless explicitly 0
+
+                        result.append(WatchFlattenedInterval(
+                            interval: subIntervals[0],
+                            index: counter,
+                            label: name,
+                            details: watchDetailsForSet(reps: reps, load: load, setNum: i, totalSets: repeatCount),
+                            roundInfo: "Set \(i) of \(repeatCount)",
+                            timerSeconds: nil, // Reps are not timed
+                            stepType: .reps,
+                            targetReps: reps,
+                            setNumber: i,
+                            totalSets: repeatCount,
+                            hasRestAfter: hasRest,
+                            restAfterSeconds: restSec
+                        ))
+                    }
+                } else {
+                    // Regular repeat - process sub-intervals for each round
+                    for i in 1...repeatCount {
+                        let roundContext = "Round \(i) of \(repeatCount)"
+                        flatten(subIntervals, roundContext: roundContext)
+                    }
                 }
+
+            case .reps(let sets, let reps, let name, let load, let restSec, _):
+                print("⌚️ Processing reps: \(name), sets=\(sets ?? -1), reps=\(reps), restSec=\(restSec ?? -999)")
+                let totalSets = sets ?? 1
+
+                for setNum in 1...totalSets {
+                    counter += 1
+
+                    // Has rest after all sets except the last one (within a direct .reps block)
+                    // restSec: nil = manual, 0 = no rest, >0 = timed
+                    let hasRest = setNum < totalSets && restSec != 0
+
+                    result.append(WatchFlattenedInterval(
+                        interval: interval,
+                        index: counter,
+                        label: name,
+                        details: watchDetailsForSet(reps: reps, load: load, setNum: setNum, totalSets: totalSets),
+                        roundInfo: roundContext,
+                        timerSeconds: nil, // Reps are not timed
+                        stepType: .reps,
+                        targetReps: reps,
+                        setNumber: setNum,
+                        totalSets: totalSets,
+                        hasRestAfter: hasRest,
+                        restAfterSeconds: hasRest ? restSec : nil
+                    ))
+                }
+
             default:
                 counter += 1
+                // Cooldown shouldn't have rest after (it ends the workout)
+                // All other steps (warmup, time, distance) get manual rest after
+                let isCooldown: Bool = {
+                    if case .cooldown = interval { return true }
+                    return false
+                }()
+
                 result.append(WatchFlattenedInterval(
                     interval: interval,
                     index: counter,
@@ -404,14 +611,34 @@ func flattenWatchIntervals(_ intervals: [WorkoutInterval]) -> [WatchFlattenedInt
                     roundInfo: roundContext,
                     timerSeconds: watchIntervalTimer(interval),
                     stepType: watchIntervalStepType(interval),
-                    targetReps: watchIntervalTargetReps(interval)
+                    targetReps: watchIntervalTargetReps(interval),
+                    setNumber: nil,
+                    totalSets: nil,
+                    hasRestAfter: !isCooldown,  // All steps except cooldown have rest
+                    restAfterSeconds: isCooldown ? nil : nil  // nil = manual rest
                 ))
             }
         }
     }
 
     flatten(intervals)
+    print("⌚️ flattenWatchIntervals: Created \(result.count) flattened steps")
+    for (i, step) in result.enumerated() {
+        print("⌚️   Step \(i+1): \(step.label), hasRest=\(step.hasRestAfter), restSec=\(step.restAfterSeconds ?? -1), set=\(step.setNumber ?? 0)/\(step.totalSets ?? 0)")
+    }
     return result
+}
+
+/// Helper to create details string for a specific set (Watch version)
+private func watchDetailsForSet(reps: Int, load: String?, setNum: Int, totalSets: Int) -> String {
+    var parts: [String] = ["\(reps) reps"]
+    if let load = load {
+        parts.append(load)
+    }
+    if totalSets > 1 {
+        parts.append("Set \(setNum)/\(totalSets)")
+    }
+    return parts.joined(separator: " | ")
 }
 
 private func watchIntervalLabel(_ interval: WorkoutInterval) -> String {

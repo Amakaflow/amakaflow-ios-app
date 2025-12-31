@@ -35,8 +35,10 @@ struct SettingsView: View {
     @State private var manualDeviceName = ""
     @State private var showingDebugLog = false
     @State private var showingDisconnectAlert = false
+    @State private var showingWorkoutDebugSheet = false
     @EnvironmentObject private var garminConnectivity: GarminConnectManager
     @EnvironmentObject private var pairingService: PairingService
+    @EnvironmentObject private var workoutsViewModel: WorkoutsViewModel
 
     var body: some View {
         NavigationStack {
@@ -91,6 +93,329 @@ struct SettingsView: View {
             .sheet(isPresented: $showingDebugLog) {
                 debugLogSheet
             }
+            .sheet(isPresented: $showingWorkoutDebugSheet) {
+                workoutDebugSheet
+            }
+        }
+    }
+
+    // MARK: - Workout Debug Sheet
+
+    private var workoutDebugSheet: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Action buttons
+                HStack(spacing: Theme.Spacing.sm) {
+                    Button {
+                        Task {
+                            await workoutsViewModel.checkPendingWorkouts()
+                        }
+                    } label: {
+                        VStack {
+                            Image(systemName: "arrow.down.circle")
+                            Text("Fetch")
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Spacing.sm)
+                        .background(Theme.Colors.accentBlue.opacity(0.2))
+                        .cornerRadius(Theme.CornerRadius.sm)
+                    }
+
+                    Button {
+                        workoutsViewModel.addSampleWorkout()
+                    } label: {
+                        VStack {
+                            Image(systemName: "plus.circle")
+                            Text("Sample")
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Spacing.sm)
+                        .background(Theme.Colors.accentGreen.opacity(0.2))
+                        .cornerRadius(Theme.CornerRadius.sm)
+                    }
+
+                    Button {
+                        UIPasteboard.general.string = generateWorkoutDebugText()
+                    } label: {
+                        VStack {
+                            Image(systemName: "doc.on.doc")
+                            Text("Copy")
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Spacing.sm)
+                        .background(Color.purple.opacity(0.2))
+                        .cornerRadius(Theme.CornerRadius.sm)
+                    }
+                }
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.vertical, Theme.Spacing.sm)
+                .foregroundColor(Theme.Colors.textPrimary)
+
+                Divider()
+
+                // Status
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Status: \(workoutsViewModel.pendingWorkoutsStatus.isEmpty ? "Not checked" : workoutsViewModel.pendingWorkoutsStatus)")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(Theme.Colors.textSecondary)
+                }
+                .padding(Theme.Spacing.sm)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Theme.Colors.surfaceElevated)
+
+                Divider()
+
+                // Workout details
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                        // Show all incoming workouts
+                        if workoutsViewModel.incomingWorkouts.isEmpty {
+                            Text("No incoming workouts loaded.\nTap 'Fetch' to check for pending workouts.")
+                                .font(Theme.Typography.caption)
+                                .foregroundColor(Theme.Colors.textTertiary)
+                                .padding()
+                        } else {
+                            ForEach(workoutsViewModel.incomingWorkouts) { workout in
+                                workoutDebugCard(workout)
+                            }
+                        }
+                    }
+                    .padding(Theme.Spacing.md)
+                }
+            }
+            .background(Theme.Colors.background.ignoresSafeArea())
+            .navigationTitle("Workout Debug")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        showingWorkoutDebugSheet = false
+                    }
+                }
+            }
+        }
+    }
+
+    private func workoutDebugCard(_ workout: Workout) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            // Header
+            HStack {
+                Text(workout.name)
+                    .font(Theme.Typography.bodyBold)
+                    .foregroundColor(Theme.Colors.textPrimary)
+                Spacer()
+                Text(workout.sport.rawValue)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(Theme.Colors.accentBlue)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Theme.Colors.accentBlue.opacity(0.2))
+                    .cornerRadius(4)
+            }
+
+            // Workout ID and duration
+            Text("ID: \(workout.id)")
+                .font(.system(size: 9, design: .monospaced))
+                .foregroundColor(Theme.Colors.textTertiary)
+            Text("Duration: \(workout.duration)s (\(workout.formattedDuration))")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundColor(Theme.Colors.textSecondary)
+
+            Divider()
+
+            // Raw Intervals
+            Text("RAW INTERVALS (\(workout.intervals.count))")
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundColor(Theme.Colors.accentOrange)
+
+            ForEach(Array(workout.intervals.enumerated()), id: \.offset) { index, interval in
+                intervalDebugRow(index: index, interval: interval)
+            }
+
+            Divider()
+
+            // Flattened Steps
+            let flattened = flattenIntervals(workout.intervals)
+            Text("FLATTENED STEPS (\(flattened.count))")
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundColor(Theme.Colors.accentGreen)
+
+            ForEach(Array(flattened.enumerated()), id: \.offset) { index, step in
+                flattenedStepDebugRow(index: index, step: step)
+            }
+        }
+        .padding(Theme.Spacing.md)
+        .background(Theme.Colors.surface)
+        .cornerRadius(Theme.CornerRadius.md)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                .stroke(Theme.Colors.borderLight, lineWidth: 1)
+        )
+    }
+
+    private func intervalDebugRow(index: Int, interval: WorkoutInterval) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            switch interval {
+            case .warmup(let seconds, let target):
+                Text("[\(index)] WARMUP")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundColor(.orange)
+                Text("  seconds=\(seconds), target=\(target ?? "nil")")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundColor(Theme.Colors.textSecondary)
+
+            case .cooldown(let seconds, let target):
+                Text("[\(index)] COOLDOWN")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundColor(.cyan)
+                Text("  seconds=\(seconds), target=\(target ?? "nil")")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundColor(Theme.Colors.textSecondary)
+
+            case .time(let seconds, let target):
+                Text("[\(index)] TIME")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundColor(.blue)
+                Text("  seconds=\(seconds), target=\(target ?? "nil")")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundColor(Theme.Colors.textSecondary)
+
+            case .reps(let sets, let reps, let name, let load, let restSec, let followAlongUrl):
+                Text("[\(index)] REPS: \(name)")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundColor(.green)
+                Text("  sets=\(sets.map { String($0) } ?? "nil")")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundColor(Theme.Colors.textSecondary)
+                Text("  reps=\(reps)")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundColor(Theme.Colors.textSecondary)
+                Text("  restSec=\(restSec.map { String($0) } ?? "nil") ← \(restSecExplanation(restSec))")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundColor(restSec == nil ? .yellow : (restSec == 0 ? .red : Theme.Colors.textSecondary))
+                Text("  load=\(load ?? "nil")")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundColor(Theme.Colors.textSecondary)
+                if let url = followAlongUrl {
+                    Text("  followAlongUrl=\(url)")
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                }
+
+            case .distance(let meters, let target):
+                Text("[\(index)] DISTANCE")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundColor(.purple)
+                Text("  meters=\(meters), target=\(target ?? "nil")")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundColor(Theme.Colors.textSecondary)
+
+            case .repeat(let reps, let subIntervals):
+                Text("[\(index)] REPEAT x\(reps)")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundColor(.pink)
+                Text("  contains \(subIntervals.count) sub-intervals")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundColor(Theme.Colors.textSecondary)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func restSecExplanation(_ restSec: Int?) -> String {
+        if restSec == nil {
+            return "MANUAL REST (tap when ready)"
+        } else if restSec == 0 {
+            return "NO REST (superset/HIIT)"
+        } else {
+            return "TIMED REST (\(restSec!)s countdown)"
+        }
+    }
+
+    private func flattenedStepDebugRow(index: Int, step: FlattenedInterval) -> some View {
+        HStack(spacing: 4) {
+            Text("[\(index)]")
+                .font(.system(size: 9, design: .monospaced))
+                .foregroundColor(Theme.Colors.textTertiary)
+                .frame(width: 24, alignment: .leading)
+
+            if step.hasRestAfter {
+                Image(systemName: "pause.circle.fill")
+                    .font(.system(size: 10))
+                    .foregroundColor(.yellow)
+            }
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(step.displayLabel)
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundColor(Theme.Colors.textPrimary)
+
+                HStack(spacing: 8) {
+                    Text("type=\(step.stepType == .timed ? "timed" : step.stepType == .reps ? "reps" : "distance")")
+                    if let setNum = step.setNumber, let total = step.totalSets {
+                        Text("set=\(setNum)/\(total)")
+                    }
+                    if step.hasRestAfter {
+                        let restDesc = step.restAfterSeconds.map { $0 > 0 ? "\($0)s" : "manual" } ?? "manual"
+                        Text("rest=\(restDesc)")
+                            .foregroundColor(.yellow)
+                    }
+                }
+                .font(.system(size: 8, design: .monospaced))
+                .foregroundColor(Theme.Colors.textTertiary)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func generateWorkoutDebugText() -> String {
+        var text = "=== WORKOUT DEBUG ===\n"
+        text += "Status: \(workoutsViewModel.pendingWorkoutsStatus)\n\n"
+
+        for workout in workoutsViewModel.incomingWorkouts {
+            text += "WORKOUT: \(workout.name)\n"
+            text += "ID: \(workout.id)\n"
+            text += "Sport: \(workout.sport.rawValue)\n"
+            text += "Duration: \(workout.duration)s\n\n"
+
+            text += "RAW INTERVALS:\n"
+            for (i, interval) in workout.intervals.enumerated() {
+                text += formatIntervalForCopy(index: i, interval: interval)
+            }
+
+            text += "\nFLATTENED STEPS:\n"
+            let flattened = flattenIntervals(workout.intervals)
+            for (i, step) in flattened.enumerated() {
+                let restDesc = step.hasRestAfter ? (step.restAfterSeconds.map { $0 > 0 ? "\($0)s" : "manual" } ?? "manual") : "none"
+                text += "[\(i)] \(step.displayLabel) | type=\(step.stepType) | rest=\(restDesc)\n"
+            }
+            text += "\n---\n\n"
+        }
+
+        return text
+    }
+
+    private func formatIntervalForCopy(index: Int, interval: WorkoutInterval) -> String {
+        switch interval {
+        case .warmup(let seconds, let target):
+            return "[\(index)] WARMUP: seconds=\(seconds), target=\(target ?? "nil")\n"
+        case .cooldown(let seconds, let target):
+            return "[\(index)] COOLDOWN: seconds=\(seconds), target=\(target ?? "nil")\n"
+        case .time(let seconds, let target):
+            return "[\(index)] TIME: seconds=\(seconds), target=\(target ?? "nil")\n"
+        case .reps(let sets, let reps, let name, let load, let restSec, let followAlongUrl):
+            return "[\(index)] REPS: \(name) | sets=\(sets.map { String($0) } ?? "nil") | reps=\(reps) | restSec=\(restSec.map { String($0) } ?? "nil") | load=\(load ?? "nil") | url=\(followAlongUrl ?? "nil")\n"
+        case .distance(let meters, let target):
+            return "[\(index)] DISTANCE: meters=\(meters), target=\(target ?? "nil")\n"
+        case .repeat(let reps, let subIntervals):
+            var text = "[\(index)] REPEAT x\(reps):\n"
+            for (i, sub) in subIntervals.enumerated() {
+                text += "  " + formatIntervalForCopy(index: i, interval: sub)
+            }
+            return text
         }
     }
 
@@ -926,6 +1251,54 @@ struct SettingsView: View {
                         .foregroundColor(Theme.Colors.textTertiary)
                     Spacer()
                 }
+
+                // Debug: Pending workouts status
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    HStack {
+                        Image(systemName: "arrow.down.circle")
+                            .font(.system(size: 14))
+                            .foregroundColor(Theme.Colors.textTertiary)
+                        Text("Pending Workouts:")
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(Theme.Colors.textTertiary)
+                        Spacer()
+                    }
+                    Text(workoutsViewModel.pendingWorkoutsStatus.isEmpty ? "Not checked yet" : workoutsViewModel.pendingWorkoutsStatus)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundColor(Theme.Colors.accentBlue)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Button {
+                            Task {
+                                await workoutsViewModel.checkPendingWorkouts()
+                            }
+                        } label: {
+                            Text("Check Now")
+                                .font(Theme.Typography.caption)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, Theme.Spacing.md)
+                                .padding(.vertical, Theme.Spacing.xs)
+                                .background(Theme.Colors.accentBlue)
+                                .cornerRadius(Theme.CornerRadius.sm)
+                        }
+
+                        Button {
+                            showingWorkoutDebugSheet = true
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "ant")
+                                Text("Debug")
+                            }
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, Theme.Spacing.md)
+                            .padding(.vertical, Theme.Spacing.xs)
+                            .background(Theme.Colors.accentOrange)
+                            .cornerRadius(Theme.CornerRadius.sm)
+                        }
+                    }
+                }
             }
             .padding(Theme.Spacing.md)
             .background(Theme.Colors.surface)
@@ -1150,5 +1523,6 @@ private struct SettingsToggleRow: View {
     SettingsView()
         .environmentObject(GarminConnectManager.shared)
         .environmentObject(PairingService.shared)
+        .environmentObject(WorkoutsViewModel())
         .preferredColorScheme(.dark)
 }

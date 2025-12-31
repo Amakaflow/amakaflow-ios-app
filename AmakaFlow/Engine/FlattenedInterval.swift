@@ -21,10 +21,23 @@ struct FlattenedInterval: Identifiable {
     let targetReps: Int?
     let setNumber: Int?      // Current set number (1-based)
     let totalSets: Int?      // Total number of sets
-    let isRestPeriod: Bool   // Whether this is a rest period between sets
+    let hasRestAfter: Bool   // Whether this step has a rest period after it
+    let restAfterSeconds: Int?  // Rest duration: nil = manual (tap when ready), 0 = no rest, >0 = timed countdown
 
     var formattedTime: String? {
         guard let seconds = timerSeconds else { return nil }
+        let minutes = seconds / 60
+        let secs = seconds % 60
+        if minutes > 0 {
+            return String(format: "%d:%02d", minutes, secs)
+        } else {
+            return "\(secs)s"
+        }
+    }
+
+    /// Formatted rest duration for display
+    var formattedRestTime: String? {
+        guard let seconds = restAfterSeconds, seconds > 0 else { return nil }
         let minutes = seconds / 60
         let secs = seconds % 60
         if minutes > 0 {
@@ -48,22 +61,65 @@ func flattenIntervals(_ intervals: [WorkoutInterval]) -> [FlattenedInterval] {
     var result: [FlattenedInterval] = []
     var counter = 0
 
-    func flatten(_ items: [WorkoutInterval], roundContext: String? = nil) {
+    print("📱 flattenIntervals: Processing \(intervals.count) intervals")
+
+    func flatten(_ items: [WorkoutInterval], roundContext: String? = nil, overrideRestSec: Int?? = nil) {
         for interval in items {
             switch interval {
-            case .repeat(let reps, let subIntervals):
-                for i in 1...reps {
-                    flatten(subIntervals, roundContext: "Round \(i) of \(reps)")
+            case .repeat(let repeatCount, let subIntervals):
+                print("📱 Processing repeat: \(repeatCount)x with \(subIntervals.count) sub-intervals")
+
+                // Check if this is a "sets-style" repeat (single reps interval inside)
+                // In this case, we treat each iteration as a set
+                let isSetsStyleRepeat = subIntervals.count == 1 && {
+                    if case .reps = subIntervals[0] { return true }
+                    return false
+                }()
+
+                if isSetsStyleRepeat, case .reps(_, let reps, let name, let load, let restSec, let followAlongUrl) = subIntervals[0] {
+                    // Handle sets-style repeat directly - create exercise steps with rest info
+                    for i in 1...repeatCount {
+                        counter += 1
+
+                        // All sets have rest after them (for transition between sets or to next exercise)
+                        // restSec: nil = manual, 0 = no rest, >0 = timed
+                        let hasRest = restSec != 0  // Has rest unless explicitly 0
+
+                        result.append(FlattenedInterval(
+                            interval: subIntervals[0],
+                            index: counter,
+                            label: name,
+                            details: intervalDetailsForSet(reps: reps, load: load, setNum: i, totalSets: repeatCount),
+                            roundInfo: "Set \(i) of \(repeatCount)",
+                            timerSeconds: nil, // Reps are not timed
+                            stepType: .reps,
+                            followAlongUrl: followAlongUrl,
+                            targetReps: reps,
+                            setNumber: i,
+                            totalSets: repeatCount,
+                            hasRestAfter: hasRest,
+                            restAfterSeconds: restSec
+                        ))
+                    }
+                } else {
+                    // Regular repeat - process sub-intervals for each round
+                    for i in 1...repeatCount {
+                        let roundContext = "Round \(i) of \(repeatCount)"
+                        flatten(subIntervals, roundContext: roundContext)
+                    }
                 }
 
             case .reps(let sets, let reps, let name, let load, let restSec, let followAlongUrl):
-                // Expand sets into individual steps with rest periods
+                print("📱 Processing reps: \(name), sets=\(sets ?? -1), reps=\(reps), restSec=\(restSec ?? -999)")
                 let totalSets = sets ?? 1
 
                 for setNum in 1...totalSets {
                     counter += 1
 
-                    // Create the exercise step for this set
+                    // Has rest after all sets except the last one (within a direct .reps block)
+                    // restSec: nil = manual, 0 = no rest, >0 = timed
+                    let hasRest = setNum < totalSets && restSec != 0
+
                     result.append(FlattenedInterval(
                         interval: interval,
                         index: counter,
@@ -76,31 +132,20 @@ func flattenIntervals(_ intervals: [WorkoutInterval]) -> [FlattenedInterval] {
                         targetReps: reps,
                         setNumber: setNum,
                         totalSets: totalSets,
-                        isRestPeriod: false
+                        hasRestAfter: hasRest,
+                        restAfterSeconds: hasRest ? restSec : nil
                     ))
-
-                    // Add rest period after each set (except the last one)
-                    if let restSeconds = restSec, restSeconds > 0, setNum < totalSets {
-                        counter += 1
-                        result.append(FlattenedInterval(
-                            interval: .time(seconds: restSeconds, target: "Rest"),
-                            index: counter,
-                            label: "Rest",
-                            details: formatSeconds(restSeconds),
-                            roundInfo: roundContext,
-                            timerSeconds: restSeconds,
-                            stepType: .timed,
-                            followAlongUrl: nil,
-                            targetReps: nil,
-                            setNumber: nil,
-                            totalSets: nil,
-                            isRestPeriod: true
-                        ))
-                    }
                 }
 
             default:
                 counter += 1
+                // Cooldown shouldn't have rest after (it ends the workout)
+                // All other steps (warmup, time, distance) get manual rest after
+                let isCooldown: Bool = {
+                    if case .cooldown = interval { return true }
+                    return false
+                }()
+
                 result.append(FlattenedInterval(
                     interval: interval,
                     index: counter,
@@ -113,13 +158,18 @@ func flattenIntervals(_ intervals: [WorkoutInterval]) -> [FlattenedInterval] {
                     targetReps: intervalTargetReps(interval),
                     setNumber: nil,
                     totalSets: nil,
-                    isRestPeriod: false
+                    hasRestAfter: !isCooldown,  // All steps except cooldown have rest
+                    restAfterSeconds: isCooldown ? nil : nil  // nil = manual rest ("tap when ready")
                 ))
             }
         }
     }
 
     flatten(intervals)
+    print("📱 flattenIntervals: Created \(result.count) flattened steps")
+    for (i, step) in result.enumerated() {
+        print("📱   Step \(i+1): \(step.label), hasRest=\(step.hasRestAfter), restSec=\(step.restAfterSeconds ?? -1), set=\(step.setNumber ?? 0)/\(step.totalSets ?? 0)")
+    }
     return result
 }
 

@@ -19,15 +19,33 @@ struct WorkoutPlayerView: View {
 
     var body: some View {
         ZStack {
-            // Background
+            // Background - always visible
             Theme.Colors.background.ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                // Header
-                header
+            // Debug: Show if no workout loaded
+            if engine.workout == nil {
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.largeTitle)
+                        .foregroundColor(.orange)
+                    Text("No workout loaded")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    Text("Please try starting the workout again")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Button("Go Back") {
+                        dismiss()
+                    }
+                    .buttonStyle(.bordered)
+                }
+            } else {
+                VStack(spacing: 0) {
+                    // Header
+                    header
 
-                // Main content
-                if engine.phase == .ended, let workout = engine.workout {
+                    // Main content
+                    if engine.phase == .ended, let workout = engine.workout {
                     WorkoutCompletionView(
                         viewModel: WorkoutCompletionViewModel(
                             workoutName: workout.name,
@@ -44,16 +62,22 @@ struct WorkoutPlayerView: View {
                             }
                         )
                     )
+                } else if engine.phase == .resting {
+                    // Rest screen between exercises
+                    RestPeriodView(engine: engine)
+                        .id("rest-\(engine.currentStepIndex)")
                 } else {
                     ScrollView {
                         VStack(spacing: Theme.Spacing.lg) {
                             // Current step display
                             StepDisplayView(engine: engine)
+                                .id("step-\(engine.currentStepIndex)-\(engine.stateVersion)")
 
                             // Upcoming steps preview
                             upcomingStepsPreview
                         }
                     }
+                    .id("scroll-\(engine.currentStepIndex)")
 
                     Spacer()
 
@@ -62,8 +86,10 @@ struct WorkoutPlayerView: View {
                         showEndConfirmation = true
                     }
                 }
+                }
             }
         }
+        .id("player-\(engine.stateVersion)")
         .navigationBarHidden(true)
         .statusBarHidden(engine.phase == .running)
         .confirmationDialog(
@@ -120,6 +146,10 @@ struct WorkoutPlayerView: View {
                     Text("PAUSED")
                         .font(Theme.Typography.captionBold)
                         .foregroundColor(Theme.Colors.accentRed)
+                } else if engine.phase == .resting {
+                    Text("REST")
+                        .font(Theme.Typography.captionBold)
+                        .foregroundColor(Theme.Colors.accentBlue)
                 } else if watchManager.watchHeartRate > 0 {
                     watchHeartRateView
                 } else if garminManager.isGarminHRAvailable && garminManager.garminHeartRate > 0 {

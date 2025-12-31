@@ -147,6 +147,8 @@ final class WorkoutEngineTests: XCTestCase {
         engine.start(workout: workout)
         XCTAssertEqual(engine.currentStepIndex, 0)
 
+        // First nextStep enters rest phase, second advances
+        engine.nextStep()
         engine.nextStep()
 
         XCTAssertEqual(engine.currentStepIndex, 1)
@@ -154,7 +156,7 @@ final class WorkoutEngineTests: XCTestCase {
 
     func testNextStepAtEndEndsWorkout() {
         let workout = createTestWorkout(intervals: [
-            .warmup(seconds: 10, target: nil)
+            .cooldown(seconds: 10, target: nil)  // Use cooldown - no rest after
         ])
         engine.start(workout: workout)
 
@@ -166,6 +168,8 @@ final class WorkoutEngineTests: XCTestCase {
     func testPreviousStep() {
         let workout = createTestWorkout()
         engine.start(workout: workout)
+        // First nextStep enters rest phase, second advances
+        engine.nextStep()
         engine.nextStep()
         XCTAssertEqual(engine.currentStepIndex, 1)
 
@@ -263,10 +267,17 @@ final class WorkoutEngineTests: XCTestCase {
     }
 
     func testProgressAtMiddle() {
-        let workout = createTestWorkout()
+        // Use a workout with no rest to simplify navigation testing
+        let workout = createTestWorkout(intervals: [
+            .cooldown(seconds: 10, target: nil),  // No rest after
+            .cooldown(seconds: 10, target: nil),  // No rest after
+            .cooldown(seconds: 10, target: nil),  // No rest after
+            .cooldown(seconds: 10, target: nil)   // No rest after
+        ])
         engine.start(workout: workout)
-        engine.nextStep()
-        engine.nextStep()
+
+        engine.nextStep()  // Advance to step 1
+        engine.nextStep()  // Advance to step 2
 
         // 3 of 4 steps = 0.75
         XCTAssertEqual(engine.progress, 0.75, accuracy: 0.01)
@@ -278,6 +289,11 @@ final class WorkoutEngineTests: XCTestCase {
 
         XCTAssertEqual(engine.formattedStepProgress, "1 of 4")
 
+        // First nextStep enters rest phase (warmup has rest after)
+        engine.nextStep()
+        XCTAssertEqual(engine.formattedStepProgress, "1 of 4") // Still on step 1 during rest
+
+        // Second nextStep advances to step 2
         engine.nextStep()
         XCTAssertEqual(engine.formattedStepProgress, "2 of 4")
     }
@@ -319,8 +335,9 @@ final class WorkoutEngineTests: XCTestCase {
 
         let flattened = flattenIntervals(intervals)
 
-        XCTAssertEqual(flattened[0].roundInfo, "Round 1 of 2")
-        XCTAssertEqual(flattened[1].roundInfo, "Round 2 of 2")
+        // Repeat blocks with a single reps exercise use "Set X of Y"
+        XCTAssertEqual(flattened[0].roundInfo, "Set 1 of 2")
+        XCTAssertEqual(flattened[1].roundInfo, "Set 2 of 2")
     }
 
     func testFlattenedIntervalStepType() {
@@ -345,6 +362,12 @@ final class WorkoutEngineTests: XCTestCase {
 
         XCTAssertEqual(engine.currentStep?.label, "Warm Up")
 
+        // First nextStep enters rest phase (warmup has rest after)
+        engine.nextStep()
+        XCTAssertEqual(engine.phase, .resting)
+        XCTAssertEqual(engine.currentStep?.label, "Warm Up") // Still on warmup during rest
+
+        // Second nextStep advances to Push-ups
         engine.nextStep()
         XCTAssertEqual(engine.currentStep?.label, "Push-ups")
     }
@@ -374,7 +397,9 @@ final class WorkoutEngineTests: XCTestCase {
         let workout = createTestWorkout()
         engine.start(workout: workout)
 
-        engine.handleRemoteCommand("NEXT_STEP", commandId: "cmd-3")
+        // First NEXT_STEP enters rest, second advances
+        engine.handleRemoteCommand("NEXT_STEP", commandId: "cmd-3a")
+        engine.handleRemoteCommand("NEXT_STEP", commandId: "cmd-3b")
 
         XCTAssertEqual(engine.currentStepIndex, 1)
     }
@@ -382,6 +407,8 @@ final class WorkoutEngineTests: XCTestCase {
     func testHandleRemoteCommandPreviousStep() {
         let workout = createTestWorkout()
         engine.start(workout: workout)
+        // Advance to step 1 first
+        engine.nextStep()
         engine.nextStep()
 
         engine.handleRemoteCommand("PREV_STEP", commandId: "cmd-4")
@@ -446,7 +473,8 @@ final class FlattenedIntervalTests: XCTestCase {
             targetReps: nil,
             setNumber: nil,
             totalSets: nil,
-            isRestPeriod: false
+            hasRestAfter: false,
+            restAfterSeconds: nil
         )
 
         XCTAssertEqual(interval.formattedTime, "1:30")
@@ -465,7 +493,8 @@ final class FlattenedIntervalTests: XCTestCase {
             targetReps: nil,
             setNumber: nil,
             totalSets: nil,
-            isRestPeriod: false
+            hasRestAfter: false,
+            restAfterSeconds: nil
         )
 
         XCTAssertEqual(interval.formattedTime, "45s")
@@ -484,7 +513,8 @@ final class FlattenedIntervalTests: XCTestCase {
             targetReps: 10,
             setNumber: nil,
             totalSets: nil,
-            isRestPeriod: false
+            hasRestAfter: false,
+            restAfterSeconds: nil
         )
 
         XCTAssertNil(interval.formattedTime)
@@ -500,8 +530,8 @@ final class FlattenedIntervalTests: XCTestCase {
 
         let flattened = flattenIntervals(intervals)
 
-        // Should create: Set 1, Rest, Set 2, Rest, Set 3 = 5 steps
-        XCTAssertEqual(flattened.count, 5)
+        // Should create 3 steps (one per set), each with rest info built-in
+        XCTAssertEqual(flattened.count, 3)
     }
 
     func testSetsExpansionHasCorrectSetNumbers() {
@@ -511,16 +541,18 @@ final class FlattenedIntervalTests: XCTestCase {
 
         let flattened = flattenIntervals(intervals)
 
-        // Check set numbers for exercise steps (every other step)
+        // All steps are exercise steps with rest info
         XCTAssertEqual(flattened[0].setNumber, 1)
         XCTAssertEqual(flattened[0].totalSets, 3)
-        XCTAssertFalse(flattened[0].isRestPeriod)
+        XCTAssertTrue(flattened[0].hasRestAfter) // Has rest after set 1
 
-        XCTAssertEqual(flattened[2].setNumber, 2)
+        XCTAssertEqual(flattened[1].setNumber, 2)
+        XCTAssertEqual(flattened[1].totalSets, 3)
+        XCTAssertTrue(flattened[1].hasRestAfter) // Has rest after set 2
+
+        XCTAssertEqual(flattened[2].setNumber, 3)
         XCTAssertEqual(flattened[2].totalSets, 3)
-
-        XCTAssertEqual(flattened[4].setNumber, 3)
-        XCTAssertEqual(flattened[4].totalSets, 3)
+        XCTAssertFalse(flattened[2].hasRestAfter) // No rest after last set
     }
 
     func testSetsExpansionRestPeriodsAreTimed() {
@@ -530,14 +562,12 @@ final class FlattenedIntervalTests: XCTestCase {
 
         let flattened = flattenIntervals(intervals)
 
-        // Should have: Set 1, Rest (90s), Set 2 = 3 steps
-        XCTAssertEqual(flattened.count, 3)
+        // Should have 2 steps (one per set)
+        XCTAssertEqual(flattened.count, 2)
 
-        // Rest period should be timed
-        XCTAssertEqual(flattened[1].timerSeconds, 90)
-        XCTAssertEqual(flattened[1].stepType, .timed)
-        XCTAssertTrue(flattened[1].isRestPeriod)
-        XCTAssertEqual(flattened[1].label, "Rest")
+        // First set should have 90s rest after
+        XCTAssertTrue(flattened[0].hasRestAfter)
+        XCTAssertEqual(flattened[0].restAfterSeconds, 90)
     }
 
     func testSetsExpansionNoRestAfterLastSet() {
@@ -547,9 +577,9 @@ final class FlattenedIntervalTests: XCTestCase {
 
         let flattened = flattenIntervals(intervals)
 
-        // Last step should be Set 3 (not a rest)
+        // Last step should be Set 3 with no rest after
         XCTAssertEqual(flattened.last?.setNumber, 3)
-        XCTAssertFalse(flattened.last?.isRestPeriod ?? true)
+        XCTAssertFalse(flattened.last?.hasRestAfter ?? true)
     }
 
     func testSetsExpansionWithNilSetsCreatesSingleStep() {
@@ -578,16 +608,46 @@ final class FlattenedIntervalTests: XCTestCase {
         XCTAssertEqual(flattened[0].totalSets, 1)
     }
 
-    func testSetsExpansionNoRestWhenRestSecIsNil() {
+    func testSetsExpansionManualRestWhenRestSecIsNil() {
         let intervals: [WorkoutInterval] = [
             .reps(sets: 3, reps: 10, name: "Pull-ups", load: nil, restSec: nil, followAlongUrl: nil)
         ]
 
         let flattened = flattenIntervals(intervals)
 
-        // Should create 3 steps (no rest periods)
+        // Should create 3 steps with rest info built-in
         XCTAssertEqual(flattened.count, 3)
-        XCTAssertTrue(flattened.allSatisfy { !$0.isRestPeriod })
+
+        // First two have manual rest (restAfterSeconds: nil means manual)
+        XCTAssertTrue(flattened[0].hasRestAfter)
+        XCTAssertNil(flattened[0].restAfterSeconds) // nil = manual rest
+
+        XCTAssertTrue(flattened[1].hasRestAfter)
+        XCTAssertNil(flattened[1].restAfterSeconds)
+
+        // Last set has no rest
+        XCTAssertFalse(flattened[2].hasRestAfter)
+    }
+
+    func testSetsExpansionNoRestWhenRestSecIsZero() {
+        // HIIT/superset style: restSec: 0 means no rest between sets
+        let intervals: [WorkoutInterval] = [
+            .reps(sets: 3, reps: 10, name: "Burpees", load: nil, restSec: 0, followAlongUrl: nil)
+        ]
+
+        let flattened = flattenIntervals(intervals)
+
+        // Should create 3 steps with no rest
+        XCTAssertEqual(flattened.count, 3)
+
+        // Verify no rest on any step
+        XCTAssertTrue(flattened.allSatisfy { !$0.hasRestAfter })
+
+        // Verify all steps are the exercise sets
+        XCTAssertEqual(flattened[0].setNumber, 1)
+        XCTAssertEqual(flattened[1].setNumber, 2)
+        XCTAssertEqual(flattened[2].setNumber, 3)
+        XCTAssertTrue(flattened.allSatisfy { $0.label == "Burpees" })
     }
 
     func testDisplayLabelWithSets() {
@@ -603,7 +663,8 @@ final class FlattenedIntervalTests: XCTestCase {
             targetReps: 10,
             setNumber: 2,
             totalSets: 3,
-            isRestPeriod: false
+            hasRestAfter: true,
+            restAfterSeconds: nil
         )
 
         XCTAssertEqual(interval.displayLabel, "Squat - Set 2 of 3")
@@ -622,7 +683,8 @@ final class FlattenedIntervalTests: XCTestCase {
             targetReps: nil,
             setNumber: nil,
             totalSets: nil,
-            isRestPeriod: false
+            hasRestAfter: false,
+            restAfterSeconds: nil
         )
 
         XCTAssertEqual(interval.displayLabel, "Work")
@@ -636,17 +698,18 @@ final class FlattenedIntervalTests: XCTestCase {
 
         let flattened = flattenIntervals(intervals)
 
-        // Bench: Set 1, Rest, Set 2 = 3 steps
-        // Rows: Set 1, Rest, Set 2 = 3 steps
-        // Total = 6 steps
-        XCTAssertEqual(flattened.count, 6)
+        // Bench: Set 1, Set 2 = 2 steps (rest built into each step)
+        // Rows: Set 1, Set 2 = 2 steps
+        // Total = 4 steps
+        XCTAssertEqual(flattened.count, 4)
 
         // Verify first exercise
         XCTAssertEqual(flattened[0].label, "Bench Press")
         XCTAssertEqual(flattened[0].setNumber, 1)
+        XCTAssertTrue(flattened[0].hasRestAfter)
 
-        // Verify second exercise starts at index 3
-        XCTAssertEqual(flattened[3].label, "Rows")
-        XCTAssertEqual(flattened[3].setNumber, 1)
+        // Verify second exercise starts at index 2
+        XCTAssertEqual(flattened[2].label, "Rows")
+        XCTAssertEqual(flattened[2].setNumber, 1)
     }
 }

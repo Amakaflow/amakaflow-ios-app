@@ -123,16 +123,27 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     // MARK: - State Broadcasting (Phone → Watch)
 
     func sendState(_ state: WorkoutState) {
-        guard let session = session else { return }
+        guard let session = session else {
+            print("⌚️ sendState: No session available")
+            return
+        }
+
+        print("⌚️ sendState: Sending state - step=\(state.stepIndex), name='\(state.stepName)', phase=\(state.phase.rawValue)")
 
         do {
             let data = try JSONEncoder().encode(state)
             guard let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                print("⌚️ sendState: Failed to convert to dict")
                 return
             }
 
             // Always update applicationContext (persists even when app is backgrounded)
-            try? session.updateApplicationContext(["action": "stateUpdate", "state": dict])
+            do {
+                try session.updateApplicationContext(["action": "stateUpdate", "state": dict])
+                print("⌚️ sendState: Updated applicationContext")
+            } catch {
+                print("⌚️ sendState: Failed to update applicationContext: \(error)")
+            }
 
             // Also send message if reachable (for immediate updates)
             if session.isReachable {
@@ -143,6 +154,9 @@ class WatchConnectivityManager: NSObject, ObservableObject {
                         print("⌚️ Failed to send state message: \(error)")
                     }
                 )
+                print("⌚️ sendState: Sent message (watch reachable)")
+            } else {
+                print("⌚️ sendState: Watch not reachable, only used applicationContext")
             }
         } catch {
             print("⌚️ Failed to encode state: \(error)")
