@@ -100,6 +100,9 @@ struct WatchRemoteView: View {
     @StateObject private var demoState = DemoModeState.shared
     @Environment(\.dismiss) private var dismiss
 
+    // Timeout for loading state - after 5 seconds, show disconnected view
+    @State private var loadingTimedOut = false
+
     // Computed state that uses demo state when in demo mode
     private var displayState: WatchWorkoutState? {
         if demoState.isEnabled {
@@ -112,33 +115,42 @@ struct WatchRemoteView: View {
         demoState.isEnabled && demoState.currentScreen == 4
     }
 
+    @ViewBuilder
+    private var content: some View {
+        if !bridge.isSessionActivated && !demoState.isEnabled && !loadingTimedOut {
+            // Show loading while WCSession is activating (with timeout)
+            loadingView
+        } else if showComplete {
+            completeView
+        } else if let state = displayState, state.isResting {
+            restView(state: state)
+                .id("rest-\(state.stepIndex)-\(state.stateVersion)")
+        } else if let state = displayState, state.isActive {
+            activeWorkoutView(state: state)
+                .id("active-\(state.stepIndex)-\(state.stateVersion)")
+        } else if !demoState.isEnabled && !bridge.isPhoneReachable && bridge.workoutState == nil {
+            disconnectedView
+        } else {
+            idleView
+        }
+    }
+
     var body: some View {
-        Group {
-            if !bridge.isSessionActivated && !demoState.isEnabled {
-                // Show loading while WCSession is activating
-                loadingView
-            } else if showComplete {
-                completeView
-            } else if let state = displayState, state.isResting {
-                restView(state: state)
-                    .id("rest-\(state.stepIndex)-\(state.stateVersion)")
-            } else if let state = displayState, state.isActive {
-                activeWorkoutView(state: state)
-                    .id("active-\(state.stepIndex)-\(state.stateVersion)")
-            } else if !demoState.isEnabled && !bridge.isPhoneReachable && bridge.workoutState == nil {
-                disconnectedView
-            } else {
-                idleView
+        content
+            .id("remote-\(bridge.workoutState?.stateVersion ?? 0)-\(bridge.workoutState?.stepIndex ?? -1)")
+            .onChange(of: bridge.workoutState?.stateVersion) { oldVersion, newVersion in
+                print("⌚️ VIEW: stateVersion changed \(oldVersion ?? 0) → \(newVersion ?? 0), stepIndex=\(bridge.workoutState?.stepIndex ?? -1)")
             }
-        }
-        .id("remote-\(bridge.workoutState?.stateVersion ?? 0)-\(bridge.workoutState?.stepIndex ?? -1)")
-        .onChange(of: bridge.workoutState?.stateVersion) { oldVersion, newVersion in
-            print("⌚️ VIEW: stateVersion changed \(oldVersion ?? 0) → \(newVersion ?? 0), stepIndex=\(bridge.workoutState?.stepIndex ?? -1)")
-        }
-        .onChange(of: bridge.workoutState?.stepIndex) { oldStep, newStep in
-            print("⌚️ VIEW: stepIndex changed \(oldStep ?? -1) → \(newStep ?? -1)")
-        }
-        .overlay(alignment: .bottom) {
+            .onChange(of: bridge.workoutState?.stepIndex) { oldStep, newStep in
+                print("⌚️ VIEW: stepIndex changed \(oldStep ?? -1) → \(newStep ?? -1)")
+            }
+            .onChange(of: bridge.isSessionActivated) { _, activated in
+                print("⌚️ VIEW: isSessionActivated changed to \(activated)")
+            }
+            .onChange(of: bridge.isPhoneReachable) { _, reachable in
+                print("⌚️ VIEW: isPhoneReachable changed to \(reachable)")
+            }
+            .overlay(alignment: .bottom) {
             // Demo mode controls at bottom
             if demoState.isEnabled {
                 HStack(spacing: 20) {
@@ -174,8 +186,19 @@ struct WatchRemoteView: View {
             }
         }
         .onAppear {
+            print("⌚️ VIEW onAppear: isSessionActivated=\(bridge.isSessionActivated), isPhoneReachable=\(bridge.isPhoneReachable), workoutState=\(bridge.workoutState != nil ? "exists" : "nil")")
             if !demoState.isEnabled {
                 bridge.requestCurrentState()
+            }
+
+            // Set a timeout for loading state - if session doesn't activate in 5 seconds, proceed anyway
+            if !bridge.isSessionActivated {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                    if !bridge.isSessionActivated {
+                        print("⌚️ VIEW: Loading timeout - session not activated after 5s")
+                        loadingTimedOut = true
+                    }
+                }
             }
         }
     }

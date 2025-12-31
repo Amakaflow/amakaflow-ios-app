@@ -34,10 +34,17 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
     private override init() {
         super.init()
 
+        print("⌚️ WatchConnectivityBridge init: WCSession.isSupported() = \(WCSession.isSupported())")
+
         if WCSession.isSupported() {
             session = WCSession.default
             session?.delegate = self
             session?.activate()
+            print("⌚️ WatchConnectivityBridge init: WCSession activation requested")
+        } else {
+            // WCSession not supported - mark as activated but with error state
+            print("⌚️ WatchConnectivityBridge init: WCSession NOT supported!")
+            isSessionActivated = true  // Allow view to proceed, will show disconnected
         }
 
         // Subscribe to health updates
