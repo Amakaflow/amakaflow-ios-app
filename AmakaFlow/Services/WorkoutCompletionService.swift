@@ -118,6 +118,12 @@ class WorkoutCompletionService: ObservableObject {
         setupNetworkMonitoring()
     }
 
+    // MARK: - Debug Logging
+
+    private func logCompletionError(workoutId: String?, error: Error, context: String) {
+        DebugLogService.shared.logCompletionError(workoutId: workoutId, error: error, context: context)
+    }
+
     // MARK: - Public API
 
     /// Post workout completion from phone-controlled workout
@@ -284,12 +290,18 @@ class WorkoutCompletionService: ObservableObject {
             } catch {
                 print("[WorkoutCompletion] Failed to post, queueing for retry: \(error)")
                 lastError = error
+                logCompletionError(workoutId: request.followAlongWorkoutId, error: error, context: "postCompletion")
                 queueForRetry(request)
                 throw error
             }
         } else {
             // Queue for later
             print("[WorkoutCompletion] Network unavailable, queueing for later")
+            logCompletionError(
+                workoutId: request.followAlongWorkoutId,
+                error: NSError(domain: "WorkoutCompletion", code: -1, userInfo: [NSLocalizedDescriptionKey: "Network unavailable"]),
+                context: "Network unavailable - queued for later"
+            )
             queueForRetry(request)
             return nil
         }

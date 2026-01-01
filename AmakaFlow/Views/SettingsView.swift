@@ -1276,6 +1276,27 @@ struct SettingsView: View {
                             .cornerRadius(Theme.CornerRadius.sm)
                     }
                 }
+
+                // Debug: Error Log
+                NavigationLink {
+                    DebugLogView()
+                } label: {
+                    HStack {
+                        Image(systemName: "ladybug")
+                            .font(.system(size: 14))
+                            .foregroundColor(Theme.Colors.accentOrange)
+                        Text("Debug Log")
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(Theme.Colors.textTertiary)
+                        Spacer()
+                        Text("\(DebugLogService.shared.entries.count)")
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(Theme.Colors.accentOrange)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12))
+                            .foregroundColor(Theme.Colors.textTertiary)
+                    }
+                }
                 #endif
 
                 // Debug: Pending workouts status

@@ -38,9 +38,17 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             session?.delegate = self
         }
     }
-    
+
     func activate() {
         session?.activate()
+    }
+
+    // MARK: - Debug Logging
+
+    private func logWatchError(_ title: String, details: String, metadata: [String: String]? = nil) {
+        Task { @MainActor in
+            DebugLogService.shared.logWatchError(title: title, details: details, metadata: metadata)
+        }
     }
     
     // MARK: - Send Workout to Watch
@@ -49,24 +57,28 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         guard let session = session else {
             print("⌚️ WatchConnectivity not supported on this device")
             lastError = WatchConnectivityError.sessionNotAvailable
+            logWatchError("Session not available", details: "WatchConnectivity not supported on this device")
             return
         }
-        
+
         guard session.activationState == .activated else {
             print("⌚️ WatchConnectivity session not activated. Status: \(session.activationState.rawValue)")
             lastError = WatchConnectivityError.sessionNotAvailable
+            logWatchError("Session not activated", details: "Activation state: \(session.activationState.rawValue)")
             return
         }
-        
+
         guard session.isWatchAppInstalled else {
             print("⌚️ Watch app is not installed. Please install the watch app first.")
             lastError = WatchConnectivityError.watchNotReachable
+            logWatchError("Watch app not installed", details: "Please install the watch app first")
             return
         }
-        
+
         guard session.isReachable else {
             print("⌚️ Watch is not reachable. Make sure your watch is nearby and unlocked.")
             lastError = WatchConnectivityError.watchNotReachable
+            logWatchError("Watch not reachable", details: "Make sure your watch is nearby and unlocked")
             return
         }
         
@@ -85,10 +97,11 @@ class WatchConnectivityManager: NSObject, ObservableObject {
                 replyHandler: { reply in
                     print("⌚️ Watch received workout: \(reply)")
                 },
-                errorHandler: { error in
+                errorHandler: { [weak self] error in
                     print("⌚️ Failed to send workout: \(error.localizedDescription)")
                     Task { @MainActor in
-                        self.lastError = error
+                        self?.lastError = error
+                        self?.logWatchError("Send workout failed", details: error.localizedDescription, metadata: ["Workout": workout.name])
                     }
                 }
             )
@@ -97,6 +110,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         } catch {
             print("⌚️ Failed to encode workout: \(error.localizedDescription)")
             lastError = error
+            logWatchError("Encode workout failed", details: error.localizedDescription, metadata: ["Workout": workout.name])
         }
     }
     

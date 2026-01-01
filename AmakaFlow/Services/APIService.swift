@@ -16,6 +16,20 @@ class APIService {
 
     private init() {}
 
+    // MARK: - Error Logging Helper
+
+    private func logError(endpoint: String, method: String, statusCode: Int?, response: String?, error: Error?) {
+        Task { @MainActor in
+            DebugLogService.shared.logAPIError(
+                endpoint: endpoint,
+                method: method,
+                statusCode: statusCode,
+                response: response,
+                error: error
+            )
+        }
+    }
+
     // MARK: - Auth Headers
 
     private var authHeaders: [String: String] {
@@ -290,12 +304,15 @@ class APIService {
     /// - Returns: Completion response with ID
     /// - Throws: APIError if request fails
     func postWorkoutCompletion(_ completion: WorkoutCompletionRequest) async throws -> WorkoutCompletionResponse {
+        let endpoint = "/workouts/complete"
+
         guard PairingService.shared.isPaired else {
             print("[APIService] Not paired, throwing unauthorized")
+            logError(endpoint: endpoint, method: "POST", statusCode: nil, response: nil, error: APIError.unauthorized)
             throw APIError.unauthorized
         }
 
-        let url = URL(string: "\(baseURL)/workouts/complete")!
+        let url = URL(string: "\(baseURL)\(endpoint)")!
         print("[APIService] Posting workout completion to: \(url)")
 
         var request = URLRequest(url: url)
@@ -306,9 +323,11 @@ class APIService {
         request.httpBody = try encoder.encode(completion)
 
         let (data, response) = try await session.data(for: request)
+        let responseString = String(data: data, encoding: .utf8)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             print("[APIService] Invalid response type")
+            logError(endpoint: endpoint, method: "POST", statusCode: nil, response: responseString, error: APIError.invalidResponse)
             throw APIError.invalidResponse
         }
 
@@ -323,18 +342,24 @@ class APIService {
                 return completionResponse
             } catch {
                 print("[APIService] Decoding error: \(error)")
-                if let responseString = String(data: data, encoding: .utf8) {
+                if let responseString = responseString {
                     print("[APIService] Response body: \(responseString.prefix(500))")
+                }
+                // Log if backend returned success:false (HTTP 200 but logical failure)
+                if let responseString = responseString, responseString.contains("\"success\":false") {
+                    logError(endpoint: endpoint, method: "POST", statusCode: httpResponse.statusCode, response: responseString, error: nil)
                 }
                 throw APIError.decodingError(error)
             }
         case 401:
             print("[APIService] Unauthorized (401)")
+            logError(endpoint: endpoint, method: "POST", statusCode: 401, response: responseString, error: APIError.unauthorized)
             throw APIError.unauthorized
         default:
-            if let responseString = String(data: data, encoding: .utf8) {
+            if let responseString = responseString {
                 print("[APIService] Error response: \(responseString.prefix(200))")
             }
+            logError(endpoint: endpoint, method: "POST", statusCode: httpResponse.statusCode, response: responseString, error: nil)
             throw APIError.serverError(httpResponse.statusCode)
         }
     }

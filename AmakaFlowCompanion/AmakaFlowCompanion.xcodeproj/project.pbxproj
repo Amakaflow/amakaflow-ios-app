@@ -72,6 +72,8 @@
 		F8B8C2FBBE453C44649F8E94 /* PlayerControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F89DB8A09DD1694C469E6F54 /* PlayerControlsView.swift */; };
 		F8C125A12EFAB01000459747 /* GarminConnectManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8C125A02EFAB01000459747 /* GarminConnectManager.swift */; };
 		F8C125B22EFAC00000459747 /* ConnectIQ in Frameworks */ = {isa = PBXBuildFile; productRef = F8C125B12EFAC00000459747 /* ConnectIQ */; };
+		D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000001B0000001 /* DebugLogService.swift */; };
+		D3BUG10G00000002C0000002 /* DebugLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000002B0000002 /* DebugLogView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -210,6 +212,8 @@
 		F8C125A02EFAB01000459747 /* GarminConnectManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminConnectManager.swift; path = ../AmakaFlow/Services/GarminConnectManager.swift; sourceTree = SOURCE_ROOT; };
 		F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutActivityAttributes.swift; path = ../AmakaFlow/LiveActivity/WorkoutActivityAttributes.swift; sourceTree = SOURCE_ROOT; };
 		F8FC29620578214144920365 /* AudioCueManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioCueManager.swift; path = ../AmakaFlow/Services/AudioCueManager.swift; sourceTree = SOURCE_ROOT; };
+		D3BUG10G00000001B0000001 /* DebugLogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogService.swift; path = ../AmakaFlow/Services/DebugLogService.swift; sourceTree = SOURCE_ROOT; };
+		D3BUG10G00000002B0000002 /* DebugLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogView.swift; path = ../AmakaFlow/Views/DebugLogView.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -355,6 +359,8 @@
 				F84E22832ED0D5D100459747 /* CalendarManager.swift */,
 				F84E22842ED0D5D100459747 /* WatchConnectivityManager.swift */,
 				F8C125A02EFAB01000459747 /* GarminConnectManager.swift */,
+				D3BUG10G00000001B0000001 /* DebugLogService.swift */,
+				D3BUG10G00000002B0000002 /* DebugLogView.swift */,
 				F883912261E9D246979DD881 /* WorkoutState.swift */,
 				F82258553831E24BC9B8C650 /* FlattenedInterval.swift */,
 				F856B28A238E234FDAB29478 /* WorkoutEngine.swift */,
@@ -783,6 +789,8 @@
 				F84E22802ED0D5BF00459747 /* WorkoutCard.swift in Sources */,
 				F84E22702ED0D55600459747 /* Theme.swift in Sources */,
 				F84E22722ED0D56C00459747 /* Workout.swift in Sources */,
+				D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */,
+				D3BUG10G00000002C0000002 /* DebugLogView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
