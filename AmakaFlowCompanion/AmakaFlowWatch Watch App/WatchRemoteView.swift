@@ -102,6 +102,7 @@ struct WatchRemoteView: View {
 
     // Timeout for loading state - after 5 seconds, show disconnected view
     @State private var loadingTimedOut = false
+    @State private var controlsPage: Int = 0
 
     // Computed state that uses demo state when in demo mode
     private var displayState: WatchWorkoutState? {
@@ -123,11 +124,25 @@ struct WatchRemoteView: View {
         } else if showComplete {
             completeView
         } else if let state = displayState, state.isResting {
-            restView(state: state)
-                .id("rest-\(state.stepIndex)-\(state.stateVersion)")
+            // Wrap rest view in horizontal pager
+            TabView(selection: $controlsPage) {
+                restView(state: state)
+                    .tag(0)
+                controlsPanelView(state: state)
+                    .tag(1)
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .id("rest-\(state.stepIndex)-\(state.stateVersion)")
         } else if let state = displayState, state.isActive {
-            activeWorkoutView(state: state)
-                .id("active-\(state.stepIndex)-\(state.stateVersion)")
+            // Wrap active view in horizontal pager
+            TabView(selection: $controlsPage) {
+                activeWorkoutView(state: state)
+                    .tag(0)
+                controlsPanelView(state: state)
+                    .tag(1)
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .id("active-\(state.stepIndex)-\(state.stateVersion)")
         } else if !demoState.isEnabled && !bridge.isPhoneReachable && bridge.workoutState == nil {
             disconnectedView
         } else {
@@ -355,62 +370,91 @@ struct WatchRemoteView: View {
         .cornerRadius(8)
     }
 
-    // MARK: - Controls
+    // MARK: - Controls (Simplified - just navigation)
 
     @ViewBuilder
     private func controlsView(state: WatchWorkoutState) -> some View {
-        VStack(spacing: 6) {
-            // Play/Pause + Navigation Row
-            HStack(spacing: 16) {
-                // Previous
-                Button {
-                    bridge.sendCommand(.previousStep)
-                } label: {
-                    Image(systemName: "backward.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(state.stepIndex == 0 ? .gray : .primary)
-                }
-                .buttonStyle(.plain)
-                .disabled(state.stepIndex == 0)
-
-                // Play/Pause (prominent)
-                Button {
-                    if state.isPaused {
-                        bridge.sendCommand(.resume)
-                    } else {
-                        bridge.sendCommand(.pause)
-                    }
-                } label: {
-                    Image(systemName: state.isPaused ? "play.fill" : "pause.fill")
-                        .font(.system(size: 22))
-                        .frame(width: 50, height: 50)
-                        .background(state.isPaused ? Color.green : Color.orange)
-                        .clipShape(Circle())
-                }
-                .buttonStyle(.plain)
-
-                // Next
-                Button {
-                    bridge.sendCommand(.nextStep)
-                } label: {
-                    Image(systemName: "forward.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(state.stepIndex >= state.stepCount - 1 ? .gray : .primary)
-                }
-                .buttonStyle(.plain)
-                .disabled(state.stepIndex >= state.stepCount - 1)
-            }
-
-            // End button
+        HStack(spacing: 20) {
+            // Previous (smaller)
             Button {
-                bridge.sendCommand(.end)
+                bridge.sendCommand(.previousStep)
             } label: {
-                Text("End Workout")
-                    .font(.system(size: 12))
-                    .foregroundColor(.red)
+                Image(systemName: "backward.fill")
+                    .font(.system(size: 18))
+                    .foregroundColor(state.stepIndex == 0 ? .gray : .primary)
+            }
+            .buttonStyle(.plain)
+            .disabled(state.stepIndex == 0)
+
+            // Next (prominent - primary action)
+            Button {
+                bridge.sendCommand(.nextStep)
+            } label: {
+                Image(systemName: state.stepIndex >= state.stepCount - 1 ? "checkmark" : "forward.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(.white)
+                    .frame(width: 60, height: 60)
+                    .background(state.stepIndex >= state.stepCount - 1 ? Color.green : Color.blue)
+                    .clipShape(Circle())
             }
             .buttonStyle(.plain)
         }
+    }
+
+    // MARK: - Controls Panel (swipe-left to reveal)
+
+    @ViewBuilder
+    private func controlsPanelView(state: WatchWorkoutState) -> some View {
+        VStack(spacing: 16) {
+            // Swipe hint
+            Text("Swipe right to go back")
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+
+            // Pause/Resume button
+            Button {
+                if state.isPaused {
+                    bridge.sendCommand(.resume)
+                } else {
+                    bridge.sendCommand(.pause)
+                }
+                // Return to main view after action
+                withAnimation {
+                    controlsPage = 0
+                }
+            } label: {
+                VStack(spacing: 6) {
+                    Image(systemName: state.isPaused ? "play.fill" : "pause.fill")
+                        .font(.system(size: 32))
+                    Text(state.isPaused ? "Resume" : "Pause")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .frame(width: 100, height: 70)
+                .background(state.isPaused ? Color.green : Color.orange)
+                .cornerRadius(14)
+            }
+            .buttonStyle(.plain)
+
+            // End Workout button
+            Button {
+                bridge.sendCommand(.end)
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 24))
+                    Text("End Workout")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundColor(.red)
+                .frame(width: 100, height: 56)
+                .background(Color.red.opacity(0.2))
+                .cornerRadius(12)
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.black.opacity(0.95))
     }
 
     // MARK: - Loading View

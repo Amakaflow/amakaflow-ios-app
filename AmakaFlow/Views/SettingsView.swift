@@ -1252,6 +1252,32 @@ struct SettingsView: View {
                     Spacer()
                 }
 
+                #if DEBUG
+                // Debug: Copy API token for testing
+                HStack {
+                    Image(systemName: "key")
+                        .font(.system(size: 14))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                    Text("API Token")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textTertiary)
+                    Spacer()
+                    Button {
+                        if let token = pairingService.getToken() {
+                            UIPasteboard.general.string = token
+                        }
+                    } label: {
+                        Text("Copy")
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, Theme.Spacing.sm)
+                            .padding(.vertical, 4)
+                            .background(Theme.Colors.accentBlue)
+                            .cornerRadius(Theme.CornerRadius.sm)
+                    }
+                }
+                #endif
+
                 // Debug: Pending workouts status
                 VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                     HStack {

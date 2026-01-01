@@ -137,6 +137,12 @@ class ActivityHistoryViewModel: ObservableObject {
             completions = fetched
             hasMoreData = fetched.count >= pageSize
             currentOffset = fetched.count
+        } catch is CancellationError {
+            // Task was cancelled (view dismissed, new request started) - ignore silently
+            logger.debug("loadCompletions cancelled")
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            // URL request was cancelled - ignore silently
+            logger.debug("loadCompletions URL request cancelled")
         } catch let error as APIError {
             handleAPIError(error)
         } catch {

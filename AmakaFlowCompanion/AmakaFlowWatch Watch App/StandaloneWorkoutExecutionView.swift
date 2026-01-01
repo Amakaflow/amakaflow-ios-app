@@ -14,19 +14,42 @@ struct StandaloneWorkoutExecutionView: View {
     let workout: Workout
 
     @State private var showEndConfirmation = false
+    @State private var showCountdown = true
+    @State private var controlsPage: Int = 0
 
     var body: some View {
         Group {
-            if engine.phase == .ended {
+            if showCountdown && engine.phase == .idle {
+                // Show countdown before starting
+                WorkoutCountdownView(isPresented: $showCountdown) {
+                    Task {
+                        await engine.start(workout: workout)
+                    }
+                }
+            } else if engine.phase == .ended {
                 completeView
             } else if engine.phase == .resting {
-                restView
-                    .id("rest-\(engine.currentStepIndex)")
+                // Wrap rest view in horizontal pager
+                TabView(selection: $controlsPage) {
+                    restView
+                        .tag(0)
+                    controlsPanelView
+                        .tag(1)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .id("rest-\(engine.currentStepIndex)")
             } else if engine.isActive {
-                activeWorkoutView
-                    .id("active-\(engine.currentStepIndex)")
-            } else {
-                // Starting state
+                // Wrap active view in horizontal pager
+                TabView(selection: $controlsPage) {
+                    activeWorkoutView
+                        .tag(0)
+                    controlsPanelView
+                        .tag(1)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .id("active-\(engine.currentStepIndex)")
+            } else if !showCountdown {
+                // Starting state (after countdown)
                 ProgressView("Starting...")
                     .onAppear {
                         Task {
@@ -36,7 +59,7 @@ struct StandaloneWorkoutExecutionView: View {
             }
         }
         .id("standalone-\(engine.currentStepIndex)-\(engine.phase.rawValue)")
-        .navigationBarBackButtonHidden(engine.isActive)
+        .navigationBarBackButtonHidden(engine.isActive || showCountdown)
         .confirmationDialog(
             "End Workout?",
             isPresented: $showEndConfirmation,
@@ -138,63 +161,92 @@ struct StandaloneWorkoutExecutionView: View {
         .cornerRadius(8)
     }
 
-    // MARK: - Controls
+    // MARK: - Controls (Simplified - just navigation)
 
     private var controlsView: some View {
-        VStack(spacing: 6) {
-            // Play/Pause + Navigation Row
-            HStack(spacing: 16) {
-                // Previous
-                Button {
-                    engine.previousStep()
-                } label: {
-                    Image(systemName: "backward.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(engine.currentStepIndex == 0 ? .gray : .primary)
-                }
-                .buttonStyle(.plain)
-                .disabled(engine.currentStepIndex == 0)
-
-                // Play/Pause (prominent)
-                Button {
-                    engine.togglePlayPause()
-                } label: {
-                    Image(systemName: engine.phase == .paused ? "play.fill" : "pause.fill")
-                        .font(.system(size: 22))
-                        .frame(width: 50, height: 50)
-                        .background(engine.phase == .paused ? Color.green : Color.orange)
-                        .clipShape(Circle())
-                }
-                .buttonStyle(.plain)
-
-                // Next / Done
-                Button {
-                    if engine.currentStepIndex >= engine.totalSteps - 1 {
-                        // Last step - complete workout
-                        Task {
-                            await engine.end(reason: .completed)
-                        }
-                    } else {
-                        engine.nextStep()
-                    }
-                } label: {
-                    Image(systemName: engine.currentStepIndex >= engine.totalSteps - 1 ? "checkmark" : "forward.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(engine.currentStepIndex >= engine.totalSteps - 1 ? .green : .primary)
-                }
-                .buttonStyle(.plain)
-            }
-
-            // End button
+        HStack(spacing: 20) {
+            // Previous (smaller)
             Button {
-                showEndConfirmation = true
+                engine.previousStep()
             } label: {
-                Text("End Workout")
-                    .font(.system(size: 12))
-                    .foregroundColor(.red)
+                Image(systemName: "backward.fill")
+                    .font(.system(size: 18))
+                    .foregroundColor(engine.currentStepIndex == 0 ? .gray : .primary)
+            }
+            .buttonStyle(.plain)
+            .disabled(engine.currentStepIndex == 0)
+
+            // Next / Done (prominent - primary action)
+            Button {
+                if engine.currentStepIndex >= engine.totalSteps - 1 {
+                    // Last step - complete workout
+                    Task {
+                        await engine.end(reason: .completed)
+                    }
+                } else {
+                    engine.nextStep()
+                }
+            } label: {
+                Image(systemName: engine.currentStepIndex >= engine.totalSteps - 1 ? "checkmark" : "forward.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(.white)
+                    .frame(width: 60, height: 60)
+                    .background(engine.currentStepIndex >= engine.totalSteps - 1 ? Color.green : Color.blue)
+                    .clipShape(Circle())
             }
             .buttonStyle(.plain)
         }
+    }
+
+    // MARK: - Controls Panel (swipe-left to reveal)
+
+    private var controlsPanelView: some View {
+        VStack(spacing: 16) {
+            // Swipe hint
+            Text("Swipe right to go back")
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+
+            // Pause/Resume button
+            Button {
+                engine.togglePlayPause()
+                // Return to main view after action
+                withAnimation {
+                    controlsPage = 0
+                }
+            } label: {
+                VStack(spacing: 6) {
+                    Image(systemName: engine.phase == .paused ? "play.fill" : "pause.fill")
+                        .font(.system(size: 32))
+                    Text(engine.phase == .paused ? "Resume" : "Pause")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .frame(width: 100, height: 70)
+                .background(engine.phase == .paused ? Color.green : Color.orange)
+                .cornerRadius(14)
+            }
+            .buttonStyle(.plain)
+
+            // End Workout button
+            Button {
+                showEndConfirmation = true
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 24))
+                    Text("End Workout")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundColor(.red)
+                .frame(width: 100, height: 56)
+                .background(Color.red.opacity(0.2))
+                .cornerRadius(12)
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.black.opacity(0.95))
     }
 
     // MARK: - Rest View

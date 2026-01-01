@@ -9,6 +9,9 @@
 import Foundation
 import Combine
 import UIKit
+import os.log
+
+private let logger = Logger(subsystem: "com.myamaka.AmakaFlowCompanion", category: "WorkoutEngine")
 
 @MainActor
 class WorkoutEngine: ObservableObject {
@@ -371,6 +374,13 @@ class WorkoutEngine: ObservableObject {
         startedAt: Date?,
         durationSeconds: Int
     ) {
+        logger.info("postWorkoutCompletion called")
+        logger.info("- workoutId: \(workoutId ?? "nil")")
+        logger.info("- workoutName: \(workoutName ?? "nil")")
+        logger.info("- startedAt: \(startedAt?.description ?? "nil")")
+        logger.info("- durationSeconds: \(durationSeconds)")
+        logger.info("- isPaired: \(PairingService.shared.isPaired)")
+
         guard let workoutId = workoutId,
               let startedAt = startedAt else {
             print("🏋️ Cannot post completion - missing workout ID or start time")
@@ -397,9 +407,9 @@ class WorkoutEngine: ObservableObject {
                     avgHeartRate: avgHeartRate,
                     activeCalories: activeCalories
                 )
-                print("🏋️ Workout completion posted successfully")
+                logger.info("Workout completion posted successfully")
             } catch {
-                print("🏋️ Failed to post workout completion: \(error)")
+                logger.error("Failed to post workout completion: \(error.localizedDescription)")
                 // Error is already logged and queued for retry by WorkoutCompletionService
             }
         }
