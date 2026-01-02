@@ -113,6 +113,8 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
     let heartRateSamples: [HeartRateDataPoint]?
     let syncedToStrava: Bool?       // Optional - backend may not return this
     let stravaActivityId: String?
+    let workoutId: String?          // Original workout ID (AMA-224)
+    let intervals: [WorkoutInterval]? // Workout steps/exercises (AMA-224)
 
     /// Computed endedAt from startedAt + durationSeconds if not provided
     var resolvedEndedAt: Date {
@@ -142,6 +144,130 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
         case heartRateSamples
         case syncedToStrava
         case stravaActivityId
+        case workoutId
+        case intervals
+    }
+}
+
+// MARK: - Workout Step Item (for display)
+
+import SwiftUI
+
+struct WorkoutStepItem: Identifiable, Hashable {
+    let id = UUID()
+    let stepNumber: Int
+    let name: String
+    let detail: String
+    let target: String?
+    let icon: String
+    let iconColor: Color
+}
+
+// MARK: - Workout Steps Helpers
+
+extension WorkoutCompletionDetail {
+    /// Whether this completion has workout steps to display
+    var hasWorkoutSteps: Bool {
+        !(intervals?.isEmpty ?? true)
+    }
+
+    /// Flattened list of workout steps for display (expands repeat blocks)
+    var flattenedSteps: [WorkoutStepItem] {
+        guard let intervals = intervals else { return [] }
+        return flattenIntervals(intervals, stepOffset: 0).0
+    }
+
+    private func flattenIntervals(_ intervals: [WorkoutInterval], stepOffset: Int) -> ([WorkoutStepItem], Int) {
+        var items: [WorkoutStepItem] = []
+        var currentStep = stepOffset
+
+        for interval in intervals {
+            switch interval {
+            case .warmup(let seconds, let target):
+                currentStep += 1
+                items.append(WorkoutStepItem(
+                    stepNumber: currentStep,
+                    name: "Warm Up",
+                    detail: formatTime(seconds),
+                    target: target,
+                    icon: "flame",
+                    iconColor: .orange
+                ))
+
+            case .cooldown(let seconds, let target):
+                currentStep += 1
+                items.append(WorkoutStepItem(
+                    stepNumber: currentStep,
+                    name: "Cool Down",
+                    detail: formatTime(seconds),
+                    target: target,
+                    icon: "snowflake",
+                    iconColor: .blue
+                ))
+
+            case .time(let seconds, let target):
+                currentStep += 1
+                items.append(WorkoutStepItem(
+                    stepNumber: currentStep,
+                    name: "Timed Interval",
+                    detail: formatTime(seconds),
+                    target: target,
+                    icon: "timer",
+                    iconColor: .green
+                ))
+
+            case .reps(let sets, let reps, let name, let load, _, _):
+                currentStep += 1
+                var detail = "\(reps) reps"
+                if let sets = sets, sets > 1 {
+                    detail = "\(sets) × \(reps) reps"
+                }
+                if let load = load, !load.isEmpty {
+                    detail += " @ \(load)"
+                }
+                items.append(WorkoutStepItem(
+                    stepNumber: currentStep,
+                    name: name,
+                    detail: detail,
+                    target: nil,
+                    icon: "dumbbell.fill",
+                    iconColor: .purple
+                ))
+
+            case .distance(let meters, let target):
+                currentStep += 1
+                items.append(WorkoutStepItem(
+                    stepNumber: currentStep,
+                    name: "Distance",
+                    detail: WorkoutHelpers.formatDistance(meters: meters),
+                    target: target,
+                    icon: "figure.run",
+                    iconColor: .green
+                ))
+
+            case .repeat(let repeatCount, let subIntervals):
+                // Expand repeat blocks
+                for _ in 0..<repeatCount {
+                    let (subItems, newStep) = flattenIntervals(subIntervals, stepOffset: currentStep)
+                    items.append(contentsOf: subItems)
+                    currentStep = newStep
+                }
+            }
+        }
+
+        return (items, currentStep)
+    }
+
+    private func formatTime(_ seconds: Int) -> String {
+        if seconds >= 60 {
+            let minutes = seconds / 60
+            let secs = seconds % 60
+            if secs > 0 {
+                return "\(minutes)m \(secs)s"
+            }
+            return "\(minutes) min"
+        }
+        return "\(seconds)s"
     }
 }
 
@@ -312,6 +438,17 @@ extension WorkoutCompletionDetail {
             return HeartRateDataPoint(timestamp: timestamp, bpm: bpm)
         }
 
+        // Sample workout steps
+        let sampleIntervals: [WorkoutInterval] = [
+            .warmup(seconds: 300, target: "Easy pace"),
+            .reps(sets: 3, reps: 10, name: "Squats", load: "Body weight", restSec: 60, followAlongUrl: nil),
+            .reps(sets: 3, reps: 12, name: "Lunges", load: nil, restSec: 45, followAlongUrl: nil),
+            .reps(sets: 4, reps: 8, name: "Jump Squats", load: nil, restSec: 30, followAlongUrl: nil),
+            .time(seconds: 60, target: "High knees"),
+            .time(seconds: 60, target: "Mountain climbers"),
+            .cooldown(seconds: 300, target: "Stretch")
+        ]
+
         return WorkoutCompletionDetail(
             id: "detail-1",
             workoutName: "HIIT Cardio Blast",
@@ -329,7 +466,9 @@ extension WorkoutCompletionDetail {
             deviceInfo: CompletionDeviceInfo(model: "Watch7,1", platform: "watchos", osVersion: "11.0"),
             heartRateSamples: samples,
             syncedToStrava: true,
-            stravaActivityId: "12345678"
+            stravaActivityId: "12345678",
+            workoutId: nil,  // nil to show "Save to My Workouts" button
+            intervals: sampleIntervals
         )
     }
 
@@ -352,7 +491,9 @@ extension WorkoutCompletionDetail {
             deviceInfo: nil,
             heartRateSamples: nil,
             syncedToStrava: false,
-            stravaActivityId: nil
+            stravaActivityId: nil,
+            workoutId: nil,
+            intervals: nil
         )
     }
 }

@@ -31,6 +31,7 @@
 		A19401BB00000007C0000007 /* HRChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA00000007B0000007 /* HRChartView.swift */; };
 		A19401BB00000008C0000008 /* HRZonesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA00000008B0000008 /* HRZonesView.swift */; };
 		A19401BB00000009C0000009 /* MetricGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA00000009B0000009 /* MetricGridView.swift */; };
+		A19401BB0000000AC000000A /* WorkoutStepsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA0000000AB000000A /* WorkoutStepsSection.swift */; };
 		F818DA94C6BD4F40EE8313B0 /* StepDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8BFF8D1C38311406C868156 /* StepDisplayView.swift */; };
 		AA8C7E7D040E462BB1347220 /* RestPeriodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94AE3547CCCD41159C85554B /* RestPeriodView.swift */; };
 		F84682B9F2FD8A45578F0E68 /* WorkoutPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */; };
@@ -167,6 +168,7 @@
 		A19401AA00000007B0000007 /* HRChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HRChartView.swift; path = ../AmakaFlow/Views/CompletionDetail/HRChartView.swift; sourceTree = SOURCE_ROOT; };
 		A19401AA00000008B0000008 /* HRZonesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HRZonesView.swift; path = ../AmakaFlow/Views/CompletionDetail/HRZonesView.swift; sourceTree = SOURCE_ROOT; };
 		A19401AA00000009B0000009 /* MetricGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MetricGridView.swift; path = ../AmakaFlow/Views/CompletionDetail/MetricGridView.swift; sourceTree = SOURCE_ROOT; };
+		A19401AA0000000AB000000A /* WorkoutStepsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutStepsSection.swift; path = ../AmakaFlow/Views/CompletionDetail/WorkoutStepsSection.swift; sourceTree = SOURCE_ROOT; };
 		2AB8DFBA16CE406C95456EAD /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarView.swift; path = ../AmakaFlow/Views/CalendarView.swift; sourceTree = SOURCE_ROOT; };
 		3910753486A542ECAA1E5971 /* PreWorkoutDeviceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PreWorkoutDeviceSheet.swift; path = ../AmakaFlow/Views/Components/PreWorkoutDeviceSheet.swift; sourceTree = SOURCE_ROOT; };
 		W41T1NG000000001B0000001 /* WaitingForWatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WaitingForWatchView.swift; path = ../AmakaFlow/Views/Components/WaitingForWatchView.swift; sourceTree = SOURCE_ROOT; };
@@ -393,6 +395,7 @@
 				A19401AA00000007B0000007 /* HRChartView.swift */,
 				A19401AA00000008B0000008 /* HRZonesView.swift */,
 				A19401AA00000009B0000009 /* MetricGridView.swift */,
+				A19401AA0000000AB000000A /* WorkoutStepsSection.swift */,
 				CC2192F9A69B4A51B54A138F /* HomeView.swift */,
 				F8BFF8D1C38311406C868156 /* StepDisplayView.swift */,
 				94AE3547CCCD41159C85554B /* RestPeriodView.swift */,
@@ -789,6 +792,7 @@
 				A19401BB00000007C0000007 /* HRChartView.swift in Sources */,
 				A19401BB00000008C0000008 /* HRZonesView.swift in Sources */,
 				A19401BB00000009C0000009 /* MetricGridView.swift in Sources */,
+				A19401BB0000000AC000000A /* WorkoutStepsSection.swift in Sources */,
 				67283958B3E2475BA2DA974A /* HomeView.swift in Sources */,
 				F84E22742ED0D58300459747 /* WorkoutsViewModel.swift in Sources */,
 				F84E226F2ED0D55600459747 /* AmakaFlowApp.swift in Sources */,

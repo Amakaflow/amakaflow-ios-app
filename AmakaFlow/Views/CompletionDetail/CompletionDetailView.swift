@@ -41,6 +41,9 @@ struct CompletionDetailView: View {
                     if viewModel.showStravaToast {
                         stravaToast
                     }
+                    if viewModel.showSaveToast {
+                        saveToast
+                    }
                 }
         }
     }
@@ -108,8 +111,18 @@ struct CompletionDetailView: View {
                     HRZonesView(zones: viewModel.hrZones)
                 }
 
+                // Workout Steps (AMA-224)
+                if detail.hasWorkoutSteps {
+                    WorkoutStepsSection(steps: detail.flattenedSteps)
+                }
+
                 // Details Section
                 detailsSection(detail)
+
+                // Save to Library Button (for voice-added workouts)
+                if viewModel.canSaveToLibrary {
+                    saveToLibraryButton
+                }
 
                 // Strava Button
                 stravaButton
@@ -246,6 +259,34 @@ struct CompletionDetailView: View {
         .font(.subheadline)
     }
 
+    // MARK: - Save to Library Button
+
+    private var saveToLibraryButton: some View {
+        Button {
+            Task {
+                await viewModel.saveToLibrary()
+            }
+        } label: {
+            HStack {
+                if viewModel.isSavingToLibrary {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(0.8)
+                } else {
+                    Image(systemName: "plus.circle.fill")
+                }
+                Text(viewModel.isSavingToLibrary ? "Saving..." : "Save to My Workouts")
+            }
+            .font(.headline)
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Theme.Colors.accentBlue)
+            .cornerRadius(12)
+        }
+        .disabled(viewModel.isSavingToLibrary)
+    }
+
     // MARK: - Strava Button
 
     private var stravaButton: some View {
@@ -284,6 +325,29 @@ struct CompletionDetailView: View {
         }
         .transition(.move(edge: .bottom).combined(with: .opacity))
         .animation(.easeInOut, value: viewModel.showStravaToast)
+    }
+
+    // MARK: - Save Toast
+
+    private var saveToast: some View {
+        VStack {
+            Spacer()
+
+            HStack {
+                Image(systemName: viewModel.saveToastMessage.contains("Failed") ? "xmark.circle.fill" : "checkmark.circle.fill")
+                    .foregroundColor(viewModel.saveToastMessage.contains("Failed") ? .red : .green)
+                Text(viewModel.saveToastMessage)
+            }
+            .font(.subheadline)
+            .foregroundColor(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color.black.opacity(0.8))
+            .cornerRadius(8)
+            .padding(.bottom, 50)
+        }
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .animation(.easeInOut, value: viewModel.showSaveToast)
     }
 
     // MARK: - Loading View

@@ -452,4 +452,225 @@ final class CompletionDetailTests: XCTestCase {
         let effectiveMax = max(maxSample, providedMax ?? maxSample)
         return (max(40, effectiveMin - 10), min(220, effectiveMax + 10))
     }
+
+    // MARK: - Workout Steps Tests (AMA-224)
+
+    func testHasWorkoutStepsWithIntervals() {
+        let intervals: [TestInterval] = [
+            .warmup(seconds: 300),
+            .reps(sets: 3, reps: 10, name: "Squats")
+        ]
+        let result = hasWorkoutSteps(intervals: intervals)
+        XCTAssertTrue(result)
+    }
+
+    func testHasWorkoutStepsWithEmptyIntervals() {
+        let intervals: [TestInterval] = []
+        let result = hasWorkoutSteps(intervals: intervals)
+        XCTAssertFalse(result)
+    }
+
+    func testHasWorkoutStepsWithNil() {
+        let result = hasWorkoutSteps(intervals: nil)
+        XCTAssertFalse(result)
+    }
+
+    func testFlattenIntervalsSimple() {
+        let intervals: [TestInterval] = [
+            .warmup(seconds: 300),
+            .time(seconds: 60),
+            .cooldown(seconds: 300)
+        ]
+
+        let flattened = flattenIntervals(intervals)
+        XCTAssertEqual(flattened.count, 3)
+        XCTAssertEqual(flattened[0].name, "Warm Up")
+        XCTAssertEqual(flattened[1].name, "Timed Interval")
+        XCTAssertEqual(flattened[2].name, "Cool Down")
+    }
+
+    func testFlattenIntervalsWithReps() {
+        let intervals: [TestInterval] = [
+            .reps(sets: 3, reps: 10, name: "Squats"),
+            .reps(sets: nil, reps: 15, name: "Lunges")
+        ]
+
+        let flattened = flattenIntervals(intervals)
+        XCTAssertEqual(flattened.count, 2)
+        XCTAssertEqual(flattened[0].detail, "3 × 10 reps")
+        XCTAssertEqual(flattened[1].detail, "15 reps")
+    }
+
+    func testFlattenIntervalsWithRepeat() {
+        let intervals: [TestInterval] = [
+            .repeat(count: 3, intervals: [
+                .time(seconds: 30),
+                .time(seconds: 30)
+            ])
+        ]
+
+        let flattened = flattenIntervals(intervals)
+        XCTAssertEqual(flattened.count, 6) // 3 repeats × 2 intervals
+    }
+
+    func testStepNumbersAreSequential() {
+        let intervals: [TestInterval] = [
+            .warmup(seconds: 300),
+            .reps(sets: 3, reps: 10, name: "Squats"),
+            .cooldown(seconds: 300)
+        ]
+
+        let flattened = flattenIntervals(intervals)
+        XCTAssertEqual(flattened[0].stepNumber, 1)
+        XCTAssertEqual(flattened[1].stepNumber, 2)
+        XCTAssertEqual(flattened[2].stepNumber, 3)
+    }
+
+    // MARK: - Save to Library Tests (AMA-224)
+
+    func testCanSaveToLibraryWithNoWorkoutId() {
+        let result = canSaveToLibrary(workoutId: nil, hasIntervals: true)
+        XCTAssertTrue(result)
+    }
+
+    func testCannotSaveToLibraryWithWorkoutId() {
+        let result = canSaveToLibrary(workoutId: "workout-123", hasIntervals: true)
+        XCTAssertFalse(result)
+    }
+
+    func testCannotSaveToLibraryWithoutIntervals() {
+        let result = canSaveToLibrary(workoutId: nil, hasIntervals: false)
+        XCTAssertFalse(result)
+    }
+
+    func testInferSportFromRepsIntervals() {
+        let intervals: [TestInterval] = [
+            .reps(sets: 3, reps: 10, name: "Squats"),
+            .reps(sets: 3, reps: 12, name: "Lunges")
+        ]
+
+        let sport = inferSportFromIntervals(intervals)
+        XCTAssertEqual(sport, "strength")
+    }
+
+    func testInferSportFromDistanceIntervals() {
+        let intervals: [TestInterval] = [
+            .warmup(seconds: 300),
+            .distance(meters: 1000),
+            .cooldown(seconds: 300)
+        ]
+
+        let sport = inferSportFromIntervals(intervals)
+        XCTAssertEqual(sport, "running")
+    }
+
+    func testInferSportFromTimeIntervals() {
+        let intervals: [TestInterval] = [
+            .warmup(seconds: 300),
+            .time(seconds: 60),
+            .time(seconds: 60),
+            .cooldown(seconds: 300)
+        ]
+
+        let sport = inferSportFromIntervals(intervals)
+        XCTAssertEqual(sport, "cardio")
+    }
+
+    // MARK: - Workout Steps Helper Types
+
+    private enum TestInterval {
+        case warmup(seconds: Int)
+        case cooldown(seconds: Int)
+        case time(seconds: Int)
+        case reps(sets: Int?, reps: Int, name: String)
+        case distance(meters: Int)
+        case `repeat`(count: Int, intervals: [TestInterval])
+    }
+
+    private struct TestStepItem {
+        let stepNumber: Int
+        let name: String
+        let detail: String
+    }
+
+    private func hasWorkoutSteps(intervals: [TestInterval]?) -> Bool {
+        !(intervals?.isEmpty ?? true)
+    }
+
+    private func flattenIntervals(_ intervals: [TestInterval]) -> [TestStepItem] {
+        var items: [TestStepItem] = []
+        var stepNumber = 0
+
+        func flatten(_ interval: TestInterval) {
+            switch interval {
+            case .warmup(let seconds):
+                stepNumber += 1
+                items.append(TestStepItem(stepNumber: stepNumber, name: "Warm Up", detail: formatIntervalTime(seconds)))
+            case .cooldown(let seconds):
+                stepNumber += 1
+                items.append(TestStepItem(stepNumber: stepNumber, name: "Cool Down", detail: formatIntervalTime(seconds)))
+            case .time(let seconds):
+                stepNumber += 1
+                items.append(TestStepItem(stepNumber: stepNumber, name: "Timed Interval", detail: formatIntervalTime(seconds)))
+            case .reps(let sets, let reps, let name):
+                stepNumber += 1
+                var detail = "\(reps) reps"
+                if let sets = sets, sets > 1 {
+                    detail = "\(sets) × \(reps) reps"
+                }
+                items.append(TestStepItem(stepNumber: stepNumber, name: name, detail: detail))
+            case .distance(let meters):
+                stepNumber += 1
+                items.append(TestStepItem(stepNumber: stepNumber, name: "Distance", detail: formatDistance(meters: meters)))
+            case .repeat(let count, let subIntervals):
+                for _ in 0..<count {
+                    for sub in subIntervals {
+                        flatten(sub)
+                    }
+                }
+            }
+        }
+
+        for interval in intervals {
+            flatten(interval)
+        }
+
+        return items
+    }
+
+    private func formatIntervalTime(_ seconds: Int) -> String {
+        if seconds >= 60 {
+            let minutes = seconds / 60
+            let secs = seconds % 60
+            if secs > 0 {
+                return "\(minutes)m \(secs)s"
+            }
+            return "\(minutes) min"
+        }
+        return "\(seconds)s"
+    }
+
+    private func canSaveToLibrary(workoutId: String?, hasIntervals: Bool) -> Bool {
+        workoutId == nil && hasIntervals
+    }
+
+    private func inferSportFromIntervals(_ intervals: [TestInterval]) -> String {
+        let hasReps = intervals.contains { interval in
+            if case .reps = interval { return true }
+            return false
+        }
+
+        let hasDistance = intervals.contains { interval in
+            if case .distance = interval { return true }
+            return false
+        }
+
+        if hasReps {
+            return "strength"
+        } else if hasDistance {
+            return "running"
+        } else {
+            return "cardio"
+        }
+    }
 }

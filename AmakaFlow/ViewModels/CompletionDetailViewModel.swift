@@ -20,6 +20,9 @@ class CompletionDetailViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var showStravaToast: Bool = false
     @Published var stravaToastMessage: String = ""
+    @Published var isSavingToLibrary: Bool = false
+    @Published var showSaveToast: Bool = false
+    @Published var saveToastMessage: String = ""
 
     // MARK: - Properties
 
@@ -63,6 +66,15 @@ class CompletionDetailViewModel: ObservableObject {
         return detail.isSyncedToStrava ? "View on Strava" : "Sync to Strava"
     }
 
+    /// Whether this workout can be saved to the library (voice-added workouts only)
+    var canSaveToLibrary: Bool {
+        guard let detail = detail else { return false }
+        // Can save if:
+        // 1. Not already from library (workoutId is nil)
+        // 2. Has intervals to save (workout structure exists)
+        return detail.workoutId == nil && detail.hasWorkoutSteps
+    }
+
     // MARK: - Initialization
 
     init(completionId: String) {
@@ -71,10 +83,24 @@ class CompletionDetailViewModel: ObservableObject {
 
     // MARK: - Data Loading
 
+    /// Set to true to force mock data for testing (AMA-224)
+    #if DEBUG
+    static var forceMockData = false
+    #endif
+
     /// Load the full completion detail from API
     func loadDetail() async {
         isLoading = true
         errorMessage = nil
+
+        #if DEBUG
+        // Force mock data for testing the full UI (AMA-224)
+        if Self.forceMockData {
+            loadMockData()
+            isLoading = false
+            return
+        }
+        #endif
 
         // Check if paired
         if !PairingService.shared.isPaired {
@@ -144,6 +170,91 @@ class CompletionDetailViewModel: ObservableObject {
             }
         }
         #endif
+    }
+
+    // MARK: - Save to Library
+
+    /// Save this workout to the user's library
+    func saveToLibrary() async {
+        guard canSaveToLibrary, let detail = detail, let intervals = detail.intervals else {
+            return
+        }
+
+        isSavingToLibrary = true
+
+        // Create a Workout from the completion detail
+        let workout = Workout(
+            id: UUID().uuidString,
+            name: detail.workoutName,
+            sport: inferSportFromIntervals(intervals),
+            duration: detail.durationSeconds,
+            intervals: intervals,
+            description: nil,
+            source: .ai,  // Voice-added workouts are AI-generated
+            sourceUrl: nil
+        )
+
+        do {
+            try await apiService.syncWorkout(workout)
+            saveToastMessage = "Saved to My Workouts!"
+            showSaveToast = true
+
+            // Update the detail to reflect it's now in library
+            // (prevents showing the button again)
+            self.detail = WorkoutCompletionDetail(
+                id: detail.id,
+                workoutName: detail.workoutName,
+                startedAt: detail.startedAt,
+                endedAt: detail.endedAt,
+                durationSeconds: detail.durationSeconds,
+                avgHeartRate: detail.avgHeartRate,
+                maxHeartRate: detail.maxHeartRate,
+                minHeartRate: detail.minHeartRate,
+                activeCalories: detail.activeCalories,
+                totalCalories: detail.totalCalories,
+                steps: detail.steps,
+                distanceMeters: detail.distanceMeters,
+                source: detail.source,
+                deviceInfo: detail.deviceInfo,
+                heartRateSamples: detail.heartRateSamples,
+                syncedToStrava: detail.syncedToStrava,
+                stravaActivityId: detail.stravaActivityId,
+                workoutId: workout.id,  // Now linked to library
+                intervals: detail.intervals
+            )
+        } catch {
+            saveToastMessage = "Failed to save: \(error.localizedDescription)"
+            showSaveToast = true
+        }
+
+        isSavingToLibrary = false
+
+        // Hide toast after delay
+        try? await Task.sleep(nanoseconds: 2_500_000_000)
+        showSaveToast = false
+    }
+
+    /// Infer sport type from workout intervals
+    private func inferSportFromIntervals(_ intervals: [WorkoutInterval]) -> WorkoutSport {
+        // Check for strength indicators (reps-based exercises)
+        let hasReps = intervals.contains { interval in
+            if case .reps = interval { return true }
+            return false
+        }
+
+        // Check for cardio indicators (distance-based)
+        let hasDistance = intervals.contains { interval in
+            if case .distance = interval { return true }
+            return false
+        }
+
+        if hasReps {
+            return .strength
+        } else if hasDistance {
+            return .running
+        } else {
+            return .cardio  // Default for time-based workouts
+        }
     }
 
     // MARK: - Error Handling
