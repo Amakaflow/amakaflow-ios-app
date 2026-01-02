@@ -64,6 +64,7 @@ class WorkoutEngine: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
     private var workoutStartTime: Date?
+    private var cachedDevicePreference: DevicePreference = .appleWatchPhone // Cached to avoid UserDefaults reads in hot path (AMA-226)
 
     private init() {
         setupBackgroundHandling()
@@ -90,6 +91,9 @@ class WorkoutEngine: ObservableObject {
         self.phase = .running
         self.stateVersion += 1
         self.workoutStartTime = Date()
+
+        // Cache device preference at start to avoid UserDefaults reads during workout (AMA-226)
+        self.cachedDevicePreference = devicePreference
 
         // Track workout start (AMA-225)
         SentryService.shared.trackWorkoutAction("Started workout", workoutId: workout.id, workoutName: workout.name)
@@ -516,10 +520,9 @@ class WorkoutEngine: ObservableObject {
 
     private func broadcastState() {
         let state = buildCurrentState()
-        let preference = devicePreference
 
-        // Send to appropriate watch based on device preference
-        switch preference {
+        // Use cached device preference to avoid UserDefaults reads in hot path (AMA-226)
+        switch cachedDevicePreference {
         case .appleWatchPhone, .appleWatchOnly:
             WatchConnectivityManager.shared.sendState(state)
         case .garminPhone:
