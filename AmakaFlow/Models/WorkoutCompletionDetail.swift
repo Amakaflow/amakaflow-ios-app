@@ -85,7 +85,7 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
     let id: String
     let workoutName: String
     let startedAt: Date
-    let endedAt: Date
+    let endedAt: Date?              // Optional - backend may not return this
     let durationSeconds: Int
     let avgHeartRate: Int?
     let maxHeartRate: Int?
@@ -97,8 +97,18 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
     let source: WorkoutCompletion.CompletionSource
     let deviceInfo: CompletionDeviceInfo?
     let heartRateSamples: [HeartRateDataPoint]?
-    let syncedToStrava: Bool
+    let syncedToStrava: Bool?       // Optional - backend may not return this
     let stravaActivityId: String?
+
+    /// Computed endedAt from startedAt + durationSeconds if not provided
+    var resolvedEndedAt: Date {
+        endedAt ?? startedAt.addingTimeInterval(TimeInterval(durationSeconds))
+    }
+
+    /// Strava sync status with default false if not provided
+    var isSyncedToStrava: Bool {
+        syncedToStrava ?? false
+    }
 
     enum CodingKeys: String, CodingKey {
         case id
