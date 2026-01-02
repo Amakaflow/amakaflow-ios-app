@@ -151,15 +151,25 @@ class WatchConnectivityManager: NSObject, ObservableObject {
                 return
             }
 
-            // Always update applicationContext (persists even when app is backgrounded)
+            // IMPORTANT: Do NOT persist running/resting workout states in applicationContext.
+            // watchOS interprets persistent workout state as a "companion workout"
+            // and shows a phantom "Open on iPhone" system card (AMA-223).
+            // When workout is active, clear applicationContext to remove any cached running state.
+            // Only persist idle/ended states.
             do {
-                try session.updateApplicationContext(["action": "stateUpdate", "state": dict])
-                print("⌚️ sendState: Updated applicationContext")
+                if state.phase == .idle || state.phase == .ended {
+                    try session.updateApplicationContext(["action": "stateUpdate", "state": dict])
+                    print("⌚️ sendState: Updated applicationContext (phase=\(state.phase.rawValue))")
+                } else {
+                    // Clear applicationContext when workout is running to prevent phantom card
+                    try session.updateApplicationContext(["action": "cleared"])
+                    print("⌚️ sendState: Cleared applicationContext (workout running)")
+                }
             } catch {
                 print("⌚️ sendState: Failed to update applicationContext: \(error)")
             }
 
-            // Also send message if reachable (for immediate updates)
+            // Send message if reachable (for immediate updates)
             if session.isReachable {
                 session.sendMessage(
                     ["action": "stateUpdate", "state": dict],

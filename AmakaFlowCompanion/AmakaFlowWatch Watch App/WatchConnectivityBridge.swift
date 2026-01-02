@@ -287,6 +287,11 @@ extension WatchConnectivityBridge: WCSessionDelegate {
         case "commandAck":
             handleCommandAck(message)
 
+        case "cleared":
+            // applicationContext was cleared (workout is running, state sent via message only)
+            // No action needed - this prevents phantom "Open on iPhone" card
+            print("⌚️ Received cleared applicationContext (workout running)")
+
         default:
             print("⌚️ Unknown action: \(action)")
         }

@@ -539,6 +539,14 @@ class WorkoutEngine: ObservableObject {
     private func startLiveActivity() {
         guard let workout = workout else { return }
 
+        // Skip Live Activity when Watch is connected and being used for remote control.
+        // The Live Activity would mirror to Watch's Smart Stack and show an "Open on iPhone"
+        // card, which is confusing when the user is already using the Watch remote control UI (AMA-223).
+        if WatchConnectivityManager.shared.isWatchReachable {
+            print("🔵 Skipping Live Activity - Watch is connected for remote control")
+            return
+        }
+
         let initialState = WorkoutActivityAttributes.ContentState(
             phase: phase.rawValue,
             stepName: currentStep?.label ?? "",
@@ -557,6 +565,15 @@ class WorkoutEngine: ObservableObject {
     }
 
     private func updateLiveActivity(_ state: WorkoutState) {
+        // End Live Activity if Watch becomes reachable mid-workout (AMA-223)
+        if WatchConnectivityManager.shared.isWatchReachable {
+            Task {
+                await LiveActivityManager.shared.endActivity()
+                print("🔵 Ended Live Activity - Watch became reachable")
+            }
+            return
+        }
+
         let activityState = WorkoutActivityAttributes.ContentState(
             phase: state.phase.rawValue,
             stepName: state.stepName,
