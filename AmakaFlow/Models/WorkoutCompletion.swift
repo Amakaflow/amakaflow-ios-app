@@ -25,14 +25,14 @@ struct WorkoutCompletion: Identifiable, Codable, Hashable {
         case appleWatch = "apple_watch"
         case garmin = "garmin"
         case manual = "manual"
-        case phoneOnly = "phone_only"
+        case phone = "phone"
 
         var displayName: String {
             switch self {
             case .appleWatch: return "Apple Watch"
             case .garmin: return "Garmin"
             case .manual: return "Manual"
-            case .phoneOnly: return "Phone"
+            case .phone: return "Phone"
             }
         }
 
@@ -41,7 +41,7 @@ struct WorkoutCompletion: Identifiable, Codable, Hashable {
             case .appleWatch: return "applewatch"
             case .garmin: return "watchface.applewatch.case"
             case .manual: return "pencil"
-            case .phoneOnly: return "iphone"
+            case .phone: return "iphone"
             }
         }
     }
@@ -223,7 +223,7 @@ extension WorkoutCompletion {
                 avgHeartRate: 110,
                 maxHeartRate: 130,
                 activeCalories: 150,
-                source: .phoneOnly,
+                source: .phone,
                 syncedToStrava: false
             )
         ]

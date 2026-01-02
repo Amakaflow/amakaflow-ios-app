@@ -275,9 +275,24 @@ extension APIService {
             decoder.dateDecodingStrategy = .iso8601
             do {
                 return try decoder.decode([WorkoutCompletion].self, from: data)
+            } catch let decodingError as DecodingError {
+                // Log detailed decoding error to help debug schema mismatches
+                switch decodingError {
+                case .typeMismatch(let type, let context):
+                    logger.error("fetchCompletions - Type mismatch: expected \(String(describing: type)) at \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                case .valueNotFound(let type, let context):
+                    logger.error("fetchCompletions - Value not found: \(String(describing: type)) at \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                case .keyNotFound(let key, let context):
+                    logger.error("fetchCompletions - Key not found: '\(key.stringValue)' at \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                case .dataCorrupted(let context):
+                    logger.error("fetchCompletions - Data corrupted at \(context.codingPath.map { $0.stringValue }.joined(separator: ".")): \(context.debugDescription)")
+                @unknown default:
+                    logger.error("fetchCompletions - Unknown decode error: \(decodingError.localizedDescription)")
+                }
+                logger.error("fetchCompletions - Response was: \(responseBody.prefix(500))")
+                return []
             } catch {
                 logger.error("fetchCompletions - Decode error: \(error.localizedDescription)")
-                // Return empty array instead of throwing - backend may have different schema
                 return []
             }
         case 401:
