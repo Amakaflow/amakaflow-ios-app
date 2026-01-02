@@ -9,13 +9,105 @@ class PairingService: ObservableObject {
     private let baseURL = AppEnvironment.current.mapperAPIURL
     private let tokenKey = "jwt_token"
     private let profileKey = "user_profile"
+    private let tokenRefreshKey = "last_token_refresh"
 
     @Published var isPaired: Bool = false
     @Published var userProfile: UserProfile?
+    @Published var needsReauth: Bool = false
+    @Published var lastTokenRefresh: Date?
 
     private init() {
         isPaired = getToken() != nil
         userProfile = loadProfile()
+        lastTokenRefresh = loadLastTokenRefresh()
+    }
+
+    /// Mark authentication as invalid (e.g., on 401 response)
+    /// This preserves queued data while signaling that re-pairing is needed
+    func markAuthInvalid() {
+        needsReauth = true
+        // Don't clear isPaired immediately - let the UI handle showing re-pair prompt
+        // The queued completions will be processed after re-pairing
+    }
+
+    /// Called after successful re-pairing to clear the needsReauth flag
+    func authRestored() {
+        needsReauth = false
+    }
+
+    // MARK: - Token Refresh
+
+    /// Silently refresh the JWT using device ID
+    /// Returns true if refresh succeeded, false if device not found (needs re-pair)
+    func refreshToken() async -> Bool {
+        guard let deviceId = UIDevice.current.identifierForVendor?.uuidString else {
+            print("[PairingService] No device ID available for refresh")
+            return false
+        }
+
+        print("[PairingService] Attempting silent token refresh")
+
+        let url = URL(string: "\(baseURL)/mobile/pairing/refresh")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body = TokenRefreshRequest(deviceId: deviceId)
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+
+        do {
+            request.httpBody = try encoder.encode(body)
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("[PairingService] Invalid response type during refresh")
+                return false
+            }
+
+            print("[PairingService] Refresh response status = \(httpResponse.statusCode)")
+
+            switch httpResponse.statusCode {
+            case 200:
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                decoder.dateDecodingStrategy = .iso8601
+                let result = try decoder.decode(TokenRefreshResponse.self, from: data)
+
+                try storeToken(result.jwt)
+                storeLastTokenRefresh(result.refreshedAt)
+
+                await MainActor.run {
+                    self.needsReauth = false
+                    self.lastTokenRefresh = result.refreshedAt
+                }
+
+                print("[PairingService] Token refreshed successfully")
+
+                // Process any queued workout completions after refresh
+                Task {
+                    await WorkoutCompletionService.shared.retryPendingCompletions()
+                }
+
+                return true
+
+            case 401:
+                // Device not found or not paired - need to re-pair
+                print("[PairingService] Refresh failed: device not found")
+                await MainActor.run {
+                    self.needsReauth = true
+                }
+                return false
+
+            default:
+                print("[PairingService] Refresh failed with status \(httpResponse.statusCode)")
+                return false
+            }
+        } catch {
+            print("[PairingService] Refresh error: \(error)")
+            return false
+        }
     }
 
     // MARK: - Pairing
@@ -82,6 +174,11 @@ class PairingService: ObservableObject {
             await MainActor.run {
                 self.isPaired = true
                 self.userProfile = result.profile
+                self.needsReauth = false
+            }
+            // Process any queued workout completions after re-pairing
+            Task {
+                await WorkoutCompletionService.shared.retryPendingCompletions()
             }
             return result
         case 400:
@@ -129,6 +226,16 @@ class PairingService: ObservableObject {
     private func loadProfile() -> UserProfile? {
         guard let data = KeychainHelper.shared.read(for: profileKey) else { return nil }
         return try? JSONDecoder().decode(UserProfile.self, from: data)
+    }
+
+    // MARK: - Token Refresh Timestamp Storage
+
+    private func storeLastTokenRefresh(_ date: Date) {
+        UserDefaults.standard.set(date, forKey: tokenRefreshKey)
+    }
+
+    private func loadLastTokenRefresh() -> Date? {
+        return UserDefaults.standard.object(forKey: tokenRefreshKey) as? Date
     }
 
     // MARK: - Device Info
@@ -227,6 +334,16 @@ struct APIErrorResponse: Codable {
     let detail: String
     let error: String?
     let message: String?
+}
+
+struct TokenRefreshRequest: Codable {
+    let deviceId: String
+}
+
+struct TokenRefreshResponse: Codable {
+    let jwt: String
+    let expiresAt: Date
+    let refreshedAt: Date
 }
 
 enum PairingError: LocalizedError {

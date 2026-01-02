@@ -74,12 +74,21 @@ struct HRSample: Codable {
 }
 
 struct WorkoutCompletionResponse: Codable {
-    let completionId: String
-    let status: String
+    let completionId: String?
+    let id: String?           // Alternative field name
+    let status: String?
+    let success: Bool?
 
     enum CodingKeys: String, CodingKey {
         case completionId = "completion_id"
+        case id
         case status
+        case success
+    }
+
+    /// Get the completion ID from whichever field is present
+    var resolvedCompletionId: String {
+        completionId ?? id ?? "unknown"
     }
 }
 
@@ -248,6 +257,11 @@ class WorkoutCompletionService: ObservableObject {
             print("[WorkoutCompletion] Network unavailable, skipping retry")
             return
         }
+        // Don't retry if auth is invalid - wait for user to re-pair
+        guard !PairingService.shared.needsReauth else {
+            print("[WorkoutCompletion] Auth invalid, skipping retry until re-paired")
+            return
+        }
 
         isProcessingQueue = true
         defer { isProcessingQueue = false }
@@ -290,7 +304,7 @@ class WorkoutCompletionService: ObservableObject {
         if isNetworkAvailable {
             do {
                 let response = try await APIService.shared.postWorkoutCompletion(request)
-                print("[WorkoutCompletion] Successfully posted completion: \(response.completionId)")
+                print("[WorkoutCompletion] Successfully posted completion: \(response.resolvedCompletionId)")
                 return response
             } catch {
                 print("[WorkoutCompletion] Failed to post, queueing for retry: \(error)")

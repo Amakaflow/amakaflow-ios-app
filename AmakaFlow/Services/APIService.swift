@@ -303,7 +303,7 @@ class APIService {
     /// - Parameter completion: Workout completion request with health metrics
     /// - Returns: Completion response with ID
     /// - Throws: APIError if request fails
-    func postWorkoutCompletion(_ completion: WorkoutCompletionRequest) async throws -> WorkoutCompletionResponse {
+    func postWorkoutCompletion(_ completion: WorkoutCompletionRequest, isRetry: Bool = false) async throws -> WorkoutCompletionResponse {
         let endpoint = "/workouts/complete"
 
         guard PairingService.shared.isPaired else {
@@ -338,7 +338,7 @@ class APIService {
             let decoder = JSONDecoder()
             do {
                 let completionResponse = try decoder.decode(WorkoutCompletionResponse.self, from: data)
-                print("[APIService] Workout completion posted, ID: \(completionResponse.completionId)")
+                print("[APIService] Workout completion posted, ID: \(completionResponse.resolvedCompletionId)")
                 return completionResponse
             } catch {
                 print("[APIService] Decoding error: \(error)")
@@ -353,8 +353,31 @@ class APIService {
             }
         case 401:
             print("[APIService] Unauthorized (401)")
-            logError(endpoint: endpoint, method: "POST", statusCode: 401, response: responseString, error: APIError.unauthorized)
-            throw APIError.unauthorized
+
+            // If this is already a retry, don't try again
+            if isRetry {
+                print("[APIService] Retry also failed with 401, marking auth invalid")
+                logError(endpoint: endpoint, method: "POST", statusCode: 401, response: responseString, error: APIError.unauthorized)
+                await MainActor.run {
+                    PairingService.shared.markAuthInvalid()
+                }
+                throw APIError.unauthorized
+            }
+
+            // Try to silently refresh the token
+            print("[APIService] Attempting silent token refresh...")
+            let refreshed = await PairingService.shared.refreshToken()
+
+            if refreshed {
+                print("[APIService] Token refreshed, retrying request...")
+                // Retry the request with new token
+                return try await postWorkoutCompletion(completion, isRetry: true)
+            } else {
+                // Refresh failed - device not found or needs re-pair
+                print("[APIService] Token refresh failed, marking auth invalid")
+                logError(endpoint: endpoint, method: "POST", statusCode: 401, response: responseString, error: APIError.unauthorized)
+                throw APIError.unauthorized
+            }
         default:
             if let responseString = responseString {
                 print("[APIService] Error response: \(responseString.prefix(200))")
