@@ -1,0 +1,100 @@
+//
+//  VoiceRecordingView.swift
+//  AmakaFlow
+//
+//  Initial view for starting voice recording (AMA-5)
+//
+
+import SwiftUI
+
+struct VoiceRecordingView: View {
+    @ObservedObject var viewModel: VoiceWorkoutViewModel
+
+    var body: some View {
+        VStack(spacing: 32) {
+            Spacer()
+
+            // Microphone button
+            Button {
+                Task {
+                    await viewModel.startRecording()
+                }
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(Theme.Colors.accentBlue)
+                        .frame(width: 120, height: 120)
+                        .shadow(color: Theme.Colors.accentBlue.opacity(0.4), radius: 20)
+
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 50))
+                        .foregroundColor(.white)
+                }
+            }
+
+            // Instructions
+            VStack(spacing: 8) {
+                Text("Tap to Start Recording")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+
+                Text("Describe your workout in natural language")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            // Example prompts
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Try saying something like:")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    ExamplePrompt(text: "\"5 minute warmup, then 4 sets of 10 squats with 60 seconds rest, followed by 3 sets of 12 lunges\"")
+
+                    ExamplePrompt(text: "\"30 minute tempo run at zone 3, with 5 minute warmup and cooldown\"")
+
+                    ExamplePrompt(text: "\"HIIT workout: 8 rounds of 40 seconds work, 20 seconds rest, with burpees, mountain climbers, and jumping jacks\"")
+                }
+            }
+            .padding()
+            .background(Theme.Colors.surface)
+            .cornerRadius(12)
+            .padding(.horizontal)
+
+            Spacer()
+        }
+        .background(Theme.Colors.background)
+    }
+}
+
+// MARK: - Example Prompt
+
+private struct ExamplePrompt: View {
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "quote.opening")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+
+            Text(text)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .italic()
+        }
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    NavigationStack {
+        VoiceRecordingView(viewModel: VoiceWorkoutViewModel())
+            .navigationTitle("Create Workout")
+    }
+}

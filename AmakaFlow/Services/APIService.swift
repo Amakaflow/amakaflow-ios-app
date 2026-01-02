@@ -336,6 +336,62 @@ class APIService {
         }
     }
 
+    // MARK: - Voice Workout Parsing (AMA-5)
+
+    /// Parse a voice transcription into a structured workout
+    /// - Parameters:
+    ///   - transcription: The transcribed text from voice recording
+    ///   - sportHint: Optional hint about the sport type
+    /// - Returns: Parsed workout response with confidence and suggestions
+    /// - Throws: APIError if request fails
+    func parseVoiceWorkout(transcription: String, sportHint: WorkoutSport? = nil) async throws -> VoiceWorkoutParseResponse {
+        guard PairingService.shared.isPaired else {
+            throw APIError.unauthorized
+        }
+
+        let url = URL(string: "\(baseURL)/workouts/parse-voice")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders
+
+        var body: [String: Any] = ["transcription": transcription]
+        if let hint = sportHint {
+            body["sport_hint"] = hint.rawValue
+        }
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await session.data(for: request)
+        let responseString = String(data: data, encoding: .utf8)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        print("[APIService] parseVoiceWorkout - Status: \(httpResponse.statusCode)")
+
+        switch httpResponse.statusCode {
+        case 200, 201:
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            do {
+                let parseResponse = try decoder.decode(VoiceWorkoutParseResponse.self, from: data)
+                print("[APIService] Parsed workout: \(parseResponse.workout.name)")
+                return parseResponse
+            } catch {
+                print("[APIService] Decoding error: \(error)")
+                throw APIError.decodingError(error)
+            }
+        case 401:
+            throw APIError.unauthorized
+        case 422:
+            // Validation error - could not parse the transcription
+            throw APIError.serverErrorWithBody(422, responseString ?? "Could not understand workout description")
+        default:
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
     // MARK: - Workout Completion
 
     /// Post workout completion to backend
@@ -432,6 +488,14 @@ struct PendingWorkoutsResponse: Codable {
     let success: Bool
     let workouts: [Workout]
     let count: Int
+}
+
+// MARK: - Voice Workout Parse Response (AMA-5)
+struct VoiceWorkoutParseResponse: Codable {
+    let success: Bool
+    let workout: Workout
+    let confidence: Double
+    let suggestions: [String]
 }
 
 // MARK: - API Errors

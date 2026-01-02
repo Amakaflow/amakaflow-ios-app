@@ -17,6 +17,7 @@ struct HomeView: View {
     @State private var showingDeviceSheet = false
     @State private var pendingQuickStartWorkout: Workout?
     @State private var waitingForWatchWorkout: Workout?
+    @State private var showingVoiceWorkout = false
 
     private var today: Date { Date() }
 
@@ -36,8 +37,14 @@ struct HomeView: View {
                     header
                         .padding(.top, Theme.Spacing.md)
 
-                    // Quick Start button
-                    quickStartButton
+                    // Quick action buttons
+                    HStack(spacing: Theme.Spacing.md) {
+                        // Quick Start button
+                        quickStartButton
+
+                        // Voice Workout button (AMA-5)
+                        voiceWorkoutButton
+                    }
 
                     // Today's Workouts
                     todaysWorkoutsSection
@@ -110,6 +117,9 @@ struct HomeView: View {
                     }
                 )
             }
+            .sheet(isPresented: $showingVoiceWorkout) {
+                VoiceWorkoutView()
+            }
         }
     }
 
@@ -175,16 +185,36 @@ struct HomeView: View {
         Button {
             showingQuickStart = true
         } label: {
-            HStack(spacing: Theme.Spacing.sm) {
+            VStack(spacing: Theme.Spacing.sm) {
                 Image(systemName: "play.fill")
-                    .font(.system(size: 16))
-                Text("Quick Start Workout")
-                    .font(Theme.Typography.bodyBold)
+                    .font(.system(size: 20))
+                Text("Quick Start")
+                    .font(Theme.Typography.caption)
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Theme.Spacing.lg)
             .background(Theme.Colors.accentBlue)
+            .cornerRadius(Theme.CornerRadius.lg)
+        }
+    }
+
+    // MARK: - Voice Workout Button (AMA-5)
+
+    private var voiceWorkoutButton: some View {
+        Button {
+            showingVoiceWorkout = true
+        } label: {
+            VStack(spacing: Theme.Spacing.sm) {
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 20))
+                Text("Voice Create")
+                    .font(Theme.Typography.caption)
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, Theme.Spacing.lg)
+            .background(Theme.Colors.accentGreen)
             .cornerRadius(Theme.CornerRadius.lg)
         }
     }
@@ -252,10 +282,24 @@ struct HomeView: View {
                 .font(Theme.Typography.bodyBold)
                 .foregroundColor(Theme.Colors.textPrimary)
 
-            Text("Add a workout to your calendar to get started")
+            Text("Add a workout from the web, or create one with your voice")
                 .font(Theme.Typography.caption)
                 .foregroundColor(Theme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
+
+            // Voice create button (AMA-5)
+            Button {
+                showingVoiceWorkout = true
+            } label: {
+                HStack(spacing: Theme.Spacing.sm) {
+                    Image(systemName: "mic.fill")
+                    Text("Create with Voice")
+                }
+                .font(Theme.Typography.caption)
+                .fontWeight(.medium)
+                .foregroundColor(Theme.Colors.accentGreen)
+            }
+            .padding(.top, Theme.Spacing.sm)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, Theme.Spacing.xl)

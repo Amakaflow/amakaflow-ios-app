@@ -77,6 +77,15 @@
 		D3BUG10G00000002C0000002 /* DebugLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000002B0000002 /* DebugLogView.swift */; };
 		S3NTR1S3RV1C300000002 /* SentryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = S3NTR1S3RV1C300000001 /* SentryService.swift */; };
 		0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
+		V01C301100000000000000 /* PermissionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300100000000000000 /* PermissionManager.swift */; };
+		V01C301200000000000000 /* VoiceRecordingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300200000000000000 /* VoiceRecordingService.swift */; };
+		V01C301300000000000000 /* TranscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300300000000000000 /* TranscriptionService.swift */; };
+		V01C301400000000000000 /* WorkoutParsingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300400000000000000 /* WorkoutParsingService.swift */; };
+		V01C301500000000000000 /* VoiceWorkoutViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300500000000000000 /* VoiceWorkoutViewModel.swift */; };
+		V01C301600000000000000 /* VoiceWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300600000000000000 /* VoiceWorkoutView.swift */; };
+		V01C301700000000000000 /* VoiceRecordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300700000000000000 /* VoiceRecordingView.swift */; };
+		V01C301800000000000000 /* TranscriptionReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300800000000000000 /* TranscriptionReviewView.swift */; };
+		V01C301900000000000000 /* VoiceWorkoutReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300900000000000000 /* VoiceWorkoutReviewView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -219,6 +228,15 @@
 		D3BUG10G00000001B0000001 /* DebugLogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogService.swift; path = ../AmakaFlow/Services/DebugLogService.swift; sourceTree = SOURCE_ROOT; };
 		D3BUG10G00000002B0000002 /* DebugLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogView.swift; path = ../AmakaFlow/Views/DebugLogView.swift; sourceTree = SOURCE_ROOT; };
 		S3NTR1S3RV1C300000001 /* SentryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SentryService.swift; path = ../AmakaFlow/Services/SentryService.swift; sourceTree = SOURCE_ROOT; };
+		V01C300100000000000000 /* PermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PermissionManager.swift; path = ../AmakaFlow/Services/PermissionManager.swift; sourceTree = SOURCE_ROOT; };
+		V01C300200000000000000 /* VoiceRecordingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceRecordingService.swift; path = ../AmakaFlow/Services/VoiceRecordingService.swift; sourceTree = SOURCE_ROOT; };
+		V01C300300000000000000 /* TranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionService.swift; path = ../AmakaFlow/Services/TranscriptionService.swift; sourceTree = SOURCE_ROOT; };
+		V01C300400000000000000 /* WorkoutParsingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutParsingService.swift; path = ../AmakaFlow/Services/WorkoutParsingService.swift; sourceTree = SOURCE_ROOT; };
+		V01C300500000000000000 /* VoiceWorkoutViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceWorkoutViewModel.swift; path = ../AmakaFlow/ViewModels/VoiceWorkoutViewModel.swift; sourceTree = SOURCE_ROOT; };
+		V01C300600000000000000 /* VoiceWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceWorkoutView.swift; path = ../AmakaFlow/Views/VoiceWorkout/VoiceWorkoutView.swift; sourceTree = SOURCE_ROOT; };
+		V01C300700000000000000 /* VoiceRecordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceRecordingView.swift; path = ../AmakaFlow/Views/VoiceWorkout/VoiceRecordingView.swift; sourceTree = SOURCE_ROOT; };
+		V01C300800000000000000 /* TranscriptionReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/TranscriptionReviewView.swift; sourceTree = SOURCE_ROOT; };
+		V01C300900000000000000 /* VoiceWorkoutReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceWorkoutReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/VoiceWorkoutReviewView.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -810,6 +828,15 @@
 				D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */,
 				D3BUG10G00000002C0000002 /* DebugLogView.swift in Sources */,
 				S3NTR1S3RV1C300000002 /* SentryService.swift in Sources */,
+				V01C301100000000000000 /* PermissionManager.swift in Sources */,
+				V01C301200000000000000 /* VoiceRecordingService.swift in Sources */,
+				V01C301300000000000000 /* TranscriptionService.swift in Sources */,
+				V01C301400000000000000 /* WorkoutParsingService.swift in Sources */,
+				V01C301500000000000000 /* VoiceWorkoutViewModel.swift in Sources */,
+				V01C301600000000000000 /* VoiceWorkoutView.swift in Sources */,
+				V01C301700000000000000 /* VoiceRecordingView.swift in Sources */,
+				V01C301800000000000000 /* TranscriptionReviewView.swift in Sources */,
+				V01C301900000000000000 /* VoiceWorkoutReviewView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
