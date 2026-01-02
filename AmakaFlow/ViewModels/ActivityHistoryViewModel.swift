@@ -259,33 +259,71 @@ extension APIService {
         }
 
         let responseBody = String(data: data, encoding: .utf8) ?? "empty"
+        print("[ActivityHistory] fetchCompletions - Status: \(httpResponse.statusCode)")
+        print("[ActivityHistory] Response: \(responseBody.prefix(500))")
         logger.info("fetchCompletions - Status: \(httpResponse.statusCode), Body: \(responseBody)")
 
         switch httpResponse.statusCode {
         case 200:
-            // Check if response is actually an array (backend may return error object with 200)
-            // Valid JSON array starts with '[', error responses start with '{'
-            if !responseBody.trimmingCharacters(in: .whitespaces).hasPrefix("[") {
-                logger.warning("fetchCompletions - Backend returned non-array response: \(responseBody)")
-                return [] // Return empty until backend routing is fixed
-            }
-
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             decoder.dateDecodingStrategy = .iso8601
+
+            // Backend returns { "success": true, "completions": [...] }
+            // Try to decode as wrapped response first
             do {
-                return try decoder.decode([WorkoutCompletion].self, from: data)
+                let wrappedResponse = try decoder.decode(CompletionsResponse.self, from: data)
+                print("[ActivityHistory] Successfully decoded \(wrappedResponse.completions.count) completions")
+                return wrappedResponse.completions
+            } catch let decodingError as DecodingError {
+                // Log detailed decoding error to help debug schema mismatches
+                var errorMsg = ""
+                switch decodingError {
+                case .typeMismatch(let type, let context):
+                    errorMsg = "Type mismatch: expected \(String(describing: type)) at \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+                case .valueNotFound(let type, let context):
+                    errorMsg = "Value not found: \(String(describing: type)) at \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+                case .keyNotFound(let key, let context):
+                    errorMsg = "Key not found: '\(key.stringValue)' at \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+                case .dataCorrupted(let context):
+                    errorMsg = "Data corrupted at \(context.codingPath.map { $0.stringValue }.joined(separator: ".")): \(context.debugDescription)"
+                @unknown default:
+                    errorMsg = "Unknown decode error: \(decodingError.localizedDescription)"
+                }
+                print("[ActivityHistory] DECODE ERROR: \(errorMsg)")
+                print("[ActivityHistory] Response was: \(responseBody.prefix(500))")
+                logger.error("fetchCompletions - \(errorMsg)")
+                logger.error("fetchCompletions - Response was: \(responseBody.prefix(500))")
+                // Log to DebugLogService for in-app visibility
+                Task { @MainActor in
+                    DebugLogService.shared.logAPIError(
+                        endpoint: "/workouts/completions",
+                        method: "GET",
+                        statusCode: 200,
+                        response: String(responseBody.prefix(500)),
+                        error: decodingError
+                    )
+                }
+                return []
             } catch {
+                print("[ActivityHistory] DECODE ERROR: \(error.localizedDescription)")
                 logger.error("fetchCompletions - Decode error: \(error.localizedDescription)")
-                // Return empty array instead of throwing - backend may have different schema
                 return []
             }
         case 401:
             throw APIError.unauthorized
         case 404, 500:
             // Endpoint may not exist yet or backend error - return empty array for now
-            // TODO: Remove 500 handling once backend is fixed
+            print("[ActivityHistory] Got \(httpResponse.statusCode) - returning empty")
             logger.warning("fetchCompletions - Returning empty for status \(httpResponse.statusCode): \(responseBody)")
+            // Log to DebugLogService for visibility
+            Task { @MainActor in
+                DebugLogService.shared.log(
+                    "Completions: HTTP \(httpResponse.statusCode)",
+                    details: String(responseBody.prefix(300)),
+                    metadata: ["Status": "\(httpResponse.statusCode)"]
+                )
+            }
             return []
         default:
             // Include response body in error for debugging
@@ -293,4 +331,12 @@ extension APIService {
             throw APIError.serverErrorWithBody(httpResponse.statusCode, responseBody)
         }
     }
+}
+
+// MARK: - Response Wrapper
+
+/// Backend returns completions wrapped in { "success": true, "completions": [...] }
+private struct CompletionsResponse: Codable {
+    let success: Bool
+    let completions: [WorkoutCompletion]
 }

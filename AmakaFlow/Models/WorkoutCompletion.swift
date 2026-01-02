@@ -13,26 +13,36 @@ struct WorkoutCompletion: Identifiable, Codable, Hashable {
     let id: String
     let workoutName: String
     let startedAt: Date
-    let endedAt: Date
+    let endedAt: Date?           // Optional - backend may not return this
     let durationSeconds: Int
     let avgHeartRate: Int?
     let maxHeartRate: Int?
     let activeCalories: Int?
     let source: CompletionSource
-    let syncedToStrava: Bool
+    let syncedToStrava: Bool?    // Optional - backend may not return this
+
+    /// Computed endedAt from startedAt + durationSeconds if not provided
+    var resolvedEndedAt: Date {
+        endedAt ?? startedAt.addingTimeInterval(TimeInterval(durationSeconds))
+    }
+
+    /// Strava sync status with default false if not provided
+    var isSyncedToStrava: Bool {
+        syncedToStrava ?? false
+    }
 
     enum CompletionSource: String, Codable {
         case appleWatch = "apple_watch"
         case garmin = "garmin"
         case manual = "manual"
-        case phoneOnly = "phone_only"
+        case phone = "phone"
 
         var displayName: String {
             switch self {
             case .appleWatch: return "Apple Watch"
             case .garmin: return "Garmin"
             case .manual: return "Manual"
-            case .phoneOnly: return "Phone"
+            case .phone: return "Phone"
             }
         }
 
@@ -41,7 +51,7 @@ struct WorkoutCompletion: Identifiable, Codable, Hashable {
             case .appleWatch: return "applewatch"
             case .garmin: return "watchface.applewatch.case"
             case .manual: return "pencil"
-            case .phoneOnly: return "iphone"
+            case .phone: return "iphone"
             }
         }
     }
@@ -223,7 +233,7 @@ extension WorkoutCompletion {
                 avgHeartRate: 110,
                 maxHeartRate: 130,
                 activeCalories: 150,
-                source: .phoneOnly,
+                source: .phone,
                 syncedToStrava: false
             )
         ]

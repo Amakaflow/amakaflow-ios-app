@@ -229,14 +229,14 @@ final class ActivityHistoryTests: XCTestCase {
         XCTAssertEqual(sourceDisplayName(for: "apple_watch"), "Apple Watch")
         XCTAssertEqual(sourceDisplayName(for: "garmin"), "Garmin")
         XCTAssertEqual(sourceDisplayName(for: "manual"), "Manual")
-        XCTAssertEqual(sourceDisplayName(for: "phone_only"), "Phone")
+        XCTAssertEqual(sourceDisplayName(for: "phone"), "Phone")
     }
 
     func testSourceIconNames() {
         XCTAssertEqual(sourceIconName(for: "apple_watch"), "applewatch")
         XCTAssertEqual(sourceIconName(for: "garmin"), "watchface.applewatch.case")
         XCTAssertEqual(sourceIconName(for: "manual"), "pencil")
-        XCTAssertEqual(sourceIconName(for: "phone_only"), "iphone")
+        XCTAssertEqual(sourceIconName(for: "phone"), "iphone")
     }
 
     // MARK: - Pagination Tests
@@ -370,7 +370,7 @@ final class ActivityHistoryTests: XCTestCase {
         case "apple_watch": return "Apple Watch"
         case "garmin": return "Garmin"
         case "manual": return "Manual"
-        case "phone_only": return "Phone"
+        case "phone": return "Phone"
         default: return "Unknown"
         }
     }
@@ -380,7 +380,7 @@ final class ActivityHistoryTests: XCTestCase {
         case "apple_watch": return "applewatch"
         case "garmin": return "watchface.applewatch.case"
         case "manual": return "pencil"
-        case "phone_only": return "iphone"
+        case "phone": return "iphone"
         default: return "questionmark"
         }
     }
@@ -541,7 +541,7 @@ final class ActivityHistoryTests: XCTestCase {
                 "duration_seconds": 1800,
                 "avg_heart_rate": null,
                 "active_calories": null,
-                "source": "phone_only",
+                "source": "phone",
                 "synced_to_strava": false,
                 "strava_activity_id": null
             }
@@ -552,6 +552,216 @@ final class ActivityHistoryTests: XCTestCase {
         XCTAssertEqual(result.count, 1)
         XCTAssertNil(result.first?.avgHeartRate)
         XCTAssertNil(result.first?.activeCalories)
+    }
+
+    // MARK: - Wrapped Response Format Tests (AMA-222 regression prevention)
+
+    /// Tests that the wrapped response format from backend is correctly parsed
+    /// Backend returns: { "success": true, "completions": [...] }
+    /// This was the root cause of AMA-222 where Activity History showed empty
+
+    func testParseWrappedCompletionsResponse() {
+        let wrappedJSON = """
+        {
+            "success": true,
+            "completions": [
+                {
+                    "id": "46a04a8e-test-1234",
+                    "workout_name": "Morning HIIT",
+                    "started_at": "2025-12-28T10:00:00Z",
+                    "duration_seconds": 1800,
+                    "avg_heart_rate": 145,
+                    "active_calories": 320,
+                    "source": "apple_watch"
+                }
+            ]
+        }
+        """
+
+        let result = parseWrappedCompletionsResponse(wrappedJSON)
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result.first?.id, "46a04a8e-test-1234")
+        XCTAssertEqual(result.first?.workoutName, "Morning HIIT")
+        XCTAssertEqual(result.first?.source, "apple_watch")
+    }
+
+    func testParseWrappedResponseWithEmptyCompletions() {
+        let emptyWrappedJSON = """
+        {
+            "success": true,
+            "completions": []
+        }
+        """
+
+        let result = parseWrappedCompletionsResponse(emptyWrappedJSON)
+        XCTAssertEqual(result.count, 0)
+    }
+
+    func testParseWrappedResponseWithMultipleCompletions() {
+        let multipleJSON = """
+        {
+            "success": true,
+            "completions": [
+                {
+                    "id": "completion-1",
+                    "workout_name": "Workout 1",
+                    "started_at": "2025-12-28T10:00:00Z",
+                    "duration_seconds": 1800,
+                    "source": "apple_watch"
+                },
+                {
+                    "id": "completion-2",
+                    "workout_name": "Workout 2",
+                    "started_at": "2025-12-27T14:00:00Z",
+                    "duration_seconds": 2400,
+                    "source": "phone"
+                }
+            ]
+        }
+        """
+
+        let result = parseWrappedCompletionsResponse(multipleJSON)
+        XCTAssertEqual(result.count, 2)
+        XCTAssertEqual(result[0].id, "completion-1")
+        XCTAssertEqual(result[1].id, "completion-2")
+        XCTAssertEqual(result[1].source, "phone")
+    }
+
+    // MARK: - Missing Optional Fields Tests (AMA-222 regression prevention)
+
+    /// Tests that completions without ended_at field are correctly parsed
+    /// Backend may not return ended_at - we compute it from startedAt + durationSeconds
+
+    func testParseCompletionWithMissingEndedAt() {
+        let jsonWithoutEndedAt = """
+        {
+            "success": true,
+            "completions": [
+                {
+                    "id": "test-no-ended-at",
+                    "workout_name": "Quick Session",
+                    "started_at": "2025-12-28T10:00:00Z",
+                    "duration_seconds": 1800,
+                    "source": "phone"
+                }
+            ]
+        }
+        """
+
+        let result = parseWrappedCompletionsResponse(jsonWithoutEndedAt)
+        XCTAssertEqual(result.count, 1)
+        XCTAssertNil(result.first?.endedAt)
+        XCTAssertEqual(result.first?.durationSeconds, 1800)
+    }
+
+    func testParseCompletionWithMissingSyncedToStrava() {
+        let jsonWithoutSyncedToStrava = """
+        {
+            "success": true,
+            "completions": [
+                {
+                    "id": "test-no-strava",
+                    "workout_name": "Local Workout",
+                    "started_at": "2025-12-28T10:00:00Z",
+                    "duration_seconds": 900,
+                    "source": "garmin"
+                }
+            ]
+        }
+        """
+
+        let result = parseWrappedCompletionsResponse(jsonWithoutSyncedToStrava)
+        XCTAssertEqual(result.count, 1)
+        XCTAssertNil(result.first?.syncedToStrava)
+    }
+
+    func testResolvedEndedAtComputation() {
+        // Test the computed property logic: endedAt ?? startedAt + durationSeconds
+        let startDate = Date(timeIntervalSince1970: 1735380000) // Fixed timestamp
+        let durationSeconds = 1800 // 30 minutes
+
+        let resolvedEndedAt = computeResolvedEndedAt(
+            endedAt: nil,
+            startedAt: startDate,
+            durationSeconds: durationSeconds
+        )
+
+        let expectedEndedAt = startDate.addingTimeInterval(TimeInterval(durationSeconds))
+        XCTAssertEqual(resolvedEndedAt, expectedEndedAt)
+    }
+
+    func testResolvedEndedAtUsesProvidedValue() {
+        let startDate = Date(timeIntervalSince1970: 1735380000)
+        let actualEndDate = Date(timeIntervalSince1970: 1735382000)
+        let durationSeconds = 1800
+
+        let resolvedEndedAt = computeResolvedEndedAt(
+            endedAt: actualEndDate,
+            startedAt: startDate,
+            durationSeconds: durationSeconds
+        )
+
+        XCTAssertEqual(resolvedEndedAt, actualEndDate)
+    }
+
+    func testIsSyncedToStravaDefaultsFalse() {
+        // Test that nil syncedToStrava defaults to false
+        let isSynced = computeIsSyncedToStrava(syncedToStrava: nil)
+        XCTAssertFalse(isSynced)
+    }
+
+    func testIsSyncedToStravaReturnsActualValue() {
+        XCTAssertTrue(computeIsSyncedToStrava(syncedToStrava: true))
+        XCTAssertFalse(computeIsSyncedToStrava(syncedToStrava: false))
+    }
+
+    // MARK: - Source Enum "phone" Tests (AMA-222 regression prevention)
+
+    func testSourcePhoneEnumValue() {
+        // Ensure "phone" source value decodes correctly (was previously "phone_only")
+        let jsonWithPhoneSource = """
+        {
+            "success": true,
+            "completions": [
+                {
+                    "id": "phone-workout",
+                    "workout_name": "Phone Controlled",
+                    "started_at": "2025-12-28T10:00:00Z",
+                    "duration_seconds": 600,
+                    "source": "phone"
+                }
+            ]
+        }
+        """
+
+        let result = parseWrappedCompletionsResponse(jsonWithPhoneSource)
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result.first?.source, "phone")
+    }
+
+    func testAllSourceEnumValues() {
+        // Test all valid source values decode correctly
+        let sources = ["apple_watch", "garmin", "manual", "phone"]
+        for source in sources {
+            let json = """
+            {
+                "success": true,
+                "completions": [
+                    {
+                        "id": "test-\(source)",
+                        "workout_name": "Test",
+                        "started_at": "2025-12-28T10:00:00Z",
+                        "duration_seconds": 600,
+                        "source": "\(source)"
+                    }
+                ]
+            }
+            """
+
+            let result = parseWrappedCompletionsResponse(json)
+            XCTAssertEqual(result.count, 1, "Failed to parse source: \(source)")
+            XCTAssertEqual(result.first?.source, source)
+        }
     }
 
     // MARK: - API Response Handling Helper Methods
@@ -566,17 +776,18 @@ final class ActivityHistoryTests: XCTestCase {
         statusCode == 404 || statusCode == 500
     }
 
-    /// Test struct matching WorkoutCompletion fields
+    /// Test struct matching WorkoutCompletion fields (with optional endedAt and syncedToStrava)
     private struct TestCompletion: Codable {
         let id: String
         let workoutName: String
         let startedAt: Date
-        let endedAt: Date
+        let endedAt: Date?           // Optional - backend may not return this
         let durationSeconds: Int
         let avgHeartRate: Int?
+        let maxHeartRate: Int?
         let activeCalories: Int?
         let source: String
-        let syncedToStrava: Bool
+        let syncedToStrava: Bool?    // Optional - backend may not return this
         let stravaActivityId: String?
 
         enum CodingKeys: String, CodingKey {
@@ -586,6 +797,7 @@ final class ActivityHistoryTests: XCTestCase {
             case endedAt = "ended_at"
             case durationSeconds = "duration_seconds"
             case avgHeartRate = "avg_heart_rate"
+            case maxHeartRate = "max_heart_rate"
             case activeCalories = "active_calories"
             case source
             case syncedToStrava = "synced_to_strava"
@@ -593,7 +805,13 @@ final class ActivityHistoryTests: XCTestCase {
         }
     }
 
-    /// Parse completions response, returning empty array on any error
+    /// Test struct for wrapped response format: { "success": true, "completions": [...] }
+    private struct TestWrappedResponse: Codable {
+        let success: Bool
+        let completions: [TestCompletion]
+    }
+
+    /// Parse completions response (plain array format), returning empty array on any error
     private func parseCompletionsResponse(_ jsonString: String) -> [TestCompletion] {
         // Check if response is actually an array
         guard isArrayResponse(jsonString) else {
@@ -613,5 +831,34 @@ final class ActivityHistoryTests: XCTestCase {
             // Return empty array on decode errors (schema mismatch, etc.)
             return []
         }
+    }
+
+    /// Parse wrapped completions response format: { "success": true, "completions": [...] }
+    /// This is the actual format returned by the backend API
+    private func parseWrappedCompletionsResponse(_ jsonString: String) -> [TestCompletion] {
+        guard let data = jsonString.data(using: .utf8) else {
+            return []
+        }
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        do {
+            let wrappedResponse = try decoder.decode(TestWrappedResponse.self, from: data)
+            return wrappedResponse.completions
+        } catch {
+            // Return empty array on decode errors
+            return []
+        }
+    }
+
+    /// Compute resolved endedAt (mirrors WorkoutCompletion.resolvedEndedAt)
+    private func computeResolvedEndedAt(endedAt: Date?, startedAt: Date, durationSeconds: Int) -> Date {
+        endedAt ?? startedAt.addingTimeInterval(TimeInterval(durationSeconds))
+    }
+
+    /// Compute isSyncedToStrava (mirrors WorkoutCompletion.isSyncedToStrava)
+    private func computeIsSyncedToStrava(syncedToStrava: Bool?) -> Bool {
+        syncedToStrava ?? false
     }
 }

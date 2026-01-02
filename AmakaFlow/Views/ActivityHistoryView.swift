@@ -246,7 +246,7 @@ struct CompletionRowView: View {
                         .font(Theme.Typography.caption)
                         .foregroundColor(Theme.Colors.textTertiary)
 
-                    if completion.syncedToStrava {
+                    if completion.isSyncedToStrava {
                         Spacer()
 
                         HStack(spacing: 4) {
