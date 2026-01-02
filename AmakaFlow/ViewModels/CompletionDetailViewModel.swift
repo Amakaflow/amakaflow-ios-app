@@ -54,13 +54,13 @@ class CompletionDetailViewModel: ObservableObject {
     /// Whether this can be synced to Strava
     var canSyncToStrava: Bool {
         guard let detail = detail else { return false }
-        return !detail.syncedToStrava
+        return !detail.isSyncedToStrava
     }
 
     /// Strava button text
     var stravaButtonText: String {
         guard let detail = detail else { return "Sync to Strava" }
-        return detail.syncedToStrava ? "View on Strava" : "Sync to Strava"
+        return detail.isSyncedToStrava ? "View on Strava" : "Sync to Strava"
     }
 
     // MARK: - Initialization
@@ -122,7 +122,7 @@ class CompletionDetailViewModel: ObservableObject {
     /// Open the activity in Strava app/web
     func openInStrava() {
         guard let detail = detail,
-              detail.syncedToStrava,
+              detail.isSyncedToStrava,
               let activityId = detail.stravaActivityId else {
             return
         }
@@ -171,6 +171,16 @@ class CompletionDetailViewModel: ObservableObject {
 
 // MARK: - API Service Extension
 
+import os.log
+
+private let detailLogger = Logger(subsystem: "com.myamaka.AmakaFlowCompanion", category: "CompletionDetail")
+
+/// Backend returns completion detail wrapped in { "success": true, "completion": {...} }
+private struct CompletionDetailResponse: Codable {
+    let success: Bool
+    let completion: WorkoutCompletionDetail
+}
+
 extension APIService {
     /// Fetch full workout completion detail from backend
     /// - Parameter id: The completion ID to fetch
@@ -197,17 +207,57 @@ extension APIService {
             throw APIError.invalidResponse
         }
 
+        let responseBody = String(data: data, encoding: .utf8) ?? "empty"
+        print("[CompletionDetail] fetchCompletionDetail - Status: \(httpResponse.statusCode)")
+        print("[CompletionDetail] Response: \(responseBody.prefix(500))")
+        detailLogger.info("fetchCompletionDetail - Status: \(httpResponse.statusCode), Body: \(responseBody)")
+
         switch httpResponse.statusCode {
         case 200:
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-            decoder.dateDecodingStrategy = .iso8601
-            return try decoder.decode(WorkoutCompletionDetail.self, from: data)
+            let decoder = APIService.makeDecoder()
+
+            // Try wrapped format first: { "success": true, "completion": {...} }
+            do {
+                let wrappedResponse = try decoder.decode(CompletionDetailResponse.self, from: data)
+                print("[CompletionDetail] Successfully decoded wrapped completion detail")
+                return wrappedResponse.completion
+            } catch let wrappedError as DecodingError {
+                // Log detailed wrapped decode error
+                var errorMsg = ""
+                switch wrappedError {
+                case .typeMismatch(let type, let context):
+                    errorMsg = "Type mismatch: expected \(String(describing: type)) at \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+                case .valueNotFound(let type, let context):
+                    errorMsg = "Value not found: \(String(describing: type)) at \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+                case .keyNotFound(let key, let context):
+                    errorMsg = "Key not found: '\(key.stringValue)' at \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+                case .dataCorrupted(let context):
+                    errorMsg = "Data corrupted at \(context.codingPath.map { $0.stringValue }.joined(separator: ".")): \(context.debugDescription)"
+                @unknown default:
+                    errorMsg = "Unknown: \(wrappedError.localizedDescription)"
+                }
+                print("[CompletionDetail] Wrapped decode failed: \(errorMsg)")
+
+                // Log to DebugLogService for visibility
+                Task { @MainActor in
+                    DebugLogService.shared.log(
+                        "WRAPPED DECODE: \(errorMsg)",
+                        details: String(responseBody.prefix(2000)),
+                        metadata: ["Endpoint": "/workouts/completions/\(id)"]
+                    )
+                }
+                throw wrappedError  // Don't try direct decode, the wrapped format is what backend returns
+            } catch {
+                print("[CompletionDetail] Wrapped decode failed with non-decoding error: \(error)")
+                throw error
+            }
         case 401:
             throw APIError.unauthorized
         case 404:
+            detailLogger.warning("fetchCompletionDetail - 404 Not Found for ID: \(id)")
             throw APIError.notFound
         default:
+            detailLogger.error("fetchCompletionDetail - Server error \(httpResponse.statusCode): \(responseBody)")
             throw APIError.serverError(httpResponse.statusCode)
         }
     }

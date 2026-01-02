@@ -265,9 +265,7 @@ extension APIService {
 
         switch httpResponse.statusCode {
         case 200:
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-            decoder.dateDecodingStrategy = .iso8601
+            let decoder = APIService.makeDecoder()
 
             // Backend returns { "success": true, "completions": [...] }
             // Try to decode as wrapped response first

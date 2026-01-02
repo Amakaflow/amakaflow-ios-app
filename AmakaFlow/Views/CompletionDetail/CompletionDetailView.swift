@@ -149,7 +149,7 @@ struct CompletionDetailView: View {
                     value: detail.deviceInfo?.displayName ?? detail.source.displayName
                 )
 
-                if detail.syncedToStrava {
+                if detail.isSyncedToStrava {
                     detailRow(
                         icon: "checkmark.circle.fill",
                         label: "Strava",

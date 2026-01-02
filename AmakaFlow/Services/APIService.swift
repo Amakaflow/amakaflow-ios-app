@@ -16,6 +16,39 @@ class APIService {
 
     private init() {}
 
+    // MARK: - Shared JSON Decoder
+
+    /// Create a JSONDecoder configured for our API responses
+    /// Handles ISO8601 dates both with and without fractional seconds
+    static func makeDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let dateString = try container.decode(String.self)
+
+            // Try ISO8601 with fractional seconds first (e.g., "2026-01-02T02:41:21.295+00:00")
+            let formatterWithFractional = ISO8601DateFormatter()
+            formatterWithFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = formatterWithFractional.date(from: dateString) {
+                return date
+            }
+
+            // Fall back to standard ISO8601 (e.g., "2025-01-01T10:00:00Z")
+            let formatterStandard = ISO8601DateFormatter()
+            formatterStandard.formatOptions = [.withInternetDateTime]
+            if let date = formatterStandard.date(from: dateString) {
+                return date
+            }
+
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Cannot decode date: \(dateString)"
+            )
+        }
+        return decoder
+    }
+
     // MARK: - Error Logging Helper
 
     private func logError(endpoint: String, method: String, statusCode: Int?, response: String?, error: Error?) {
@@ -114,9 +147,7 @@ class APIService {
 
         switch httpResponse.statusCode {
         case 200:
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-            decoder.dateDecodingStrategy = .iso8601
+            let decoder = APIService.makeDecoder()
             return try decoder.decode([ScheduledWorkout].self, from: data)
         case 401:
             throw APIError.unauthorized
@@ -195,9 +226,7 @@ class APIService {
 
         switch httpResponse.statusCode {
         case 200:
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-            decoder.dateDecodingStrategy = .iso8601
+            let decoder = APIService.makeDecoder()
             do {
                 let pendingResponse = try decoder.decode(PendingWorkoutsResponse.self, from: data)
                 print("[APIService] Decoded \(pendingResponse.count) pending workouts")

@@ -23,15 +23,29 @@ struct HeartRateDataPoint: Identifiable, Codable, Hashable {
 // MARK: - Device Info (for completion detail)
 
 struct CompletionDeviceInfo: Codable, Hashable {
-    let name: String
     let model: String?
-    let manufacturer: String?
+    let platform: String?
+    let osVersion: String?
 
     var displayName: String {
+        // Build a friendly display name from available fields
         if let model = model {
-            return "\(name) \(model)"
+            // Convert model identifiers like "iPhone18,1" to friendlier names
+            if model.starts(with: "iPhone") {
+                return "iPhone"
+            } else if model.starts(with: "Watch") {
+                return "Apple Watch"
+            }
+            return model
         }
-        return name
+        if let platform = platform {
+            switch platform.lowercased() {
+            case "ios": return "iPhone"
+            case "watchos": return "Apple Watch"
+            default: return platform.capitalized
+            }
+        }
+        return "Unknown Device"
     }
 }
 
@@ -85,7 +99,7 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
     let id: String
     let workoutName: String
     let startedAt: Date
-    let endedAt: Date
+    let endedAt: Date?              // Optional - backend may not return this
     let durationSeconds: Int
     let avgHeartRate: Int?
     let maxHeartRate: Int?
@@ -97,8 +111,18 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
     let source: WorkoutCompletion.CompletionSource
     let deviceInfo: CompletionDeviceInfo?
     let heartRateSamples: [HeartRateDataPoint]?
-    let syncedToStrava: Bool
+    let syncedToStrava: Bool?       // Optional - backend may not return this
     let stravaActivityId: String?
+
+    /// Computed endedAt from startedAt + durationSeconds if not provided
+    var resolvedEndedAt: Date {
+        endedAt ?? startedAt.addingTimeInterval(TimeInterval(durationSeconds))
+    }
+
+    /// Strava sync status with default false if not provided
+    var isSyncedToStrava: Bool {
+        syncedToStrava ?? false
+    }
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -302,7 +326,7 @@ extension WorkoutCompletionDetail {
             steps: 4500,
             distanceMeters: 3200,
             source: .appleWatch,
-            deviceInfo: CompletionDeviceInfo(name: "Apple Watch", model: "Series 9", manufacturer: "Apple"),
+            deviceInfo: CompletionDeviceInfo(model: "Watch7,1", platform: "watchos", osVersion: "11.0"),
             heartRateSamples: samples,
             syncedToStrava: true,
             stravaActivityId: "12345678"
