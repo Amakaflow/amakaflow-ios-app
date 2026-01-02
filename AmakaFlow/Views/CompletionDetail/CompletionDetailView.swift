@@ -78,12 +78,19 @@ struct CompletionDetailView: View {
                     )
                 }
 
-                // Summary Metrics
-                if detail.hasSummaryMetrics {
-                    MetricGridView.summary(
-                        duration: detail.formattedDuration,
+                // Activity Metrics (calories, steps, distance)
+                if detail.hasSummaryMetrics || detail.distanceMeters != nil {
+                    MetricGridView.activity(
                         calories: detail.formattedCalories,
-                        steps: detail.formattedSteps
+                        steps: detail.formattedSteps,
+                        distance: detail.formattedDistance
+                    )
+                } else {
+                    // Empty state for activity metrics
+                    emptyMetricsSection(
+                        icon: "figure.run",
+                        title: "No Activity Data",
+                        message: "Activity metrics like calories, steps, and distance were not recorded for this workout."
                     )
                 }
 
@@ -117,16 +124,74 @@ struct CompletionDetailView: View {
     // MARK: - Header Section
 
     private func headerSection(_ detail: WorkoutCompletionDetail) -> some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
+            // Workout name
             Text(detail.workoutName)
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.center)
 
-            Text(detail.formattedDateTime)
+            // Date
+            Text(detail.formattedFullDate)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
+
+            // Prominent duration display
+            VStack(spacing: 4) {
+                Text(detail.formattedDuration)
+                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
+
+                Text("Duration")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.vertical, 8)
+
+            // Time range (start → end)
+            HStack(spacing: 8) {
+                Image(systemName: "clock")
+                    .foregroundColor(.secondary)
+                    .font(.caption)
+
+                Text(detail.formattedStartTime)
+                    .foregroundColor(.secondary)
+
+                Image(systemName: "arrow.right")
+                    .foregroundColor(.secondary)
+                    .font(.caption2)
+
+                Text(detail.resolvedEndedAt.formatted(date: .omitted, time: .shortened))
+                    .foregroundColor(.secondary)
+            }
+            .font(.subheadline)
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(Theme.Colors.surface)
+        .cornerRadius(12)
+    }
+
+    // MARK: - Empty Metrics Section
+
+    private func emptyMetricsSection(icon: String, title: String, message: String) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.title)
+                .foregroundColor(.secondary)
+
+            VStack(spacing: 4) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
+
+                Text(message)
+                    .font(.caption)
+                    .foregroundColor(.secondary.opacity(0.8))
+                    .multilineTextAlignment(.center)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding()
@@ -155,20 +220,6 @@ struct CompletionDetailView: View {
                         label: "Strava",
                         value: "Synced",
                         valueColor: .green
-                    )
-                }
-
-                detailRow(
-                    icon: "calendar",
-                    label: "Completed",
-                    value: detail.formattedFullDate
-                )
-
-                if let distance = detail.formattedDistance {
-                    detailRow(
-                        icon: "map",
-                        label: "Distance",
-                        value: distance
                     )
                 }
             }

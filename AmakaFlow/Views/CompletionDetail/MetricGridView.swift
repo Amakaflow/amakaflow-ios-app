@@ -100,6 +100,32 @@ extension MetricGridView {
         return MetricGridView(title: "Summary", metrics: metrics)
     }
 
+    /// Create activity metrics grid (calories, steps, distance) - without duration
+    static func activity(calories: String?, steps: String?, distance: String?) -> MetricGridView {
+        var metrics: [MetricItem] = []
+
+        if let calories = calories {
+            metrics.append(MetricItem(icon: "flame.fill", value: calories, label: "Calories", iconColor: .orange))
+        }
+
+        if let steps = steps {
+            metrics.append(MetricItem(icon: "figure.walk", value: steps, label: "Steps", iconColor: .green))
+        }
+
+        if let distance = distance {
+            metrics.append(MetricItem(icon: "map", value: distance, label: "Distance", iconColor: .purple))
+        }
+
+        // Use 2 columns if only 2 items, otherwise 3
+        let columns = metrics.count == 2 ? 2 : 3
+        return MetricGridView(title: "Activity", metrics: metrics, columns: columns)
+    }
+
+    /// Whether this grid has any metrics to display
+    var hasMetrics: Bool {
+        !metrics.isEmpty
+    }
+
     /// Create a heart rate metrics grid (avg, max, min)
     static func heartRate(avg: Int?, max: Int?, min: Int?) -> MetricGridView {
         var metrics: [MetricItem] = []
