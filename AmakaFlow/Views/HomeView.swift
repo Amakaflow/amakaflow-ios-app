@@ -208,7 +208,7 @@ struct HomeView: View {
             VStack(spacing: Theme.Spacing.sm) {
                 Image(systemName: "mic.fill")
                     .font(.system(size: 20))
-                Text("Voice Create")
+                Text("Log Workout")
                     .font(Theme.Typography.caption)
             }
             .foregroundColor(.white)
@@ -282,18 +282,18 @@ struct HomeView: View {
                 .font(Theme.Typography.bodyBold)
                 .foregroundColor(Theme.Colors.textPrimary)
 
-            Text("Add a workout from the web, or create one with your voice")
+            Text("Add a workout from the web, or log one you've completed")
                 .font(Theme.Typography.caption)
                 .foregroundColor(Theme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
 
-            // Voice create button (AMA-5)
+            // Voice log button (AMA-5)
             Button {
                 showingVoiceWorkout = true
             } label: {
                 HStack(spacing: Theme.Spacing.sm) {
                     Image(systemName: "mic.fill")
-                    Text("Create with Voice")
+                    Text("Log with Voice")
                 }
                 .font(Theme.Typography.caption)
                 .fontWeight(.medium)

@@ -271,14 +271,15 @@ class APIService {
     }
 
     /// Sync workout to backend
-    /// - Parameter workout: Workout to sync
+    /// - Parameter workout: Workout to sync/create
     /// - Throws: APIError if sync fails
     func syncWorkout(_ workout: Workout) async throws {
         guard PairingService.shared.isPaired else {
             throw APIError.unauthorized
         }
 
-        let url = URL(string: "\(baseURL)/workouts/sync")!
+        // Use POST /workouts to create the workout
+        let url = URL(string: "\(baseURL)/workouts")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = authHeaders
@@ -287,10 +288,27 @@ class APIService {
         encoder.keyEncodingStrategy = .convertToSnakeCase
         request.httpBody = try encoder.encode(workout)
 
-        let (_, response) = try await session.data(for: request)
+        print("[APIService] syncWorkout - URL: \(url.absoluteString)")
+        print("[APIService] syncWorkout - Workout: \(workout.name)")
+
+        let (data, response) = try await session.data(for: request)
+        let responseString = String(data: data, encoding: .utf8)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
+        }
+
+        print("[APIService] syncWorkout - Status: \(httpResponse.statusCode)")
+        print("[APIService] syncWorkout - Response: \(responseString ?? "nil")")
+
+        // Log errors to DebugLogService
+        if httpResponse.statusCode >= 400 {
+            await DebugLogService.shared.logAPIError(
+                endpoint: "/workouts",
+                method: "POST",
+                statusCode: httpResponse.statusCode,
+                response: responseString
+            )
         }
 
         switch httpResponse.statusCode {
@@ -349,7 +367,9 @@ class APIService {
             throw APIError.unauthorized
         }
 
-        let url = URL(string: "\(baseURL)/workouts/parse-voice")!
+        // Voice parsing is on the ingestor API, not the mapper API
+        let ingestorURL = AppEnvironment.current.ingestorAPIURL
+        let url = URL(string: "\(ingestorURL)/workouts/parse-voice")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = authHeaders
@@ -361,6 +381,9 @@ class APIService {
 
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
+        print("[APIService] parseVoiceWorkout - URL: \(url.absoluteString)")
+        print("[APIService] parseVoiceWorkout - Body: \(body)")
+
         let (data, response) = try await session.data(for: request)
         let responseString = String(data: data, encoding: .utf8)
 
@@ -369,6 +392,17 @@ class APIService {
         }
 
         print("[APIService] parseVoiceWorkout - Status: \(httpResponse.statusCode)")
+        print("[APIService] parseVoiceWorkout - Response: \(responseString ?? "nil")")
+
+        // Log errors to DebugLogService
+        if httpResponse.statusCode >= 400 {
+            await DebugLogService.shared.logAPIError(
+                endpoint: "/workouts/parse-voice",
+                method: "POST",
+                statusCode: httpResponse.statusCode,
+                response: responseString
+            )
+        }
 
         switch httpResponse.statusCode {
         case 200, 201:
@@ -389,6 +423,75 @@ class APIService {
             throw APIError.serverErrorWithBody(422, responseString ?? "Could not understand workout description")
         default:
             throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    // MARK: - Manual Workout Logging (AMA-5)
+
+    /// Log a manually-recorded workout completion to activity history
+    /// - Parameter completion: The workout completion to log
+    /// - Throws: APIError if request fails
+    func logCompletion(_ completion: WorkoutCompletion) async throws {
+        guard PairingService.shared.isPaired else {
+            throw APIError.unauthorized
+        }
+
+        let url = URL(string: "\(baseURL)/workouts/completions")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders
+
+        // Build request body matching backend schema
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        let body: [String: Any] = [
+            "workout_name": completion.workoutName,
+            "started_at": formatter.string(from: completion.startedAt),
+            "ended_at": formatter.string(from: completion.resolvedEndedAt),
+            "duration_seconds": completion.durationSeconds,
+            "source": completion.source.rawValue,
+            "avg_heart_rate": completion.avgHeartRate as Any,
+            "max_heart_rate": completion.maxHeartRate as Any,
+            "active_calories": completion.activeCalories as Any
+        ].compactMapValues { $0 is NSNull ? nil : $0 }
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        print("[APIService] logCompletion - URL: \(url.absoluteString)")
+        print("[APIService] logCompletion - Body: \(body)")
+
+        let (data, response) = try await session.data(for: request)
+        let responseString = String(data: data, encoding: .utf8)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        print("[APIService] logCompletion - Status: \(httpResponse.statusCode)")
+        print("[APIService] logCompletion - Response: \(responseString ?? "nil")")
+
+        // Log errors to DebugLogService
+        if httpResponse.statusCode >= 400 {
+            await DebugLogService.shared.logAPIError(
+                endpoint: "/workouts/completions",
+                method: "POST",
+                statusCode: httpResponse.statusCode,
+                response: responseString
+            )
+        }
+
+        switch httpResponse.statusCode {
+        case 200, 201:
+            return
+        case 401:
+            throw APIError.unauthorized
+        case 404, 405:
+            // Endpoint may not exist yet - log but don't fail for MVP
+            print("[APIService] logCompletion - Endpoint not available (\(httpResponse.statusCode))")
+            throw APIError.serverErrorWithBody(httpResponse.statusCode, responseString ?? "Endpoint not available")
+        default:
+            throw APIError.serverErrorWithBody(httpResponse.statusCode, responseString ?? "Unknown error")
         }
     }
 
