@@ -7,21 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		27599809E31D40308DBFA93A /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F86F482904144B39B954F6A /* Environment.swift */; };
-		444EFC17D69346B3B93C9ECA /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11B5892FB68A40CB890E3630 /* KeychainHelper.swift */; };
-		CA268753E918494FAD7CCD56 /* PairingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85D3757E5B284286B341C75C /* PairingService.swift */; };
-		B69E1808FE344A15848A3B67 /* WorkoutCompletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */; };
-		40E350E9B26F4574902587EF /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29B50DC380A44F2D96E6E414 /* PairingView.swift */; };
+		0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
 		1A7B03C2552441FEB810773A /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */; };
+		27599809E31D40308DBFA93A /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F86F482904144B39B954F6A /* Environment.swift */; };
+		40E350E9B26F4574902587EF /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29B50DC380A44F2D96E6E414 /* PairingView.swift */; };
 		43F9F2E9369F4546B3AF005A /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D9B67C13E34BAE804A9359 /* HistoryView.swift */; };
+		444EFC17D69346B3B93C9ECA /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11B5892FB68A40CB890E3630 /* KeychainHelper.swift */; };
 		521047C38D23474889C39F35 /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AB8DFBA16CE406C95456EAD /* CalendarView.swift */; };
 		67283958B3E2475BA2DA974A /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2192F9A69B4A51B54A138F /* HomeView.swift */; };
 		9D0C3D8A603340BC8364F188 /* PreWorkoutDeviceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3910753486A542ECAA1E5971 /* PreWorkoutDeviceSheet.swift */; };
-		W41T1NG000000002C0000002 /* WaitingForWatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = W41T1NG000000001B0000001 /* WaitingForWatchView.swift */; };
-		B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E57529578481B8991A91F /* SourcesView.swift */; };
-		E33FF845EAAD4110B7D87FB0 /* DevicePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89321AF9D21D441198437105 /* DevicePreference.swift */; };
-		EB63D5EF54FF452580C70684 /* WorkoutCompletionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */; };
-		EB63D5EF54FF452580C70685 /* WorkoutCompletionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */; };
 		A19401BB00000001C0000001 /* ActivityHistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA00000001B0000001 /* ActivityHistoryViewModel.swift */; };
 		A19401BB00000002C0000002 /* CompletionDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA00000002B0000002 /* CompletionDetailViewModel.swift */; };
 		A19401BB00000003C0000003 /* ActivityHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA00000003B0000003 /* ActivityHistoryView.swift */; };
@@ -32,8 +26,16 @@
 		A19401BB00000008C0000008 /* HRZonesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA00000008B0000008 /* HRZonesView.swift */; };
 		A19401BB00000009C0000009 /* MetricGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA00000009B0000009 /* MetricGridView.swift */; };
 		A19401BB0000000AC000000A /* WorkoutStepsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA0000000AB000000A /* WorkoutStepsSection.swift */; };
-		F818DA94C6BD4F40EE8313B0 /* StepDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8BFF8D1C38311406C868156 /* StepDisplayView.swift */; };
 		AA8C7E7D040E462BB1347220 /* RestPeriodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94AE3547CCCD41159C85554B /* RestPeriodView.swift */; };
+		B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E57529578481B8991A91F /* SourcesView.swift */; };
+		B69E1808FE344A15848A3B67 /* WorkoutCompletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */; };
+		CA268753E918494FAD7CCD56 /* PairingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85D3757E5B284286B341C75C /* PairingService.swift */; };
+		D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000001B0000001 /* DebugLogService.swift */; };
+		D3BUG10G00000002C0000002 /* DebugLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000002B0000002 /* DebugLogView.swift */; };
+		E33FF845EAAD4110B7D87FB0 /* DevicePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89321AF9D21D441198437105 /* DevicePreference.swift */; };
+		EB63D5EF54FF452580C70684 /* WorkoutCompletionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */; };
+		EB63D5EF54FF452580C70685 /* WorkoutCompletionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */; };
+		F818DA94C6BD4F40EE8313B0 /* StepDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8BFF8D1C38311406C868156 /* StepDisplayView.swift */; };
 		F84682B9F2FD8A45578F0E68 /* WorkoutPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */; };
 		F84E226F2ED0D55600459747 /* AmakaFlowApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E226D2ED0D55600459747 /* AmakaFlowApp.swift */; };
 		F84E22702ED0D55600459747 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E226E2ED0D55600459747 /* Theme.swift */; };
@@ -65,6 +67,13 @@
 		F85C4F6DCDE4544563BA4983 /* WorkoutState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F883912261E9D246979DD881 /* WorkoutState.swift */; };
 		F8654CAC3BB541420480C602 /* FlattenedInterval.swift in Sources */ = {isa = PBXBuildFile; fileRef = F82258553831E24BC9B8C650 /* FlattenedInterval.swift */; };
 		F87ADA7721B76045D5938EA4 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */; };
+		F880AD612F09559A00E8D7D3 /* (null) in Frameworks */ = {isa = PBXBuildFile; };
+		F880AD622F09559A00E8D7D3 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
+		F880AD632F09559A00E8D7D3 /* (null) in Frameworks */ = {isa = PBXBuildFile; };
+		F880AD642F09559A00E8D7D3 /* (null) in Frameworks */ = {isa = PBXBuildFile; };
+		F880AD652F09559A00E8D7D3 /* (null) in Frameworks */ = {isa = PBXBuildFile; };
+		F880AD662F09559A00E8D7D3 /* (null) in Frameworks */ = {isa = PBXBuildFile; };
+		F880AD672F09559A00E8D7D3 /* (null) in Frameworks */ = {isa = PBXBuildFile; };
 		F8B356C52EF8BA7B00E88B51 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F8B356C42EF8BA7B00E88B51 /* WidgetKit.framework */; };
 		F8B356C72EF8BA7B00E88B51 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F8B356C62EF8BA7B00E88B51 /* SwiftUI.framework */; };
 		F8B356D82EF8BA7C00E88B51 /* WorkoutLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F8B356C32EF8BA7B00E88B51 /* WorkoutLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -73,10 +82,14 @@
 		F8B8C2FBBE453C44649F8E94 /* PlayerControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F89DB8A09DD1694C469E6F54 /* PlayerControlsView.swift */; };
 		F8C125A12EFAB01000459747 /* GarminConnectManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8C125A02EFAB01000459747 /* GarminConnectManager.swift */; };
 		F8C125B22EFAC00000459747 /* ConnectIQ in Frameworks */ = {isa = PBXBuildFile; productRef = F8C125B12EFAC00000459747 /* ConnectIQ */; };
-		D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000001B0000001 /* DebugLogService.swift */; };
-		D3BUG10G00000002C0000002 /* DebugLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000002B0000002 /* DebugLogView.swift */; };
 		S3NTR1S3RV1C300000002 /* SentryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = S3NTR1S3RV1C300000001 /* SentryService.swift */; };
-		0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
+		TR4N5CR1PT10N3NG1N31001 /* TranscriptionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30001 /* TranscriptionEngine.swift */; };
+		TR4N5CR1PT10N3NG1N31002 /* OnDeviceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30002 /* OnDeviceEngine.swift */; };
+		TR4N5CR1PT10N3NG1N31003 /* CloudTranscriptionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30003 /* CloudTranscriptionEngine.swift */; };
+		TR4N5CR1PT10N3NG1N31004 /* TranscriptionRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30004 /* TranscriptionRouter.swift */; };
+		TR4N5CR1PT10N3NG1N31005 /* FitnessVocabulary.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30005 /* FitnessVocabulary.swift */; };
+		TR4N5CR1PT10N3NG1N31006 /* PersonalDictionary.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30006 /* PersonalDictionary.swift */; };
+		TR4N5CR1PT10N53TT1NG5101 /* VoiceTranscriptionSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N53TT1NG5001 /* VoiceTranscriptionSettingsView.swift */; };
 		V01C301100000000000000 /* PermissionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300100000000000000 /* PermissionManager.swift */; };
 		V01C301200000000000000 /* VoiceRecordingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300200000000000000 /* VoiceRecordingService.swift */; };
 		V01C301300000000000000 /* TranscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300300000000000000 /* TranscriptionService.swift */; };
@@ -86,13 +99,7 @@
 		V01C301700000000000000 /* VoiceRecordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300700000000000000 /* VoiceRecordingView.swift */; };
 		V01C301800000000000000 /* TranscriptionReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300800000000000000 /* TranscriptionReviewView.swift */; };
 		V01C301900000000000000 /* VoiceWorkoutReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300900000000000000 /* VoiceWorkoutReviewView.swift */; };
-		TR4N5CR1PT10N3NG1N31001 /* TranscriptionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30001 /* TranscriptionEngine.swift */; };
-		TR4N5CR1PT10N3NG1N31002 /* OnDeviceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30002 /* OnDeviceEngine.swift */; };
-		TR4N5CR1PT10N3NG1N31003 /* CloudTranscriptionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30003 /* CloudTranscriptionEngine.swift */; };
-		TR4N5CR1PT10N3NG1N31004 /* TranscriptionRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30004 /* TranscriptionRouter.swift */; };
-		TR4N5CR1PT10N3NG1N31005 /* FitnessVocabulary.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30005 /* FitnessVocabulary.swift */; };
-		TR4N5CR1PT10N3NG1N31006 /* PersonalDictionary.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30006 /* PersonalDictionary.swift */; };
-		TR4N5CR1PT10N53TT1NG5101 /* VoiceTranscriptionSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N53TT1NG5001 /* VoiceTranscriptionSettingsView.swift */; };
+		W41T1NG000000002C0000002 /* WaitingForWatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = W41T1NG000000001B0000001 /* WaitingForWatchView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -166,15 +173,19 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		5F86F482904144B39B954F6A /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Environment.swift; path = ../AmakaFlow/Models/Environment.swift; sourceTree = SOURCE_ROOT; };
-		11B5892FB68A40CB890E3630 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainHelper.swift; path = ../AmakaFlow/Services/KeychainHelper.swift; sourceTree = SOURCE_ROOT; };
-		85D3757E5B284286B341C75C /* PairingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingService.swift; path = ../AmakaFlow/Services/PairingService.swift; sourceTree = SOURCE_ROOT; };
-		8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionService.swift; path = ../AmakaFlow/Services/WorkoutCompletionService.swift; sourceTree = SOURCE_ROOT; };
-		29B50DC380A44F2D96E6E414 /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingView.swift; path = ../AmakaFlow/Views/PairingView.swift; sourceTree = SOURCE_ROOT; };
-		1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QRScannerView.swift; path = ../AmakaFlow/Views/QRScannerView.swift; sourceTree = SOURCE_ROOT; };
 		08D9B67C13E34BAE804A9359 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HistoryView.swift; path = ../AmakaFlow/Views/HistoryView.swift; sourceTree = SOURCE_ROOT; };
 		0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionView.swift; path = ../AmakaFlow/Views/WorkoutCompletionView.swift; sourceTree = SOURCE_ROOT; };
 		0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionViewModel.swift; path = ../AmakaFlow/ViewModels/WorkoutCompletionViewModel.swift; sourceTree = SOURCE_ROOT; };
+		11B5892FB68A40CB890E3630 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainHelper.swift; path = ../AmakaFlow/Services/KeychainHelper.swift; sourceTree = SOURCE_ROOT; };
+		1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QRScannerView.swift; path = ../AmakaFlow/Views/QRScannerView.swift; sourceTree = SOURCE_ROOT; };
+		29B50DC380A44F2D96E6E414 /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingView.swift; path = ../AmakaFlow/Views/PairingView.swift; sourceTree = SOURCE_ROOT; };
+		2AB8DFBA16CE406C95456EAD /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarView.swift; path = ../AmakaFlow/Views/CalendarView.swift; sourceTree = SOURCE_ROOT; };
+		3910753486A542ECAA1E5971 /* PreWorkoutDeviceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PreWorkoutDeviceSheet.swift; path = ../AmakaFlow/Views/Components/PreWorkoutDeviceSheet.swift; sourceTree = SOURCE_ROOT; };
+		5F86F482904144B39B954F6A /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Environment.swift; path = ../AmakaFlow/Models/Environment.swift; sourceTree = SOURCE_ROOT; };
+		85D3757E5B284286B341C75C /* PairingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingService.swift; path = ../AmakaFlow/Services/PairingService.swift; sourceTree = SOURCE_ROOT; };
+		89321AF9D21D441198437105 /* DevicePreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DevicePreference.swift; path = ../AmakaFlow/Models/DevicePreference.swift; sourceTree = SOURCE_ROOT; };
+		8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionService.swift; path = ../AmakaFlow/Services/WorkoutCompletionService.swift; sourceTree = SOURCE_ROOT; };
+		94AE3547CCCD41159C85554B /* RestPeriodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RestPeriodView.swift; path = ../AmakaFlow/Views/Components/RestPeriodView.swift; sourceTree = SOURCE_ROOT; };
 		A19401AA00000001B0000001 /* ActivityHistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivityHistoryViewModel.swift; path = ../AmakaFlow/ViewModels/ActivityHistoryViewModel.swift; sourceTree = SOURCE_ROOT; };
 		A19401AA00000002B0000002 /* CompletionDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CompletionDetailViewModel.swift; path = ../AmakaFlow/ViewModels/CompletionDetailViewModel.swift; sourceTree = SOURCE_ROOT; };
 		A19401AA00000003B0000003 /* ActivityHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivityHistoryView.swift; path = ../AmakaFlow/Views/ActivityHistoryView.swift; sourceTree = SOURCE_ROOT; };
@@ -185,11 +196,9 @@
 		A19401AA00000008B0000008 /* HRZonesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HRZonesView.swift; path = ../AmakaFlow/Views/CompletionDetail/HRZonesView.swift; sourceTree = SOURCE_ROOT; };
 		A19401AA00000009B0000009 /* MetricGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MetricGridView.swift; path = ../AmakaFlow/Views/CompletionDetail/MetricGridView.swift; sourceTree = SOURCE_ROOT; };
 		A19401AA0000000AB000000A /* WorkoutStepsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutStepsSection.swift; path = ../AmakaFlow/Views/CompletionDetail/WorkoutStepsSection.swift; sourceTree = SOURCE_ROOT; };
-		2AB8DFBA16CE406C95456EAD /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarView.swift; path = ../AmakaFlow/Views/CalendarView.swift; sourceTree = SOURCE_ROOT; };
-		3910753486A542ECAA1E5971 /* PreWorkoutDeviceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PreWorkoutDeviceSheet.swift; path = ../AmakaFlow/Views/Components/PreWorkoutDeviceSheet.swift; sourceTree = SOURCE_ROOT; };
-		W41T1NG000000001B0000001 /* WaitingForWatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WaitingForWatchView.swift; path = ../AmakaFlow/Views/Components/WaitingForWatchView.swift; sourceTree = SOURCE_ROOT; };
-		89321AF9D21D441198437105 /* DevicePreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DevicePreference.swift; path = ../AmakaFlow/Models/DevicePreference.swift; sourceTree = SOURCE_ROOT; };
 		CC2192F9A69B4A51B54A138F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeView.swift; path = ../AmakaFlow/Views/HomeView.swift; sourceTree = SOURCE_ROOT; };
+		D3BUG10G00000001B0000001 /* DebugLogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogService.swift; path = ../AmakaFlow/Services/DebugLogService.swift; sourceTree = SOURCE_ROOT; };
+		D3BUG10G00000002B0000002 /* DebugLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogView.swift; path = ../AmakaFlow/Views/DebugLogView.swift; sourceTree = SOURCE_ROOT; };
 		E79E57529578481B8991A91F /* SourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SourcesView.swift; path = ../AmakaFlow/Views/SourcesView.swift; sourceTree = SOURCE_ROOT; };
 		F82258553831E24BC9B8C650 /* FlattenedInterval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FlattenedInterval.swift; path = ../AmakaFlow/Engine/FlattenedInterval.swift; sourceTree = SOURCE_ROOT; };
 		F84E21742ED0B0C800459747 /* AmakaFlowCompanion.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AmakaFlowCompanion.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -228,13 +237,17 @@
 		F8B356C42EF8BA7B00E88B51 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		F8B356C62EF8BA7B00E88B51 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		F8BFF8D1C38311406C868156 /* StepDisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StepDisplayView.swift; path = ../AmakaFlow/Views/Components/StepDisplayView.swift; sourceTree = SOURCE_ROOT; };
-		94AE3547CCCD41159C85554B /* RestPeriodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RestPeriodView.swift; path = ../AmakaFlow/Views/Components/RestPeriodView.swift; sourceTree = SOURCE_ROOT; };
 		F8C125A02EFAB01000459747 /* GarminConnectManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminConnectManager.swift; path = ../AmakaFlow/Services/GarminConnectManager.swift; sourceTree = SOURCE_ROOT; };
 		F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutActivityAttributes.swift; path = ../AmakaFlow/LiveActivity/WorkoutActivityAttributes.swift; sourceTree = SOURCE_ROOT; };
 		F8FC29620578214144920365 /* AudioCueManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioCueManager.swift; path = ../AmakaFlow/Services/AudioCueManager.swift; sourceTree = SOURCE_ROOT; };
-		D3BUG10G00000001B0000001 /* DebugLogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogService.swift; path = ../AmakaFlow/Services/DebugLogService.swift; sourceTree = SOURCE_ROOT; };
-		D3BUG10G00000002B0000002 /* DebugLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogView.swift; path = ../AmakaFlow/Views/DebugLogView.swift; sourceTree = SOURCE_ROOT; };
 		S3NTR1S3RV1C300000001 /* SentryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SentryService.swift; path = ../AmakaFlow/Services/SentryService.swift; sourceTree = SOURCE_ROOT; };
+		TR4N5CR1PT10N3NG1N30001 /* TranscriptionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionEngine.swift; path = ../AmakaFlow/Services/Transcription/TranscriptionEngine.swift; sourceTree = SOURCE_ROOT; };
+		TR4N5CR1PT10N3NG1N30002 /* OnDeviceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnDeviceEngine.swift; path = ../AmakaFlow/Services/Transcription/OnDeviceEngine.swift; sourceTree = SOURCE_ROOT; };
+		TR4N5CR1PT10N3NG1N30003 /* CloudTranscriptionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CloudTranscriptionEngine.swift; path = ../AmakaFlow/Services/Transcription/CloudTranscriptionEngine.swift; sourceTree = SOURCE_ROOT; };
+		TR4N5CR1PT10N3NG1N30004 /* TranscriptionRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionRouter.swift; path = ../AmakaFlow/Services/Transcription/TranscriptionRouter.swift; sourceTree = SOURCE_ROOT; };
+		TR4N5CR1PT10N3NG1N30005 /* FitnessVocabulary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FitnessVocabulary.swift; path = ../AmakaFlow/Services/Transcription/FitnessVocabulary.swift; sourceTree = SOURCE_ROOT; };
+		TR4N5CR1PT10N3NG1N30006 /* PersonalDictionary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PersonalDictionary.swift; path = ../AmakaFlow/Services/Transcription/PersonalDictionary.swift; sourceTree = SOURCE_ROOT; };
+		TR4N5CR1PT10N53TT1NG5001 /* VoiceTranscriptionSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceTranscriptionSettingsView.swift; path = ../AmakaFlow/Views/Settings/VoiceTranscriptionSettingsView.swift; sourceTree = SOURCE_ROOT; };
 		V01C300100000000000000 /* PermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PermissionManager.swift; path = ../AmakaFlow/Services/PermissionManager.swift; sourceTree = SOURCE_ROOT; };
 		V01C300200000000000000 /* VoiceRecordingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceRecordingService.swift; path = ../AmakaFlow/Services/VoiceRecordingService.swift; sourceTree = SOURCE_ROOT; };
 		V01C300300000000000000 /* TranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionService.swift; path = ../AmakaFlow/Services/TranscriptionService.swift; sourceTree = SOURCE_ROOT; };
@@ -244,13 +257,7 @@
 		V01C300700000000000000 /* VoiceRecordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceRecordingView.swift; path = ../AmakaFlow/Views/VoiceWorkout/VoiceRecordingView.swift; sourceTree = SOURCE_ROOT; };
 		V01C300800000000000000 /* TranscriptionReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/TranscriptionReviewView.swift; sourceTree = SOURCE_ROOT; };
 		V01C300900000000000000 /* VoiceWorkoutReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceWorkoutReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/VoiceWorkoutReviewView.swift; sourceTree = SOURCE_ROOT; };
-		TR4N5CR1PT10N3NG1N30001 /* TranscriptionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionEngine.swift; path = ../AmakaFlow/Services/Transcription/TranscriptionEngine.swift; sourceTree = SOURCE_ROOT; };
-		TR4N5CR1PT10N3NG1N30002 /* OnDeviceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnDeviceEngine.swift; path = ../AmakaFlow/Services/Transcription/OnDeviceEngine.swift; sourceTree = SOURCE_ROOT; };
-		TR4N5CR1PT10N3NG1N30003 /* CloudTranscriptionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CloudTranscriptionEngine.swift; path = ../AmakaFlow/Services/Transcription/CloudTranscriptionEngine.swift; sourceTree = SOURCE_ROOT; };
-		TR4N5CR1PT10N3NG1N30004 /* TranscriptionRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionRouter.swift; path = ../AmakaFlow/Services/Transcription/TranscriptionRouter.swift; sourceTree = SOURCE_ROOT; };
-		TR4N5CR1PT10N3NG1N30005 /* FitnessVocabulary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FitnessVocabulary.swift; path = ../AmakaFlow/Services/Transcription/FitnessVocabulary.swift; sourceTree = SOURCE_ROOT; };
-		TR4N5CR1PT10N3NG1N30006 /* PersonalDictionary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PersonalDictionary.swift; path = ../AmakaFlow/Services/Transcription/PersonalDictionary.swift; sourceTree = SOURCE_ROOT; };
-		TR4N5CR1PT10N53TT1NG5001 /* VoiceTranscriptionSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceTranscriptionSettingsView.swift; path = ../AmakaFlow/Views/Settings/VoiceTranscriptionSettingsView.swift; sourceTree = SOURCE_ROOT; };
+		W41T1NG000000001B0000001 /* WaitingForWatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WaitingForWatchView.swift; path = ../AmakaFlow/Views/Components/WaitingForWatchView.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -329,12 +336,13 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F880AD622F09559A00E8D7D3 /* Sentry in Frameworks */,
 				F84E22932ED0D9FA00459747 /* EventKit.framework in Frameworks */,
 				F84E22952ED0DA0200459747 /* HealthKit.framework in Frameworks */,
 				F84E22992ED0DA1F00459747 /* WorkoutKitSync in Frameworks */,
 				F8C125B22EFAC00000459747 /* ConnectIQ in Frameworks */,
 				F84E22972ED0DA0F00459747 /* WatchConnectivity.framework in Frameworks */,
-				0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */,
+				F880AD612F09559A00E8D7D3 /* (null) in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -342,7 +350,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */,
+				F880AD642F09559A00E8D7D3 /* (null) in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -350,7 +358,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */,
+				F880AD652F09559A00E8D7D3 /* (null) in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -362,7 +370,7 @@
 				F84E229B2ED0DC0900459747 /* HealthKit.framework in Frameworks */,
 				F84E22A12ED0DC2700459747 /* WorkoutKitSync in Frameworks */,
 				F84E229D2ED0DC1100459747 /* WatchConnectivity.framework in Frameworks */,
-				0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */,
+				F880AD632F09559A00E8D7D3 /* (null) in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -370,7 +378,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */,
+				F880AD662F09559A00E8D7D3 /* (null) in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -378,7 +386,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */,
+				F880AD672F09559A00E8D7D3 /* (null) in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -491,6 +499,28 @@
 				E79E57529578481B8991A91F /* SourcesView.swift */,
 				2AB8DFBA16CE406C95456EAD /* CalendarView.swift */,
 				08D9B67C13E34BAE804A9359 /* HistoryView.swift */,
+				5F86F482904144B39B954F6A /* Environment.swift */,
+				11B5892FB68A40CB890E3630 /* KeychainHelper.swift */,
+				85D3757E5B284286B341C75C /* PairingService.swift */,
+				8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */,
+				29B50DC380A44F2D96E6E414 /* PairingView.swift */,
+				1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */,
+				V01C300100000000000000 /* PermissionManager.swift */,
+				V01C300200000000000000 /* VoiceRecordingService.swift */,
+				V01C300300000000000000 /* TranscriptionService.swift */,
+				V01C300400000000000000 /* WorkoutParsingService.swift */,
+				V01C300500000000000000 /* VoiceWorkoutViewModel.swift */,
+				V01C300600000000000000 /* VoiceWorkoutView.swift */,
+				V01C300700000000000000 /* VoiceRecordingView.swift */,
+				V01C300800000000000000 /* TranscriptionReviewView.swift */,
+				V01C300900000000000000 /* VoiceWorkoutReviewView.swift */,
+				TR4N5CR1PT10N3NG1N30001 /* TranscriptionEngine.swift */,
+				TR4N5CR1PT10N3NG1N30002 /* OnDeviceEngine.swift */,
+				TR4N5CR1PT10N3NG1N30003 /* CloudTranscriptionEngine.swift */,
+				TR4N5CR1PT10N3NG1N30004 /* TranscriptionRouter.swift */,
+				TR4N5CR1PT10N3NG1N30005 /* FitnessVocabulary.swift */,
+				TR4N5CR1PT10N3NG1N30006 /* PersonalDictionary.swift */,
+				TR4N5CR1PT10N53TT1NG5001 /* VoiceTranscriptionSettingsView.swift */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -784,6 +814,24 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		BA612D7EA9704AF3B2F09E08 /* Upload Debug Symbols to Sentry */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}",
+			);
+			name = "Upload Debug Symbols to Sentry";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# This script is responsible for uploading debug symbols and source context for Sentry.\nif which sentry-cli >/dev/null; then\n  export SENTRY_ORG=me-6o\n  export SENTRY_PROJECT=amakaflow-ios\n  ERROR=$(sentry-cli debug-files upload --include-sources \"$DWARF_DSYM_FOLDER_PATH\" 2>&1 >/dev/null)\n  if [ ! $? -eq 0 ]; then\n    echo \"warning: sentry-cli - $ERROR\"\n  fi\nelse\n  echo \"warning: sentry-cli not installed, download from https://github.com/getsentry/sentry-cli/releases\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		F84E21702ED0B0C800459747 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -1071,8 +1119,10 @@
 				CODE_SIGN_ENTITLEMENTS = AmakaFlowCompanion/AmakaFlowCompanion.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 17;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AmakaFlowCompanion/Info.plist;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "AmakaFlow Companion needs access to read your workout data";
@@ -1098,8 +1148,6 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				ENABLE_USER_SCRIPT_SANDBOXING = "NO";
 			};
 			name = Debug;
 		};
@@ -1111,8 +1159,10 @@
 				CODE_SIGN_ENTITLEMENTS = AmakaFlowCompanion/AmakaFlowCompanion.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 17;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AmakaFlowCompanion/Info.plist;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "AmakaFlow Companion needs access to read your workout data";
@@ -1138,8 +1188,6 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				ENABLE_USER_SCRIPT_SANDBOXING = "NO";
 			};
 			name = Release;
 		};
@@ -1541,7 +1589,23 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		6EFD6A06E1264416B1103D42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa/";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
+		2F0C8DCE03694CF3A60D12F9 /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6EFD6A06E1264416B1103D42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
+		};
 		F84E22982ED0DA1F00459747 /* WorkoutKitSync */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = F84E225F2ED0B84300459747 /* XCLocalSwiftPackageReference "../../../workoutkit-sync" */;
@@ -1557,52 +1621,7 @@
 			package = F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "../Vendor/ConnectIQ" */;
 			productName = ConnectIQ;
 		};
-		2F0C8DCE03694CF3A60D12F9 /* Sentry */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6EFD6A06E1264416B1103D42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
-			productName = Sentry;
-		};
 /* End XCSwiftPackageProductDependency section */
-
-/* Begin PBXShellScriptBuildPhase section */
-		BA612D7EA9704AF3B2F09E08 /* Upload Debug Symbols to Sentry */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}",
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# This script is responsible for uploading debug symbols and source context for Sentry.
-if which sentry-cli >/dev/null; then
-  export SENTRY_ORG=me-6o
-  export SENTRY_PROJECT=amakaflow-ios
-  ERROR=$(sentry-cli debug-files upload --include-sources \"$DWARF_DSYM_FOLDER_PATH\" 2>&1 >/dev/null)
-  if [ ! $? -eq 0 ]; then
-    echo \"warning: sentry-cli - $ERROR\"
-  fi
-else
-  echo \"warning: sentry-cli not installed, download from https://github.com/getsentry/sentry-cli/releases\"
-fi
-";
-			name = "Upload Debug Symbols to Sentry";
-		};
-/* End PBXShellScriptBuildPhase section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		6EFD6A06E1264416B1103D42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/getsentry/sentry-cocoa/";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 8.0.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
 	};
 	rootObject = F84E216C2ED0B0C800459747 /* Project object */;
 }
