@@ -429,9 +429,14 @@ class APIService {
     // MARK: - Manual Workout Logging (AMA-5)
 
     /// Log a manually-recorded workout completion to activity history
-    /// - Parameter completion: The workout completion to log
+    /// Creates both a Workout record (with exercise details) and a Completion record
+    /// - Parameters:
+    ///   - workout: The parsed workout with full interval details
+    ///   - startedAt: When the workout started
+    ///   - endedAt: When the workout ended
+    ///   - durationSeconds: Total duration in seconds
     /// - Throws: APIError if request fails
-    func logCompletion(_ completion: WorkoutCompletion) async throws {
+    func logManualWorkout(_ workout: Workout, startedAt: Date, endedAt: Date, durationSeconds: Int) async throws {
         guard PairingService.shared.isPaired else {
             throw APIError.unauthorized
         }
@@ -441,25 +446,40 @@ class APIService {
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = authHeaders
 
-        // Build request body matching backend schema
+        // Build request body with full workout details
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
 
+        // Encode workout intervals to JSON
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        let intervalsData = try encoder.encode(workout.intervals)
+        let intervalsJSON = try JSONSerialization.jsonObject(with: intervalsData)
+
         let body: [String: Any] = [
-            "workout_name": completion.workoutName,
-            "started_at": formatter.string(from: completion.startedAt),
-            "ended_at": formatter.string(from: completion.resolvedEndedAt),
-            "duration_seconds": completion.durationSeconds,
-            "source": completion.source.rawValue,
-            "avg_heart_rate": completion.avgHeartRate as Any,
-            "max_heart_rate": completion.maxHeartRate as Any,
-            "active_calories": completion.activeCalories as Any
-        ].compactMapValues { $0 is NSNull ? nil : $0 }
+            // Workout details
+            "workout": [
+                "id": workout.id,
+                "name": workout.name,
+                "sport": workout.sport.rawValue,
+                "duration": workout.duration,
+                "intervals": intervalsJSON,
+                "description": workout.description as Any,
+                "source": "ai"
+            ],
+            // Completion details
+            "completion": [
+                "started_at": formatter.string(from: startedAt),
+                "ended_at": formatter.string(from: endedAt),
+                "duration_seconds": durationSeconds,
+                "source": "manual"
+            ]
+        ]
 
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        print("[APIService] logCompletion - URL: \(url.absoluteString)")
-        print("[APIService] logCompletion - Body: \(body)")
+        print("[APIService] logManualWorkout - URL: \(url.absoluteString)")
+        print("[APIService] logManualWorkout - Workout: \(workout.name) with \(workout.intervals.count) intervals")
 
         let (data, response) = try await session.data(for: request)
         let responseString = String(data: data, encoding: .utf8)
@@ -468,8 +488,8 @@ class APIService {
             throw APIError.invalidResponse
         }
 
-        print("[APIService] logCompletion - Status: \(httpResponse.statusCode)")
-        print("[APIService] logCompletion - Response: \(responseString ?? "nil")")
+        print("[APIService] logManualWorkout - Status: \(httpResponse.statusCode)")
+        print("[APIService] logManualWorkout - Response: \(responseString ?? "nil")")
 
         // Log errors to DebugLogService
         if httpResponse.statusCode >= 400 {
@@ -488,7 +508,7 @@ class APIService {
             throw APIError.unauthorized
         case 404, 405:
             // Endpoint may not exist yet - log but don't fail for MVP
-            print("[APIService] logCompletion - Endpoint not available (\(httpResponse.statusCode))")
+            print("[APIService] logManualWorkout - Endpoint not available (\(httpResponse.statusCode))")
             throw APIError.serverErrorWithBody(httpResponse.statusCode, responseString ?? "Endpoint not available")
         default:
             throw APIError.serverErrorWithBody(httpResponse.statusCode, responseString ?? "Unknown error")

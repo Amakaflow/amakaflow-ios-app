@@ -312,6 +312,7 @@ class VoiceWorkoutViewModel: ObservableObject {
     // MARK: - Log Completed Workout Flow
 
     /// Log the completed workout to activity history
+    /// Sends both the workout details (exercises, sets, reps) and completion record
     func logCompletedWorkout() async {
         guard let workoutToLog = workout else {
             state = .error("No workout to log")
@@ -320,25 +321,18 @@ class VoiceWorkoutViewModel: ObservableObject {
 
         state = .saving
 
-        // Create a WorkoutCompletion from the parsed workout
+        // Calculate timing from user inputs
         let durationSeconds = completedDurationMinutes * 60
         let startedAt = completedAt.addingTimeInterval(TimeInterval(-durationSeconds))
 
-        let completion = WorkoutCompletion(
-            id: UUID().uuidString,
-            workoutName: workoutToLog.name,
-            startedAt: startedAt,
-            endedAt: completedAt,
-            durationSeconds: durationSeconds,
-            avgHeartRate: nil,  // Not captured via voice
-            maxHeartRate: nil,
-            activeCalories: nil,
-            source: .manual,
-            syncedToStrava: false
-        )
-
         do {
-            try await apiService.logCompletion(completion)
+            // Send full workout with intervals + completion data
+            try await apiService.logManualWorkout(
+                workoutToLog,
+                startedAt: startedAt,
+                endedAt: completedAt,
+                durationSeconds: durationSeconds
+            )
             state = .completed
         } catch {
             print("[VoiceWorkoutViewModel] Log failed: \(error)")
