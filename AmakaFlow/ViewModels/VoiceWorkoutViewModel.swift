@@ -72,6 +72,7 @@ class VoiceWorkoutViewModel: ObservableObject {
     @Published var selectedSport: WorkoutSport = .cardio
     @Published private(set) var workout: Workout?
     @Published private(set) var confidence: Double = 0
+    @Published private(set) var transcriptionProvider: TranscriptionProvider?
     @Published private(set) var suggestions: [String] = []
 
     // Completed workout properties (user can edit these before logging)
@@ -86,7 +87,7 @@ class VoiceWorkoutViewModel: ObservableObject {
 
     private let permissionManager = PermissionManager.shared
     private let recordingService = VoiceRecordingService()
-    private let transcriptionService = TranscriptionService()
+    private let transcriptionRouter = TranscriptionRouter.shared
     private let parsingService = WorkoutParsingService()
     private let apiService = APIService.shared
 
@@ -186,7 +187,11 @@ class VoiceWorkoutViewModel: ObservableObject {
         state = .transcribing
 
         do {
-            transcription = try await transcriptionService.transcribe(audioURL: url)
+            let result = try await transcriptionRouter.transcribe(audioURL: url)
+            transcription = result.text
+            // Store confidence and provider for later display
+            confidence = result.confidence
+            transcriptionProvider = result.provider
             state = .reviewingTranscription
         } catch {
             state = .error("Transcription failed: \(error.localizedDescription)")
@@ -352,6 +357,7 @@ class VoiceWorkoutViewModel: ObservableObject {
         transcription = ""
         workout = nil
         confidence = 0
+        transcriptionProvider = nil
         suggestions = []
         completedDurationMinutes = 30
         completedAt = Date()

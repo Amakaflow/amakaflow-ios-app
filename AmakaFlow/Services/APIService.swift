@@ -426,6 +426,144 @@ class APIService {
         }
     }
 
+    // MARK: - Cloud Transcription (AMA-229)
+
+    /// Request cloud transcription using specified provider
+    /// - Parameters:
+    ///   - audioData: Base64 encoded audio data
+    ///   - provider: Transcription provider (deepgram or assemblyai)
+    ///   - language: Language/accent code (e.g., "en-US")
+    ///   - keywords: Optional keywords for boosting
+    ///   - includeWordTimings: Whether to include word-level timings
+    /// - Returns: CloudTranscriptionResponse with text and confidence
+    /// - Throws: APIError if request fails
+    func transcribeAudio(
+        audioData: String,
+        provider: String,
+        language: String,
+        keywords: [String],
+        includeWordTimings: Bool
+    ) async throws -> CloudTranscriptionResponse {
+        guard PairingService.shared.isPaired else {
+            throw APIError.unauthorized
+        }
+
+        let ingestorURL = AppEnvironment.current.ingestorAPIURL
+        let url = URL(string: "\(ingestorURL)/voice/transcribe")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders
+
+        let body: [String: Any] = [
+            "audio": audioData,
+            "provider": provider,
+            "language": language,
+            "keywords": keywords,
+            "include_word_timings": includeWordTimings
+        ]
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await session.data(for: request)
+        let responseString = String(data: data, encoding: .utf8)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        if httpResponse.statusCode >= 400 {
+            await DebugLogService.shared.logAPIError(
+                endpoint: "/voice/transcribe",
+                method: "POST",
+                statusCode: httpResponse.statusCode,
+                response: responseString
+            )
+        }
+
+        switch httpResponse.statusCode {
+        case 200, 201:
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            return try decoder.decode(CloudTranscriptionResponse.self, from: data)
+        case 401:
+            throw APIError.unauthorized
+        default:
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    // MARK: - Personal Dictionary Sync (AMA-229)
+
+    /// Sync personal dictionary with backend
+    func syncPersonalDictionary(
+        corrections: [String: String],
+        customTerms: [String]
+    ) async throws -> PersonalDictionaryResponse {
+        guard PairingService.shared.isPaired else {
+            throw APIError.unauthorized
+        }
+
+        let ingestorURL = AppEnvironment.current.ingestorAPIURL
+        let url = URL(string: "\(ingestorURL)/voice/dictionary")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders
+
+        let body: [String: Any] = [
+            "corrections": corrections,
+            "custom_terms": customTerms
+        ]
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        switch httpResponse.statusCode {
+        case 200, 201:
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            return try decoder.decode(PersonalDictionaryResponse.self, from: data)
+        case 401:
+            throw APIError.unauthorized
+        default:
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    /// Fetch personal dictionary from backend
+    func fetchPersonalDictionary() async throws -> PersonalDictionaryResponse {
+        guard PairingService.shared.isPaired else {
+            throw APIError.unauthorized
+        }
+
+        let ingestorURL = AppEnvironment.current.ingestorAPIURL
+        let url = URL(string: "\(ingestorURL)/voice/dictionary")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = authHeaders
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        switch httpResponse.statusCode {
+        case 200:
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            return try decoder.decode(PersonalDictionaryResponse.self, from: data)
+        case 401:
+            throw APIError.unauthorized
+        default:
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
     // MARK: - Manual Workout Logging (AMA-5)
 
     /// Log a manually-recorded workout completion to activity history
@@ -619,6 +757,30 @@ struct VoiceWorkoutParseResponse: Codable {
     let workout: Workout
     let confidence: Double
     let suggestions: [String]
+}
+
+// MARK: - Cloud Transcription Response (AMA-229)
+
+struct CloudTranscriptionResponse: Codable {
+    let text: String
+    let confidence: Double
+    let words: [CloudWordTiming]?
+    let provider: String
+    let durationMs: Int?
+}
+
+struct CloudWordTiming: Codable {
+    let word: String
+    let start: Double
+    let end: Double
+    let confidence: Double?
+}
+
+// MARK: - Personal Dictionary Response (AMA-229)
+
+struct PersonalDictionaryResponse: Codable {
+    let corrections: [String: String]
+    let customTerms: [String]
 }
 
 // MARK: - API Errors

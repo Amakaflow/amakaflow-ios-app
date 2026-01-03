@@ -36,6 +36,8 @@ struct SettingsView: View {
     @State private var showingDebugLog = false
     @State private var showingDisconnectAlert = false
     @State private var showingWorkoutDebugSheet = false
+    @State private var showingVoiceTranscriptionSettings = false
+    @State private var showingErrorLogSheet = false
     @EnvironmentObject private var garminConnectivity: GarminConnectManager
     @EnvironmentObject private var pairingService: PairingService
     @EnvironmentObject private var workoutsViewModel: WorkoutsViewModel
@@ -51,6 +53,11 @@ struct SettingsView: View {
 
                     // Audio Cues Section
                     audioCuesSection
+
+                    divider
+
+                    // Voice Transcription Section
+                    voiceTranscriptionSection
 
                     divider
 
@@ -95,6 +102,30 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showingWorkoutDebugSheet) {
                 workoutDebugSheet
+            }
+            .sheet(isPresented: $showingVoiceTranscriptionSettings) {
+                NavigationStack {
+                    VoiceTranscriptionSettingsView()
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") {
+                                    showingVoiceTranscriptionSettings = false
+                                }
+                            }
+                        }
+                }
+            }
+            .sheet(isPresented: $showingErrorLogSheet) {
+                NavigationStack {
+                    DebugLogView()
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") {
+                                    showingErrorLogSheet = false
+                                }
+                            }
+                        }
+                }
             }
         }
     }
@@ -866,7 +897,7 @@ struct SettingsView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "ant")
-                        Text("Debug Log")
+                        Text("Garmin Debug")
                     }
                     .font(Theme.Typography.caption)
                     .foregroundColor(Theme.Colors.accentOrange)
@@ -1096,6 +1127,58 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Voice Transcription Section
+
+    private var voiceTranscriptionSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            Text("VOICE TRANSCRIPTION")
+                .font(Theme.Typography.footnote)
+                .foregroundColor(Theme.Colors.textSecondary)
+                .tracking(1)
+                .padding(.horizontal, Theme.Spacing.xs)
+
+            Button {
+                showingVoiceTranscriptionSettings = true
+            } label: {
+                HStack(spacing: Theme.Spacing.md) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                            .fill(Color.purple.opacity(0.1))
+                            .frame(width: 48, height: 48)
+
+                        Image(systemName: "waveform")
+                            .font(.system(size: 22))
+                            .foregroundColor(.purple)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Transcription Settings")
+                            .font(Theme.Typography.bodyBold)
+                            .foregroundColor(Theme.Colors.textPrimary)
+
+                        Text("Provider, accent, and personal dictionary")
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(Theme.Colors.textSecondary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                }
+                .padding(Theme.Spacing.md)
+                .background(Theme.Colors.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                        .stroke(Theme.Colors.borderLight, lineWidth: 1)
+                )
+                .cornerRadius(Theme.CornerRadius.md)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
     // MARK: - Integrations Section
 
     private var integrationsSection: some View {
@@ -1319,14 +1402,14 @@ struct SettingsView: View {
                 }
 
                 // Debug: Error Log
-                NavigationLink {
-                    DebugLogView()
+                Button {
+                    showingErrorLogSheet = true
                 } label: {
                     HStack {
                         Image(systemName: "ladybug")
                             .font(.system(size: 14))
                             .foregroundColor(Theme.Colors.accentOrange)
-                        Text("Debug Log")
+                        Text("Error Log")
                             .font(Theme.Typography.caption)
                             .foregroundColor(Theme.Colors.textTertiary)
                         Spacer()
@@ -1338,6 +1421,7 @@ struct SettingsView: View {
                             .foregroundColor(Theme.Colors.textTertiary)
                     }
                 }
+                .buttonStyle(.plain)
                 #endif
 
                 // Debug: Pending workouts status
@@ -1376,7 +1460,7 @@ struct SettingsView: View {
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "ant")
-                                Text("Debug")
+                                Text("Workout Debug")
                             }
                             .font(Theme.Typography.caption)
                             .foregroundColor(.white)

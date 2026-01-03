@@ -86,6 +86,13 @@
 		V01C301700000000000000 /* VoiceRecordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300700000000000000 /* VoiceRecordingView.swift */; };
 		V01C301800000000000000 /* TranscriptionReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300800000000000000 /* TranscriptionReviewView.swift */; };
 		V01C301900000000000000 /* VoiceWorkoutReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300900000000000000 /* VoiceWorkoutReviewView.swift */; };
+		TR4N5CR1PT10N3NG1N31001 /* TranscriptionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30001 /* TranscriptionEngine.swift */; };
+		TR4N5CR1PT10N3NG1N31002 /* OnDeviceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30002 /* OnDeviceEngine.swift */; };
+		TR4N5CR1PT10N3NG1N31003 /* CloudTranscriptionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30003 /* CloudTranscriptionEngine.swift */; };
+		TR4N5CR1PT10N3NG1N31004 /* TranscriptionRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30004 /* TranscriptionRouter.swift */; };
+		TR4N5CR1PT10N3NG1N31005 /* FitnessVocabulary.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30005 /* FitnessVocabulary.swift */; };
+		TR4N5CR1PT10N3NG1N31006 /* PersonalDictionary.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30006 /* PersonalDictionary.swift */; };
+		TR4N5CR1PT10N53TT1NG5101 /* VoiceTranscriptionSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N53TT1NG5001 /* VoiceTranscriptionSettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -237,6 +244,13 @@
 		V01C300700000000000000 /* VoiceRecordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceRecordingView.swift; path = ../AmakaFlow/Views/VoiceWorkout/VoiceRecordingView.swift; sourceTree = SOURCE_ROOT; };
 		V01C300800000000000000 /* TranscriptionReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/TranscriptionReviewView.swift; sourceTree = SOURCE_ROOT; };
 		V01C300900000000000000 /* VoiceWorkoutReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceWorkoutReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/VoiceWorkoutReviewView.swift; sourceTree = SOURCE_ROOT; };
+		TR4N5CR1PT10N3NG1N30001 /* TranscriptionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionEngine.swift; path = ../AmakaFlow/Services/Transcription/TranscriptionEngine.swift; sourceTree = SOURCE_ROOT; };
+		TR4N5CR1PT10N3NG1N30002 /* OnDeviceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnDeviceEngine.swift; path = ../AmakaFlow/Services/Transcription/OnDeviceEngine.swift; sourceTree = SOURCE_ROOT; };
+		TR4N5CR1PT10N3NG1N30003 /* CloudTranscriptionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CloudTranscriptionEngine.swift; path = ../AmakaFlow/Services/Transcription/CloudTranscriptionEngine.swift; sourceTree = SOURCE_ROOT; };
+		TR4N5CR1PT10N3NG1N30004 /* TranscriptionRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionRouter.swift; path = ../AmakaFlow/Services/Transcription/TranscriptionRouter.swift; sourceTree = SOURCE_ROOT; };
+		TR4N5CR1PT10N3NG1N30005 /* FitnessVocabulary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FitnessVocabulary.swift; path = ../AmakaFlow/Services/Transcription/FitnessVocabulary.swift; sourceTree = SOURCE_ROOT; };
+		TR4N5CR1PT10N3NG1N30006 /* PersonalDictionary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PersonalDictionary.swift; path = ../AmakaFlow/Services/Transcription/PersonalDictionary.swift; sourceTree = SOURCE_ROOT; };
+		TR4N5CR1PT10N53TT1NG5001 /* VoiceTranscriptionSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceTranscriptionSettingsView.swift; path = ../AmakaFlow/Views/Settings/VoiceTranscriptionSettingsView.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -837,6 +851,13 @@
 				V01C301700000000000000 /* VoiceRecordingView.swift in Sources */,
 				V01C301800000000000000 /* TranscriptionReviewView.swift in Sources */,
 				V01C301900000000000000 /* VoiceWorkoutReviewView.swift in Sources */,
+				TR4N5CR1PT10N3NG1N31001 /* TranscriptionEngine.swift in Sources */,
+				TR4N5CR1PT10N3NG1N31002 /* OnDeviceEngine.swift in Sources */,
+				TR4N5CR1PT10N3NG1N31003 /* CloudTranscriptionEngine.swift in Sources */,
+				TR4N5CR1PT10N3NG1N31004 /* TranscriptionRouter.swift in Sources */,
+				TR4N5CR1PT10N3NG1N31005 /* FitnessVocabulary.swift in Sources */,
+				TR4N5CR1PT10N3NG1N31006 /* PersonalDictionary.swift in Sources */,
+				TR4N5CR1PT10N53TT1NG5101 /* VoiceTranscriptionSettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
