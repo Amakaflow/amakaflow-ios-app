@@ -2,7 +2,7 @@
 //  VoiceWorkoutView.swift
 //  AmakaFlow
 //
-//  Main container view for voice-to-workout creation flow (AMA-5)
+//  Main container view for voice logging of completed workouts (AMA-5)
 //
 
 import SwiftUI
@@ -31,9 +31,9 @@ struct VoiceWorkoutView: View {
 
                     if viewModel.state == .reviewingWorkout {
                         ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Save") {
+                            Button("Log") {
                                 Task {
-                                    await viewModel.saveWorkout()
+                                    await viewModel.logCompletedWorkout()
                                 }
                             }
                             .fontWeight(.semibold)
@@ -68,7 +68,7 @@ struct VoiceWorkoutView: View {
             VoiceWorkoutReviewView(viewModel: viewModel)
 
         case .saving:
-            ProcessingView(message: "Saving to your library...", icon: "square.and.arrow.down")
+            ProcessingView(message: "Logging to activity history...", icon: "checkmark.circle")
 
         case .completed:
             CompletedView(viewModel: viewModel, dismiss: { dismiss() })
@@ -250,7 +250,7 @@ private struct CompletedView: View {
                 .font(.system(size: 80))
                 .foregroundColor(.green)
 
-            Text("Workout Saved!")
+            Text("Workout Logged!")
                 .font(.title)
                 .fontWeight(.bold)
 
@@ -260,13 +260,17 @@ private struct CompletedView: View {
                     .foregroundColor(.secondary)
             }
 
+            Text("Added to your activity history")
+                .font(.subheadline)
+                .foregroundColor(Theme.Colors.textTertiary)
+
             Spacer()
 
             VStack(spacing: 12) {
                 Button {
                     viewModel.startOver()
                 } label: {
-                    Text("Create Another")
+                    Text("Log Another")
                         .font(.headline)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)

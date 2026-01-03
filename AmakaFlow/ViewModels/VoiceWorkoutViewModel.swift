@@ -2,7 +2,7 @@
 //  VoiceWorkoutViewModel.swift
 //  AmakaFlow
 //
-//  ViewModel for voice-to-workout creation flow (AMA-5)
+//  ViewModel for voice logging of completed workouts (AMA-5)
 //
 
 import Foundation
@@ -30,7 +30,7 @@ enum VoiceWorkoutState: Equatable {
         case .reviewingTranscription: return "Review Transcription"
         case .parsing: return "Creating Workout"
         case .reviewingWorkout: return "Review Workout"
-        case .saving: return "Saving"
+        case .saving: return "Logging"
         case .completed: return "Saved!"
         case .error: return "Error"
         }
@@ -73,6 +73,10 @@ class VoiceWorkoutViewModel: ObservableObject {
     @Published private(set) var workout: Workout?
     @Published private(set) var confidence: Double = 0
     @Published private(set) var suggestions: [String] = []
+
+    // Completed workout properties (user can edit these before logging)
+    @Published var completedDurationMinutes: Int = 30
+    @Published var completedAt: Date = Date()
 
     // Recording properties
     @Published private(set) var recordingDuration: TimeInterval = 0
@@ -216,6 +220,15 @@ class VoiceWorkoutViewModel: ObservableObject {
             )
             confidence = parsingService.confidence
             suggestions = parsingService.suggestions
+
+            // Set initial duration from parsed workout estimate
+            if let parsedWorkout = workout {
+                let estimatedMinutes = parsedWorkout.duration / 60
+                // Round to nearest common duration option
+                let options = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 75, 90, 120]
+                completedDurationMinutes = options.min(by: { abs($0 - estimatedMinutes) < abs($1 - estimatedMinutes) }) ?? 30
+            }
+
             state = .reviewingWorkout
         } catch {
             state = .error("Could not create workout: \(error.localizedDescription)")
@@ -296,22 +309,39 @@ class VoiceWorkoutViewModel: ObservableObject {
         return total
     }
 
-    // MARK: - Save Flow
+    // MARK: - Log Completed Workout Flow
 
-    /// Save the workout to the user's library
-    func saveWorkout() async {
-        guard let workoutToSave = workout else {
-            state = .error("No workout to save")
+    /// Log the completed workout to activity history
+    /// Sends both the workout details (exercises, sets, reps) and completion record
+    func logCompletedWorkout() async {
+        guard let workoutToLog = workout else {
+            state = .error("No workout to log")
             return
         }
 
         state = .saving
 
+        // Calculate timing from user inputs
+        let durationSeconds = completedDurationMinutes * 60
+        let startedAt = completedAt.addingTimeInterval(TimeInterval(-durationSeconds))
+
         do {
-            try await apiService.syncWorkout(workoutToSave)
+            // Send full workout with intervals + completion data
+            try await apiService.logManualWorkout(
+                workoutToLog,
+                startedAt: startedAt,
+                endedAt: completedAt,
+                durationSeconds: durationSeconds
+            )
             state = .completed
         } catch {
-            state = .error("Failed to save: \(error.localizedDescription)")
+            print("[VoiceWorkoutViewModel] Log failed: \(error)")
+            await DebugLogService.shared.log(
+                "Completion log failed",
+                details: "POST /workouts/completions failed. Workout: \(workoutToLog.name)",
+                metadata: ["workoutName": workoutToLog.name, "error": error.localizedDescription]
+            )
+            state = .error("Failed to log workout: \(error.localizedDescription)")
         }
     }
 
@@ -323,6 +353,8 @@ class VoiceWorkoutViewModel: ObservableObject {
         workout = nil
         confidence = 0
         suggestions = []
+        completedDurationMinutes = 30
+        completedAt = Date()
         audioURL = nil
         recordingService.cleanupTempFiles()
         checkPermissions()

@@ -2,7 +2,7 @@
 //  VoiceRecordingView.swift
 //  AmakaFlow
 //
-//  Initial view for starting voice recording (AMA-5)
+//  Initial view for starting voice recording to log a completed workout (AMA-5)
 //
 
 import SwiftUI
@@ -38,9 +38,13 @@ struct VoiceRecordingView: View {
                     .font(.title3)
                     .fontWeight(.semibold)
 
-                Text("Describe your workout in natural language")
+                Text("Describe the workout you just completed")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+
+                Text("Include exercises, sets, reps, and how long it took")
+                    .font(.caption)
+                    .foregroundColor(Theme.Colors.textTertiary)
             }
 
             Spacer()
@@ -53,11 +57,11 @@ struct VoiceRecordingView: View {
                     .foregroundColor(.secondary)
 
                 VStack(alignment: .leading, spacing: 12) {
-                    ExamplePrompt(text: "\"5 minute warmup, then 4 sets of 10 squats with 60 seconds rest, followed by 3 sets of 12 lunges\"")
+                    ExamplePrompt(text: "\"I just did a 45 minute strength workout with 4 sets of 10 squats, 3 sets of 12 lunges, and 3 sets of 15 pushups\"")
 
-                    ExamplePrompt(text: "\"30 minute tempo run at zone 3, with 5 minute warmup and cooldown\"")
+                    ExamplePrompt(text: "\"Just finished a 30 minute run, felt pretty good, did about 5K\"")
 
-                    ExamplePrompt(text: "\"HIIT workout: 8 rounds of 40 seconds work, 20 seconds rest, with burpees, mountain climbers, and jumping jacks\"")
+                    ExamplePrompt(text: "\"I did upper body today for about an hour: bench press 4x8, overhead press 3x10, and dumbbell rows 3x12 each side\"")
                 }
             }
             .padding()

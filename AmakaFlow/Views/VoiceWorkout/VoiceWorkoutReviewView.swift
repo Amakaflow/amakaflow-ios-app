@@ -2,7 +2,7 @@
 //  VoiceWorkoutReviewView.swift
 //  AmakaFlow
 //
-//  View for reviewing and editing parsed workout before saving (AMA-5)
+//  View for reviewing and editing parsed workout before logging to history (AMA-5)
 //
 
 import SwiftUI
@@ -22,6 +22,9 @@ struct VoiceWorkoutReviewView: View {
 
                 // Workout header
                 workoutHeader
+
+                // Completion details (when did you finish, how long)
+                completionDetailsSection
 
                 // Intervals list
                 if let workout = viewModel.workout {
@@ -124,6 +127,61 @@ struct VoiceWorkoutReviewView: View {
         case .cardio: return "heart.fill"
         default: return "sportscourt"
         }
+    }
+
+    // MARK: - Completion Details Section
+
+    private var completionDetailsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Completion Details")
+                .font(.headline)
+
+            // Duration picker
+            HStack {
+                Image(systemName: "timer")
+                    .foregroundColor(Theme.Colors.accentBlue)
+                    .frame(width: 24)
+
+                Text("Duration")
+                    .font(.subheadline)
+
+                Spacer()
+
+                Picker("Duration", selection: $viewModel.completedDurationMinutes) {
+                    ForEach([5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 75, 90, 120], id: \.self) { minutes in
+                        Text("\(minutes) min").tag(minutes)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
+            .padding(.vertical, 4)
+
+            Divider()
+
+            // Completed at time picker
+            HStack {
+                Image(systemName: "clock")
+                    .foregroundColor(Theme.Colors.accentGreen)
+                    .frame(width: 24)
+
+                Text("Completed")
+                    .font(.subheadline)
+
+                Spacer()
+
+                DatePicker(
+                    "",
+                    selection: $viewModel.completedAt,
+                    in: ...Date(),
+                    displayedComponents: [.date, .hourAndMinute]
+                )
+                .labelsHidden()
+            }
+            .padding(.vertical, 4)
+        }
+        .padding()
+        .background(Theme.Colors.surface)
+        .cornerRadius(12)
     }
 
     // MARK: - Intervals Section
