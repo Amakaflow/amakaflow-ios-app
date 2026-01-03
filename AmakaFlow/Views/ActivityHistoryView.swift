@@ -7,8 +7,14 @@
 
 import SwiftUI
 
+// Extension to make String work with sheet(item:)
+extension String: @retroactive Identifiable {
+    public var id: String { self }
+}
+
 struct ActivityHistoryView: View {
     @StateObject private var viewModel = ActivityHistoryViewModel()
+    @State private var selectedCompletionId: String?
 
     var body: some View {
         NavigationStack {
@@ -32,7 +38,9 @@ struct ActivityHistoryView: View {
                                 Section {
                                     VStack(spacing: Theme.Spacing.sm) {
                                         ForEach(group.completions) { completion in
-                                            NavigationLink(destination: CompletionDetailView(completionId: completion.id)) {
+                                            Button {
+                                                selectedCompletionId = completion.id
+                                            } label: {
                                                 CompletionRowView(completion: completion)
                                             }
                                             .buttonStyle(.plain)
@@ -80,6 +88,18 @@ struct ActivityHistoryView: View {
                 }
             } message: {
                 Text(viewModel.errorMessage ?? "")
+            }
+            .sheet(item: $selectedCompletionId) { completionId in
+                NavigationStack {
+                    CompletionDetailView(completionId: completionId)
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") {
+                                    selectedCompletionId = nil
+                                }
+                            }
+                        }
+                }
             }
         }
     }
