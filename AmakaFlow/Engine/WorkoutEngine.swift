@@ -495,11 +495,8 @@ class WorkoutEngine: ObservableObject {
         let endedAt = Date()
 
         // Get health metrics from connected watch if available
-        let avgHeartRate: Int? = nil  // Will be populated when we integrate with HealthKit
-        let activeCalories: Int? = {
-            let watchCals = WatchConnectivityManager.shared.watchActiveCalories
-            return watchCals > 0 ? Int(watchCals) : nil
-        }()
+        // In E2E test mode (TEST_AUTH_SECRET set), generate mock data
+        let (avgHeartRate, activeCalories) = getHealthMetrics(durationSeconds: durationSeconds)
 
         Task {
             do {
@@ -518,6 +515,41 @@ class WorkoutEngine: ObservableObject {
                 // Error is already logged and queued for retry by WorkoutCompletionService
             }
         }
+    }
+
+    /// Get health metrics - uses mock data in E2E test mode, otherwise from Watch
+    private func getHealthMetrics(durationSeconds: Int) -> (avgHeartRate: Int?, activeCalories: Int?) {
+        #if DEBUG
+        // Check if running in E2E test mode (TEST_AUTH_SECRET environment variable set)
+        if ProcessInfo.processInfo.environment["TEST_AUTH_SECRET"] != nil {
+            // Generate realistic mock health data for E2E tests
+            // Average HR varies by workout intensity - use 130-150 bpm range for strength training
+            let baseHR = 140
+            let hrVariation = Int.random(in: -10...10)
+            let mockAvgHR = baseHR + hrVariation
+
+            // Calories burned: approximately 5-7 cal/min for strength training
+            let caloriesPerMinute = Double.random(in: 5.0...7.0)
+            let durationMinutes = Double(durationSeconds) / 60.0
+            let mockCalories = Int(caloriesPerMinute * durationMinutes)
+
+            print("🏋️ [E2E Test Mode] Using mock health data: avgHR=\(mockAvgHR), calories=\(mockCalories)")
+            return (mockAvgHR, mockCalories)
+        }
+        #endif
+
+        // Production mode: get data from connected watch
+        let watchCals = WatchConnectivityManager.shared.watchActiveCalories
+        let activeCalories: Int? = watchCals > 0 ? Int(watchCals) : nil
+
+        // Try to get heart rate from watch samples
+        let hrSamples = WatchConnectivityManager.shared.heartRateSamples
+        let avgHeartRate: Int? = hrSamples.isEmpty ? nil : {
+            let sum = hrSamples.reduce(0) { $0 + $1.value }
+            return sum / hrSamples.count
+        }()
+
+        return (avgHeartRate, activeCalories)
     }
 
     // MARK: - Timer Management
