@@ -78,6 +78,9 @@ class WorkoutEngine: ObservableObject {
             end(reason: .userEnded)
         }
 
+        // Clear any saved progress since we're starting fresh
+        SavedWorkoutProgress.clear()
+
         // Reset all state for fresh start
         timer?.invalidate()
         timer = nil
@@ -113,6 +116,61 @@ class WorkoutEngine: ObservableObject {
         startLiveActivity()
 
         beginBackgroundTask()
+    }
+
+    /// Resume a workout from saved progress
+    func resume(workout: Workout, fromProgress progress: SavedWorkoutProgress) {
+        // End any existing session
+        if isActive {
+            end(reason: .userEnded)
+        }
+
+        // Clear the saved progress since we're resuming
+        SavedWorkoutProgress.clear()
+
+        // Setup workout state
+        timer?.invalidate()
+        timer = nil
+        self.workout = workout
+        self.flattenedSteps = flattenIntervals(workout.intervals)
+
+        // Restore progress
+        self.currentStepIndex = min(progress.currentStepIndex, flattenedSteps.count - 1)
+        self.elapsedSeconds = progress.elapsedSeconds
+        self.remainingSeconds = 0
+        self.restRemainingSeconds = 0
+        self.isManualRest = false
+        self.phase = .running
+        self.stateVersion += 1
+        self.workoutStartTime = Date().addingTimeInterval(-Double(progress.elapsedSeconds))
+
+        // Cache device preference
+        self.cachedDevicePreference = devicePreference
+
+        // Track resume (AMA-225)
+        SentryService.shared.trackWorkoutAction("Resumed saved workout", workoutId: workout.id, workoutName: workout.name)
+
+        print("🏋️ Resuming workout: \(workout.name) from step \(currentStepIndex + 1)/\(flattenedSteps.count)")
+        print("🏋️ Elapsed time: \(elapsedSeconds)s")
+
+        setupCurrentStep()
+        broadcastState()
+        audioCueManager.announceStep("Resuming \(workout.name)", roundInfo: nil)
+
+        // Start Live Activity
+        startLiveActivity()
+
+        beginBackgroundTask()
+    }
+
+    /// Check if there's saved workout progress
+    static var hasSavedProgress: Bool {
+        SavedWorkoutProgress.load() != nil
+    }
+
+    /// Get saved workout progress if available
+    static var savedProgress: SavedWorkoutProgress? {
+        SavedWorkoutProgress.load()
     }
 
     func pause() {
@@ -316,8 +374,32 @@ class WorkoutEngine: ObservableObject {
         Thread.callStackSymbols.prefix(10).forEach { print("🏋️ \($0)") }
 
         // Track workout end (AMA-225)
-        let endAction = reason == .completed ? "Completed workout" : "Ended workout (\(reason))"
+        let endAction: String
+        switch reason {
+        case .completed:
+            endAction = "Completed workout"
+        case .userEnded:
+            endAction = "Ended workout (saved)"
+        case .discarded:
+            endAction = "Discarded workout"
+        case .savedForLater:
+            endAction = "Saved workout for later"
+        case .error:
+            endAction = "Ended workout (error)"
+        }
         SentryService.shared.trackWorkoutAction(endAction, workoutId: workout?.id, workoutName: workout?.name)
+
+        // Save progress for Resume Later
+        if reason == .savedForLater, let workoutId = workout?.id, let workoutName = workout?.name {
+            let progress = SavedWorkoutProgress(
+                workoutId: workoutId,
+                workoutName: workoutName,
+                currentStepIndex: currentStepIndex,
+                elapsedSeconds: elapsedSeconds,
+                savedAt: Date()
+            )
+            progress.save()
+        }
 
         // Capture workout data before resetting state
         let workoutData = (
@@ -337,13 +419,19 @@ class WorkoutEngine: ObservableObject {
             audioCueManager.announceWorkoutComplete()
         }
 
-        // Post workout completion to API
-        postWorkoutCompletion(
-            workoutId: workoutData.id,
-            workoutName: workoutData.name,
-            startedAt: workoutData.startTime,
-            durationSeconds: workoutData.duration
-        )
+        // Only post workout completion to API if completed or userEnded (not discarded or saved for later)
+        if reason == .completed || reason == .userEnded || reason == .error {
+            postWorkoutCompletion(
+                workoutId: workoutData.id,
+                workoutName: workoutData.name,
+                startedAt: workoutData.startTime,
+                durationSeconds: workoutData.duration
+            )
+        } else if reason == .discarded {
+            print("🏋️ Workout discarded - not posting to API")
+        } else if reason == .savedForLater {
+            print("🏋️ Workout saved for later - not posting to API")
+        }
 
         // End Live Activity
         Task {

@@ -18,6 +18,7 @@ struct HomeView: View {
     @State private var pendingQuickStartWorkout: Workout?
     @State private var waitingForWatchWorkout: Workout?
     @State private var showingVoiceWorkout = false
+    @State private var savedProgress: SavedWorkoutProgress?
 
     private var today: Date { Date() }
 
@@ -36,6 +37,11 @@ struct HomeView: View {
                     // Header
                     header
                         .padding(.top, Theme.Spacing.md)
+
+                    // Resume Workout banner (if saved progress exists)
+                    if let progress = savedProgress {
+                        resumeWorkoutBanner(progress: progress)
+                    }
 
                     // Quick action buttons
                     HStack(spacing: Theme.Spacing.md) {
@@ -120,6 +126,106 @@ struct HomeView: View {
             .sheet(isPresented: $showingVoiceWorkout) {
                 VoiceWorkoutView()
             }
+            .onAppear {
+                // Check for saved workout progress
+                savedProgress = SavedWorkoutProgress.load()
+            }
+        }
+    }
+
+    // MARK: - Resume Workout Banner
+
+    private func resumeWorkoutBanner(progress: SavedWorkoutProgress) -> some View {
+        VStack(spacing: Theme.Spacing.sm) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Continue Workout")
+                        .font(Theme.Typography.bodyBold)
+                        .foregroundColor(.white)
+
+                    Text(progress.workoutName)
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(.white.opacity(0.8))
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("Step \(progress.currentStepIndex + 1)")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(.white.opacity(0.8))
+
+                    Text(formatElapsedTime(progress.elapsedSeconds))
+                        .font(Theme.Typography.captionBold)
+                        .foregroundColor(.white)
+                }
+            }
+
+            HStack(spacing: Theme.Spacing.md) {
+                // Resume button
+                Button {
+                    resumeSavedWorkout(progress)
+                } label: {
+                    HStack {
+                        Image(systemName: "play.fill")
+                        Text("Resume")
+                    }
+                    .font(Theme.Typography.captionBold)
+                    .foregroundColor(Theme.Colors.accentOrange)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Theme.Spacing.sm)
+                    .background(Color.white)
+                    .cornerRadius(Theme.CornerRadius.md)
+                }
+
+                // Discard button
+                Button {
+                    SavedWorkoutProgress.clear()
+                    savedProgress = nil
+                } label: {
+                    HStack {
+                        Image(systemName: "xmark")
+                        Text("Discard")
+                    }
+                    .font(Theme.Typography.captionBold)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Theme.Spacing.sm)
+                    .background(Color.white.opacity(0.2))
+                    .cornerRadius(Theme.CornerRadius.md)
+                }
+            }
+        }
+        .padding(Theme.Spacing.md)
+        .background(Theme.Colors.accentOrange)
+        .cornerRadius(Theme.CornerRadius.lg)
+    }
+
+    private func formatElapsedTime(_ seconds: Int) -> String {
+        let minutes = seconds / 60
+        let secs = seconds % 60
+        return String(format: "%d:%02d elapsed", minutes, secs)
+    }
+
+    private func resumeSavedWorkout(_ progress: SavedWorkoutProgress) {
+        // Find the workout by ID in incoming or upcoming workouts
+        let workout = viewModel.incomingWorkouts.first { $0.id == progress.workoutId }
+            ?? viewModel.upcomingWorkouts.first { $0.workout.id == progress.workoutId }?.workout
+
+        guard let workout = workout else {
+            // Workout no longer available, clear progress
+            print("🏋️ Saved workout no longer available, clearing progress")
+            SavedWorkoutProgress.clear()
+            savedProgress = nil
+            return
+        }
+
+        // Resume the workout
+        WorkoutEngine.shared.resume(workout: workout, fromProgress: progress)
+        savedProgress = nil // Clear local state since WorkoutEngine.resume clears the saved progress
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            showingWorkoutPlayer = true
         }
     }
 
