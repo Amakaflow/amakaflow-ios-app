@@ -113,7 +113,33 @@ class RealWorkoutTestCase: XCTestCase {
 
     /// Select the first available workout
     func selectFirstWorkout() -> Bool {
-        // Look for workout cells in tables or collection views
+        // WorkoutsView uses ScrollView with VStack, not List/Table
+        // Look for workout cards by finding specific workout name patterns
+        // Avoid matching section headers like "Upcoming Workouts" or "Incoming Workouts"
+
+        let workoutPatterns = [
+            "PERFECT Leg",      // Known test workout from API
+            "Full Body",        // Common workout name
+            "Training Session", // Common workout name
+            "Push Day",         // Common workout name
+            "Pull Day",         // Common workout name
+            "Long Run",         // Running workout
+            "Speed Work"        // Running workout
+        ]
+
+        for pattern in workoutPatterns {
+            let workoutText = app.staticTexts.matching(
+                NSPredicate(format: "label CONTAINS[c] %@", pattern)
+            ).firstMatch
+
+            if workoutText.waitForExistence(timeout: 2) {
+                workoutText.tap()
+                sleep(1)
+                return true
+            }
+        }
+
+        // Fallback: try table/collection cells (for backwards compatibility)
         let tableCells = app.tables.cells
         let collectionCells = app.collectionViews.cells
 
@@ -128,6 +154,31 @@ class RealWorkoutTestCase: XCTestCase {
         }
 
         return false
+    }
+
+    /// Check if workouts are available in the UI
+    func hasWorkoutsAvailable() -> Bool {
+        // Check for actual workout names, not section headers
+        let workoutPatterns = [
+            "PERFECT Leg",      // Known test workout
+            "Full Body",        // Common workout name
+            "Training Session", // Common workout name
+            "Push Day",         // Common workout name
+            "Pull Day"          // Common workout name
+        ]
+
+        for pattern in workoutPatterns {
+            let workoutText = app.staticTexts.matching(
+                NSPredicate(format: "label CONTAINS[c] %@", pattern)
+            ).firstMatch
+
+            if workoutText.waitForExistence(timeout: 2) {
+                return true
+            }
+        }
+
+        // Also check for table/collection cells as fallback
+        return app.tables.cells.count > 0 || app.collectionViews.cells.count > 0
     }
 
     /// Select a workout by name
@@ -170,36 +221,48 @@ class RealWorkoutTestCase: XCTestCase {
 
     /// Start the workout (tap Start button)
     func startWorkout() -> Bool {
-        // Look for Start button variants
-        let startButtons = [
-            app.buttons["Start Workout"],
-            app.buttons["Start"],
-            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'start'")).firstMatch
-        ]
+        // Wait for the detail sheet to fully appear
+        sleep(2)
 
-        for button in startButtons {
-            if button.waitForExistence(timeout: 3) && button.isHittable {
-                button.tap()
-                sleep(2)  // Wait for workout view to load
+        // Look for Start Follow-Along button specifically (this is the primary action)
+        let startFollowAlong = app.buttons["Start Follow-Along"]
+        if startFollowAlong.waitForExistence(timeout: 5) {
+            // Scroll to make it visible if needed, then tap
+            // Use coordinate-based tap if not hittable
+            if startFollowAlong.isHittable {
+                startFollowAlong.tap()
+            } else {
+                // Force tap by scrolling the sheet
+                let sheets = app.sheets
+                if sheets.count > 0 {
+                    sheets.firstMatch.swipeUp()
+                    sleep(1)
+                }
+                // Try direct coordinate tap
+                startFollowAlong.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            }
+            print("[E2E] Tapped 'Start Follow-Along' button")
+            sleep(2)  // Wait for workout view to load
+            return true
+        }
+
+        // Fallback: look for any start button by iterating through all buttons
+        for i in 0..<app.buttons.count {
+            let button = app.buttons.element(boundBy: i)
+            if button.exists && button.label.lowercased().contains("start") && !button.label.lowercased().contains("watch") {
+                print("[E2E] Found start button by iteration: \(button.label)")
+                button.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                sleep(2)
                 return true
             }
         }
 
-        // May need to select device first (iPhone/Watch choice)
-        let iPhoneOption = app.buttons.matching(
-            NSPredicate(format: "label CONTAINS[c] 'iphone' OR label CONTAINS[c] 'phone'")
-        ).firstMatch
-
-        if iPhoneOption.waitForExistence(timeout: 3) {
-            iPhoneOption.tap()
-            sleep(1)
-            // Now look for start button again
-            for button in startButtons {
-                if button.waitForExistence(timeout: 3) && button.isHittable {
-                    button.tap()
-                    sleep(2)
-                    return true
-                }
+        // Debug: Print all visible buttons
+        print("[E2E] Could not find start button. Visible buttons:")
+        for i in 0..<min(10, app.buttons.count) {
+            let btn = app.buttons.element(boundBy: i)
+            if btn.exists {
+                print("[E2E]   - \(btn.label)")
             }
         }
 
@@ -298,12 +361,8 @@ final class QuickWorkoutE2ETests: RealWorkoutTestCase {
         // Navigate to workouts
         XCTAssertTrue(navigateToWorkouts(), "Should navigate to workouts")
 
-        // Check for workouts
-        let workoutCells = app.tables.cells
-        let collectionCells = app.collectionViews.cells
-        let hasWorkouts = workoutCells.count > 0 || collectionCells.count > 0
-
-        guard hasWorkouts else {
+        // Check for workouts (uses static text search since UI uses ScrollView, not List)
+        guard hasWorkoutsAvailable() else {
             throw XCTSkip("No workouts available - ensure test user has synced workouts from localhost")
         }
 
