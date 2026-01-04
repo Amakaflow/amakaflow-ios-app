@@ -599,6 +599,7 @@
 			);
 			name = AmakaFlowCompanionUITests;
 			packageProductDependencies = (
+				XCTH34LTH2320001E2E00002 /* XCTHealthKit */,
 			);
 			productName = AmakaFlowCompanionUITests;
 			productReference = F84E218D2ED0B0CA00459747 /* AmakaFlowCompanionUITests.xctest */;
@@ -745,6 +746,7 @@
 				F84E225F2ED0B84300459747 /* XCLocalSwiftPackageReference "../../../workoutkit-sync" */,
 				F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "../Vendor/ConnectIQ" */,
 				6EFD6A06E1264416B1103D42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+				XCTH34LTH2320001E2E00001 /* XCRemoteSwiftPackageReference "XCTHealthKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F84E21752ED0B0C800459747 /* Products */;
@@ -1598,6 +1600,14 @@
 				minimumVersion = 8.0.0;
 			};
 		};
+		XCTH34LTH2320001E2E00001 /* XCRemoteSwiftPackageReference "XCTHealthKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/StanfordBDHG/XCTHealthKit.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1620,6 +1630,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "../Vendor/ConnectIQ" */;
 			productName = ConnectIQ;
+		};
+		XCTH34LTH2320001E2E00002 /* XCTHealthKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = XCTH34LTH2320001E2E00001 /* XCRemoteSwiftPackageReference "XCTHealthKit" */;
+			productName = XCTHealthKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

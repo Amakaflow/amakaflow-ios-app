@@ -16,6 +16,9 @@ struct AmakaFlowCompanionApp: App {
     @StateObject private var garminConnectivity = GarminConnectManager.shared
 
     init() {
+        // Note: E2E test auth bypass (AMA-232) is handled in PairingService.init()
+        // to ensure isPaired is set before SwiftUI evaluates the body
+
         // Initialize Sentry error tracking (AMA-225)
         SentrySDK.start { options in
             options.dsn = "https://7fa7415e248b5a064d84f74679719797@o951666.ingest.us.sentry.io/4510638875017216"

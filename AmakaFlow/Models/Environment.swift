@@ -10,6 +10,14 @@ enum AppEnvironment: String, CaseIterable {
     /// Get or set the current environment. Defaults to staging for debug builds, production for release.
     static var current: AppEnvironment {
         get {
+            // E2E Test override (AMA-232) - check launch environment first
+            #if DEBUG
+            if let testEnv = ProcessInfo.processInfo.environment["TEST_ENVIRONMENT"],
+               let env = AppEnvironment(rawValue: testEnv) {
+                return env
+            }
+            #endif
+
             // Check if user has manually set an environment
             if let savedEnv = UserDefaults.standard.string(forKey: environmentKey),
                let env = AppEnvironment(rawValue: savedEnv) {

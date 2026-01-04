@@ -69,6 +69,31 @@ jobs:
             echo "name=iPhone 15" >> $GITHUB_OUTPUT
           fi
 
+      - name: Create stub TestCredentials for compilation
+        working-directory: AmakaFlowCompanion
+        run: |
+          # Create stub TestCredentials.swift for UI test compilation
+          # UI tests won't run in CI (they need local API), but code must compile
+          cat > AmakaFlowCompanionUITests/TestCredentials.swift << 'EOF'
+          //
+          //  TestCredentials.swift
+          //  AmakaFlowCompanionUITests
+          //
+          //  CI Stub - placeholder values for compilation only
+          //  UI tests require local API and are not run in CI
+          //
+          import Foundation
+
+          enum TestCredentials {
+              static let testAuthSecret = "ci-stub-not-for-testing"
+              static let userId = "ci_stub_user"
+              static let userEmail = "ci@stub.local"
+              static let userName = "CI Stub"
+              static let apiBaseURL = "http://localhost:8001"
+          }
+          EOF
+          echo "Created stub TestCredentials.swift for CI compilation"
+
       - name: Run tests
         working-directory: AmakaFlowCompanion
         run: |

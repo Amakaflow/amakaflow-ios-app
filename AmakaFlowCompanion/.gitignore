@@ -1,1 +1,4 @@
 .sentryclirc
+
+# E2E Test credentials (contains JWT secrets)
+AmakaFlowCompanionUITests/TestCredentials.swift

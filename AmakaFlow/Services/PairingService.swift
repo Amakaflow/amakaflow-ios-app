@@ -17,9 +17,45 @@ class PairingService: ObservableObject {
     @Published var lastTokenRefresh: Date?
 
     private init() {
+        // Handle E2E test auth bypass (AMA-232)
+        // Check for test mode BEFORE setting isPaired so SwiftUI sees the correct initial state
+        #if DEBUG
+        let hasUITesting = CommandLine.arguments.contains("--uitesting")
+        let hasSkipPairing = CommandLine.arguments.contains("--skip-pairing")
+        print("[PairingService] Init - hasUITesting=\(hasUITesting), hasSkipPairing=\(hasSkipPairing)")
+
+        if hasUITesting && hasSkipPairing {
+            // Check for X-Test-Auth header bypass (preferred - no token expiry)
+            if let testAuthSecret = ProcessInfo.processInfo.environment["TEST_AUTH_SECRET"],
+               let testUserId = ProcessInfo.processInfo.environment["TEST_USER_ID"],
+               !testAuthSecret.isEmpty {
+                print("[E2E] Using X-Test-Auth header bypass for user: \(testUserId)")
+                // Set isPaired directly since auth is via headers, not token
+                isPaired = true
+                userProfile = loadProfile()
+                lastTokenRefresh = loadLastTokenRefresh()
+                print("[PairingService] E2E mode initialized with isPaired=true (X-Test-Auth)")
+                return
+            }
+
+            // Legacy: JWT token in keychain (has expiry issues)
+            if let testToken = ProcessInfo.processInfo.environment["TEST_JWT"] {
+                print("[E2E] Found TEST_JWT, length=\(testToken.count)")
+                let saveResult = KeychainHelper.shared.save(testToken, for: tokenKey)
+                if saveResult {
+                    print("[E2E] Test JWT stored in keychain during PairingService init")
+                }
+            }
+        }
+        #endif
+
         isPaired = getToken() != nil
         userProfile = loadProfile()
         lastTokenRefresh = loadLastTokenRefresh()
+
+        #if DEBUG
+        print("[PairingService] Initialized with isPaired=\(isPaired), hasToken=\(getToken() != nil)")
+        #endif
     }
 
     /// Mark authentication as invalid (e.g., on 401 response)

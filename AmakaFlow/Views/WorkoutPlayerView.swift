@@ -16,6 +16,7 @@ struct WorkoutPlayerView: View {
     @State private var showEndConfirmation = false
     @State private var showStepList = false
     @State private var deviceMode: DevicePreference = .phoneOnly
+    @State private var shouldDismissImmediately = false  // Track if workout was discarded or saved for later
 
     var body: some View {
         ZStack {
@@ -45,7 +46,7 @@ struct WorkoutPlayerView: View {
                     header
 
                     // Main content
-                    if engine.phase == .ended, let workout = engine.workout {
+                    if engine.phase == .ended, let workout = engine.workout, !shouldDismissImmediately {
                     WorkoutCompletionView(
                         viewModel: WorkoutCompletionViewModel(
                             workoutName: workout.name,
@@ -97,12 +98,20 @@ struct WorkoutPlayerView: View {
             isPresented: $showEndConfirmation,
             titleVisibility: .visible
         ) {
-            Button("End Workout", role: .destructive) {
+            Button("Save & End") {
                 engine.end(reason: .userEnded)
+            }
+            Button("Resume Later") {
+                shouldDismissImmediately = true
+                engine.end(reason: .savedForLater)
+            }
+            Button("Discard", role: .destructive) {
+                shouldDismissImmediately = true
+                engine.end(reason: .discarded)
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Your progress will be saved.")
+            Text("Save progress, resume later, or discard.")
         }
         .sheet(isPresented: $showStepList) {
             stepListSheet
@@ -113,7 +122,16 @@ struct WorkoutPlayerView: View {
                 garminManager.clearHealthMetrics()
                 dismiss()
             } else if newPhase == .ended {
-                // Keep metrics for display in complete view
+                // If workout was discarded or saved for later, dismiss immediately without showing completion view
+                if shouldDismissImmediately {
+                    watchManager.clearHealthMetrics()
+                    garminManager.clearHealthMetrics()
+                    // Small delay to allow engine to clean up
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        dismiss()
+                    }
+                }
+                // Otherwise keep metrics for display in completion view
             }
         }
     }
@@ -133,6 +151,7 @@ struct WorkoutPlayerView: View {
                     .background(Theme.Colors.surfaceElevated)
                     .clipShape(Circle())
             }
+            .accessibilityIdentifier("CloseWorkoutButton")
 
             Spacer()
 

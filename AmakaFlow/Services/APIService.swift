@@ -77,6 +77,20 @@ class APIService {
 
     private var authHeaders: [String: String] {
         var headers = ["Content-Type": "application/json"]
+
+        // E2E Test mode: Use X-Test-Auth header bypass instead of JWT
+        #if DEBUG
+        if let testAuthSecret = ProcessInfo.processInfo.environment["TEST_AUTH_SECRET"],
+           let testUserId = ProcessInfo.processInfo.environment["TEST_USER_ID"],
+           !testAuthSecret.isEmpty {
+            headers["X-Test-Auth"] = testAuthSecret
+            headers["X-Test-User-Id"] = testUserId
+            print("[APIService] Using X-Test-Auth header bypass for E2E tests")
+            return headers
+        }
+        #endif
+
+        // Normal auth: Use JWT token
         if let token = PairingService.shared.getToken() {
             headers["Authorization"] = "Bearer \(token)"
         }

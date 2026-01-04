@@ -70,7 +70,52 @@ struct WorkoutsView: View {
                             }
                         }
                         .padding(.bottom, 40)
-                        
+
+                        // Incoming Workouts Section (pending workouts from API)
+                        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                            HStack {
+                                Text("Incoming Workouts")
+                                    .font(Theme.Typography.title1)
+                                    .foregroundColor(Theme.Colors.textPrimary)
+
+                                Spacer()
+
+                                if !viewModel.incomingWorkouts.isEmpty {
+                                    Text("\(viewModel.incomingWorkouts.count) pending")
+                                        .font(Theme.Typography.caption)
+                                        .foregroundColor(Theme.Colors.textSecondary)
+                                }
+                            }
+                            .padding(.horizontal, Theme.Spacing.lg)
+
+                            if viewModel.filteredIncoming.isEmpty {
+                                EmptyStateView(
+                                    icon: "arrow.down.circle",
+                                    title: "No Incoming Workouts",
+                                    message: "Workouts synced from the web will appear here"
+                                )
+                                .padding(.horizontal, Theme.Spacing.lg)
+                            } else {
+                                VStack(spacing: 12) {
+                                    ForEach(viewModel.filteredIncoming) { workout in
+                                        WorkoutCard(
+                                            workout: workout,
+                                            scheduledDate: nil,
+                                            scheduledTime: nil,
+                                            isPrimary: false
+                                        )
+                                        .onTapGesture {
+                                            print("🔵 TAPPED INCOMING WORKOUT: \(workout.name)")
+                                            selectedWorkout = workout
+                                            showingDetail = true
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal, Theme.Spacing.lg)
+                            }
+                        }
+                        .padding(.bottom, 40)
+
                         // Add Sample Workout Button (for testing)
                         VStack(spacing: Theme.Spacing.md) {
                             Button(action: {
