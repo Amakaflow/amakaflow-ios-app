@@ -114,7 +114,7 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
     let syncedToStrava: Bool?       // Optional - backend may not return this
     let stravaActivityId: String?
     let workoutId: String?          // Original workout ID (AMA-224)
-    let intervals: [WorkoutInterval]? // Workout steps/exercises (AMA-224)
+    let workoutStructure: [WorkoutInterval]? // Workout steps/exercises (AMA-240)
 
     /// Computed endedAt from startedAt + durationSeconds if not provided
     var resolvedEndedAt: Date {
@@ -124,6 +124,11 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
     /// Strava sync status with default false if not provided
     var isSyncedToStrava: Bool {
         syncedToStrava ?? false
+    }
+
+    /// Backward-compatible alias for workoutStructure
+    var intervals: [WorkoutInterval]? {
+        workoutStructure
     }
 
     enum CodingKeys: String, CodingKey {
@@ -145,7 +150,111 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
         case syncedToStrava
         case stravaActivityId
         case workoutId
-        case intervals
+        case workoutStructure = "workout_structure"
+        case intervalsLegacy = "intervals"  // Backwards compatibility (AMA-240)
+    }
+
+    // MARK: - Memberwise Initializer (required since we have custom decoder)
+
+    init(
+        id: String,
+        workoutName: String,
+        startedAt: Date,
+        endedAt: Date?,
+        durationSeconds: Int,
+        avgHeartRate: Int?,
+        maxHeartRate: Int?,
+        minHeartRate: Int?,
+        activeCalories: Int?,
+        totalCalories: Int?,
+        steps: Int?,
+        distanceMeters: Int?,
+        source: WorkoutCompletion.CompletionSource,
+        deviceInfo: CompletionDeviceInfo?,
+        heartRateSamples: [HeartRateDataPoint]?,
+        syncedToStrava: Bool?,
+        stravaActivityId: String?,
+        workoutId: String?,
+        workoutStructure: [WorkoutInterval]?
+    ) {
+        self.id = id
+        self.workoutName = workoutName
+        self.startedAt = startedAt
+        self.endedAt = endedAt
+        self.durationSeconds = durationSeconds
+        self.avgHeartRate = avgHeartRate
+        self.maxHeartRate = maxHeartRate
+        self.minHeartRate = minHeartRate
+        self.activeCalories = activeCalories
+        self.totalCalories = totalCalories
+        self.steps = steps
+        self.distanceMeters = distanceMeters
+        self.source = source
+        self.deviceInfo = deviceInfo
+        self.heartRateSamples = heartRateSamples
+        self.syncedToStrava = syncedToStrava
+        self.stravaActivityId = stravaActivityId
+        self.workoutId = workoutId
+        self.workoutStructure = workoutStructure
+    }
+
+    // MARK: - Custom Decoder (supports both "workout_structure" and "intervals" from backend)
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        id = try container.decode(String.self, forKey: .id)
+        workoutName = try container.decode(String.self, forKey: .workoutName)
+        startedAt = try container.decode(Date.self, forKey: .startedAt)
+        endedAt = try container.decodeIfPresent(Date.self, forKey: .endedAt)
+        durationSeconds = try container.decode(Int.self, forKey: .durationSeconds)
+        avgHeartRate = try container.decodeIfPresent(Int.self, forKey: .avgHeartRate)
+        maxHeartRate = try container.decodeIfPresent(Int.self, forKey: .maxHeartRate)
+        minHeartRate = try container.decodeIfPresent(Int.self, forKey: .minHeartRate)
+        activeCalories = try container.decodeIfPresent(Int.self, forKey: .activeCalories)
+        totalCalories = try container.decodeIfPresent(Int.self, forKey: .totalCalories)
+        steps = try container.decodeIfPresent(Int.self, forKey: .steps)
+        distanceMeters = try container.decodeIfPresent(Int.self, forKey: .distanceMeters)
+        source = try container.decode(WorkoutCompletion.CompletionSource.self, forKey: .source)
+        deviceInfo = try container.decodeIfPresent(CompletionDeviceInfo.self, forKey: .deviceInfo)
+        heartRateSamples = try container.decodeIfPresent([HeartRateDataPoint].self, forKey: .heartRateSamples)
+        syncedToStrava = try container.decodeIfPresent(Bool.self, forKey: .syncedToStrava)
+        stravaActivityId = try container.decodeIfPresent(String.self, forKey: .stravaActivityId)
+        workoutId = try container.decodeIfPresent(String.self, forKey: .workoutId)
+
+        // Try new field name first, fall back to legacy field name (AMA-240)
+        if let structure = try container.decodeIfPresent([WorkoutInterval].self, forKey: .workoutStructure) {
+            workoutStructure = structure
+        } else {
+            workoutStructure = try container.decodeIfPresent([WorkoutInterval].self, forKey: .intervalsLegacy)
+        }
+    }
+
+    // MARK: - Custom Encoder (only encodes workoutStructure, not intervalsLegacy)
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        try container.encode(id, forKey: .id)
+        try container.encode(workoutName, forKey: .workoutName)
+        try container.encode(startedAt, forKey: .startedAt)
+        try container.encodeIfPresent(endedAt, forKey: .endedAt)
+        try container.encode(durationSeconds, forKey: .durationSeconds)
+        try container.encodeIfPresent(avgHeartRate, forKey: .avgHeartRate)
+        try container.encodeIfPresent(maxHeartRate, forKey: .maxHeartRate)
+        try container.encodeIfPresent(minHeartRate, forKey: .minHeartRate)
+        try container.encodeIfPresent(activeCalories, forKey: .activeCalories)
+        try container.encodeIfPresent(totalCalories, forKey: .totalCalories)
+        try container.encodeIfPresent(steps, forKey: .steps)
+        try container.encodeIfPresent(distanceMeters, forKey: .distanceMeters)
+        try container.encode(source, forKey: .source)
+        try container.encodeIfPresent(deviceInfo, forKey: .deviceInfo)
+        try container.encodeIfPresent(heartRateSamples, forKey: .heartRateSamples)
+        try container.encodeIfPresent(syncedToStrava, forKey: .syncedToStrava)
+        try container.encodeIfPresent(stravaActivityId, forKey: .stravaActivityId)
+        try container.encodeIfPresent(workoutId, forKey: .workoutId)
+        try container.encodeIfPresent(workoutStructure, forKey: .workoutStructure)
+        // Note: intervalsLegacy is NOT encoded - it's only used for decoding backwards compatibility
     }
 }
 
@@ -468,7 +577,7 @@ extension WorkoutCompletionDetail {
             syncedToStrava: true,
             stravaActivityId: "12345678",
             workoutId: nil,  // nil to show "Save to My Workouts" button
-            intervals: sampleIntervals
+            workoutStructure: sampleIntervals
         )
     }
 
@@ -493,7 +602,7 @@ extension WorkoutCompletionDetail {
             syncedToStrava: false,
             stravaActivityId: nil,
             workoutId: nil,
-            intervals: nil
+            workoutStructure: nil
         )
     }
 }

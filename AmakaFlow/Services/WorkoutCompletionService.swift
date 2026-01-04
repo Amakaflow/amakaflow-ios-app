@@ -22,8 +22,8 @@ struct WorkoutCompletionRequest: Codable {
     let source: String     // "apple_watch", "garmin", "phone"
     let deviceInfo: WorkoutDeviceInfo
     let heartRateSamples: [HRSample]?
-    let intervals: [WorkoutInterval]?   // Workout structure for "Run Again" (AMA-237)
-    let workoutName: String?            // Workout name for display (AMA-237)
+    let workoutStructure: [WorkoutInterval]?  // Workout structure for "Run Again" (AMA-240)
+    let workoutName: String?                  // Workout name for display (AMA-237)
 
     enum CodingKeys: String, CodingKey {
         case workoutEventId = "workout_event_id"
@@ -35,7 +35,7 @@ struct WorkoutCompletionRequest: Codable {
         case source
         case deviceInfo = "device_info"
         case heartRateSamples = "heart_rate_samples"
-        case intervals
+        case workoutStructure = "workout_structure"
         case workoutName = "workout_name"
     }
 }
@@ -150,7 +150,7 @@ class WorkoutCompletionService: ObservableObject {
         durationSeconds: Int,
         avgHeartRate: Int? = nil,
         activeCalories: Int? = nil,
-        intervals: [WorkoutInterval]? = nil  // (AMA-237) Workout structure for "Run Again"
+        workoutStructure: [WorkoutInterval]? = nil  // (AMA-240) Workout structure for "Run Again"
     ) async throws -> WorkoutCompletionResponse? {
         let healthMetrics = HealthMetrics(
             avgHeartRate: avgHeartRate,
@@ -178,7 +178,7 @@ class WorkoutCompletionService: ObservableObject {
             source: "phone",
             deviceInfo: deviceInfo,
             heartRateSamples: nil,
-            intervals: intervals,
+            workoutStructure: workoutStructure,
             workoutName: workoutName
         )
 
@@ -188,7 +188,7 @@ class WorkoutCompletionService: ObservableObject {
     /// Post workout completion from Apple Watch standalone workout
     func postWatchWorkoutCompletion(
         summary: StandaloneWorkoutSummary,
-        intervals: [WorkoutInterval]? = nil,  // (AMA-237) Workout structure for "Run Again"
+        workoutStructure: [WorkoutInterval]? = nil,  // (AMA-240) Workout structure for "Run Again"
         workoutName: String? = nil
     ) async throws -> WorkoutCompletionResponse? {
         let healthMetrics = HealthMetrics(
@@ -217,7 +217,7 @@ class WorkoutCompletionService: ObservableObject {
             source: "apple_watch",
             deviceInfo: deviceInfo,
             heartRateSamples: nil,
-            intervals: intervals,
+            workoutStructure: workoutStructure,
             workoutName: workoutName
         )
 
@@ -231,7 +231,7 @@ class WorkoutCompletionService: ObservableObject {
         endedAt: Date,
         avgHeartRate: Int? = nil,
         activeCalories: Int? = nil,
-        intervals: [WorkoutInterval]? = nil,  // (AMA-237) Workout structure for "Run Again"
+        workoutStructure: [WorkoutInterval]? = nil,  // (AMA-240) Workout structure for "Run Again"
         workoutName: String? = nil
     ) async throws -> WorkoutCompletionResponse? {
         let healthMetrics = HealthMetrics(
@@ -260,7 +260,7 @@ class WorkoutCompletionService: ObservableObject {
             source: "garmin",
             deviceInfo: deviceInfo,
             heartRateSamples: nil,
-            intervals: intervals,
+            workoutStructure: workoutStructure,
             workoutName: workoutName
         )
 

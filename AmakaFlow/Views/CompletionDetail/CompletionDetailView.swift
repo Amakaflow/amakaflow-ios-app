@@ -37,6 +37,15 @@ struct CompletionDetailView: View {
                     saveToast
                 }
             }
+            // Run Again fullScreenCover - placed here (not on button) to prevent @State reset
+            // when view hierarchy changes during workout playback (AMA-240 fix)
+            .fullScreenCover(isPresented: $viewModel.showWorkoutPlayer) {
+                WorkoutPlayerView()
+                    .onDisappear {
+                        // Clear the workout reference when player is dismissed
+                        viewModel.workoutToRerun = nil
+                    }
+            }
     }
 
     // MARK: - Content
@@ -272,12 +281,7 @@ struct CompletionDetailView: View {
             .background(Theme.Colors.accentGreen)
             .cornerRadius(12)
         }
-        .fullScreenCover(item: $viewModel.workoutToRerun) { workout in
-            WorkoutPlayerView()
-                .onAppear {
-                    // Workout is already started by rerunWorkout()
-                }
-        }
+        // Note: fullScreenCover moved to main body to prevent @State reset when view hierarchy changes
     }
 
     // MARK: - Save to Library Button

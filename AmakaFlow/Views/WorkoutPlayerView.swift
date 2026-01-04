@@ -84,20 +84,21 @@ struct WorkoutPlayerView: View {
 
                     // Controls
                     PlayerControlsView(engine: engine) {
+                        // Pause while showing confirmation to stop timer updates
+                        if engine.phase == .running {
+                            engine.pause()
+                        }
                         showEndConfirmation = true
                     }
                 }
                 }
             }
         }
-        .id("player-\(engine.stateVersion)")
+        // Note: Removed .id("player-\(engine.stateVersion)") as it caused @State to reset
+        // when stateVersion changed, dismissing the end workout confirmation dialog
         .navigationBarHidden(true)
         .statusBarHidden(engine.phase == .running)
-        .confirmationDialog(
-            "End Workout?",
-            isPresented: $showEndConfirmation,
-            titleVisibility: .visible
-        ) {
+        .alert("End Workout?", isPresented: $showEndConfirmation) {
             Button("Save & End") {
                 engine.end(reason: .userEnded)
             }
@@ -109,14 +110,19 @@ struct WorkoutPlayerView: View {
                 shouldDismissImmediately = true
                 engine.end(reason: .discarded)
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) {
+                // Resume workout if it was paused for the confirmation dialog
+                if engine.phase == .paused {
+                    engine.resume()
+                }
+            }
         } message: {
             Text("Save progress, resume later, or discard.")
         }
         .sheet(isPresented: $showStepList) {
             stepListSheet
         }
-        .onChange(of: engine.phase) { _, newPhase in
+        .onChange(of: engine.phase) { oldPhase, newPhase in
             if newPhase == .idle {
                 watchManager.clearHealthMetrics()
                 garminManager.clearHealthMetrics()
@@ -142,6 +148,10 @@ struct WorkoutPlayerView: View {
         HStack {
             // Close button
             Button {
+                // Pause while showing confirmation to stop timer updates
+                if engine.phase == .running {
+                    engine.pause()
+                }
                 showEndConfirmation = true
             } label: {
                 Image(systemName: "xmark")

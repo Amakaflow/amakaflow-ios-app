@@ -24,6 +24,7 @@ class CompletionDetailViewModel: ObservableObject {
     @Published var showSaveToast: Bool = false
     @Published var saveToastMessage: String = ""
     @Published var workoutToRerun: Workout?  // Set to navigate to WorkoutPlayerView (AMA-237)
+    @Published var showWorkoutPlayer: Bool = false  // Controls fullScreenCover presentation
 
     // MARK: - Properties
 
@@ -158,6 +159,7 @@ class CompletionDetailViewModel: ObservableObject {
 
         // Set this to trigger navigation in the view
         workoutToRerun = workout
+        showWorkoutPlayer = true
         print("[CompletionDetailViewModel] Started workout for re-run: \(workout.name)")
     }
 
@@ -255,7 +257,7 @@ class CompletionDetailViewModel: ObservableObject {
                 syncedToStrava: detail.syncedToStrava,
                 stravaActivityId: detail.stravaActivityId,
                 workoutId: workout.id,  // Now linked to library
-                intervals: detail.intervals
+                workoutStructure: detail.workoutStructure
             )
         } catch {
             saveToastMessage = "Failed to save: \(error.localizedDescription)"

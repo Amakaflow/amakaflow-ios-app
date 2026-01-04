@@ -24,20 +24,32 @@ class PairingService: ObservableObject {
         let hasSkipPairing = CommandLine.arguments.contains("--skip-pairing")
         print("[PairingService] Init - hasUITesting=\(hasUITesting), hasSkipPairing=\(hasSkipPairing)")
 
-        if hasUITesting && hasSkipPairing {
-            // Check for X-Test-Auth header bypass (preferred - no token expiry)
-            if let testAuthSecret = ProcessInfo.processInfo.environment["TEST_AUTH_SECRET"],
-               let testUserId = ProcessInfo.processInfo.environment["TEST_USER_ID"],
-               !testAuthSecret.isEmpty {
-                print("[E2E] Using X-Test-Auth header bypass for user: \(testUserId)")
-                // Set isPaired directly since auth is via headers, not token
-                isPaired = true
-                userProfile = loadProfile()
-                lastTokenRefresh = loadLastTokenRefresh()
-                print("[PairingService] E2E mode initialized with isPaired=true (X-Test-Auth)")
-                return
-            }
+        // Check for X-Test-Auth header bypass (preferred - no token expiry)
+        // Support both: command line args OR environment variables alone
+        let testAuthSecret = ProcessInfo.processInfo.environment["TEST_AUTH_SECRET"]
+        let testUserId = ProcessInfo.processInfo.environment["TEST_USER_ID"]
+        let testUserEmail = ProcessInfo.processInfo.environment["TEST_USER_EMAIL"]
 
+        if let authSecret = testAuthSecret, let userId = testUserId, !authSecret.isEmpty {
+            print("[E2E] Using X-Test-Auth header bypass for user: \(userId)")
+            // Set isPaired directly since auth is via headers, not token
+            isPaired = true
+
+            // Create a test profile from environment variables (AMA-240)
+            userProfile = UserProfile(
+                id: userId,
+                email: testUserEmail,
+                name: testUserEmail != nil ? "E2E Test User" : nil,
+                avatarUrl: nil
+            )
+            print("[PairingService] E2E mode: created test profile for \(testUserEmail ?? userId)")
+
+            lastTokenRefresh = loadLastTokenRefresh()
+            print("[PairingService] E2E mode initialized with isPaired=true (X-Test-Auth)")
+            return
+        }
+
+        if hasUITesting && hasSkipPairing {
             // Legacy: JWT token in keychain (has expiry issues)
             if let testToken = ProcessInfo.processInfo.environment["TEST_JWT"] {
                 print("[E2E] Found TEST_JWT, length=\(testToken.count)")

@@ -152,9 +152,9 @@ final class WorkoutCompletionViewModelTests: XCTestCase {
 
     // MARK: - WorkoutCompletionRequest Encoding Tests (AMA-237)
 
-    func testWorkoutCompletionRequestEncodesIntervals() throws {
-        // Given a completion request with intervals
-        let intervals: [WorkoutInterval] = [
+    func testWorkoutCompletionRequestEncodesWorkoutStructure() throws {
+        // Given a completion request with workout structure
+        let workoutStructure: [WorkoutInterval] = [
             .warmup(seconds: 300, target: "Easy pace"),
             .reps(sets: 3, reps: 10, name: "Squats", load: "50kg", restSec: 60, followAlongUrl: nil),
             .cooldown(seconds: 180, target: nil)
@@ -178,7 +178,7 @@ final class WorkoutCompletionViewModelTests: XCTestCase {
             source: "phone",
             deviceInfo: WorkoutDeviceInfo(platform: "ios", model: "iPhone15,2", osVersion: "18.0"),
             heartRateSamples: nil,
-            intervals: intervals,
+            workoutStructure: workoutStructure,
             workoutName: "Test Workout"
         )
 
@@ -188,14 +188,14 @@ final class WorkoutCompletionViewModelTests: XCTestCase {
         let data = try encoder.encode(request)
         let json = String(data: data, encoding: .utf8)!
 
-        // Then intervals should be included
-        XCTAssertTrue(json.contains("\"intervals\""))
+        // Then workout_structure should be included (AMA-240)
+        XCTAssertTrue(json.contains("\"workout_structure\""))
         XCTAssertTrue(json.contains("\"workout_name\":\"Test Workout\""))
         XCTAssertTrue(json.contains("Squats"))
     }
 
-    func testWorkoutCompletionRequestEncodesWithNilIntervals() throws {
-        // Given a completion request without intervals
+    func testWorkoutCompletionRequestEncodesWithNilWorkoutStructure() throws {
+        // Given a completion request without workout structure
         let request = WorkoutCompletionRequest(
             workoutEventId: nil,
             workoutId: "workout-456",
@@ -214,7 +214,7 @@ final class WorkoutCompletionViewModelTests: XCTestCase {
             source: "apple_watch",
             deviceInfo: WorkoutDeviceInfo(platform: "watchos", model: "Apple Watch", osVersion: nil),
             heartRateSamples: nil,
-            intervals: nil,
+            workoutStructure: nil,
             workoutName: nil
         )
 
@@ -223,7 +223,7 @@ final class WorkoutCompletionViewModelTests: XCTestCase {
         let data = try encoder.encode(request)
         let json = String(data: data, encoding: .utf8)!
 
-        // Then should encode without errors (intervals should be null)
+        // Then should encode without errors (workout_structure should be null)
         XCTAssertTrue(json.contains("\"workout_id\":\"workout-456\""))
         XCTAssertTrue(json.contains("\"source\":\"apple_watch\""))
     }
@@ -248,7 +248,7 @@ final class WorkoutCompletionViewModelTests: XCTestCase {
             source: "phone",
             deviceInfo: WorkoutDeviceInfo(platform: "ios", model: nil, osVersion: nil),
             heartRateSamples: nil,
-            intervals: [],
+            workoutStructure: [],
             workoutName: "My Workout"
         )
 
@@ -265,10 +265,12 @@ final class WorkoutCompletionViewModelTests: XCTestCase {
         XCTAssertTrue(json.contains("\"health_metrics\""))
         XCTAssertTrue(json.contains("\"device_info\""))
         XCTAssertTrue(json.contains("\"workout_name\""))
+        XCTAssertTrue(json.contains("\"workout_structure\""))  // AMA-240
 
         // And should NOT contain camelCase keys
         XCTAssertFalse(json.contains("\"workoutEventId\""))
         XCTAssertFalse(json.contains("\"workoutId\""))
         XCTAssertFalse(json.contains("\"startedAt\""))
+        XCTAssertFalse(json.contains("\"workoutStructure\""))  // AMA-240
     }
 }

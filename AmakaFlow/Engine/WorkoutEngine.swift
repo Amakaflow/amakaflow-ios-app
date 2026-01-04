@@ -512,7 +512,7 @@ class WorkoutEngine: ObservableObject {
                     durationSeconds: durationSeconds,
                     avgHeartRate: avgHeartRate,
                     activeCalories: activeCalories,
-                    intervals: intervals  // (AMA-237) Include workout structure for "Run Again"
+                    workoutStructure: intervals  // (AMA-240) Include workout structure for "Run Again"
                 )
                 logger.info("Workout completion posted successfully")
 

@@ -41,6 +41,14 @@ enum AppEnvironment: String, CaseIterable {
     }
 
     var mapperAPIURL: String {
+        // Allow override via TEST_API_BASE_URL for E2E testing with specific backends
+        #if DEBUG
+        if let testBaseURL = ProcessInfo.processInfo.environment["TEST_API_BASE_URL"],
+           !testBaseURL.isEmpty {
+            return testBaseURL
+        }
+        #endif
+
         switch self {
         case .development: return "http://localhost:8001"
         case .staging: return "https://mapper-api.staging.amakaflow.com"
@@ -65,6 +73,16 @@ enum AppEnvironment: String, CaseIterable {
     }
 
     var displayName: String {
+        // Show custom API URL hostname when using TEST_API_BASE_URL override
+        #if DEBUG
+        if let testBaseURL = ProcessInfo.processInfo.environment["TEST_API_BASE_URL"],
+           !testBaseURL.isEmpty,
+           let url = URL(string: testBaseURL),
+           let host = url.host {
+            return host
+        }
+        #endif
+
         switch self {
         case .development: return "Development"
         case .staging: return "Staging"
