@@ -136,6 +136,7 @@ struct IntervalRow: View {
         case .reps: return "arrow.clockwise"
         case .distance: return "location"
         case .repeat: return "repeat"
+        case .rest: return "pause.circle.fill"
         }
     }
     
@@ -147,6 +148,7 @@ struct IntervalRow: View {
         case .reps: return Theme.Colors.accentGreen
         case .distance: return .purple
         case .repeat: return .yellow
+        case .rest: return .gray
         }
     }
     
@@ -162,6 +164,8 @@ struct IntervalRow: View {
             return "Run"
         case .repeat(let reps, _):
             return "Repeat \(reps)x"
+        case .rest:
+            return "Rest"
         }
     }
     
@@ -181,11 +185,19 @@ struct IntervalRow: View {
                     return total + s
                 case .reps(_, _, _, _, let rest, _):
                     return total + (rest ?? 0)
+                case .rest(let s):
+                    return total + (s ?? 0)
                 default:
                     return total
                 }
             }
             return WorkoutHelpers.formatDuration(seconds: totalSeconds)
+        case .rest(let seconds):
+            if let secs = seconds {
+                return WorkoutHelpers.formatDuration(seconds: secs)
+            } else {
+                return "Tap when ready"
+            }
         }
     }
     
@@ -203,6 +215,8 @@ struct IntervalRow: View {
             }
             return details.isEmpty ? nil : details.joined(separator: " • ")
         case .repeat:
+            return nil
+        case .rest:
             return nil
         }
     }
@@ -244,9 +258,10 @@ struct NestedIntervalRow: View {
         case .reps(_, _, let name, _, _, _): return name
         case .distance: return "Run"
         case .repeat: return "Repeat"
+        case .rest: return "Rest"
         }
     }
-    
+
     private var intervalDuration: String {
         switch interval {
         case .warmup(let seconds, _), .cooldown(let seconds, _), .time(let seconds, _):
@@ -257,6 +272,12 @@ struct NestedIntervalRow: View {
             return WorkoutHelpers.formatDistance(meters: meters)
         case .repeat(let reps, _):
             return "\(reps)x"
+        case .rest(let seconds):
+            if let secs = seconds {
+                return WorkoutHelpers.formatDuration(seconds: secs)
+            } else {
+                return "Tap when ready"
+            }
         }
     }
 }

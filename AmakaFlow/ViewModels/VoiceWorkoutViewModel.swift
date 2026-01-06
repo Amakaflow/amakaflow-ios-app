@@ -309,6 +309,9 @@ class VoiceWorkoutViewModel: ObservableObject {
                 total += Int(Double(meters) / 1000.0 * 300.0)
             case .repeat(let reps, let subIntervals):
                 total += reps * calculateDuration(subIntervals)
+            case .rest(let seconds):
+                // Add rest duration, or estimate 60 seconds for manual rest
+                total += seconds ?? 60
             }
         }
         return total

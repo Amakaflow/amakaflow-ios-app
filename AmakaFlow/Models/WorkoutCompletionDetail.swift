@@ -361,6 +361,23 @@ extension WorkoutCompletionDetail {
                     items.append(contentsOf: subItems)
                     currentStep = newStep
                 }
+
+            case .rest(let seconds):
+                currentStep += 1
+                let detail: String
+                if let secs = seconds {
+                    detail = formatTime(secs)
+                } else {
+                    detail = "Manual"
+                }
+                items.append(WorkoutStepItem(
+                    stepNumber: currentStep,
+                    name: "Rest",
+                    detail: detail,
+                    target: nil,
+                    icon: "pause.circle.fill",
+                    iconColor: .gray
+                ))
             }
         }
 

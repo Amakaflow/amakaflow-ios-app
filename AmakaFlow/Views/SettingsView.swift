@@ -351,6 +351,20 @@ struct SettingsView: View {
                 Text("  contains \(subIntervals.count) sub-intervals")
                     .font(.system(size: 9, design: .monospaced))
                     .foregroundColor(Theme.Colors.textSecondary)
+
+            case .rest(let seconds):
+                Text("[\(index)] REST")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundColor(.gray)
+                if let secs = seconds {
+                    Text("  seconds=\(secs) (timed rest)")
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundColor(Theme.Colors.textSecondary)
+                } else {
+                    Text("  seconds=nil (manual rest - tap when ready)")
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundColor(.yellow)
+                }
             }
         }
         .padding(.vertical, 2)
@@ -447,6 +461,12 @@ struct SettingsView: View {
                 text += "  " + formatIntervalForCopy(index: i, interval: sub)
             }
             return text
+        case .rest(let seconds):
+            if let secs = seconds {
+                return "[\(index)] REST: seconds=\(secs) (timed)\n"
+            } else {
+                return "[\(index)] REST: manual (tap when ready)\n"
+            }
         }
     }
 

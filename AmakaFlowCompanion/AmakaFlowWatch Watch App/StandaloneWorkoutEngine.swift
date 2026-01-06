@@ -655,6 +655,8 @@ private func watchIntervalLabel(_ interval: WorkoutInterval) -> String {
         return target ?? "\(WorkoutHelpers.formatDistance(meters: meters))"
     case .repeat:
         return "Repeat"
+    case .rest:
+        return "Rest"
     }
 }
 
@@ -674,6 +676,12 @@ private func watchIntervalDetails(_ interval: WorkoutInterval) -> String {
         return WorkoutHelpers.formatDistance(meters: meters)
     case .repeat(let reps, _):
         return "\(reps)x"
+    case .rest(let seconds):
+        if let secs = seconds {
+            return formatWatchSeconds(secs)
+        } else {
+            return "Tap when ready"
+        }
     }
 }
 
@@ -687,6 +695,8 @@ private func watchIntervalTimer(_ interval: WorkoutInterval) -> Int? {
         return restSec
     case .distance, .repeat:
         return nil
+    case .rest(let seconds):
+        return seconds
     }
 }
 
@@ -700,6 +710,8 @@ private func watchIntervalStepType(_ interval: WorkoutInterval) -> StepType {
         return .distance
     case .repeat:
         return .timed
+    case .rest:
+        return .rest
     }
 }
 

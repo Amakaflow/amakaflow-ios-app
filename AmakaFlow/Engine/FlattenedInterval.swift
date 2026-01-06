@@ -201,6 +201,8 @@ private func intervalLabel(_ interval: WorkoutInterval) -> String {
         return target ?? "\(WorkoutHelpers.formatDistance(meters: meters))"
     case .repeat:
         return "Repeat"
+    case .rest:
+        return "Rest"
     }
 }
 
@@ -239,6 +241,13 @@ private func intervalDetails(_ interval: WorkoutInterval) -> String {
 
     case .repeat(let reps, _):
         return "\(reps)x"
+
+    case .rest(let seconds):
+        if let secs = seconds {
+            return formatSeconds(secs)
+        } else {
+            return "Tap when ready"
+        }
     }
 }
 
@@ -253,6 +262,8 @@ private func intervalTimer(_ interval: WorkoutInterval) -> Int? {
         return restSec
     case .distance, .repeat:
         return nil
+    case .rest(let seconds):
+        return seconds
     }
 }
 
@@ -266,6 +277,8 @@ private func intervalStepType(_ interval: WorkoutInterval) -> StepType {
         return .distance
     case .repeat:
         return .timed
+    case .rest:
+        return .rest
     }
 }
 

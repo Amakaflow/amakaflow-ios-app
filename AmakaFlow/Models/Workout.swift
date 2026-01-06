@@ -15,6 +15,7 @@ enum WorkoutInterval: Codable, Hashable {
     case reps(sets: Int?, reps: Int, name: String, load: String?, restSec: Int?, followAlongUrl: String?)
     case distance(meters: Int, target: String?)
     case `repeat`(reps: Int, intervals: [WorkoutInterval])
+    case rest(seconds: Int?)  // nil = manual rest, value = timed rest
     
     enum CodingKeys: String, CodingKey {
         case kind, seconds, target, sets, reps, name, load, restSec, meters, intervals, followAlongUrl
@@ -58,7 +59,11 @@ enum WorkoutInterval: Codable, Hashable {
             let reps = try container.decode(Int.self, forKey: .reps)
             let intervals = try container.decode([WorkoutInterval].self, forKey: .intervals)
             self = .repeat(reps: reps, intervals: intervals)
-            
+
+        case "rest":
+            let seconds = try container.decodeIfPresent(Int.self, forKey: .seconds)
+            self = .rest(seconds: seconds)
+
         default:
             throw DecodingError.dataCorruptedError(
                 forKey: .kind,
@@ -105,6 +110,10 @@ enum WorkoutInterval: Codable, Hashable {
             try container.encode("repeat", forKey: .kind)
             try container.encode(reps, forKey: .reps)
             try container.encode(intervals, forKey: .intervals)
+
+        case .rest(let seconds):
+            try container.encode("rest", forKey: .kind)
+            try container.encodeIfPresent(seconds, forKey: .seconds)
         }
     }
 }

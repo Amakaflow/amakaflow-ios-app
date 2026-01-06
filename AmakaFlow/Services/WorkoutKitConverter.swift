@@ -142,6 +142,20 @@ class WorkoutKitConverter {
                 return step
             }
             return .repeatSet(reps: reps, intervals: steps)
+
+        case .rest(let seconds):
+            // Convert rest to a time-based step
+            let step = WKPlanDTO.Interval.Step(
+                kind: "rest",
+                seconds: seconds,
+                meters: nil,
+                reps: nil,
+                name: "Rest",
+                load: nil,
+                restSec: nil,
+                target: nil
+            )
+            return .step(step)
         }
     }
     

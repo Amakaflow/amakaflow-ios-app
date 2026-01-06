@@ -294,6 +294,7 @@ private struct IntervalRowView: View {
         case .reps: return "dumbbell.fill"
         case .distance: return "location"
         case .repeat: return "arrow.clockwise"
+        case .rest: return "pause.circle.fill"
         }
     }
 
@@ -305,6 +306,7 @@ private struct IntervalRowView: View {
         case .reps: return .purple
         case .distance: return .cyan
         case .repeat: return .indigo
+        case .rest: return .gray
         }
     }
 
@@ -316,6 +318,7 @@ private struct IntervalRowView: View {
         case .reps(_, _, let name, _, _, _): return name
         case .distance: return "Distance"
         case .repeat(let reps, _): return "Repeat \(reps)x"
+        case .rest: return "Rest"
         }
     }
 
@@ -341,6 +344,12 @@ private struct IntervalRowView: View {
             return WorkoutHelpers.formatDistance(meters: meters) + (target.map { " • \($0)" } ?? "")
         case .repeat(_, let subIntervals):
             return "\(subIntervals.count) exercises per round"
+        case .rest(let seconds):
+            if let secs = seconds {
+                return formatTime(secs)
+            } else {
+                return "Tap when ready"
+            }
         }
     }
 

@@ -167,9 +167,10 @@ struct WatchIntervalRow: View {
         case .reps(_, _, let name, _, _, _): return name
         case .distance: return "Run"
         case .repeat(let reps, _): return "Repeat \(reps)x"
+        case .rest: return "Rest"
         }
     }
-    
+
     private var intervalDuration: String {
         switch interval {
         case .warmup(let seconds, _), .cooldown(let seconds, _), .time(let seconds, _):
@@ -180,6 +181,12 @@ struct WatchIntervalRow: View {
             return WorkoutHelpers.formatDistance(meters: meters)
         case .repeat(_, let intervals):
             return "\(intervals.count) steps"
+        case .rest(let seconds):
+            if let secs = seconds {
+                return WorkoutHelpers.formatDuration(seconds: secs)
+            } else {
+                return "Tap when ready"
+            }
         }
     }
 }

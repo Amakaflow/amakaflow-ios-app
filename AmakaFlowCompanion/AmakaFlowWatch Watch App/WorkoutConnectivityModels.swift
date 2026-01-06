@@ -69,6 +69,7 @@ public enum StepType: String, Codable {
     case timed
     case reps
     case distance
+    case rest       // Rest interval (timed or manual)
 }
 
 // MARK: - Remote Command (Watch → Phone)

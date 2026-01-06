@@ -21,6 +21,7 @@ enum StepType: String, Codable {
     case timed      // Has countdown timer
     case reps       // Manual completion
     case distance   // Distance-based
+    case rest       // Rest interval (timed or manual)
 }
 
 // MARK: - End Reason
