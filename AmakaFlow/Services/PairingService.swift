@@ -6,7 +6,7 @@ import Combine
 class PairingService: ObservableObject {
     static let shared = PairingService()
 
-    private let baseURL = AppEnvironment.current.mapperAPIURL
+    private var baseURL: String { AppEnvironment.current.mapperAPIURL }
     private let tokenKey = "jwt_token"
     private let profileKey = "user_profile"
     private let tokenRefreshKey = "last_token_refresh"
@@ -33,18 +33,23 @@ class PairingService: ObservableObject {
             // Set isPaired directly since auth is via headers, not token
             isPaired = true
 
-            // Create a test profile
+            // Create a placeholder profile - will fetch actual profile async
             let testUserEmail = TestAuthStore.shared.userEmail
             userProfile = UserProfile(
                 id: userId,
                 email: testUserEmail,
-                name: testUserEmail != nil ? "E2E Test User" : nil,
+                name: "Loading...",
                 avatarUrl: nil
             )
-            print("[PairingService] E2E mode: created test profile for \(testUserEmail ?? userId)")
+            print("[PairingService] E2E mode: created placeholder profile for \(testUserEmail ?? userId)")
 
             lastTokenRefresh = loadLastTokenRefresh()
             print("[PairingService] E2E mode initialized with isPaired=true (X-Test-Auth)")
+
+            // Fetch actual user profile in background
+            Task {
+                await self.fetchAndUpdateProfile()
+            }
             return
         }
 
@@ -95,20 +100,41 @@ class PairingService: ObservableObject {
             return
         }
 
-        // Store credentials
+        // Store credentials first so API calls will work
         TestAuthStore.shared.storeCredentials(authSecret: authSecret, userId: userId)
 
-        // Set paired state
+        // Set paired state with placeholder profile
         isPaired = true
         userProfile = UserProfile(
             id: userId,
             email: nil,
-            name: "E2E Test User",
+            name: "Loading...",
             avatarUrl: nil
         )
         needsReauth = false
 
         print("[PairingService] E2E test mode enabled for user: \(userId)")
+
+        // Fetch actual user profile in background
+        Task {
+            await fetchAndUpdateProfile()
+        }
+        #endif
+    }
+
+    /// Fetch user profile from API and update the stored profile
+    private func fetchAndUpdateProfile() async {
+        #if DEBUG
+        do {
+            let profile = try await APIService.shared.fetchProfile()
+            await MainActor.run {
+                self.userProfile = profile
+                print("[PairingService] Updated profile: \(profile.name ?? profile.email ?? profile.id)")
+            }
+        } catch {
+            print("[PairingService] Failed to fetch profile: \(error.localizedDescription)")
+            // Keep the placeholder profile - user can still use the app
+        }
         #endif
     }
 

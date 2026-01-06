@@ -11,7 +11,7 @@ import Foundation
 class APIService {
     static let shared = APIService()
 
-    private let baseURL = AppEnvironment.current.mapperAPIURL
+    private var baseURL: String { AppEnvironment.current.mapperAPIURL }
     private let session = URLSession.shared
 
     private init() {}
@@ -757,6 +757,60 @@ class APIService {
             throw APIError.serverError(httpResponse.statusCode)
         }
     }
+
+    // MARK: - User Profile
+
+    /// Fetch user profile from backend
+    /// - Returns: UserProfile if successful
+    /// - Throws: APIError if request fails
+    func fetchProfile() async throws -> UserProfile {
+        let url = URL(string: "\(baseURL)/mobile/profile")!
+        print("[APIService] Fetching profile from: \(url)")
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = authHeaders
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            print("[APIService] Invalid response type")
+            throw APIError.invalidResponse
+        }
+
+        print("[APIService] Profile response status: \(httpResponse.statusCode)")
+
+        switch httpResponse.statusCode {
+        case 200:
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            do {
+                let profileResponse = try decoder.decode(ProfileResponse.self, from: data)
+                print("[APIService] Fetched profile for: \(profileResponse.profile.name ?? profileResponse.profile.email ?? "unknown")")
+                return profileResponse.profile
+            } catch {
+                print("[APIService] Profile decoding error: \(error)")
+                if let responseString = String(data: data, encoding: .utf8) {
+                    print("[APIService] Response body: \(responseString.prefix(500))")
+                }
+                throw APIError.decodingError(error)
+            }
+        case 401:
+            print("[APIService] Unauthorized (401)")
+            throw APIError.unauthorized
+        default:
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("[APIService] Error response: \(responseString.prefix(200))")
+            }
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+}
+
+// MARK: - Profile Response
+struct ProfileResponse: Codable {
+    let success: Bool
+    let profile: UserProfile
 }
 
 // MARK: - Pending Workouts Response
