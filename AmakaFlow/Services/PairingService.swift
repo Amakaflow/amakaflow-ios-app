@@ -6,7 +6,7 @@ import Combine
 class PairingService: ObservableObject {
     static let shared = PairingService()
 
-    private let baseURL = AppEnvironment.current.mapperAPIURL
+    private var baseURL: String { AppEnvironment.current.mapperAPIURL }
     private let tokenKey = "jwt_token"
     private let profileKey = "user_profile"
     private let tokenRefreshKey = "last_token_refresh"

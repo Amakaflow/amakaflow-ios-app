@@ -1350,6 +1350,45 @@ struct SettingsView: View {
                 }
 
                 // Environment info
+                #if DEBUG
+                // Environment selector (DEBUG only)
+                HStack {
+                    Image(systemName: "server.rack")
+                        .font(.system(size: 14))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                    Text("Environment:")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textTertiary)
+                    Spacer()
+                    Menu {
+                        ForEach(AppEnvironment.allCases, id: \.self) { env in
+                            Button {
+                                AppEnvironment.current = env
+                                // Force UI refresh
+                                Task { @MainActor in
+                                    // Re-check workouts with new environment
+                                    await workoutsViewModel.checkPendingWorkouts()
+                                }
+                            } label: {
+                                HStack {
+                                    Text(env.displayName)
+                                    if env == AppEnvironment.current {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(AppEnvironment.current.displayName)
+                                .font(Theme.Typography.caption)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.system(size: 10))
+                        }
+                        .foregroundColor(Theme.Colors.accentBlue)
+                    }
+                }
+                #else
                 HStack {
                     Image(systemName: "server.rack")
                         .font(.system(size: 14))
@@ -1359,6 +1398,7 @@ struct SettingsView: View {
                         .foregroundColor(Theme.Colors.textTertiary)
                     Spacer()
                 }
+                #endif
 
                 // App version
                 HStack {

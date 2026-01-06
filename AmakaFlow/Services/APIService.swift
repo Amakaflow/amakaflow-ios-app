@@ -11,7 +11,7 @@ import Foundation
 class APIService {
     static let shared = APIService()
 
-    private let baseURL = AppEnvironment.current.mapperAPIURL
+    private var baseURL: String { AppEnvironment.current.mapperAPIURL }
     private let session = URLSession.shared
 
     private init() {}
