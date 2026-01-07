@@ -677,8 +677,15 @@ class APIService {
     func postWorkoutCompletion(_ completion: WorkoutCompletionRequest, isRetry: Bool = false) async throws -> WorkoutCompletionResponse {
         let endpoint = "/workouts/complete"
 
-        guard PairingService.shared.isPaired else {
-            print("[APIService] Not paired, throwing unauthorized")
+        // Check for valid auth - either pairing or E2E test mode
+        #if DEBUG
+        let hasAuth = PairingService.shared.isPaired || TestAuthStore.shared.isTestModeEnabled
+        #else
+        let hasAuth = PairingService.shared.isPaired
+        #endif
+
+        guard hasAuth else {
+            print("[APIService] Not paired and not in E2E test mode, throwing unauthorized")
             logError(endpoint: endpoint, method: "POST", statusCode: nil, response: nil, error: APIError.unauthorized)
             throw APIError.unauthorized
         }
@@ -707,6 +714,31 @@ class APIService {
         switch httpResponse.statusCode {
         case 200, 201:
             let decoder = JSONDecoder()
+            // Log the raw response for debugging (AMA-271)
+            let responseBody = responseString ?? "nil"
+            print("[APIService] POST /workouts/complete response: \(responseBody.prefix(500))")
+            Task { @MainActor in
+                DebugLogService.shared.log(
+                    "API: POST complete",
+                    details: "Status: \(httpResponse.statusCode), Body: \(responseBody.prefix(300))",
+                    metadata: nil
+                )
+            }
+
+            // Check for success:false in response body - backend returns HTTP 200 but logical failure (AMA-271)
+            if let responseString = responseString, responseString.contains("\"success\":false") {
+                print("[APIService] Backend returned success:false - treating as error")
+                logError(endpoint: endpoint, method: "POST", statusCode: httpResponse.statusCode, response: responseString, error: nil)
+                Task { @MainActor in
+                    DebugLogService.shared.log(
+                        "API: Completion FAILED",
+                        details: "Backend error: \(responseBody.prefix(200))",
+                        metadata: nil
+                    )
+                }
+                throw APIError.serverErrorWithBody(httpResponse.statusCode, responseBody)
+            }
+
             do {
                 let completionResponse = try decoder.decode(WorkoutCompletionResponse.self, from: data)
                 print("[APIService] Workout completion posted, ID: \(completionResponse.resolvedCompletionId)")
@@ -715,10 +747,6 @@ class APIService {
                 print("[APIService] Decoding error: \(error)")
                 if let responseString = responseString {
                     print("[APIService] Response body: \(responseString.prefix(500))")
-                }
-                // Log if backend returned success:false (HTTP 200 but logical failure)
-                if let responseString = responseString, responseString.contains("\"success\":false") {
-                    logError(endpoint: endpoint, method: "POST", statusCode: httpResponse.statusCode, response: responseString, error: nil)
                 }
                 throw APIError.decodingError(error)
             }

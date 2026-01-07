@@ -45,6 +45,11 @@ struct WorkoutPlayerView: View {
                     // Header
                     header
 
+                    // Simulation mode banner (AMA-271)
+                    if engine.isSimulation {
+                        SimulationBannerView(speed: engine.simulationSpeed)
+                    }
+
                     // Main content
                     if engine.phase == .ended, let workout = engine.workout, !shouldDismissImmediately {
                     WorkoutCompletionView(

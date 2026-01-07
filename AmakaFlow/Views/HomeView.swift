@@ -10,6 +10,7 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject var viewModel: WorkoutsViewModel
     @StateObject private var historyViewModel = ActivityHistoryViewModel()
+    @ObservedObject private var simulationSettings = SimulationSettings.shared
     @AppStorage("devicePreference") private var devicePreference: DevicePreference = .appleWatchPhone
     @State private var showingQuickStart = false
     @State private var selectedWorkout: Workout?
@@ -37,6 +38,27 @@ struct HomeView: View {
                     // Header
                     header
                         .padding(.top, Theme.Spacing.md)
+
+                    // Simulation mode indicator (AMA-271)
+                    #if DEBUG
+                    if simulationSettings.isEnabled {
+                        HStack(spacing: 8) {
+                            Image(systemName: "gearshape.2.fill")
+                                .font(.system(size: 14))
+                            Text("Simulation Mode: \(simulationSettings.speedDisplayString)")
+                                .font(.system(size: 14, weight: .medium))
+                            Spacer()
+                            Text("Settings → Version × 7")
+                                .font(.system(size: 11))
+                                .foregroundColor(.black.opacity(0.6))
+                        }
+                        .foregroundColor(.black)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(Color.yellow)
+                        .cornerRadius(8)
+                    }
+                    #endif
 
                     // Resume Workout banner (if saved progress exists)
                     if let progress = savedProgress {

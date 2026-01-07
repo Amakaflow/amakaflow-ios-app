@@ -35,8 +35,12 @@ class WorkoutsViewModel: ObservableObject {
         NotificationCenter.default.publisher(for: .workoutCompleted)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] notification in
+                print("[WorkoutsViewModel] Received workoutCompleted notification")
                 if let workoutId = notification.userInfo?["workoutId"] as? String {
+                    print("[WorkoutsViewModel] Marking workout \(workoutId) as completed")
                     self?.markWorkoutCompleted(workoutId)
+                } else {
+                    print("[WorkoutsViewModel] ERROR: No workoutId in notification")
                 }
             }
             .store(in: &cancellables)
@@ -168,9 +172,16 @@ class WorkoutsViewModel: ObservableObject {
     func checkPendingWorkouts() async {
         pendingWorkoutsStatus = "Checking..."
 
-        guard PairingService.shared.isPaired else {
-            pendingWorkoutsStatus = "Not paired - skipping"
-            print("[WorkoutsViewModel] Not paired, skipping pending workout check")
+        // Check for valid auth - either pairing or E2E test mode
+        #if DEBUG
+        let hasAuth = PairingService.shared.isPaired || TestAuthStore.shared.isTestModeEnabled
+        #else
+        let hasAuth = PairingService.shared.isPaired
+        #endif
+
+        guard hasAuth else {
+            pendingWorkoutsStatus = "Not authenticated - skipping"
+            print("[WorkoutsViewModel] Not authenticated, skipping pending workout check")
             return
         }
 
@@ -198,10 +209,17 @@ class WorkoutsViewModel: ObservableObject {
             pendingWorkoutsStatus = debugInfo
             print("[WorkoutsViewModel] Found \(pendingWorkouts.count) pending workouts, syncing...")
 
+            // Get device preference to determine if we should sync to Apple Watch
+            let devicePref = UserDefaults.standard.string(forKey: "devicePreference").flatMap { DevicePreference(rawValue: $0) } ?? .appleWatchPhone
+
             for workout in pendingWorkouts {
-                // Sync to Watch
-                await WatchConnectivityManager.shared.sendWorkout(workout)
-                print("[WorkoutsViewModel] Sent '\(workout.name)' to Watch")
+                // Only sync to Apple Watch if user has selected Apple Watch mode
+                if devicePref == .appleWatchPhone || devicePref == .appleWatchOnly {
+                    await WatchConnectivityManager.shared.sendWorkout(workout)
+                    print("[WorkoutsViewModel] Sent '\(workout.name)' to Watch")
+                } else {
+                    print("[WorkoutsViewModel] Skipping Watch sync for '\(workout.name)' - device preference is \(devicePref.rawValue)")
+                }
 
                 // Save to WorkoutKit (iOS 18+)
                 if #available(iOS 18.0, *) {
@@ -243,13 +261,27 @@ class WorkoutsViewModel: ObservableObject {
     /// Mark a workout as completed - removes from incoming and upcoming lists (AMA-237)
     /// Called after WorkoutCompletionService.submitCompletion() succeeds
     func markWorkoutCompleted(_ workoutId: String) {
+        let incomingBefore = incomingWorkouts.count
+        let upcomingBefore = upcomingWorkouts.count
+
         // Remove from incoming (if present)
         incomingWorkouts.removeAll { $0.id == workoutId }
 
         // Remove from upcoming (scheduled workouts)
         upcomingWorkouts.removeAll { $0.workout.id == workoutId }
 
-        print("[WorkoutsViewModel] Marked workout \(workoutId) as completed, removed from lists")
+        let incomingRemoved = incomingBefore - incomingWorkouts.count
+        let upcomingRemoved = upcomingBefore - upcomingWorkouts.count
+
+        print("[WorkoutsViewModel] Marked workout \(workoutId) as completed")
+        print("[WorkoutsViewModel] Removed: \(incomingRemoved) incoming, \(upcomingRemoved) upcoming")
+
+        // Log to DebugLogService for in-app visibility (AMA-271)
+        DebugLogService.shared.log(
+            "Workout: Completed",
+            details: "Removed from incoming: \(incomingRemoved), upcoming: \(upcomingRemoved)",
+            metadata: ["workoutId": workoutId]
+        )
     }
     
     func addSampleWorkout() {

@@ -24,6 +24,7 @@ struct WorkoutCompletionRequest: Codable {
     let heartRateSamples: [HRSample]?
     let workoutStructure: [WorkoutInterval]?  // Workout structure for "Run Again" (AMA-240)
     let workoutName: String?                  // Workout name for display (AMA-237)
+    let isSimulated: Bool?                    // True if workout was run in simulation mode (AMA-271)
 
     enum CodingKeys: String, CodingKey {
         case workoutEventId = "workout_event_id"
@@ -37,6 +38,7 @@ struct WorkoutCompletionRequest: Codable {
         case heartRateSamples = "heart_rate_samples"
         case workoutStructure = "workout_structure"
         case workoutName = "workout_name"
+        case isSimulated = "is_simulated"
     }
 }
 
@@ -150,7 +152,8 @@ class WorkoutCompletionService: ObservableObject {
         durationSeconds: Int,
         avgHeartRate: Int? = nil,
         activeCalories: Int? = nil,
-        workoutStructure: [WorkoutInterval]? = nil  // (AMA-240) Workout structure for "Run Again"
+        workoutStructure: [WorkoutInterval]? = nil,  // (AMA-240) Workout structure for "Run Again"
+        isSimulated: Bool = false                    // (AMA-271) Simulation mode flag
     ) async throws -> WorkoutCompletionResponse? {
         let healthMetrics = HealthMetrics(
             avgHeartRate: avgHeartRate,
@@ -179,7 +182,8 @@ class WorkoutCompletionService: ObservableObject {
             deviceInfo: deviceInfo,
             heartRateSamples: nil,
             workoutStructure: workoutStructure,
-            workoutName: workoutName
+            workoutName: workoutName,
+            isSimulated: isSimulated ? true : nil  // Only send if true (AMA-271)
         )
 
         return try await postCompletion(request)
@@ -218,7 +222,8 @@ class WorkoutCompletionService: ObservableObject {
             deviceInfo: deviceInfo,
             heartRateSamples: nil,
             workoutStructure: workoutStructure,
-            workoutName: workoutName
+            workoutName: workoutName,
+            isSimulated: nil  // Watch workouts are never simulated
         )
 
         return try await postCompletion(request)
@@ -261,7 +266,8 @@ class WorkoutCompletionService: ObservableObject {
             deviceInfo: deviceInfo,
             heartRateSamples: nil,
             workoutStructure: workoutStructure,
-            workoutName: workoutName
+            workoutName: workoutName,
+            isSimulated: nil  // Garmin workouts are never simulated
         )
 
         return try await postCompletion(request)
@@ -274,8 +280,14 @@ class WorkoutCompletionService: ObservableObject {
             print("[WorkoutCompletion] Network unavailable, skipping retry")
             return
         }
-        // Don't retry if auth is invalid - wait for user to re-pair
-        guard !PairingService.shared.needsReauth else {
+        // Don't retry if auth is invalid - wait for user to re-pair (unless in E2E test mode)
+        #if DEBUG
+        let canRetry = !PairingService.shared.needsReauth || TestAuthStore.shared.isTestModeEnabled
+        #else
+        let canRetry = !PairingService.shared.needsReauth
+        #endif
+
+        guard canRetry else {
             print("[WorkoutCompletion] Auth invalid, skipping retry until re-paired")
             return
         }
@@ -312,8 +324,20 @@ class WorkoutCompletionService: ObservableObject {
     // MARK: - Private Methods
 
     private func postCompletion(_ request: WorkoutCompletionRequest) async throws -> WorkoutCompletionResponse? {
-        guard PairingService.shared.isPaired else {
-            print("[WorkoutCompletion] Not paired, skipping POST")
+        // Check for valid auth - either pairing or E2E test mode
+        #if DEBUG
+        let hasAuth = PairingService.shared.isPaired || TestAuthStore.shared.isTestModeEnabled
+        #else
+        let hasAuth = PairingService.shared.isPaired
+        #endif
+
+        guard hasAuth else {
+            print("[WorkoutCompletion] Not paired and not in E2E test mode, skipping POST")
+            logCompletionError(
+                workoutId: request.workoutId ?? request.followAlongWorkoutId,
+                error: NSError(domain: "WorkoutCompletion", code: -2, userInfo: [NSLocalizedDescriptionKey: "Not authenticated (no pairing and no E2E test mode)"]),
+                context: "postCompletion - no auth"
+            )
             return nil
         }
 

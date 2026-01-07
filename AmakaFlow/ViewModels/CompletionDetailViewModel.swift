@@ -110,8 +110,14 @@ class CompletionDetailViewModel: ObservableObject {
         }
         #endif
 
-        // Check if paired
-        if !PairingService.shared.isPaired {
+        // Check if we have valid auth - either pairing or E2E test mode
+        #if DEBUG
+        let hasAuth = PairingService.shared.isPaired || TestAuthStore.shared.isTestModeEnabled
+        #else
+        let hasAuth = PairingService.shared.isPaired
+        #endif
+
+        if !hasAuth {
             loadMockData()
             isLoading = false
             return
@@ -335,7 +341,14 @@ extension APIService {
     /// - Returns: WorkoutCompletionDetail with full HR samples
     /// - Throws: APIError if request fails
     func fetchCompletionDetail(id: String) async throws -> WorkoutCompletionDetail {
-        guard PairingService.shared.isPaired else {
+        // Check for valid auth - either pairing or E2E test mode
+        #if DEBUG
+        let hasAuth = PairingService.shared.isPaired || TestAuthStore.shared.isTestModeEnabled
+        #else
+        let hasAuth = PairingService.shared.isPaired
+        #endif
+
+        guard hasAuth else {
             throw APIError.unauthorized
         }
 
@@ -345,9 +358,23 @@ extension APIService {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        // Set auth headers - E2E test mode or normal JWT
+        #if DEBUG
+        if let testAuthSecret = TestAuthStore.shared.authSecret,
+           let testUserId = TestAuthStore.shared.userId,
+           !testAuthSecret.isEmpty {
+            request.setValue(testAuthSecret, forHTTPHeaderField: "X-Test-Auth")
+            request.setValue(testUserId, forHTTPHeaderField: "X-Test-User-Id")
+            print("[CompletionDetail] Using X-Test-Auth header bypass for E2E tests")
+        } else if let token = PairingService.shared.getToken() {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        #else
         if let token = PairingService.shared.getToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
+        #endif
 
         let (data, response) = try await URLSession.shared.data(for: request)
 

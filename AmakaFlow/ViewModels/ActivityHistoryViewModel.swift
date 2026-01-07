@@ -124,8 +124,15 @@ class ActivityHistoryViewModel: ObservableObject {
             return
         }
 
-        // If not paired, show empty state (no mock data)
-        if !PairingService.shared.isPaired {
+        // Check if we have valid auth - either pairing or E2E test mode
+        #if DEBUG
+        let hasAuth = PairingService.shared.isPaired || TestAuthStore.shared.isTestModeEnabled
+        #else
+        let hasAuth = PairingService.shared.isPaired
+        #endif
+
+        // If not authenticated, show empty state (no mock data)
+        if !hasAuth {
             completions = []
             hasMoreData = false
             isLoading = false
@@ -133,10 +140,18 @@ class ActivityHistoryViewModel: ObservableObject {
         }
 
         do {
+            logger.info("loadCompletions: Fetching from API...")
             let fetched = try await apiService.fetchCompletions(limit: pageSize, offset: 0)
             completions = fetched
             hasMoreData = fetched.count >= pageSize
             currentOffset = fetched.count
+            logger.info("loadCompletions: Got \(fetched.count) completions")
+            // Log to DebugLogService for in-app visibility (AMA-271)
+            DebugLogService.shared.log(
+                "History: Loaded",
+                details: "Got \(fetched.count) completions",
+                metadata: nil
+            )
         } catch is CancellationError {
             // Task was cancelled (view dismissed, new request started) - ignore silently
             logger.debug("loadCompletions cancelled")
@@ -145,9 +160,21 @@ class ActivityHistoryViewModel: ObservableObject {
             logger.debug("loadCompletions URL request cancelled")
         } catch let error as APIError {
             handleAPIError(error)
+            logger.error("loadCompletions: API error \(error.localizedDescription)")
+            DebugLogService.shared.log(
+                "History: ERROR",
+                details: error.localizedDescription,
+                metadata: nil
+            )
         } catch {
             errorMessage = "Failed to load activities: \(error.localizedDescription)"
             completions = []
+            logger.error("loadCompletions: Error \(error.localizedDescription)")
+            DebugLogService.shared.log(
+                "History: ERROR",
+                details: error.localizedDescription,
+                metadata: nil
+            )
         }
 
         isLoading = false
@@ -178,8 +205,15 @@ class ActivityHistoryViewModel: ObservableObject {
 
         isLoadingMore = true
 
-        if useDemoMode || !PairingService.shared.isPaired {
-            // No more data to load in demo mode or when not paired
+        // Check if we have valid auth
+        #if DEBUG
+        let hasAuth = PairingService.shared.isPaired || TestAuthStore.shared.isTestModeEnabled
+        #else
+        let hasAuth = PairingService.shared.isPaired
+        #endif
+
+        if useDemoMode || !hasAuth {
+            // No more data to load in demo mode or when not authenticated
             hasMoreData = false
             isLoadingMore = false
             return
@@ -238,7 +272,14 @@ extension APIService {
     /// - Returns: Array of workout completions
     /// - Throws: APIError if request fails
     func fetchCompletions(limit: Int = 50, offset: Int = 0) async throws -> [WorkoutCompletion] {
-        guard PairingService.shared.isPaired else {
+        // Check for valid auth - either pairing or E2E test mode
+        #if DEBUG
+        let hasAuth = PairingService.shared.isPaired || TestAuthStore.shared.isTestModeEnabled
+        #else
+        let hasAuth = PairingService.shared.isPaired
+        #endif
+
+        guard hasAuth else {
             throw APIError.unauthorized
         }
 
@@ -248,9 +289,23 @@ extension APIService {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        // Set auth headers - E2E test mode or normal JWT
+        #if DEBUG
+        if let testAuthSecret = TestAuthStore.shared.authSecret,
+           let testUserId = TestAuthStore.shared.userId,
+           !testAuthSecret.isEmpty {
+            request.setValue(testAuthSecret, forHTTPHeaderField: "X-Test-Auth")
+            request.setValue(testUserId, forHTTPHeaderField: "X-Test-User-Id")
+            print("[ActivityHistory] Using X-Test-Auth header bypass for E2E tests")
+        } else if let token = PairingService.shared.getToken() {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        #else
         if let token = PairingService.shared.getToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
+        #endif
 
         let (data, response) = try await URLSession.shared.data(for: request)
 

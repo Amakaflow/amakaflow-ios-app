@@ -38,6 +38,9 @@ struct SettingsView: View {
     @State private var showingWorkoutDebugSheet = false
     @State private var showingVoiceTranscriptionSettings = false
     @State private var showingErrorLogSheet = false
+    @State private var showDebugSettings = false
+    @State private var debugTapCount = 0
+    @State private var debugTapResetTask: DispatchWorkItem?
     @EnvironmentObject private var garminConnectivity: GarminConnectManager
     @EnvironmentObject private var pairingService: PairingService
     @EnvironmentObject private var workoutsViewModel: WorkoutsViewModel
@@ -127,6 +130,20 @@ struct SettingsView: View {
                         }
                 }
             }
+            #if DEBUG
+            .sheet(isPresented: $showDebugSettings) {
+                NavigationStack {
+                    DebugSettingsView()
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") {
+                                    showDebugSettings = false
+                                }
+                            }
+                        }
+                }
+            }
+            #endif
         }
     }
 
@@ -1400,7 +1417,7 @@ struct SettingsView: View {
                 }
                 #endif
 
-                // App version
+                // App version (hidden 7-tap gesture for debug settings - AMA-271)
                 HStack {
                     Image(systemName: "info.circle")
                         .font(.system(size: 14))
@@ -1409,7 +1426,36 @@ struct SettingsView: View {
                         .font(Theme.Typography.caption)
                         .foregroundColor(Theme.Colors.textTertiary)
                     Spacer()
+                    #if DEBUG
+                    // Show tap progress hint after 3 taps
+                    if debugTapCount >= 3 && debugTapCount < 7 {
+                        Text("\(7 - debugTapCount) more...")
+                            .font(.system(size: 9))
+                            .foregroundColor(Theme.Colors.textTertiary.opacity(0.5))
+                    }
+                    #endif
                 }
+                #if DEBUG
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    // Cancel any pending reset
+                    debugTapResetTask?.cancel()
+
+                    debugTapCount += 1
+                    if debugTapCount >= 7 {
+                        debugTapCount = 0
+                        showDebugSettings = true
+                        return
+                    }
+
+                    // Schedule reset after 2 seconds of inactivity
+                    let task = DispatchWorkItem { [self] in
+                        debugTapCount = 0
+                    }
+                    debugTapResetTask = task
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: task)
+                }
+                #endif
 
                 #if DEBUG
                 // Debug: Copy API token for testing

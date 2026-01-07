@@ -102,6 +102,13 @@
 		V01C301800000000000000 /* TranscriptionReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300800000000000000 /* TranscriptionReviewView.swift */; };
 		V01C301900000000000000 /* VoiceWorkoutReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300900000000000000 /* VoiceWorkoutReviewView.swift */; };
 		W41T1NG000000002C0000002 /* WaitingForWatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = W41T1NG000000001B0000001 /* WaitingForWatchView.swift */; };
+		S1MUL4T10N00000011 /* WorkoutClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000001 /* WorkoutClock.swift */; };
+		S1MUL4T10N00000012 /* UserBehaviorProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000002 /* UserBehaviorProfile.swift */; };
+		S1MUL4T10N00000013 /* UserInputProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000003 /* UserInputProvider.swift */; };
+		S1MUL4T10N00000014 /* SimulatedHealthProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000004 /* SimulatedHealthProvider.swift */; };
+		S1MUL4T10N00000015 /* SimulationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000005 /* SimulationSettings.swift */; };
+		S1MUL4T10N00000016 /* DebugSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000006 /* DebugSettingsView.swift */; };
+		S1MUL4T10N00000017 /* SimulationBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000007 /* SimulationBannerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -261,6 +268,13 @@
 		V01C300800000000000000 /* TranscriptionReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/TranscriptionReviewView.swift; sourceTree = SOURCE_ROOT; };
 		V01C300900000000000000 /* VoiceWorkoutReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceWorkoutReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/VoiceWorkoutReviewView.swift; sourceTree = SOURCE_ROOT; };
 		W41T1NG000000001B0000001 /* WaitingForWatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WaitingForWatchView.swift; path = ../AmakaFlow/Views/Components/WaitingForWatchView.swift; sourceTree = SOURCE_ROOT; };
+		S1MUL4T10N00000001 /* WorkoutClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutClock.swift; path = ../AmakaFlow/Simulation/WorkoutClock.swift; sourceTree = SOURCE_ROOT; };
+		S1MUL4T10N00000002 /* UserBehaviorProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserBehaviorProfile.swift; path = ../AmakaFlow/Simulation/UserBehaviorProfile.swift; sourceTree = SOURCE_ROOT; };
+		S1MUL4T10N00000003 /* UserInputProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserInputProvider.swift; path = ../AmakaFlow/Simulation/UserInputProvider.swift; sourceTree = SOURCE_ROOT; };
+		S1MUL4T10N00000004 /* SimulatedHealthProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SimulatedHealthProvider.swift; path = ../AmakaFlow/Simulation/SimulatedHealthProvider.swift; sourceTree = SOURCE_ROOT; };
+		S1MUL4T10N00000005 /* SimulationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SimulationSettings.swift; path = ../AmakaFlow/Simulation/SimulationSettings.swift; sourceTree = SOURCE_ROOT; };
+		S1MUL4T10N00000006 /* DebugSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugSettingsView.swift; path = ../AmakaFlow/Views/Settings/DebugSettingsView.swift; sourceTree = SOURCE_ROOT; };
+		S1MUL4T10N00000007 /* SimulationBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SimulationBannerView.swift; path = ../AmakaFlow/Views/Components/SimulationBannerView.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -446,6 +460,13 @@
 				F89DB8A09DD1694C469E6F54 /* PlayerControlsView.swift */,
 				3910753486A542ECAA1E5971 /* PreWorkoutDeviceSheet.swift */,
 				W41T1NG000000001B0000001 /* WaitingForWatchView.swift */,
+				S1MUL4T10N00000001 /* WorkoutClock.swift */,
+				S1MUL4T10N00000002 /* UserBehaviorProfile.swift */,
+				S1MUL4T10N00000003 /* UserInputProvider.swift */,
+				S1MUL4T10N00000004 /* SimulatedHealthProvider.swift */,
+				S1MUL4T10N00000005 /* SimulationSettings.swift */,
+				S1MUL4T10N00000006 /* DebugSettingsView.swift */,
+				S1MUL4T10N00000007 /* SimulationBannerView.swift */,
 				F84E22752ED0D59B00459747 /* SettingsView.swift */,
 				F84E22762ED0D59B00459747 /* WorkoutDetailView.swift */,
 				F84E22772ED0D59B00459747 /* WorkoutsView.swift */,
@@ -913,6 +934,13 @@
 				TR4N5CR1PT10N3NG1N31005 /* FitnessVocabulary.swift in Sources */,
 				TR4N5CR1PT10N3NG1N31006 /* PersonalDictionary.swift in Sources */,
 				TR4N5CR1PT10N53TT1NG5101 /* VoiceTranscriptionSettingsView.swift in Sources */,
+				S1MUL4T10N00000011 /* WorkoutClock.swift in Sources */,
+				S1MUL4T10N00000012 /* UserBehaviorProfile.swift in Sources */,
+				S1MUL4T10N00000013 /* UserInputProvider.swift in Sources */,
+				S1MUL4T10N00000014 /* SimulatedHealthProvider.swift in Sources */,
+				S1MUL4T10N00000015 /* SimulationSettings.swift in Sources */,
+				S1MUL4T10N00000016 /* DebugSettingsView.swift in Sources */,
+				S1MUL4T10N00000017 /* SimulationBannerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

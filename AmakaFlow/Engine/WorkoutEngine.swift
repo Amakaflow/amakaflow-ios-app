@@ -17,6 +17,22 @@ private let logger = Logger(subsystem: "com.myamaka.AmakaFlowCompanion", categor
 class WorkoutEngine: ObservableObject {
     static let shared = WorkoutEngine()
 
+    // MARK: - Simulation Mode (AMA-271)
+
+    /// Clock abstraction for timing - can be accelerated in simulation mode
+    private var clock: WorkoutClock
+
+    /// Whether this engine is running in simulation mode
+    @Published private(set) var isSimulation: Bool = false
+
+    /// Health data provider for simulation mode
+    private var healthProvider: HealthDataProvider?
+
+    /// Speed multiplier for display (1.0 = real-time)
+    var simulationSpeed: Double {
+        clock.speedMultiplier
+    }
+
     // MARK: - Published State
 
     @Published private(set) var phase: WorkoutPhase = .idle
@@ -59,15 +75,34 @@ class WorkoutEngine: ObservableObject {
 
     // MARK: - Private
 
-    private var timer: Timer?
     private var audioCueManager = AudioCueManager()
     private var cancellables = Set<AnyCancellable>()
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
     private var workoutStartTime: Date?
     private var cachedDevicePreference: DevicePreference = .appleWatchPhone // Cached to avoid UserDefaults reads in hot path (AMA-226)
 
+    /// Default init for shared singleton (uses real clock by default, but can switch to simulation)
     private init() {
+        self.clock = RealClock()
+        self.isSimulation = false
+        self.healthProvider = nil
         setupBackgroundHandling()
+    }
+
+    /// Configure for simulation mode based on current settings (AMA-271)
+    /// Called automatically when starting a workout if simulation is enabled
+    private func configureForSimulation() {
+        let settings = SimulationSettings.shared
+        if settings.isEnabled {
+            self.clock = settings.createClock()
+            self.healthProvider = settings.createHealthProvider()
+            self.isSimulation = true
+            print("🎮 [Simulation Mode] Enabled - Speed: \(settings.speed)x, Profile: \(settings.profileName)")
+        } else {
+            self.clock = RealClock()
+            self.healthProvider = nil
+            self.isSimulation = false
+        }
     }
 
     // MARK: - Commands
@@ -78,12 +113,14 @@ class WorkoutEngine: ObservableObject {
             end(reason: .userEnded)
         }
 
+        // Configure simulation mode based on current settings (AMA-271)
+        configureForSimulation()
+
         // Clear any saved progress since we're starting fresh
         SavedWorkoutProgress.clear()
 
         // Reset all state for fresh start
-        timer?.invalidate()
-        timer = nil
+        clock.invalidateTimer()
         self.workout = workout
         self.flattenedSteps = flattenIntervals(workout.intervals)
         self.currentStepIndex = 0
@@ -129,8 +166,7 @@ class WorkoutEngine: ObservableObject {
         SavedWorkoutProgress.clear()
 
         // Setup workout state
-        timer?.invalidate()
-        timer = nil
+        clock.invalidateTimer()
         self.workout = workout
         self.flattenedSteps = flattenIntervals(workout.intervals)
 
@@ -177,8 +213,7 @@ class WorkoutEngine: ObservableObject {
         guard phase == .running else { return }
 
         phase = .paused
-        timer?.invalidate()
-        timer = nil
+        clock.invalidateTimer()
         stateVersion += 1
         broadcastState()
         audioCueManager.announcePaused()
@@ -243,10 +278,9 @@ class WorkoutEngine: ObservableObject {
 
     /// Enter the rest phase between exercises
     private func enterRestPhase(restSeconds: Int?) {
-        print("🏋️ enterRestPhase() called. phase before: \(phase), restSeconds: \(restSeconds ?? -1)")
+        print("🏋️ enterRestPhase() called. phase before: \(phase), restSeconds: \(restSeconds ?? -1), isSimulation: \(isSimulation)")
 
-        timer?.invalidate()
-        timer = nil
+        clock.invalidateTimer()
 
         phase = .resting
         print("🏋️ enterRestPhase: phase set to .resting")
@@ -257,6 +291,13 @@ class WorkoutEngine: ObservableObject {
             restRemainingSeconds = seconds
             startRestTimer()
             print("🏋️ enterRestPhase: Starting timed rest of \(seconds)s")
+        } else if isSimulation {
+            // In simulation mode, convert manual rest to short timed rest (3s simulated)
+            // This allows simulation to auto-advance without user interaction
+            isManualRest = false
+            restRemainingSeconds = 3
+            startRestTimer()
+            print("🎮 enterRestPhase: Simulation mode - converting manual rest to 3s timed rest")
         } else {
             // Manual rest (nil or 0 treated as manual "tap when ready")
             isManualRest = true
@@ -271,26 +312,25 @@ class WorkoutEngine: ObservableObject {
     }
 
     private func startRestTimer() {
-        timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.restTimerTick()
-            }
-        }
-        if let timer = timer {
-            RunLoop.main.add(timer, forMode: .common)
+        clock.invalidateTimer()
+        print("🎮 [Rest Timer] Starting with clock speed: \(clock.speedMultiplier)x, restSeconds: \(restRemainingSeconds)")
+        clock.scheduleTimer(interval: 1.0) { [weak self] in
+            self?.restTimerTick()
         }
     }
 
     private func restTimerTick() {
+        print("🎮 [Rest Timer] Tick - remaining: \(restRemainingSeconds)")
         guard restRemainingSeconds > 0 else {
             // Rest complete, advance to next step
+            print("🎮 [Rest Timer] Calling completeRest()")
             completeRest()
             return
         }
 
         restRemainingSeconds -= 1
         elapsedSeconds += 1
+        stateVersion += 1  // Force UI update on every tick
 
         // Countdown audio for last 3 seconds
         if restRemainingSeconds <= 3 && restRemainingSeconds > 0 {
@@ -320,8 +360,7 @@ class WorkoutEngine: ObservableObject {
 
         print("🏋️ Completing rest, advancing to next step")
 
-        timer?.invalidate()
-        timer = nil
+        clock.invalidateTimer()
         restRemainingSeconds = 0
         isManualRest = false
 
@@ -410,8 +449,7 @@ class WorkoutEngine: ObservableObject {
             intervals: workout?.intervals  // (AMA-237) For "Run Again" feature
         )
 
-        timer?.invalidate()
-        timer = nil
+        clock.invalidateTimer()
         phase = .ended
         stateVersion += 1
         broadcastState()
@@ -455,8 +493,7 @@ class WorkoutEngine: ObservableObject {
     }
 
     func reset() {
-        timer?.invalidate()
-        timer = nil
+        clock.invalidateTimer()
 
         // End any active Live Activity
         Task {
@@ -482,17 +519,39 @@ class WorkoutEngine: ObservableObject {
         durationSeconds: Int,
         intervals: [WorkoutInterval]?  // (AMA-237) For "Run Again" feature
     ) {
+        // Check auth status for logging
+        let isPaired = PairingService.shared.isPaired
+        #if DEBUG
+        let isE2EMode = TestAuthStore.shared.isTestModeEnabled
+        let hasAuth = isPaired || isE2EMode
+        #else
+        let isE2EMode = false
+        let hasAuth = isPaired
+        #endif
+
         logger.info("postWorkoutCompletion called")
         logger.info("- workoutId: \(workoutId ?? "nil")")
         logger.info("- workoutName: \(workoutName ?? "nil")")
         logger.info("- startedAt: \(startedAt?.description ?? "nil")")
         logger.info("- durationSeconds: \(durationSeconds)")
-        logger.info("- isPaired: \(PairingService.shared.isPaired)")
+        logger.info("- isPaired: \(isPaired), isE2EMode: \(isE2EMode), hasAuth: \(hasAuth)")
         logger.info("- intervals count: \(intervals?.count ?? 0)")
+
+        // Log to DebugLogService for in-app visibility (AMA-271)
+        DebugLogService.shared.log(
+            "Completion: Starting",
+            details: "workout=\(workoutId ?? "nil"), duration=\(durationSeconds)s",
+            metadata: ["isPaired": "\(isPaired)", "isE2EMode": "\(isE2EMode)", "hasAuth": "\(hasAuth)"]
+        )
 
         guard let workoutId = workoutId,
               let startedAt = startedAt else {
             print("🏋️ Cannot post completion - missing workout ID or start time")
+            DebugLogService.shared.log(
+                "Completion: SKIPPED",
+                details: "Missing workout ID or start time",
+                metadata: ["workoutId": workoutId ?? "nil", "startedAt": startedAt?.description ?? "nil"]
+            )
             return
         }
 
@@ -504,7 +563,7 @@ class WorkoutEngine: ObservableObject {
 
         Task {
             do {
-                _ = try await WorkoutCompletionService.shared.postPhoneWorkoutCompletion(
+                let response = try await WorkoutCompletionService.shared.postPhoneWorkoutCompletion(
                     workoutId: workoutId,
                     workoutName: workoutName ?? "Workout",
                     startedAt: startedAt,
@@ -512,9 +571,15 @@ class WorkoutEngine: ObservableObject {
                     durationSeconds: durationSeconds,
                     avgHeartRate: avgHeartRate,
                     activeCalories: activeCalories,
-                    workoutStructure: intervals  // (AMA-240) Include workout structure for "Run Again"
+                    workoutStructure: intervals,  // (AMA-240) Include workout structure for "Run Again"
+                    isSimulated: isSimulation     // (AMA-271) Flag simulated workouts
                 )
                 logger.info("Workout completion posted successfully")
+                DebugLogService.shared.log(
+                    "Completion: SUCCESS",
+                    details: "Posted for workout \(workoutId)",
+                    metadata: ["completionId": response?.resolvedCompletionId ?? "nil"]
+                )
 
                 // Notify WorkoutsViewModel to remove from incoming/upcoming lists (AMA-237)
                 NotificationCenter.default.post(
@@ -524,13 +589,25 @@ class WorkoutEngine: ObservableObject {
                 )
             } catch {
                 logger.error("Failed to post workout completion: \(error.localizedDescription)")
+                DebugLogService.shared.logCompletionError(
+                    workoutId: workoutId,
+                    error: error,
+                    context: "WorkoutEngine.postWorkoutCompletion"
+                )
                 // Error is already logged and queued for retry by WorkoutCompletionService
             }
         }
     }
 
-    /// Get health metrics - uses mock data in E2E test mode, otherwise from Watch
+    /// Get health metrics - uses simulated data in simulation mode, mock data in E2E test mode, otherwise from Watch
     private func getHealthMetrics(durationSeconds: Int) -> (avgHeartRate: Int?, activeCalories: Int?) {
+        // Check for simulation mode health provider first (AMA-271)
+        if isSimulation, let provider = healthProvider {
+            let data = provider.getCollectedData()
+            print("🏋️ [Simulation Mode] Using simulated health data: avgHR=\(data.avgHR), calories=\(data.calories)")
+            return (data.avgHR, data.calories)
+        }
+
         #if DEBUG
         // Check if running in E2E test mode (via TestAuthStore - supports both env vars and UI bypass)
         if TestAuthStore.shared.isTestModeEnabled {
@@ -567,8 +644,7 @@ class WorkoutEngine: ObservableObject {
     // MARK: - Timer Management
 
     private func setupCurrentStep() {
-        timer?.invalidate()
-        timer = nil
+        clock.invalidateTimer()
 
         guard let step = currentStep else {
             print("🏋️ setupCurrentStep: No current step! Index: \(currentStepIndex)")
@@ -587,6 +663,13 @@ class WorkoutEngine: ObservableObject {
                 startTimer()
                 print("🏋️ Timer started with \(seconds) seconds")
             }
+        } else if isSimulation && (step.stepType == .reps || step.stepType == .distance) {
+            // In simulation mode, give reps/distance steps a short timer to auto-advance
+            remainingSeconds = 5  // 5 seconds simulated time to "complete" the step
+            if phase == .running {
+                startTimer()
+                print("🎮 Simulation mode: Starting 5s timer for \(step.stepType) step")
+            }
         } else {
             remainingSeconds = 0
             print("🏋️ No timer for this step (reps/distance)")
@@ -594,24 +677,21 @@ class WorkoutEngine: ObservableObject {
     }
 
     private func startTimer() {
-        timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.timerTick()
-            }
-        }
-        // Make sure timer fires even during scroll
-        if let timer = timer {
-            RunLoop.main.add(timer, forMode: .common)
+        clock.invalidateTimer()
+        print("🎮 [Work Timer] Starting with clock speed: \(clock.speedMultiplier)x, remainingSeconds: \(remainingSeconds)")
+        clock.scheduleTimer(interval: 1.0) { [weak self] in
+            self?.timerTick()
         }
     }
 
     private func timerTick() {
         elapsedSeconds += 1
+        print("🎮 [Work Timer] Tick - remaining: \(remainingSeconds), elapsed: \(elapsedSeconds)")
 
         guard remainingSeconds > 0 else {
-            // For reps-based steps, don't auto-advance
-            if currentStep?.stepType == .reps {
+            // For reps/distance steps, don't auto-advance (unless in simulation mode)
+            let stepType = currentStep?.stepType
+            if (stepType == .reps || stepType == .distance) && !isSimulation {
                 return
             }
             nextStep()

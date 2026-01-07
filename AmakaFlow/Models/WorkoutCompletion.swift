@@ -22,6 +22,7 @@ struct WorkoutCompletion: Identifiable, Codable, Hashable {
     let syncedToStrava: Bool?    // Optional - backend may not return this
     let workoutId: String?       // Link to original workout (AMA-237)
     let originalWorkout: Workout? // Full workout for re-running (AMA-237)
+    let isSimulated: Bool?       // True if workout was run in simulation mode (AMA-271)
 
     /// Computed endedAt from startedAt + durationSeconds if not provided
     var resolvedEndedAt: Date {
@@ -36,6 +37,11 @@ struct WorkoutCompletion: Identifiable, Codable, Hashable {
     /// Whether this completion can be re-run (has original workout data)
     var canRerun: Bool {
         originalWorkout != nil
+    }
+
+    /// Whether this was a simulated workout (AMA-271)
+    var wasSimulated: Bool {
+        isSimulated ?? false
     }
 
     enum CompletionSource: String, Codable {
@@ -195,7 +201,8 @@ extension WorkoutCompletion {
                 source: .appleWatch,
                 syncedToStrava: true,
                 workoutId: "workout-1",
-                originalWorkout: nil
+                originalWorkout: nil,
+                isSimulated: false
             ),
             WorkoutCompletion(
                 id: "2",
@@ -209,7 +216,8 @@ extension WorkoutCompletion {
                 source: .appleWatch,
                 syncedToStrava: false,
                 workoutId: "workout-2",
-                originalWorkout: nil
+                originalWorkout: nil,
+                isSimulated: false
             ),
             WorkoutCompletion(
                 id: "3",
@@ -223,7 +231,8 @@ extension WorkoutCompletion {
                 source: .appleWatch,
                 syncedToStrava: false,
                 workoutId: nil,
-                originalWorkout: nil
+                originalWorkout: nil,
+                isSimulated: false
             ),
             WorkoutCompletion(
                 id: "4",
@@ -237,7 +246,8 @@ extension WorkoutCompletion {
                 source: .garmin,
                 syncedToStrava: true,
                 workoutId: "workout-4",
-                originalWorkout: nil
+                originalWorkout: nil,
+                isSimulated: false
             ),
             WorkoutCompletion(
                 id: "5",
@@ -251,7 +261,8 @@ extension WorkoutCompletion {
                 source: .phone,
                 syncedToStrava: false,
                 workoutId: nil,
-                originalWorkout: nil
+                originalWorkout: nil,
+                isSimulated: false
             )
         ]
     }
