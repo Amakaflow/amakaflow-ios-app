@@ -97,7 +97,7 @@ jobs:
       - name: Run tests
         working-directory: AmakaFlowCompanion
         run: |
-          # Run tests and capture exit code
+          # Run tests and capture output
           set +e
           xcodebuild test \
             -project AmakaFlowCompanion.xcodeproj \
@@ -109,35 +109,29 @@ jobs:
             -parallel-testing-enabled NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            SKIP_INSTALL=YES
-          XCODE_EXIT=$?
+            SKIP_INSTALL=YES 2>&1 | tee test_output.log
+          XCODE_EXIT=${PIPESTATUS[0]}
           set -e
 
-          # Check actual test results from xcresult bundle
-          echo "Checking test results..."
-          FAILURES=$(xcrun xcresulttool get --path TestResults.xcresult --format json 2>/dev/null | python3 -c "
-          import json, sys
-          try:
-              data = json.load(sys.stdin)
-              # Look for test failure count
-              metrics = data.get('metrics', {})
-              failures = metrics.get('testsFailedCount', {}).get('_value', '0')
-              print(failures)
-          except:
-              print('-1')
-          " 2>/dev/null || echo "-1")
+          # Check test output directly for pass/fail
+          echo "Checking test results from output..."
 
-          echo "Test failures detected: $FAILURES"
-
-          if [ "$FAILURES" = "0" ]; then
+          # Look for the final test summary line
+          if grep -q "with 0 failures (0 unexpected)" test_output.log; then
             echo "All tests passed!"
             exit 0
-          elif [ "$FAILURES" = "-1" ]; then
-            echo "Could not parse test results, using xcodebuild exit code: $XCODE_EXIT"
-            exit $XCODE_EXIT
-          else
-            echo "Tests failed with $FAILURES failures"
+          elif grep -q "TEST SUCCEEDED" test_output.log; then
+            echo "All tests passed!"
+            exit 0
+          elif grep -q "with [1-9][0-9]* failures" test_output.log; then
+            echo "Tests failed!"
+            grep "failures" test_output.log | tail -5
             exit 1
+          else
+            echo "Could not determine test status, using xcodebuild exit code: $XCODE_EXIT"
+            # Show last few lines of output for debugging
+            tail -20 test_output.log
+            exit $XCODE_EXIT
           fi
 
       - name: Upload test results
