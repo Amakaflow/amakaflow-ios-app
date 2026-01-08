@@ -180,7 +180,8 @@ final class WorkoutCompletionViewModelTests: XCTestCase {
             heartRateSamples: nil,
             workoutStructure: workoutStructure,
             workoutName: "Test Workout",
-            isSimulated: false
+            isSimulated: false,
+            setLogs: nil
         )
 
         // When encoding
@@ -217,7 +218,8 @@ final class WorkoutCompletionViewModelTests: XCTestCase {
             heartRateSamples: nil,
             workoutStructure: nil,
             workoutName: nil,
-            isSimulated: false
+            isSimulated: false,
+            setLogs: nil
         )
 
         // When encoding
@@ -252,7 +254,8 @@ final class WorkoutCompletionViewModelTests: XCTestCase {
             heartRateSamples: nil,
             workoutStructure: [],
             workoutName: "My Workout",
-            isSimulated: false
+            isSimulated: false,
+            setLogs: nil
         )
 
         // When encoding
