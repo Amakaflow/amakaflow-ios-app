@@ -46,6 +46,13 @@ class WorkoutEngine: ObservableObject {
     @Published private(set) var restRemainingSeconds: Int = 0
     @Published private(set) var isManualRest: Bool = false
 
+    // Set weight tracking (AMA-281)
+    /// Tracks set weights during workout, keyed by exercise name
+    private var exerciseSetEntries: [String: [SetEntry]] = [:]
+    /// Tracks exercise index for each exercise name (order encountered)
+    private var exerciseIndexMap: [String: Int] = [:]
+    private var nextExerciseIndex: Int = 0
+
     // MARK: - Flattened Steps
 
     private(set) var flattenedSteps: [FlattenedInterval] = []
@@ -131,6 +138,7 @@ class WorkoutEngine: ObservableObject {
         self.phase = .running
         self.stateVersion += 1
         self.workoutStartTime = Date()
+        clearSetTracking()  // (AMA-281) Reset weight tracking
 
         // Cache device preference at start to avoid UserDefaults reads during workout (AMA-226)
         self.cachedDevicePreference = devicePreference
@@ -389,6 +397,87 @@ class WorkoutEngine: ObservableObject {
         completeRest()
     }
 
+    // MARK: - Set Weight Tracking (AMA-281)
+
+    /// Log weight for the current set and advance to next step
+    /// - Parameters:
+    ///   - weight: Weight used (nil if skipped)
+    ///   - unit: Weight unit ("lbs" or "kg")
+    func logSetWeight(weight: Double?, unit: String?) {
+        guard let step = currentStep, step.stepType == .reps else {
+            print("🏋️ logSetWeight: Not a reps step, ignoring")
+            nextStep()
+            return
+        }
+
+        let exerciseName = step.label
+        let setNumber = step.setNumber ?? 1
+
+        // Track exercise index (first time we see this exercise)
+        if exerciseIndexMap[exerciseName] == nil {
+            exerciseIndexMap[exerciseName] = nextExerciseIndex
+            nextExerciseIndex += 1
+        }
+
+        // Create set entry
+        let entry = SetEntry(
+            setNumber: setNumber,
+            weight: weight,
+            unit: weight != nil ? unit : nil,
+            completed: true
+        )
+
+        // Add to exercise's set list
+        if exerciseSetEntries[exerciseName] == nil {
+            exerciseSetEntries[exerciseName] = []
+        }
+        exerciseSetEntries[exerciseName]?.append(entry)
+
+        print("🏋️ Logged set: \(exerciseName) set \(setNumber) - weight: \(weight ?? 0) \(unit ?? "")")
+
+        // Advance to next step (which may trigger rest phase)
+        nextStep()
+    }
+
+    /// Build SetLog array for workout completion submission
+    func buildSetLogs() -> [SetLog]? {
+        guard !exerciseSetEntries.isEmpty else { return nil }
+
+        var logs: [SetLog] = []
+        for (exerciseName, entries) in exerciseSetEntries {
+            let exerciseIndex = exerciseIndexMap[exerciseName] ?? 0
+            let log = SetLog(
+                exerciseName: exerciseName,
+                exerciseIndex: exerciseIndex,
+                sets: entries
+            )
+            logs.append(log)
+        }
+
+        // Sort by exercise index to maintain workout order
+        return logs.sorted { $0.exerciseIndex < $1.exerciseIndex }
+    }
+
+    /// Clear set tracking data (called on workout start/reset)
+    private func clearSetTracking() {
+        exerciseSetEntries.removeAll()
+        exerciseIndexMap.removeAll()
+        nextExerciseIndex = 0
+    }
+
+    /// Get the last logged weight for an exercise (for pre-filling subsequent sets)
+    /// - Parameter exerciseName: The exercise name to look up
+    /// - Returns: Tuple of (weight, unit) if found, nil otherwise
+    func getLastWeight(for exerciseName: String) -> (weight: Double, unit: String)? {
+        guard let entries = exerciseSetEntries[exerciseName],
+              let lastEntry = entries.last(where: { $0.weight != nil }),
+              let weight = lastEntry.weight,
+              let unit = lastEntry.unit else {
+            return nil
+        }
+        return (weight, unit)
+    }
+
     func previousStep() {
         guard currentStepIndex > 0 else { return }
 
@@ -446,7 +535,8 @@ class WorkoutEngine: ObservableObject {
             name: workout?.name,
             startTime: workoutStartTime,
             duration: elapsedSeconds,
-            intervals: workout?.intervals  // (AMA-237) For "Run Again" feature
+            intervals: workout?.intervals,  // (AMA-237) For "Run Again" feature
+            setLogs: buildSetLogs()         // (AMA-281) Weight tracking
         )
 
         clock.invalidateTimer()
@@ -465,7 +555,8 @@ class WorkoutEngine: ObservableObject {
                 workoutName: workoutData.name,
                 startedAt: workoutData.startTime,
                 durationSeconds: workoutData.duration,
-                intervals: workoutData.intervals  // (AMA-237) For "Run Again" feature
+                intervals: workoutData.intervals,  // (AMA-237) For "Run Again" feature
+                setLogs: workoutData.setLogs       // (AMA-281) Weight tracking
             )
         } else if reason == .discarded {
             print("🏋️ Workout discarded - not posting to API")
@@ -508,6 +599,7 @@ class WorkoutEngine: ObservableObject {
         elapsedSeconds = 0
         stateVersion += 1
         workoutStartTime = nil
+        clearSetTracking()  // (AMA-281) Clear weight tracking
     }
 
     // MARK: - Workout Completion
@@ -517,7 +609,8 @@ class WorkoutEngine: ObservableObject {
         workoutName: String?,
         startedAt: Date?,
         durationSeconds: Int,
-        intervals: [WorkoutInterval]?  // (AMA-237) For "Run Again" feature
+        intervals: [WorkoutInterval]?,  // (AMA-237) For "Run Again" feature
+        setLogs: [SetLog]?              // (AMA-281) Weight tracking
     ) {
         // Check auth status for logging
         let isPaired = PairingService.shared.isPaired
@@ -572,7 +665,8 @@ class WorkoutEngine: ObservableObject {
                     avgHeartRate: avgHeartRate,
                     activeCalories: activeCalories,
                     workoutStructure: intervals,  // (AMA-240) Include workout structure for "Run Again"
-                    isSimulated: isSimulation     // (AMA-271) Flag simulated workouts
+                    isSimulated: isSimulation,    // (AMA-271) Flag simulated workouts
+                    setLogs: setLogs              // (AMA-281) Weight tracking
                 )
                 logger.info("Workout completion posted successfully")
                 DebugLogService.shared.log(

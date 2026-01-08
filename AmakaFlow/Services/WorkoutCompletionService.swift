@@ -25,6 +25,7 @@ struct WorkoutCompletionRequest: Codable {
     let workoutStructure: [WorkoutInterval]?  // Workout structure for "Run Again" (AMA-240)
     let workoutName: String?                  // Workout name for display (AMA-237)
     let isSimulated: Bool?                    // True if workout was run in simulation mode (AMA-271)
+    let setLogs: [SetLog]?                    // Weight logs per exercise/set (AMA-281)
 
     enum CodingKeys: String, CodingKey {
         case workoutEventId = "workout_event_id"
@@ -39,6 +40,7 @@ struct WorkoutCompletionRequest: Codable {
         case workoutStructure = "workout_structure"
         case workoutName = "workout_name"
         case isSimulated = "is_simulated"
+        case setLogs = "set_logs"
     }
 }
 
@@ -77,6 +79,36 @@ struct WorkoutDeviceInfo: Codable {
 struct HRSample: Codable {
     let timestamp: String  // ISO8601
     let value: Int
+}
+
+// MARK: - Set Logging Models (AMA-281)
+
+/// Individual set within an exercise log
+struct SetEntry: Codable {
+    let setNumber: Int
+    let weight: Double?
+    let unit: String?
+    let completed: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case setNumber = "set_number"
+        case weight
+        case unit
+        case completed
+    }
+}
+
+/// Log of sets for a single exercise
+struct SetLog: Codable {
+    let exerciseName: String
+    let exerciseIndex: Int
+    let sets: [SetEntry]
+
+    enum CodingKeys: String, CodingKey {
+        case exerciseName = "exercise_name"
+        case exerciseIndex = "exercise_index"
+        case sets
+    }
 }
 
 struct WorkoutCompletionResponse: Codable {
@@ -153,7 +185,8 @@ class WorkoutCompletionService: ObservableObject {
         avgHeartRate: Int? = nil,
         activeCalories: Int? = nil,
         workoutStructure: [WorkoutInterval]? = nil,  // (AMA-240) Workout structure for "Run Again"
-        isSimulated: Bool = false                    // (AMA-271) Simulation mode flag
+        isSimulated: Bool = false,                   // (AMA-271) Simulation mode flag
+        setLogs: [SetLog]? = nil                     // (AMA-281) Weight logs per exercise/set
     ) async throws -> WorkoutCompletionResponse? {
         let healthMetrics = HealthMetrics(
             avgHeartRate: avgHeartRate,
@@ -183,7 +216,8 @@ class WorkoutCompletionService: ObservableObject {
             heartRateSamples: nil,
             workoutStructure: workoutStructure,
             workoutName: workoutName,
-            isSimulated: isSimulated ? true : nil  // Only send if true (AMA-271)
+            isSimulated: isSimulated ? true : nil,  // Only send if true (AMA-271)
+            setLogs: setLogs                        // (AMA-281) Weight logs
         )
 
         return try await postCompletion(request)
@@ -223,7 +257,8 @@ class WorkoutCompletionService: ObservableObject {
             heartRateSamples: nil,
             workoutStructure: workoutStructure,
             workoutName: workoutName,
-            isSimulated: nil  // Watch workouts are never simulated
+            isSimulated: nil,  // Watch workouts are never simulated
+            setLogs: nil       // Watch weight tracking coming in AMA-286
         )
 
         return try await postCompletion(request)
@@ -267,7 +302,8 @@ class WorkoutCompletionService: ObservableObject {
             heartRateSamples: nil,
             workoutStructure: workoutStructure,
             workoutName: workoutName,
-            isSimulated: nil  // Garmin workouts are never simulated
+            isSimulated: nil,  // Garmin workouts are never simulated
+            setLogs: nil       // Garmin weight tracking coming in AMA-288
         )
 
         return try await postCompletion(request)
