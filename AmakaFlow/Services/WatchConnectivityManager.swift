@@ -313,6 +313,11 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 handleWorkoutSummary(message)
                 replyHandler(["status": "received"])
 
+            case "logSet":
+                // AMA-286: Weight log from watch
+                handleSetLog(message)
+                replyHandler(["status": "received"])
+
             default:
                 replyHandler(["status": "unknown_action"])
             }
@@ -327,9 +332,24 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 handleHealthMetrics(message)
             case "workoutSummary":
                 handleWorkoutSummary(message)
+            case "logSet":
+                handleSetLog(message)
             default:
                 break
             }
+        }
+    }
+
+    // MARK: - Set Log Handler (AMA-286)
+
+    private func handleSetLog(_ message: [String: Any]) {
+        let weight = message["weight"] as? Double
+        let unit = message["unit"] as? String
+
+        Task { @MainActor in
+            // Log the weight and advance to next step
+            WorkoutEngine.shared.logSetWeight(weight: weight, unit: unit)
+            print("⌚️ Received set log from watch - weight: \(weight ?? 0) \(unit ?? "")")
         }
     }
 

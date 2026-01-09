@@ -910,7 +910,25 @@ class WorkoutEngine: ObservableObject {
     }
 
     private func buildCurrentState() -> WorkoutState {
-        WorkoutState(
+        // AMA-286: Include weight data for reps steps
+        let step = currentStep
+        let setNumber = step?.setNumber
+        let totalSets = step?.totalSets
+        var suggestedWeight: Double? = nil
+        var weightUnit: String? = nil
+
+        // If this is a reps step, get suggested weight from last logged entry
+        if step?.stepType == .reps, let exerciseName = step?.label {
+            if let lastWeight = getLastWeight(for: exerciseName) {
+                suggestedWeight = lastWeight.weight
+                weightUnit = lastWeight.unit
+            } else {
+                // Default to lbs if no previous weight
+                weightUnit = "lbs"
+            }
+        }
+
+        return WorkoutState(
             stateVersion: stateVersion,
             workoutId: workout?.id ?? "",
             workoutName: workout?.name ?? "",
@@ -922,7 +940,11 @@ class WorkoutEngine: ObservableObject {
             remainingMs: remainingSeconds * 1000,
             roundInfo: currentStep?.roundInfo,
             targetReps: currentStep?.targetReps,
-            lastCommandAck: nil
+            lastCommandAck: nil,
+            setNumber: setNumber,
+            totalSets: totalSets,
+            suggestedWeight: suggestedWeight,
+            weightUnit: weightUnit
         )
     }
 

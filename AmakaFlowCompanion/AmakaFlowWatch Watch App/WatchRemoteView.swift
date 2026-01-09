@@ -17,12 +17,12 @@ class DemoModeState: ObservableObject {
 
     let totalScreens = 5
 
-    // Demo screen types: 0=idle, 1=rep-based, 2=timed, 3=paused, 4=complete
+    // Demo screen types: 0=idle, 1=rep-based with weight, 2=timed, 3=paused, 4=complete
     var demoWorkoutState: WatchWorkoutState? {
         guard isEnabled else { return nil }
 
         switch currentScreen {
-        case 1: // Rep-based step (Jumping Jacks)
+        case 1: // Rep-based step with weight input (AMA-286 demo)
             return WorkoutState(
                 stateVersion: 1,
                 workoutId: "demo-1",
@@ -30,11 +30,16 @@ class DemoModeState: ObservableObject {
                 phase: .running,
                 stepIndex: 1,
                 stepCount: 7,
-                stepName: "Jumping Jacks",
+                stepName: "Bench Press",
                 stepType: .reps,
                 remainingMs: nil,
-                roundInfo: "Round 2 of 3",
-                lastCommandAck: nil
+                roundInfo: nil,
+                targetReps: 10,
+                lastCommandAck: nil,
+                setNumber: 2,
+                totalSets: 4,
+                suggestedWeight: 135,
+                weightUnit: "lbs"
             )
         case 2: // Timed step (Warm Up)
             return WorkoutState(
@@ -58,11 +63,15 @@ class DemoModeState: ObservableObject {
                 phase: .paused,
                 stepIndex: 1,
                 stepCount: 7,
-                stepName: "Jumping Jacks",
+                stepName: "Bench Press",
                 stepType: .reps,
                 remainingMs: nil,
-                roundInfo: "Round 2 of 3",
-                lastCommandAck: nil
+                roundInfo: nil,
+                lastCommandAck: nil,
+                setNumber: 2,
+                totalSets: 4,
+                suggestedWeight: 135,
+                weightUnit: "lbs"
             )
         case 4: // Complete
             return WorkoutState(
@@ -222,6 +231,49 @@ struct WatchRemoteView: View {
 
     @ViewBuilder
     private func activeWorkoutView(state: WatchWorkoutState) -> some View {
+        // AMA-286: Show weight input for reps steps with set information
+        if state.stepType == .reps, let setNumber = state.setNumber, let totalSets = state.totalSets {
+            weightInputView(state: state, setNumber: setNumber, totalSets: totalSets)
+        } else {
+            standardWorkoutView(state: state)
+        }
+    }
+
+    // MARK: - Weight Input View (AMA-286)
+
+    @ViewBuilder
+    private func weightInputView(state: WatchWorkoutState, setNumber: Int, totalSets: Int) -> some View {
+        WeightInputWatchView(
+            exerciseName: state.stepName,
+            setNumber: setNumber,
+            totalSets: totalSets,
+            suggestedWeight: state.suggestedWeight,
+            weightUnit: state.weightUnit ?? "lbs",
+            onLogSet: { weight, unit in
+                // Send set log to iPhone and advance to next step
+                bridge.sendSetLog(
+                    exerciseIndex: state.stepIndex,
+                    setNumber: setNumber,
+                    weight: weight,
+                    unit: unit
+                )
+            },
+            onSkipWeight: {
+                // Skip weight (log nil) and advance
+                bridge.sendSetLog(
+                    exerciseIndex: state.stepIndex,
+                    setNumber: setNumber,
+                    weight: nil,
+                    unit: nil
+                )
+            }
+        )
+    }
+
+    // MARK: - Standard Workout View (non-weight steps)
+
+    @ViewBuilder
+    private func standardWorkoutView(state: WatchWorkoutState) -> some View {
         ScrollView {
             VStack(spacing: 4) {
                 // Connection warning if phone not reachable (compact)
@@ -252,7 +304,7 @@ struct WatchRemoteView: View {
                         .monospacedDigit()
                         .foregroundColor(state.isPaused ? .orange : .primary)
                 } else if let reps = state.targetReps, reps > 0 {
-                    // Reps display for rep-based steps
+                    // Reps display for rep-based steps (without set tracking)
                     Text("\(reps) reps")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundColor(.blue)
@@ -487,10 +539,20 @@ struct WatchRemoteView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 
-            Button("Retry") {
-                bridge.requestCurrentState()
+            HStack(spacing: 12) {
+                Button("Retry") {
+                    bridge.requestCurrentState()
+                }
+                .buttonStyle(.bordered)
+
+                Button("Demo") {
+                    withAnimation {
+                        demoState.toggle()
+                    }
+                }
+                .buttonStyle(.bordered)
+                .tint(.yellow)
             }
-            .buttonStyle(.bordered)
         }
     }
 

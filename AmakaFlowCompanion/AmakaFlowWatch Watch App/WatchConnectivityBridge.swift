@@ -159,6 +159,57 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
         print("⌚️ Sent command: \(command.rawValue)")
     }
 
+    // MARK: - Send Set Log (AMA-286)
+
+    /// Send weight log for a set to iPhone
+    /// - Parameters:
+    ///   - exerciseIndex: Index of the exercise in the workout
+    ///   - setNumber: Set number (1-based)
+    ///   - weight: Weight used (nil if skipped)
+    ///   - unit: Weight unit ("lbs" or "kg")
+    func sendSetLog(exerciseIndex: Int, setNumber: Int, weight: Double?, unit: String?) {
+        guard let session = session, session.isReachable else {
+            print("⌚️ Phone not reachable, cannot send set log")
+            lastError = WatchConnectivityBridgeError.phoneNotReachable
+            playHaptic(.failure)
+            return
+        }
+
+        var message: [String: Any] = [
+            "action": "logSet",
+            "exerciseIndex": exerciseIndex,
+            "setNumber": setNumber
+        ]
+
+        if let weight = weight {
+            message["weight"] = weight
+        }
+        if let unit = unit {
+            message["unit"] = unit
+        }
+
+        session.sendMessage(
+            message,
+            replyHandler: { [weak self] reply in
+                Task { @MainActor in
+                    if reply["status"] as? String == "received" {
+                        print("⌚️ Set log acknowledged")
+                        self?.playHaptic(.success)
+                    }
+                }
+            },
+            errorHandler: { [weak self] error in
+                Task { @MainActor in
+                    print("⌚️ Failed to send set log: \(error)")
+                    self?.lastError = error
+                    self?.playHaptic(.failure)
+                }
+            }
+        )
+
+        print("⌚️ Sent set log: exercise=\(exerciseIndex), set=\(setNumber), weight=\(weight ?? 0) \(unit ?? "")")
+    }
+
     // MARK: - Request State
 
     func requestCurrentState() {

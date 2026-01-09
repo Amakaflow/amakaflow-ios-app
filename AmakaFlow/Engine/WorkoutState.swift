@@ -82,6 +82,12 @@ struct WorkoutState: Codable {
     let targetReps: Int?
     let lastCommandAck: CommandAck?
 
+    // AMA-286: Weight capture support
+    let setNumber: Int?          // Current set number (1-based)
+    let totalSets: Int?          // Total sets for this exercise
+    let suggestedWeight: Double? // Pre-fill from last logged weight
+    let weightUnit: String?      // "lbs" or "kg"
+
     init(
         stateVersion: Int,
         workoutId: String,
@@ -94,7 +100,11 @@ struct WorkoutState: Codable {
         remainingMs: Int?,
         roundInfo: String?,
         targetReps: Int? = nil,
-        lastCommandAck: CommandAck?
+        lastCommandAck: CommandAck?,
+        setNumber: Int? = nil,
+        totalSets: Int? = nil,
+        suggestedWeight: Double? = nil,
+        weightUnit: String? = nil
     ) {
         self.stateVersion = stateVersion
         self.workoutId = workoutId
@@ -108,6 +118,10 @@ struct WorkoutState: Codable {
         self.roundInfo = roundInfo
         self.targetReps = targetReps
         self.lastCommandAck = lastCommandAck
+        self.setNumber = setNumber
+        self.totalSets = totalSets
+        self.suggestedWeight = suggestedWeight
+        self.weightUnit = weightUnit
     }
 }
 
