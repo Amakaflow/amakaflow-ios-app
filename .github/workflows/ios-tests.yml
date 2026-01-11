@@ -8,17 +8,10 @@ on:
   schedule:
     - cron: '0 6 * * *'  # Nightly full test run with coverage
 
-env:
-  DERIVED_DATA_PATH: DerivedData
-  SCHEME: AmakaFlowCompanion
-  PROJECT: AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj
-
 jobs:
-  build:
-    name: Build for Testing
+  test:
+    name: Unit Tests
     runs-on: macos-15
-    outputs:
-      simulator_name: ${{ steps.simulator.outputs.name }}
 
     steps:
       - name: Checkout code
@@ -26,15 +19,10 @@ jobs:
 
       - name: Clone workoutkit-sync dependency
         run: |
-          # The project references ../../../workoutkit-sync relative to AmakaFlowCompanion/
-          # Checkout is at /Users/runner/work/amakaflow-ios-app/amakaflow-ios-app
-          # Need to clone to /Users/runner/work/workoutkit-sync
           git clone https://github.com/supergeri/workoutkit-sync.git ../../workoutkit-sync
-          ls -la ../../
 
       - name: Select Xcode
         run: |
-          # Use Xcode 26.x (beta) which properly handles PBXFileSystemSynchronizedRootGroup
           XCODE_PATH=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
           if [ -z "$XCODE_PATH" ]; then
             XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
@@ -61,7 +49,7 @@ jobs:
         with:
           path: |
             ~/Library/Caches/org.swift.swiftpm
-            ${{ env.DERIVED_DATA_PATH }}/SourcePackages
+            AmakaFlowCompanion/DerivedData/SourcePackages
           key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
           restore-keys: |
             ${{ runner.os }}-spm-
@@ -70,14 +58,7 @@ jobs:
         working-directory: AmakaFlowCompanion
         run: |
           cat > AmakaFlowCompanionUITests/TestCredentials.swift << 'EOF'
-          //
-          //  TestCredentials.swift
-          //  AmakaFlowCompanionUITests
-          //
-          //  CI Stub - placeholder values for compilation only
-          //
           import Foundation
-
           enum TestCredentials {
               static let testAuthSecret = "ci-stub-not-for-testing"
               static let userId = "ci_stub_user"
@@ -98,87 +79,27 @@ jobs:
         run: |
           xcodebuild build-for-testing \
             -project AmakaFlowCompanion.xcodeproj \
-            -scheme ${{ env.SCHEME }} \
+            -scheme AmakaFlowCompanion \
             -destination 'platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}' \
-            -derivedDataPath ${{ env.DERIVED_DATA_PATH }} \
+            -derivedDataPath DerivedData \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             SKIP_INSTALL=YES
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-for-testing
-          path: AmakaFlowCompanion/${{ env.DERIVED_DATA_PATH }}
-          retention-days: 1
-
-  test:
-    name: Test ${{ matrix.shard.name }}
-    needs: build
-    runs-on: macos-15
-    strategy:
-      fail-fast: false
-      matrix:
-        shard:
-          - name: "Engine"
-            tests: "AmakaFlowCompanionTests/WorkoutEngineTests,AmakaFlowCompanionTests/WorkoutEngineEdgeCaseTests"
-          - name: "ViewModels"
-            tests: "AmakaFlowCompanionTests/WorkoutsViewModelTests,AmakaFlowCompanionTests/WorkoutCompletionViewModelTests"
-          - name: "Models"
-            tests: "AmakaFlowCompanionTests/WorkoutModelTests,AmakaFlowCompanionTests/ActivityHistoryTests"
-          - name: "Services"
-            tests: "AmakaFlowCompanionTests/PairingTests,AmakaFlowCompanionTests/WatchConnectivityTests,AmakaFlowCompanionTests/TranscriptionTests"
-          - name: "Completion"
-            tests: "AmakaFlowCompanionTests/CompletionDetailTests"
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Clone workoutkit-sync dependency
-        run: |
-          git clone https://github.com/supergeri/workoutkit-sync.git ../../workoutkit-sync
-
-      - name: Select Xcode
-        run: |
-          XCODE_PATH=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
-          if [ -z "$XCODE_PATH" ]; then
-            XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
-          fi
-          sudo xcode-select -s "$XCODE_PATH"
-
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: build-for-testing
-          path: AmakaFlowCompanion/${{ env.DERIVED_DATA_PATH }}
-
-      - name: Boot simulator
-        run: |
-          DEVICE_ID=$(xcrun simctl list devices available | grep "${{ needs.build.outputs.simulator_name }}" | head -1 | grep -oE "[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}")
-          echo "Booting simulator: $DEVICE_ID"
-          xcrun simctl boot "$DEVICE_ID" || true
-
-      - name: Run tests (${{ matrix.shard.name }})
+      - name: Run tests (parallel, no coverage)
         working-directory: AmakaFlowCompanion
         run: |
-          # Build test arguments for this shard
-          TEST_ARGS=""
-          IFS=',' read -ra TESTS <<< "${{ matrix.shard.tests }}"
-          for test in "${TESTS[@]}"; do
-            TEST_ARGS="$TEST_ARGS -only-testing:$test"
-          done
-
           set +e
           xcodebuild test-without-building \
             -project AmakaFlowCompanion.xcodeproj \
-            -scheme ${{ env.SCHEME }} \
-            -destination 'platform=iOS Simulator,name=${{ needs.build.outputs.simulator_name }}' \
-            -derivedDataPath ${{ env.DERIVED_DATA_PATH }} \
-            -resultBundlePath TestResults-${{ matrix.shard.name }} \
+            -scheme AmakaFlowCompanion \
+            -destination 'platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}' \
+            -derivedDataPath DerivedData \
+            -only-testing:AmakaFlowCompanionTests \
+            -resultBundlePath TestResults \
             -parallel-testing-enabled YES \
             -parallel-testing-worker-count 4 \
-            $TEST_ARGS 2>&1 | tee test_output.log
+            2>&1 | tee test_output.log
           XCODE_EXIT=${PIPESTATUS[0]}
           set -e
 
@@ -203,13 +124,13 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results-${{ matrix.shard.name }}
-          path: AmakaFlowCompanion/TestResults-${{ matrix.shard.name }}
+          name: test-results
+          path: AmakaFlowCompanion/TestResults
           retention-days: 7
 
   # Nightly job runs full suite with code coverage
   nightly:
-    name: Nightly Full Suite with Coverage
+    name: Nightly with Coverage
     if: github.event_name == 'schedule'
     runs-on: macos-15
 
@@ -245,7 +166,7 @@ jobs:
         with:
           path: |
             ~/Library/Caches/org.swift.swiftpm
-            DerivedData/SourcePackages
+            AmakaFlowCompanion/DerivedData/SourcePackages
           key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
           restore-keys: |
             ${{ runner.os }}-spm-
