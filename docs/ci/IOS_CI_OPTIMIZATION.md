@@ -62,7 +62,27 @@ This ensures:
     sudo xcode-select -s "$XCODE_PATH"
 ```
 
-### 4. Simulator Reset
+### 4. Deterministic Simulator Selection
+
+**Problem:** Hardcoded simulator names (e.g., "iPhone 15 Pro") may not exist on all runners. Invalid fallback like `name=iPhone` causes destination errors.
+
+**Solution:** Dynamically pick the first available iPhone simulator:
+
+```yaml
+- name: Determine simulator (first available iPhone)
+  id: simulator
+  run: |
+    NAME=$(xcrun simctl list devices available | sed -n 's/.*(iPhone[^()]*) (.*) (available).*/\1/p' | head -1)
+    if [ -z "$NAME" ]; then
+      echo "No available iPhone simulator found" >&2
+      xcrun simctl list devices available
+      exit 1
+    fi
+    echo "Using simulator: $NAME"
+    echo "name=$NAME" >> $GITHUB_OUTPUT
+```
+
+### 5. Simulator Reset
 
 **Problem:** Parallel testing causes "instruments lockdown" timeouts (120+ seconds) when simulators have stale state.
 
@@ -75,7 +95,7 @@ This ensures:
     xcrun simctl erase all || true
 ```
 
-### 5. Parallel Testing Limits
+### 6. Parallel Testing Limits
 
 **Problem:** Running 4 parallel test workers causes simulator clone timeouts and lockdown service conflicts.
 
@@ -88,7 +108,7 @@ xcodebuild test-without-building \
   -maximum-concurrent-test-simulator-destinations 2
 ```
 
-### 6. Build-Test Separation
+### 7. Build-Test Separation
 
 **Problem:** Combined build+test makes caching less effective and failures harder to diagnose.
 
@@ -115,7 +135,7 @@ xcodebuild test-without-building \
       ...
 ```
 
-### 7. Coverage Only on Nightly
+### 8. Coverage Only on Nightly
 
 **Problem:** Code coverage adds significant overhead to test execution.
 
