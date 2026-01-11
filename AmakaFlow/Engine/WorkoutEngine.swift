@@ -28,6 +28,9 @@ class WorkoutEngine: ObservableObject {
     /// Health data provider for simulation mode
     private var healthProvider: HealthDataProvider?
 
+    /// AMA-308: Weight provider for simulation mode
+    private var weightProvider: SimulatedWeightProvider?
+
     /// Speed multiplier for display (1.0 = real-time)
     var simulationSpeed: Double {
         clock.speedMultiplier
@@ -93,6 +96,7 @@ class WorkoutEngine: ObservableObject {
         self.clock = RealClock()
         self.isSimulation = false
         self.healthProvider = nil
+        self.weightProvider = nil  // AMA-308
         setupBackgroundHandling()
     }
 
@@ -103,11 +107,13 @@ class WorkoutEngine: ObservableObject {
         if settings.isEnabled {
             self.clock = settings.createClock()
             self.healthProvider = settings.createHealthProvider()
+            self.weightProvider = settings.createWeightProvider()  // AMA-308
             self.isSimulation = true
-            print("🎮 [Simulation Mode] Enabled - Speed: \(settings.speed)x, Profile: \(settings.profileName)")
+            print("🎮 [Simulation Mode] Enabled - Speed: \(settings.speed)x, Profile: \(settings.profileName), WeightSim: \(settings.simulateWeight)")
         } else {
             self.clock = RealClock()
             self.healthProvider = nil
+            self.weightProvider = nil  // AMA-308
             self.isSimulation = false
         }
     }
@@ -758,11 +764,30 @@ class WorkoutEngine: ObservableObject {
                 print("🏋️ Timer started with \(seconds) seconds")
             }
         } else if isSimulation && (step.stepType == .reps || step.stepType == .distance) {
-            // In simulation mode, give reps/distance steps a short timer to auto-advance
-            remainingSeconds = 5  // 5 seconds simulated time to "complete" the step
-            if phase == .running {
-                startTimer()
-                print("🎮 Simulation mode: Starting 5s timer for \(step.stepType) step")
+            // AMA-308: In simulation mode with weight simulation, auto-log weight for reps steps
+            if step.stepType == .reps, let provider = weightProvider {
+                // Auto-select weight based on exercise type and profile
+                let unit = "lbs"  // Default to lbs
+                let simulatedWeight = provider.getSimulatedWeight(exerciseName: step.label, unit: unit)
+
+                // Apply realistic delay based on behavior profile, scaled by simulation speed
+                let settings = SimulationSettings.shared
+                let reactionTime = Double.random(in: settings.behaviorProfile.reactionTime)
+                let scaledDelay = max(0.05, reactionTime / clock.speedMultiplier)
+
+                print("🎮 [AMA-308] Auto-selecting weight \(simulatedWeight ?? 0) \(unit) for \(step.label) after \(scaledDelay)s delay")
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + scaledDelay) { [weak self] in
+                    guard let self = self, self.currentStep?.label == step.label else { return }
+                    self.logSetWeight(weight: simulatedWeight, unit: unit)
+                }
+            } else {
+                // In simulation mode, give reps/distance steps a short timer to auto-advance
+                remainingSeconds = 5  // 5 seconds simulated time to "complete" the step
+                if phase == .running {
+                    startTimer()
+                    print("🎮 Simulation mode: Starting 5s timer for \(step.stepType) step")
+                }
             }
         } else {
             remainingSeconds = 0

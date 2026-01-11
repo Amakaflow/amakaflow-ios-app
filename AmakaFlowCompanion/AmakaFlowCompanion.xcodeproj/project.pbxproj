@@ -109,6 +109,7 @@
 		S1MUL4T10N00000015 /* SimulationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000005 /* SimulationSettings.swift */; };
 		S1MUL4T10N00000016 /* DebugSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000006 /* DebugSettingsView.swift */; };
 		S1MUL4T10N00000017 /* SimulationBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000007 /* SimulationBannerView.swift */; };
+		S1MUL4T10N00000018 /* SimulatedWeightProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000008 /* SimulatedWeightProvider.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -275,6 +276,7 @@
 		S1MUL4T10N00000005 /* SimulationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SimulationSettings.swift; path = ../AmakaFlow/Simulation/SimulationSettings.swift; sourceTree = SOURCE_ROOT; };
 		S1MUL4T10N00000006 /* DebugSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugSettingsView.swift; path = ../AmakaFlow/Views/Settings/DebugSettingsView.swift; sourceTree = SOURCE_ROOT; };
 		S1MUL4T10N00000007 /* SimulationBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SimulationBannerView.swift; path = ../AmakaFlow/Views/Components/SimulationBannerView.swift; sourceTree = SOURCE_ROOT; };
+		S1MUL4T10N00000008 /* SimulatedWeightProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SimulatedWeightProvider.swift; path = ../AmakaFlow/Simulation/SimulatedWeightProvider.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -467,6 +469,7 @@
 				S1MUL4T10N00000005 /* SimulationSettings.swift */,
 				S1MUL4T10N00000006 /* DebugSettingsView.swift */,
 				S1MUL4T10N00000007 /* SimulationBannerView.swift */,
+				S1MUL4T10N00000008 /* SimulatedWeightProvider.swift */,
 				F84E22752ED0D59B00459747 /* SettingsView.swift */,
 				F84E22762ED0D59B00459747 /* WorkoutDetailView.swift */,
 				F84E22772ED0D59B00459747 /* WorkoutsView.swift */,
@@ -941,6 +944,7 @@
 				S1MUL4T10N00000015 /* SimulationSettings.swift in Sources */,
 				S1MUL4T10N00000016 /* DebugSettingsView.swift in Sources */,
 				S1MUL4T10N00000017 /* SimulationBannerView.swift in Sources */,
+				S1MUL4T10N00000018 /* SimulatedWeightProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
