@@ -218,7 +218,8 @@ class APIService {
         }
     }
 
-    /// Fetch pending workouts from iOS companion endpoint
+    /// Fetch pending workouts from sync queue endpoint (AMA-307)
+    /// Uses the new /sync/pending endpoint which tracks proper sync state
     /// - Returns: Array of pending workouts
     /// - Throws: APIError if request fails
     func fetchPendingWorkouts() async throws -> [Workout] {
@@ -227,7 +228,7 @@ class APIService {
             throw APIError.unauthorized
         }
 
-        let url = URL(string: "\(baseURL)/ios-companion/pending")!
+        let url = URL(string: "\(baseURL)/sync/pending?device_type=ios")!
         print("[APIService] Fetching pending workouts from: \(url)")
 
         var request = URLRequest(url: url)
@@ -782,6 +783,116 @@ class APIService {
                 print("[APIService] Error response: \(responseString.prefix(200))")
             }
             logError(endpoint: endpoint, method: "POST", statusCode: httpResponse.statusCode, response: responseString, error: nil)
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    // MARK: - Sync Confirmation (AMA-307)
+
+    /// Confirm that a workout was successfully synced/downloaded to this device
+    /// - Parameters:
+    ///   - workoutId: The workout ID that was synced
+    ///   - deviceType: Device type (ios, android, garmin)
+    ///   - deviceId: Optional device identifier
+    /// - Throws: APIError if request fails
+    func confirmSync(workoutId: String, deviceType: String = "ios", deviceId: String? = nil) async throws {
+        guard PairingService.shared.isPaired else {
+            throw APIError.unauthorized
+        }
+
+        let url = URL(string: "\(baseURL)/sync/confirm")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders
+
+        var body: [String: Any] = [
+            "workout_id": workoutId,
+            "device_type": deviceType
+        ]
+        if let deviceId = deviceId {
+            body["device_id"] = deviceId
+        }
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        print("[APIService] Confirming sync for workout \(workoutId)")
+
+        let (data, response) = try await session.data(for: request)
+        let responseString = String(data: data, encoding: .utf8)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        print("[APIService] Confirm sync response: \(httpResponse.statusCode)")
+
+        switch httpResponse.statusCode {
+        case 200, 201:
+            print("[APIService] Sync confirmed for workout \(workoutId)")
+            return
+        case 401:
+            throw APIError.unauthorized
+        case 404:
+            // Queue entry not found - might have been already confirmed or doesn't exist
+            print("[APIService] No sync queue entry found for workout \(workoutId) - may already be confirmed")
+            return
+        default:
+            logError(endpoint: "/sync/confirm", method: "POST", statusCode: httpResponse.statusCode, response: responseString, error: nil)
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    /// Report that a workout sync/download failed
+    /// - Parameters:
+    ///   - workoutId: The workout ID that failed to sync
+    ///   - deviceType: Device type (ios, android, garmin)
+    ///   - error: Error message describing the failure
+    ///   - deviceId: Optional device identifier
+    /// - Throws: APIError if request fails
+    func reportSyncFailed(workoutId: String, deviceType: String = "ios", error: String, deviceId: String? = nil) async throws {
+        guard PairingService.shared.isPaired else {
+            throw APIError.unauthorized
+        }
+
+        let url = URL(string: "\(baseURL)/sync/failed")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders
+
+        var body: [String: Any] = [
+            "workout_id": workoutId,
+            "device_type": deviceType,
+            "error": error
+        ]
+        if let deviceId = deviceId {
+            body["device_id"] = deviceId
+        }
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        print("[APIService] Reporting sync failure for workout \(workoutId): \(error)")
+
+        let (data, response) = try await session.data(for: request)
+        let responseString = String(data: data, encoding: .utf8)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        print("[APIService] Report sync failed response: \(httpResponse.statusCode)")
+
+        switch httpResponse.statusCode {
+        case 200, 201:
+            print("[APIService] Sync failure reported for workout \(workoutId)")
+            return
+        case 401:
+            throw APIError.unauthorized
+        case 404:
+            // Queue entry not found - log but don't fail
+            print("[APIService] No sync queue entry found for workout \(workoutId)")
+            return
+        default:
+            logError(endpoint: "/sync/failed", method: "POST", statusCode: httpResponse.statusCode, response: responseString, error: nil)
             throw APIError.serverError(httpResponse.statusCode)
         }
     }

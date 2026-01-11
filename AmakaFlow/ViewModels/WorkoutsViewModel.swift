@@ -213,6 +213,9 @@ class WorkoutsViewModel: ObservableObject {
             let devicePref = UserDefaults.standard.string(forKey: "devicePreference").flatMap { DevicePreference(rawValue: $0) } ?? .appleWatchPhone
 
             for workout in pendingWorkouts {
+                var syncSuccessful = true
+                var syncError: String?
+
                 // Only sync to Apple Watch if user has selected Apple Watch mode
                 if devicePref == .appleWatchPhone || devicePref == .appleWatchOnly {
                     await WatchConnectivityManager.shared.sendWorkout(workout)
@@ -228,6 +231,8 @@ class WorkoutsViewModel: ObservableObject {
                         print("[WorkoutsViewModel] Saved '\(workout.name)' to WorkoutKit")
                     } catch {
                         print("[WorkoutsViewModel] Failed to save to WorkoutKit: \(error.localizedDescription)")
+                        syncSuccessful = false
+                        syncError = "WorkoutKit save failed: \(error.localizedDescription)"
                     }
                 }
 
@@ -235,6 +240,24 @@ class WorkoutsViewModel: ObservableObject {
                 if !incomingWorkouts.contains(where: { $0.id == workout.id }) {
                     incomingWorkouts.append(workout)
                     print("[WorkoutsViewModel] Added '\(workout.name)' to incoming workouts")
+                }
+
+                // Confirm or report sync status to backend (AMA-307)
+                if syncSuccessful {
+                    do {
+                        try await apiService.confirmSync(workoutId: workout.id)
+                        print("[WorkoutsViewModel] Confirmed sync for '\(workout.name)'")
+                    } catch {
+                        print("[WorkoutsViewModel] Failed to confirm sync: \(error.localizedDescription)")
+                        // Non-fatal - workout was still synced locally
+                    }
+                } else if let error = syncError {
+                    do {
+                        try await apiService.reportSyncFailed(workoutId: workout.id, error: error)
+                        print("[WorkoutsViewModel] Reported sync failure for '\(workout.name)'")
+                    } catch {
+                        print("[WorkoutsViewModel] Failed to report sync failure: \(error.localizedDescription)")
+                    }
                 }
             }
 
