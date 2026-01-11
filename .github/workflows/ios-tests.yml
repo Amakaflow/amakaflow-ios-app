@@ -5,85 +5,57 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '0 6 * * *'  # Nightly full test run with coverage
 
 jobs:
-  test:
-    name: Run Unit Tests
+  ios-tests:
+    name: iOS Tests (Faster + Stable)
+    # Note: macos-15-xlarge (Apple Silicon) would be 3-4x faster but requires billing upgrade
     runs-on: macos-15
+    timeout-minutes: 60
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Clone workoutkit-sync dependency
-        run: |
-          # The project references ../../../workoutkit-sync relative to AmakaFlowCompanion/
-          # Checkout is at /Users/runner/work/amakaflow-ios-app/amakaflow-ios-app
-          # Need to clone to /Users/runner/work/workoutkit-sync
-          git clone https://github.com/supergeri/workoutkit-sync.git ../../workoutkit-sync
-          ls -la ../../
+        run: git clone https://github.com/supergeri/workoutkit-sync.git ../../workoutkit-sync
 
-      - name: List available Xcode versions
-        run: ls -la /Applications | grep Xcode
-
-      - name: Select Xcode
+      - name: Select Xcode (latest available)
+        id: xcode
         run: |
-          # Use Xcode 26.x (beta) which properly handles PBXFileSystemSynchronizedRootGroup
-          # Xcode 16.x has issues with the newer project format
-          XCODE_PATH=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
-          if [ -z "$XCODE_PATH" ]; then
-            # Fallback to latest available Xcode
-            XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
-          fi
+          # Use latest Xcode - project requires iOS 18.6+/watchOS 11.6 which needs Xcode 26.x
+          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
           echo "Using Xcode: $XCODE_PATH"
           sudo xcode-select -s "$XCODE_PATH"
+          XCODE_VER=$(xcodebuild -version | head -1 | tr ' ' '-')
+          echo "version=$XCODE_VER" >> $GITHUB_OUTPUT
 
-      - name: Show Xcode version
-        run: xcodebuild -version
-
-      - name: List available simulators
-        run: xcrun simctl list devices available | grep -E "iPhone (15|16|17)" | head -10
-
-      - name: Boot simulator
-        run: |
-          # Find and boot an iPhone simulator (prefer iPhone 17 for Xcode 26.x, fallback to 16/15)
-          DEVICE_ID=$(xcrun simctl list devices available | grep "iPhone 17" | head -1 | grep -oE "[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}")
-          if [ -z "$DEVICE_ID" ]; then
-            DEVICE_ID=$(xcrun simctl list devices available | grep "iPhone 16" | head -1 | grep -oE "[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}")
-          fi
-          if [ -z "$DEVICE_ID" ]; then
-            DEVICE_ID=$(xcrun simctl list devices available | grep "iPhone 15" | head -1 | grep -oE "[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}")
-          fi
-          echo "Booting simulator: $DEVICE_ID"
-          xcrun simctl boot "$DEVICE_ID" || true
-
-      - name: Determine simulator name
+      - name: Determine simulator (first available iPhone)
         id: simulator
         run: |
-          # Determine which iPhone simulator to use based on availability
-          if xcrun simctl list devices available | grep -q "iPhone 17"; then
-            echo "name=iPhone 17 Pro" >> $GITHUB_OUTPUT
-          elif xcrun simctl list devices available | grep -q "iPhone 16"; then
-            echo "name=iPhone 16" >> $GITHUB_OUTPUT
-          else
-            echo "name=iPhone 15" >> $GITHUB_OUTPUT
+          # Extract first iPhone device name from available simulators
+          # Format: "    iPhone 17 Pro (UUID) (Shutdown)"
+          NAME=$(xcrun simctl list devices available | grep -o 'iPhone [^(]*' | head -1 | sed 's/ *$//')
+          if [ -z "$NAME" ]; then
+            echo "No available iPhone simulator found" >&2
+            xcrun simctl list devices available
+            exit 1
           fi
+          echo "Using simulator: $NAME"
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+
+      - name: Reset simulators (avoid instruments lockdown timeouts)
+        run: |
+          xcrun simctl shutdown all || true
+          xcrun simctl erase all || true
 
       - name: Create stub TestCredentials for compilation
         working-directory: AmakaFlowCompanion
         run: |
-          # Create stub TestCredentials.swift for UI test compilation
-          # UI tests won't run in CI (they need local API), but code must compile
           cat > AmakaFlowCompanionUITests/TestCredentials.swift << 'EOF'
-          //
-          //  TestCredentials.swift
-          //  AmakaFlowCompanionUITests
-          //
-          //  CI Stub - placeholder values for compilation only
-          //  UI tests require local API and are not run in CI
-          //
           import Foundation
-
           enum TestCredentials {
               static let testAuthSecret = "ci-stub-not-for-testing"
               static let userId = "ci_stub_user"
@@ -92,31 +64,90 @@ jobs:
               static let apiBaseURL = "http://localhost:8001"
           }
           EOF
-          echo "Created stub TestCredentials.swift for CI compilation"
 
+      # -----------------------------
+      # Cache RESTORE (must happen BEFORE resolve/build)
+      # -----------------------------
+      - name: Restore SwiftPM cache
+        uses: actions/cache@v4
+        with:
+          path: AmakaFlowCompanion/.spm
+          key: spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('**/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
+          restore-keys: |
+            spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
+
+      - name: Restore DerivedData cache
+        uses: actions/cache@v4
+        with:
+          path: AmakaFlowCompanion/DerivedData
+          key: deriveddata-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj', 'AmakaFlow/**/*.swift', 'AmakaFlowCompanion/**/*.swift') }}
+          restore-keys: |
+            deriveddata-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
+
+      # -----------------------------
+      # SwiftPM Resolve (fast if cache hit)
+      # -----------------------------
+      - name: Resolve SwiftPM dependencies
+        working-directory: AmakaFlowCompanion
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project AmakaFlowCompanion.xcodeproj \
+            -scheme AmakaFlowCompanion \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm
+
+      - name: Debug cache status
+        working-directory: AmakaFlowCompanion
+        run: |
+          echo "=== .spm cache status ==="
+          ls -la .spm 2>/dev/null || echo ".spm directory not found (cache miss)"
+          echo "=== DerivedData cache status ==="
+          ls -la DerivedData 2>/dev/null | head -10 || echo "DerivedData directory not found (cache miss)"
+
+      # -----------------------------
+      # Build for Testing
+      # -----------------------------
+      - name: Build for testing
+        working-directory: AmakaFlowCompanion
+        run: |
+          xcodebuild build-for-testing \
+            -project AmakaFlowCompanion.xcodeproj \
+            -scheme AmakaFlowCompanion \
+            -destination "platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}" \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm \
+            -parallelizeTargets \
+            -jobs $(sysctl -n hw.ncpu)
+
+      # -----------------------------
+      # Run Tests (limit concurrency to avoid clone timeouts)
+      # -----------------------------
       - name: Run tests
         working-directory: AmakaFlowCompanion
         run: |
-          # Run tests and capture output
+          COVERAGE_FLAG="NO"
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            COVERAGE_FLAG="YES"
+          fi
+
           set +e
-          xcodebuild test \
+          xcodebuild test-without-building \
             -project AmakaFlowCompanion.xcodeproj \
             -scheme AmakaFlowCompanion \
-            -destination 'platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}' \
+            -destination "platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}" \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm \
             -only-testing:AmakaFlowCompanionTests \
             -resultBundlePath TestResults \
-            -enableCodeCoverage YES \
-            -parallel-testing-enabled NO \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            SKIP_INSTALL=YES 2>&1 | tee test_output.log
+            -enableCodeCoverage $COVERAGE_FLAG \
+            -parallel-testing-enabled YES \
+            -parallel-testing-worker-count 2 \
+            -maximum-concurrent-test-simulator-destinations 2 \
+            -parallelizeTargets \
+            -jobs $(sysctl -n hw.ncpu) 2>&1 | tee test_output.log
           XCODE_EXIT=${PIPESTATUS[0]}
           set -e
 
-          # Check test output directly for pass/fail
-          echo "Checking test results from output..."
-
-          # Look for the final test summary line
           if grep -q "with 0 failures (0 unexpected)" test_output.log; then
             echo "All tests passed!"
             exit 0
@@ -128,9 +159,8 @@ jobs:
             grep "failures" test_output.log | tail -5
             exit 1
           else
-            echo "Could not determine test status, using xcodebuild exit code: $XCODE_EXIT"
-            # Show last few lines of output for debugging
-            tail -20 test_output.log
+            echo "Using xcodebuild exit code: $XCODE_EXIT"
+            tail -60 test_output.log
             exit $XCODE_EXIT
           fi
 

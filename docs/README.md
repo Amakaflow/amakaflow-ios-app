@@ -81,6 +81,10 @@ Implementation status and sample data
 - **VERIFY_FILE_SETUP.md** - File setup verification checklist
 - **NORMAL_LOG_MESSAGES.md** - Expected log messages and debugging info
 
+### [ci/](./ci/)
+Continuous Integration configuration and optimization
+- **IOS_CI_OPTIMIZATION.md** - iOS CI workflow optimization guide (cache strategies, parallel testing, runtime reduction)
+
 ## 🚀 Quick Start
 
 1. **New to the project?** Start with [setup/XCODE_SETUP_GUIDE.md](./setup/XCODE_SETUP_GUIDE.md)
