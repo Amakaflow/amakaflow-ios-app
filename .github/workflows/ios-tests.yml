@@ -11,11 +11,8 @@ on:
 jobs:
   ios-tests:
     name: iOS Tests (Fast)
-    runs-on: macos-14
-    timeout-minutes: 90
-
-    env:
-      XCODE_VERSION: "15.2"
+    runs-on: macos-15
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
@@ -25,7 +22,27 @@ jobs:
         run: git clone https://github.com/supergeri/workoutkit-sync.git ../../workoutkit-sync
 
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_${{ env.XCODE_VERSION }}.app
+        id: xcode
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE_PATH" ]; then
+            XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          fi
+          echo "Using Xcode: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
+          XCODE_VER=$(xcodebuild -version | head -1 | tr ' ' '-')
+          echo "version=$XCODE_VER" >> $GITHUB_OUTPUT
+
+      - name: Determine simulator
+        id: simulator
+        run: |
+          if xcrun simctl list devices available | grep -q "iPhone 17"; then
+            echo "name=iPhone 17 Pro" >> $GITHUB_OUTPUT
+          elif xcrun simctl list devices available | grep -q "iPhone 16"; then
+            echo "name=iPhone 16" >> $GITHUB_OUTPUT
+          else
+            echo "name=iPhone 15 Pro" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create stub TestCredentials for compilation
         working-directory: AmakaFlowCompanion
@@ -57,9 +74,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: AmakaFlowCompanion/.spm
-          key: spm-${{ runner.os }}-${{ env.XCODE_VERSION }}-${{ hashFiles('**/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
+          key: spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('**/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
           restore-keys: |
-            spm-${{ runner.os }}-${{ env.XCODE_VERSION }}-
+            spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
 
       # -----------------------------
       # DerivedData Cache
@@ -68,9 +85,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: AmakaFlowCompanion/DerivedData
-          key: deriveddata-${{ runner.os }}-${{ env.XCODE_VERSION }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj', 'AmakaFlow/**/*.swift', 'AmakaFlowCompanion/**/*.swift') }}
+          key: deriveddata-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj', 'AmakaFlow/**/*.swift', 'AmakaFlowCompanion/**/*.swift') }}
           restore-keys: |
-            deriveddata-${{ runner.os }}-${{ env.XCODE_VERSION }}-
+            deriveddata-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
 
       # -----------------------------
       # Build for Testing
@@ -81,7 +98,7 @@ jobs:
           xcodebuild build-for-testing \
             -project AmakaFlowCompanion.xcodeproj \
             -scheme AmakaFlowCompanion \
-            -destination 'platform=iOS Simulator,name=iPhone 15 Pro' \
+            -destination 'platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}' \
             -derivedDataPath DerivedData \
             -clonedSourcePackagesDirPath .spm \
             -parallelizeTargets \
@@ -102,7 +119,7 @@ jobs:
           xcodebuild test-without-building \
             -project AmakaFlowCompanion.xcodeproj \
             -scheme AmakaFlowCompanion \
-            -destination 'platform=iOS Simulator,name=iPhone 15 Pro' \
+            -destination 'platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}' \
             -derivedDataPath DerivedData \
             -clonedSourcePackagesDirPath .spm \
             -only-testing:AmakaFlowCompanionTests \
