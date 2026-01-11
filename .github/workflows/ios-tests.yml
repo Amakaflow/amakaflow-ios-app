@@ -34,16 +34,17 @@ jobs:
           XCODE_VER=$(xcodebuild -version | head -1 | tr ' ' '-')
           echo "version=$XCODE_VER" >> $GITHUB_OUTPUT
 
-      - name: Determine simulator (prefer iPhone 15 Pro)
+      - name: Determine simulator (first available iPhone)
         id: simulator
         run: |
-          if xcrun simctl list devices available | grep -q "iPhone 15 Pro"; then
-            echo "name=iPhone 15 Pro" >> $GITHUB_OUTPUT
-          elif xcrun simctl list devices available | grep -q "iPhone 16"; then
-            echo "name=iPhone 16" >> $GITHUB_OUTPUT
-          else
-            echo "name=iPhone" >> $GITHUB_OUTPUT
+          NAME=$(xcrun simctl list devices available | sed -n 's/.*(iPhone[^()]*) (.*) (available).*/\1/p' | head -1)
+          if [ -z "$NAME" ]; then
+            echo "No available iPhone simulator found" >&2
+            xcrun simctl list devices available
+            exit 1
           fi
+          echo "Using simulator: $NAME"
+          echo "name=$NAME" >> $GITHUB_OUTPUT
 
       - name: Reset simulators (avoid instruments lockdown timeouts)
         run: |
@@ -94,6 +95,14 @@ jobs:
             -scheme AmakaFlowCompanion \
             -derivedDataPath DerivedData \
             -clonedSourcePackagesDirPath .spm
+
+      - name: Debug cache status
+        working-directory: AmakaFlowCompanion
+        run: |
+          echo "=== .spm cache status ==="
+          ls -la .spm 2>/dev/null || echo ".spm directory not found (cache miss)"
+          echo "=== DerivedData cache status ==="
+          ls -la DerivedData 2>/dev/null | head -10 || echo "DerivedData directory not found (cache miss)"
 
       # -----------------------------
       # Build for Testing
