@@ -18,8 +18,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Clone workoutkit-sync dependency
-        run: |
-          git clone https://github.com/supergeri/workoutkit-sync.git ../../workoutkit-sync
+        run: git clone https://github.com/supergeri/workoutkit-sync.git ../../workoutkit-sync
 
       - name: Select Xcode
         run: |
@@ -44,15 +43,18 @@ jobs:
             echo "name=iPhone 15" >> $GITHUB_OUTPUT
           fi
 
-      - name: Cache SPM packages
-        uses: actions/cache@v4
+      # Use irgaly/xcode-cache for mtime-aware caching (enables incremental builds)
+      - name: Restore Xcode cache (DerivedData + mtime)
+        uses: irgaly/xcode-cache@v1
         with:
-          path: |
-            ~/Library/Caches/org.swift.swiftpm
-            AmakaFlowCompanion/DerivedData/SourcePackages
-          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
-          restore-keys: |
-            ${{ runner.os }}-spm-
+          key: xcode-deriveddata-${{ runner.os }}-${{ hashFiles('**/*.swift', '**/*.xcodeproj/project.pbxproj') }}
+          restore-keys: xcode-deriveddata-${{ runner.os }}-
+          deriveddata-directory: AmakaFlowCompanion/DerivedData
+          sourcepackages-directory: AmakaFlowCompanion/DerivedData/SourcePackages
+          restore-mtime-targets: |
+            AmakaFlow/**/*
+            AmakaFlowCompanion/**/*
+            ../../workoutkit-sync/**/*
 
       - name: Create stub TestCredentials for compilation
         working-directory: AmakaFlowCompanion
@@ -82,6 +84,7 @@ jobs:
             -scheme AmakaFlowCompanion \
             -destination 'platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}' \
             -derivedDataPath DerivedData \
+            -IgnoreFileSystemDeviceInodeChanges=YES \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             SKIP_INSTALL=YES
@@ -139,8 +142,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Clone workoutkit-sync dependency
-        run: |
-          git clone https://github.com/supergeri/workoutkit-sync.git ../../workoutkit-sync
+        run: git clone https://github.com/supergeri/workoutkit-sync.git ../../workoutkit-sync
 
       - name: Select Xcode
         run: |
@@ -161,15 +163,16 @@ jobs:
             echo "name=iPhone 15" >> $GITHUB_OUTPUT
           fi
 
-      - name: Cache SPM packages
-        uses: actions/cache@v4
+      - name: Restore Xcode cache (DerivedData + mtime)
+        uses: irgaly/xcode-cache@v1
         with:
-          path: |
-            ~/Library/Caches/org.swift.swiftpm
-            AmakaFlowCompanion/DerivedData/SourcePackages
-          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
-          restore-keys: |
-            ${{ runner.os }}-spm-
+          key: xcode-deriveddata-nightly-${{ runner.os }}-${{ hashFiles('**/*.swift', '**/*.xcodeproj/project.pbxproj') }}
+          restore-keys: xcode-deriveddata-nightly-${{ runner.os }}-
+          deriveddata-directory: AmakaFlowCompanion/DerivedData
+          sourcepackages-directory: AmakaFlowCompanion/DerivedData/SourcePackages
+          restore-mtime-targets: |
+            AmakaFlow/**/*
+            AmakaFlowCompanion/**/*
 
       - name: Create stub TestCredentials
         working-directory: AmakaFlowCompanion
@@ -198,11 +201,13 @@ jobs:
             -project AmakaFlowCompanion.xcodeproj \
             -scheme AmakaFlowCompanion \
             -destination 'platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}' \
+            -derivedDataPath DerivedData \
             -only-testing:AmakaFlowCompanionTests \
             -resultBundlePath TestResults \
             -enableCodeCoverage YES \
             -parallel-testing-enabled YES \
             -parallel-testing-worker-count 4 \
+            -IgnoreFileSystemDeviceInodeChanges=YES \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             SKIP_INSTALL=YES 2>&1 | tee test_output.log
