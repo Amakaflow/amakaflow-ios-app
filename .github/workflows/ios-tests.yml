@@ -34,7 +34,9 @@ jobs:
       - name: Determine simulator (first available iPhone)
         id: simulator
         run: |
-          NAME=$(xcrun simctl list devices available | sed -n 's/.*(iPhone[^()]*) (.*) (available).*/\1/p' | head -1)
+          # Extract first iPhone device name from available simulators
+          # Format: "    iPhone 17 Pro (UUID) (Shutdown)"
+          NAME=$(xcrun simctl list devices available | grep -o 'iPhone [^(]*' | head -1 | sed 's/ *$//')
           if [ -z "$NAME" ]; then
             echo "No available iPhone simulator found" >&2
             xcrun simctl list devices available
