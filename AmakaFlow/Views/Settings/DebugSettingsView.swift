@@ -67,6 +67,26 @@ struct DebugSettingsView: View {
                     }
                 }
 
+                // MARK: - Weight Simulation Section (AMA-308)
+                if settings.isEnabled {
+                    Section {
+                        Toggle("Auto-Select Weights", isOn: $settings.simulateWeight)
+                            .tint(Theme.Colors.accentBlue)
+
+                        if settings.simulateWeight {
+                            Picker("Strength Level", selection: $settings.weightProfileName) {
+                                ForEach(SimulationSettings.weightProfileOptions, id: \.value) { option in
+                                    Text("\(option.label) (\(option.description))").tag(option.value)
+                                }
+                            }
+                        }
+                    } header: {
+                        Text("Weight Simulation")
+                    } footer: {
+                        Text("Automatically select realistic weights for strength exercises based on your strength level.")
+                    }
+                }
+
                 // MARK: - Behavior Details (info section)
                 if settings.isEnabled {
                     Section {

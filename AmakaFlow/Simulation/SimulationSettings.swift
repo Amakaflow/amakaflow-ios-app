@@ -37,6 +37,13 @@ final class SimulationSettings: ObservableObject {
     /// Custom max heart rate
     @AppStorage("simulationMaxHR") var maxHR: Int = 175
 
+    // AMA-308: Weight simulation settings
+    /// Whether to automatically select weights for strength exercises
+    @AppStorage("simulationSimulateWeight") var simulateWeight: Bool = true
+
+    /// Weight profile for simulated weights (beginner, intermediate, advanced)
+    @AppStorage("simulationWeightProfile") var weightProfileName: String = "intermediate"
+
     // MARK: - Computed Properties
 
     /// Get the behavior profile based on name
@@ -47,6 +54,11 @@ final class SimulationSettings: ObservableObject {
     /// Get custom HR profile with user settings
     var hrProfile: HRProfile {
         HRProfile(restingHR: restingHR, maxHR: maxHR, recoveryRate: 1.0)
+    }
+
+    /// AMA-308: Get the weight profile based on name
+    var weightProfile: WeightProfile {
+        WeightProfile.fromName(weightProfileName)
     }
 
     /// Available speed options
@@ -62,6 +74,13 @@ final class SimulationSettings: ObservableObject {
         ("Efficient", "efficient"),
         ("Casual", "casual"),
         ("Distracted", "distracted")
+    ]
+
+    /// AMA-308: Available weight profiles
+    static let weightProfileOptions: [(label: String, value: String, description: String)] = [
+        ("Beginner", "beginner", "~95-135 lbs"),
+        ("Intermediate", "intermediate", "~185-275 lbs"),
+        ("Advanced", "advanced", "~315-495 lbs")
     ]
 
     // MARK: - Factory Methods
@@ -88,6 +107,12 @@ final class SimulationSettings: ObservableObject {
     func createHealthProvider() -> HealthDataProvider? {
         guard isEnabled && generateHealthData else { return nil }
         return SimulatedHealthProvider(profile: hrProfile)
+    }
+
+    /// AMA-308: Create weight provider for current settings
+    func createWeightProvider() -> SimulatedWeightProvider? {
+        guard isEnabled && simulateWeight else { return nil }
+        return SimulatedWeightProvider(profile: weightProfile)
     }
 
     // MARK: - Private Init (singleton)
