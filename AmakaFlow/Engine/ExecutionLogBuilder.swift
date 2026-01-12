@@ -173,6 +173,8 @@ class ExecutionLogBuilder {
     private var intervals: [IntervalExecution] = []
     private var currentIntervalStartTime: Date?
     private var currentIntervalIndex: Int?
+    // AMA-291: Track elapsed seconds for accurate simulation time
+    private var currentIntervalStartElapsed: Int?
 
     // MARK: - Interval Tracking
 
@@ -182,14 +184,16 @@ class ExecutionLogBuilder {
     ///   - kind: Interval type (warmup, work, rest, reps, etc.)
     ///   - name: Display name for the interval
     ///   - plannedDuration: Planned duration in seconds (nil for reps-based)
-    func startInterval(index: Int, kind: String?, name: String?, plannedDuration: Int?) {
+    ///   - elapsedSeconds: Current elapsed seconds in workout (for simulation mode timing)
+    func startInterval(index: Int, kind: String?, name: String?, plannedDuration: Int?, elapsedSeconds: Int? = nil) {
         // End any previous interval that wasn't properly closed
         if currentIntervalIndex != nil {
-            endCurrentInterval(actualDuration: nil)
+            endCurrentInterval(actualDuration: nil, elapsedSeconds: elapsedSeconds)
         }
 
         currentIntervalStartTime = Date()
         currentIntervalIndex = index
+        currentIntervalStartElapsed = elapsedSeconds
 
         var interval = IntervalExecution(
             intervalIndex: index,
@@ -203,8 +207,10 @@ class ExecutionLogBuilder {
     }
 
     /// End the current interval
-    /// - Parameter actualDuration: Actual duration in seconds (nil to calculate from start time)
-    func endCurrentInterval(actualDuration: Int?) {
+    /// - Parameters:
+    ///   - actualDuration: Actual duration in seconds (nil to calculate from elapsed time or wall clock)
+    ///   - elapsedSeconds: Current elapsed seconds in workout (for simulation mode timing)
+    func endCurrentInterval(actualDuration: Int?, elapsedSeconds: Int? = nil) {
         guard let currentIndex = currentIntervalIndex,
               let idx = intervals.firstIndex(where: { $0.intervalIndex == currentIndex }) else {
             return
@@ -213,13 +219,19 @@ class ExecutionLogBuilder {
         intervals[idx].endedAt = Date()
 
         if let duration = actualDuration {
+            // Explicit duration provided
             intervals[idx].actualDurationSeconds = duration
+        } else if let startElapsed = currentIntervalStartElapsed, let endElapsed = elapsedSeconds {
+            // AMA-291: Calculate from elapsed seconds (accurate for simulation mode)
+            intervals[idx].actualDurationSeconds = endElapsed - startElapsed
         } else if let startTime = currentIntervalStartTime {
+            // Fallback to wall-clock time
             intervals[idx].actualDurationSeconds = Int(Date().timeIntervalSince(startTime))
         }
 
         currentIntervalIndex = nil
         currentIntervalStartTime = nil
+        currentIntervalStartElapsed = nil
     }
 
     /// Mark an interval as skipped
@@ -415,6 +427,7 @@ class ExecutionLogBuilder {
         intervals = []
         currentIntervalStartTime = nil
         currentIntervalIndex = nil
+        currentIntervalStartElapsed = nil
     }
 
     /// Get current interval count (for debugging)

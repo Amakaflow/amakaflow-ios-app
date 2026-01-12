@@ -269,7 +269,8 @@ class WorkoutEngine: ObservableObject {
         print("🏋️ nextStep() called. currentStepIndex: \(currentStepIndex), flattenedSteps.count: \(flattenedSteps.count), phase: \(phase)")
 
         // (AMA-291) End current interval tracking before advancing
-        executionLogBuilder.endCurrentInterval(actualDuration: nil)
+        // Pass elapsedSeconds for accurate simulation mode timing
+        executionLogBuilder.endCurrentInterval(actualDuration: nil, elapsedSeconds: elapsedSeconds)
 
         // Check if current step has rest after it
         if let currentStep = currentStep {
@@ -822,11 +823,13 @@ class WorkoutEngine: ObservableObject {
         print("🏋️ setupCurrentStep: \(step.label), timerSeconds: \(step.timerSeconds ?? -1), stepType: \(step.stepType)")
 
         // (AMA-291) Track interval start in execution log
+        // Pass elapsedSeconds for accurate simulation mode timing
         executionLogBuilder.startInterval(
             index: currentStepIndex,
             kind: step.stepType.rawValue,
             name: step.label,
-            plannedDuration: step.timerSeconds
+            plannedDuration: step.timerSeconds,
+            elapsedSeconds: elapsedSeconds
         )
 
         // (AMA-291) Simulate health data for this step in simulation mode
