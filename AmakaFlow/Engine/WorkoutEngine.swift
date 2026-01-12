@@ -844,10 +844,28 @@ class WorkoutEngine: ObservableObject {
                 let reactionTime = Double.random(in: settings.behaviorProfile.reactionTime)
                 let scaledDelay = max(0.05, reactionTime / clock.speedMultiplier)
 
-                print("🎮 [AMA-308] Auto-selecting weight \(simulatedWeight ?? 0) \(unit) for \(step.label) after \(scaledDelay)s delay")
+                // Capture step index for reliable comparison (not label which could match multiple steps)
+                let capturedStepIndex = currentStepIndex
+
+                print("🎮 [AMA-308] Auto-selecting weight \(simulatedWeight ?? 0) \(unit) for \(step.label) (step \(capturedStepIndex)) after \(scaledDelay)s delay")
+
+                // Start elapsed time counter for reps step (simulates time spent doing the exercise)
+                let simulatedExerciseTime = max(3, Int(scaledDelay * clock.speedMultiplier))
+                remainingSeconds = simulatedExerciseTime
+                if phase == .running {
+                    startTimer()
+                }
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + scaledDelay) { [weak self] in
-                    guard let self = self, self.currentStep?.label == step.label else { return }
+                    guard let self = self else { return }
+
+                    // Use step index for reliable comparison instead of label
+                    guard self.currentStepIndex == capturedStepIndex else {
+                        print("🎮 [AMA-308] Step already advanced from \(capturedStepIndex) to \(self.currentStepIndex), skipping weight log")
+                        return
+                    }
+
+                    print("🎮 [AMA-308] Logging weight \(simulatedWeight ?? 0) \(unit) for step \(capturedStepIndex)")
                     self.logSetWeight(weight: simulatedWeight, unit: unit)
                 }
             } else {
@@ -877,9 +895,15 @@ class WorkoutEngine: ObservableObject {
         print("🎮 [Work Timer] Tick - remaining: \(remainingSeconds), elapsed: \(elapsedSeconds)")
 
         guard remainingSeconds > 0 else {
-            // For reps/distance steps, don't auto-advance (unless in simulation mode)
+            // For reps/distance steps, don't auto-advance (unless in simulation mode WITHOUT weight sim)
             let stepType = currentStep?.stepType
             if (stepType == .reps || stepType == .distance) && !isSimulation {
+                return
+            }
+            // AMA-308: For reps steps with weight simulation, don't auto-advance from timer
+            // The async block in setupCurrentStep will call logSetWeight which advances
+            if stepType == .reps && isSimulation && weightProvider != nil {
+                print("🎮 [Work Timer] Reps step with weight sim - waiting for async weight log")
                 return
             }
             nextStep()
@@ -895,6 +919,13 @@ class WorkoutEngine: ObservableObject {
 
         // Auto-advance when timer hits 0
         if remainingSeconds == 0 {
+            // AMA-308: For reps steps with weight simulation, don't auto-advance
+            // The async block will handle it
+            let stepType = currentStep?.stepType
+            if stepType == .reps && isSimulation && weightProvider != nil {
+                print("🎮 [Work Timer] Timer expired for reps step with weight sim - waiting for async weight log")
+                return
+            }
             // Small delay before advancing to allow "0" to display
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                 self?.nextStep()

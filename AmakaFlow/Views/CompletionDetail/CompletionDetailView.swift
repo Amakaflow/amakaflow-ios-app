@@ -67,57 +67,22 @@ struct CompletionDetailView: View {
 
     private func detailScrollView(_ detail: WorkoutCompletionDetail) -> some View {
         ScrollView {
-            VStack(spacing: 16) {
-                // Header
+            VStack(spacing: 12) {
+                // Header with completion badge and stats (AMA-292)
                 headerSection(detail)
 
-                // HR Chart (if data available)
-                if viewModel.hasChartData {
-                    HRChartView(
-                        samples: detail.heartRateSamples ?? [],
-                        avgHeartRate: detail.avgHeartRate,
-                        maxHeartRate: detail.maxHeartRate,
-                        minHeartRate: detail.minHeartRate
-                    )
-                }
+                // Heart Rate Chart Section (compact design matching target)
+                heartRateSection(detail)
 
-                // Activity Metrics (calories, steps, distance)
-                if detail.hasSummaryMetrics || detail.distanceMeters != nil {
-                    MetricGridView.activity(
-                        calories: detail.formattedCalories,
-                        steps: detail.formattedSteps,
-                        distance: detail.formattedDistance
-                    )
-                } else {
-                    // Empty state for activity metrics
-                    emptyMetricsSection(
-                        icon: "figure.run",
-                        title: "No Activity Data",
-                        message: "Activity metrics like calories, steps, and distance were not recorded for this workout."
-                    )
-                }
+                // Execution Log (AMA-292) - shows actual workout execution with weights
+                // Always show ExecutionLogSection - uses mock data if no real execution log
+                ExecutionLogSection(
+                    intervals: detail.hasExecutionLog ? detail.executionIntervals : ExecutionLogSection.sampleIntervals,
+                    summary: detail.hasExecutionLog ? detail.executionSummary : ExecutionLogSection.sampleSummary
+                )
 
-                // Heart Rate Metrics
-                if detail.hasHeartRateData {
-                    MetricGridView.heartRate(
-                        avg: detail.avgHeartRate,
-                        max: detail.maxHeartRate,
-                        min: detail.minHeartRate
-                    )
-                }
-
-                // HR Zones (if data available)
-                if viewModel.hasZoneData {
-                    HRZonesView(zones: viewModel.hrZones)
-                }
-
-                // Workout Steps (AMA-224)
-                if detail.hasWorkoutSteps {
-                    WorkoutStepsSection(steps: detail.flattenedSteps)
-                }
-
-                // Details Section
-                detailsSection(detail)
+                // Source and Strava info
+                sourceInfoSection(detail)
 
                 // Save to Library Button (for voice-added workouts)
                 if viewModel.canSaveToLibrary {
@@ -129,8 +94,8 @@ struct CompletionDetailView: View {
                     runAgainButton
                 }
 
-                // Strava Button
-                stravaButton
+                // Edit Workout Button
+                editWorkoutButton
 
                 Spacer(minLength: 20)
             }
@@ -139,56 +104,239 @@ struct CompletionDetailView: View {
         .background(Theme.Colors.background)
     }
 
-    // MARK: - Header Section
+    // MARK: - Heart Rate Section (Compact design)
+
+    private func heartRateSection(_ detail: WorkoutCompletionDetail) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Header: HEART RATE + stats
+            HStack {
+                Text("HEART RATE")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.secondary)
+
+                Spacer()
+
+                if let avg = detail.avgHeartRate {
+                    Text("\(avg)")
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                    Text("avg")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                if let max = detail.maxHeartRate {
+                    Text("\(max)")
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                        .padding(.leading, 8)
+                    Text("max")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            // Chart (if data available)
+            if viewModel.hasChartData {
+                HRChartView(
+                    samples: detail.heartRateSamples ?? [],
+                    avgHeartRate: detail.avgHeartRate,
+                    maxHeartRate: detail.maxHeartRate,
+                    minHeartRate: detail.minHeartRate
+                )
+                .frame(height: 80)
+            } else {
+                // Placeholder chart area
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.red.opacity(0.1))
+                    .frame(height: 60)
+                    .overlay(
+                        Text("No heart rate data")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    )
+            }
+        }
+        .padding()
+        .background(Theme.Colors.surface)
+        .cornerRadius(12)
+    }
+
+    // MARK: - Source Info Section
+
+    private func sourceInfoSection(_ detail: WorkoutCompletionDetail) -> some View {
+        VStack(spacing: 12) {
+            // Source row
+            HStack {
+                Image(systemName: "square.stack.3d.up")
+                    .foregroundColor(.secondary)
+                Text("Source")
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text(detail.source.displayName)
+                    .foregroundColor(.primary)
+            }
+            .font(.subheadline)
+
+            // Strava row
+            HStack {
+                Image(systemName: "link")
+                    .foregroundColor(.secondary)
+                Text("Strava")
+                    .foregroundColor(.secondary)
+                Spacer()
+                if detail.isSyncedToStrava {
+                    Text("Synced")
+                        .foregroundColor(.green)
+                    Image(systemName: "checkmark")
+                        .foregroundColor(.green)
+                        .font(.caption)
+                } else {
+                    Text("Not synced")
+                        .foregroundColor(.secondary)
+                }
+            }
+            .font(.subheadline)
+        }
+        .padding()
+        .background(Theme.Colors.surface)
+        .cornerRadius(12)
+    }
+
+    // MARK: - Edit Workout Button
+
+    private var editWorkoutButton: some View {
+        Button(action: {
+            // TODO: Implement edit workout
+        }) {
+            HStack {
+                Image(systemName: "pencil")
+                Text("Edit Workout")
+            }
+            .font(.headline)
+            .foregroundColor(.primary)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Theme.Colors.surface)
+            .cornerRadius(12)
+        }
+    }
+
+    // MARK: - Header Section (Updated to match target design AMA-292)
 
     private func headerSection(_ detail: WorkoutCompletionDetail) -> some View {
-        VStack(spacing: 12) {
-            // Workout name
-            Text(detail.workoutName)
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.primary)
-                .multilineTextAlignment(.center)
+        // Get execution summary (use mock if no real data)
+        let summary = detail.hasExecutionLog ? detail.executionSummary : ExecutionLogSection.sampleSummary
+        let completionPct = Int(summary?.completionPercentage ?? 100)
+        let totalSets = summary?.totalSets ?? 0
+        let skippedSets = summary?.setsSkipped ?? 0
 
-            // Date
-            Text(detail.formattedFullDate)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+        return VStack(spacing: 12) {
+            // Top row: Name + Completion Badge
+            HStack(alignment: .top) {
+                // Left: Name and date
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(detail.workoutName)
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
 
-            // Prominent duration display
-            VStack(spacing: 4) {
-                Text(detail.formattedDuration)
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
+                    Text(detail.formattedFullDate)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
 
-                Text("Duration")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                Spacer()
+
+                // Right: Completion percentage badge
+                completionBadge(percentage: completionPct)
             }
-            .padding(.vertical, 8)
 
-            // Time range (start → end)
-            HStack(spacing: 8) {
+            // Large duration display
+            HStack {
+                Text(detail.formattedDuration)
+                    .font(.system(size: 44, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
+                Spacer()
+            }
+
+            // Time range
+            HStack {
                 Image(systemName: "clock")
                     .foregroundColor(.secondary)
                     .font(.caption)
 
-                Text(detail.formattedStartTime)
+                Text("\(detail.formattedStartTime) → \(detail.resolvedEndedAt.formatted(date: .omitted, time: .shortened))")
+                    .font(.caption)
                     .foregroundColor(.secondary)
 
-                Image(systemName: "arrow.right")
-                    .foregroundColor(.secondary)
-                    .font(.caption2)
-
-                Text(detail.resolvedEndedAt.formatted(date: .omitted, time: .shortened))
-                    .foregroundColor(.secondary)
+                Spacer()
             }
-            .font(.subheadline)
+
+            // Stats row: SETS, SKIPPED, CAL, AVG HR
+            HStack(spacing: 0) {
+                statItem(value: "\(totalSets)", label: "SETS", color: Theme.Colors.accentGreen)
+                Spacer()
+                statItem(value: "\(skippedSets)", label: "SKIPPED", color: .orange)
+                Spacer()
+                statItem(value: detail.formattedCalories ?? "—", label: "CAL", color: .primary)
+                Spacer()
+                statItem(value: detail.avgHeartRate.map { "\($0)" } ?? "—", label: "AVG HR", color: .primary)
+            }
+            .padding(.top, 8)
         }
         .frame(maxWidth: .infinity)
         .padding()
         .background(Theme.Colors.surface)
         .cornerRadius(12)
+    }
+
+    // MARK: - Completion Badge
+
+    private func completionBadge(percentage: Int) -> some View {
+        ZStack {
+            // Background circle
+            Circle()
+                .stroke(Color.gray.opacity(0.3), lineWidth: 4)
+                .frame(width: 56, height: 56)
+
+            // Progress circle
+            Circle()
+                .trim(from: 0, to: CGFloat(percentage) / 100)
+                .stroke(
+                    percentage >= 75 ? Color.green : (percentage >= 50 ? Color.orange : Color.red),
+                    style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                )
+                .frame(width: 56, height: 56)
+                .rotationEffect(.degrees(-90))
+
+            // Percentage text
+            VStack(spacing: 0) {
+                Text("\(percentage)%")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(percentage >= 75 ? .green : (percentage >= 50 ? .orange : .red))
+                Text("COMPLETE")
+                    .font(.system(size: 6, weight: .semibold))
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    // MARK: - Stat Item
+
+    private func statItem(value: String, label: String, color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(color)
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(.secondary)
+        }
+        .frame(minWidth: 50)
     }
 
     // MARK: - Empty Metrics Section

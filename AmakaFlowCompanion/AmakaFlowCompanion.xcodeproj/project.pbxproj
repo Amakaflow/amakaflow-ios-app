@@ -27,6 +27,7 @@
 		A19401BB00000008C0000008 /* HRZonesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA00000008B0000008 /* HRZonesView.swift */; };
 		A19401BB00000009C0000009 /* MetricGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA00000009B0000009 /* MetricGridView.swift */; };
 		A19401BB0000000AC000000A /* WorkoutStepsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA0000000AB000000A /* WorkoutStepsSection.swift */; };
+		A19401BB0000000BC000000B /* ExecutionLogSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA0000000BB000000B /* ExecutionLogSection.swift */; };
 		AA8C7E7D040E462BB1347220 /* RestPeriodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94AE3547CCCD41159C85554B /* RestPeriodView.swift */; };
 		B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E57529578481B8991A91F /* SourcesView.swift */; };
 		B69E1808FE344A15848A3B67 /* WorkoutCompletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */; };
@@ -209,6 +210,7 @@
 		A19401AA00000008B0000008 /* HRZonesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HRZonesView.swift; path = ../AmakaFlow/Views/CompletionDetail/HRZonesView.swift; sourceTree = SOURCE_ROOT; };
 		A19401AA00000009B0000009 /* MetricGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MetricGridView.swift; path = ../AmakaFlow/Views/CompletionDetail/MetricGridView.swift; sourceTree = SOURCE_ROOT; };
 		A19401AA0000000AB000000A /* WorkoutStepsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutStepsSection.swift; path = ../AmakaFlow/Views/CompletionDetail/WorkoutStepsSection.swift; sourceTree = SOURCE_ROOT; };
+		A19401AA0000000BB000000B /* ExecutionLogSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ExecutionLogSection.swift; path = ../AmakaFlow/Views/CompletionDetail/ExecutionLogSection.swift; sourceTree = SOURCE_ROOT; };
 		CC2192F9A69B4A51B54A138F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeView.swift; path = ../AmakaFlow/Views/HomeView.swift; sourceTree = SOURCE_ROOT; };
 		D3BUG10G00000001B0000001 /* DebugLogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogService.swift; path = ../AmakaFlow/Services/DebugLogService.swift; sourceTree = SOURCE_ROOT; };
 		D3BUG10G00000002B0000002 /* DebugLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogView.swift; path = ../AmakaFlow/Views/DebugLogView.swift; sourceTree = SOURCE_ROOT; };
@@ -462,6 +464,7 @@
 				A19401AA00000008B0000008 /* HRZonesView.swift */,
 				A19401AA00000009B0000009 /* MetricGridView.swift */,
 				A19401AA0000000AB000000A /* WorkoutStepsSection.swift */,
+				A19401AA0000000BB000000B /* ExecutionLogSection.swift */,
 				CC2192F9A69B4A51B54A138F /* HomeView.swift */,
 				F8BFF8D1C38311406C868156 /* StepDisplayView.swift */,
 				94AE3547CCCD41159C85554B /* RestPeriodView.swift */,
@@ -912,6 +915,7 @@
 				A19401BB00000008C0000008 /* HRZonesView.swift in Sources */,
 				A19401BB00000009C0000009 /* MetricGridView.swift in Sources */,
 				A19401BB0000000AC000000A /* WorkoutStepsSection.swift in Sources */,
+				A19401BB0000000BC000000B /* ExecutionLogSection.swift in Sources */,
 				67283958B3E2475BA2DA974A /* HomeView.swift in Sources */,
 				F84E22742ED0D58300459747 /* WorkoutsViewModel.swift in Sources */,
 				F84E226F2ED0D55600459747 /* AmakaFlowApp.swift in Sources */,

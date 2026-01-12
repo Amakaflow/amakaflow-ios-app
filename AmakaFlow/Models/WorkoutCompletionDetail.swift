@@ -93,6 +93,116 @@ enum HRZoneColor: String, Hashable {
     }
 }
 
+// MARK: - Execution Log Types (AMA-292)
+
+/// Weight entry from execution log
+struct ExecutionLogWeight: Codable, Hashable {
+    let components: [ExecutionLogWeightComponent]?
+    let displayLabel: String?
+
+    enum CodingKeys: String, CodingKey {
+        case components
+        case displayLabel = "display_label"
+    }
+}
+
+/// Individual weight component
+struct ExecutionLogWeightComponent: Codable, Hashable {
+    let source: String?
+    let value: Double
+    let unit: String
+}
+
+/// A single set within an interval
+struct ExecutionLogSet: Codable, Hashable {
+    let setNumber: Int
+    let status: String
+    let repsPlanned: Int?
+    let repsCompleted: Int?
+    let weight: ExecutionLogWeight?
+    let durationSeconds: Int?
+    let rpe: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case setNumber = "set_number"
+        case status
+        case repsPlanned = "reps_planned"
+        case repsCompleted = "reps_completed"
+        case weight
+        case durationSeconds = "duration_seconds"
+        case rpe
+    }
+}
+
+/// A single interval in the execution log
+struct ExecutionLogInterval: Codable, Hashable, Identifiable {
+    let intervalIndex: Int
+    let plannedKind: String?
+    let plannedName: String?
+    let status: String
+    let plannedDurationSeconds: Int?
+    let actualDurationSeconds: Int?
+    let startedAt: Date?
+    let endedAt: Date?
+    let skipReason: String?
+    let sets: [ExecutionLogSet]?
+
+    var id: Int { intervalIndex }
+
+    enum CodingKeys: String, CodingKey {
+        case intervalIndex = "interval_index"
+        case plannedKind = "planned_kind"
+        case plannedName = "planned_name"
+        case status
+        case plannedDurationSeconds = "planned_duration_seconds"  // Matches ExecutionLogBuilder.build()
+        case actualDurationSeconds = "actual_duration_seconds"    // Matches ExecutionLogBuilder.build()
+        case startedAt = "started_at"
+        case endedAt = "ended_at"
+        case skipReason = "skip_reason"
+        case sets
+    }
+
+    /// Whether this interval was completed
+    var isCompleted: Bool { status == "completed" }
+
+    /// Whether this interval was skipped
+    var isSkipped: Bool { status == "skipped" }
+}
+
+/// Summary of execution log
+struct ExecutionLogSummary: Codable, Hashable {
+    let totalIntervals: Int?
+    let completed: Int?
+    let skipped: Int?
+    let notReached: Int?
+    let completionPercentage: Double?
+    let totalSets: Int?
+    let setsCompleted: Int?
+    let setsSkipped: Int?
+    let totalDurationSeconds: Int?
+    let activeDurationSeconds: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case totalIntervals = "total_intervals"
+        case completed
+        case skipped
+        case notReached = "not_reached"
+        case completionPercentage = "completion_percentage"
+        case totalSets = "total_sets"
+        case setsCompleted = "sets_completed"
+        case setsSkipped = "sets_skipped"
+        case totalDurationSeconds = "total_duration_seconds"
+        case activeDurationSeconds = "active_duration_seconds"
+    }
+}
+
+/// Complete execution log from API (AMA-292)
+struct ExecutionLog: Codable, Hashable {
+    let version: Int?
+    let intervals: [ExecutionLogInterval]?
+    let summary: ExecutionLogSummary?
+}
+
 // MARK: - Workout Completion Detail
 
 struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
@@ -115,6 +225,7 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
     let stravaActivityId: String?
     let workoutId: String?          // Original workout ID (AMA-224)
     let workoutStructure: [WorkoutInterval]? // Workout steps/exercises (AMA-240)
+    let executionLog: ExecutionLog? // Actual execution data (AMA-292)
 
     /// Computed endedAt from startedAt + durationSeconds if not provided
     var resolvedEndedAt: Date {
@@ -152,6 +263,7 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
         case workoutId
         case workoutStructure = "workout_structure"
         case intervalsLegacy = "intervals"  // Backwards compatibility (AMA-240)
+        case executionLog = "execution_log"  // AMA-292
     }
 
     // MARK: - Memberwise Initializer (required since we have custom decoder)
@@ -175,7 +287,8 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
         syncedToStrava: Bool?,
         stravaActivityId: String?,
         workoutId: String?,
-        workoutStructure: [WorkoutInterval]?
+        workoutStructure: [WorkoutInterval]?,
+        executionLog: ExecutionLog? = nil
     ) {
         self.id = id
         self.workoutName = workoutName
@@ -196,6 +309,7 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
         self.stravaActivityId = stravaActivityId
         self.workoutId = workoutId
         self.workoutStructure = workoutStructure
+        self.executionLog = executionLog
     }
 
     // MARK: - Custom Decoder (supports both "workout_structure" and "intervals" from backend)
@@ -228,6 +342,19 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
         } else {
             workoutStructure = try container.decodeIfPresent([WorkoutInterval].self, forKey: .intervalsLegacy)
         }
+
+        // AMA-292: Decode execution log with error logging
+        do {
+            executionLog = try container.decodeIfPresent(ExecutionLog.self, forKey: .executionLog)
+            if let log = executionLog {
+                print("[WorkoutCompletionDetail] Decoded execution_log with \(log.intervals?.count ?? 0) intervals")
+            } else {
+                print("[WorkoutCompletionDetail] No execution_log field in response")
+            }
+        } catch {
+            print("[WorkoutCompletionDetail] Failed to decode execution_log: \(error)")
+            executionLog = nil
+        }
     }
 
     // MARK: - Custom Encoder (only encodes workoutStructure, not intervalsLegacy)
@@ -254,7 +381,34 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
         try container.encodeIfPresent(stravaActivityId, forKey: .stravaActivityId)
         try container.encodeIfPresent(workoutId, forKey: .workoutId)
         try container.encodeIfPresent(workoutStructure, forKey: .workoutStructure)
+        try container.encodeIfPresent(executionLog, forKey: .executionLog)
         // Note: intervalsLegacy is NOT encoded - it's only used for decoding backwards compatibility
+    }
+
+    // MARK: - Execution Log Helpers (AMA-292)
+
+    /// Whether this completion has execution log data to display
+    var hasExecutionLog: Bool {
+        guard let log = executionLog, let intervals = log.intervals else { return false }
+        return !intervals.isEmpty
+    }
+
+    /// Get completed intervals with sets (for strength exercises display)
+    var completedStrengthIntervals: [ExecutionLogInterval] {
+        guard let log = executionLog, let intervals = log.intervals else { return [] }
+        return intervals.filter { interval in
+            interval.isCompleted && interval.sets != nil && !(interval.sets?.isEmpty ?? true)
+        }
+    }
+
+    /// Get all intervals for display
+    var executionIntervals: [ExecutionLogInterval] {
+        executionLog?.intervals ?? []
+    }
+
+    /// Get execution summary
+    var executionSummary: ExecutionLogSummary? {
+        executionLog?.summary
     }
 }
 
