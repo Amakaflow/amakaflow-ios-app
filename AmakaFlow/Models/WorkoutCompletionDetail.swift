@@ -96,14 +96,10 @@ enum HRZoneColor: String, Hashable {
 // MARK: - Execution Log Types (AMA-292)
 
 /// Weight entry from execution log
+/// Note: CodingKeys rely on decoder's .convertFromSnakeCase strategy
 struct ExecutionLogWeight: Codable, Hashable {
     let components: [ExecutionLogWeightComponent]?
     let displayLabel: String?
-
-    enum CodingKeys: String, CodingKey {
-        case components
-        case displayLabel = "display_label"
-    }
 }
 
 /// Individual weight component
@@ -114,6 +110,7 @@ struct ExecutionLogWeightComponent: Codable, Hashable {
 }
 
 /// A single set within an interval
+/// Note: CodingKeys rely on decoder's .convertFromSnakeCase strategy
 struct ExecutionLogSet: Codable, Hashable {
     let setNumber: Int
     let status: String
@@ -122,19 +119,10 @@ struct ExecutionLogSet: Codable, Hashable {
     let weight: ExecutionLogWeight?
     let durationSeconds: Int?
     let rpe: Int?
-
-    enum CodingKeys: String, CodingKey {
-        case setNumber = "set_number"
-        case status
-        case repsPlanned = "reps_planned"
-        case repsCompleted = "reps_completed"
-        case weight
-        case durationSeconds = "duration_seconds"
-        case rpe
-    }
 }
 
 /// A single interval in the execution log
+/// Note: CodingKeys rely on decoder's .convertFromSnakeCase strategy
 struct ExecutionLogInterval: Codable, Hashable, Identifiable {
     let intervalIndex: Int
     let plannedKind: String?
@@ -149,19 +137,6 @@ struct ExecutionLogInterval: Codable, Hashable, Identifiable {
 
     var id: Int { intervalIndex }
 
-    enum CodingKeys: String, CodingKey {
-        case intervalIndex = "interval_index"
-        case plannedKind = "planned_kind"
-        case plannedName = "planned_name"
-        case status
-        case plannedDurationSeconds = "planned_duration_seconds"  // Matches ExecutionLogBuilder.build()
-        case actualDurationSeconds = "actual_duration_seconds"    // Matches ExecutionLogBuilder.build()
-        case startedAt = "started_at"
-        case endedAt = "ended_at"
-        case skipReason = "skip_reason"
-        case sets
-    }
-
     /// Whether this interval was completed
     var isCompleted: Bool { status == "completed" }
 
@@ -170,6 +145,7 @@ struct ExecutionLogInterval: Codable, Hashable, Identifiable {
 }
 
 /// Summary of execution log
+/// Note: CodingKeys rely on decoder's .convertFromSnakeCase strategy
 struct ExecutionLogSummary: Codable, Hashable {
     let totalIntervals: Int?
     let completed: Int?
@@ -181,19 +157,6 @@ struct ExecutionLogSummary: Codable, Hashable {
     let setsSkipped: Int?
     let totalDurationSeconds: Int?
     let activeDurationSeconds: Int?
-
-    enum CodingKeys: String, CodingKey {
-        case totalIntervals = "total_intervals"
-        case completed
-        case skipped
-        case notReached = "not_reached"
-        case completionPercentage = "completion_percentage"
-        case totalSets = "total_sets"
-        case setsCompleted = "sets_completed"
-        case setsSkipped = "sets_skipped"
-        case totalDurationSeconds = "total_duration_seconds"
-        case activeDurationSeconds = "active_duration_seconds"
-    }
 }
 
 /// Complete execution log from API (AMA-292)
@@ -261,9 +224,9 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
         case syncedToStrava
         case stravaActivityId
         case workoutId
-        case workoutStructure = "workout_structure"
+        case workoutStructure  // AMA-240: decoder uses .convertFromSnakeCase
         case intervalsLegacy = "intervals"  // Backwards compatibility (AMA-240)
-        case executionLog = "execution_log"  // AMA-292
+        case executionLog  // AMA-292: decoder uses .convertFromSnakeCase
     }
 
     // MARK: - Memberwise Initializer (required since we have custom decoder)
