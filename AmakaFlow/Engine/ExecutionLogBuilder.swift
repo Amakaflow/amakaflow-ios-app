@@ -186,6 +186,8 @@ class ExecutionLogBuilder {
     ///   - plannedDuration: Planned duration in seconds (nil for reps-based)
     ///   - elapsedSeconds: Current elapsed seconds in workout (for simulation mode timing)
     func startInterval(index: Int, kind: String?, name: String?, plannedDuration: Int?, elapsedSeconds: Int? = nil) {
+        print("📊 [AMA-291] startInterval: index=\(index), name=\(name ?? "nil"), elapsedSeconds=\(elapsedSeconds ?? -1)")
+
         // End any previous interval that wasn't properly closed
         if currentIntervalIndex != nil {
             endCurrentInterval(actualDuration: nil, elapsedSeconds: elapsedSeconds)
@@ -204,6 +206,7 @@ class ExecutionLogBuilder {
         interval.startedAt = currentIntervalStartTime
 
         intervals.append(interval)
+        print("📊 [AMA-291] startInterval: stored startElapsed=\(currentIntervalStartElapsed ?? -1)")
     }
 
     /// End the current interval
@@ -211,8 +214,11 @@ class ExecutionLogBuilder {
     ///   - actualDuration: Actual duration in seconds (nil to calculate from elapsed time or wall clock)
     ///   - elapsedSeconds: Current elapsed seconds in workout (for simulation mode timing)
     func endCurrentInterval(actualDuration: Int?, elapsedSeconds: Int? = nil) {
+        print("📊 [AMA-291] endCurrentInterval: currentIndex=\(currentIntervalIndex ?? -1), elapsedSeconds=\(elapsedSeconds ?? -1), startElapsed=\(currentIntervalStartElapsed ?? -1)")
+
         guard let currentIndex = currentIntervalIndex,
               let idx = intervals.firstIndex(where: { $0.intervalIndex == currentIndex }) else {
+            print("📊 [AMA-291] endCurrentInterval: No current interval to end")
             return
         }
 
@@ -221,12 +227,19 @@ class ExecutionLogBuilder {
         if let duration = actualDuration {
             // Explicit duration provided
             intervals[idx].actualDurationSeconds = duration
+            print("📊 [AMA-291] endCurrentInterval: Using explicit duration=\(duration)")
         } else if let startElapsed = currentIntervalStartElapsed, let endElapsed = elapsedSeconds {
             // AMA-291: Calculate from elapsed seconds (accurate for simulation mode)
-            intervals[idx].actualDurationSeconds = endElapsed - startElapsed
+            let calculatedDuration = endElapsed - startElapsed
+            intervals[idx].actualDurationSeconds = calculatedDuration
+            print("📊 [AMA-291] endCurrentInterval: Calculated duration=\(calculatedDuration) (endElapsed=\(endElapsed) - startElapsed=\(startElapsed))")
         } else if let startTime = currentIntervalStartTime {
             // Fallback to wall-clock time
-            intervals[idx].actualDurationSeconds = Int(Date().timeIntervalSince(startTime))
+            let wallClockDuration = Int(Date().timeIntervalSince(startTime))
+            intervals[idx].actualDurationSeconds = wallClockDuration
+            print("📊 [AMA-291] endCurrentInterval: Fallback to wall-clock duration=\(wallClockDuration)")
+        } else {
+            print("📊 [AMA-291] endCurrentInterval: WARNING - No duration calculation possible!")
         }
 
         currentIntervalIndex = nil
@@ -281,7 +294,10 @@ class ExecutionLogBuilder {
         skipped: Bool = false,
         weightSource: WeightSource = .other
     ) {
+        print("📊 [AMA-291] logSet called: intervalIndex=\(intervalIndex), setNumber=\(setNumber), reps=\(reps ?? -1), repsPlanned=\(repsPlanned ?? -1), weight=\(weight ?? -1)")
+
         guard let idx = intervals.firstIndex(where: { $0.intervalIndex == intervalIndex }) else {
+            print("📊 [AMA-291] ERROR: Could not find interval with index \(intervalIndex)")
             return
         }
 
@@ -289,6 +305,7 @@ class ExecutionLogBuilder {
         setExec.status = skipped ? .skipped : .completed
         setExec.repsPlanned = repsPlanned
         setExec.repsCompleted = reps
+        print("📊 [AMA-291] Created SetExecution: repsPlanned=\(setExec.repsPlanned ?? -1), repsCompleted=\(setExec.repsCompleted ?? -1)")
 
         // Convert weight to WeightEntry if provided
         if let w = weight, let u = unit {
@@ -305,9 +322,23 @@ class ExecutionLogBuilder {
 
     /// Build the final execution_log dictionary for API submission (v2 format)
     func build() -> [String: Any] {
+        print("📊 [AMA-291] build() called with \(intervals.count) intervals")
+
         // End any unclosed interval
         if currentIntervalIndex != nil {
             endCurrentInterval(actualDuration: nil)
+        }
+
+        // Debug: Print all interval data before building
+        for interval in intervals {
+            print("📊 [AMA-291] Interval \(interval.intervalIndex): \(interval.plannedName ?? "unnamed"), actualDuration=\(interval.actualDurationSeconds ?? -1)")
+            if let sets = interval.sets {
+                for set in sets {
+                    print("📊 [AMA-291]   Set \(set.setNumber): repsPlanned=\(set.repsPlanned ?? -1), repsCompleted=\(set.repsCompleted ?? -1), weight=\(set.weight?.displayLabel ?? "nil")")
+                }
+            } else {
+                print("📊 [AMA-291]   No sets logged for this interval")
+            }
         }
 
         let summary = calculateSummary()

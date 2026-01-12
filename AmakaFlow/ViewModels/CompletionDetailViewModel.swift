@@ -395,7 +395,34 @@ extension APIService {
             do {
                 let wrappedResponse = try decoder.decode(CompletionDetailResponse.self, from: data)
                 print("[CompletionDetail] Successfully decoded wrapped completion detail")
-                return wrappedResponse.completion
+
+                // AMA-291: Debug log what execution_log data was received from API
+                let completion = wrappedResponse.completion
+                Task { @MainActor in
+                    if let log = completion.executionLog, let intervals = log.intervals {
+                        var debugDetails = "API returned execution_log with \(intervals.count) intervals\n"
+                        for interval in intervals.prefix(5) {
+                            let name = interval.plannedName ?? "unnamed"
+                            let duration = interval.actualDurationSeconds ?? -1
+                            debugDetails += "  \(name): duration=\(duration)s"
+                            if let sets = interval.sets {
+                                debugDetails += ", sets=\(sets.count)"
+                                for set in sets {
+                                    debugDetails += "\n    Set \(set.setNumber): repsCompleted=\(set.repsCompleted ?? -1)"
+                                }
+                            }
+                            debugDetails += "\n"
+                        }
+                        if intervals.count > 5 {
+                            debugDetails += "  ... and \(intervals.count - 5) more intervals"
+                        }
+                        DebugLogService.shared.log("API ExecutionLog Response", details: debugDetails)
+                    } else {
+                        DebugLogService.shared.log("API ExecutionLog Response", details: "No execution_log returned from API")
+                    }
+                }
+
+                return completion
             } catch let wrappedError as DecodingError {
                 // Log detailed wrapped decode error
                 var errorMsg = ""

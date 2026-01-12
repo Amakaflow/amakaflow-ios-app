@@ -456,16 +456,18 @@ class WorkoutEngine: ObservableObject {
         exerciseSetEntries[exerciseName]?.append(entry)
 
         // (AMA-291) Log set to execution log
+        print("📊 [AMA-291] logSetWeight: step.targetReps=\(step.targetReps ?? -1) for \(exerciseName)")
         executionLogBuilder.logSet(
             intervalIndex: currentStepIndex,
             setNumber: setNumber,
             weight: weight,
             unit: unit,
             reps: step.targetReps,
+            repsPlanned: step.targetReps,
             skipped: weight == nil
         )
 
-        print("🏋️ Logged set: \(exerciseName) set \(setNumber) - weight: \(weight ?? 0) \(unit ?? "")")
+        print("🏋️ Logged set: \(exerciseName) set \(setNumber) - weight: \(weight ?? 0) \(unit ?? ""), targetReps: \(step.targetReps ?? -1)")
 
         // Advance to next step (which may trigger rest phase)
         nextStep()
@@ -607,6 +609,29 @@ class WorkoutEngine: ObservableObject {
         }
 
         // Capture workout data before resetting state
+        let executionLog = executionLogBuilder.build()  // (AMA-291) Execution tracking
+
+        // AMA-291: Debug log the execution log contents
+        if let intervalsArray = executionLog["intervals"] as? [[String: Any]] {
+            var debugDetails = "Intervals: \(intervalsArray.count)\n"
+            for interval in intervalsArray {
+                let name = interval["planned_name"] as? String ?? "unnamed"
+                let duration = interval["actual_duration_seconds"] as? Int ?? -1
+                debugDetails += "  \(name): duration=\(duration)s"
+                if let sets = interval["sets"] as? [[String: Any]] {
+                    debugDetails += ", sets=\(sets.count)"
+                    for set in sets {
+                        let setNum = set["set_number"] as? Int ?? 0
+                        let repsCompleted = set["reps_completed"] as? Int
+                        let repsPlanned = set["reps_planned"] as? Int
+                        debugDetails += "\n    Set \(setNum): repsCompleted=\(repsCompleted ?? -1), repsPlanned=\(repsPlanned ?? -1)"
+                    }
+                }
+                debugDetails += "\n"
+            }
+            DebugLogService.shared.log("ExecutionLog Debug", details: debugDetails)
+        }
+
         let workoutData = (
             id: workout?.id,
             name: workout?.name,
@@ -614,7 +639,7 @@ class WorkoutEngine: ObservableObject {
             duration: elapsedSeconds,
             intervals: workout?.intervals,  // (AMA-237) For "Run Again" feature
             setLogs: buildSetLogs(),        // (AMA-281) Weight tracking
-            executionLog: executionLogBuilder.build()  // (AMA-291) Execution tracking
+            executionLog: executionLog  // (AMA-291) Execution tracking
         )
 
         clock.invalidateTimer()
@@ -913,12 +938,13 @@ class WorkoutEngine: ObservableObject {
 
                 print("🎮 [AMA-308] Auto-selecting weight \(simulatedWeight ?? 0) \(unit) for \(step.label) (step \(capturedStepIndex)) after \(scaledDelay)s delay")
 
-                // Start elapsed time counter for reps step (simulates time spent doing the exercise)
+                // AMA-291: Calculate simulated exercise time but DON'T start timer
+                // We add the simulated time directly in the async block to avoid double-counting
+                // (timer ticks would also increment elapsedSeconds, causing over-counting)
                 let simulatedExerciseTime = max(3, Int(scaledDelay * clock.speedMultiplier))
-                remainingSeconds = simulatedExerciseTime
-                if phase == .running {
-                    startTimer()
-                }
+
+                // Capture the simulated duration for use in async block
+                let capturedSimulatedTime = simulatedExerciseTime
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + scaledDelay) { [weak self] in
                     guard let self = self else { return }
@@ -928,6 +954,11 @@ class WorkoutEngine: ObservableObject {
                         print("🎮 [AMA-308] Step already advanced from \(capturedStepIndex) to \(self.currentStepIndex), skipping weight log")
                         return
                     }
+
+                    // AMA-291: Add simulated exercise time to elapsed seconds
+                    // This ensures interval duration is tracked even when timer doesn't tick at high speeds
+                    self.elapsedSeconds += capturedSimulatedTime
+                    print("🎮 [AMA-308] Added \(capturedSimulatedTime)s simulated time, elapsed now \(self.elapsedSeconds)s")
 
                     print("🎮 [AMA-308] Logging weight \(simulatedWeight ?? 0) \(unit) for step \(capturedStepIndex)")
                     self.logSetWeight(weight: simulatedWeight, unit: unit)
