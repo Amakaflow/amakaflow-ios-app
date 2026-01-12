@@ -17,6 +17,33 @@ struct HeartRateDataPoint: Identifiable, Codable, Hashable {
     enum CodingKeys: String, CodingKey {
         case timestamp
         case bpm
+        case value  // API returns "value" instead of "bpm"
+    }
+
+    // Custom decoder to accept both "bpm" and "value" keys from API
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        timestamp = try container.decode(Date.self, forKey: .timestamp)
+
+        // Try "bpm" first, then fall back to "value"
+        if let bpmValue = try container.decodeIfPresent(Int.self, forKey: .bpm) {
+            bpm = bpmValue
+        } else {
+            bpm = try container.decode(Int.self, forKey: .value)
+        }
+    }
+
+    // Custom encoder - always encode as "bpm" for consistency
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(timestamp, forKey: .timestamp)
+        try container.encode(bpm, forKey: .bpm)
+    }
+
+    // Memberwise init for sample data
+    init(timestamp: Date, bpm: Int) {
+        self.timestamp = timestamp
+        self.bpm = bpm
     }
 }
 
