@@ -240,6 +240,7 @@ class WorkoutCompletionService: ObservableObject {
         durationSeconds: Int,
         avgHeartRate: Int? = nil,
         activeCalories: Int? = nil,
+        heartRateSamples: [HRSample]? = nil,         // (AMA-291) HR samples for chart display
         workoutStructure: [WorkoutInterval]? = nil,  // (AMA-240) Workout structure for "Run Again"
         isSimulated: Bool = false,                   // (AMA-271) Simulation mode flag
         setLogs: [SetLog]? = nil,                    // (AMA-281) Weight logs per exercise/set
@@ -270,7 +271,7 @@ class WorkoutCompletionService: ObservableObject {
             healthMetrics: healthMetrics,
             source: "phone",
             deviceInfo: deviceInfo,
-            heartRateSamples: nil,
+            heartRateSamples: heartRateSamples,      // (AMA-291) HR samples for chart display
             workoutStructure: workoutStructure,
             workoutName: workoutName,
             isSimulated: isSimulated ? true : nil,  // Only send if true (AMA-271)

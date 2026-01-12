@@ -728,11 +728,15 @@ class WorkoutEngine: ObservableObject {
             return
         }
 
-        let endedAt = Date()
+        // AMA-291: For simulation mode, calculate endedAt from durationSeconds
+        // so the server gets the correct simulated duration, not real wall-clock time
+        let endedAt = isSimulation
+            ? startedAt.addingTimeInterval(Double(durationSeconds))
+            : Date()
 
         // Get health metrics from connected watch if available
         // In E2E test mode (TEST_AUTH_SECRET set), generate mock data
-        let (avgHeartRate, activeCalories) = getHealthMetrics(durationSeconds: durationSeconds)
+        let (avgHeartRate, activeCalories, hrSamples) = getHealthMetricsWithSamples(durationSeconds: durationSeconds)
 
         Task {
             do {
@@ -744,6 +748,7 @@ class WorkoutEngine: ObservableObject {
                     durationSeconds: durationSeconds,
                     avgHeartRate: avgHeartRate,
                     activeCalories: activeCalories,
+                    heartRateSamples: hrSamples,  // (AMA-291) HR samples for chart display
                     workoutStructure: intervals,  // (AMA-240) Include workout structure for "Run Again"
                     isSimulated: isSimulation,    // (AMA-271) Flag simulated workouts
                     setLogs: setLogs,             // (AMA-281) Weight tracking
@@ -774,13 +779,23 @@ class WorkoutEngine: ObservableObject {
         }
     }
 
-    /// Get health metrics - uses simulated data in simulation mode, mock data in E2E test mode, otherwise from Watch
-    private func getHealthMetrics(durationSeconds: Int) -> (avgHeartRate: Int?, activeCalories: Int?) {
+    /// Get health metrics with HR samples - uses simulated data in simulation mode, mock data in E2E test mode, otherwise from Watch
+    /// AMA-291: Updated to return HR samples for API submission
+    private func getHealthMetricsWithSamples(durationSeconds: Int) -> (avgHeartRate: Int?, activeCalories: Int?, hrSamples: [HRSample]?) {
         // Check for simulation mode health provider first (AMA-271)
         if isSimulation, let provider = healthProvider {
             let data = provider.getCollectedData()
-            print("🏋️ [Simulation Mode] Using simulated health data: avgHR=\(data.avgHR), calories=\(data.calories)")
-            return (data.avgHR, data.calories)
+            print("🏋️ [Simulation Mode] Using simulated health data: avgHR=\(data.avgHR), calories=\(data.calories), samples=\(data.hrSamples.count)")
+
+            // Convert simulated samples to HRSample format for API
+            let apiSamples = data.hrSamples.map { sample in
+                HRSample(
+                    timestamp: ISO8601DateFormatter().string(from: sample.timestamp),
+                    value: sample.value
+                )
+            }
+
+            return (data.avgHR, data.calories, apiSamples.isEmpty ? nil : apiSamples)
         }
 
         #if DEBUG
@@ -798,7 +813,7 @@ class WorkoutEngine: ObservableObject {
             let mockCalories = Int(caloriesPerMinute * durationMinutes)
 
             print("🏋️ [E2E Test Mode] Using mock health data: avgHR=\(mockAvgHR), calories=\(mockCalories)")
-            return (mockAvgHR, mockCalories)
+            return (mockAvgHR, mockCalories, nil)
         }
         #endif
 
@@ -807,13 +822,21 @@ class WorkoutEngine: ObservableObject {
         let activeCalories: Int? = watchCals > 0 ? Int(watchCals) : nil
 
         // Try to get heart rate from watch samples
-        let hrSamples = WatchConnectivityManager.shared.heartRateSamples
-        let avgHeartRate: Int? = hrSamples.isEmpty ? nil : {
-            let sum = hrSamples.reduce(0) { $0 + $1.value }
-            return sum / hrSamples.count
+        let watchHRSamples = WatchConnectivityManager.shared.heartRateSamples
+        let avgHeartRate: Int? = watchHRSamples.isEmpty ? nil : {
+            let sum = watchHRSamples.reduce(0) { $0 + $1.value }
+            return sum / watchHRSamples.count
         }()
 
-        return (avgHeartRate, activeCalories)
+        // Convert watch samples to HRSample format for API
+        let apiSamples = watchHRSamples.map { sample in
+            HRSample(
+                timestamp: ISO8601DateFormatter().string(from: sample.timestamp),
+                value: sample.value
+            )
+        }
+
+        return (avgHeartRate, activeCalories, apiSamples.isEmpty ? nil : apiSamples)
     }
 
     // MARK: - Timer Management
