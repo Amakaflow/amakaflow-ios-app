@@ -39,8 +39,9 @@ struct StepDisplayView: View {
                     .foregroundColor(Theme.Colors.textPrimary)
                     .multilineTextAlignment(.center)
 
-                // Timer display (for timed steps)
-                if engine.currentStep?.stepType == .timed {
+                // Timer display (for timed steps and rest with countdown)
+                if engine.currentStep?.stepType == .timed ||
+                   (engine.currentStep?.stepType == .rest && engine.currentStep?.timerSeconds != nil) {
                     timerDisplay
                 }
 

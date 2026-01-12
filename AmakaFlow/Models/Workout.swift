@@ -201,16 +201,16 @@ struct Workout: Identifiable, Codable, Hashable {
         self.sourceUrl = sourceUrl
     }
 
-    // Custom decoder to handle missing/null intervals
+    // Custom decoder to handle missing/null fields gracefully
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
-        sport = try container.decode(WorkoutSport.self, forKey: .sport)
-        duration = try container.decode(Int.self, forKey: .duration)
+        sport = try container.decodeIfPresent(WorkoutSport.self, forKey: .sport) ?? .other
+        duration = try container.decodeIfPresent(Int.self, forKey: .duration) ?? 0
         intervals = try container.decodeIfPresent([WorkoutInterval].self, forKey: .intervals) ?? []
         description = try container.decodeIfPresent(String.self, forKey: .description)
-        source = try container.decode(WorkoutSource.self, forKey: .source)
+        source = try container.decodeIfPresent(WorkoutSource.self, forKey: .source) ?? .other
         sourceUrl = try container.decodeIfPresent(String.self, forKey: .sourceUrl)
     }
 

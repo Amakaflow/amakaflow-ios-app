@@ -137,6 +137,27 @@ func flattenIntervals(_ intervals: [WorkoutInterval]) -> [FlattenedInterval] {
                     ))
                 }
 
+            case .rest(let seconds):
+                // Handle explicit REST intervals - these are timed rest periods
+                counter += 1
+                print("📱 Processing rest: seconds=\(seconds ?? -1)")
+
+                result.append(FlattenedInterval(
+                    interval: interval,
+                    index: counter,
+                    label: "Rest",
+                    details: seconds.map { formatSeconds($0) } ?? "Tap when ready",
+                    roundInfo: roundContext,
+                    timerSeconds: seconds,  // Use the timed countdown
+                    stepType: .rest,
+                    followAlongUrl: nil,
+                    targetReps: nil,
+                    setNumber: nil,
+                    totalSets: nil,
+                    hasRestAfter: false,  // Rest doesn't have rest after it
+                    restAfterSeconds: nil
+                ))
+
             default:
                 counter += 1
                 // Cooldown shouldn't have rest after (it ends the workout)

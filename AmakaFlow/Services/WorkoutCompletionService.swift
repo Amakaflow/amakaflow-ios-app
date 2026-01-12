@@ -26,6 +26,7 @@ struct WorkoutCompletionRequest: Codable {
     let workoutName: String?                  // Workout name for display (AMA-237)
     let isSimulated: Bool?                    // True if workout was run in simulation mode (AMA-271)
     let setLogs: [SetLog]?                    // Weight logs per exercise/set (AMA-281)
+    let executionLog: AnyCodable?             // Execution tracking (AMA-291) - uses AnyCodable for Codable conformance
 
     enum CodingKeys: String, CodingKey {
         case workoutEventId = "workout_event_id"
@@ -41,6 +42,61 @@ struct WorkoutCompletionRequest: Codable {
         case workoutName = "workout_name"
         case isSimulated = "is_simulated"
         case setLogs = "set_logs"
+        case executionLog = "execution_log"
+    }
+}
+
+/// Helper for encoding [String: Any] dictionaries (AMA-291)
+struct AnyCodable: Codable {
+    let value: Any
+
+    init(_ value: Any) {
+        self.value = value
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+
+        if container.decodeNil() {
+            self.value = NSNull()
+        } else if let bool = try? container.decode(Bool.self) {
+            self.value = bool
+        } else if let int = try? container.decode(Int.self) {
+            self.value = int
+        } else if let double = try? container.decode(Double.self) {
+            self.value = double
+        } else if let string = try? container.decode(String.self) {
+            self.value = string
+        } else if let array = try? container.decode([AnyCodable].self) {
+            self.value = array.map { $0.value }
+        } else if let dict = try? container.decode([String: AnyCodable].self) {
+            self.value = dict.mapValues { $0.value }
+        } else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode AnyCodable")
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+
+        switch value {
+        case is NSNull:
+            try container.encodeNil()
+        case let bool as Bool:
+            try container.encode(bool)
+        case let int as Int:
+            try container.encode(int)
+        case let double as Double:
+            try container.encode(double)
+        case let string as String:
+            try container.encode(string)
+        case let array as [Any]:
+            try container.encode(array.map { AnyCodable($0) })
+        case let dict as [String: Any]:
+            try container.encode(dict.mapValues { AnyCodable($0) })
+        default:
+            throw EncodingError.invalidValue(value, EncodingError.Context(codingPath: container.codingPath, debugDescription: "Cannot encode AnyCodable"))
+        }
     }
 }
 
@@ -186,7 +242,8 @@ class WorkoutCompletionService: ObservableObject {
         activeCalories: Int? = nil,
         workoutStructure: [WorkoutInterval]? = nil,  // (AMA-240) Workout structure for "Run Again"
         isSimulated: Bool = false,                   // (AMA-271) Simulation mode flag
-        setLogs: [SetLog]? = nil                     // (AMA-281) Weight logs per exercise/set
+        setLogs: [SetLog]? = nil,                    // (AMA-281) Weight logs per exercise/set
+        executionLog: [String: Any]? = nil           // (AMA-291) Execution tracking
     ) async throws -> WorkoutCompletionResponse? {
         let healthMetrics = HealthMetrics(
             avgHeartRate: avgHeartRate,
@@ -217,7 +274,8 @@ class WorkoutCompletionService: ObservableObject {
             workoutStructure: workoutStructure,
             workoutName: workoutName,
             isSimulated: isSimulated ? true : nil,  // Only send if true (AMA-271)
-            setLogs: setLogs                        // (AMA-281) Weight logs
+            setLogs: setLogs,                       // (AMA-281) Weight logs
+            executionLog: executionLog.map { AnyCodable($0) }  // (AMA-291) Execution tracking
         )
 
         return try await postCompletion(request)
@@ -258,7 +316,8 @@ class WorkoutCompletionService: ObservableObject {
             workoutStructure: workoutStructure,
             workoutName: workoutName,
             isSimulated: nil,  // Watch workouts are never simulated
-            setLogs: nil       // Watch weight tracking coming in AMA-286
+            setLogs: nil,      // Watch weight tracking coming in AMA-286
+            executionLog: nil  // (AMA-291) Watch execution tracking coming later
         )
 
         return try await postCompletion(request)
@@ -303,7 +362,8 @@ class WorkoutCompletionService: ObservableObject {
             workoutStructure: workoutStructure,
             workoutName: workoutName,
             isSimulated: nil,  // Garmin workouts are never simulated
-            setLogs: nil       // Garmin weight tracking coming in AMA-288
+            setLogs: nil,      // Garmin weight tracking coming in AMA-288
+            executionLog: nil  // (AMA-291) Garmin execution tracking coming later
         )
 
         return try await postCompletion(request)

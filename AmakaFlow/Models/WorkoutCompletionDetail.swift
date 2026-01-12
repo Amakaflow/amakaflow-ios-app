@@ -93,6 +93,79 @@ enum HRZoneColor: String, Hashable {
     }
 }
 
+// MARK: - Execution Log Types (AMA-292)
+
+/// Weight entry from execution log
+/// Note: CodingKeys rely on decoder's .convertFromSnakeCase strategy
+struct ExecutionLogWeight: Codable, Hashable {
+    let components: [ExecutionLogWeightComponent]?
+    let displayLabel: String?
+}
+
+/// Individual weight component
+struct ExecutionLogWeightComponent: Codable, Hashable {
+    let source: String?
+    let value: Double
+    let unit: String
+}
+
+/// A single set within an interval
+/// Note: CodingKeys rely on decoder's .convertFromSnakeCase strategy
+struct ExecutionLogSet: Codable, Hashable {
+    let setNumber: Int
+    let status: String
+    let repsPlanned: Int?
+    let repsCompleted: Int?
+    let weight: ExecutionLogWeight?
+    let durationSeconds: Int?
+    let rpe: Int?
+}
+
+/// A single interval in the execution log
+/// Note: CodingKeys rely on decoder's .convertFromSnakeCase strategy
+struct ExecutionLogInterval: Codable, Hashable, Identifiable {
+    let intervalIndex: Int
+    let plannedKind: String?
+    let plannedName: String?
+    let status: String
+    let plannedDurationSeconds: Int?
+    let actualDurationSeconds: Int?
+    let startedAt: Date?
+    let endedAt: Date?
+    let skipReason: String?
+    let sets: [ExecutionLogSet]?
+
+    var id: Int { intervalIndex }
+
+    /// Whether this interval was completed
+    var isCompleted: Bool { status == "completed" }
+
+    /// Whether this interval was skipped
+    var isSkipped: Bool { status == "skipped" }
+}
+
+/// Summary of execution log
+/// Note: CodingKeys rely on decoder's .convertFromSnakeCase strategy
+struct ExecutionLogSummary: Codable, Hashable {
+    let totalIntervals: Int?
+    let completed: Int?
+    let skipped: Int?
+    let notReached: Int?
+    let completionPercentage: Double?
+    let totalSets: Int?
+    let setsCompleted: Int?
+    let setsSkipped: Int?
+    let totalDurationSeconds: Int?
+    let activeDurationSeconds: Int?
+}
+
+/// Complete execution log from API (AMA-292)
+struct ExecutionLog: Codable, Hashable {
+    let version: Int?
+    let intervals: [ExecutionLogInterval]?
+    let summary: ExecutionLogSummary?
+}
+
 // MARK: - Workout Completion Detail
 
 struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
@@ -115,6 +188,7 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
     let stravaActivityId: String?
     let workoutId: String?          // Original workout ID (AMA-224)
     let workoutStructure: [WorkoutInterval]? // Workout steps/exercises (AMA-240)
+    let executionLog: ExecutionLog? // Actual execution data (AMA-292)
 
     /// Computed endedAt from startedAt + durationSeconds if not provided
     var resolvedEndedAt: Date {
@@ -150,8 +224,9 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
         case syncedToStrava
         case stravaActivityId
         case workoutId
-        case workoutStructure = "workout_structure"
+        case workoutStructure  // AMA-240: decoder uses .convertFromSnakeCase
         case intervalsLegacy = "intervals"  // Backwards compatibility (AMA-240)
+        case executionLog  // AMA-292: decoder uses .convertFromSnakeCase
     }
 
     // MARK: - Memberwise Initializer (required since we have custom decoder)
@@ -175,7 +250,8 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
         syncedToStrava: Bool?,
         stravaActivityId: String?,
         workoutId: String?,
-        workoutStructure: [WorkoutInterval]?
+        workoutStructure: [WorkoutInterval]?,
+        executionLog: ExecutionLog? = nil
     ) {
         self.id = id
         self.workoutName = workoutName
@@ -196,6 +272,7 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
         self.stravaActivityId = stravaActivityId
         self.workoutId = workoutId
         self.workoutStructure = workoutStructure
+        self.executionLog = executionLog
     }
 
     // MARK: - Custom Decoder (supports both "workout_structure" and "intervals" from backend)
@@ -228,6 +305,19 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
         } else {
             workoutStructure = try container.decodeIfPresent([WorkoutInterval].self, forKey: .intervalsLegacy)
         }
+
+        // AMA-292: Decode execution log with error logging
+        do {
+            executionLog = try container.decodeIfPresent(ExecutionLog.self, forKey: .executionLog)
+            if let log = executionLog {
+                print("[WorkoutCompletionDetail] Decoded execution_log with \(log.intervals?.count ?? 0) intervals")
+            } else {
+                print("[WorkoutCompletionDetail] No execution_log field in response")
+            }
+        } catch {
+            print("[WorkoutCompletionDetail] Failed to decode execution_log: \(error)")
+            executionLog = nil
+        }
     }
 
     // MARK: - Custom Encoder (only encodes workoutStructure, not intervalsLegacy)
@@ -254,7 +344,34 @@ struct WorkoutCompletionDetail: Identifiable, Codable, Hashable {
         try container.encodeIfPresent(stravaActivityId, forKey: .stravaActivityId)
         try container.encodeIfPresent(workoutId, forKey: .workoutId)
         try container.encodeIfPresent(workoutStructure, forKey: .workoutStructure)
+        try container.encodeIfPresent(executionLog, forKey: .executionLog)
         // Note: intervalsLegacy is NOT encoded - it's only used for decoding backwards compatibility
+    }
+
+    // MARK: - Execution Log Helpers (AMA-292)
+
+    /// Whether this completion has execution log data to display
+    var hasExecutionLog: Bool {
+        guard let log = executionLog, let intervals = log.intervals else { return false }
+        return !intervals.isEmpty
+    }
+
+    /// Get completed intervals with sets (for strength exercises display)
+    var completedStrengthIntervals: [ExecutionLogInterval] {
+        guard let log = executionLog, let intervals = log.intervals else { return [] }
+        return intervals.filter { interval in
+            interval.isCompleted && interval.sets != nil && !(interval.sets?.isEmpty ?? true)
+        }
+    }
+
+    /// Get all intervals for display
+    var executionIntervals: [ExecutionLogInterval] {
+        executionLog?.intervals ?? []
+    }
+
+    /// Get execution summary
+    var executionSummary: ExecutionLogSummary? {
+        executionLog?.summary
     }
 }
 

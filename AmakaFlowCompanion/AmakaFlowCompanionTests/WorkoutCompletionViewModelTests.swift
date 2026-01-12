@@ -181,7 +181,8 @@ final class WorkoutCompletionViewModelTests: XCTestCase {
             workoutStructure: workoutStructure,
             workoutName: "Test Workout",
             isSimulated: false,
-            setLogs: nil
+            setLogs: nil,
+            executionLog: nil
         )
 
         // When encoding
@@ -219,7 +220,8 @@ final class WorkoutCompletionViewModelTests: XCTestCase {
             workoutStructure: nil,
             workoutName: nil,
             isSimulated: false,
-            setLogs: nil
+            setLogs: nil,
+            executionLog: nil
         )
 
         // When encoding
@@ -255,7 +257,8 @@ final class WorkoutCompletionViewModelTests: XCTestCase {
             workoutStructure: [],
             workoutName: "My Workout",
             isSimulated: false,
-            setLogs: nil
+            setLogs: nil,
+            executionLog: nil
         )
 
         // When encoding

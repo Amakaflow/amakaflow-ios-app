@@ -56,6 +56,10 @@ class WorkoutEngine: ObservableObject {
     private var exerciseIndexMap: [String: Int] = [:]
     private var nextExerciseIndex: Int = 0
 
+    // Execution log tracking (AMA-291)
+    /// Builds execution_log for tracking actual workout execution
+    private var executionLogBuilder = ExecutionLogBuilder()
+
     // MARK: - Flattened Steps
 
     private(set) var flattenedSteps: [FlattenedInterval] = []
@@ -145,6 +149,7 @@ class WorkoutEngine: ObservableObject {
         self.stateVersion += 1
         self.workoutStartTime = Date()
         clearSetTracking()  // (AMA-281) Reset weight tracking
+        executionLogBuilder.reset()  // (AMA-291) Reset execution log tracking
 
         // Cache device preference at start to avoid UserDefaults reads during workout (AMA-226)
         self.cachedDevicePreference = devicePreference
@@ -262,6 +267,9 @@ class WorkoutEngine: ObservableObject {
 
     func nextStep() {
         print("🏋️ nextStep() called. currentStepIndex: \(currentStepIndex), flattenedSteps.count: \(flattenedSteps.count), phase: \(phase)")
+
+        // (AMA-291) End current interval tracking before advancing
+        executionLogBuilder.endCurrentInterval(actualDuration: nil)
 
         // Check if current step has rest after it
         if let currentStep = currentStep {
@@ -439,6 +447,16 @@ class WorkoutEngine: ObservableObject {
         }
         exerciseSetEntries[exerciseName]?.append(entry)
 
+        // (AMA-291) Log set to execution log
+        executionLogBuilder.logSet(
+            intervalIndex: currentStepIndex,
+            setNumber: setNumber,
+            weight: weight,
+            unit: unit,
+            reps: step.targetReps,
+            skipped: weight == nil
+        )
+
         print("🏋️ Logged set: \(exerciseName) set \(setNumber) - weight: \(weight ?? 0) \(unit ?? "")")
 
         // Advance to next step (which may trigger rest phase)
@@ -493,6 +511,45 @@ class WorkoutEngine: ObservableObject {
         broadcastState()
     }
 
+    // MARK: - Skip Interval (AMA-291)
+
+    /// Skip the current interval with a reason
+    /// - Parameter reason: Why the interval is being skipped
+    func skipInterval(reason: SkipReason) {
+        guard let step = currentStep else { return }
+
+        print("🏋️ Skipping interval: \(step.label) with reason: \(reason.rawValue)")
+
+        // Log skip in execution log
+        executionLogBuilder.skipInterval(
+            index: currentStepIndex,
+            kind: step.stepType.rawValue,
+            name: step.label,
+            reason: reason
+        )
+
+        // Track skip (AMA-291)
+        SentryService.shared.trackWorkoutAction(
+            "Skipped interval: \(step.label) - reason: \(reason.rawValue)",
+            workoutId: workout?.id,
+            workoutName: workout?.name
+        )
+
+        // Check if current step has rest after it - skip the rest too
+        // Then advance to next step
+        guard currentStepIndex < flattenedSteps.count - 1 else {
+            print("🏋️ No more steps after skip! Ending workout.")
+            end(reason: .completed)
+            return
+        }
+
+        currentStepIndex += 1
+        phase = .running
+        setupCurrentStep()
+        stateVersion += 1
+        broadcastState()
+    }
+
     func skipToStep(_ index: Int) {
         guard index >= 0, index < flattenedSteps.count else { return }
 
@@ -542,7 +599,8 @@ class WorkoutEngine: ObservableObject {
             startTime: workoutStartTime,
             duration: elapsedSeconds,
             intervals: workout?.intervals,  // (AMA-237) For "Run Again" feature
-            setLogs: buildSetLogs()         // (AMA-281) Weight tracking
+            setLogs: buildSetLogs(),        // (AMA-281) Weight tracking
+            executionLog: executionLogBuilder.build()  // (AMA-291) Execution tracking
         )
 
         clock.invalidateTimer()
@@ -562,7 +620,8 @@ class WorkoutEngine: ObservableObject {
                 startedAt: workoutData.startTime,
                 durationSeconds: workoutData.duration,
                 intervals: workoutData.intervals,  // (AMA-237) For "Run Again" feature
-                setLogs: workoutData.setLogs       // (AMA-281) Weight tracking
+                setLogs: workoutData.setLogs,      // (AMA-281) Weight tracking
+                executionLog: workoutData.executionLog  // (AMA-291) Execution tracking
             )
         } else if reason == .discarded {
             print("🏋️ Workout discarded - not posting to API")
@@ -616,7 +675,8 @@ class WorkoutEngine: ObservableObject {
         startedAt: Date?,
         durationSeconds: Int,
         intervals: [WorkoutInterval]?,  // (AMA-237) For "Run Again" feature
-        setLogs: [SetLog]?              // (AMA-281) Weight tracking
+        setLogs: [SetLog]?,             // (AMA-281) Weight tracking
+        executionLog: [String: Any]?    // (AMA-291) Execution tracking
     ) {
         // Check auth status for logging
         let isPaired = PairingService.shared.isPaired
@@ -672,7 +732,8 @@ class WorkoutEngine: ObservableObject {
                     activeCalories: activeCalories,
                     workoutStructure: intervals,  // (AMA-240) Include workout structure for "Run Again"
                     isSimulated: isSimulation,    // (AMA-271) Flag simulated workouts
-                    setLogs: setLogs              // (AMA-281) Weight tracking
+                    setLogs: setLogs,             // (AMA-281) Weight tracking
+                    executionLog: executionLog    // (AMA-291) Execution tracking
                 )
                 logger.info("Workout completion posted successfully")
                 DebugLogService.shared.log(
@@ -753,6 +814,14 @@ class WorkoutEngine: ObservableObject {
 
         print("🏋️ setupCurrentStep: \(step.label), timerSeconds: \(step.timerSeconds ?? -1), stepType: \(step.stepType)")
 
+        // (AMA-291) Track interval start in execution log
+        executionLogBuilder.startInterval(
+            index: currentStepIndex,
+            kind: step.stepType.rawValue,
+            name: step.label,
+            plannedDuration: step.timerSeconds
+        )
+
         // Announce step
         audioCueManager.announceStep(step.label, roundInfo: step.roundInfo)
 
@@ -775,10 +844,28 @@ class WorkoutEngine: ObservableObject {
                 let reactionTime = Double.random(in: settings.behaviorProfile.reactionTime)
                 let scaledDelay = max(0.05, reactionTime / clock.speedMultiplier)
 
-                print("🎮 [AMA-308] Auto-selecting weight \(simulatedWeight ?? 0) \(unit) for \(step.label) after \(scaledDelay)s delay")
+                // Capture step index for reliable comparison (not label which could match multiple steps)
+                let capturedStepIndex = currentStepIndex
+
+                print("🎮 [AMA-308] Auto-selecting weight \(simulatedWeight ?? 0) \(unit) for \(step.label) (step \(capturedStepIndex)) after \(scaledDelay)s delay")
+
+                // Start elapsed time counter for reps step (simulates time spent doing the exercise)
+                let simulatedExerciseTime = max(3, Int(scaledDelay * clock.speedMultiplier))
+                remainingSeconds = simulatedExerciseTime
+                if phase == .running {
+                    startTimer()
+                }
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + scaledDelay) { [weak self] in
-                    guard let self = self, self.currentStep?.label == step.label else { return }
+                    guard let self = self else { return }
+
+                    // Use step index for reliable comparison instead of label
+                    guard self.currentStepIndex == capturedStepIndex else {
+                        print("🎮 [AMA-308] Step already advanced from \(capturedStepIndex) to \(self.currentStepIndex), skipping weight log")
+                        return
+                    }
+
+                    print("🎮 [AMA-308] Logging weight \(simulatedWeight ?? 0) \(unit) for step \(capturedStepIndex)")
                     self.logSetWeight(weight: simulatedWeight, unit: unit)
                 }
             } else {
@@ -808,9 +895,15 @@ class WorkoutEngine: ObservableObject {
         print("🎮 [Work Timer] Tick - remaining: \(remainingSeconds), elapsed: \(elapsedSeconds)")
 
         guard remainingSeconds > 0 else {
-            // For reps/distance steps, don't auto-advance (unless in simulation mode)
+            // For reps/distance steps, don't auto-advance (unless in simulation mode WITHOUT weight sim)
             let stepType = currentStep?.stepType
             if (stepType == .reps || stepType == .distance) && !isSimulation {
+                return
+            }
+            // AMA-308: For reps steps with weight simulation, don't auto-advance from timer
+            // The async block in setupCurrentStep will call logSetWeight which advances
+            if stepType == .reps && isSimulation && weightProvider != nil {
+                print("🎮 [Work Timer] Reps step with weight sim - waiting for async weight log")
                 return
             }
             nextStep()
@@ -826,6 +919,13 @@ class WorkoutEngine: ObservableObject {
 
         // Auto-advance when timer hits 0
         if remainingSeconds == 0 {
+            // AMA-308: For reps steps with weight simulation, don't auto-advance
+            // The async block will handle it
+            let stepType = currentStep?.stepType
+            if stepType == .reps && isSimulation && weightProvider != nil {
+                print("🎮 [Work Timer] Timer expired for reps step with weight sim - waiting for async weight log")
+                return
+            }
             // Small delay before advancing to allow "0" to display
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                 self?.nextStep()

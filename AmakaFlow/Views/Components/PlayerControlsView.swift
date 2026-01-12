@@ -11,6 +11,8 @@ struct PlayerControlsView: View {
     @ObservedObject var engine: WorkoutEngine
     var onEnd: () -> Void
 
+    @State private var showSkipSheet = false
+
     var body: some View {
         VStack(spacing: Theme.Spacing.md) {
             // Progress bar
@@ -58,17 +60,42 @@ struct PlayerControlsView: View {
                 .font(Theme.Typography.caption)
                 .foregroundColor(Theme.Colors.textSecondary)
 
-            // End workout button
-            Button {
-                onEnd()
-            } label: {
-                Text("End Workout")
-                    .font(Theme.Typography.body)
-                    .foregroundColor(Theme.Colors.accentRed)
+            // Secondary actions row (AMA-291: Skip + End)
+            HStack(spacing: Theme.Spacing.lg) {
+                // Skip interval button
+                Button {
+                    showSkipSheet = true
+                } label: {
+                    HStack(spacing: Theme.Spacing.xs) {
+                        Image(systemName: "forward.end")
+                            .font(.system(size: 14))
+                        Text("Skip")
+                            .font(Theme.Typography.body)
+                    }
+                    .foregroundColor(Theme.Colors.textSecondary)
                     .padding(.vertical, Theme.Spacing.sm)
+                    .padding(.horizontal, Theme.Spacing.md)
+                }
+
+                // End workout button
+                Button {
+                    onEnd()
+                } label: {
+                    Text("End Workout")
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.accentRed)
+                        .padding(.vertical, Theme.Spacing.sm)
+                }
             }
         }
         .padding(Theme.Spacing.lg)
+        .sheet(isPresented: $showSkipSheet) {
+            SkipIntervalSheet(isPresented: $showSkipSheet) { reason in
+                engine.skipInterval(reason: reason)
+            }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+        }
     }
 
     // MARK: - Progress Bar
