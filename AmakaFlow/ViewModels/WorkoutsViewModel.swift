@@ -24,12 +24,14 @@ class WorkoutsViewModel: ObservableObject {
     @Published var useDemoMode: Bool = false
     @Published var pendingWorkoutsStatus: String = ""  // Debug status for pending workouts
 
+    private let dependencies: AppDependencies
     private let calendarManager = CalendarManager()
-    private let apiService = APIService.shared
     private var cancellables = Set<AnyCancellable>()
 
-    init() {
-        // Start with empty data - will load from API or demo mode
+    /// Initialize with dependencies for dependency injection
+    /// - Parameter dependencies: App dependencies container (defaults to .live for production)
+    init(dependencies: AppDependencies = .live) {
+        self.dependencies = dependencies
 
         // Observe workout completion notifications (AMA-237)
         NotificationCenter.default.publisher(for: .workoutCompleted)
@@ -61,7 +63,7 @@ class WorkoutsViewModel: ObservableObject {
             return
         }
 
-        if !PairingService.shared.isPaired {
+        if !dependencies.pairingService.isPaired {
             print("[WorkoutsViewModel] Not paired, loading mock data")
             loadMockData()
             isLoading = false
@@ -71,8 +73,8 @@ class WorkoutsViewModel: ObservableObject {
         print("[WorkoutsViewModel] Fetching workouts from API...")
 
         do {
-            async let fetchedWorkouts = apiService.fetchWorkouts()
-            async let fetchedScheduled = apiService.fetchScheduledWorkouts()
+            async let fetchedWorkouts = dependencies.apiService.fetchWorkouts()
+            async let fetchedScheduled = dependencies.apiService.fetchScheduledWorkouts()
 
             let (workouts, scheduled) = try await (fetchedWorkouts, fetchedScheduled)
 
@@ -174,9 +176,9 @@ class WorkoutsViewModel: ObservableObject {
 
         // Check for valid auth - either pairing or E2E test mode
         #if DEBUG
-        let hasAuth = PairingService.shared.isPaired || TestAuthStore.shared.isTestModeEnabled
+        let hasAuth = dependencies.pairingService.isPaired || TestAuthStore.shared.isTestModeEnabled
         #else
-        let hasAuth = PairingService.shared.isPaired
+        let hasAuth = dependencies.pairingService.isPaired
         #endif
 
         guard hasAuth else {
@@ -188,7 +190,7 @@ class WorkoutsViewModel: ObservableObject {
         print("[WorkoutsViewModel] Checking for pending workouts...")
 
         do {
-            let pendingWorkouts = try await apiService.fetchPendingWorkouts()
+            let pendingWorkouts = try await dependencies.apiService.fetchPendingWorkouts()
 
             guard !pendingWorkouts.isEmpty else {
                 pendingWorkoutsStatus = "No pending workouts"
@@ -245,7 +247,7 @@ class WorkoutsViewModel: ObservableObject {
                 // Confirm or report sync status to backend (AMA-307)
                 if syncSuccessful {
                     do {
-                        try await apiService.confirmSync(workoutId: workout.id)
+                        try await dependencies.apiService.confirmSync(workoutId: workout.id)
                         print("[WorkoutsViewModel] Confirmed sync for '\(workout.name)'")
                     } catch {
                         print("[WorkoutsViewModel] Failed to confirm sync: \(error.localizedDescription)")
@@ -253,7 +255,7 @@ class WorkoutsViewModel: ObservableObject {
                     }
                 } else if let error = syncError {
                     do {
-                        try await apiService.reportSyncFailed(workoutId: workout.id, error: error)
+                        try await dependencies.apiService.reportSyncFailed(workoutId: workout.id, error: error)
                         print("[WorkoutsViewModel] Reported sync failure for '\(workout.name)'")
                     } catch {
                         print("[WorkoutsViewModel] Failed to report sync failure: \(error.localizedDescription)")
