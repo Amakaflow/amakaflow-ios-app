@@ -17,10 +17,21 @@ private let logger = Logger(subsystem: "com.myamaka.AmakaFlowCompanion", categor
 class WorkoutEngine: ObservableObject {
     static let shared = WorkoutEngine()
 
-    // MARK: - Simulation Mode (AMA-271)
+    // MARK: - Dependencies
 
     /// Clock abstraction for timing - can be accelerated in simulation mode
     private var clock: WorkoutClock
+
+    /// Audio cue playback service
+    private let audioService: AudioProviding
+
+    /// Workout progress persistence store
+    private let progressStore: ProgressStoreProviding
+
+    /// Pairing service for auth status
+    private let pairingService: PairingServiceProviding
+
+    // MARK: - Simulation Mode (AMA-271)
 
     /// Whether this engine is running in simulation mode
     @Published private(set) var isSimulation: Bool = false
@@ -89,15 +100,28 @@ class WorkoutEngine: ObservableObject {
 
     // MARK: - Private
 
-    private var audioCueManager = AudioCueManager()
     private var cancellables = Set<AnyCancellable>()
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
     private var workoutStartTime: Date?
     private var cachedDevicePreference: DevicePreference = .appleWatchPhone // Cached to avoid UserDefaults reads in hot path (AMA-226)
 
-    /// Default init for shared singleton (uses real clock by default, but can switch to simulation)
-    private init() {
-        self.clock = RealClock()
+    /// Initialize with dependencies for testing
+    /// - Parameters:
+    ///   - clock: Clock abstraction for timing control
+    ///   - audioService: Audio cue playback service
+    ///   - progressStore: Workout progress persistence store
+    ///   - pairingService: Pairing service for auth status
+    init(
+        clock: WorkoutClock = RealClock(),
+        audioService: AudioProviding = AudioCueManager(),
+        progressStore: ProgressStoreProviding = LiveProgressStore.shared,
+        pairingService: PairingServiceProviding? = nil
+    ) {
+        self.clock = clock
+        self.audioService = audioService
+        self.progressStore = progressStore
+        // Use provided pairingService or default to shared (allows nil for convenience init)
+        self.pairingService = pairingService ?? PairingService.shared
         self.isSimulation = false
         self.healthProvider = nil
         self.weightProvider = nil  // AMA-308
@@ -134,7 +158,7 @@ class WorkoutEngine: ObservableObject {
         configureForSimulation()
 
         // Clear any saved progress since we're starting fresh
-        SavedWorkoutProgress.clear()
+        progressStore.clear()
 
         // Reset all state for fresh start
         clock.invalidateTimer()
@@ -166,7 +190,7 @@ class WorkoutEngine: ObservableObject {
 
         setupCurrentStep()
         broadcastState()
-        audioCueManager.announceWorkoutStart(workout.name)
+        audioService.announceWorkoutStart(workout.name)
 
         // Start Live Activity
         startLiveActivity()
@@ -182,7 +206,7 @@ class WorkoutEngine: ObservableObject {
         }
 
         // Clear the saved progress since we're resuming
-        SavedWorkoutProgress.clear()
+        progressStore.clear()
 
         // Setup workout state
         clock.invalidateTimer()
@@ -210,7 +234,7 @@ class WorkoutEngine: ObservableObject {
 
         setupCurrentStep()
         broadcastState()
-        audioCueManager.announceStep("Resuming \(workout.name)", roundInfo: nil)
+        audioService.announceStep("Resuming \(workout.name)", roundInfo: nil)
 
         // Start Live Activity
         startLiveActivity()
@@ -235,7 +259,7 @@ class WorkoutEngine: ObservableObject {
         clock.invalidateTimer()
         stateVersion += 1
         broadcastState()
-        audioCueManager.announcePaused()
+        audioService.announcePaused()
 
         // Track pause (AMA-225)
         SentryService.shared.trackWorkoutAction("Paused workout", workoutId: workout?.id, workoutName: workout?.name)
@@ -248,7 +272,7 @@ class WorkoutEngine: ObservableObject {
         startTimer()
         stateVersion += 1
         broadcastState()
-        audioCueManager.announceResumed()
+        audioService.announceResumed()
 
         // Track resume (AMA-225)
         SentryService.shared.trackWorkoutAction("Resumed workout", workoutId: workout?.id, workoutName: workout?.name)
@@ -337,7 +361,7 @@ class WorkoutEngine: ObservableObject {
 
         stateVersion += 1
         broadcastState()
-        audioCueManager.announceRest(isManual: isManualRest, seconds: restRemainingSeconds)
+        audioService.announceRest(isManual: isManualRest, seconds: restRemainingSeconds)
         print("🏋️ enterRestPhase: Complete. phase=\(phase), isManualRest=\(isManualRest)")
     }
 
@@ -364,7 +388,7 @@ class WorkoutEngine: ObservableObject {
 
         // Countdown audio for last 3 seconds
         if restRemainingSeconds <= 3 && restRemainingSeconds > 0 {
-            audioCueManager.announceCountdown(restRemainingSeconds)
+            audioService.announceCountdown(restRemainingSeconds)
         }
 
         // Auto-advance when timer hits 0
@@ -605,7 +629,7 @@ class WorkoutEngine: ObservableObject {
                 elapsedSeconds: elapsedSeconds,
                 savedAt: Date()
             )
-            progress.save()
+            progressStore.save(progress)
         }
 
         // Capture workout data before resetting state
@@ -648,7 +672,7 @@ class WorkoutEngine: ObservableObject {
         broadcastState()
 
         if reason == .completed {
-            audioCueManager.announceWorkoutComplete()
+            audioService.announceWorkoutComplete()
         }
 
         // Only post workout completion to API if completed or userEnded (not discarded or saved for later)
@@ -718,7 +742,7 @@ class WorkoutEngine: ObservableObject {
         executionLog: [String: Any]?    // (AMA-291) Execution tracking
     ) {
         // Check auth status for logging
-        let isPaired = PairingService.shared.isPaired
+        let isPaired = pairingService.isPaired
         #if DEBUG
         let isE2EMode = TestAuthStore.shared.isTestModeEnabled
         let hasAuth = isPaired || isE2EMode
@@ -912,7 +936,7 @@ class WorkoutEngine: ObservableObject {
         }
 
         // Announce step
-        audioCueManager.announceStep(step.label, roundInfo: step.roundInfo)
+        audioService.announceStep(step.label, roundInfo: step.roundInfo)
 
         // Setup timer for timed steps
         if let seconds = step.timerSeconds {
@@ -1009,7 +1033,7 @@ class WorkoutEngine: ObservableObject {
 
         // Countdown audio for last 3 seconds
         if remainingSeconds <= 3 && remainingSeconds > 0 {
-            audioCueManager.announceCountdown(remainingSeconds)
+            audioService.announceCountdown(remainingSeconds)
         }
 
         // Auto-advance when timer hits 0

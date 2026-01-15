@@ -13,19 +13,25 @@ import Foundation
 struct AppDependencies {
     let apiService: APIServiceProviding
     let pairingService: PairingServiceProviding
+    let audioService: AudioProviding
+    let progressStore: ProgressStoreProviding
 
     /// Live dependencies using real service implementations
     @MainActor
     static let live = AppDependencies(
         apiService: APIService.shared,
-        pairingService: PairingService.shared
+        pairingService: PairingService.shared,
+        audioService: AudioCueManager(),
+        progressStore: LiveProgressStore.shared
     )
 
     /// Mock dependencies for unit testing
     @MainActor
     static let mock = AppDependencies(
         apiService: MockAPIService(),
-        pairingService: MockPairingService()
+        pairingService: MockPairingService(),
+        audioService: MockAudioService(),
+        progressStore: MockProgressStore()
     )
 }
 
@@ -265,4 +271,112 @@ class MockPairingService: PairingServiceProviding {
         isPaired = false
     }
     #endif
+}
+
+/// Mock audio service for testing
+class MockAudioService: AudioProviding {
+    // MARK: - State
+
+    var isEnabled: Bool = true
+    var isSpeaking: Bool = false
+
+    // MARK: - Call Tracking
+
+    var speakCalled = false
+    var lastSpokenText: String?
+    var lastSpeechPriority: SpeechPriority?
+    var stopSpeakingCalled = false
+    var announceWorkoutStartCalled = false
+    var announceStepCalled = false
+    var announceCountdownCalled = false
+    var announceWorkoutCompleteCalled = false
+    var announcePausedCalled = false
+    var announceResumedCalled = false
+    var announceRestCalled = false
+
+    // MARK: - Protocol Implementation
+
+    func speak(_ text: String, priority: SpeechPriority) {
+        speakCalled = true
+        lastSpokenText = text
+        lastSpeechPriority = priority
+    }
+
+    func stopSpeaking() {
+        stopSpeakingCalled = true
+        isSpeaking = false
+    }
+
+    func announceWorkoutStart(_ workoutName: String) {
+        announceWorkoutStartCalled = true
+        speak("Starting \(workoutName)", priority: .high)
+    }
+
+    func announceStep(_ stepName: String, roundInfo: String?) {
+        announceStepCalled = true
+        var announcement = stepName
+        if let round = roundInfo {
+            announcement = "\(round). \(stepName)"
+        }
+        speak(announcement, priority: .high)
+    }
+
+    func announceCountdown(_ seconds: Int) {
+        announceCountdownCalled = true
+        speak("\(seconds)", priority: .countdown)
+    }
+
+    func announceWorkoutComplete() {
+        announceWorkoutCompleteCalled = true
+        speak("Workout complete. Great job!", priority: .high)
+    }
+
+    func announcePaused() {
+        announcePausedCalled = true
+        speak("Paused", priority: .normal)
+    }
+
+    func announceResumed() {
+        announceResumedCalled = true
+        speak("Resuming", priority: .normal)
+    }
+
+    func announceRest(isManual: Bool, seconds: Int) {
+        announceRestCalled = true
+        if isManual {
+            speak("Rest. Tap when ready.", priority: .high)
+        } else if seconds > 0 {
+            speak("Rest for \(seconds) seconds", priority: .high)
+        }
+    }
+}
+
+/// Mock progress store for testing
+class MockProgressStore: ProgressStoreProviding {
+    // MARK: - State
+
+    var storedProgress: SavedWorkoutProgress?
+
+    // MARK: - Call Tracking
+
+    var saveCalled = false
+    var loadCalled = false
+    var clearCalled = false
+
+    // MARK: - Protocol Implementation
+
+    func save(_ progress: SavedWorkoutProgress) {
+        saveCalled = true
+        storedProgress = progress
+    }
+
+    func load() -> SavedWorkoutProgress? {
+        loadCalled = true
+        return storedProgress
+    }
+
+    func clear() {
+        clearCalled = true
+        storedProgress = nil
+    }
 }
