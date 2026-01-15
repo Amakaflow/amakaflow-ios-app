@@ -1,0 +1,172 @@
+name: PR iOS Tests (Impacted)
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - ".github/ISSUE_TEMPLATE/**"
+
+jobs:
+  ios-tests:
+    name: iOS Tests (PR - Impacted)
+    runs-on: macos-15
+    timeout-minutes: 30  # Reduced from 60 for PR runs
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # needed for diff base...head
+
+      - name: Clone workoutkit-sync dependency
+        run: git clone https://github.com/supergeri/workoutkit-sync.git ../../workoutkit-sync
+
+      - name: Select Xcode (latest available)
+        id: xcode
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          echo "Using Xcode: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
+          XCODE_VER=$(xcodebuild -version | head -1 | tr ' ' '-')
+          echo "version=$XCODE_VER" >> $GITHUB_OUTPUT
+
+      - name: Determine simulator (first available iPhone)
+        id: simulator
+        run: |
+          NAME=$(xcrun simctl list devices available | grep -o 'iPhone [^(]*' | head -1 | sed 's/ *$//')
+          if [ -z "$NAME" ]; then
+            echo "No available iPhone simulator found" >&2
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Using simulator: $NAME"
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+
+      - name: Reset simulators
+        run: |
+          xcrun simctl shutdown all || true
+          xcrun simctl erase all || true
+
+      - name: Create stub TestCredentials for compilation
+        working-directory: AmakaFlowCompanion
+        run: |
+          cat > AmakaFlowCompanionUITests/TestCredentials.swift << 'EOF'
+          import Foundation
+          enum TestCredentials {
+              static let testAuthSecret = "ci-stub-not-for-testing"
+              static let userId = "ci_stub_user"
+              static let userEmail = "ci@stub.local"
+              static let userName = "CI Stub"
+              static let apiBaseURL = "http://localhost:8001"
+          }
+          EOF
+
+      - name: Restore SwiftPM cache
+        uses: actions/cache@v4
+        with:
+          path: AmakaFlowCompanion/.spm
+          key: spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('**/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
+          restore-keys: |
+            spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
+
+      - name: Restore DerivedData cache
+        uses: actions/cache@v4
+        with:
+          path: AmakaFlowCompanion/DerivedData
+          key: deriveddata-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj', 'AmakaFlow/**/*.swift', 'AmakaFlowCompanion/**/*.swift') }}
+          restore-keys: |
+            deriveddata-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
+
+      - name: Resolve SwiftPM dependencies
+        working-directory: AmakaFlowCompanion
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project AmakaFlowCompanion.xcodeproj \
+            -scheme AmakaFlowCompanion \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm
+
+      - name: Determine affected tests
+        id: affected
+        run: |
+          chmod +x .github/scripts/affected-tests-ios.sh
+          RESULT=$(.github/scripts/affected-tests-ios.sh)
+          echo "result=$RESULT" >> "$GITHUB_OUTPUT"
+          echo "Affected result: $RESULT"
+
+      - name: Build for testing
+        if: steps.affected.outputs.result != 'NONE'
+        working-directory: AmakaFlowCompanion
+        run: |
+          xcodebuild build-for-testing \
+            -project AmakaFlowCompanion.xcodeproj \
+            -scheme AmakaFlowCompanion \
+            -destination "platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}" \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm \
+            -parallelizeTargets \
+            -jobs $(sysctl -n hw.ncpu)
+
+      - name: Run impacted tests
+        if: steps.affected.outputs.result != 'NONE' && steps.affected.outputs.result != 'FULL'
+        working-directory: AmakaFlowCompanion
+        run: |
+          ONLY_TESTING=""
+          for test in ${{ steps.affected.outputs.result }}; do
+            ONLY_TESTING="$ONLY_TESTING -only-testing:$test"
+          done
+          echo "Running: xcodebuild test-without-building $ONLY_TESTING"
+
+          set +e
+          xcodebuild test-without-building \
+            -project AmakaFlowCompanion.xcodeproj \
+            -scheme AmakaFlowCompanion \
+            -destination "platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}" \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm \
+            $ONLY_TESTING \
+            -resultBundlePath TestResults \
+            -enableCodeCoverage NO \
+            -parallel-testing-enabled YES \
+            -parallel-testing-worker-count 2 2>&1 | tee test_output.log
+          XCODE_EXIT=${PIPESTATUS[0]}
+          set -e
+
+          if grep -q "TEST SUCCEEDED" test_output.log || grep -q "with 0 failures" test_output.log; then
+            exit 0
+          fi
+          exit $XCODE_EXIT
+
+      - name: Run full tests (fallback)
+        if: steps.affected.outputs.result == 'FULL'
+        working-directory: AmakaFlowCompanion
+        run: |
+          set +e
+          xcodebuild test-without-building \
+            -project AmakaFlowCompanion.xcodeproj \
+            -scheme AmakaFlowCompanion \
+            -destination "platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}" \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm \
+            -only-testing:AmakaFlowCompanionTests \
+            -resultBundlePath TestResults \
+            -enableCodeCoverage NO \
+            -parallel-testing-enabled YES \
+            -parallel-testing-worker-count 2 2>&1 | tee test_output.log
+          XCODE_EXIT=${PIPESTATUS[0]}
+          set -e
+
+          if grep -q "TEST SUCCEEDED" test_output.log || grep -q "with 0 failures" test_output.log; then
+            exit 0
+          fi
+          exit $XCODE_EXIT
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: AmakaFlowCompanion/TestResults
+          retention-days: 7
