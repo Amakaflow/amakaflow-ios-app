@@ -5,6 +5,9 @@
 //  Additional edge case tests for WorkoutEngine (AMA-231)
 //  Covers rest phase transitions, timer edge cases, and state validation
 //
+//  Updated AMA-350: Now uses TestClock and injected dependencies for
+//  deterministic, fast tests without real timers or singletons.
+//
 
 import XCTest
 @testable import AmakaFlowCompanion
@@ -12,29 +15,47 @@ import XCTest
 @MainActor
 final class WorkoutEngineEdgeCaseTests: XCTestCase {
 
+    // MARK: - Test Dependencies
+
     var engine: WorkoutEngine!
+    var clock: TestClock!
+    var audioService: MockAudioService!
+    var progressStore: MockProgressStore!
+    var pairingService: MockPairingService!
 
     override func setUp() async throws {
-        engine = WorkoutEngine.shared
-        engine.reset()
+        // Create fresh mocks for each test
+        clock = TestClock()
+        audioService = MockAudioService()
+        progressStore = MockProgressStore()
+        pairingService = MockPairingService()
+
+        // Create engine with test dependencies (no singleton!)
+        engine = WorkoutEngine(
+            clock: clock,
+            audioService: audioService,
+            progressStore: progressStore,
+            pairingService: pairingService
+        )
     }
 
     override func tearDown() async throws {
+        // Clean up - no need for Task.sleep with mocked dependencies
         engine.reset()
-        try await Task.sleep(nanoseconds: 100_000_000)
+        engine = nil
+        clock = nil
+        audioService = nil
+        progressStore = nil
+        pairingService = nil
     }
 
     // MARK: - Test Fixtures
 
     private func createTestWorkout(intervals: [WorkoutInterval]) -> Workout {
-        Workout(
-            id: "edge-case-test-\(UUID().uuidString)",
+        TestFixtures.workout(
+            id: "edge-case-test-\(UUID().uuidString.prefix(8))",
             name: "Edge Case Test",
-            sport: .strength,
-            duration: 600,
-            intervals: intervals,
-            description: nil,
-            source: .ai
+            intervals: intervals
         )
     }
 

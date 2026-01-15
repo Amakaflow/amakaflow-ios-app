@@ -4,6 +4,9 @@
 //
 //  Unit tests for WorkoutsViewModel
 //
+//  Updated AMA-350: Now uses AppDependencies.mock for proper dependency injection
+//  instead of demo mode flag.
+//
 
 import XCTest
 @testable import AmakaFlowCompanion
@@ -12,27 +15,65 @@ import XCTest
 final class WorkoutsViewModelTests: XCTestCase {
 
     var viewModel: WorkoutsViewModel!
+    var mockAPIService: MockAPIService!
+    var mockPairingService: MockPairingService!
 
     override func setUp() async throws {
-        viewModel = WorkoutsViewModel()
-        // Enable demo mode to load mock data for testing
-        viewModel.useDemoMode = true
+        // Create mock dependencies
+        mockAPIService = MockAPIService()
+        mockPairingService = MockPairingService()
+
+        // Configure mock pairing service as "paired" so API calls are attempted
+        mockPairingService.configurePaired()
+
+        // Configure mock API to return test workouts
+        let testWorkouts = [
+            TestFixtures.workout(id: "w1", name: "Strength Training", sport: .strength),
+            TestFixtures.workout(id: "w2", name: "Running Intervals", sport: .running),
+            TestFixtures.workout(id: "w3", name: "Speed Drills", sport: .running)
+        ]
+        let scheduledWorkouts = testWorkouts.prefix(2).map { workout in
+            ScheduledWorkout(workout: workout, scheduledDate: Date(), scheduledTime: nil, syncedToApple: false)
+        }
+
+        mockAPIService.fetchWorkoutsResult = .success(Array(testWorkouts))
+        mockAPIService.fetchScheduledWorkoutsResult = .success(Array(scheduledWorkouts))
+        mockAPIService.fetchPushedWorkoutsResult = .success([])
+        mockAPIService.fetchPendingWorkoutsResult = .success([])
+
+        // Create dependencies container with mocks
+        let dependencies = AppDependencies(
+            apiService: mockAPIService,
+            pairingService: mockPairingService,
+            audioService: MockAudioService(),
+            progressStore: MockProgressStore(),
+            watchSession: MockWatchSession()
+        )
+
+        // Create ViewModel with mock dependencies
+        viewModel = WorkoutsViewModel(dependencies: dependencies)
         await viewModel.loadWorkouts()
     }
 
     override func tearDown() async throws {
         viewModel = nil
+        mockAPIService = nil
+        mockPairingService = nil
     }
 
     // MARK: - Initial State Tests
 
     func testInitialStateHasMockData() {
-        // ViewModel loads mock data when demo mode is enabled
-        XCTAssertFalse(viewModel.upcomingWorkouts.isEmpty)
-        XCTAssertFalse(viewModel.incomingWorkouts.isEmpty)
+        // ViewModel loads workouts from mock API
+        XCTAssertFalse(viewModel.upcomingWorkouts.isEmpty, "Should have upcoming workouts")
+        XCTAssertFalse(viewModel.incomingWorkouts.isEmpty, "Should have incoming workouts")
         XCTAssertEqual(viewModel.searchQuery, "")
         XCTAssertFalse(viewModel.isLoading)
         XCTAssertNil(viewModel.errorMessage)
+
+        // Verify API was called
+        XCTAssertTrue(mockAPIService.fetchWorkoutsCalled, "Should have fetched workouts")
+        XCTAssertTrue(mockAPIService.fetchScheduledWorkoutsCalled, "Should have fetched scheduled workouts")
     }
 
     // MARK: - Filtering Tests
@@ -100,12 +141,12 @@ final class WorkoutsViewModelTests: XCTestCase {
     }
 
     func testFilteredIncomingBySport() {
-        viewModel.searchQuery = "mobility"
+        viewModel.searchQuery = "running"
 
         let filtered = viewModel.filteredIncoming
         XCTAssertTrue(filtered.allSatisfy { workout in
-            workout.name.localizedCaseInsensitiveContains("mobility") ||
-            workout.sport.rawValue.localizedCaseInsensitiveContains("mobility")
+            workout.name.localizedCaseInsensitiveContains("running") ||
+            workout.sport.rawValue.localizedCaseInsensitiveContains("running")
         })
     }
 

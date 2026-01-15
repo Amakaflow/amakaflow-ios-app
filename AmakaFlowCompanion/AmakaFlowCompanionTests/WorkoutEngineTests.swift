@@ -4,6 +4,9 @@
 //
 //  Unit tests for WorkoutEngine state machine
 //
+//  Updated AMA-350: Now uses TestClock and injected dependencies for
+//  deterministic, fast tests without real timers or singletons.
+//
 
 import XCTest
 @testable import AmakaFlowCompanion
@@ -11,35 +14,45 @@ import XCTest
 @MainActor
 final class WorkoutEngineTests: XCTestCase {
 
+    // MARK: - Test Dependencies
+
     var engine: WorkoutEngine!
+    var clock: TestClock!
+    var audioService: MockAudioService!
+    var progressStore: MockProgressStore!
+    var pairingService: MockPairingService!
 
     override func setUp() async throws {
-        engine = WorkoutEngine.shared
-        engine.reset()
+        // Create fresh mocks for each test
+        clock = TestClock()
+        audioService = MockAudioService()
+        progressStore = MockProgressStore()
+        pairingService = MockPairingService()
+
+        // Create engine with test dependencies (no singleton!)
+        engine = WorkoutEngine(
+            clock: clock,
+            audioService: audioService,
+            progressStore: progressStore,
+            pairingService: pairingService
+        )
     }
 
     override func tearDown() async throws {
+        // Clean up - no need for Task.sleep with mocked dependencies
         engine.reset()
-        // Allow async cleanup (Live Activity ending, timers) to complete
-        try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        engine = nil
+        clock = nil
+        audioService = nil
+        progressStore = nil
+        pairingService = nil
     }
 
     // MARK: - Test Fixtures
 
     private func createTestWorkout(intervals: [WorkoutInterval]? = nil) -> Workout {
-        Workout(
-            id: "test-workout-1",
-            name: "Test Workout",
-            sport: .strength,
-            duration: 600,
-            intervals: intervals ?? [
-                .warmup(seconds: 30, target: "Easy pace"),
-                .reps(sets: nil, reps: 10, name: "Push-ups", load: nil, restSec: 15, followAlongUrl: nil),
-                .time(seconds: 60, target: "Plank hold"),
-                .cooldown(seconds: 30, target: nil)
-            ],
-            description: "A test workout",
-            source: .coach
+        TestFixtures.workout(
+            intervals: intervals ?? TestFixtures.defaultIntervals
         )
     }
 
