@@ -27,7 +27,7 @@ enum TestFixtures {
         duration: Int = 600,
         intervals: [WorkoutInterval]? = nil,
         description: String? = "A test workout",
-        source: Workout.WorkoutSource = .coach
+        source: WorkoutSource = .coach
     ) -> Workout {
         Workout(
             id: id,
