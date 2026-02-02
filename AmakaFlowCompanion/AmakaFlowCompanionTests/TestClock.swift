@@ -63,7 +63,7 @@ final class TestClock: WorkoutClock {
 
     // MARK: - Initialization
 
-    init(startTime: Date = Date()) {
+    nonisolated init(startTime: Date = Date()) {
         self.virtualTime = startTime
     }
 

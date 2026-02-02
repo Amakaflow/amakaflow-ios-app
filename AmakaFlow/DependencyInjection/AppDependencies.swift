@@ -222,6 +222,11 @@ class MockPairingService: PairingServiceProviding {
     var isInTestMode: Bool = false
     #endif
 
+    // MARK: - Initialization
+
+    /// Nonisolated init to allow creation from async test contexts
+    nonisolated init() {}
+
     // MARK: - Protocol Implementation
 
     func markAuthInvalid() {
