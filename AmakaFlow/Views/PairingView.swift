@@ -138,6 +138,7 @@ struct PairingView: View {
                             .font(.caption)
                             .foregroundColor(.red)
                     }
+                    .accessibilityIdentifier("e2e_skip_button")
                     .padding(.bottom, 16)
                 }
                 #endif
@@ -276,6 +277,7 @@ struct E2ETestingDialog: View {
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .autocorrectionDisabled()
                             .textInputAutocapitalization(.never)
+                            .accessibilityIdentifier("e2e_auth_secret")
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
@@ -286,6 +288,7 @@ struct E2ETestingDialog: View {
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .autocorrectionDisabled()
                             .textInputAutocapitalization(.never)
+                            .accessibilityIdentifier("e2e_user_id")
                     }
                 }
 
@@ -302,6 +305,7 @@ struct E2ETestingDialog: View {
                     Button("Enable & Skip Pairing") {
                         onEnable()
                     }
+                    .accessibilityIdentifier("e2e_enable_button")
                     .disabled(authSecret.isEmpty || userId.isEmpty)
                 }
             }
