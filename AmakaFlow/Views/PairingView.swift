@@ -10,8 +10,8 @@ struct PairingView: View {
     // E2E Testing bypass (DEBUG only, non-production)
     #if DEBUG
     @State private var showE2EDialog = false
-    @State private var e2eAuthSecret = ""
-    @State private var e2eUserId = ""
+    @State private var e2eAuthSecret = TestAuthStore.shared.authSecret ?? ""
+    @State private var e2eUserId = TestAuthStore.shared.userId ?? ""
     #endif
 
     var body: some View {
@@ -165,6 +165,32 @@ struct PairingView: View {
                     }
                 )
                 .presentationDetents([.medium])
+                .onAppear {
+                    // Auto-submit if fields were pre-filled from env vars (AMA-545)
+                    if !e2eAuthSecret.isEmpty && !e2eUserId.isEmpty {
+                        print("[E2ETestingDialog] Auto-submitting with pre-filled credentials")
+                        pairingService.enableTestMode(authSecret: e2eAuthSecret, userId: e2eUserId)
+                        showE2EDialog = false
+                    }
+                }
+            }
+            #endif
+            #if DEBUG
+            .onAppear {
+                // Log env var state for E2E debugging (AMA-545)
+                let hasAuthSecret = TestAuthStore.shared.authSecret != nil
+                let hasUserId = TestAuthStore.shared.userId != nil
+                print("[PairingView] onAppear - hasAuthSecret=\(hasAuthSecret), hasUserId=\(hasUserId), env=\(AppEnvironment.current)")
+
+                // Auto-enable E2E test mode if env vars are present (AMA-545)
+                // This handles cases where PairingService.init() didn't pick up env vars
+                if AppEnvironment.current != .production,
+                   let authSecret = TestAuthStore.shared.authSecret,
+                   let userId = TestAuthStore.shared.userId,
+                   !authSecret.isEmpty, !userId.isEmpty {
+                    print("[PairingView] Auto-enabling E2E test mode from env vars")
+                    pairingService.enableTestMode(authSecret: authSecret, userId: userId)
+                }
             }
             #endif
         }
