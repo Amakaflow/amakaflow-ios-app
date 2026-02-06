@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import Combine
 import WatchConnectivity
 
 /// Container for all app dependencies

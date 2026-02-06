@@ -44,6 +44,7 @@ struct VoiceTranscriptionSettingsView: View {
         .sheet(isPresented: $showingAddTerm) {
             addTermSheet
         }
+        .accessibilityIdentifier("voice_settings_screen")
     }
 
     // MARK: - Provider Section

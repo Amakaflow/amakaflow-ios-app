@@ -101,11 +101,11 @@ enum TestFixtures {
 
     /// Create a test user profile
     static func userProfile(
-        userId: String = "test-user-\(UUID().uuidString.prefix(8))",
+        id: String = "test-user-\(UUID().uuidString.prefix(8))",
         email: String = "test@example.com",
         name: String = "Test User"
     ) -> UserProfile {
-        UserProfile(userId: userId, email: email, name: name)
+        UserProfile(id: id, email: email, name: name, avatarUrl: nil)
     }
 
     // MARK: - Saved Progress Fixtures
@@ -237,7 +237,7 @@ extension MockPairingService {
     ) {
         isPaired = true
         storedToken = token
-        userProfile = UserProfile(userId: userId, email: email, name: name)
+        userProfile = UserProfile(id: userId, email: email, name: name, avatarUrl: nil)
         needsReauth = false
     }
 
@@ -298,7 +298,7 @@ extension XCTestCase {
     }
 
     /// Wait for async operations to settle
-    func waitForAsync(seconds: TimeInterval = 0.1) async {
+    @nonobjc func waitForAsync(seconds: TimeInterval = 0.1) async {
         try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
     }
 }

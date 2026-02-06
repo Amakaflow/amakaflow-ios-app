@@ -46,6 +46,7 @@ struct ContentView: View {
                     Text(Tab.home.rawValue)
                 }
                 .tag(Tab.home)
+                .accessibilityIdentifier("home_tab")
 
             WorkoutsView()
                 .tabItem {
@@ -53,6 +54,7 @@ struct ContentView: View {
                     Text(Tab.workouts.rawValue)
                 }
                 .tag(Tab.workouts)
+                .accessibilityIdentifier("workouts_tab")
 
             SourcesView()
                 .tabItem {
@@ -60,6 +62,7 @@ struct ContentView: View {
                     Text(Tab.sources.rawValue)
                 }
                 .tag(Tab.sources)
+                .accessibilityIdentifier("sources_tab")
 
             CalendarView(onAddWorkout: {
                     selectedTab = .workouts
@@ -69,6 +72,7 @@ struct ContentView: View {
                     Text(Tab.calendar.rawValue)
                 }
                 .tag(Tab.calendar)
+                .accessibilityIdentifier("calendar_tab")
 
             ActivityHistoryView()
                 .tabItem {
@@ -76,6 +80,7 @@ struct ContentView: View {
                     Text(Tab.history.rawValue)
                 }
                 .tag(Tab.history)
+                .accessibilityIdentifier("history_tab")
 
             SettingsView()
                 .tabItem {
@@ -83,6 +88,7 @@ struct ContentView: View {
                     Text(Tab.settings.rawValue)
                 }
                 .tag(Tab.settings)
+                .accessibilityIdentifier("settings_tab")
         }
         .tint(Theme.Colors.accentBlue)
         .task {

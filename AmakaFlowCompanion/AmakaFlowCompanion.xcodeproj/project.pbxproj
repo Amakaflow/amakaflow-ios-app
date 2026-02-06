@@ -113,6 +113,12 @@
 		S1MUL4T10N00000016 /* DebugSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000006 /* DebugSettingsView.swift */; };
 		S1MUL4T10N00000017 /* SimulationBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000007 /* SimulationBannerView.swift */; };
 		S1MUL4T10N00000018 /* SimulatedWeightProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000008 /* SimulatedWeightProvider.swift */; };
+		D3P3ND1NJ3CT10N1001 /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0001 /* AppDependencies.swift */; };
+		D3P3ND1NJ3CT10N1002 /* AudioProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0002 /* AudioProviding.swift */; };
+		D3P3ND1NJ3CT10N1003 /* PairingServiceProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0003 /* PairingServiceProviding.swift */; };
+		D3P3ND1NJ3CT10N1004 /* ProgressStoreProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0004 /* ProgressStoreProviding.swift */; };
+		D3P3ND1NJ3CT10N1005 /* APIServiceProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0005 /* APIServiceProviding.swift */; };
+		D3P3ND1NJ3CT10N1006 /* WatchSessionProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0006 /* WatchSessionProviding.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -283,6 +289,12 @@
 		S1MUL4T10N00000006 /* DebugSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugSettingsView.swift; path = ../AmakaFlow/Views/Settings/DebugSettingsView.swift; sourceTree = SOURCE_ROOT; };
 		S1MUL4T10N00000007 /* SimulationBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SimulationBannerView.swift; path = ../AmakaFlow/Views/Components/SimulationBannerView.swift; sourceTree = SOURCE_ROOT; };
 		S1MUL4T10N00000008 /* SimulatedWeightProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SimulatedWeightProvider.swift; path = ../AmakaFlow/Simulation/SimulatedWeightProvider.swift; sourceTree = SOURCE_ROOT; };
+		D3P3ND1NJ3CT10N0001 /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDependencies.swift; path = ../AmakaFlow/DependencyInjection/AppDependencies.swift; sourceTree = SOURCE_ROOT; };
+		D3P3ND1NJ3CT10N0002 /* AudioProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioProviding.swift; path = ../AmakaFlow/DependencyInjection/AudioProviding.swift; sourceTree = SOURCE_ROOT; };
+		D3P3ND1NJ3CT10N0003 /* PairingServiceProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingServiceProviding.swift; path = ../AmakaFlow/DependencyInjection/PairingServiceProviding.swift; sourceTree = SOURCE_ROOT; };
+		D3P3ND1NJ3CT10N0004 /* ProgressStoreProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProgressStoreProviding.swift; path = ../AmakaFlow/DependencyInjection/ProgressStoreProviding.swift; sourceTree = SOURCE_ROOT; };
+		D3P3ND1NJ3CT10N0005 /* APIServiceProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIServiceProviding.swift; path = ../AmakaFlow/DependencyInjection/APIServiceProviding.swift; sourceTree = SOURCE_ROOT; };
+		D3P3ND1NJ3CT10N0006 /* WatchSessionProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchSessionProviding.swift; path = ../AmakaFlow/DependencyInjection/WatchSessionProviding.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -479,6 +491,12 @@
 				S1MUL4T10N00000006 /* DebugSettingsView.swift */,
 				S1MUL4T10N00000007 /* SimulationBannerView.swift */,
 				S1MUL4T10N00000008 /* SimulatedWeightProvider.swift */,
+				D3P3ND1NJ3CT10N0001 /* AppDependencies.swift */,
+				D3P3ND1NJ3CT10N0002 /* AudioProviding.swift */,
+				D3P3ND1NJ3CT10N0003 /* PairingServiceProviding.swift */,
+				D3P3ND1NJ3CT10N0004 /* ProgressStoreProviding.swift */,
+				D3P3ND1NJ3CT10N0005 /* APIServiceProviding.swift */,
+				D3P3ND1NJ3CT10N0006 /* WatchSessionProviding.swift */,
 				F84E22752ED0D59B00459747 /* SettingsView.swift */,
 				F84E22762ED0D59B00459747 /* WorkoutDetailView.swift */,
 				F84E22772ED0D59B00459747 /* WorkoutsView.swift */,
@@ -957,6 +975,12 @@
 				S1MUL4T10N00000016 /* DebugSettingsView.swift in Sources */,
 				S1MUL4T10N00000017 /* SimulationBannerView.swift in Sources */,
 				S1MUL4T10N00000018 /* SimulatedWeightProvider.swift in Sources */,
+				D3P3ND1NJ3CT10N1001 /* AppDependencies.swift in Sources */,
+				D3P3ND1NJ3CT10N1002 /* AudioProviding.swift in Sources */,
+				D3P3ND1NJ3CT10N1003 /* PairingServiceProviding.swift in Sources */,
+				D3P3ND1NJ3CT10N1004 /* ProgressStoreProviding.swift in Sources */,
+				D3P3ND1NJ3CT10N1005 /* APIServiceProviding.swift in Sources */,
+				D3P3ND1NJ3CT10N1006 /* WatchSessionProviding.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

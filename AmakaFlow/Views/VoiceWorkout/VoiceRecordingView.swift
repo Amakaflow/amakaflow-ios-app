@@ -31,6 +31,7 @@ struct VoiceRecordingView: View {
                         .foregroundColor(.white)
                 }
             }
+            .accessibilityIdentifier("microphone_button")
 
             // Instructions
             VStack(spacing: 8) {
@@ -72,6 +73,7 @@ struct VoiceRecordingView: View {
             Spacer()
         }
         .background(Theme.Colors.background)
+        .accessibilityIdentifier("voice_recording_view")
     }
 }
 

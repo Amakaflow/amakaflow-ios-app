@@ -112,13 +112,13 @@ class WorkoutEngine: ObservableObject {
     ///   - progressStore: Workout progress persistence store
     ///   - pairingService: Pairing service for auth status
     init(
-        clock: WorkoutClock = RealClock(),
-        audioService: AudioProviding = AudioCueManager(),
+        clock: WorkoutClock? = nil,
+        audioService: AudioProviding? = nil,
         progressStore: ProgressStoreProviding = LiveProgressStore.shared,
         pairingService: PairingServiceProviding? = nil
     ) {
-        self.clock = clock
-        self.audioService = audioService
+        self.clock = clock ?? RealClock()
+        self.audioService = audioService ?? AudioCueManager()
         self.progressStore = progressStore
         // Use provided pairingService or default to shared (allows nil for convenience init)
         self.pairingService = pairingService ?? PairingService.shared
