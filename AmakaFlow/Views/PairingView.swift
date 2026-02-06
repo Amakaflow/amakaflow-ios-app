@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct PairingView: View {
-    @ObservedObject private var pairingService = PairingService.shared
+    @EnvironmentObject var pairingService: PairingService
     @State private var manualCode = ""
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -288,4 +288,5 @@ struct E2ETestingDialog: View {
 
 #Preview {
     PairingView()
+        .environmentObject(PairingService.shared)
 }
