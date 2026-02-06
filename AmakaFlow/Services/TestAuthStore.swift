@@ -19,15 +19,28 @@ class TestAuthStore {
 
     private init() {}
 
+    // MARK: - Launch Argument Helper
+
+    /// Read a UITEST_* value from launch arguments (injected via UserDefaults by Maestro 2.1.0)
+    private func launchArgument(_ key: String) -> String? {
+        guard let value = UserDefaults.standard.string(forKey: key),
+              !value.isEmpty else { return nil }
+        return value
+    }
+
     // MARK: - Credential Access
 
-    /// Get the test auth secret (checks environment first, then stored value)
+    /// Get the test auth secret (checks environment first, then launch args, then stored value)
     var authSecret: String? {
         #if DEBUG
         // UITEST_* env vars take highest precedence (Maestro E2E tests)
         if let envSecret = ProcessInfo.processInfo.environment["UITEST_AUTH_SECRET"],
            !envSecret.isEmpty {
             return envSecret
+        }
+        // Launch arguments next (Maestro 2.1.0 injects via UserDefaults)
+        if let argSecret = launchArgument("UITEST_AUTH_SECRET") {
+            return argSecret
         }
         // TEST_* env vars next (xcodebuild / simctl tests)
         if let envSecret = ProcessInfo.processInfo.environment["TEST_AUTH_SECRET"],
@@ -41,13 +54,17 @@ class TestAuthStore {
         #endif
     }
 
-    /// Get the test user ID (checks environment first, then stored value)
+    /// Get the test user ID (checks environment first, then launch args, then stored value)
     var userId: String? {
         #if DEBUG
         // UITEST_* env vars take highest precedence (Maestro E2E tests)
         if let envUserId = ProcessInfo.processInfo.environment["UITEST_USER_ID"],
            !envUserId.isEmpty {
             return envUserId
+        }
+        // Launch arguments next (Maestro 2.1.0 injects via UserDefaults)
+        if let argUserId = launchArgument("UITEST_USER_ID") {
+            return argUserId
         }
         // TEST_* env vars next (xcodebuild / simctl tests)
         if let envUserId = ProcessInfo.processInfo.environment["TEST_USER_ID"],
@@ -61,13 +78,17 @@ class TestAuthStore {
         #endif
     }
 
-    /// Get the test user email (checks environment first, then stored value)
+    /// Get the test user email (checks environment first, then launch args, then stored value)
     var userEmail: String? {
         #if DEBUG
         // UITEST_* env vars take highest precedence (Maestro E2E tests)
         if let envEmail = ProcessInfo.processInfo.environment["UITEST_USER_EMAIL"],
            !envEmail.isEmpty {
             return envEmail
+        }
+        // Launch arguments next (Maestro 2.1.0 injects via UserDefaults)
+        if let argEmail = launchArgument("UITEST_USER_EMAIL") {
+            return argEmail
         }
         // TEST_* env vars next (xcodebuild / simctl tests)
         if let envEmail = ProcessInfo.processInfo.environment["TEST_USER_EMAIL"],
@@ -90,14 +111,15 @@ class TestAuthStore {
         #endif
     }
 
-    /// Check if using stored credentials (not environment variables)
+    /// Check if using stored credentials (not environment variables or launch arguments)
     var isUsingStoredCredentials: Bool {
         #if DEBUG
-        // Check if we have stored credentials and NOT environment variables
+        // Check if we have stored credentials and NOT environment variables or launch arguments
         let hasEnvCredentials = ProcessInfo.processInfo.environment["UITEST_AUTH_SECRET"] != nil
             || ProcessInfo.processInfo.environment["TEST_AUTH_SECRET"] != nil
+        let hasLaunchArgCredentials = launchArgument("UITEST_AUTH_SECRET") != nil
         let hasStoredCredentials = UserDefaults.standard.string(forKey: authSecretKey) != nil
-        return hasStoredCredentials && !hasEnvCredentials
+        return hasStoredCredentials && !hasEnvCredentials && !hasLaunchArgCredentials
         #else
         return false
         #endif
@@ -107,6 +129,7 @@ class TestAuthStore {
     var useFixtures: Bool {
         #if DEBUG
         return ProcessInfo.processInfo.environment["UITEST_USE_FIXTURES"] == "true"
+            || launchArgument("UITEST_USE_FIXTURES") == "true"
         #else
         return false
         #endif
@@ -116,8 +139,9 @@ class TestAuthStore {
     /// When nil, all bundled fixtures are loaded
     var fixtureNames: [String]? {
         #if DEBUG
-        guard let value = ProcessInfo.processInfo.environment["UITEST_FIXTURES"],
-              !value.isEmpty else { return nil }
+        let value = ProcessInfo.processInfo.environment["UITEST_FIXTURES"]
+            ?? launchArgument("UITEST_FIXTURES")
+        guard let value, !value.isEmpty else { return nil }
         return value.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }
         #else
         return nil
@@ -128,6 +152,7 @@ class TestAuthStore {
     var fixtureState: String? {
         #if DEBUG
         return ProcessInfo.processInfo.environment["UITEST_FIXTURE_STATE"]
+            ?? launchArgument("UITEST_FIXTURE_STATE")
         #else
         return nil
         #endif
@@ -137,6 +162,7 @@ class TestAuthStore {
     var skipOnboarding: Bool {
         #if DEBUG
         return ProcessInfo.processInfo.environment["UITEST_SKIP_ONBOARDING"] == "true"
+            || launchArgument("UITEST_SKIP_ONBOARDING") == "true"
         #else
         return false
         #endif
