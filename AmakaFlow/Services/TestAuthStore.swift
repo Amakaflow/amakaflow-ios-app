@@ -24,7 +24,12 @@ class TestAuthStore {
     /// Get the test auth secret (checks environment first, then stored value)
     var authSecret: String? {
         #if DEBUG
-        // Environment variable takes precedence (for automated tests)
+        // UITEST_* env vars take highest precedence (Maestro E2E tests)
+        if let envSecret = ProcessInfo.processInfo.environment["UITEST_AUTH_SECRET"],
+           !envSecret.isEmpty {
+            return envSecret
+        }
+        // TEST_* env vars next (xcodebuild / simctl tests)
         if let envSecret = ProcessInfo.processInfo.environment["TEST_AUTH_SECRET"],
            !envSecret.isEmpty {
             return envSecret
@@ -39,7 +44,12 @@ class TestAuthStore {
     /// Get the test user ID (checks environment first, then stored value)
     var userId: String? {
         #if DEBUG
-        // Environment variable takes precedence
+        // UITEST_* env vars take highest precedence (Maestro E2E tests)
+        if let envUserId = ProcessInfo.processInfo.environment["UITEST_USER_ID"],
+           !envUserId.isEmpty {
+            return envUserId
+        }
+        // TEST_* env vars next (xcodebuild / simctl tests)
         if let envUserId = ProcessInfo.processInfo.environment["TEST_USER_ID"],
            !envUserId.isEmpty {
             return envUserId
@@ -54,7 +64,12 @@ class TestAuthStore {
     /// Get the test user email (checks environment first, then stored value)
     var userEmail: String? {
         #if DEBUG
-        // Environment variable takes precedence
+        // UITEST_* env vars take highest precedence (Maestro E2E tests)
+        if let envEmail = ProcessInfo.processInfo.environment["UITEST_USER_EMAIL"],
+           !envEmail.isEmpty {
+            return envEmail
+        }
+        // TEST_* env vars next (xcodebuild / simctl tests)
         if let envEmail = ProcessInfo.processInfo.environment["TEST_USER_EMAIL"],
            !envEmail.isEmpty {
             return envEmail
@@ -79,9 +94,28 @@ class TestAuthStore {
     var isUsingStoredCredentials: Bool {
         #if DEBUG
         // Check if we have stored credentials and NOT environment variables
-        let hasEnvCredentials = ProcessInfo.processInfo.environment["TEST_AUTH_SECRET"] != nil
+        let hasEnvCredentials = ProcessInfo.processInfo.environment["UITEST_AUTH_SECRET"] != nil
+            || ProcessInfo.processInfo.environment["TEST_AUTH_SECRET"] != nil
         let hasStoredCredentials = UserDefaults.standard.string(forKey: authSecretKey) != nil
         return hasStoredCredentials && !hasEnvCredentials
+        #else
+        return false
+        #endif
+    }
+
+    /// Whether Maestro tests should load fixture data instead of calling the API
+    var useFixtures: Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.environment["UITEST_USE_FIXTURES"] == "true"
+        #else
+        return false
+        #endif
+    }
+
+    /// Whether onboarding screens should be skipped (forward-compatible, no onboarding screens exist yet)
+    var skipOnboarding: Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.environment["UITEST_SKIP_ONBOARDING"] == "true"
         #else
         return false
         #endif

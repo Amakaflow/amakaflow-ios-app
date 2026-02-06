@@ -112,6 +112,53 @@ Note: The `SIMCTL_CHILD_` prefix is stripped by `simctl` before passing to the a
 - iOS Simulator should resolve localhost to your Mac
 - If issues persist, try using your Mac's IP address instead
 
+## UITEST_* Environment Variables (Maestro / AMA-536)
+
+For Maestro E2E tests, use `UITEST_*` variables instead of `TEST_*`. These are passed via Maestro's `launchApp.env` and take higher priority than `TEST_*` vars.
+
+### Available Variables
+
+| Variable | Purpose | Example |
+|----------|---------|---------|
+| `UITEST_AUTH_SECRET` | Bypasses JWT auth (same as TEST_AUTH_SECRET) | `e2e-test-secret-dev-only` |
+| `UITEST_USER_ID` | Sets the authenticated user ID | `user_37lZCcU9AJ9b7MX2H71dZ2CuX2u` |
+| `UITEST_USER_EMAIL` | Sets the user's email for profile display | `soopergeri+e2etest@gmail.com` |
+| `UITEST_ENVIRONMENT` | Sets app environment (development/staging/production) | `development` |
+| `UITEST_API_BASE_URL` | Overrides the API base URL | `http://localhost:8001` |
+| `UITEST_USE_FIXTURES` | Load mock/fixture data instead of calling API | `true` |
+| `UITEST_SKIP_ONBOARDING` | Skip onboarding screens (forward-compatible) | `true` |
+| `UITEST_MODE` | General flag indicating UITEST mode | `true` |
+
+### Priority Order
+
+`UITEST_*` env vars > `TEST_*` env vars > UserDefaults stored credentials
+
+### Running Maestro with UITEST Variables
+
+```bash
+# Run the UITEST validation flow
+UITEST_AUTH_SECRET="e2e-test-secret-dev-only" \
+UITEST_USER_ID="user_37lZCcU9AJ9b7MX2H71dZ2CuX2u" \
+maestro test flows/ios/uitest-smoke.yaml
+
+# Run smoke tests (env vars are embedded in the flow YAML)
+UITEST_AUTH_SECRET="e2e-test-secret-dev-only" \
+UITEST_USER_ID="user_37lZCcU9AJ9b7MX2H71dZ2CuX2u" \
+maestro test flows/ios/smoke.yaml
+```
+
+### How It Works
+
+1. Maestro passes `UITEST_*` vars via `launchApp.env` to the iOS app process
+2. `TestAuthStore` reads `UITEST_AUTH_SECRET` / `UITEST_USER_ID` (highest priority)
+3. `PairingService.init()` detects valid credentials and sets `isPaired = true`
+4. App shows `ContentView` (home screen) instead of `PairingView`
+5. If `UITEST_USE_FIXTURES=true`, `WorkoutsViewModel` loads mock data instead of calling the API
+
+### Security
+
+All `UITEST_*` / `TEST_*` reads are wrapped in `#if DEBUG`. Release builds return `nil`/`false` for everything.
+
 ## Related Docs
 
 - [QUICK_START_TESTING.md](./QUICK_START_TESTING.md) - General testing guide

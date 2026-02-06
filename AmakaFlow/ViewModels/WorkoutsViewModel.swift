@@ -55,6 +55,16 @@ class WorkoutsViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
 
+        // UITEST fixture mode - load mock data for deterministic Maestro tests
+        #if DEBUG
+        if TestAuthStore.shared.useFixtures {
+            print("[WorkoutsViewModel] UITEST_USE_FIXTURES enabled, loading fixture data")
+            loadMockData()
+            isLoading = false
+            return
+        }
+        #endif
+
         // Only show mock data if explicitly in demo mode OR not paired
         if useDemoMode {
             print("[WorkoutsViewModel] Demo mode enabled, loading mock data")
