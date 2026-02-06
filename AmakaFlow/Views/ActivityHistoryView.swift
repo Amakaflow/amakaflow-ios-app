@@ -37,13 +37,14 @@ struct ActivityHistoryView: View {
                             ForEach(viewModel.groupedCompletions) { group in
                                 Section {
                                     VStack(spacing: Theme.Spacing.sm) {
-                                        ForEach(group.completions) { completion in
+                                        ForEach(Array(group.completions.enumerated()), id: \.element.id) { index, completion in
                                             Button {
                                                 selectedCompletionId = completion.id
                                             } label: {
                                                 CompletionRowView(completion: completion)
                                             }
                                             .buttonStyle(.plain)
+                                            .accessibilityIdentifier("completion_card_\(index)")
                                             .onAppear {
                                                 Task {
                                                     await viewModel.loadMoreIfNeeded(currentItem: completion)
@@ -102,6 +103,7 @@ struct ActivityHistoryView: View {
                 }
             }
         }
+        .accessibilityIdentifier("history_screen")
     }
 
     // MARK: - Section Header

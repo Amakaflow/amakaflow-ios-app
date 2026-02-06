@@ -50,13 +50,14 @@ struct WorkoutsView: View {
                                 .padding(.horizontal, Theme.Spacing.lg)
                             } else {
                                 VStack(spacing: 12) {
-                                    ForEach(viewModel.filteredUpcoming) { scheduled in
+                                    ForEach(Array(viewModel.filteredUpcoming.enumerated()), id: \.element.id) { index, scheduled in
                                         WorkoutCard(
                                             workout: scheduled.workout,
                                             scheduledDate: scheduled.scheduledDate,
                                             scheduledTime: scheduled.scheduledTime,
                                             isPrimary: true
                                         )
+                                        .accessibilityIdentifier("workout_card_\(index)")
                                         .onTapGesture {
                                             print("🔵 TAPPED WORKOUT: \(scheduled.workout.name)")
                                             selectedWorkout = scheduled.workout
@@ -166,6 +167,7 @@ struct WorkoutsView: View {
                 print("🔵 showingDetail changed: \(oldValue) → \(newValue)")
             }
         }
+        .accessibilityIdentifier("workouts_screen")
     }
 }
 

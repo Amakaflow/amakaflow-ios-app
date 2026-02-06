@@ -145,6 +145,7 @@ struct SettingsView: View {
             }
             #endif
         }
+        .accessibilityIdentifier("settings_screen")
     }
 
     // MARK: - Workout Debug Sheet

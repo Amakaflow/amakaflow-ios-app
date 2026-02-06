@@ -153,6 +153,7 @@ struct HomeView: View {
                 savedProgress = SavedWorkoutProgress.load()
             }
         }
+        .accessibilityIdentifier("home_screen")
     }
 
     // MARK: - Resume Workout Banner
@@ -345,6 +346,7 @@ struct HomeView: View {
             .background(Theme.Colors.accentGreen)
             .cornerRadius(Theme.CornerRadius.lg)
         }
+        .accessibilityIdentifier("voice_workout_button")
     }
 
     // MARK: - Today's Workouts Section
