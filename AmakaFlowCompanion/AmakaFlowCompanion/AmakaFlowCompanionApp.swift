@@ -10,7 +10,7 @@ import Sentry
 
 @main
 struct AmakaFlowCompanionApp: App {
-    @ObservedObject private var pairingService = PairingService.shared
+    @StateObject private var pairingService = PairingService.shared
     @StateObject private var workoutsViewModel = WorkoutsViewModel()
     @StateObject private var watchConnectivity = WatchConnectivityManager.shared
     @StateObject private var garminConnectivity = GarminConnectManager.shared
