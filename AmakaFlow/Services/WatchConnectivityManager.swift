@@ -33,6 +33,13 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     override init() {
         super.init()
 
+        #if DEBUG
+        if TestAuthStore.shared.skipAppleWatch {
+            print("[WatchConnectivityManager] Skipping WCSession setup (UITEST_SKIP_APPLE_WATCH=true)")
+            return
+        }
+        #endif
+
         if WCSession.isSupported() {
             session = WCSession.default
             session?.delegate = self

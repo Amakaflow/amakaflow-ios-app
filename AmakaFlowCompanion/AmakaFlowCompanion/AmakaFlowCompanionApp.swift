@@ -75,7 +75,14 @@ struct AmakaFlowCompanionApp: App {
                             await workoutsViewModel.loadWorkouts()
 
                             // Initialize WatchConnectivity asynchronously (non-blocking)
+                            // Skip when UITEST_SKIP_APPLE_WATCH=true to avoid system permission modal (AMA-549)
+                            #if DEBUG
+                            if !TestAuthStore.shared.skipAppleWatch {
+                                watchConnectivity.activate()
+                            }
+                            #else
                             watchConnectivity.activate()
+                            #endif
 
                             // Auto-reconnect to saved Garmin device if available
                             if garminConnectivity.savedDeviceInfo != nil && !garminConnectivity.isConnected {
