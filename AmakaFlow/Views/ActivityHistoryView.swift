@@ -102,8 +102,15 @@ struct ActivityHistoryView: View {
                         }
                 }
             }
+            .overlay(alignment: .top) {
+                // Invisible marker for Maestro E2E tests (container views
+                // don't expose accessibilityIdentifier on iOS 26)
+                Text(" ")
+                    .font(.system(size: 1))
+                    .opacity(0.01)
+                    .accessibilityIdentifier("history_screen")
+            }
         }
-        .accessibilityIdentifier("history_screen")
     }
 
     // MARK: - Section Header

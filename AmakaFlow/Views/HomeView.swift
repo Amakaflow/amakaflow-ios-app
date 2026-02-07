@@ -152,8 +152,15 @@ struct HomeView: View {
                 // Check for saved workout progress
                 savedProgress = SavedWorkoutProgress.load()
             }
+            .overlay(alignment: .top) {
+                // Invisible marker for Maestro E2E tests (container views
+                // don't expose accessibilityIdentifier on iOS 26)
+                Text(" ")
+                    .font(.system(size: 1))
+                    .opacity(0.01)
+                    .accessibilityIdentifier("home_screen")
+            }
         }
-        .accessibilityIdentifier("home_screen")
     }
 
     // MARK: - Resume Workout Banner
