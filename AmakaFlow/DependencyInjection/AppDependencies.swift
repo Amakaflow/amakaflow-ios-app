@@ -42,13 +42,14 @@ struct AppDependencies {
     #if DEBUG
     /// Fixture dependencies for E2E testing with JSON fixture data
     /// Uses FixtureAPIService (bundled JSON, canned writes) with real UI services
+    /// Watch session uses MockWatchSession to avoid WCSession permission modal (AMA-549)
     @MainActor
     static let fixture = AppDependencies(
         apiService: FixtureAPIService(),
         pairingService: PairingService.shared,
         audioService: AudioCueManager(),
         progressStore: LiveProgressStore.shared,
-        watchSession: LiveWatchSession.shared
+        watchSession: MockWatchSession()
     )
 
     /// Returns the appropriate dependencies based on environment:

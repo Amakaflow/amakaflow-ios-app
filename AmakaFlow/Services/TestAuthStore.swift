@@ -168,6 +168,17 @@ class TestAuthStore {
         #endif
     }
 
+    /// Whether Apple Watch connectivity should be skipped during tests (AMA-549)
+    /// Prevents WCSession.activate() from triggering the system "Connect?" permission modal
+    var skipAppleWatch: Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.environment["UITEST_SKIP_APPLE_WATCH"] == "true"
+            || launchArgument("UITEST_SKIP_APPLE_WATCH") == "true"
+        #else
+        return false
+        #endif
+    }
+
     // MARK: - Credential Storage
 
     /// Store test credentials for manual E2E testing
