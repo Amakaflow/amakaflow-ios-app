@@ -56,7 +56,14 @@ struct WorkoutCompletionView: View {
                 .padding(.horizontal, Theme.Spacing.lg)
                 .padding(.vertical, Theme.Spacing.xl)
             }
-            .accessibilityIdentifier("workout_completion_screen")
+            .overlay(alignment: .top) {
+                // Invisible marker for Maestro E2E tests (container views
+                // don't expose accessibilityIdentifier on iOS 26)
+                Text(" ")
+                    .font(.system(size: 1))
+                    .opacity(0.01)
+                    .accessibilityIdentifier("workout_completion_screen")
+            }
 
             // Coming Soon toast
             if viewModel.showComingSoonToast {

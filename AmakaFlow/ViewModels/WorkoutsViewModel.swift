@@ -227,7 +227,13 @@ class WorkoutsViewModel: ObservableObject {
                 }
 
                 // Save to WorkoutKit (iOS 18+)
-                if #available(iOS 18.0, *) {
+                // Skip in test mode to avoid WorkoutKit authorization system dialog
+                #if DEBUG
+                let skipWorkoutKit = TestAuthStore.shared.isTestModeEnabled
+                #else
+                let skipWorkoutKit = false
+                #endif
+                if !skipWorkoutKit, #available(iOS 18.0, *) {
                     do {
                         try await WorkoutKitConverter.shared.saveToWorkoutKit(workout)
                         print("[WorkoutsViewModel] Saved '\(workout.name)' to WorkoutKit")

@@ -104,7 +104,14 @@ struct WorkoutPlayerView: View {
         }
         // Note: Removed .id("player-\(engine.stateVersion)") as it caused @State to reset
         // when stateVersion changed, dismissing the end workout confirmation dialog
-        .accessibilityIdentifier("workout_player_screen")
+        .overlay(alignment: .top) {
+            // Invisible marker for Maestro E2E tests (container views
+            // don't expose accessibilityIdentifier on iOS 26)
+            Text(" ")
+                .font(.system(size: 1))
+                .opacity(0.01)
+                .accessibilityIdentifier("workout_player_screen")
+        }
         .navigationBarHidden(true)
         .statusBarHidden(engine.phase == .running)
         .alert("End Workout?", isPresented: $showEndConfirmation) {

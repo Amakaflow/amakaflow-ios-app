@@ -244,7 +244,14 @@ struct WorkoutDetailView: View {
             .background(Theme.Colors.background.ignoresSafeArea())
             .navigationTitle(workout.name)
             .navigationBarTitleDisplayMode(.inline)
-            .accessibilityIdentifier("workout_detail_screen")
+            .overlay(alignment: .top) {
+                // Invisible marker for Maestro E2E tests (container views
+                // don't expose accessibilityIdentifier on iOS 26)
+                Text(" ")
+                    .font(.system(size: 1))
+                    .opacity(0.01)
+                    .accessibilityIdentifier("workout_detail_screen")
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { dismiss() }) {
