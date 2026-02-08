@@ -12,6 +12,21 @@ final class AmakaFlowWatch_Watch_AppUITests: XCTestCase {
 
     var app: XCUIApplication!
 
+    /// Whether we're running on CI (slower x86_64 emulated simulators)
+    private var isCI: Bool {
+        ProcessInfo.processInfo.environment["CI"] != nil
+    }
+
+    /// Timeout multiplier: CI simulators run on x86_64 emulation and need longer waits
+    private var timeoutMultiplier: Double {
+        isCI ? 3.0 : 1.0
+    }
+
+    /// Scaled timeout for CI resilience
+    private func timeout(_ base: Double) -> Double {
+        base * timeoutMultiplier
+    }
+
     override func setUpWithError() throws {
         continueAfterFailure = false
 
@@ -62,7 +77,7 @@ final class AmakaFlowWatch_Watch_AppUITests: XCTestCase {
         app.launch()
 
         // Verify the app launched without crashing
-        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10),
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: timeout(15)),
                       "Watch app should launch and reach foreground state")
 
         // Take a screenshot of the initial launch state
@@ -75,7 +90,7 @@ final class AmakaFlowWatch_Watch_AppUITests: XCTestCase {
     @MainActor
     func testMainScreenLoads() throws {
         app.launch()
-        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: timeout(15)))
 
         // The app entry point is WatchRemoteView which shows different states:
         // - "Connecting..." (loading)
@@ -83,19 +98,22 @@ final class AmakaFlowWatch_Watch_AppUITests: XCTestCase {
         // - "iPhone Not Connected" (disconnected, with Retry and Demo buttons)
         // In test/simulator, we expect either idle or disconnected view.
 
-        // Wait for loading to finish (up to 10s for session activation timeout)
+        // Wait for loading to finish.
+        // On CI without a paired iPhone, the app's 5s loading timeout must fire
+        // before transitioning. With x86_64 emulation this takes longer.
         let idleText = app.staticTexts["No Active Workout"]
         let disconnectedText = app.staticTexts["iPhone Not Connected"]
         let connectingText = app.staticTexts["Connecting..."]
 
         // First, wait for the connecting state to resolve
-        if connectingText.waitForExistence(timeout: 3) {
+        if connectingText.waitForExistence(timeout: timeout(3)) {
             // Wait for it to transition to idle or disconnected
-            let resolved = idleText.waitForExistence(timeout: 10) || disconnectedText.waitForExistence(timeout: 2)
+            let resolved = idleText.waitForExistence(timeout: timeout(15))
+                || disconnectedText.waitForExistence(timeout: timeout(5))
             XCTAssertTrue(resolved, "Loading state should resolve to idle or disconnected")
         } else {
             // Already past loading, check for expected states
-            let hasExpectedState = idleText.waitForExistence(timeout: 5) || disconnectedText.exists
+            let hasExpectedState = idleText.waitForExistence(timeout: timeout(5)) || disconnectedText.exists
             XCTAssertTrue(hasExpectedState,
                           "Main screen should show 'No Active Workout' or 'iPhone Not Connected'")
         }
@@ -109,30 +127,32 @@ final class AmakaFlowWatch_Watch_AppUITests: XCTestCase {
     @MainActor
     func testDemoButtonExists() throws {
         app.launch()
-        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: timeout(15)))
 
         // Wait for the main screen to load past connecting state
         let idleText = app.staticTexts["No Active Workout"]
         let disconnectedText = app.staticTexts["iPhone Not Connected"]
 
-        let mainScreenLoaded = idleText.waitForExistence(timeout: 12) || disconnectedText.waitForExistence(timeout: 2)
+        let mainScreenLoaded = idleText.waitForExistence(timeout: timeout(15))
+            || disconnectedText.waitForExistence(timeout: timeout(5))
         XCTAssertTrue(mainScreenLoaded, "Main screen should load")
 
         // Both idle and disconnected views have a "Demo" button
         let demoButton = app.buttons["Demo"]
-        XCTAssertTrue(demoButton.waitForExistence(timeout: 5),
+        XCTAssertTrue(demoButton.waitForExistence(timeout: timeout(5)),
                       "Demo button should be present on idle/disconnected screen")
     }
 
     @MainActor
     func testRefreshButtonExists() throws {
         app.launch()
-        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: timeout(15)))
 
         // Wait for main screen
         let idleText = app.staticTexts["No Active Workout"]
         let disconnectedText = app.staticTexts["iPhone Not Connected"]
-        _ = idleText.waitForExistence(timeout: 12) || disconnectedText.waitForExistence(timeout: 2)
+        _ = idleText.waitForExistence(timeout: timeout(15))
+            || disconnectedText.waitForExistence(timeout: timeout(5))
 
         // Idle view has "Refresh", disconnected view has "Retry"
         let refreshButton = app.buttons["Refresh"]
@@ -144,10 +164,10 @@ final class AmakaFlowWatch_Watch_AppUITests: XCTestCase {
     @MainActor
     func testNoErrorDialogsOnLaunch() throws {
         app.launch()
-        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: timeout(15)))
 
         // Wait for main screen to settle
-        sleep(3)
+        if isCI { sleep(5) } else { sleep(3) }
 
         // Check for error/crash dialogs
         let errorAlerts = app.alerts
@@ -164,17 +184,18 @@ final class AmakaFlowWatch_Watch_AppUITests: XCTestCase {
     @MainActor
     func testDemoModeActivation() throws {
         app.launch()
-        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: timeout(15)))
 
         // Wait for main screen
         let idleText = app.staticTexts["No Active Workout"]
         let disconnectedText = app.staticTexts["iPhone Not Connected"]
-        let loaded = idleText.waitForExistence(timeout: 12) || disconnectedText.waitForExistence(timeout: 2)
+        let loaded = idleText.waitForExistence(timeout: timeout(15))
+            || disconnectedText.waitForExistence(timeout: timeout(5))
         XCTAssertTrue(loaded, "Main screen should load")
 
         // Tap Demo button to enter demo mode
         let demoButton = app.buttons["Demo"]
-        XCTAssertTrue(demoButton.waitForExistence(timeout: 5), "Demo button should exist")
+        XCTAssertTrue(demoButton.waitForExistence(timeout: timeout(5)), "Demo button should exist")
         demoButton.tap()
 
         // In demo mode, screen 0 shows idle (same as before),
@@ -183,7 +204,7 @@ final class AmakaFlowWatch_Watch_AppUITests: XCTestCase {
         let demoIndicator = app.staticTexts.matching(
             NSPredicate(format: "label BEGINSWITH 'DEMO'")
         ).firstMatch
-        XCTAssertTrue(demoIndicator.waitForExistence(timeout: 5),
+        XCTAssertTrue(demoIndicator.waitForExistence(timeout: timeout(8)),
                       "Demo mode indicator should appear")
 
         let screenshot = XCTAttachment(screenshot: app.screenshot())

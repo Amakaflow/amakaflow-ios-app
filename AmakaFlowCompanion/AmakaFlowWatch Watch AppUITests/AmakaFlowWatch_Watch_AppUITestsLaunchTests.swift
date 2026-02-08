@@ -13,6 +13,21 @@ final class AmakaFlowWatch_Watch_AppUITestsLaunchTests: XCTestCase {
         true
     }
 
+    /// Whether we're running on CI (slower x86_64 emulated simulators)
+    private var isCI: Bool {
+        ProcessInfo.processInfo.environment["CI"] != nil
+    }
+
+    /// Timeout multiplier: CI simulators run on x86_64 emulation and need longer waits
+    private var timeoutMultiplier: Double {
+        isCI ? 3.0 : 1.0
+    }
+
+    /// Scaled timeout for CI resilience
+    private func timeout(_ base: Double) -> Double {
+        base * timeoutMultiplier
+    }
+
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
@@ -30,18 +45,22 @@ final class AmakaFlowWatch_Watch_AppUITestsLaunchTests: XCTestCase {
         app.launch()
 
         // Verify the app is running
-        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10),
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: timeout(15)),
                       "App should reach foreground state")
 
-        // Wait for main screen to load past any connecting state
+        // Wait for main screen to load past any connecting state.
+        // On CI without a paired iPhone, WCSession never activates and the app's
+        // 5s loading timeout must fire before showing idle/disconnected.
+        // With x86_64 emulation overhead, this takes significantly longer.
         let idleText = app.staticTexts["No Active Workout"]
         let disconnectedText = app.staticTexts["iPhone Not Connected"]
         let connectingText = app.staticTexts["Connecting..."]
 
         // Either we see connecting (which will resolve) or we're already on the main screen
-        if connectingText.waitForExistence(timeout: 2) {
-            // Wait for connecting to resolve
-            _ = idleText.waitForExistence(timeout: 10) || disconnectedText.waitForExistence(timeout: 2)
+        if connectingText.waitForExistence(timeout: timeout(3)) {
+            // Wait for connecting to resolve -- generous timeout for CI
+            _ = idleText.waitForExistence(timeout: timeout(15))
+                || disconnectedText.waitForExistence(timeout: timeout(5))
         }
 
         // Verify we're showing a meaningful state, not a blank screen
@@ -71,18 +90,19 @@ final class AmakaFlowWatch_Watch_AppUITestsLaunchTests: XCTestCase {
         ]
         app.launch()
 
-        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: timeout(15)))
 
         // Wait for main screen
         let idleText = app.staticTexts["No Active Workout"]
         let disconnectedText = app.staticTexts["iPhone Not Connected"]
-        _ = idleText.waitForExistence(timeout: 12) || disconnectedText.waitForExistence(timeout: 2)
+        _ = idleText.waitForExistence(timeout: timeout(15))
+            || disconnectedText.waitForExistence(timeout: timeout(5))
 
         // Enter demo mode if available
         let demoButton = app.buttons["Demo"]
-        if demoButton.waitForExistence(timeout: 5) {
+        if demoButton.waitForExistence(timeout: timeout(5)) {
             demoButton.tap()
-            sleep(1)
+            if isCI { sleep(3) } else { sleep(1) }
 
             let attachment = XCTAttachment(screenshot: app.screenshot())
             attachment.name = "Launch - Demo Mode"

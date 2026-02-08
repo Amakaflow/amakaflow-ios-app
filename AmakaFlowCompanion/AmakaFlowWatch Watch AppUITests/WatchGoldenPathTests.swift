@@ -13,6 +13,21 @@ final class WatchGoldenPathTests: XCTestCase {
 
     var app: XCUIApplication!
 
+    /// Whether we're running on CI (slower x86_64 emulated simulators)
+    private var isCI: Bool {
+        ProcessInfo.processInfo.environment["CI"] != nil
+    }
+
+    /// Timeout multiplier: CI simulators run on x86_64 emulation and need longer waits
+    private var timeoutMultiplier: Double {
+        isCI ? 3.0 : 1.0
+    }
+
+    /// Scaled timeout for CI resilience
+    private func timeout(_ base: Double) -> Double {
+        base * timeoutMultiplier
+    }
+
     override func setUpWithError() throws {
         continueAfterFailure = false
 
@@ -49,7 +64,7 @@ final class WatchGoldenPathTests: XCTestCase {
         }
 
         app.launch()
-        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10),
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: timeout(15)),
                       "App should reach foreground state")
     }
 
@@ -60,12 +75,21 @@ final class WatchGoldenPathTests: XCTestCase {
 
     // MARK: - Helpers
 
-    /// Wait for the main screen to load past the "Connecting..." state
+    /// Wait for the main screen to load past the "Connecting..." state.
+    /// On CI, the WCSession activation timeout (5s) plus x86_64 emulation overhead
+    /// means we need significantly longer waits.
     private func waitForMainScreen() -> Bool {
         let idleText = app.staticTexts["No Active Workout"]
         let disconnectedText = app.staticTexts["iPhone Not Connected"]
 
-        return idleText.waitForExistence(timeout: 12) || disconnectedText.waitForExistence(timeout: 2)
+        // Use a single generous timeout that covers WCSession activation + UI rendering.
+        // On CI (x86_64 emulation), the 5s loading timeout in the app itself takes longer
+        // to fire, plus the simulator is slow to render after state changes.
+        let mainTimeout = timeout(15)
+        let fallbackTimeout = timeout(5)
+
+        return idleText.waitForExistence(timeout: mainTimeout)
+            || disconnectedText.waitForExistence(timeout: fallbackTimeout)
     }
 
     /// Enter demo mode and return true if successful
@@ -73,26 +97,34 @@ final class WatchGoldenPathTests: XCTestCase {
         guard waitForMainScreen() else { return false }
 
         let demoButton = app.buttons["Demo"]
-        guard demoButton.waitForExistence(timeout: 5) else { return false }
+        guard demoButton.waitForExistence(timeout: timeout(5)) else { return false }
         demoButton.tap()
 
         // Verify demo mode is active
         let demoIndicator = app.staticTexts.matching(
             NSPredicate(format: "label BEGINSWITH 'DEMO'")
         ).firstMatch
-        return demoIndicator.waitForExistence(timeout: 5)
+        return demoIndicator.waitForExistence(timeout: timeout(8))
     }
 
     /// Advance to the next demo screen by tapping the demo overlay forward button.
     /// Uses the dedicated "demo-next-button" accessibility identifier to avoid
     /// conflicting with workout-internal forward buttons (e.g., Skip in weight input).
+    ///
+    /// On CI, we use retry logic: if the button tap doesn't register (common on slow
+    /// simulators), we wait and try again.
     private func advanceDemoScreen() {
         let demoNextButton = app.buttons["demo-next-button"]
-        if demoNextButton.waitForExistence(timeout: 3) {
-            demoNextButton.tap()
+        XCTAssertTrue(demoNextButton.waitForExistence(timeout: timeout(5)),
+                      "demo-next-button should exist before advancing")
+        demoNextButton.tap()
+
+        // Allow UI to update -- CI simulators need more time for SwiftUI re-render
+        if isCI {
+            sleep(3)
+        } else {
+            sleep(1)
         }
-        // Allow UI to update
-        sleep(1)
     }
 
     // MARK: - Golden Path: Demo Mode Workout Flow
@@ -115,21 +147,21 @@ final class WatchGoldenPathTests: XCTestCase {
         let benchPressText = app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS[c] 'BENCH PRESS'")
         ).firstMatch
-        XCTAssertTrue(benchPressText.waitForExistence(timeout: 5),
+        XCTAssertTrue(benchPressText.waitForExistence(timeout: timeout(5)),
                       "Should show Bench Press exercise name")
 
         // Should show set info "Set 2/4"
         let setInfoText = app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS 'Set 2/4'")
         ).firstMatch
-        XCTAssertTrue(setInfoText.waitForExistence(timeout: 3),
+        XCTAssertTrue(setInfoText.waitForExistence(timeout: timeout(5)),
                       "Should show set information")
 
         // Should show LOG button
         let logButton = app.staticTexts.matching(
             NSPredicate(format: "label == 'LOG'")
         ).firstMatch
-        XCTAssertTrue(logButton.waitForExistence(timeout: 3),
+        XCTAssertTrue(logButton.waitForExistence(timeout: timeout(5)),
                       "Should show LOG button")
 
         let screenshot2 = XCTAttachment(screenshot: app.screenshot())
@@ -150,21 +182,21 @@ final class WatchGoldenPathTests: XCTestCase {
         let warmUpText = app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS[c] 'Warm Up'")
         ).firstMatch
-        XCTAssertTrue(warmUpText.waitForExistence(timeout: 5),
+        XCTAssertTrue(warmUpText.waitForExistence(timeout: timeout(5)),
                       "Should show Warm Up step name")
 
         // Should show timer in format M:SS (e.g., "4:55")
         let timerText = app.staticTexts.matching(
             NSPredicate(format: "label MATCHES '\\\\d+:\\\\d{2}'")
         ).firstMatch
-        XCTAssertTrue(timerText.waitForExistence(timeout: 3),
+        XCTAssertTrue(timerText.waitForExistence(timeout: timeout(5)),
                       "Should show countdown timer")
 
         // Should show progress indicator (step count like "1/7")
         let progressText = app.staticTexts.matching(
             NSPredicate(format: "label MATCHES '\\\\d+/\\\\d+'")
         ).firstMatch
-        XCTAssertTrue(progressText.waitForExistence(timeout: 3),
+        XCTAssertTrue(progressText.waitForExistence(timeout: timeout(5)),
                       "Should show step progress indicator")
 
         let screenshot = XCTAttachment(screenshot: app.screenshot())
@@ -187,7 +219,7 @@ final class WatchGoldenPathTests: XCTestCase {
         let exerciseText = app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS[c] 'BENCH PRESS' OR label CONTAINS[c] 'Bench Press'")
         ).firstMatch
-        XCTAssertTrue(exerciseText.waitForExistence(timeout: 5),
+        XCTAssertTrue(exerciseText.waitForExistence(timeout: timeout(5)),
                       "Should show exercise name in paused state")
 
         let screenshot = XCTAttachment(screenshot: app.screenshot())
@@ -208,12 +240,12 @@ final class WatchGoldenPathTests: XCTestCase {
 
         // Complete view should show checkmark and "Complete!" text
         let completeText = app.staticTexts["Complete!"]
-        XCTAssertTrue(completeText.waitForExistence(timeout: 5),
+        XCTAssertTrue(completeText.waitForExistence(timeout: timeout(5)),
                       "Should show 'Complete!' text")
 
         // Should also show "Great workout!" congratulatory message
         let greatWorkoutText = app.staticTexts["Great workout!"]
-        XCTAssertTrue(greatWorkoutText.waitForExistence(timeout: 3),
+        XCTAssertTrue(greatWorkoutText.waitForExistence(timeout: timeout(5)),
                       "Should show congratulatory message")
 
         let screenshot = XCTAttachment(screenshot: app.screenshot())
@@ -236,7 +268,7 @@ final class WatchGoldenPathTests: XCTestCase {
         let demoIndicator = app.staticTexts.matching(
             NSPredicate(format: "label BEGINSWITH 'DEMO 1/'")
         ).firstMatch
-        XCTAssertTrue(demoIndicator.waitForExistence(timeout: 5),
+        XCTAssertTrue(demoIndicator.waitForExistence(timeout: timeout(8)),
                       "Demo mode should cycle back to screen 1/5")
     }
 
@@ -247,15 +279,17 @@ final class WatchGoldenPathTests: XCTestCase {
         // The demo overlay has an X (xmark) button to exit demo mode
         // Use the dedicated accessibility identifier
         let exitButton = app.buttons["demo-exit-button"]
-        XCTAssertTrue(exitButton.waitForExistence(timeout: 5),
+        XCTAssertTrue(exitButton.waitForExistence(timeout: timeout(5)),
                       "Demo exit button should exist")
         exitButton.tap()
 
-        sleep(1)
-        // After exiting demo, should see regular idle/disconnected screen
+        // After exiting demo, should see regular idle/disconnected screen.
+        // Use waitForExistence instead of sleep + exists for CI resilience.
         let idleText = app.staticTexts["No Active Workout"]
         let disconnectedText = app.staticTexts["iPhone Not Connected"]
-        XCTAssertTrue(idleText.exists || disconnectedText.exists,
+        let returned = idleText.waitForExistence(timeout: timeout(10))
+            || disconnectedText.waitForExistence(timeout: timeout(5))
+        XCTAssertTrue(returned,
                       "Should return to normal idle/disconnected view after exiting demo")
 
         let screenshot = XCTAttachment(screenshot: app.screenshot())
@@ -279,7 +313,7 @@ final class WatchGoldenPathTests: XCTestCase {
         let warmUpText = app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS[c] 'Warm Up'")
         ).firstMatch
-        XCTAssertTrue(warmUpText.waitForExistence(timeout: 5),
+        XCTAssertTrue(warmUpText.waitForExistence(timeout: timeout(5)),
                       "Should show Warm Up step name on screen 2")
 
         // Verify navigation controls exist on the standard workout view
@@ -289,14 +323,14 @@ final class WatchGoldenPathTests: XCTestCase {
         let scrollView = app.scrollViews.firstMatch
         if scrollView.exists {
             scrollView.swipeUp()
-            sleep(1)
+            if isCI { sleep(2) } else { sleep(1) }
         }
 
         // Previous button (backward.fill) - check by identifier or label
         let backwardButton = app.buttons.matching(
             NSPredicate(format: "identifier == 'backward.fill' OR label CONTAINS[c] 'Backward'")
         ).firstMatch
-        XCTAssertTrue(backwardButton.waitForExistence(timeout: 5),
+        XCTAssertTrue(backwardButton.waitForExistence(timeout: timeout(5)),
                       "Previous step button should exist")
 
         // Next/Forward button - look for the workout's next button (not the demo overlay one)
@@ -330,8 +364,8 @@ final class WatchGoldenPathTests: XCTestCase {
         let caloriesText = app.staticTexts["87"]
 
         // Heart rate and calories are shown in demo mode on standard workout view
-        let heartRateVisible = heartRateText.waitForExistence(timeout: 5)
-        let caloriesVisible = caloriesText.waitForExistence(timeout: 3)
+        let heartRateVisible = heartRateText.waitForExistence(timeout: timeout(5))
+        let caloriesVisible = caloriesText.waitForExistence(timeout: timeout(5))
         XCTAssertTrue(heartRateVisible || caloriesVisible,
                       "Heart rate or calories should be displayed in demo mode")
 
@@ -369,7 +403,7 @@ final class WatchGoldenPathTests: XCTestCase {
         let timerText = app.staticTexts.matching(
             NSPredicate(format: "label MATCHES '\\\\d+:\\\\d{2}'")
         ).firstMatch
-        XCTAssertTrue(timerText.waitForExistence(timeout: 5),
+        XCTAssertTrue(timerText.waitForExistence(timeout: timeout(5)),
                       "Timer should be visible on timed step")
 
         screenshot = XCTAttachment(screenshot: app.screenshot())
@@ -387,7 +421,7 @@ final class WatchGoldenPathTests: XCTestCase {
         // Screen 4 - Complete
         advanceDemoScreen()
         let completeText = app.staticTexts["Complete!"]
-        XCTAssertTrue(completeText.waitForExistence(timeout: 5),
+        XCTAssertTrue(completeText.waitForExistence(timeout: timeout(5)),
                       "Complete screen should appear")
 
         screenshot = XCTAttachment(screenshot: app.screenshot())
