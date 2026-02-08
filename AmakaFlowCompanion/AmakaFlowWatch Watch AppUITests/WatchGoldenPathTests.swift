@@ -83,16 +83,13 @@ final class WatchGoldenPathTests: XCTestCase {
         return demoIndicator.waitForExistence(timeout: 5)
     }
 
-    /// Advance to the next demo screen by tapping the forward button
+    /// Advance to the next demo screen by tapping the demo overlay forward button.
+    /// Uses the dedicated "demo-next-button" accessibility identifier to avoid
+    /// conflicting with workout-internal forward buttons (e.g., Skip in weight input).
     private func advanceDemoScreen() {
-        // The forward button in demo mode uses "forward.fill" SF Symbol
-        // It's a plain button style in the demo controls overlay
-        let forwardButtons = app.buttons.matching(
-            NSPredicate(format: "label CONTAINS 'Forward' OR label CONTAINS 'forward'")
-        )
-        if forwardButtons.count > 0 {
-            // Tap the last forward button (demo controls are at bottom)
-            forwardButtons.element(boundBy: forwardButtons.count - 1).tap()
+        let demoNextButton = app.buttons["demo-next-button"]
+        if demoNextButton.waitForExistence(timeout: 3) {
+            demoNextButton.tap()
         }
         // Allow UI to update
         sleep(1)
@@ -114,7 +111,7 @@ final class WatchGoldenPathTests: XCTestCase {
         // Advance to Screen 1: Rep-based step with weight input
         advanceDemoScreen()
 
-        // Screen 1 should show "Bench Press" with weight input
+        // Screen 1 should show "Bench Press" with weight input (uppercased in WeightInputWatchView)
         let benchPressText = app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS[c] 'BENCH PRESS'")
         ).firstMatch
@@ -185,9 +182,8 @@ final class WatchGoldenPathTests: XCTestCase {
         advanceDemoScreen()  // Screen 2
         advanceDemoScreen()  // Screen 3
 
-        // In paused state, swipe left should reveal controls panel with Resume/End
-        // The paused state shows the same workout view but in paused coloring
-        // The exercise name should still be visible
+        // Screen 3 is paused state showing Bench Press weight input (same as screen 1 but paused)
+        // The exercise name should still be visible (uppercased in WeightInputWatchView)
         let exerciseText = app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS[c] 'BENCH PRESS' OR label CONTAINS[c] 'Bench Press'")
         ).firstMatch
@@ -215,7 +211,7 @@ final class WatchGoldenPathTests: XCTestCase {
         XCTAssertTrue(completeText.waitForExistence(timeout: 5),
                       "Should show 'Complete!' text")
 
-        // Should also show "Great workout!" or workout summary info
+        // Should also show "Great workout!" congratulatory message
         let greatWorkoutText = app.staticTexts["Great workout!"]
         XCTAssertTrue(greatWorkoutText.waitForExistence(timeout: 3),
                       "Should show congratulatory message")
@@ -249,31 +245,18 @@ final class WatchGoldenPathTests: XCTestCase {
         XCTAssertTrue(enterDemoMode(), "Should enter demo mode")
 
         // The demo overlay has an X (xmark) button to exit demo mode
-        // Look for a close/dismiss button in the demo controls
-        let closeButtons = app.buttons.matching(
-            NSPredicate(format: "label CONTAINS 'Close' OR label CONTAINS 'xmark' OR label CONTAINS 'X'")
-        )
+        // Use the dedicated accessibility identifier
+        let exitButton = app.buttons["demo-exit-button"]
+        XCTAssertTrue(exitButton.waitForExistence(timeout: 5),
+                      "Demo exit button should exist")
+        exitButton.tap()
 
-        var exitedDemo = false
-        for i in 0..<closeButtons.count {
-            let btn = closeButtons.element(boundBy: i)
-            if btn.exists && btn.isHittable {
-                btn.tap()
-                exitedDemo = true
-                break
-            }
-        }
-
-        XCTAssertTrue(exitedDemo, "Should find and tap an exit/close button to leave demo mode")
-
-        if exitedDemo {
-            sleep(1)
-            // After exiting demo, should see regular idle/disconnected screen
-            let idleText = app.staticTexts["No Active Workout"]
-            let disconnectedText = app.staticTexts["iPhone Not Connected"]
-            XCTAssertTrue(idleText.exists || disconnectedText.exists,
-                          "Should return to normal idle/disconnected view after exiting demo")
-        }
+        sleep(1)
+        // After exiting demo, should see regular idle/disconnected screen
+        let idleText = app.staticTexts["No Active Workout"]
+        let disconnectedText = app.staticTexts["iPhone Not Connected"]
+        XCTAssertTrue(idleText.exists || disconnectedText.exists,
+                      "Should return to normal idle/disconnected view after exiting demo")
 
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "After Demo Exit"
@@ -287,23 +270,43 @@ final class WatchGoldenPathTests: XCTestCase {
     func testDemoWorkoutNavigationControls() throws {
         XCTAssertTrue(enterDemoMode(), "Should enter demo mode")
 
-        // Go to rep-based screen (screen 1)
-        advanceDemoScreen()
+        // Go to timed step screen (screen 2) which has standard navigation controls
+        // Screen 1 (weight input) has Skip/LOG buttons instead of backward/forward navigation
+        advanceDemoScreen()  // Screen 1
+        advanceDemoScreen()  // Screen 2 (timed step with standard controls)
 
-        // Verify navigation controls exist
-        // Previous button (backward.fill)
+        // Verify the standard workout view is showing (Warm Up)
+        let warmUpText = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS[c] 'Warm Up'")
+        ).firstMatch
+        XCTAssertTrue(warmUpText.waitForExistence(timeout: 5),
+                      "Should show Warm Up step name on screen 2")
+
+        // Verify navigation controls exist on the standard workout view
+        // The controls use SF Symbol images: "backward.fill" and "forward.fill"
+        // On the small watch screen, controls may require scrolling to be visible.
+        // Scroll down to reveal the navigation controls area.
+        let scrollView = app.scrollViews.firstMatch
+        if scrollView.exists {
+            scrollView.swipeUp()
+            sleep(1)
+        }
+
+        // Previous button (backward.fill) - check by identifier or label
         let backwardButton = app.buttons.matching(
-            NSPredicate(format: "label CONTAINS[c] 'Backward' OR label CONTAINS[c] 'backward'")
+            NSPredicate(format: "identifier == 'backward.fill' OR label CONTAINS[c] 'Backward'")
         ).firstMatch
         XCTAssertTrue(backwardButton.waitForExistence(timeout: 5),
                       "Previous step button should exist")
 
-        // Next/Forward button (forward.fill) - the main action button in the workout
-        let forwardButton = app.buttons.matching(
-            NSPredicate(format: "label CONTAINS[c] 'Forward' OR label CONTAINS[c] 'forward'")
-        ).firstMatch
-        XCTAssertTrue(forwardButton.waitForExistence(timeout: 3),
-                      "Next step button should exist")
+        // Next/Forward button - look for the workout's next button (not the demo overlay one)
+        // The workout forward button is inside the scroll view
+        let forwardButtons = app.buttons.matching(
+            NSPredicate(format: "identifier == 'forward.fill' OR label CONTAINS[c] 'Forward'")
+        )
+        // Should have at least 2 forward buttons: one from workout controls, one from demo overlay
+        XCTAssertTrue(forwardButtons.count >= 2,
+                      "Should have forward buttons from both workout controls and demo overlay")
 
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "Navigation Controls"
@@ -318,14 +321,15 @@ final class WatchGoldenPathTests: XCTestCase {
         XCTAssertTrue(enterDemoMode(), "Should enter demo mode")
 
         // Go to timed step screen (screen 2) which shows heart rate in demo mode
-        advanceDemoScreen()  // Screen 1
-        advanceDemoScreen()  // Screen 2
+        // Heart rate is shown on the standardWorkoutView, not the weight input view
+        advanceDemoScreen()  // Screen 1 (weight input - no HR display)
+        advanceDemoScreen()  // Screen 2 (timed step - has HR display)
 
         // In demo mode, heart rate shows "142" and calories show "87"
         let heartRateText = app.staticTexts["142"]
         let caloriesText = app.staticTexts["87"]
 
-        // Heart rate and calories are shown in demo mode
+        // Heart rate and calories are shown in demo mode on standard workout view
         let heartRateVisible = heartRateText.waitForExistence(timeout: 5)
         let caloriesVisible = caloriesText.waitForExistence(timeout: 3)
         XCTAssertTrue(heartRateVisible || caloriesVisible,
@@ -353,14 +357,14 @@ final class WatchGoldenPathTests: XCTestCase {
         XCTAssertTrue(enterDemoMode(), "Should enter demo mode")
 
         // Step 3: View each demo screen
-        // Screen 1 - Rep-based with weight
+        // Screen 1 - Rep-based with weight input
         advanceDemoScreen()
         screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "Step 3a - Weight Input"
         screenshot.lifetime = .keepAlways
         add(screenshot)
 
-        // Screen 2 - Timed step
+        // Screen 2 - Timed step (Warm Up with timer)
         advanceDemoScreen()
         let timerText = app.staticTexts.matching(
             NSPredicate(format: "label MATCHES '\\\\d+:\\\\d{2}'")
@@ -373,7 +377,7 @@ final class WatchGoldenPathTests: XCTestCase {
         screenshot.lifetime = .keepAlways
         add(screenshot)
 
-        // Screen 3 - Paused
+        // Screen 3 - Paused (Bench Press weight input in paused state)
         advanceDemoScreen()
         screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "Step 3c - Paused"
