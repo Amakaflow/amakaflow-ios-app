@@ -215,6 +215,20 @@ jobs:
           xcrun simctl shutdown all || true
           xcrun simctl erase all || true
 
+      - name: Create stub TestCredentials for compilation
+        working-directory: AmakaFlowCompanion
+        run: |
+          cat > AmakaFlowCompanionUITests/TestCredentials.swift << 'EOF'
+          import Foundation
+          enum TestCredentials {
+              static let testAuthSecret = "ci-stub-not-for-testing"
+              static let userId = "ci_stub_user"
+              static let userEmail = "ci@stub.local"
+              static let userName = "CI Stub"
+              static let apiBaseURL = "http://localhost:8001"
+          }
+          EOF
+
       # -----------------------------
       # Cache RESTORE
       # -----------------------------
