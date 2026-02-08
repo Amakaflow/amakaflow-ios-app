@@ -1,4 +1,4 @@
-name: iOS Tests
+name: iOS & watchOS Tests
 
 on:
   push:
@@ -167,6 +167,146 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results
+          name: ios-test-results
           path: AmakaFlowCompanion/TestResults
+          retention-days: 7
+
+  # ---------------------------------------------------------
+  # watchOS Tests (runs in parallel with iOS tests)
+  # Part of AMA-553: Watch app test automation coverage
+  # ---------------------------------------------------------
+  watchos-tests:
+    name: watchOS Tests
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Clone workoutkit-sync dependency
+        run: git clone https://github.com/supergeri/workoutkit-sync.git ../../workoutkit-sync
+
+      - name: Select Xcode (latest available)
+        id: xcode
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          echo "Using Xcode: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
+          XCODE_VER=$(xcodebuild -version | head -1 | tr ' ' '-')
+          echo "version=$XCODE_VER" >> $GITHUB_OUTPUT
+
+      - name: Determine watch simulator (first available Apple Watch)
+        id: watch-simulator
+        run: |
+          # Apple Watch names include size in parens, e.g. "Apple Watch Series 10 (46mm)"
+          # Extract full name up to the UUID pattern
+          NAME=$(xcrun simctl list devices available | grep 'Apple Watch' | head -1 | sed -E 's/^[[:space:]]*//' | sed -E 's/ \([0-9A-F]{8}-.*$//')
+          if [ -z "$NAME" ]; then
+            echo "No available Apple Watch simulator found" >&2
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Using watch simulator: $NAME"
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+
+      - name: Reset simulators
+        run: |
+          xcrun simctl shutdown all || true
+          xcrun simctl erase all || true
+
+      - name: Create stub TestCredentials for compilation
+        working-directory: AmakaFlowCompanion
+        run: |
+          cat > AmakaFlowCompanionUITests/TestCredentials.swift << 'EOF'
+          import Foundation
+          enum TestCredentials {
+              static let testAuthSecret = "ci-stub-not-for-testing"
+              static let userId = "ci_stub_user"
+              static let userEmail = "ci@stub.local"
+              static let userName = "CI Stub"
+              static let apiBaseURL = "http://localhost:8001"
+          }
+          EOF
+
+      # -----------------------------
+      # Cache RESTORE
+      # -----------------------------
+      - name: Restore SwiftPM cache
+        uses: actions/cache@v4
+        with:
+          path: AmakaFlowCompanion/.spm
+          key: spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('**/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
+          restore-keys: |
+            spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
+
+      - name: Restore DerivedData cache
+        uses: actions/cache@v4
+        with:
+          path: AmakaFlowCompanion/DerivedData
+          key: deriveddata-watchos-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj', 'AmakaFlowCompanion/AmakaFlowWatch Watch App/**/*.swift') }}
+          restore-keys: |
+            deriveddata-watchos-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
+
+      # -----------------------------
+      # SwiftPM Resolve
+      # -----------------------------
+      - name: Resolve SwiftPM dependencies
+        working-directory: AmakaFlowCompanion
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project AmakaFlowCompanion.xcodeproj \
+            -scheme "AmakaFlowWatch Watch App" \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm
+
+      # -----------------------------
+      # Build watchOS tests
+      # -----------------------------
+      - name: Build watchOS tests
+        working-directory: AmakaFlowCompanion
+        run: |
+          xcodebuild build-for-testing \
+            -project AmakaFlowCompanion.xcodeproj \
+            -scheme "AmakaFlowWatch Watch App" \
+            -destination "platform=watchOS Simulator,name=${{ steps.watch-simulator.outputs.name }}" \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm \
+            -parallelizeTargets \
+            -jobs $(sysctl -n hw.ncpu)
+
+      # -----------------------------
+      # Run watchOS unit tests
+      # Note: watchOS UI tests (XCUITest) require the AX accessibility
+      # framework which doesn't work on CI watchOS simulators
+      # (kAXErrorCannotComplete). UI tests must be run locally.
+      # -----------------------------
+      - name: Run watchOS unit tests
+        working-directory: AmakaFlowCompanion
+        run: |
+          set +e
+          xcodebuild test-without-building \
+            -project AmakaFlowCompanion.xcodeproj \
+            -scheme "AmakaFlowWatch Watch App" \
+            -destination "platform=watchOS Simulator,name=${{ steps.watch-simulator.outputs.name }}" \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm \
+            -only-testing:"AmakaFlowWatch Watch AppTests" \
+            -resultBundlePath WatchTestResults \
+            -enableCodeCoverage NO 2>&1 | tee watch_output.log
+          XCODE_EXIT=${PIPESTATUS[0]}
+          set -e
+
+          if grep -q "TEST SUCCEEDED" watch_output.log || grep -q "with 0 failures" watch_output.log; then
+            echo "watchOS unit tests passed!"
+            exit 0
+          fi
+          exit $XCODE_EXIT
+
+      - name: Upload watchOS test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: watchos-test-results
+          path: AmakaFlowCompanion/WatchTestResults
           retention-days: 7

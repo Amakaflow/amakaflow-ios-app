@@ -186,6 +186,7 @@ struct WatchRemoteView: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundColor(.yellow)
+                    .accessibilityIdentifier("demo-next-button")
 
                     Text("DEMO \(demoState.currentScreen + 1)/\(demoState.totalScreens)")
                         .font(.system(size: 12, weight: .bold))
@@ -201,6 +202,7 @@ struct WatchRemoteView: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundColor(.red)
+                    .accessibilityIdentifier("demo-exit-button")
                 }
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
