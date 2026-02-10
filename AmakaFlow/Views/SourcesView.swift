@@ -9,10 +9,12 @@ import SwiftUI
 
 struct SourcesView: View {
     @EnvironmentObject var viewModel: WorkoutsViewModel
+    @AppStorage("instagramImportMode") private var instagramImportMode: InstagramImportMode = .manual
     @State private var showingAppleWorkouts = false
     @State private var showingAIImport = false
     @State private var showingImageImport = false
     @State private var showingInstagramImport = false
+    @State private var showingManualInstagramImport = false
 
     var body: some View {
         NavigationStack {
@@ -31,8 +33,17 @@ struct SourcesView: View {
             .background(Theme.Colors.background.ignoresSafeArea())
             .navigationTitle("Sources")
             .navigationBarTitleDisplayMode(.large)
+            .overlay(alignment: .top) {
+                Text(" ")
+                    .font(.system(size: 1))
+                    .opacity(0.01)
+                    .accessibilityIdentifier("sources_screen")
+            }
             .sheet(isPresented: $showingInstagramImport) {
                 InstagramReelIngestionView(apiService: APIService.shared)
+            }
+            .sheet(isPresented: $showingManualInstagramImport) {
+                ManualInstagramIngestionView(apiService: APIService.shared)
             }
         }
     }
@@ -98,10 +109,17 @@ struct SourcesView: View {
                     icon: "camera.fill",
                     iconColor: Color(hex: "E4405F"),
                     title: "Instagram",
-                    subtitle: "Import from saved reels",
-                    badge: "2 new",
-                    badgeColor: Theme.Colors.accentOrange,
-                    action: { showingInstagramImport = true }
+                    subtitle: instagramImportMode == .automatic
+                        ? "Import from saved reels"
+                        : "Paste caption text",
+                    action: {
+                        switch instagramImportMode {
+                        case .automatic:
+                            showingInstagramImport = true
+                        case .manual:
+                            showingManualInstagramImport = true
+                        }
+                    }
                 )
 
                 // TikTok

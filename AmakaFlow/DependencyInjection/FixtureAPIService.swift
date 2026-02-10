@@ -61,6 +61,11 @@ class FixtureAPIService: APIServiceProviding {
         throw APIError.notImplemented
     }
 
+    func ingestText(text: String, source: String?) async throws -> IngestTextResponse {
+        print("[FixtureAPIService] Stub: ingestText -> canned response")
+        return IngestTextResponse(name: "Fixture Workout", sport: "strength", source: source)
+    }
+
     func transcribeAudio(
         audioData: String,
         provider: String,

@@ -1,36 +1,17 @@
 //
-//  InstagramReelIngestionView.swift
+//  ManualInstagramIngestionView.swift
 //  AmakaFlow
 //
-//  Instagram Reel URL paste sheet for workout ingestion (AMA-564)
+//  Manual Instagram workout import: paste caption text + optional URL,
+//  parsed via the /ingest/text endpoint.
 //
 
 import SwiftUI
 
-// MARK: - Instagram Import Mode
-
-enum InstagramImportMode: String, CaseIterable {
-    case automatic = "automatic"
-    case manual = "manual"
-
-    var title: String {
-        switch self {
-        case .automatic: return "Automatic"
-        case .manual: return "Manual"
-        }
-    }
-
-    var subtitle: String {
-        switch self {
-        case .automatic: return "Paste reel URL (requires Apify)"
-        case .manual: return "Paste caption text"
-        }
-    }
-}
-
-struct InstagramReelIngestionView: View {
+struct ManualInstagramIngestionView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var url: String = ""
+    @State private var captionText: String = ""
+    @State private var instagramURL: String = ""
     @State private var state: IngestionState = .idle
 
     let apiService: APIServiceProviding
@@ -46,13 +27,23 @@ struct InstagramReelIngestionView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Instagram Reel URL", text: $url)
+                    TextEditor(text: $captionText)
+                        .frame(minHeight: 120)
+                        .font(.body)
+                        .accessibilityIdentifier("instagram_caption_editor")
+                } header: {
+                    Text("Paste the workout caption")
+                } footer: {
+                    Text("Copy the workout description from the Instagram post and paste it here.")
+                }
+
+                Section {
+                    TextField("Instagram URL (optional)", text: $instagramURL)
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
                         .textContentType(.URL)
-                        .accessibilityIdentifier("instagram_reel_url_field")
                 } header: {
-                    Text("Paste an Instagram Reel URL")
+                    Text("Source Link")
                 }
 
                 Section {
@@ -94,7 +85,7 @@ struct InstagramReelIngestionView: View {
                 Text(" ")
                     .font(.system(size: 1))
                     .opacity(0.01)
-                    .accessibilityIdentifier("automatic_instagram_sheet")
+                    .accessibilityIdentifier("manual_instagram_sheet")
             }
         }
     }
@@ -107,15 +98,22 @@ struct InstagramReelIngestionView: View {
     }
 
     private var canSubmit: Bool {
-        !url.isEmpty && url.contains("instagram.com") && state == .idle
+        let hasText = !captionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        switch state {
+        case .idle, .error:
+            return hasText
+        case .loading, .success:
+            return false
+        }
     }
 
     private func ingest() {
         state = .loading
         Task {
             do {
-                let response = try await apiService.ingestInstagramReel(url: url)
-                state = .success(title: response.title ?? "Workout imported")
+                let source = instagramURL.isEmpty ? "instagram" : instagramURL
+                let response = try await apiService.ingestText(text: captionText, source: source)
+                state = .success(title: response.name ?? "Workout imported")
                 try? await Task.sleep(nanoseconds: 1_500_000_000)
                 dismiss()
             } catch {

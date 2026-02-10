@@ -82,6 +82,7 @@ class MockAPIService: APIServiceProviding {
     var getAppleExportResult: Result<String, Error> = .success("{}")
     var parseVoiceWorkoutResult: Result<VoiceWorkoutParseResponse, Error>?
     var ingestInstagramReelResult: Result<IngestInstagramReelResponse, Error>?
+    var ingestTextResult: Result<IngestTextResponse, Error>?
     var transcribeAudioResult: Result<CloudTranscriptionResponse, Error>?
     var syncPersonalDictionaryResult: Result<PersonalDictionaryResponse, Error> = .success(PersonalDictionaryResponse(corrections: [:], customTerms: []))
     var fetchPersonalDictionaryResult: Result<PersonalDictionaryResponse, Error> = .success(PersonalDictionaryResponse(corrections: [:], customTerms: []))
@@ -102,6 +103,7 @@ class MockAPIService: APIServiceProviding {
     var getAppleExportCalled = false
     var parseVoiceWorkoutCalled = false
     var ingestInstagramReelCalled = false
+    var ingestTextCalled = false
     var transcribeAudioCalled = false
     var syncPersonalDictionaryCalled = false
     var fetchPersonalDictionaryCalled = false
@@ -157,6 +159,14 @@ class MockAPIService: APIServiceProviding {
     func ingestInstagramReel(url: String) async throws -> IngestInstagramReelResponse {
         ingestInstagramReelCalled = true
         guard let result = ingestInstagramReelResult else {
+            throw APIError.notImplemented
+        }
+        return try result.get()
+    }
+
+    func ingestText(text: String, source: String?) async throws -> IngestTextResponse {
+        ingestTextCalled = true
+        guard let result = ingestTextResult else {
             throw APIError.notImplemented
         }
         return try result.get()

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
 		1A7B03C2552441FEB810773A /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */; };
+		1N5T4GR4MR33L0002 /* InstagramReelIngestionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */; };
 		27599809E31D40308DBFA93A /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F86F482904144B39B954F6A /* Environment.swift */; };
 		40E350E9B26F4574902587EF /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29B50DC380A44F2D96E6E414 /* PairingView.swift */; };
 		43F9F2E9369F4546B3AF005A /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D9B67C13E34BAE804A9359 /* HistoryView.swift */; };
@@ -28,7 +29,6 @@
 		A19401BB0000000AC000000A /* WorkoutStepsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA0000000AB000000A /* WorkoutStepsSection.swift */; };
 		A19401BB0000000BC000000B /* ExecutionLogSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA0000000BB000000B /* ExecutionLogSection.swift */; };
 		AA8C7E7D040E462BB1347220 /* RestPeriodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94AE3547CCCD41159C85554B /* RestPeriodView.swift */; };
-		1N5T4GR4MR33L0002 /* InstagramReelIngestionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */; };
 		B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E57529578481B8991A91F /* SourcesView.swift */; };
 		B69E1808FE344A15848A3B67 /* WorkoutCompletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */; };
 		CA268753E918494FAD7CCD56 /* PairingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85D3757E5B284286B341C75C /* PairingService.swift */; };
@@ -99,6 +99,7 @@
 		F8B8C2FBBE453C44649F8E94 /* PlayerControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F89DB8A09DD1694C469E6F54 /* PlayerControlsView.swift */; };
 		F8C125A12EFAB01000459747 /* GarminConnectManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8C125A02EFAB01000459747 /* GarminConnectManager.swift */; };
 		F8C125B22EFAC00000459747 /* ConnectIQ in Frameworks */ = {isa = PBXBuildFile; productRef = F8C125B12EFAC00000459747 /* ConnectIQ */; };
+		M4NU4L1N5T4GR4M0002 /* ManualInstagramIngestionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = M4NU4L1N5T4GR4M0001 /* ManualInstagramIngestionView.swift */; };
 		S1MUL4T10N00000011 /* WorkoutClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000001 /* WorkoutClock.swift */; };
 		S1MUL4T10N00000012 /* UserBehaviorProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000002 /* UserBehaviorProfile.swift */; };
 		S1MUL4T10N00000013 /* UserInputProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000003 /* UserInputProvider.swift */; };
@@ -206,6 +207,7 @@
 		0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionViewModel.swift; path = ../AmakaFlow/ViewModels/WorkoutCompletionViewModel.swift; sourceTree = SOURCE_ROOT; };
 		11B5892FB68A40CB890E3630 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainHelper.swift; path = ../AmakaFlow/Services/KeychainHelper.swift; sourceTree = SOURCE_ROOT; };
 		1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QRScannerView.swift; path = ../AmakaFlow/Views/QRScannerView.swift; sourceTree = SOURCE_ROOT; };
+		1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = InstagramReelIngestionView.swift; path = ../AmakaFlow/Views/InstagramReelIngestionView.swift; sourceTree = SOURCE_ROOT; };
 		29B50DC380A44F2D96E6E414 /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingView.swift; path = ../AmakaFlow/Views/PairingView.swift; sourceTree = SOURCE_ROOT; };
 		2AB8DFBA16CE406C95456EAD /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarView.swift; path = ../AmakaFlow/Views/CalendarView.swift; sourceTree = SOURCE_ROOT; };
 		3910753486A542ECAA1E5971 /* PreWorkoutDeviceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PreWorkoutDeviceSheet.swift; path = ../AmakaFlow/Views/Components/PreWorkoutDeviceSheet.swift; sourceTree = SOURCE_ROOT; };
@@ -234,7 +236,6 @@
 		D3P3ND1NJ3CT10N0004 /* ProgressStoreProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProgressStoreProviding.swift; path = ../AmakaFlow/DependencyInjection/ProgressStoreProviding.swift; sourceTree = SOURCE_ROOT; };
 		D3P3ND1NJ3CT10N0005 /* APIServiceProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIServiceProviding.swift; path = ../AmakaFlow/DependencyInjection/APIServiceProviding.swift; sourceTree = SOURCE_ROOT; };
 		D3P3ND1NJ3CT10N0006 /* WatchSessionProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchSessionProviding.swift; path = ../AmakaFlow/DependencyInjection/WatchSessionProviding.swift; sourceTree = SOURCE_ROOT; };
-		1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = InstagramReelIngestionView.swift; path = ../AmakaFlow/Views/InstagramReelIngestionView.swift; sourceTree = SOURCE_ROOT; };
 		E79E57529578481B8991A91F /* SourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SourcesView.swift; path = ../AmakaFlow/Views/SourcesView.swift; sourceTree = SOURCE_ROOT; };
 		EXEC10NL0G8U1LD3R0001 /* ExecutionLogBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ExecutionLogBuilder.swift; path = ../AmakaFlow/Engine/ExecutionLogBuilder.swift; sourceTree = SOURCE_ROOT; };
 		F1XTUR34P15RV0000001 /* FixtureAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FixtureAPIService.swift; path = ../AmakaFlow/DependencyInjection/FixtureAPIService.swift; sourceTree = SOURCE_ROOT; };
@@ -285,6 +286,7 @@
 		F8C125A02EFAB01000459747 /* GarminConnectManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminConnectManager.swift; path = ../AmakaFlow/Services/GarminConnectManager.swift; sourceTree = SOURCE_ROOT; };
 		F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutActivityAttributes.swift; path = ../AmakaFlow/LiveActivity/WorkoutActivityAttributes.swift; sourceTree = SOURCE_ROOT; };
 		F8FC29620578214144920365 /* AudioCueManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioCueManager.swift; path = ../AmakaFlow/Services/AudioCueManager.swift; sourceTree = SOURCE_ROOT; };
+		M4NU4L1N5T4GR4M0001 /* ManualInstagramIngestionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ManualInstagramIngestionView.swift; path = ../AmakaFlow/Views/ManualInstagramIngestionView.swift; sourceTree = SOURCE_ROOT; };
 		S1MUL4T10N00000001 /* WorkoutClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutClock.swift; path = ../AmakaFlow/Simulation/WorkoutClock.swift; sourceTree = SOURCE_ROOT; };
 		S1MUL4T10N00000002 /* UserBehaviorProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserBehaviorProfile.swift; path = ../AmakaFlow/Simulation/UserBehaviorProfile.swift; sourceTree = SOURCE_ROOT; };
 		S1MUL4T10N00000003 /* UserInputProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserInputProvider.swift; path = ../AmakaFlow/Simulation/UserInputProvider.swift; sourceTree = SOURCE_ROOT; };
@@ -571,6 +573,7 @@
 			children = (
 				E79E57529578481B8991A91F /* SourcesView.swift */,
 				1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */,
+				M4NU4L1N5T4GR4M0001 /* ManualInstagramIngestionView.swift */,
 				2AB8DFBA16CE406C95456EAD /* CalendarView.swift */,
 				08D9B67C13E34BAE804A9359 /* HistoryView.swift */,
 				5F86F482904144B39B954F6A /* Environment.swift */,
@@ -938,6 +941,7 @@
 				1A7B03C2552441FEB810773A /* QRScannerView.swift in Sources */,
 				B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */,
 				1N5T4GR4MR33L0002 /* InstagramReelIngestionView.swift in Sources */,
+				M4NU4L1N5T4GR4M0002 /* ManualInstagramIngestionView.swift in Sources */,
 				521047C38D23474889C39F35 /* CalendarView.swift in Sources */,
 				43F9F2E9369F4546B3AF005A /* HistoryView.swift in Sources */,
 				F84E22782ED0D59B00459747 /* SettingsView.swift in Sources */,
