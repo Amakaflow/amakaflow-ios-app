@@ -34,6 +34,11 @@ protocol APIServiceProviding {
     /// Parse a voice transcription into a structured workout
     func parseVoiceWorkout(transcription: String, sportHint: WorkoutSport?) async throws -> VoiceWorkoutParseResponse
 
+    // MARK: - Instagram Reel Ingestion
+
+    /// Ingest an Instagram Reel URL and return structured workout data
+    func ingestInstagramReel(url: String) async throws -> IngestInstagramReelResponse
+
     // MARK: - Cloud Transcription
 
     /// Request cloud transcription using specified provider

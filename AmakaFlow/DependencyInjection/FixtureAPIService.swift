@@ -57,6 +57,10 @@ class FixtureAPIService: APIServiceProviding {
         throw APIError.notImplemented
     }
 
+    func ingestInstagramReel(url: String) async throws -> IngestInstagramReelResponse {
+        throw APIError.notImplemented
+    }
+
     func transcribeAudio(
         audioData: String,
         provider: String,
