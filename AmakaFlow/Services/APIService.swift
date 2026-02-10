@@ -442,6 +442,153 @@ class APIService {
         }
     }
 
+    // MARK: - Instagram Reel Ingestion (AMA-564)
+
+    /// Ingest an Instagram Reel URL and return structured workout data
+    /// - Parameter url: The Instagram Reel URL to ingest
+    /// - Returns: IngestInstagramReelResponse with title and workout type
+    /// - Throws: APIError if request fails
+    func ingestInstagramReel(url: String) async throws -> IngestInstagramReelResponse {
+        guard PairingService.shared.isPaired else {
+            throw APIError.unauthorized
+        }
+
+        let ingestorURL = AppEnvironment.current.ingestorAPIURL
+        let requestURL = URL(string: "\(ingestorURL)/ingest/instagram_reel")!
+        var request = URLRequest(url: requestURL)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders
+
+        let body: [String: Any] = ["url": url]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        print("[APIService] ingestInstagramReel - URL: \(requestURL.absoluteString)")
+
+        let (data, response) = try await session.data(for: request)
+        let responseString = String(data: data, encoding: .utf8)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        print("[APIService] ingestInstagramReel - Status: \(httpResponse.statusCode)")
+        print("[APIService] ingestInstagramReel - Response: \(responseString ?? "nil")")
+
+        if httpResponse.statusCode >= 400 {
+            await DebugLogService.shared.logAPIError(
+                endpoint: "/ingest/instagram_reel",
+                method: "POST",
+                statusCode: httpResponse.statusCode,
+                response: responseString
+            )
+        }
+
+        switch httpResponse.statusCode {
+        case 200, 201:
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            do {
+                return try decoder.decode(IngestInstagramReelResponse.self, from: data)
+            } catch {
+                print("[APIService] ingestInstagramReel decoding error: \(error)")
+                throw APIError.decodingError(error)
+            }
+        case 400:
+            throw APIError.serverErrorWithBody(400, responseString ?? "Bad request")
+        case 401:
+            throw APIError.unauthorized
+        case 422:
+            throw APIError.serverErrorWithBody(422, responseString ?? "Could not process Instagram Reel")
+        default:
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    // MARK: - Text Ingestion (Manual Instagram Import)
+
+    /// Ingest workout from plain text via the /ingest/text endpoint (multipart form)
+    /// - Parameters:
+    ///   - text: The workout description/caption text
+    ///   - source: Optional source identifier (e.g. "instagram")
+    /// - Returns: IngestTextResponse with parsed workout title and type
+    /// - Throws: APIError if request fails
+    func ingestText(text: String, source: String? = nil) async throws -> IngestTextResponse {
+        guard PairingService.shared.isPaired else {
+            throw APIError.unauthorized
+        }
+
+        let ingestorURL = AppEnvironment.current.ingestorAPIURL
+        let requestURL = URL(string: "\(ingestorURL)/ingest/text")!
+
+        // Build multipart form body
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var request = URLRequest(url: requestURL)
+        request.httpMethod = "POST"
+
+        // Use auth headers but override Content-Type for multipart
+        var headers = authHeaders
+        headers["Content-Type"] = "multipart/form-data; boundary=\(boundary)"
+        request.allHTTPHeaderFields = headers
+
+        var body = Data()
+
+        // text field (required)
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"text\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(text)\r\n".data(using: .utf8)!)
+
+        // source field (optional)
+        if let source = source {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"source\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(source)\r\n".data(using: .utf8)!)
+        }
+
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+
+        print("[APIService] ingestText - URL: \(requestURL.absoluteString)")
+
+        let (data, response) = try await session.data(for: request)
+        let responseString = String(data: data, encoding: .utf8)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        print("[APIService] ingestText - Status: \(httpResponse.statusCode)")
+        print("[APIService] ingestText - Response: \(responseString?.prefix(500) ?? "nil")")
+
+        if httpResponse.statusCode >= 400 {
+            await DebugLogService.shared.logAPIError(
+                endpoint: "/ingest/text",
+                method: "POST",
+                statusCode: httpResponse.statusCode,
+                response: responseString
+            )
+        }
+
+        switch httpResponse.statusCode {
+        case 200, 201:
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            do {
+                return try decoder.decode(IngestTextResponse.self, from: data)
+            } catch {
+                print("[APIService] ingestText decoding error: \(error)")
+                throw APIError.decodingError(error)
+            }
+        case 400:
+            throw APIError.serverErrorWithBody(400, responseString ?? "Bad request")
+        case 401:
+            throw APIError.unauthorized
+        case 422:
+            throw APIError.serverErrorWithBody(422, responseString ?? "Could not parse workout text")
+        default:
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
     // MARK: - Cloud Transcription (AMA-229)
 
     /// Request cloud transcription using specified provider
@@ -965,6 +1112,22 @@ struct VoiceWorkoutParseResponse: Codable {
     let workout: Workout
     let confidence: Double
     let suggestions: [String]
+}
+
+// MARK: - Instagram Reel Ingestion Response (AMA-564)
+
+struct IngestInstagramReelResponse: Codable {
+    let title: String?
+    let workoutType: String?
+    let source: String?
+}
+
+// MARK: - Text Ingestion Response
+
+struct IngestTextResponse: Codable {
+    let name: String?
+    let sport: String?
+    let source: String?
 }
 
 // MARK: - Cloud Transcription Response (AMA-229)

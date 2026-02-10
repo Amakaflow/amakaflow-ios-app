@@ -8,8 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
-		XCT4H34LTH00000001 /* XCTHealthKit in Frameworks */ = {isa = PBXBuildFile; productRef = XCT4H34LTH00000002 /* XCTHealthKit */; };
 		1A7B03C2552441FEB810773A /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */; };
+		1N5T4GR4MR33L0002 /* InstagramReelIngestionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */; };
 		27599809E31D40308DBFA93A /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F86F482904144B39B954F6A /* Environment.swift */; };
 		40E350E9B26F4574902587EF /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29B50DC380A44F2D96E6E414 /* PairingView.swift */; };
 		43F9F2E9369F4546B3AF005A /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D9B67C13E34BAE804A9359 /* HistoryView.swift */; };
@@ -32,8 +32,18 @@
 		B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E57529578481B8991A91F /* SourcesView.swift */; };
 		B69E1808FE344A15848A3B67 /* WorkoutCompletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */; };
 		CA268753E918494FAD7CCD56 /* PairingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85D3757E5B284286B341C75C /* PairingService.swift */; };
-		T35T4UTH5T0R300000002 /* TestAuthStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = T35T4UTH5T0R300000001 /* TestAuthStore.swift */; };
-		F1XTUR3L0AD3R0000002 /* FixtureLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1XTUR3L0AD3R0000001 /* FixtureLoader.swift */; };
+		D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000001B0000001 /* DebugLogService.swift */; };
+		D3BUG10G00000002C0000002 /* DebugLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000002B0000002 /* DebugLogView.swift */; };
+		D3P3ND1NJ3CT10N1001 /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0001 /* AppDependencies.swift */; };
+		D3P3ND1NJ3CT10N1002 /* AudioProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0002 /* AudioProviding.swift */; };
+		D3P3ND1NJ3CT10N1003 /* PairingServiceProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0003 /* PairingServiceProviding.swift */; };
+		D3P3ND1NJ3CT10N1004 /* ProgressStoreProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0004 /* ProgressStoreProviding.swift */; };
+		D3P3ND1NJ3CT10N1005 /* APIServiceProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0005 /* APIServiceProviding.swift */; };
+		D3P3ND1NJ3CT10N1006 /* WatchSessionProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0006 /* WatchSessionProviding.swift */; };
+		E33FF845EAAD4110B7D87FB0 /* DevicePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89321AF9D21D441198437105 /* DevicePreference.swift */; };
+		EB63D5EF54FF452580C70684 /* WorkoutCompletionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */; };
+		EB63D5EF54FF452580C70685 /* WorkoutCompletionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */; };
+		EXEC10NL0G8U1LD3R0002 /* ExecutionLogBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = EXEC10NL0G8U1LD3R0001 /* ExecutionLogBuilder.swift */; };
 		F1XTUR34P15RV0000002 /* FixtureAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1XTUR34P15RV0000001 /* FixtureAPIService.swift */; };
 		F1XTUR3JS0N01000001 /* amrap_10min.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000001 /* amrap_10min.json */; };
 		F1XTUR3JS0N01000002 /* emom_strength.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000002 /* emom_strength.json */; };
@@ -41,11 +51,7 @@
 		F1XTUR3JS0N01000004 /* strength_block_w1.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000004 /* strength_block_w1.json */; };
 		F1XTUR3JS0N01000005 /* running_long.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000005 /* running_long.json */; };
 		F1XTUR3JS0N01000006 /* hiit_follow_along.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000006 /* hiit_follow_along.json */; };
-		D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000001B0000001 /* DebugLogService.swift */; };
-		D3BUG10G00000002C0000002 /* DebugLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000002B0000002 /* DebugLogView.swift */; };
-		E33FF845EAAD4110B7D87FB0 /* DevicePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89321AF9D21D441198437105 /* DevicePreference.swift */; };
-		EB63D5EF54FF452580C70684 /* WorkoutCompletionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */; };
-		EB63D5EF54FF452580C70685 /* WorkoutCompletionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */; };
+		F1XTUR3L0AD3R0000002 /* FixtureLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1XTUR3L0AD3R0000001 /* FixtureLoader.swift */; };
 		F818DA94C6BD4F40EE8313B0 /* StepDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8BFF8D1C38311406C868156 /* StepDisplayView.swift */; };
 		F84682B9F2FD8A45578F0E68 /* WorkoutPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */; };
 		F84E226F2ED0D55600459747 /* AmakaFlowApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E226D2ED0D55600459747 /* AmakaFlowApp.swift */; };
@@ -77,8 +83,6 @@
 		F85A0F1D503D8A43A7B52FCC /* AudioCueManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8FC29620578214144920365 /* AudioCueManager.swift */; };
 		F85C4F6DCDE4544563BA4983 /* WorkoutState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F883912261E9D246979DD881 /* WorkoutState.swift */; };
 		F8654CAC3BB541420480C602 /* FlattenedInterval.swift in Sources */ = {isa = PBXBuildFile; fileRef = F82258553831E24BC9B8C650 /* FlattenedInterval.swift */; };
-		EXEC10NL0G8U1LD3R0002 /* ExecutionLogBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = EXEC10NL0G8U1LD3R0001 /* ExecutionLogBuilder.swift */; };
-		SK1P1NT3RV4L5H33T0002 /* SkipIntervalSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = SK1P1NT3RV4L5H33T0001 /* SkipIntervalSheet.swift */; };
 		F87ADA7721B76045D5938EA4 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */; };
 		F880AD612F09559A00E8D7D3 /* (null) in Frameworks */ = {isa = PBXBuildFile; };
 		F880AD622F09559A00E8D7D3 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
@@ -95,7 +99,18 @@
 		F8B8C2FBBE453C44649F8E94 /* PlayerControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F89DB8A09DD1694C469E6F54 /* PlayerControlsView.swift */; };
 		F8C125A12EFAB01000459747 /* GarminConnectManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8C125A02EFAB01000459747 /* GarminConnectManager.swift */; };
 		F8C125B22EFAC00000459747 /* ConnectIQ in Frameworks */ = {isa = PBXBuildFile; productRef = F8C125B12EFAC00000459747 /* ConnectIQ */; };
+		M4NU4L1N5T4GR4M0002 /* ManualInstagramIngestionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = M4NU4L1N5T4GR4M0001 /* ManualInstagramIngestionView.swift */; };
+		S1MUL4T10N00000011 /* WorkoutClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000001 /* WorkoutClock.swift */; };
+		S1MUL4T10N00000012 /* UserBehaviorProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000002 /* UserBehaviorProfile.swift */; };
+		S1MUL4T10N00000013 /* UserInputProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000003 /* UserInputProvider.swift */; };
+		S1MUL4T10N00000014 /* SimulatedHealthProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000004 /* SimulatedHealthProvider.swift */; };
+		S1MUL4T10N00000015 /* SimulationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000005 /* SimulationSettings.swift */; };
+		S1MUL4T10N00000016 /* DebugSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000006 /* DebugSettingsView.swift */; };
+		S1MUL4T10N00000017 /* SimulationBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000007 /* SimulationBannerView.swift */; };
+		S1MUL4T10N00000018 /* SimulatedWeightProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000008 /* SimulatedWeightProvider.swift */; };
 		S3NTR1S3RV1C300000002 /* SentryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = S3NTR1S3RV1C300000001 /* SentryService.swift */; };
+		SK1P1NT3RV4L5H33T0002 /* SkipIntervalSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = SK1P1NT3RV4L5H33T0001 /* SkipIntervalSheet.swift */; };
+		T35T4UTH5T0R300000002 /* TestAuthStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = T35T4UTH5T0R300000001 /* TestAuthStore.swift */; };
 		TR4N5CR1PT10N3NG1N31001 /* TranscriptionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30001 /* TranscriptionEngine.swift */; };
 		TR4N5CR1PT10N3NG1N31002 /* OnDeviceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30002 /* OnDeviceEngine.swift */; };
 		TR4N5CR1PT10N3NG1N31003 /* CloudTranscriptionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30003 /* CloudTranscriptionEngine.swift */; };
@@ -113,20 +128,7 @@
 		V01C301800000000000000 /* TranscriptionReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300800000000000000 /* TranscriptionReviewView.swift */; };
 		V01C301900000000000000 /* VoiceWorkoutReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300900000000000000 /* VoiceWorkoutReviewView.swift */; };
 		W41T1NG000000002C0000002 /* WaitingForWatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = W41T1NG000000001B0000001 /* WaitingForWatchView.swift */; };
-		S1MUL4T10N00000011 /* WorkoutClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000001 /* WorkoutClock.swift */; };
-		S1MUL4T10N00000012 /* UserBehaviorProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000002 /* UserBehaviorProfile.swift */; };
-		S1MUL4T10N00000013 /* UserInputProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000003 /* UserInputProvider.swift */; };
-		S1MUL4T10N00000014 /* SimulatedHealthProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000004 /* SimulatedHealthProvider.swift */; };
-		S1MUL4T10N00000015 /* SimulationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000005 /* SimulationSettings.swift */; };
-		S1MUL4T10N00000016 /* DebugSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000006 /* DebugSettingsView.swift */; };
-		S1MUL4T10N00000017 /* SimulationBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000007 /* SimulationBannerView.swift */; };
-		S1MUL4T10N00000018 /* SimulatedWeightProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000008 /* SimulatedWeightProvider.swift */; };
-		D3P3ND1NJ3CT10N1001 /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0001 /* AppDependencies.swift */; };
-		D3P3ND1NJ3CT10N1002 /* AudioProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0002 /* AudioProviding.swift */; };
-		D3P3ND1NJ3CT10N1003 /* PairingServiceProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0003 /* PairingServiceProviding.swift */; };
-		D3P3ND1NJ3CT10N1004 /* ProgressStoreProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0004 /* ProgressStoreProviding.swift */; };
-		D3P3ND1NJ3CT10N1005 /* APIServiceProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0005 /* APIServiceProviding.swift */; };
-		D3P3ND1NJ3CT10N1006 /* WatchSessionProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0006 /* WatchSessionProviding.swift */; };
+		XCT4H34LTH00000001 /* XCTHealthKit in Frameworks */ = {isa = PBXBuildFile; productRef = XCT4H34LTH00000002 /* XCTHealthKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -205,20 +207,12 @@
 		0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionViewModel.swift; path = ../AmakaFlow/ViewModels/WorkoutCompletionViewModel.swift; sourceTree = SOURCE_ROOT; };
 		11B5892FB68A40CB890E3630 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainHelper.swift; path = ../AmakaFlow/Services/KeychainHelper.swift; sourceTree = SOURCE_ROOT; };
 		1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QRScannerView.swift; path = ../AmakaFlow/Views/QRScannerView.swift; sourceTree = SOURCE_ROOT; };
+		1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = InstagramReelIngestionView.swift; path = ../AmakaFlow/Views/InstagramReelIngestionView.swift; sourceTree = SOURCE_ROOT; };
 		29B50DC380A44F2D96E6E414 /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingView.swift; path = ../AmakaFlow/Views/PairingView.swift; sourceTree = SOURCE_ROOT; };
 		2AB8DFBA16CE406C95456EAD /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarView.swift; path = ../AmakaFlow/Views/CalendarView.swift; sourceTree = SOURCE_ROOT; };
 		3910753486A542ECAA1E5971 /* PreWorkoutDeviceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PreWorkoutDeviceSheet.swift; path = ../AmakaFlow/Views/Components/PreWorkoutDeviceSheet.swift; sourceTree = SOURCE_ROOT; };
 		5F86F482904144B39B954F6A /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Environment.swift; path = ../AmakaFlow/Models/Environment.swift; sourceTree = SOURCE_ROOT; };
 		85D3757E5B284286B341C75C /* PairingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingService.swift; path = ../AmakaFlow/Services/PairingService.swift; sourceTree = SOURCE_ROOT; };
-		T35T4UTH5T0R300000001 /* TestAuthStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TestAuthStore.swift; path = ../AmakaFlow/Services/TestAuthStore.swift; sourceTree = SOURCE_ROOT; };
-		F1XTUR3L0AD3R0000001 /* FixtureLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FixtureLoader.swift; path = ../AmakaFlow/Services/FixtureLoader.swift; sourceTree = SOURCE_ROOT; };
-		F1XTUR34P15RV0000001 /* FixtureAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FixtureAPIService.swift; path = ../AmakaFlow/DependencyInjection/FixtureAPIService.swift; sourceTree = SOURCE_ROOT; };
-		F1XTUR3JS0N00000001 /* amrap_10min.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = amrap_10min.json; path = ../AmakaFlow/Resources/Fixtures/amrap_10min.json; sourceTree = SOURCE_ROOT; };
-		F1XTUR3JS0N00000002 /* emom_strength.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = emom_strength.json; path = ../AmakaFlow/Resources/Fixtures/emom_strength.json; sourceTree = SOURCE_ROOT; };
-		F1XTUR3JS0N00000003 /* for_time_conditioning.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = for_time_conditioning.json; path = ../AmakaFlow/Resources/Fixtures/for_time_conditioning.json; sourceTree = SOURCE_ROOT; };
-		F1XTUR3JS0N00000004 /* strength_block_w1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = strength_block_w1.json; path = ../AmakaFlow/Resources/Fixtures/strength_block_w1.json; sourceTree = SOURCE_ROOT; };
-		F1XTUR3JS0N00000005 /* running_long.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = running_long.json; path = ../AmakaFlow/Resources/Fixtures/running_long.json; sourceTree = SOURCE_ROOT; };
-		F1XTUR3JS0N00000006 /* hiit_follow_along.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = hiit_follow_along.json; path = ../AmakaFlow/Resources/Fixtures/hiit_follow_along.json; sourceTree = SOURCE_ROOT; };
 		89321AF9D21D441198437105 /* DevicePreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DevicePreference.swift; path = ../AmakaFlow/Models/DevicePreference.swift; sourceTree = SOURCE_ROOT; };
 		8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionService.swift; path = ../AmakaFlow/Services/WorkoutCompletionService.swift; sourceTree = SOURCE_ROOT; };
 		94AE3547CCCD41159C85554B /* RestPeriodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RestPeriodView.swift; path = ../AmakaFlow/Views/Components/RestPeriodView.swift; sourceTree = SOURCE_ROOT; };
@@ -236,7 +230,22 @@
 		CC2192F9A69B4A51B54A138F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeView.swift; path = ../AmakaFlow/Views/HomeView.swift; sourceTree = SOURCE_ROOT; };
 		D3BUG10G00000001B0000001 /* DebugLogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogService.swift; path = ../AmakaFlow/Services/DebugLogService.swift; sourceTree = SOURCE_ROOT; };
 		D3BUG10G00000002B0000002 /* DebugLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogView.swift; path = ../AmakaFlow/Views/DebugLogView.swift; sourceTree = SOURCE_ROOT; };
+		D3P3ND1NJ3CT10N0001 /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDependencies.swift; path = ../AmakaFlow/DependencyInjection/AppDependencies.swift; sourceTree = SOURCE_ROOT; };
+		D3P3ND1NJ3CT10N0002 /* AudioProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioProviding.swift; path = ../AmakaFlow/DependencyInjection/AudioProviding.swift; sourceTree = SOURCE_ROOT; };
+		D3P3ND1NJ3CT10N0003 /* PairingServiceProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingServiceProviding.swift; path = ../AmakaFlow/DependencyInjection/PairingServiceProviding.swift; sourceTree = SOURCE_ROOT; };
+		D3P3ND1NJ3CT10N0004 /* ProgressStoreProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProgressStoreProviding.swift; path = ../AmakaFlow/DependencyInjection/ProgressStoreProviding.swift; sourceTree = SOURCE_ROOT; };
+		D3P3ND1NJ3CT10N0005 /* APIServiceProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIServiceProviding.swift; path = ../AmakaFlow/DependencyInjection/APIServiceProviding.swift; sourceTree = SOURCE_ROOT; };
+		D3P3ND1NJ3CT10N0006 /* WatchSessionProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchSessionProviding.swift; path = ../AmakaFlow/DependencyInjection/WatchSessionProviding.swift; sourceTree = SOURCE_ROOT; };
 		E79E57529578481B8991A91F /* SourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SourcesView.swift; path = ../AmakaFlow/Views/SourcesView.swift; sourceTree = SOURCE_ROOT; };
+		EXEC10NL0G8U1LD3R0001 /* ExecutionLogBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ExecutionLogBuilder.swift; path = ../AmakaFlow/Engine/ExecutionLogBuilder.swift; sourceTree = SOURCE_ROOT; };
+		F1XTUR34P15RV0000001 /* FixtureAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FixtureAPIService.swift; path = ../AmakaFlow/DependencyInjection/FixtureAPIService.swift; sourceTree = SOURCE_ROOT; };
+		F1XTUR3JS0N00000001 /* amrap_10min.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = amrap_10min.json; path = ../AmakaFlow/Resources/Fixtures/amrap_10min.json; sourceTree = SOURCE_ROOT; };
+		F1XTUR3JS0N00000002 /* emom_strength.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = emom_strength.json; path = ../AmakaFlow/Resources/Fixtures/emom_strength.json; sourceTree = SOURCE_ROOT; };
+		F1XTUR3JS0N00000003 /* for_time_conditioning.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = for_time_conditioning.json; path = ../AmakaFlow/Resources/Fixtures/for_time_conditioning.json; sourceTree = SOURCE_ROOT; };
+		F1XTUR3JS0N00000004 /* strength_block_w1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = strength_block_w1.json; path = ../AmakaFlow/Resources/Fixtures/strength_block_w1.json; sourceTree = SOURCE_ROOT; };
+		F1XTUR3JS0N00000005 /* running_long.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = running_long.json; path = ../AmakaFlow/Resources/Fixtures/running_long.json; sourceTree = SOURCE_ROOT; };
+		F1XTUR3JS0N00000006 /* hiit_follow_along.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = hiit_follow_along.json; path = ../AmakaFlow/Resources/Fixtures/hiit_follow_along.json; sourceTree = SOURCE_ROOT; };
+		F1XTUR3L0AD3R0000001 /* FixtureLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FixtureLoader.swift; path = ../AmakaFlow/Services/FixtureLoader.swift; sourceTree = SOURCE_ROOT; };
 		F82258553831E24BC9B8C650 /* FlattenedInterval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FlattenedInterval.swift; path = ../AmakaFlow/Engine/FlattenedInterval.swift; sourceTree = SOURCE_ROOT; };
 		F84E21742ED0B0C800459747 /* AmakaFlowCompanion.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AmakaFlowCompanion.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F84E21832ED0B0CA00459747 /* AmakaFlowCompanionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AmakaFlowCompanionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -267,8 +276,6 @@
 		F84E229C2ED0DC1100459747 /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.1.sdk/System/Library/Frameworks/WatchConnectivity.framework; sourceTree = DEVELOPER_DIR; };
 		F84E229E2ED0DC1B00459747 /* WorkoutKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WorkoutKit.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.1.sdk/System/Library/Frameworks/WorkoutKit.framework; sourceTree = DEVELOPER_DIR; };
 		F856B28A238E234FDAB29478 /* WorkoutEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEngine.swift; path = ../AmakaFlow/Engine/WorkoutEngine.swift; sourceTree = SOURCE_ROOT; };
-		EXEC10NL0G8U1LD3R0001 /* ExecutionLogBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ExecutionLogBuilder.swift; path = ../AmakaFlow/Engine/ExecutionLogBuilder.swift; sourceTree = SOURCE_ROOT; };
-		SK1P1NT3RV4L5H33T0001 /* SkipIntervalSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SkipIntervalSheet.swift; path = ../AmakaFlow/Views/Components/SkipIntervalSheet.swift; sourceTree = SOURCE_ROOT; };
 		F883912261E9D246979DD881 /* WorkoutState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutState.swift; path = ../AmakaFlow/Engine/WorkoutState.swift; sourceTree = SOURCE_ROOT; };
 		F89DB8A09DD1694C469E6F54 /* PlayerControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PlayerControlsView.swift; path = ../AmakaFlow/Views/Components/PlayerControlsView.swift; sourceTree = SOURCE_ROOT; };
 		F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutPlayerView.swift; path = ../AmakaFlow/Views/WorkoutPlayerView.swift; sourceTree = SOURCE_ROOT; };
@@ -279,7 +286,18 @@
 		F8C125A02EFAB01000459747 /* GarminConnectManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminConnectManager.swift; path = ../AmakaFlow/Services/GarminConnectManager.swift; sourceTree = SOURCE_ROOT; };
 		F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutActivityAttributes.swift; path = ../AmakaFlow/LiveActivity/WorkoutActivityAttributes.swift; sourceTree = SOURCE_ROOT; };
 		F8FC29620578214144920365 /* AudioCueManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioCueManager.swift; path = ../AmakaFlow/Services/AudioCueManager.swift; sourceTree = SOURCE_ROOT; };
+		M4NU4L1N5T4GR4M0001 /* ManualInstagramIngestionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ManualInstagramIngestionView.swift; path = ../AmakaFlow/Views/ManualInstagramIngestionView.swift; sourceTree = SOURCE_ROOT; };
+		S1MUL4T10N00000001 /* WorkoutClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutClock.swift; path = ../AmakaFlow/Simulation/WorkoutClock.swift; sourceTree = SOURCE_ROOT; };
+		S1MUL4T10N00000002 /* UserBehaviorProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserBehaviorProfile.swift; path = ../AmakaFlow/Simulation/UserBehaviorProfile.swift; sourceTree = SOURCE_ROOT; };
+		S1MUL4T10N00000003 /* UserInputProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserInputProvider.swift; path = ../AmakaFlow/Simulation/UserInputProvider.swift; sourceTree = SOURCE_ROOT; };
+		S1MUL4T10N00000004 /* SimulatedHealthProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SimulatedHealthProvider.swift; path = ../AmakaFlow/Simulation/SimulatedHealthProvider.swift; sourceTree = SOURCE_ROOT; };
+		S1MUL4T10N00000005 /* SimulationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SimulationSettings.swift; path = ../AmakaFlow/Simulation/SimulationSettings.swift; sourceTree = SOURCE_ROOT; };
+		S1MUL4T10N00000006 /* DebugSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugSettingsView.swift; path = ../AmakaFlow/Views/Settings/DebugSettingsView.swift; sourceTree = SOURCE_ROOT; };
+		S1MUL4T10N00000007 /* SimulationBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SimulationBannerView.swift; path = ../AmakaFlow/Views/Components/SimulationBannerView.swift; sourceTree = SOURCE_ROOT; };
+		S1MUL4T10N00000008 /* SimulatedWeightProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SimulatedWeightProvider.swift; path = ../AmakaFlow/Simulation/SimulatedWeightProvider.swift; sourceTree = SOURCE_ROOT; };
 		S3NTR1S3RV1C300000001 /* SentryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SentryService.swift; path = ../AmakaFlow/Services/SentryService.swift; sourceTree = SOURCE_ROOT; };
+		SK1P1NT3RV4L5H33T0001 /* SkipIntervalSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SkipIntervalSheet.swift; path = ../AmakaFlow/Views/Components/SkipIntervalSheet.swift; sourceTree = SOURCE_ROOT; };
+		T35T4UTH5T0R300000001 /* TestAuthStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TestAuthStore.swift; path = ../AmakaFlow/Services/TestAuthStore.swift; sourceTree = SOURCE_ROOT; };
 		TR4N5CR1PT10N3NG1N30001 /* TranscriptionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionEngine.swift; path = ../AmakaFlow/Services/Transcription/TranscriptionEngine.swift; sourceTree = SOURCE_ROOT; };
 		TR4N5CR1PT10N3NG1N30002 /* OnDeviceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnDeviceEngine.swift; path = ../AmakaFlow/Services/Transcription/OnDeviceEngine.swift; sourceTree = SOURCE_ROOT; };
 		TR4N5CR1PT10N3NG1N30003 /* CloudTranscriptionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CloudTranscriptionEngine.swift; path = ../AmakaFlow/Services/Transcription/CloudTranscriptionEngine.swift; sourceTree = SOURCE_ROOT; };
@@ -297,20 +315,6 @@
 		V01C300800000000000000 /* TranscriptionReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/TranscriptionReviewView.swift; sourceTree = SOURCE_ROOT; };
 		V01C300900000000000000 /* VoiceWorkoutReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceWorkoutReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/VoiceWorkoutReviewView.swift; sourceTree = SOURCE_ROOT; };
 		W41T1NG000000001B0000001 /* WaitingForWatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WaitingForWatchView.swift; path = ../AmakaFlow/Views/Components/WaitingForWatchView.swift; sourceTree = SOURCE_ROOT; };
-		S1MUL4T10N00000001 /* WorkoutClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutClock.swift; path = ../AmakaFlow/Simulation/WorkoutClock.swift; sourceTree = SOURCE_ROOT; };
-		S1MUL4T10N00000002 /* UserBehaviorProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserBehaviorProfile.swift; path = ../AmakaFlow/Simulation/UserBehaviorProfile.swift; sourceTree = SOURCE_ROOT; };
-		S1MUL4T10N00000003 /* UserInputProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserInputProvider.swift; path = ../AmakaFlow/Simulation/UserInputProvider.swift; sourceTree = SOURCE_ROOT; };
-		S1MUL4T10N00000004 /* SimulatedHealthProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SimulatedHealthProvider.swift; path = ../AmakaFlow/Simulation/SimulatedHealthProvider.swift; sourceTree = SOURCE_ROOT; };
-		S1MUL4T10N00000005 /* SimulationSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SimulationSettings.swift; path = ../AmakaFlow/Simulation/SimulationSettings.swift; sourceTree = SOURCE_ROOT; };
-		S1MUL4T10N00000006 /* DebugSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugSettingsView.swift; path = ../AmakaFlow/Views/Settings/DebugSettingsView.swift; sourceTree = SOURCE_ROOT; };
-		S1MUL4T10N00000007 /* SimulationBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SimulationBannerView.swift; path = ../AmakaFlow/Views/Components/SimulationBannerView.swift; sourceTree = SOURCE_ROOT; };
-		S1MUL4T10N00000008 /* SimulatedWeightProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SimulatedWeightProvider.swift; path = ../AmakaFlow/Simulation/SimulatedWeightProvider.swift; sourceTree = SOURCE_ROOT; };
-		D3P3ND1NJ3CT10N0001 /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDependencies.swift; path = ../AmakaFlow/DependencyInjection/AppDependencies.swift; sourceTree = SOURCE_ROOT; };
-		D3P3ND1NJ3CT10N0002 /* AudioProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioProviding.swift; path = ../AmakaFlow/DependencyInjection/AudioProviding.swift; sourceTree = SOURCE_ROOT; };
-		D3P3ND1NJ3CT10N0003 /* PairingServiceProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingServiceProviding.swift; path = ../AmakaFlow/DependencyInjection/PairingServiceProviding.swift; sourceTree = SOURCE_ROOT; };
-		D3P3ND1NJ3CT10N0004 /* ProgressStoreProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProgressStoreProviding.swift; path = ../AmakaFlow/DependencyInjection/ProgressStoreProviding.swift; sourceTree = SOURCE_ROOT; };
-		D3P3ND1NJ3CT10N0005 /* APIServiceProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIServiceProviding.swift; path = ../AmakaFlow/DependencyInjection/APIServiceProviding.swift; sourceTree = SOURCE_ROOT; };
-		D3P3ND1NJ3CT10N0006 /* WatchSessionProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchSessionProviding.swift; path = ../AmakaFlow/DependencyInjection/WatchSessionProviding.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -568,6 +572,8 @@
 			isa = PBXGroup;
 			children = (
 				E79E57529578481B8991A91F /* SourcesView.swift */,
+				1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */,
+				M4NU4L1N5T4GR4M0001 /* ManualInstagramIngestionView.swift */,
 				2AB8DFBA16CE406C95456EAD /* CalendarView.swift */,
 				08D9B67C13E34BAE804A9359 /* HistoryView.swift */,
 				5F86F482904144B39B954F6A /* Environment.swift */,
@@ -934,6 +940,8 @@
 				40E350E9B26F4574902587EF /* PairingView.swift in Sources */,
 				1A7B03C2552441FEB810773A /* QRScannerView.swift in Sources */,
 				B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */,
+				1N5T4GR4MR33L0002 /* InstagramReelIngestionView.swift in Sources */,
+				M4NU4L1N5T4GR4M0002 /* ManualInstagramIngestionView.swift in Sources */,
 				521047C38D23474889C39F35 /* CalendarView.swift in Sources */,
 				43F9F2E9369F4546B3AF005A /* HistoryView.swift in Sources */,
 				F84E22782ED0D59B00459747 /* SettingsView.swift in Sources */,

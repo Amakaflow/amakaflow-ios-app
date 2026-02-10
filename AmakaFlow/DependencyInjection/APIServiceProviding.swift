@@ -34,6 +34,16 @@ protocol APIServiceProviding {
     /// Parse a voice transcription into a structured workout
     func parseVoiceWorkout(transcription: String, sportHint: WorkoutSport?) async throws -> VoiceWorkoutParseResponse
 
+    // MARK: - Instagram Reel Ingestion
+
+    /// Ingest an Instagram Reel URL and return structured workout data
+    func ingestInstagramReel(url: String) async throws -> IngestInstagramReelResponse
+
+    // MARK: - Text Ingestion
+
+    /// Ingest workout from plain text
+    func ingestText(text: String, source: String?) async throws -> IngestTextResponse
+
     // MARK: - Cloud Transcription
 
     /// Request cloud transcription using specified provider
@@ -86,6 +96,11 @@ extension APIServiceProviding {
     /// Convenience method with default sportHint
     func parseVoiceWorkout(transcription: String) async throws -> VoiceWorkoutParseResponse {
         try await parseVoiceWorkout(transcription: transcription, sportHint: nil)
+    }
+
+    /// Convenience method with default source
+    func ingestText(text: String) async throws -> IngestTextResponse {
+        try await ingestText(text: text, source: nil)
     }
 
     /// Convenience method with default isRetry

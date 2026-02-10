@@ -23,6 +23,7 @@ enum AudioBehavior: String, CaseIterable {
 
 struct SettingsView: View {
     @AppStorage("devicePreference") private var deviceMode: DevicePreference = .appleWatchPhone
+    @AppStorage("instagramImportMode") private var instagramImportMode: InstagramImportMode = .manual
     @State private var voiceCuesEnabled = true
     @State private var audioBehavior: AudioBehavior = .duck
     @State private var countdownBeepsEnabled = true
@@ -1294,7 +1295,55 @@ struct SettingsView: View {
                     .stroke(Theme.Colors.borderLight, lineWidth: 1)
             )
             .cornerRadius(Theme.CornerRadius.md)
+
+            // Instagram Import Mode
+            instagramImportCard
         }
+    }
+
+    // MARK: - Instagram Import Card
+
+    private var instagramImportCard: some View {
+        VStack(spacing: Theme.Spacing.md) {
+            HStack(spacing: Theme.Spacing.md) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                        .fill(Color(hex: "E4405F").opacity(0.1))
+                        .frame(width: 48, height: 48)
+
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 22))
+                        .foregroundColor(Color(hex: "E4405F"))
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Instagram Import")
+                        .font(Theme.Typography.bodyBold)
+                        .foregroundColor(Theme.Colors.textPrimary)
+
+                    Text(instagramImportMode.subtitle)
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                }
+
+                Spacer()
+            }
+
+            Picker("Import Mode", selection: $instagramImportMode) {
+                ForEach(InstagramImportMode.allCases, id: \.self) { mode in
+                    Text(mode.title).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("instagram_mode_picker")
+        }
+        .padding(Theme.Spacing.md)
+        .background(Theme.Colors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                .stroke(Theme.Colors.borderLight, lineWidth: 1)
+        )
+        .cornerRadius(Theme.CornerRadius.md)
     }
 
     // MARK: - Account Section
