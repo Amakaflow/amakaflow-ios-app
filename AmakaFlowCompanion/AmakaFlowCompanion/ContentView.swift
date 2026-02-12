@@ -95,6 +95,11 @@ struct ContentView: View {
             // Check for pending workouts on app open
             await viewModel.checkPendingWorkouts()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .refreshPendingWorkouts)) { _ in
+            Task {
+                await viewModel.checkPendingWorkouts()
+            }
+        }
         .onOpenURL { url in
             // Handle deep link from Dynamic Island
             if url.scheme == "amakaflow" && url.host == "workout" {

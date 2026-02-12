@@ -897,6 +897,51 @@ class APIService {
         }
     }
 
+    // MARK: - Push Token Registration (AMA-567)
+
+    /// Register APNs push token with the backend for silent push notifications
+    /// - Parameters:
+    ///   - apnsToken: Hex-encoded APNs device token from Apple
+    ///   - deviceId: iOS device UUID (identifierForVendor)
+    /// - Throws: APIError if request fails
+    func registerPushToken(apnsToken: String, deviceId: String) async throws {
+        guard PairingService.shared.isPaired else {
+            throw APIError.unauthorized
+        }
+
+        let url = URL(string: "\(baseURL)/mobile/devices/register-push-token")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders
+
+        let body: [String: Any] = [
+            "apns_token": apnsToken,
+            "device_id": deviceId,
+        ]
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        print("[APIService] Registering push token")
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        switch httpResponse.statusCode {
+        case 200, 201:
+            print("[APIService] Push token registered successfully")
+            return
+        case 401:
+            throw APIError.unauthorized
+        default:
+            let responseString = String(data: data, encoding: .utf8)
+            logError(endpoint: "/mobile/devices/register-push-token", method: "POST", statusCode: httpResponse.statusCode, response: responseString, error: nil)
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
     // MARK: - User Profile
 
     /// Fetch user profile from backend

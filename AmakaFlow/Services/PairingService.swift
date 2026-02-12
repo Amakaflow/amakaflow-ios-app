@@ -157,6 +157,30 @@ class PairingService: ObservableObject {
         #endif
     }
 
+    // MARK: - APNs Push Token Registration (AMA-567)
+
+    /// Register the APNs device token with the backend for push notifications
+    func registerAPNsToken(_ token: String) async {
+        guard isPaired else {
+            print("[PairingService] Not paired, skipping APNs token registration")
+            return
+        }
+
+        guard let deviceId = UIDevice.current.identifierForVendor?.uuidString else {
+            print("[PairingService] No device ID available for APNs registration")
+            return
+        }
+
+        print("[PairingService] Registering APNs token \(token.prefix(16))...")
+
+        do {
+            try await APIService.shared.registerPushToken(apnsToken: token, deviceId: deviceId)
+            print("[PairingService] APNs token registered successfully")
+        } catch {
+            print("[PairingService] APNs token registration failed: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - Token Refresh
 
     /// Silently refresh the JWT using device ID
