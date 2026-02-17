@@ -1,0 +1,259 @@
+name: Agent Validation Gate
+
+on:
+  push:
+    branches: ['agent/**']
+
+concurrency:
+  group: agent-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: macos-15
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Clone workoutkit-sync dependency
+        id: clone
+        run: git clone https://github.com/supergeri/workoutkit-sync.git ../../workoutkit-sync
+
+      - name: Select Xcode (latest available)
+        id: xcode
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          echo "Using Xcode: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
+          XCODE_VER=$(xcodebuild -version | head -1 | tr ' ' '-')
+          echo "version=$XCODE_VER" >> $GITHUB_OUTPUT
+
+      - name: Determine simulator (first available iPhone)
+        id: simulator
+        run: |
+          NAME=$(xcrun simctl list devices available | grep -o 'iPhone [^(]*' | head -1 | sed 's/ *$//')
+          if [ -z "$NAME" ]; then
+            echo "No available iPhone simulator found" >&2
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Using simulator: $NAME"
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+
+      - name: Reset simulators
+        run: |
+          xcrun simctl shutdown all || true
+          xcrun simctl erase all || true
+
+      - name: Create stub TestCredentials for compilation
+        working-directory: AmakaFlowCompanion
+        run: |
+          cat > AmakaFlowCompanionUITests/TestCredentials.swift << 'EOF'
+          import Foundation
+          enum TestCredentials {
+              static let testAuthSecret = "ci-stub-not-for-testing"
+              static let userId = "ci_stub_user"
+              static let userEmail = "ci@stub.local"
+              static let userName = "CI Stub"
+              static let apiBaseURL = "http://localhost:8001"
+          }
+          EOF
+
+      - name: Restore SwiftPM cache
+        uses: actions/cache@v4
+        with:
+          path: AmakaFlowCompanion/.spm
+          key: spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('**/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
+          restore-keys: |
+            spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
+
+      - name: Restore DerivedData cache
+        uses: actions/cache@v4
+        with:
+          path: AmakaFlowCompanion/DerivedData
+          key: deriveddata-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj', 'AmakaFlow/**/*.swift', 'AmakaFlowCompanion/**/*.swift') }}
+          restore-keys: |
+            deriveddata-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
+
+      - name: Resolve SwiftPM dependencies
+        id: spm
+        timeout-minutes: 10
+        working-directory: AmakaFlowCompanion
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project AmakaFlowCompanion.xcodeproj \
+            -scheme AmakaFlowCompanion \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm
+
+      - name: Build for testing
+        id: build
+        timeout-minutes: 20
+        if: always() && steps.spm.outcome == 'success'
+        working-directory: AmakaFlowCompanion
+        run: |
+          xcodebuild build-for-testing \
+            -project AmakaFlowCompanion.xcodeproj \
+            -scheme AmakaFlowCompanion \
+            -destination "platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}" \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm \
+            -parallelizeTargets \
+            -jobs $(sysctl -n hw.ncpu) 2>&1 | tee build_output.log
+
+      - name: Run tests
+        id: tests
+        timeout-minutes: 15
+        if: always() && steps.build.outcome == 'success'
+        working-directory: AmakaFlowCompanion
+        run: |
+          set +e
+          xcodebuild test-without-building \
+            -project AmakaFlowCompanion.xcodeproj \
+            -scheme AmakaFlowCompanion \
+            -destination "platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}" \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm \
+            -only-testing:AmakaFlowCompanionTests \
+            -resultBundlePath TestResults \
+            -enableCodeCoverage NO \
+            -parallel-testing-enabled YES \
+            -parallel-testing-worker-count 2 \
+            -maximum-concurrent-test-simulator-destinations 2 \
+            -parallelizeTargets \
+            -jobs $(sysctl -n hw.ncpu) 2>&1 | tee test_output.log
+          XCODE_EXIT=${PIPESTATUS[0]}
+          set -e
+
+          if grep -q "with 0 failures (0 unexpected)" test_output.log; then
+            echo "All tests passed!"
+            exit 0
+          elif grep -q "TEST SUCCEEDED" test_output.log; then
+            echo "All tests passed!"
+            exit 0
+          elif grep -q "with [1-9][0-9]* failures" test_output.log; then
+            echo "Tests failed!"
+            grep "failures" test_output.log | tail -5
+            exit 1
+          else
+            echo "Using xcodebuild exit code: $XCODE_EXIT"
+            tail -60 test_output.log
+            exit $XCODE_EXIT
+          fi
+
+      - name: Determine outcome
+        if: always()
+        id: outcome
+        run: |
+          if [ "${{ steps.clone.outcome }}" == "failure" ]; then
+            echo "ci_outcome=failure" >> "$GITHUB_OUTPUT"
+            echo "failed_step=clone" >> "$GITHUB_OUTPUT"
+          elif [ "${{ steps.spm.outcome }}" == "failure" ]; then
+            echo "ci_outcome=failure" >> "$GITHUB_OUTPUT"
+            echo "failed_step=spm" >> "$GITHUB_OUTPUT"
+          elif [ "${{ steps.build.outcome }}" == "failure" ]; then
+            echo "ci_outcome=failure" >> "$GITHUB_OUTPUT"
+            echo "failed_step=build" >> "$GITHUB_OUTPUT"
+          elif [ "${{ steps.tests.outcome }}" == "failure" ]; then
+            echo "ci_outcome=failure" >> "$GITHUB_OUTPUT"
+            echo "failed_step=test" >> "$GITHUB_OUTPUT"
+          elif [ "${{ steps.tests.outcome }}" == "success" ]; then
+            echo "ci_outcome=success" >> "$GITHUB_OUTPUT"
+            echo "failed_step=" >> "$GITHUB_OUTPUT"
+          else
+            echo "ci_outcome=failure" >> "$GITHUB_OUTPUT"
+            echo "failed_step=unknown" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate test summary
+        if: always()
+        id: summary
+        working-directory: AmakaFlowCompanion
+        run: |
+          SUMMARY=""
+
+          if [ -f "test_output.log" ]; then
+            # Extract test counts from xcodebuild output
+            # Format: "Executed N tests, with M failures (K unexpected) in X.XXXs"
+            LINE=$(grep -o 'Executed [0-9]* test[s]*, with [0-9]* failure[s]*' test_output.log | tail -1)
+            if [ -n "$LINE" ]; then
+              TOTAL=$(echo "$LINE" | grep -o 'Executed [0-9]*' | grep -o '[0-9]*')
+              FAILURES=$(echo "$LINE" | grep -o 'with [0-9]*' | grep -o '[0-9]*')
+              PASSED=$((TOTAL - FAILURES))
+              SUMMARY="**iOS tests:** ${PASSED} passed, ${FAILURES} failed (${TOTAL} total)"
+            else
+              SUMMARY="**iOS tests:** Unable to parse results (see artifacts)"
+            fi
+          elif [ -f "build_output.log" ]; then
+            SUMMARY="**iOS tests:** Build failed before tests could run"
+          else
+            SUMMARY="**iOS tests:** No results found"
+          fi
+
+          {
+            echo "markdown<<EOF"
+            echo "$SUMMARY"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Capture failure logs
+        if: always() && steps.outcome.outputs.ci_outcome == 'failure'
+        id: failure-logs
+        working-directory: AmakaFlowCompanion
+        run: |
+          LOGS=""
+          FAILED="${{ steps.outcome.outputs.failed_step }}"
+
+          if [ "$FAILED" == "clone" ]; then
+            LOGS="Failed to clone workoutkit-sync dependency. Check network access or repository permissions."
+          elif [ "$FAILED" == "spm" ]; then
+            LOGS="SwiftPM dependency resolution failed. Check workflow run for full output."
+          elif [ "$FAILED" == "build" ]; then
+            if [ -f "build_output.log" ]; then
+              LOGS=$(grep -E '(error:|fatal error:)' build_output.log | head -20 | head -c 2000)
+            fi
+            if [ -z "$LOGS" ]; then
+              LOGS="Build failed. Check workflow run for full output."
+            fi
+          elif [ "$FAILED" == "test" ]; then
+            if [ -f "test_output.log" ]; then
+              LOGS=$(grep -E '(FAIL|failed|error:|Unable to boot|SimDeviceBootError)' test_output.log | tail -30 | head -c 2000)
+            fi
+            if [ -z "$LOGS" ]; then
+              LOGS="Tests failed. Check workflow run for full output."
+            fi
+          fi
+
+          {
+            echo "logs<<EOF"
+            echo "$LOGS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: agent-test-results
+          path: |
+            AmakaFlowCompanion/TestResults
+            AmakaFlowCompanion/test_output.log
+            AmakaFlowCompanion/build_output.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Validation Gate
+        if: always()
+        uses: supergeri/amakaflow-automation/.github/actions/validation-gate@main
+        with:
+          linear-api-key: ${{ secrets.LINEAR_API_KEY }}
+          repo-name: amakaflow-ios-app
+          ci-outcome: ${{ steps.outcome.outputs.ci_outcome }}
+          failed-step: ${{ steps.outcome.outputs.failed_step }}
+          failure-logs: ${{ steps.failure-logs.outputs.logs }}
+          test-results-summary: ${{ steps.summary.outputs.markdown }}
