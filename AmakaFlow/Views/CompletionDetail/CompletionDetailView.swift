@@ -74,6 +74,11 @@ struct CompletionDetailView: View {
                 // Heart Rate Chart Section (compact design matching target)
                 heartRateSection(detail)
 
+                // Activity metrics (AMA-275)
+                if detail.hasSummaryMetrics {
+                    activitySection(detail)
+                }
+
                 // Execution Log (AMA-292) - shows actual workout execution with weights
                 // Always show ExecutionLogSection - uses mock data if no real execution log
                 ExecutionLogSection(
@@ -160,6 +165,29 @@ struct CompletionDetailView: View {
                     )
             }
         }
+        .padding()
+        .background(Theme.Colors.surface)
+        .cornerRadius(12)
+    }
+
+    // MARK: - Activity Section (AMA-275)
+
+    private func activitySection(_ detail: WorkoutCompletionDetail) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("ACTIVITY")
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(.secondary)
+
+            HStack(spacing: 0) {
+                statItem(value: detail.formattedCalories ?? "—", label: "CAL", color: .primary)
+                Spacer()
+                statItem(value: detail.formattedSteps ?? "—", label: "STEPS", color: .primary)
+                Spacer()
+                statItem(value: detail.formattedDistance ?? "—", label: "DIST", color: .primary)
+            }
+        }
+        .frame(maxWidth: .infinity)
         .padding()
         .background(Theme.Colors.surface)
         .cornerRadius(12)
