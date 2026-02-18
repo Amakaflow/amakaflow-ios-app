@@ -102,6 +102,9 @@ struct CompletionDetailView: View {
                 // Sync to Strava Button (AMA-275)
                 stravaButton
 
+                // Done Button (AMA-275)
+                doneButton
+
                 // Edit Workout Button
                 editWorkoutButton
 
@@ -510,6 +513,20 @@ struct CompletionDetailView: View {
             .background(Color.orange)
             .cornerRadius(12)
         }
+    }
+
+    // MARK: - Done Button (AMA-275)
+
+    private var doneButton: some View {
+        Button("Done") {
+            dismiss()
+        }
+        .font(.headline)
+        .foregroundColor(.primary)
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(Theme.Colors.surface)
+        .cornerRadius(12)
     }
 
     // MARK: - Strava Toast
