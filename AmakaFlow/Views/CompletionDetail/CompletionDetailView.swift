@@ -176,7 +176,7 @@ struct CompletionDetailView: View {
         .cornerRadius(12)
     }
 
-    // MARK: - Activity Section (AMA-275)
+    // MARK: - Activity Section
 
     private func activitySection(_ detail: WorkoutCompletionDetail) -> some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -515,7 +515,7 @@ struct CompletionDetailView: View {
         }
     }
 
-    // MARK: - Done Button (AMA-275)
+    // MARK: - Done Button
 
     private var doneButton: some View {
         Button("Done") {
