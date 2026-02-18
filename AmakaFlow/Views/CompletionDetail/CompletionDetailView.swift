@@ -99,6 +99,9 @@ struct CompletionDetailView: View {
                     runAgainButton
                 }
 
+                // Sync to Strava Button (AMA-275)
+                stravaButton
+
                 // Edit Workout Button
                 editWorkoutButton
 
