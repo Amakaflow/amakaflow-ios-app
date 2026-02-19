@@ -6,12 +6,11 @@ on:
 
 jobs:
   code-review:
-    if: github.event.pull_request.user.login == 'openclawjoshua-eng' && !github.event.pull_request.draft
+    if: "!github.event.pull_request.draft"
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
-      id-token: write
 
     steps:
       - uses: actions/checkout@v4
@@ -25,14 +24,14 @@ jobs:
             const reviews = await github.rest.pulls.listReviews({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: context.issue.number
+              pull_number: context.payload.pull_request.number
             });
             for (const review of reviews.data) {
               if (review.user.login === 'github-actions[bot]' && review.state === 'CHANGES_REQUESTED') {
                 await github.rest.pulls.dismissReview({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  pull_number: context.issue.number,
+                  pull_number: context.payload.pull_request.number,
                   review_id: review.id,
                   message: 'Dismissed: new review in progress.'
                 });
@@ -41,22 +40,22 @@ jobs:
 
       - uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           use_sticky_comment: true
           claude_args: '--allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api:*)"'
           prompt: |
-            You are a senior code reviewer for a Swift/SwiftUI iOS application.
+            You are a senior code reviewer for a SwiftUI iOS app (amakaflow-ios-app).
             Your audience is a junior developer — be specific and actionable.
 
             First, use `gh pr diff` to review the changes. Then review this PR thoroughly for:
 
-            1. **Critical issues**: Runtime crashes, force unwraps, incorrect data flow, data loss
-            2. **Security**: Keychain usage, hardcoded secrets, insecure network calls
-            3. **SwiftUI patterns**: Proper use of @State/@Binding/@ObservedObject, view lifecycle
-            4. **Concurrency**: Swift concurrency (async/await), main actor isolation, data races
-            5. **Architecture**: MVVM adherence, separation of concerns, testability
-            6. **Code quality**: DRY violations, unused code, naming conventions, access control
+            1. **Critical issues**: Crashes, memory leaks, incorrect async patterns, data corruption
+            2. **SwiftUI best practices**: View composition, @State/@Binding/@ObservedObject correctness, view lifecycle
+            3. **Concurrency**: Correct use of async/await, MainActor, Task cancellation
+            4. **Memory management**: Retain cycles, weak/unowned references in closures
+            5. **Security**: Keychain usage, secure data handling, no secrets in code
+            6. **Performance**: Expensive body recomputation, missing lazy loading, image caching
 
             ## Output format
 
@@ -75,10 +74,6 @@ jobs:
             ### Action items
             A numbered checklist of EXACTLY what the developer needs to do, in order.
             Be specific — include file names, line numbers, and what to change.
-            For example:
-            1. In `Sources/Models/Workout.swift:42`, replace force unwrap with `guard let`
-            2. In `Sources/Views/LibraryView.swift:88`, move network call to ViewModel
-            3. Push your changes — CI and code review will re-run automatically
 
             If there are no issues, just say: "No action needed — this PR is ready to merge."
 
@@ -91,9 +86,8 @@ jobs:
 
             Use this command to submit the formal review:
             ```
-            gh api repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/reviews \
+            gh api repos/$GITHUB_REPOSITORY/pulls/${{ github.event.pull_request.number }}/reviews \
               -f event="REQUEST_CHANGES" \
               -f body="Review verdict: **Request changes** — see action items in review comment."
             ```
             Replace the event and body as appropriate for COMMENT or APPROVE verdicts.
-            Get the PR number from `gh pr view --json number --jq .number`.
