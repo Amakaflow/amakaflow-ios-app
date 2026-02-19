@@ -102,11 +102,11 @@ struct CompletionDetailView: View {
                 // Sync to Strava Button (AMA-275)
                 stravaButton
 
-                // Done Button (AMA-275)
-                doneButton
-
                 // Edit Workout Button
                 editWorkoutButton
+
+                // Done Button (AMA-275)
+                doneButton
 
                 Spacer(minLength: 20)
             }
@@ -197,6 +197,7 @@ struct CompletionDetailView: View {
         .padding()
         .background(Theme.Colors.surface)
         .cornerRadius(12)
+        .accessibilityIdentifier("activity_section")
     }
 
     // MARK: - Source Info Section
@@ -513,6 +514,8 @@ struct CompletionDetailView: View {
             .background(Color.orange)
             .cornerRadius(12)
         }
+        .disabled(!viewModel.canSyncToStrava)
+        .accessibilityIdentifier("strava_button")
     }
 
     // MARK: - Done Button
@@ -527,6 +530,7 @@ struct CompletionDetailView: View {
         .padding()
         .background(Theme.Colors.surface)
         .cornerRadius(12)
+        .accessibilityIdentifier("completion_done_button")
     }
 
     // MARK: - Strava Toast
