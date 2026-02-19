@@ -74,6 +74,11 @@ struct CompletionDetailView: View {
                 // Heart Rate Chart Section (compact design matching target)
                 heartRateSection(detail)
 
+                // Activity metrics (AMA-275)
+                if detail.hasSummaryMetrics {
+                    activitySection(detail)
+                }
+
                 // Execution Log (AMA-292) - shows actual workout execution with weights
                 // Always show ExecutionLogSection - uses mock data if no real execution log
                 ExecutionLogSection(
@@ -94,8 +99,14 @@ struct CompletionDetailView: View {
                     runAgainButton
                 }
 
+                // Sync to Strava Button (AMA-275)
+                stravaButton
+
                 // Edit Workout Button
                 editWorkoutButton
+
+                // Done Button (AMA-275)
+                doneButton
 
                 Spacer(minLength: 20)
             }
@@ -163,6 +174,30 @@ struct CompletionDetailView: View {
         .padding()
         .background(Theme.Colors.surface)
         .cornerRadius(12)
+    }
+
+    // MARK: - Activity Section
+
+    private func activitySection(_ detail: WorkoutCompletionDetail) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("ACTIVITY")
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(.secondary)
+
+            HStack(spacing: 0) {
+                statItem(value: detail.formattedCalories ?? "—", label: "CAL", color: .primary)
+                Spacer()
+                statItem(value: detail.formattedSteps ?? "—", label: "STEPS", color: .primary)
+                Spacer()
+                statItem(value: detail.formattedDistance ?? "—", label: "DIST", color: .primary)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(Theme.Colors.surface)
+        .cornerRadius(12)
+        .accessibilityIdentifier("activity_section")
     }
 
     // MARK: - Source Info Section
@@ -479,6 +514,23 @@ struct CompletionDetailView: View {
             .background(Color.orange)
             .cornerRadius(12)
         }
+        .disabled(!viewModel.canSyncToStrava)
+        .accessibilityIdentifier("strava_button")
+    }
+
+    // MARK: - Done Button
+
+    private var doneButton: some View {
+        Button("Done") {
+            dismiss()
+        }
+        .font(.headline)
+        .foregroundColor(.primary)
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(Theme.Colors.surface)
+        .cornerRadius(12)
+        .accessibilityIdentifier("completion_done_button")
     }
 
     // MARK: - Strava Toast
