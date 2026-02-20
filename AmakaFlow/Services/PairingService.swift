@@ -65,13 +65,30 @@ class PairingService: ObservableObject {
         }
         #endif
 
-        isPaired = getToken() != nil
-        userProfile = loadProfile()
+        // Do NOT read Keychain synchronously on @MainActor — SecItemCopyMatching blocks
+        // the main thread, causing >2 s ANR reported by Sentry (AMA-680).
+        // Start with safe defaults and populate from Keychain on a background thread.
+        isPaired = false
+        userProfile = nil
         lastTokenRefresh = loadLastTokenRefresh()
 
-        #if DEBUG
-        print("[PairingService] Initialized with isPaired=\(isPaired), hasToken=\(getToken() != nil)")
-        #endif
+        let tokenKey = self.tokenKey
+        let profileKey = self.profileKey
+        Task {
+            let (token, profile): (String?, UserProfile?) = await Task.detached(priority: .userInitiated) {
+                let t = KeychainHelper.shared.readString(for: tokenKey)
+                let p: UserProfile? = {
+                    guard let data = KeychainHelper.shared.read(for: profileKey) else { return nil }
+                    return try? JSONDecoder().decode(UserProfile.self, from: data)
+                }()
+                return (t, p)
+            }.value
+            self.isPaired = token != nil
+            self.userProfile = profile
+            #if DEBUG
+            print("[PairingService] Initialized with isPaired=\(self.isPaired), hasToken=\(token != nil)")
+            #endif
+        }
     }
 
     /// Mark authentication as invalid (e.g., on 401 response)
