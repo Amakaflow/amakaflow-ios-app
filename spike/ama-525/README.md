@@ -9,6 +9,8 @@
 
 ## Setup
 ```bash
+# Requires Python 3.10 or 3.11 (coremltools 7.x does not support 3.12+)
+mkdir -p data models notebooks reports
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
