@@ -8,6 +8,7 @@ struct IMUSample {
     let timestamp: TimeInterval
 }
 
+@MainActor
 final class MotionCapture: ObservableObject {
     let sampleRate: Double
     private let maxBufferSize: Int
@@ -31,6 +32,7 @@ final class MotionCapture: ObservableObject {
     func startCapture() {
         guard motionManager.isDeviceMotionAvailable else { return }
         motionManager.deviceMotionUpdateInterval = 1.0 / sampleRate
+        isCapturing = true   // set before handler can fire
         motionManager.startDeviceMotionUpdates(to: .main) { [weak self] motion, error in
             guard let self, let motion, error == nil else { return }
             let sample = IMUSample(
@@ -44,7 +46,6 @@ final class MotionCapture: ObservableObject {
             )
             self.appendSample(sample)
         }
-        isCapturing = true
     }
 
     func stopCapture() {
