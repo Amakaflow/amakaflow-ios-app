@@ -26,15 +26,27 @@ final class RepSegmenterTests: XCTestCase {
         XCTAssertEqual(reps.count, 1)
     }
 
-    func test_repWindow_hasCorrectedSize() {
+    func test_repWindow_hasCorrectedSize() throws {
         let segmenter = RepSegmenter(windowSize: 50)
         var yValues: [Float] = Array(repeating: Float(1.0), count: 20)
         yValues += Array(repeating: Float(-1.0), count: 20)
         yValues += Array(repeating: Float(1.0), count: 20)
         let reps = segmenter.extractReps(from: makeSamples(yValues: yValues))
-        if let rep = reps.first {
-            XCTAssertEqual(rep.count, 50)
-        }
+        XCTAssertEqual(reps.count, 1)
+        let rep = try XCTUnwrap(reps.first)
+        XCTAssertEqual(rep.count, segmenter.windowSize)
+    }
+
+    func test_detectsMultipleReps_withThreePeaks() {
+        let segmenter = RepSegmenter()
+        // Three peaks separated by valleys = two rep windows
+        var yValues: [Float] = Array(repeating: 1.5, count: 20)   // peak 1
+        yValues += Array(repeating: -0.5, count: 20)               // valley
+        yValues += Array(repeating: 1.5, count: 20)                // peak 2
+        yValues += Array(repeating: -0.5, count: 20)               // valley
+        yValues += Array(repeating: 1.5, count: 20)                // peak 3
+        let reps = segmenter.extractReps(from: makeSamples(yValues: yValues))
+        XCTAssertGreaterThanOrEqual(reps.count, 2)
     }
 
     func test_noReps_whenSignalBelowThreshold() {

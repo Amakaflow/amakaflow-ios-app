@@ -63,7 +63,7 @@ struct RepSegmenter {
     private func resample(_ segment: [IMUSample], to size: Int) -> [IMUSample] {
         if segment.count == size { return segment }
         if segment.count > size { return Array(segment.prefix(size)) }
-        let padding = Array(repeating: segment.last!, count: size - segment.count)
+        let padding = Array(repeating: IMUSample(accX: 0, accY: 0, accZ: 0, gyrX: 0, gyrY: 0, gyrZ: 0, timestamp: 0), count: size - segment.count)
         return segment + padding
     }
 }
