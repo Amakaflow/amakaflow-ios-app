@@ -25,10 +25,14 @@ final class HapticCoach {
     }
 
     func cueType(for result: FormResult) -> HapticCue {
+        if result.confidence < 0.40 { return .stop }
         switch result.label {
         case "insufficient_depth": return .depthPrompt
         case "knee_cave":          return .asymmetryWarning
-        case "forward_lean":       return .tempoTooFast
+        case "forward_lean":       return .asymmetryWarning  // posture deviation, not tempo
+        case "fatigue":            return .fatigueWarning    // future model label
+        case "tempo_too_fast":     return .tempoTooFast      // future model label
+        case "good_form":          return .goodRep
         default:                   return .goodRep
         }
     }

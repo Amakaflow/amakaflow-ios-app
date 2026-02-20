@@ -36,10 +36,45 @@ final class HapticCoachTests: XCTestCase {
     func test_cueType_forForwardLean() {
         let coach = HapticCoach()
         let result = FormResult(label: "forward_lean", confidence: 0.9)
+        XCTAssertEqual(coach.cueType(for: result), .asymmetryWarning)
+    }
+
+    func test_cueType_stop_whenConfidenceLow() {
+        let coach = HapticCoach()
+        let result = FormResult(label: "insufficient_depth", confidence: 0.30)
+        XCTAssertEqual(coach.cueType(for: result), .stop)
+    }
+
+    func test_cueType_goodRep_forGoodForm() {
+        let coach = HapticCoach()
+        let result = FormResult(label: "good_form", confidence: 0.95)
+        XCTAssertEqual(coach.cueType(for: result), .goodRep)
+    }
+
+    func test_cueType_fatigueWarning_forFatigueLabel() {
+        let coach = HapticCoach()
+        let result = FormResult(label: "fatigue", confidence: 0.80)
+        XCTAssertEqual(coach.cueType(for: result), .fatigueWarning)
+    }
+
+    func test_cueType_tempoTooFast_forTempoLabel() {
+        let coach = HapticCoach()
+        let result = FormResult(label: "tempo_too_fast", confidence: 0.80)
         XCTAssertEqual(coach.cueType(for: result), .tempoTooFast)
     }
 
-    func test_allCueTypes_areCovered() {
-        XCTAssertEqual(HapticCue.allCases.count, 6)
+    func test_allSixCueCasesMappable() {
+        let coach = HapticCoach()
+        let mappings: [(String, Float, HapticCue)] = [
+            ("insufficient_depth", 0.9, .depthPrompt),
+            ("insufficient_depth", 0.3, .stop),
+            ("knee_cave", 0.9, .asymmetryWarning),
+            ("tempo_too_fast", 0.8, .tempoTooFast),
+            ("good_form", 0.95, .goodRep),
+            ("fatigue", 0.8, .fatigueWarning)
+        ]
+        for (label, confidence, expected) in mappings {
+            XCTAssertEqual(coach.cueType(for: FormResult(label: label, confidence: confidence)), expected, "Failed for label: \(label)")
+        }
     }
 }
