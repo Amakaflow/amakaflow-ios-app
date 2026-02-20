@@ -61,6 +61,7 @@ struct RepSegmenter {
 
     /// Pad or trim segment to exactly `size` samples.
     private func resample(_ segment: [IMUSample], to size: Int) -> [IMUSample] {
+        guard !segment.isEmpty else { return [] }
         if segment.count == size { return segment }
         if segment.count > size { return Array(segment.prefix(size)) }
         let padding = Array(repeating: segment.last!, count: size - segment.count)

@@ -46,7 +46,7 @@ final class RepSegmenterTests: XCTestCase {
         yValues += Array(repeating: -0.5, count: 20)               // valley
         yValues += Array(repeating: 1.5, count: 20)                // peak 3
         let reps = segmenter.extractReps(from: makeSamples(yValues: yValues))
-        XCTAssertGreaterThanOrEqual(reps.count, 2)
+        XCTAssertEqual(reps.count, 2)
     }
 
     func test_noReps_whenSignalBelowThreshold() {
