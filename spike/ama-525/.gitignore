@@ -1,0 +1,8 @@
+.venv/
+data/
+__pycache__/
+*.pyc
+models/*.mlmodel
+models/*.tflite
+.ipynb_checkpoints/
+models/*.mlpackage
