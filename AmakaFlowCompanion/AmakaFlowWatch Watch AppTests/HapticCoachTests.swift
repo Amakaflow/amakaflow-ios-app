@@ -45,6 +45,14 @@ final class HapticCoachTests: XCTestCase {
         XCTAssertEqual(coach.cueType(for: result), .stop)
     }
 
+    func test_cueType_stop_atStopThresholdBoundary() {
+        let coach = HapticCoach()
+        // Just below stop threshold → .stop
+        XCTAssertEqual(coach.cueType(for: FormResult(label: "insufficient_depth", confidence: 0.3999)), .stop)
+        // At stop threshold → falls through to switch, not .stop
+        XCTAssertNotEqual(coach.cueType(for: FormResult(label: "insufficient_depth", confidence: 0.40)), .stop)
+    }
+
     func test_cueType_goodRep_forGoodForm() {
         let coach = HapticCoach()
         let result = FormResult(label: "good_form", confidence: 0.95)

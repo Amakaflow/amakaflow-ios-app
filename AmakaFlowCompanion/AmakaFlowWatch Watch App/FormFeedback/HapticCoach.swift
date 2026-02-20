@@ -17,6 +17,7 @@ enum HapticCue: String, CaseIterable {
 
 final class HapticCoach {
     private let confidenceThreshold: Float = 0.7
+    private let stopThreshold: Float = 0.40
 
     init() {}
 
@@ -25,7 +26,7 @@ final class HapticCoach {
     }
 
     func cueType(for result: FormResult) -> HapticCue {
-        if result.confidence < 0.40 { return .stop }
+        if result.confidence < stopThreshold { return .stop }
         switch result.label {
         case "insufficient_depth": return .depthPrompt
         case "knee_cave":          return .asymmetryWarning
