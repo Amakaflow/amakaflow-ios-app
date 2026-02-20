@@ -103,7 +103,7 @@ class APIService {
     /// Fetch workouts from backend
     /// - Returns: Array of workouts
     /// - Throws: APIError if request fails
-    func fetchWorkouts() async throws -> [Workout] {
+    func fetchWorkouts(isRetry: Bool = false) async throws -> [Workout] {
         guard PairingService.shared.isPaired else {
             print("[APIService] Not paired, throwing unauthorized")
             throw APIError.unauthorized
@@ -142,6 +142,11 @@ class APIService {
             }
         case 401:
             print("[APIService] Unauthorized (401)")
+            guard !isRetry else { throw APIError.unauthorized }
+            let refreshed = await PairingService.shared.refreshToken()
+            if refreshed {
+                return try await fetchWorkouts(isRetry: true)
+            }
             throw APIError.unauthorized
         default:
             if let responseString = String(data: data, encoding: .utf8) {
@@ -154,7 +159,7 @@ class APIService {
     /// Fetch scheduled workouts from backend
     /// - Returns: Array of scheduled workouts
     /// - Throws: APIError if request fails
-    func fetchScheduledWorkouts() async throws -> [ScheduledWorkout] {
+    func fetchScheduledWorkouts(isRetry: Bool = false) async throws -> [ScheduledWorkout] {
         guard PairingService.shared.isPaired else {
             throw APIError.unauthorized
         }
@@ -175,6 +180,11 @@ class APIService {
             let decoder = APIService.makeDecoder()
             return try decoder.decode([ScheduledWorkout].self, from: data)
         case 401:
+            guard !isRetry else { throw APIError.unauthorized }
+            let refreshed = await PairingService.shared.refreshToken()
+            if refreshed {
+                return try await fetchScheduledWorkouts(isRetry: true)
+            }
             throw APIError.unauthorized
         case 404:
             // Endpoint may not exist yet, return empty array
@@ -187,7 +197,7 @@ class APIService {
     /// Fetch workouts that have been pushed to this device
     /// - Returns: Array of workouts
     /// - Throws: APIError if request fails
-    func fetchPushedWorkouts() async throws -> [Workout] {
+    func fetchPushedWorkouts(isRetry: Bool = false) async throws -> [Workout] {
         guard PairingService.shared.isPaired else {
             throw APIError.unauthorized
         }
@@ -209,6 +219,11 @@ class APIService {
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             return try decoder.decode([Workout].self, from: data)
         case 401:
+            guard !isRetry else { throw APIError.unauthorized }
+            let refreshed = await PairingService.shared.refreshToken()
+            if refreshed {
+                return try await fetchPushedWorkouts(isRetry: true)
+            }
             throw APIError.unauthorized
         case 404:
             // Endpoint may not exist yet, return empty array
@@ -222,7 +237,7 @@ class APIService {
     /// Uses the new /sync/pending endpoint which tracks proper sync state
     /// - Returns: Array of pending workouts
     /// - Throws: APIError if request fails
-    func fetchPendingWorkouts() async throws -> [Workout] {
+    func fetchPendingWorkouts(isRetry: Bool = false) async throws -> [Workout] {
         guard PairingService.shared.isPaired else {
             print("[APIService] Not paired, throwing unauthorized")
             throw APIError.unauthorized
@@ -273,6 +288,11 @@ class APIService {
             }
         case 401:
             print("[APIService] Unauthorized (401)")
+            guard !isRetry else { throw APIError.unauthorized }
+            let refreshed = await PairingService.shared.refreshToken()
+            if refreshed {
+                return try await fetchPendingWorkouts(isRetry: true)
+            }
             throw APIError.unauthorized
         case 404:
             // Endpoint may not exist yet, return empty array
