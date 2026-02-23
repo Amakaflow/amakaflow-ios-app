@@ -22,7 +22,7 @@ jobs:
 
       - name: Clone workoutkit-sync dependency
         id: clone
-        run: git clone https://github.com/supergeri/workoutkit-sync.git ../../workoutkit-sync
+        run: git clone https://github.com/Amakaflow/workoutkit-sync.git ../../workoutkit-sync
 
       - name: Select Xcode (latest available)
         id: xcode
@@ -249,7 +249,7 @@ jobs:
 
       - name: Validation Gate
         if: always()
-        uses: supergeri/amakaflow-automation/.github/actions/validation-gate@main
+        uses: Amakaflow/amakaflow-automation/.github/actions/validation-gate@main
         with:
           linear-api-key: ${{ secrets.LINEAR_API_KEY }}
           repo-name: amakaflow-ios-app
