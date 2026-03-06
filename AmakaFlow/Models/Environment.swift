@@ -80,6 +80,20 @@ enum AppEnvironment: String, CaseIterable {
         }
     }
 
+    var mcpAPIURL: String {
+        #if DEBUG
+        if let testBaseURL = ProcessInfo.processInfo.environment["UITEST_API_BASE_URL"],
+           !testBaseURL.isEmpty {
+            return testBaseURL
+        }
+        #endif
+        switch self {
+        case .development: return "http://localhost:8000"
+        case .staging: return "https://amakaflow-mcp.onrender.com"
+        case .production: return "https://amakaflow-mcp.onrender.com"
+        }
+    }
+
     var displayName: String {
         // Show custom API URL hostname when using UITEST_API_BASE_URL / TEST_API_BASE_URL override
         #if DEBUG
