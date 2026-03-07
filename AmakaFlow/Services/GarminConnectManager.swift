@@ -134,11 +134,21 @@ class GarminConnectManager: NSObject, ObservableObject {
                 }
             }
         }
-        bluetoothKick.start()
 
         setupConnectIQ()
         loadSavedDevice()
         setupNotifications()
+
+        // Defer Bluetooth initialization to avoid blocking app launch (AMA-1062)
+        // The Bluetooth permission dialog can cause a 2+ second hang on first launch
+        // Run after a brief delay to let the app finish launching
+        Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            await MainActor.run {
+                self?.bluetoothKick.start()
+            }
+        }
+
         log("Init complete - SDK: \(connectIQAvailable ? "YES" : "NO")")
     }
 
