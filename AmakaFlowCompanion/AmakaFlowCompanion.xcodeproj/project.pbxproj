@@ -30,6 +30,7 @@
 		A19401BB0000000BC000000B /* ExecutionLogSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA0000000BB000000B /* ExecutionLogSection.swift */; };
 		AA8C7E7D040E462BB1347220 /* RestPeriodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94AE3547CCCD41159C85554B /* RestPeriodView.swift */; };
 		B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E57529578481B8991A91F /* SourcesView.swift */; };
+		A1IMP0RTV13W00000001 /* AIImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1IMP0RTV13W00000000 /* AIImportView.swift */; };
 		B69E1808FE344A15848A3B67 /* WorkoutCompletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */; };
 		CA268753E918494FAD7CCD56 /* PairingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85D3757E5B284286B341C75C /* PairingService.swift */; };
 		D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000001B0000001 /* DebugLogService.swift */; };
@@ -68,6 +69,7 @@
 		F84E22872ED0D5D100459747 /* CalendarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22832ED0D5D100459747 /* CalendarManager.swift */; };
 		F84E22882ED0D5D100459747 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22842ED0D5D100459747 /* WatchConnectivityManager.swift */; };
 		F84E22892ED0D5D100459747 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22812ED0D5D100459747 /* APIService.swift */; };
+		KBSVC00000000001 /* KnowledgeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = KBSVC00000000000 /* KnowledgeService.swift */; };
 		F84E228A2ED0D5D100459747 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22822ED0D5D100459747 /* AuthService.swift */; };
 		F84E22932ED0D9FA00459747 /* EventKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E22922ED0D9FA00459747 /* EventKit.framework */; };
 		F84E22952ED0DA0200459747 /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E22942ED0DA0200459747 /* HealthKit.framework */; };
@@ -237,6 +239,7 @@
 		D3P3ND1NJ3CT10N0005 /* APIServiceProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIServiceProviding.swift; path = ../AmakaFlow/DependencyInjection/APIServiceProviding.swift; sourceTree = SOURCE_ROOT; };
 		D3P3ND1NJ3CT10N0006 /* WatchSessionProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchSessionProviding.swift; path = ../AmakaFlow/DependencyInjection/WatchSessionProviding.swift; sourceTree = SOURCE_ROOT; };
 		E79E57529578481B8991A91F /* SourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SourcesView.swift; path = ../AmakaFlow/Views/SourcesView.swift; sourceTree = SOURCE_ROOT; };
+		A1IMP0RTV13W00000000 /* AIImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AIImportView.swift; path = ../AmakaFlow/Views/AIImportView.swift; sourceTree = SOURCE_ROOT; };
 		EXEC10NL0G8U1LD3R0001 /* ExecutionLogBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ExecutionLogBuilder.swift; path = ../AmakaFlow/Engine/ExecutionLogBuilder.swift; sourceTree = SOURCE_ROOT; };
 		F1XTUR34P15RV0000001 /* FixtureAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FixtureAPIService.swift; path = ../AmakaFlow/DependencyInjection/FixtureAPIService.swift; sourceTree = SOURCE_ROOT; };
 		F1XTUR3JS0N00000001 /* amrap_10min.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = amrap_10min.json; path = ../AmakaFlow/Resources/Fixtures/amrap_10min.json; sourceTree = SOURCE_ROOT; };
@@ -265,6 +268,7 @@
 		F84E227C2ED0D5BF00459747 /* ScheduleCalendarSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ScheduleCalendarSheet.swift; path = ../AmakaFlow/Views/Components/ScheduleCalendarSheet.swift; sourceTree = SOURCE_ROOT; };
 		F84E227D2ED0D5BF00459747 /* WorkoutCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCard.swift; path = ../AmakaFlow/Views/Components/WorkoutCard.swift; sourceTree = SOURCE_ROOT; };
 		F84E22812ED0D5D100459747 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIService.swift; path = ../AmakaFlow/Services/APIService.swift; sourceTree = SOURCE_ROOT; };
+		KBSVC00000000000 /* KnowledgeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KnowledgeService.swift; path = ../AmakaFlow/Services/KnowledgeService.swift; sourceTree = SOURCE_ROOT; };
 		F84E22822ED0D5D100459747 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AuthService.swift; path = ../AmakaFlow/Services/AuthService.swift; sourceTree = SOURCE_ROOT; };
 		F84E22832ED0D5D100459747 /* CalendarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarManager.swift; path = ../AmakaFlow/Services/CalendarManager.swift; sourceTree = SOURCE_ROOT; };
 		F84E22842ED0D5D100459747 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchConnectivityManager.swift; path = ../AmakaFlow/Services/WatchConnectivityManager.swift; sourceTree = SOURCE_ROOT; };
@@ -465,6 +469,7 @@
 			isa = PBXGroup;
 			children = (
 				F84E22812ED0D5D100459747 /* APIService.swift */,
+				KBSVC00000000000 /* KnowledgeService.swift */,
 				F84E22822ED0D5D100459747 /* AuthService.swift */,
 				F84E22832ED0D5D100459747 /* CalendarManager.swift */,
 				F84E22842ED0D5D100459747 /* WatchConnectivityManager.swift */,
@@ -572,6 +577,7 @@
 			isa = PBXGroup;
 			children = (
 				E79E57529578481B8991A91F /* SourcesView.swift */,
+				A1IMP0RTV13W00000000 /* AIImportView.swift */,
 				1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */,
 				M4NU4L1N5T4GR4M0001 /* ManualInstagramIngestionView.swift */,
 				2AB8DFBA16CE406C95456EAD /* CalendarView.swift */,
@@ -940,6 +946,7 @@
 				40E350E9B26F4574902587EF /* PairingView.swift in Sources */,
 				1A7B03C2552441FEB810773A /* QRScannerView.swift in Sources */,
 				B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */,
+				A1IMP0RTV13W00000001 /* AIImportView.swift in Sources */,
 				1N5T4GR4MR33L0002 /* InstagramReelIngestionView.swift in Sources */,
 				M4NU4L1N5T4GR4M0002 /* ManualInstagramIngestionView.swift in Sources */,
 				521047C38D23474889C39F35 /* CalendarView.swift in Sources */,
@@ -982,6 +989,7 @@
 				F84E22882ED0D5D100459747 /* WatchConnectivityManager.swift in Sources */,
 				F8C125A12EFAB01000459747 /* GarminConnectManager.swift in Sources */,
 				F84E22892ED0D5D100459747 /* APIService.swift in Sources */,
+				KBSVC00000000001 /* KnowledgeService.swift in Sources */,
 				F84E228A2ED0D5D100459747 /* AuthService.swift in Sources */,
 				F84E227E2ED0D5BF00459747 /* IntervalRow.swift in Sources */,
 				F84E227F2ED0D5BF00459747 /* ScheduleCalendarSheet.swift in Sources */,
