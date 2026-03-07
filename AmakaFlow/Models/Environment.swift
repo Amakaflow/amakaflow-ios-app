@@ -86,9 +86,14 @@ enum AppEnvironment: String, CaseIterable {
            !testBaseURL.isEmpty {
             return testBaseURL
         }
+        if let testBaseURL = ProcessInfo.processInfo.environment["TEST_API_BASE_URL"],
+           !testBaseURL.isEmpty {
+            return testBaseURL
+        }
         #endif
         switch self {
         case .development: return "http://localhost:8000"
+        // Staging and production share the same Render deployment until a dedicated staging URL exists.
         case .staging: return "https://amakaflow-mcp.onrender.com"
         case .production: return "https://amakaflow-mcp.onrender.com"
         }

@@ -13,8 +13,9 @@ struct AIImportView: View {
     @State private var message: String = ""
     @State private var events: [String] = []
     @State private var state: ImportState = .idle
+    @State private var importTask: Task<Void, Never>?
 
-    enum ImportState {
+    enum ImportState: Equatable {
         case idle
         case streaming
         case done
@@ -23,6 +24,33 @@ struct AIImportView: View {
 
     private var baseURL: String {
         AppEnvironment.current.mcpAPIURL
+    }
+
+    /// Auth headers matching APIService.authHeaders, covering E2E and production.
+    private var authHeaders: [String: String] {
+        var headers = [String: String]()
+        #if DEBUG
+        if let testAuthSecret = TestAuthStore.shared.authSecret,
+           let testUserId = TestAuthStore.shared.userId,
+           !testAuthSecret.isEmpty {
+            headers["X-Test-Auth"] = testAuthSecret
+            headers["X-Test-User-Id"] = testUserId
+            return headers
+        }
+        #endif
+        if let token = PairingService.shared.getToken() {
+            headers["Authorization"] = "Bearer \(token)"
+        }
+        return headers
+    }
+
+    private var profileId: String {
+        #if DEBUG
+        if let testUserId = TestAuthStore.shared.userId, !testUserId.isEmpty {
+            return testUserId
+        }
+        #endif
+        return PairingService.shared.userProfile?.id ?? "unknown"
     }
 
     var body: some View {
@@ -60,6 +88,14 @@ struct AIImportView: View {
                     .accessibilityIdentifier("ai_import_button")
                 }
 
+                if case .error(let msg) = state {
+                    Section {
+                        Text(msg)
+                            .foregroundStyle(.red)
+                            .font(.caption)
+                    }
+                }
+
                 if !events.isEmpty {
                     Section("Events") {
                         ForEach(Array(events.enumerated()), id: \.offset) { _, event in
@@ -69,26 +105,23 @@ struct AIImportView: View {
                         }
                     }
                 }
-
-                if case .error(let msg) = state {
-                    Section {
-                        Text(msg)
-                            .foregroundStyle(.red)
-                            .font(.caption)
-                    }
-                }
             }
             .navigationTitle("AI Import")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .accessibilityIdentifier("ai_import_cancel_button")
                 }
                 if case .done = state {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Done") { dismiss() }
+                            .accessibilityIdentifier("ai_import_done_button")
                     }
                 }
+            }
+            .onDisappear {
+                importTask?.cancel()
             }
         }
     }
@@ -96,11 +129,12 @@ struct AIImportView: View {
     private func startImport() {
         events = []
         state = .streaming
-
-        Task {
+        importTask = Task {
             do {
                 try await streamImport()
                 state = .done
+            } catch is CancellationError {
+                state = .idle
             } catch {
                 state = .error(error.localizedDescription)
             }
@@ -116,9 +150,12 @@ struct AIImportView: View {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        for (key, value) in authHeaders {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
 
         var body: [String: String] = [
-            "profile_id": "current_user",
+            "profile_id": profileId,
             "message": message,
         ]
         if !sourceURL.trimmingCharacters(in: .whitespaces).isEmpty {
@@ -128,22 +165,37 @@ struct AIImportView: View {
 
         let (bytes, response) = try await URLSession.shared.bytes(for: request)
 
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+        guard let httpResponse = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
         }
+        guard httpResponse.statusCode == 200 else {
+            var bodyData = Data()
+            for try await byte in bytes { bodyData.append(byte) }
+            let detail = String(data: bodyData, encoding: .utf8)?.prefix(200) ?? ""
+            throw URLError(.badServerResponse, userInfo: [
+                NSLocalizedDescriptionKey: "HTTP \(httpResponse.statusCode): \(detail)"
+            ])
+        }
 
-        var dataBuffer = ""
+        // SSE parsing: buffer event name and data, flush on blank line.
+        var pendingEvent = ""
+        var pendingData = ""
         for try await line in bytes.lines {
-            if line.hasPrefix("data: ") {
-                dataBuffer = String(line.dropFirst(6))
-            } else if line.hasPrefix("event: ") {
-                let eventName = String(line.dropFirst(7))
-                if eventName == "done" { break }
-                if !dataBuffer.isEmpty {
-                    let display = "[\(eventName)] \(dataBuffer)"
+            try Task.checkCancellation()
+            if line.hasPrefix("event: ") {
+                pendingEvent = String(line.dropFirst(7))
+                if pendingEvent == "done" { break }
+            } else if line.hasPrefix("data: ") {
+                pendingData = String(line.dropFirst(6))
+            } else if line.isEmpty {
+                // Blank line = dispatch the event
+                let eventName = pendingEvent.isEmpty ? "message" : pendingEvent
+                if !pendingData.isEmpty {
+                    let display = "[\(eventName)] \(pendingData)"
                     await MainActor.run { events.append(display) }
-                    dataBuffer = ""
                 }
+                pendingEvent = ""
+                pendingData = ""
             }
         }
     }
