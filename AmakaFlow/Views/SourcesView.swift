@@ -173,8 +173,56 @@ struct SourcesView: View {
                     subtitle: "Import workout files",
                     action: {}
                 )
+
+                // My Library
+                NavigationLink(destination: KnowledgeLibraryView()) {
+                    LibraryRow()
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("my_library_button")
             }
         }
+    }
+}
+
+// MARK: - Library Row
+
+private struct LibraryRow: View {
+    var body: some View {
+        HStack(spacing: Theme.Spacing.md) {
+            ZStack {
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                    .fill(Theme.Colors.accentBlue.opacity(0.1))
+                    .frame(width: 48, height: 48)
+
+                Image(systemName: "books.vertical.fill")
+                    .font(.system(size: 22))
+                    .foregroundColor(Theme.Colors.accentBlue)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("My Library")
+                    .font(Theme.Typography.bodyBold)
+                    .foregroundColor(Theme.Colors.textPrimary)
+
+                Text("Articles, videos and notes")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textSecondary)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(Theme.Colors.textTertiary)
+        }
+        .padding(Theme.Spacing.md)
+        .background(Theme.Colors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                .stroke(Theme.Colors.borderLight, lineWidth: 1)
+        )
+        .cornerRadius(Theme.CornerRadius.md)
     }
 }
 

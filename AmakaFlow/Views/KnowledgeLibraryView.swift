@@ -339,12 +339,6 @@ private struct FilterChip: View {
     }
 }
 
-// MARK: - Temporary stub — will be replaced in Task 7
-
-private struct AddKnowledgeView: View {
-    var body: some View { Text("Add Knowledge") }
-}
-
 // MARK: - Preview
 
 #Preview {

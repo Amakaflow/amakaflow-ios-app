@@ -33,6 +33,7 @@
 		A1IMP0RTV13W00000001 /* AIImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1IMP0RTV13W00000000 /* AIImportView.swift */; };
 		KB00LIB0001B /* KnowledgeLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = KB00LIB0001A /* KnowledgeLibraryView.swift */; };
 		KB00DTL0001B /* KnowledgeCardDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = KB00DTL0001A /* KnowledgeCardDetailView.swift */; };
+		KB00ADD0001B /* AddKnowledgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = KB00ADD0001A /* AddKnowledgeView.swift */; };
 		B69E1808FE344A15848A3B67 /* WorkoutCompletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */; };
 		CA268753E918494FAD7CCD56 /* PairingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85D3757E5B284286B341C75C /* PairingService.swift */; };
 		D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000001B0000001 /* DebugLogService.swift */; };
@@ -244,6 +245,7 @@
 		A1IMP0RTV13W00000000 /* AIImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AIImportView.swift; path = ../AmakaFlow/Views/AIImportView.swift; sourceTree = SOURCE_ROOT; };
 		KB00LIB0001A /* KnowledgeLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KnowledgeLibraryView.swift; path = ../AmakaFlow/Views/KnowledgeLibraryView.swift; sourceTree = SOURCE_ROOT; };
 		KB00DTL0001A /* KnowledgeCardDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KnowledgeCardDetailView.swift; path = ../AmakaFlow/Views/KnowledgeCardDetailView.swift; sourceTree = SOURCE_ROOT; };
+		KB00ADD0001A /* AddKnowledgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AddKnowledgeView.swift; path = ../AmakaFlow/Views/AddKnowledgeView.swift; sourceTree = SOURCE_ROOT; };
 		EXEC10NL0G8U1LD3R0001 /* ExecutionLogBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ExecutionLogBuilder.swift; path = ../AmakaFlow/Engine/ExecutionLogBuilder.swift; sourceTree = SOURCE_ROOT; };
 		F1XTUR34P15RV0000001 /* FixtureAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FixtureAPIService.swift; path = ../AmakaFlow/DependencyInjection/FixtureAPIService.swift; sourceTree = SOURCE_ROOT; };
 		F1XTUR3JS0N00000001 /* amrap_10min.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = amrap_10min.json; path = ../AmakaFlow/Resources/Fixtures/amrap_10min.json; sourceTree = SOURCE_ROOT; };
@@ -584,6 +586,7 @@
 				A1IMP0RTV13W00000000 /* AIImportView.swift */,
 				KB00LIB0001A /* KnowledgeLibraryView.swift */,
 				KB00DTL0001A /* KnowledgeCardDetailView.swift */,
+				KB00ADD0001A /* AddKnowledgeView.swift */,
 				1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */,
 				M4NU4L1N5T4GR4M0001 /* ManualInstagramIngestionView.swift */,
 				2AB8DFBA16CE406C95456EAD /* CalendarView.swift */,
@@ -955,6 +958,7 @@
 				A1IMP0RTV13W00000001 /* AIImportView.swift in Sources */,
 				KB00LIB0001B /* KnowledgeLibraryView.swift in Sources */,
 				KB00DTL0001B /* KnowledgeCardDetailView.swift in Sources */,
+				KB00ADD0001B /* AddKnowledgeView.swift in Sources */,
 				1N5T4GR4MR33L0002 /* InstagramReelIngestionView.swift in Sources */,
 				M4NU4L1N5T4GR4M0002 /* ManualInstagramIngestionView.swift in Sources */,
 				521047C38D23474889C39F35 /* CalendarView.swift in Sources */,
