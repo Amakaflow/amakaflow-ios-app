@@ -369,6 +369,7 @@ class PairingService: ObservableObject {
         if !KeychainHelper.shared.save(jwt, for: tokenKey) {
             throw PairingError.tokenStorageFailed
         }
+        UserDefaults(suiteName: "group.com.amakaflow.companion")?.set(jwt, forKey: "auth_token")
     }
 
     func getToken() -> String? {

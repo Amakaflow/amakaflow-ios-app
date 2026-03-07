@@ -134,6 +134,9 @@
 		V01C301900000000000000 /* VoiceWorkoutReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300900000000000000 /* VoiceWorkoutReviewView.swift */; };
 		W41T1NG000000002C0000002 /* WaitingForWatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = W41T1NG000000001B0000001 /* WaitingForWatchView.swift */; };
 		XCT4H34LTH00000001 /* XCTHealthKit in Frameworks */ = {isa = PBXBuildFile; productRef = XCT4H34LTH00000002 /* XCTHealthKit */; };
+		AK00SHARE001B /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SHARE001A /* ShareViewController.swift */; };
+		AK00SHARE002B /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = AK00SHARE002A /* Info.plist */; };
+		AK00SHARE00EB /* AmakaFlowShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AK00SHARE00EA /* AmakaFlowShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -179,6 +182,13 @@
 			remoteGlobalIDString = F84E22162ED0B62000459747;
 			remoteInfo = "AmakaFlowWatch Watch App";
 		};
+		AK00SHARE00C1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F84E216C2ED0B0C800459747 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AK00SHARE009;
+			remoteInfo = AmakaFlowShare;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -189,6 +199,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				F8B356D82EF8BA7C00E88B51 /* WorkoutLiveActivityExtension.appex in Embed Foundation Extensions */,
+				AK00SHARE00EB /* AmakaFlowShare.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -325,6 +336,9 @@
 		V01C300800000000000000 /* TranscriptionReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/TranscriptionReviewView.swift; sourceTree = SOURCE_ROOT; };
 		V01C300900000000000000 /* VoiceWorkoutReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceWorkoutReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/VoiceWorkoutReviewView.swift; sourceTree = SOURCE_ROOT; };
 		W41T1NG000000001B0000001 /* WaitingForWatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WaitingForWatchView.swift; path = ../AmakaFlow/Views/Components/WaitingForWatchView.swift; sourceTree = SOURCE_ROOT; };
+		AK00SHARE001A /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		AK00SHARE002A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AK00SHARE00EA /* AmakaFlowShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AmakaFlowShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -468,6 +482,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AK00SHARE005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -543,10 +564,20 @@
 				F84E22292ED0B62100459747 /* AmakaFlowWatch Watch AppTests */,
 				F84E22332ED0B62100459747 /* AmakaFlowWatch Watch AppUITests */,
 				F8B356C82EF8BA7B00E88B51 /* WorkoutLiveActivity */,
+				AK00SHARE003 /* AmakaFlowShare */,
 				F84E22912ED0D9FA00459747 /* Frameworks */,
 				F84E21752ED0B0C800459747 /* Products */,
 				F8B356932EF8B94000E88B51 /* Recovered References */,
 			);
+			sourceTree = "<group>";
+		};
+		AK00SHARE003 /* AmakaFlowShare */ = {
+			isa = PBXGroup;
+			children = (
+				AK00SHARE001A /* ShareViewController.swift */,
+				AK00SHARE002A /* Info.plist */,
+			);
+			path = AmakaFlowShare;
 			sourceTree = "<group>";
 		};
 		F84E21752ED0B0C800459747 /* Products */ = {
@@ -560,6 +591,7 @@
 				F84E22262ED0B62100459747 /* AmakaFlowWatch Watch AppTests.xctest */,
 				F84E22302ED0B62100459747 /* AmakaFlowWatch Watch AppUITests.xctest */,
 				F8B356C32EF8BA7B00E88B51 /* WorkoutLiveActivityExtension.appex */,
+				AK00SHARE00EA /* AmakaFlowShare.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -645,6 +677,7 @@
 			dependencies = (
 				F8B356D72EF8BA7C00E88B51 /* PBXTargetDependency */,
 				F8B358B12EF9C7B000E88B51 /* PBXTargetDependency */,
+				AK00SHARE00C2 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				F84E21762ED0B0C800459747 /* AmakaFlowCompanion */,
@@ -796,6 +829,25 @@
 			productReference = F8B356C32EF8BA7B00E88B51 /* WorkoutLiveActivityExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		AK00SHARE009 /* AmakaFlowShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AK00SHARE00D /* Build configuration list for PBXNativeTarget "AmakaFlowShare" */;
+			buildPhases = (
+				AK00SHARE004 /* Sources */,
+				AK00SHARE005 /* Frameworks */,
+				AK00SHARE006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AmakaFlowShare;
+			packageProductDependencies = (
+			);
+			productName = AmakaFlowShare;
+			productReference = AK00SHARE00EA /* AmakaFlowShare.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -831,6 +883,9 @@
 					F8B356C22EF8BA7B00E88B51 = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
+					AK00SHARE009 = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
 				};
 			};
 			buildConfigurationList = F84E216F2ED0B0C800459747 /* Build configuration list for PBXProject "AmakaFlowCompanion" */;
@@ -860,6 +915,7 @@
 				F84E22252ED0B62100459747 /* AmakaFlowWatch Watch AppTests */,
 				F84E222F2ED0B62100459747 /* AmakaFlowWatch Watch AppUITests */,
 				F8B356C22EF8BA7B00E88B51 /* WorkoutLiveActivityExtension */,
+				AK00SHARE009 /* AmakaFlowShare */,
 			);
 		};
 /* End PBXProject section */
@@ -914,6 +970,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F8B356C12EF8BA7B00E88B51 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AK00SHARE006 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -1089,6 +1152,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AK00SHARE004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AK00SHARE001B /* ShareViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -1116,6 +1187,11 @@
 			isa = PBXTargetDependency;
 			target = F8B356C22EF8BA7B00E88B51 /* WorkoutLiveActivityExtension */;
 			targetProxy = F8B356D62EF8BA7C00E88B51 /* PBXContainerItemProxy */;
+		};
+		AK00SHARE00C2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AK00SHARE009 /* AmakaFlowShare */;
+			targetProxy = AK00SHARE00C1 /* PBXContainerItemProxy */;
 		};
 		F8B358B12EF9C7B000E88B51 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1636,6 +1712,54 @@
 			};
 			name = Release;
 		};
+		AK00SHARE00A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A9K5QG6YW8;
+				INFOPLIST_FILE = AmakaFlowShare/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.myamaka.AmakaFlowCompanion.AmakaFlowShare;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AK00SHARE00B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A9K5QG6YW8;
+				INFOPLIST_FILE = AmakaFlowShare/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.myamaka.AmakaFlowCompanion.AmakaFlowShare;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1707,6 +1831,15 @@
 			buildConfigurations = (
 				F8B356DA2EF8BA7C00E88B51 /* Debug */,
 				F8B356DB2EF8BA7C00E88B51 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AK00SHARE00D /* Build configuration list for PBXNativeTarget "AmakaFlowShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AK00SHARE00A /* Debug */,
+				AK00SHARE00B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
