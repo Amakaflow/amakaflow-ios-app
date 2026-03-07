@@ -118,5 +118,13 @@ class FixtureAPIService: APIServiceProviding {
             avatarUrl: nil
         )
     }
+
+    func fetchCompletions(limit: Int, offset: Int) async throws -> [WorkoutCompletion] {
+        return WorkoutCompletion.sampleData
+    }
+
+    func fetchCompletionDetail(id: String) async throws -> WorkoutCompletionDetail {
+        return WorkoutCompletionDetail.sample
+    }
 }
 #endif

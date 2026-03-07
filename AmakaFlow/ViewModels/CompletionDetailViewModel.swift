@@ -29,7 +29,7 @@ class CompletionDetailViewModel: ObservableObject {
     // MARK: - Properties
 
     let completionId: String
-    private let apiService = APIService.shared
+    private let dependencies: AppDependencies
 
     /// User's max heart rate for zone calculations (default: 190)
     var userMaxHR: Int = 190
@@ -85,8 +85,10 @@ class CompletionDetailViewModel: ObservableObject {
 
     // MARK: - Initialization
 
-    init(completionId: String) {
+    @MainActor
+    init(completionId: String, dependencies: AppDependencies = .live) {
         self.completionId = completionId
+        self.dependencies = dependencies
     }
 
     // MARK: - Data Loading
@@ -112,9 +114,9 @@ class CompletionDetailViewModel: ObservableObject {
 
         // Check if we have valid auth - either pairing or E2E test mode
         #if DEBUG
-        let hasAuth = PairingService.shared.isPaired || TestAuthStore.shared.isTestModeEnabled
+        let hasAuth = dependencies.pairingService.isPaired || TestAuthStore.shared.isTestModeEnabled
         #else
-        let hasAuth = PairingService.shared.isPaired
+        let hasAuth = dependencies.pairingService.isPaired
         #endif
 
         if !hasAuth {
@@ -124,7 +126,7 @@ class CompletionDetailViewModel: ObservableObject {
         }
 
         do {
-            detail = try await apiService.fetchCompletionDetail(id: completionId)
+            detail = try await dependencies.apiService.fetchCompletionDetail(id: completionId)
         } catch let error as APIError {
             handleAPIError(error)
         } catch {
@@ -238,7 +240,7 @@ class CompletionDetailViewModel: ObservableObject {
         )
 
         do {
-            try await apiService.syncWorkout(workout)
+            try await dependencies.apiService.syncWorkout(workout)
             saveToastMessage = "Saved to My Workouts!"
             showSaveToast = true
 
@@ -323,144 +325,3 @@ class CompletionDetailViewModel: ObservableObject {
     }
 }
 
-// MARK: - API Service Extension
-
-import os.log
-
-private let detailLogger = Logger(subsystem: "com.myamaka.AmakaFlowCompanion", category: "CompletionDetail")
-
-/// Backend returns completion detail wrapped in { "success": true, "completion": {...} }
-private struct CompletionDetailResponse: Codable {
-    let success: Bool
-    let completion: WorkoutCompletionDetail
-}
-
-extension APIService {
-    /// Fetch full workout completion detail from backend
-    /// - Parameter id: The completion ID to fetch
-    /// - Returns: WorkoutCompletionDetail with full HR samples
-    /// - Throws: APIError if request fails
-    func fetchCompletionDetail(id: String) async throws -> WorkoutCompletionDetail {
-        // Check for valid auth - either pairing or E2E test mode
-        #if DEBUG
-        let hasAuth = PairingService.shared.isPaired || TestAuthStore.shared.isTestModeEnabled
-        #else
-        let hasAuth = PairingService.shared.isPaired
-        #endif
-
-        guard hasAuth else {
-            throw APIError.unauthorized
-        }
-
-        let baseURL = AppEnvironment.current.mapperAPIURL
-        let url = URL(string: "\(baseURL)/workouts/completions/\(id)")!
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        // Set auth headers - E2E test mode or normal JWT
-        #if DEBUG
-        if let testAuthSecret = TestAuthStore.shared.authSecret,
-           let testUserId = TestAuthStore.shared.userId,
-           !testAuthSecret.isEmpty {
-            request.setValue(testAuthSecret, forHTTPHeaderField: "X-Test-Auth")
-            request.setValue(testUserId, forHTTPHeaderField: "X-Test-User-Id")
-            print("[CompletionDetail] Using X-Test-Auth header bypass for E2E tests")
-        } else if let token = PairingService.shared.getToken() {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        #else
-        if let token = PairingService.shared.getToken() {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        #endif
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        let responseBody = String(data: data, encoding: .utf8) ?? "empty"
-        print("[CompletionDetail] fetchCompletionDetail - Status: \(httpResponse.statusCode)")
-        print("[CompletionDetail] Response: \(responseBody.prefix(500))")
-        detailLogger.info("fetchCompletionDetail - Status: \(httpResponse.statusCode), Body: \(responseBody)")
-
-        switch httpResponse.statusCode {
-        case 200:
-            let decoder = APIService.makeDecoder()
-
-            // Try wrapped format first: { "success": true, "completion": {...} }
-            do {
-                let wrappedResponse = try decoder.decode(CompletionDetailResponse.self, from: data)
-                print("[CompletionDetail] Successfully decoded wrapped completion detail")
-
-                // AMA-291: Debug log what execution_log data was received from API
-                let completion = wrappedResponse.completion
-                Task { @MainActor in
-                    if let log = completion.executionLog, let intervals = log.intervals {
-                        var debugDetails = "API returned execution_log with \(intervals.count) intervals\n"
-                        for interval in intervals.prefix(5) {
-                            let name = interval.plannedName ?? "unnamed"
-                            let duration = interval.actualDurationSeconds ?? -1
-                            debugDetails += "  \(name): duration=\(duration)s"
-                            if let sets = interval.sets {
-                                debugDetails += ", sets=\(sets.count)"
-                                for set in sets {
-                                    debugDetails += "\n    Set \(set.setNumber): repsCompleted=\(set.repsCompleted ?? -1)"
-                                }
-                            }
-                            debugDetails += "\n"
-                        }
-                        if intervals.count > 5 {
-                            debugDetails += "  ... and \(intervals.count - 5) more intervals"
-                        }
-                        DebugLogService.shared.log("API ExecutionLog Response", details: debugDetails)
-                    } else {
-                        DebugLogService.shared.log("API ExecutionLog Response", details: "No execution_log returned from API")
-                    }
-                }
-
-                return completion
-            } catch let wrappedError as DecodingError {
-                // Log detailed wrapped decode error
-                var errorMsg = ""
-                switch wrappedError {
-                case .typeMismatch(let type, let context):
-                    errorMsg = "Type mismatch: expected \(String(describing: type)) at \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
-                case .valueNotFound(let type, let context):
-                    errorMsg = "Value not found: \(String(describing: type)) at \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
-                case .keyNotFound(let key, let context):
-                    errorMsg = "Key not found: '\(key.stringValue)' at \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
-                case .dataCorrupted(let context):
-                    errorMsg = "Data corrupted at \(context.codingPath.map { $0.stringValue }.joined(separator: ".")): \(context.debugDescription)"
-                @unknown default:
-                    errorMsg = "Unknown: \(wrappedError.localizedDescription)"
-                }
-                print("[CompletionDetail] Wrapped decode failed: \(errorMsg)")
-
-                // Log to DebugLogService for visibility
-                Task { @MainActor in
-                    DebugLogService.shared.log(
-                        "WRAPPED DECODE: \(errorMsg)",
-                        details: String(responseBody.prefix(2000)),
-                        metadata: ["Endpoint": "/workouts/completions/\(id)"]
-                    )
-                }
-                throw wrappedError  // Don't try direct decode, the wrapped format is what backend returns
-            } catch {
-                print("[CompletionDetail] Wrapped decode failed with non-decoding error: \(error)")
-                throw error
-            }
-        case 401:
-            throw APIError.unauthorized
-        case 404:
-            detailLogger.warning("fetchCompletionDetail - 404 Not Found for ID: \(id)")
-            throw APIError.notFound
-        default:
-            detailLogger.error("fetchCompletionDetail - Server error \(httpResponse.statusCode): \(responseBody)")
-            throw APIError.serverError(httpResponse.statusCode)
-        }
-    }
-}
