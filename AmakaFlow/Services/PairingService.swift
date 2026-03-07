@@ -79,15 +79,18 @@ class PairingService: ObservableObject {
         let tokenKey = self.tokenKey
         let profileKey = self.profileKey
         Task {
-            // Use await .value to properly suspend main actor instead of blocking (AMA-1063)
-            let (token, profile): (String?, UserProfile?) = await Task.detached(priority: .userInitiated) {
-                let t = KeychainHelper.shared.readString(for: tokenKey)
-                let p: UserProfile? = {
-                    guard let data = KeychainHelper.shared.read(for: profileKey) else { return nil }
-                    return try? JSONDecoder().decode(UserProfile.self, from: data)
-                }()
-                return (t, p)
-            }.value
+            // Use continuation to avoid blocking on .value (AMA-1059 fix)
+            // withCheckedContinuation properly yields to scheduler instead of blocking
+            let (token, profile): (String?, UserProfile?) = await withCheckedContinuation { continuation in
+                Task.detached(priority: .userInitiated) {
+                    let t = KeychainHelper.shared.readString(for: tokenKey)
+                    let p: UserProfile? = {
+                        guard let data = KeychainHelper.shared.read(for: profileKey) else { return nil }
+                        return try? JSONDecoder().decode(UserProfile.self, from: data)
+                    }()
+                    continuation.resume(returning: (t, p))
+                }
+            }
             self.isPaired = token != nil
             self.userProfile = profile
             // Cache token to avoid blocking getToken() calls (AMA-969)
