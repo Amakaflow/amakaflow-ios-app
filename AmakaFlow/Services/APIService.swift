@@ -1156,6 +1156,86 @@ class APIService {
             throw APIError.serverError(httpResponse.statusCode)
         }
     }
+
+    // MARK: - Completion History
+
+    func fetchCompletions(limit: Int = 50, offset: Int = 0) async throws -> [WorkoutCompletion] {
+        let url = URL(string: "\(baseURL)/workouts/completions?limit=\(limit)&offset=\(offset)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = authHeaders
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        let responseBody = String(data: data, encoding: .utf8) ?? "empty"
+        print("[APIService] fetchCompletions - Status: \(httpResponse.statusCode)")
+
+        switch httpResponse.statusCode {
+        case 200:
+            do {
+                let wrapped = try Self.makeDecoder().decode(CompletionsListResponse.self, from: data)
+                return wrapped.completions
+            } catch {
+                logError(endpoint: "/workouts/completions", method: "GET", statusCode: 200,
+                         response: String(responseBody.prefix(500)), error: error)
+                return []
+            }
+        case 401:
+            throw APIError.unauthorized
+        case 404, 500:
+            return []
+        default:
+            logError(endpoint: "/workouts/completions", method: "GET", statusCode: httpResponse.statusCode,
+                     response: responseBody, error: nil)
+            throw APIError.serverErrorWithBody(httpResponse.statusCode, responseBody)
+        }
+    }
+
+    func fetchCompletionDetail(id: String) async throws -> WorkoutCompletionDetail {
+        let url = URL(string: "\(baseURL)/workouts/completions/\(id)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = authHeaders
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        let responseBody = String(data: data, encoding: .utf8) ?? "empty"
+        print("[APIService] fetchCompletionDetail(\(id)) - Status: \(httpResponse.statusCode)")
+
+        switch httpResponse.statusCode {
+        case 200:
+            let wrapped = try Self.makeDecoder().decode(CompletionDetailWrappedResponse.self, from: data)
+            return wrapped.completion
+        case 401:
+            throw APIError.unauthorized
+        case 404:
+            throw APIError.notFound
+        default:
+            logError(endpoint: "/workouts/completions/\(id)", method: "GET", statusCode: httpResponse.statusCode,
+                     response: responseBody, error: nil)
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+}
+
+// MARK: - Completion History Responses
+
+private struct CompletionsListResponse: Codable {
+    let success: Bool
+    let completions: [WorkoutCompletion]
+}
+
+private struct CompletionDetailWrappedResponse: Codable {
+    let success: Bool
+    let completion: WorkoutCompletionDetail
 }
 
 // MARK: - Profile Response

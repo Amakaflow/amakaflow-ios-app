@@ -68,7 +68,14 @@ class ActivityHistoryViewModel: ObservableObject {
 
     // MARK: - Dependencies
 
-    private let apiService = APIService.shared
+    private let dependencies: AppDependencies
+
+    // MARK: - Initialization
+
+    @MainActor
+    init(dependencies: AppDependencies = .live) {
+        self.dependencies = dependencies
+    }
 
     // MARK: - Computed Properties
 
@@ -126,9 +133,9 @@ class ActivityHistoryViewModel: ObservableObject {
 
         // Check if we have valid auth - either pairing or E2E test mode
         #if DEBUG
-        let hasAuth = PairingService.shared.isPaired || TestAuthStore.shared.isTestModeEnabled
+        let hasAuth = dependencies.pairingService.isPaired || TestAuthStore.shared.isTestModeEnabled
         #else
-        let hasAuth = PairingService.shared.isPaired
+        let hasAuth = dependencies.pairingService.isPaired
         #endif
 
         // If not authenticated, show empty state (no mock data)
@@ -141,7 +148,7 @@ class ActivityHistoryViewModel: ObservableObject {
 
         do {
             logger.info("loadCompletions: Fetching from API...")
-            let fetched = try await apiService.fetchCompletions(limit: pageSize, offset: 0)
+            let fetched = try await dependencies.apiService.fetchCompletions(limit: pageSize, offset: 0)
             completions = fetched
             hasMoreData = fetched.count >= pageSize
             currentOffset = fetched.count
@@ -207,9 +214,9 @@ class ActivityHistoryViewModel: ObservableObject {
 
         // Check if we have valid auth
         #if DEBUG
-        let hasAuth = PairingService.shared.isPaired || TestAuthStore.shared.isTestModeEnabled
+        let hasAuth = dependencies.pairingService.isPaired || TestAuthStore.shared.isTestModeEnabled
         #else
-        let hasAuth = PairingService.shared.isPaired
+        let hasAuth = dependencies.pairingService.isPaired
         #endif
 
         if useDemoMode || !hasAuth {
@@ -220,7 +227,7 @@ class ActivityHistoryViewModel: ObservableObject {
         }
 
         do {
-            let fetched = try await apiService.fetchCompletions(limit: pageSize, offset: currentOffset)
+            let fetched = try await dependencies.apiService.fetchCompletions(limit: pageSize, offset: currentOffset)
             completions.append(contentsOf: fetched)
             hasMoreData = fetched.count >= pageSize
             currentOffset += fetched.count
@@ -262,134 +269,3 @@ class ActivityHistoryViewModel: ObservableObject {
     }
 }
 
-// MARK: - API Service Extension
-
-extension APIService {
-    /// Fetch workout completions from backend
-    /// - Parameters:
-    ///   - limit: Maximum number of completions to fetch
-    ///   - offset: Offset for pagination
-    /// - Returns: Array of workout completions
-    /// - Throws: APIError if request fails
-    func fetchCompletions(limit: Int = 50, offset: Int = 0) async throws -> [WorkoutCompletion] {
-        // Check for valid auth - either pairing or E2E test mode
-        #if DEBUG
-        let hasAuth = PairingService.shared.isPaired || TestAuthStore.shared.isTestModeEnabled
-        #else
-        let hasAuth = PairingService.shared.isPaired
-        #endif
-
-        guard hasAuth else {
-            throw APIError.unauthorized
-        }
-
-        let baseURL = AppEnvironment.current.mapperAPIURL
-        let url = URL(string: "\(baseURL)/workouts/completions?limit=\(limit)&offset=\(offset)")!
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        // Set auth headers - E2E test mode or normal JWT
-        #if DEBUG
-        if let testAuthSecret = TestAuthStore.shared.authSecret,
-           let testUserId = TestAuthStore.shared.userId,
-           !testAuthSecret.isEmpty {
-            request.setValue(testAuthSecret, forHTTPHeaderField: "X-Test-Auth")
-            request.setValue(testUserId, forHTTPHeaderField: "X-Test-User-Id")
-            print("[ActivityHistory] Using X-Test-Auth header bypass for E2E tests")
-        } else if let token = PairingService.shared.getToken() {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        #else
-        if let token = PairingService.shared.getToken() {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        #endif
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        let responseBody = String(data: data, encoding: .utf8) ?? "empty"
-        print("[ActivityHistory] fetchCompletions - Status: \(httpResponse.statusCode)")
-        print("[ActivityHistory] Response: \(responseBody.prefix(500))")
-        logger.info("fetchCompletions - Status: \(httpResponse.statusCode), Body: \(responseBody)")
-
-        switch httpResponse.statusCode {
-        case 200:
-            let decoder = APIService.makeDecoder()
-
-            // Backend returns { "success": true, "completions": [...] }
-            // Try to decode as wrapped response first
-            do {
-                let wrappedResponse = try decoder.decode(CompletionsResponse.self, from: data)
-                print("[ActivityHistory] Successfully decoded \(wrappedResponse.completions.count) completions")
-                return wrappedResponse.completions
-            } catch let decodingError as DecodingError {
-                // Log detailed decoding error to help debug schema mismatches
-                var errorMsg = ""
-                switch decodingError {
-                case .typeMismatch(let type, let context):
-                    errorMsg = "Type mismatch: expected \(String(describing: type)) at \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
-                case .valueNotFound(let type, let context):
-                    errorMsg = "Value not found: \(String(describing: type)) at \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
-                case .keyNotFound(let key, let context):
-                    errorMsg = "Key not found: '\(key.stringValue)' at \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
-                case .dataCorrupted(let context):
-                    errorMsg = "Data corrupted at \(context.codingPath.map { $0.stringValue }.joined(separator: ".")): \(context.debugDescription)"
-                @unknown default:
-                    errorMsg = "Unknown decode error: \(decodingError.localizedDescription)"
-                }
-                print("[ActivityHistory] DECODE ERROR: \(errorMsg)")
-                print("[ActivityHistory] Response was: \(responseBody.prefix(500))")
-                logger.error("fetchCompletions - \(errorMsg)")
-                logger.error("fetchCompletions - Response was: \(responseBody.prefix(500))")
-                // Log to DebugLogService for in-app visibility
-                Task { @MainActor in
-                    DebugLogService.shared.logAPIError(
-                        endpoint: "/workouts/completions",
-                        method: "GET",
-                        statusCode: 200,
-                        response: String(responseBody.prefix(500)),
-                        error: decodingError
-                    )
-                }
-                return []
-            } catch {
-                print("[ActivityHistory] DECODE ERROR: \(error.localizedDescription)")
-                logger.error("fetchCompletions - Decode error: \(error.localizedDescription)")
-                return []
-            }
-        case 401:
-            throw APIError.unauthorized
-        case 404, 500:
-            // Endpoint may not exist yet or backend error - return empty array for now
-            print("[ActivityHistory] Got \(httpResponse.statusCode) - returning empty")
-            logger.warning("fetchCompletions - Returning empty for status \(httpResponse.statusCode): \(responseBody)")
-            // Log to DebugLogService for visibility
-            Task { @MainActor in
-                DebugLogService.shared.log(
-                    "Completions: HTTP \(httpResponse.statusCode)",
-                    details: String(responseBody.prefix(300)),
-                    metadata: ["Status": "\(httpResponse.statusCode)"]
-                )
-            }
-            return []
-        default:
-            // Include response body in error for debugging
-            logger.error("fetchCompletions - Server error \(httpResponse.statusCode): \(responseBody)")
-            throw APIError.serverErrorWithBody(httpResponse.statusCode, responseBody)
-        }
-    }
-}
-
-// MARK: - Response Wrapper
-
-/// Backend returns completions wrapped in { "success": true, "completions": [...] }
-private struct CompletionsResponse: Codable {
-    let success: Bool
-    let completions: [WorkoutCompletion]
-}

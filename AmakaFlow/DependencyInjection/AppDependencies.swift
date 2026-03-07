@@ -114,25 +114,29 @@ class MockAPIService: APIServiceProviding {
     var confirmedWorkoutId: String?
     var reportSyncFailedCalled = false
     var fetchProfileCalled = false
+    var fetchCompletionsCalled = false
+    var fetchCompletionsResult: Result<[WorkoutCompletion], Error> = .success([])
+    var fetchCompletionDetailCalled = false
+    var fetchCompletionDetailResult: Result<WorkoutCompletionDetail, Error>?
 
     // MARK: - Protocol Implementation
 
-    func fetchWorkouts() async throws -> [Workout] {
+    func fetchWorkouts(isRetry: Bool) async throws -> [Workout] {
         fetchWorkoutsCalled = true
         return try fetchWorkoutsResult.get()
     }
 
-    func fetchScheduledWorkouts() async throws -> [ScheduledWorkout] {
+    func fetchScheduledWorkouts(isRetry: Bool) async throws -> [ScheduledWorkout] {
         fetchScheduledWorkoutsCalled = true
         return try fetchScheduledWorkoutsResult.get()
     }
 
-    func fetchPushedWorkouts() async throws -> [Workout] {
+    func fetchPushedWorkouts(isRetry: Bool) async throws -> [Workout] {
         fetchPushedWorkoutsCalled = true
         return try fetchPushedWorkoutsResult.get()
     }
 
-    func fetchPendingWorkouts() async throws -> [Workout] {
+    func fetchPendingWorkouts(isRetry: Bool) async throws -> [Workout] {
         fetchPendingWorkoutsCalled = true
         return try fetchPendingWorkoutsResult.get()
     }
@@ -227,6 +231,19 @@ class MockAPIService: APIServiceProviding {
     func fetchProfile() async throws -> UserProfile {
         fetchProfileCalled = true
         guard let result = fetchProfileResult else {
+            throw APIError.notImplemented
+        }
+        return try result.get()
+    }
+
+    func fetchCompletions(limit: Int, offset: Int) async throws -> [WorkoutCompletion] {
+        fetchCompletionsCalled = true
+        return try fetchCompletionsResult.get()
+    }
+
+    func fetchCompletionDetail(id: String) async throws -> WorkoutCompletionDetail {
+        fetchCompletionDetailCalled = true
+        guard let result = fetchCompletionDetailResult else {
             throw APIError.notImplemented
         }
         return try result.get()

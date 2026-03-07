@@ -17,11 +17,11 @@ class FixtureAPIService: APIServiceProviding {
 
     // MARK: - Reads (from fixtures)
 
-    func fetchWorkouts() async throws -> [Workout] {
+    func fetchWorkouts(isRetry: Bool) async throws -> [Workout] {
         try FixtureLoader.loadWorkouts()
     }
 
-    func fetchScheduledWorkouts() async throws -> [ScheduledWorkout] {
+    func fetchScheduledWorkouts(isRetry: Bool) async throws -> [ScheduledWorkout] {
         // Wrap first two fixture workouts as scheduled for today/tomorrow
         let workouts = try FixtureLoader.loadWorkouts()
         return workouts.prefix(2).enumerated().map { index, workout in
@@ -34,11 +34,11 @@ class FixtureAPIService: APIServiceProviding {
         }
     }
 
-    func fetchPushedWorkouts() async throws -> [Workout] {
+    func fetchPushedWorkouts(isRetry: Bool) async throws -> [Workout] {
         try FixtureLoader.loadWorkouts()
     }
 
-    func fetchPendingWorkouts() async throws -> [Workout] {
+    func fetchPendingWorkouts(isRetry: Bool) async throws -> [Workout] {
         try FixtureLoader.loadWorkouts()
     }
 
@@ -117,6 +117,14 @@ class FixtureAPIService: APIServiceProviding {
             name: "Fixture Test User",
             avatarUrl: nil
         )
+    }
+
+    func fetchCompletions(limit: Int, offset: Int) async throws -> [WorkoutCompletion] {
+        return WorkoutCompletion.sampleData
+    }
+
+    func fetchCompletionDetail(id: String) async throws -> WorkoutCompletionDetail {
+        return WorkoutCompletionDetail.sample
     }
 }
 #endif
