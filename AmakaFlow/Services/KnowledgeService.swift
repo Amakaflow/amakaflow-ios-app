@@ -134,8 +134,12 @@ class KnowledgeService: ObservableObject {
 
     /// Search knowledge cards by query string.
     func searchCards(query: String, limit: Int = 20) async throws -> KnowledgeCardListResponse {
-        let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
-        guard let url = URL(string: "\(baseURL)/knowledge/cards/search?q=\(encodedQuery)&limit=\(limit)") else {
+        var components = URLComponents(string: "\(baseURL)/knowledge/cards/search")
+        components?.queryItems = [
+            URLQueryItem(name: "q", value: query),
+            URLQueryItem(name: "limit", value: "\(limit)")
+        ]
+        guard let url = components?.url else {
             throw KnowledgeServiceError.invalidURL
         }
 
@@ -166,6 +170,10 @@ class KnowledgeService: ObservableObject {
     /// Ingest a new knowledge card from a URL or raw text.
     /// Provide either `url` or `text`; `sourceType` is inferred automatically.
     func ingest(url: String? = nil, text: String? = nil) async throws -> KnowledgeCard {
+        guard url != nil || text != nil else {
+            throw KnowledgeServiceError.invalidURL
+        }
+
         guard let endpoint = URL(string: "\(baseURL)/knowledge/cards") else {
             throw KnowledgeServiceError.invalidURL
         }
@@ -217,14 +225,15 @@ class KnowledgeService: ObservableObject {
 
         print("[KnowledgeService] deleteCard - id: \(id), URL: \(url.absoluteString)")
 
-        let (_, response) = try await session.data(for: request)
+        let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw KnowledgeServiceError.invalidResponse
         }
 
         guard (200..<300).contains(httpResponse.statusCode) else {
-            throw KnowledgeServiceError.httpError(httpResponse.statusCode, nil)
+            let body = String(data: data, encoding: .utf8)
+            throw KnowledgeServiceError.httpError(httpResponse.statusCode, body)
         }
         // 204 No Content — nothing to decode
     }
