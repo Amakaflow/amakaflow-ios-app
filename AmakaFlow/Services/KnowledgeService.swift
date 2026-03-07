@@ -20,6 +20,7 @@ struct KnowledgeCard: Identifiable, Codable {
     let sourceUrl: String?
     let processingStatus: String
     let tags: [String]
+    let visibility: String?
     let createdAt: String
 
     enum CodingKeys: String, CodingKey {
@@ -32,6 +33,7 @@ struct KnowledgeCard: Identifiable, Codable {
         case sourceUrl = "source_url"
         case processingStatus = "processing_status"
         case tags
+        case visibility
         case createdAt = "created_at"
     }
 }

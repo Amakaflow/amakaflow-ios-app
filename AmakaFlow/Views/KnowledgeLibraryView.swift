@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct KnowledgeLibraryView: View {
-    @StateObject private var service = KnowledgeService.shared
+    private let service = KnowledgeService.shared
     @State private var searchText: String = ""
     @State private var selectedFilter: KnowledgeFilter = .all
     @State private var cards: [KnowledgeCard] = []
@@ -29,13 +29,13 @@ struct KnowledgeLibraryView: View {
         case .all:
             return cards
         case .articles:
-            return cards.filter { $0.sourceType == "article" || $0.sourceType == "url" }
+            return cards.filter { $0.sourceType == "url" }
         case .videos:
-            return cards.filter { $0.sourceType == "video" }
+            return cards.filter { $0.sourceType == "youtube" }
         case .notes:
-            return cards.filter { $0.sourceType == "manual" || $0.sourceType == "note" }
+            return cards.filter { $0.sourceType == "manual" }
         case .curated:
-            return cards.filter { $0.sourceType == "curated" }
+            return cards.filter { $0.visibility == "curated" }
         }
     }
 
@@ -232,9 +232,12 @@ private struct KnowledgeCardRow: View {
 
     private var sourceIcon: String {
         switch card.sourceType {
-        case "video": return "play.circle.fill"
-        case "article", "url": return "doc.richtext"
-        case "manual", "note": return "note.text"
+        case "youtube": return "play.circle.fill"
+        case "url": return "doc.richtext"
+        case "manual": return "note.text"
+        case "pdf": return "doc.fill"
+        case "voice_note": return "mic.fill"
+        case "chat_extract": return "bubble.left.fill"
         case "curated": return "star.fill"
         default: return "link"
         }
@@ -242,9 +245,12 @@ private struct KnowledgeCardRow: View {
 
     private var sourceIconColor: Color {
         switch card.sourceType {
-        case "video": return Theme.Colors.accentRed
-        case "article", "url": return Theme.Colors.accentBlue
-        case "manual", "note": return Theme.Colors.accentGreen
+        case "youtube": return Theme.Colors.accentRed
+        case "url": return Theme.Colors.accentBlue
+        case "manual": return Theme.Colors.accentGreen
+        case "pdf": return Theme.Colors.accentOrange
+        case "voice_note": return Theme.Colors.accentBlue
+        case "chat_extract": return Theme.Colors.accentGreen
         case "curated": return Theme.Colors.accentOrange
         default: return Theme.Colors.textSecondary
         }

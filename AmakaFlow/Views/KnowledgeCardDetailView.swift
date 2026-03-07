@@ -124,10 +124,11 @@ struct KnowledgeCardDetailView: View {
                 "Deload weeks prevent overtraining and aid recovery.",
                 "Macrocycles, mesocycles, and microcycles provide structure."
             ],
-            sourceType: "article",
+            sourceType: "url",
             sourceUrl: "https://example.com/periodization",
             processingStatus: "complete",
             tags: ["training", "periodization", "strength"],
+            visibility: nil,
             createdAt: "2026-03-07T00:00:00Z"
         ))
     }
