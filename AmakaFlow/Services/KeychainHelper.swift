@@ -1,6 +1,8 @@
 import Foundation
 import Security
 
+// AMA-973: Keychain helper for secure data storage
+
 class KeychainHelper {
     static let shared = KeychainHelper()
     private let service = "com.amakaflow.companion"
