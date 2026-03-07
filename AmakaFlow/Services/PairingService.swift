@@ -401,14 +401,8 @@ class PairingService: ObservableObject {
         let tk = tokenKey
         let pk = profileKey
         Task.detached(priority: .userInitiated) {
-            let tokenDeleted = KeychainHelper.shared.delete(for: tk)
-            let profileDeleted = KeychainHelper.shared.delete(for: pk)
-            if !tokenDeleted {
-                print("[PairingService] WARNING: Failed to delete token from Keychain during unpair")
-            }
-            if !profileDeleted {
-                print("[PairingService] WARNING: Failed to delete profile from Keychain during unpair")
-            }
+            KeychainHelper.shared.delete(for: tk)
+            KeychainHelper.shared.delete(for: pk)
         }
         
         Task { @MainActor in
