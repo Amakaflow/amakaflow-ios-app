@@ -40,6 +40,11 @@ class ShareViewController: UIViewController {
         default:            baseURL = "https://chat-api.staging.amakaflow.com"
         }
 
+        guard testAuth?.isEmpty == false || token?.isEmpty == false else {
+            finish(success: false)
+            return
+        }
+
         guard let endpoint = URL(string: "\(baseURL)/api/knowledge/ingest") else {
             finish(success: false)
             return
@@ -58,8 +63,15 @@ class ShareViewController: UIViewController {
         let body: [String: Any] = ["source_type": "url", "source_url": urlString]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
-        URLSession.shared.dataTask(with: request) { [weak self] _, _, _ in
-            DispatchQueue.main.async { self?.finish(success: true) }
+        URLSession.shared.dataTask(with: request) { [weak self] _, response, error in
+            DispatchQueue.main.async {
+                if let error {
+                    self?.finish(success: false)
+                    return
+                }
+                let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+                self?.finish(success: (200..<300).contains(statusCode))
+            }
         }.resume()
     }
 
