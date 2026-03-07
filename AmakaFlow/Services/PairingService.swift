@@ -15,6 +15,10 @@ class PairingService: ObservableObject {
     @Published var userProfile: UserProfile?
     @Published var needsReauth: Bool = false
     @Published var lastTokenRefresh: Date?
+    @Published var isInitialized: Bool = false  // Track when cache is ready (AMA-969 fix)
+
+    // Cache token in memory to avoid blocking main thread with Keychain reads (AMA-969)
+    private var cachedToken: String?
 
     private init() {
         // Handle E2E test auth bypass (AMA-232)
@@ -85,6 +89,10 @@ class PairingService: ObservableObject {
             }.value
             self.isPaired = token != nil
             self.userProfile = profile
+            // Cache token to avoid blocking getToken() calls (AMA-969)
+            self.cachedToken = token
+            // Mark initialization complete (AMA-969 fix)
+            self.isInitialized = true
             #if DEBUG
             print("[PairingService] Initialized with isPaired=\(self.isPaired), hasToken=\(token != nil)")
             #endif
@@ -238,7 +246,7 @@ class PairingService: ObservableObject {
                 decoder.dateDecodingStrategy = .iso8601
                 let result = try decoder.decode(TokenRefreshResponse.self, from: data)
 
-                try storeToken(result.jwt)
+                storeToken(result.jwt)
                 storeLastTokenRefresh(result.refreshedAt)
 
                 await MainActor.run {
@@ -329,7 +337,7 @@ class PairingService: ObservableObject {
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             let result = try decoder.decode(PairingResponse.self, from: data)
-            try storeToken(result.jwt)
+            storeToken(result.jwt)
             print("[PairingService] JWT stored successfully")
             if let profile = result.profile {
                 storeProfile(profile)
@@ -365,19 +373,38 @@ class PairingService: ObservableObject {
 
     // MARK: - Token Management
 
-    func storeToken(_ jwt: String) throws {
-        if !KeychainHelper.shared.save(jwt, for: tokenKey) {
-            throw PairingError.tokenStorageFailed
+    func storeToken(_ jwt: String) {
+        // Save to Keychain in background to avoid blocking main thread (AMA-969)
+        // Update cache immediately on main thread
+        cachedToken = jwt
+        
+        let key = tokenKey
+        Task.detached(priority: .userInitiated) {
+            let success = KeychainHelper.shared.save(jwt, for: key)
+            if !success {
+                print("[PairingService] ERROR: Failed to store token in Keychain - token will be lost on app restart")
+            }
         }
     }
 
     func getToken() -> String? {
-        return KeychainHelper.shared.readString(for: tokenKey)
+        // Return cached token to avoid blocking main thread with Keychain reads (AMA-969)
+        // The cache is updated by storeToken() and initialized in init()
+        return cachedToken
     }
 
     func unpair() {
-        KeychainHelper.shared.delete(for: tokenKey)
-        KeychainHelper.shared.delete(for: profileKey)
+        // Clear cache immediately
+        cachedToken = nil
+        
+        // Delete from Keychain in background to avoid blocking (AMA-969)
+        let tk = tokenKey
+        let pk = profileKey
+        Task.detached(priority: .userInitiated) {
+            KeychainHelper.shared.delete(for: tk)
+            KeychainHelper.shared.delete(for: pk)
+        }
+        
         Task { @MainActor in
             self.isPaired = false
             self.userProfile = nil
@@ -391,14 +418,18 @@ class PairingService: ObservableObject {
     // MARK: - Profile Storage
 
     private func storeProfile(_ profile: UserProfile) {
-        if let data = try? JSONEncoder().encode(profile) {
-            _ = KeychainHelper.shared.save(data, for: profileKey)
+        // Save to Keychain in background to avoid blocking main thread (AMA-969)
+        guard let data = try? JSONEncoder().encode(profile) else {
+            print("[PairingService] ERROR: Failed to encode profile for storage")
+            return
         }
-    }
-
-    private func loadProfile() -> UserProfile? {
-        guard let data = KeychainHelper.shared.read(for: profileKey) else { return nil }
-        return try? JSONDecoder().decode(UserProfile.self, from: data)
+        let key = profileKey
+        Task.detached(priority: .userInitiated) {
+            let success = KeychainHelper.shared.save(data, for: key)
+            if !success {
+                print("[PairingService] ERROR: Failed to store profile in Keychain")
+            }
+        }
     }
 
     // MARK: - Token Refresh Timestamp Storage

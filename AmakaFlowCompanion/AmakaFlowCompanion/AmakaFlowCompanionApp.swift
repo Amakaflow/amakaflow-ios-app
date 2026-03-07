@@ -60,6 +60,10 @@ struct AmakaFlowCompanionApp: App {
 
             // Enable experimental logging
             options.experimental.enableLogs = true
+
+            // App hang tracking - detect when app freezes for at least 2000ms (AMA-971)
+            options.enableAppHangTracking = true
+            options.appHangTimeoutInterval = 2.0
         }
     }
 
