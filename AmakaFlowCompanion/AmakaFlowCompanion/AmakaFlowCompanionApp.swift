@@ -42,6 +42,18 @@ struct AmakaFlowCompanionApp: App {
         SentrySDK.start { options in
             options.dsn = "https://7fa7415e248b5a064d84f74679719797@o951666.ingest.us.sentry.io/4510638875017216"
 
+            // Environment tagging: separates local/simulator events from production
+            #if DEBUG
+            options.environment = "debug"
+            #else
+            options.environment = "production"
+            #endif
+
+            // Release tracking: ties errors to exact app version + build
+            let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
+            let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
+            options.releaseName = "com.myamaka.AmakaFlowCompanion@\(version)+\(build)"
+
             // Adds IP for users
             options.sendDefaultPii = true
 
