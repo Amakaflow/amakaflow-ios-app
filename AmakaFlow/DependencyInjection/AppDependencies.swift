@@ -114,6 +114,10 @@ class MockAPIService: APIServiceProviding {
     var confirmedWorkoutId: String?
     var reportSyncFailedCalled = false
     var fetchProfileCalled = false
+    var fetchCompletionsCalled = false
+    var fetchCompletionsResult: Result<[WorkoutCompletion], Error> = .success([])
+    var fetchCompletionDetailCalled = false
+    var fetchCompletionDetailResult: Result<WorkoutCompletionDetail, Error>?
 
     // MARK: - Protocol Implementation
 
@@ -227,6 +231,19 @@ class MockAPIService: APIServiceProviding {
     func fetchProfile() async throws -> UserProfile {
         fetchProfileCalled = true
         guard let result = fetchProfileResult else {
+            throw APIError.notImplemented
+        }
+        return try result.get()
+    }
+
+    func fetchCompletions(limit: Int, offset: Int) async throws -> [WorkoutCompletion] {
+        fetchCompletionsCalled = true
+        return try fetchCompletionsResult.get()
+    }
+
+    func fetchCompletionDetail(id: String) async throws -> WorkoutCompletionDetail {
+        fetchCompletionDetailCalled = true
+        guard let result = fetchCompletionDetailResult else {
             throw APIError.notImplemented
         }
         return try result.get()

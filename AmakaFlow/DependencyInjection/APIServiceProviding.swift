@@ -88,6 +88,14 @@ protocol APIServiceProviding {
 
     /// Fetch user profile from backend
     func fetchProfile() async throws -> UserProfile
+
+    // MARK: - Completion History
+
+    /// Fetch workout completions from backend with pagination
+    func fetchCompletions(limit: Int, offset: Int) async throws -> [WorkoutCompletion]
+
+    /// Fetch full workout completion detail
+    func fetchCompletionDetail(id: String) async throws -> WorkoutCompletionDetail
 }
 
 // MARK: - Default Parameter Extensions
@@ -136,6 +144,11 @@ extension APIServiceProviding {
     /// Convenience method with default deviceType and deviceId
     func reportSyncFailed(workoutId: String, error: String) async throws {
         try await reportSyncFailed(workoutId: workoutId, deviceType: "ios", error: error, deviceId: nil)
+    }
+
+    /// Convenience method with default pagination
+    func fetchCompletions() async throws -> [WorkoutCompletion] {
+        try await fetchCompletions(limit: 50, offset: 0)
     }
 }
 
