@@ -79,6 +79,7 @@ class PairingService: ObservableObject {
         let tokenKey = self.tokenKey
         let profileKey = self.profileKey
         Task {
+            // Use await .value to properly suspend main actor instead of blocking (AMA-1063)
             let (token, profile): (String?, UserProfile?) = await Task.detached(priority: .userInitiated) {
                 let t = KeychainHelper.shared.readString(for: tokenKey)
                 let p: UserProfile? = {
