@@ -12,16 +12,16 @@ protocol APIServiceProviding {
     // MARK: - Workouts
 
     /// Fetch workouts from backend
-    func fetchWorkouts() async throws -> [Workout]
+    func fetchWorkouts(isRetry: Bool) async throws -> [Workout]
 
     /// Fetch scheduled workouts from backend
-    func fetchScheduledWorkouts() async throws -> [ScheduledWorkout]
+    func fetchScheduledWorkouts(isRetry: Bool) async throws -> [ScheduledWorkout]
 
     /// Fetch workouts that have been pushed to this device
-    func fetchPushedWorkouts() async throws -> [Workout]
+    func fetchPushedWorkouts(isRetry: Bool) async throws -> [Workout]
 
     /// Fetch pending workouts from sync queue endpoint
-    func fetchPendingWorkouts() async throws -> [Workout]
+    func fetchPendingWorkouts(isRetry: Bool) async throws -> [Workout]
 
     /// Sync workout to backend
     func syncWorkout(_ workout: Workout) async throws
@@ -93,6 +93,26 @@ protocol APIServiceProviding {
 // MARK: - Default Parameter Extensions
 
 extension APIServiceProviding {
+    /// Convenience method with default isRetry
+    func fetchWorkouts() async throws -> [Workout] {
+        try await fetchWorkouts(isRetry: false)
+    }
+
+    /// Convenience method with default isRetry
+    func fetchScheduledWorkouts() async throws -> [ScheduledWorkout] {
+        try await fetchScheduledWorkouts(isRetry: false)
+    }
+
+    /// Convenience method with default isRetry
+    func fetchPushedWorkouts() async throws -> [Workout] {
+        try await fetchPushedWorkouts(isRetry: false)
+    }
+
+    /// Convenience method with default isRetry
+    func fetchPendingWorkouts() async throws -> [Workout] {
+        try await fetchPendingWorkouts(isRetry: false)
+    }
+
     /// Convenience method with default sportHint
     func parseVoiceWorkout(transcription: String) async throws -> VoiceWorkoutParseResponse {
         try await parseVoiceWorkout(transcription: transcription, sportHint: nil)

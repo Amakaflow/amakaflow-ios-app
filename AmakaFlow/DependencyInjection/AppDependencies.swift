@@ -117,22 +117,22 @@ class MockAPIService: APIServiceProviding {
 
     // MARK: - Protocol Implementation
 
-    func fetchWorkouts() async throws -> [Workout] {
+    func fetchWorkouts(isRetry: Bool) async throws -> [Workout] {
         fetchWorkoutsCalled = true
         return try fetchWorkoutsResult.get()
     }
 
-    func fetchScheduledWorkouts() async throws -> [ScheduledWorkout] {
+    func fetchScheduledWorkouts(isRetry: Bool) async throws -> [ScheduledWorkout] {
         fetchScheduledWorkoutsCalled = true
         return try fetchScheduledWorkoutsResult.get()
     }
 
-    func fetchPushedWorkouts() async throws -> [Workout] {
+    func fetchPushedWorkouts(isRetry: Bool) async throws -> [Workout] {
         fetchPushedWorkoutsCalled = true
         return try fetchPushedWorkoutsResult.get()
     }
 
-    func fetchPendingWorkouts() async throws -> [Workout] {
+    func fetchPendingWorkouts(isRetry: Bool) async throws -> [Workout] {
         fetchPendingWorkoutsCalled = true
         return try fetchPendingWorkoutsResult.get()
     }
