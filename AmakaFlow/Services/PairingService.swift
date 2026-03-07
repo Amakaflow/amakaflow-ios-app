@@ -438,11 +438,6 @@ class PairingService: ObservableObject {
         }
     }
 
-    private func loadProfile() -> UserProfile? {
-        guard let data = KeychainHelper.shared.read(for: profileKey) else { return nil }
-        return try? JSONDecoder().decode(UserProfile.self, from: data)
-    }
-
     // MARK: - Token Refresh Timestamp Storage
 
     private func storeLastTokenRefresh(_ date: Date) {
