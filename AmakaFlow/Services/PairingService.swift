@@ -16,6 +16,9 @@ class PairingService: ObservableObject {
     @Published var needsReauth: Bool = false
     @Published var lastTokenRefresh: Date?
 
+    // Cache token in memory to avoid blocking main thread with Keychain reads (AMA-969)
+    private var cachedToken: String?
+
     private init() {
         // Handle E2E test auth bypass (AMA-232)
         // Check for test mode BEFORE setting isPaired so SwiftUI sees the correct initial state
@@ -85,6 +88,8 @@ class PairingService: ObservableObject {
             }.value
             self.isPaired = token != nil
             self.userProfile = profile
+            // Cache token to avoid blocking getToken() calls (AMA-969)
+            self.cachedToken = token
             #if DEBUG
             print("[PairingService] Initialized with isPaired=\(self.isPaired), hasToken=\(token != nil)")
             #endif
@@ -366,18 +371,34 @@ class PairingService: ObservableObject {
     // MARK: - Token Management
 
     func storeToken(_ jwt: String) throws {
-        if !KeychainHelper.shared.save(jwt, for: tokenKey) {
-            throw PairingError.tokenStorageFailed
+        // Save to Keychain in background to avoid blocking main thread (AMA-969)
+        // Update cache immediately on main thread
+        cachedToken = jwt
+        
+        let key = tokenKey
+        Task.detached(priority: .userInitiated) {
+            _ = KeychainHelper.shared.save(jwt, for: key)
         }
     }
 
     func getToken() -> String? {
-        return KeychainHelper.shared.readString(for: tokenKey)
+        // Return cached token to avoid blocking main thread with Keychain reads (AMA-969)
+        // The cache is updated by storeToken() and initialized in init()
+        return cachedToken
     }
 
     func unpair() {
-        KeychainHelper.shared.delete(for: tokenKey)
-        KeychainHelper.shared.delete(for: profileKey)
+        // Clear cache immediately
+        cachedToken = nil
+        
+        // Delete from Keychain in background to avoid blocking (AMA-969)
+        let tk = tokenKey
+        let pk = profileKey
+        Task.detached(priority: .userInitiated) {
+            KeychainHelper.shared.delete(for: tk)
+            KeychainHelper.shared.delete(for: pk)
+        }
+        
         Task { @MainActor in
             self.isPaired = false
             self.userProfile = nil
@@ -391,8 +412,12 @@ class PairingService: ObservableObject {
     // MARK: - Profile Storage
 
     private func storeProfile(_ profile: UserProfile) {
+        // Save to Keychain in background to avoid blocking main thread (AMA-969)
         if let data = try? JSONEncoder().encode(profile) {
-            _ = KeychainHelper.shared.save(data, for: profileKey)
+            let key = profileKey
+            Task.detached(priority: .userInitiated) {
+                _ = KeychainHelper.shared.save(data, for: key)
+            }
         }
     }
 
