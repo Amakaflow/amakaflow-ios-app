@@ -386,6 +386,7 @@ class PairingService: ObservableObject {
                 print("[PairingService] ERROR: Failed to store token in Keychain - token will be lost on app restart")
             }
         }
+        UserDefaults(suiteName: "group.com.amakaflow.companion")?.set(jwt, forKey: "auth_token")
     }
 
     func getToken() -> String? {

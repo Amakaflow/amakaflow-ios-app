@@ -154,4 +154,22 @@ extension APIServiceProviding {
 
 // MARK: - APIService Conformance
 
-extension APIService: APIServiceProviding {}
+extension APIService: APIServiceProviding {
+    // Swift default-parameter methods do not automatically satisfy protocol requirements
+    // for the no-argument variant, so we provide explicit forwarding stubs here.
+    func fetchWorkouts() async throws -> [Workout] {
+        try await fetchWorkouts(isRetry: false)
+    }
+
+    func fetchScheduledWorkouts() async throws -> [ScheduledWorkout] {
+        try await fetchScheduledWorkouts(isRetry: false)
+    }
+
+    func fetchPushedWorkouts() async throws -> [Workout] {
+        try await fetchPushedWorkouts(isRetry: false)
+    }
+
+    func fetchPendingWorkouts() async throws -> [Workout] {
+        try await fetchPendingWorkouts(isRetry: false)
+    }
+}
