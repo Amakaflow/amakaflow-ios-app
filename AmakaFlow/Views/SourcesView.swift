@@ -45,6 +45,9 @@ struct SourcesView: View {
             .sheet(isPresented: $showingManualInstagramImport) {
                 ManualInstagramIngestionView(apiService: APIService.shared)
             }
+            .sheet(isPresented: $showingAIImport) {
+                AIImportView()
+            }
         }
     }
 
