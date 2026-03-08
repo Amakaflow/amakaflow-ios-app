@@ -63,7 +63,8 @@ struct AmakaFlowCompanionApp: App {
 
             // Session Replay (AMA-1084)
             // 10% of all sessions captured; 100% of sessions with errors/hangs.
-            // Auto-disabled on iOS 26+ / Xcode 26+ (Liquid Glass masking issue) by SDK 8.57+.
+            // sessionReplay is a top-level SentryOptions property (not under experimental) in sentry-cocoa 8.57+.
+            // Auto-disabled on iOS 26+ / Liquid Glass masking issue — SDK handles this automatically.
             // Default masking: all text, images, and user input — no custom config needed.
             options.sessionReplay.sessionSampleRate = 0.1
             options.sessionReplay.onErrorSampleRate = 1.0
