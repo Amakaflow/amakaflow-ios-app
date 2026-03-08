@@ -217,6 +217,8 @@ class WorkoutCompletionService: ObservableObject {
     private let networkMonitor = NWPathMonitor()
     private var isNetworkAvailable = true
     private var cancellables = Set<AnyCancellable>()
+    /// Reusable background queue for saving pending completions (AMA-1075)
+    private let saveQueue = DispatchQueue(label: "com.amakaflow.workoutcompletion.save", qos: .utility)
 
     private init() {
         // Load pending queue in background to avoid blocking main thread (AMA-1075)
@@ -502,8 +504,8 @@ class WorkoutCompletionService: ObservableObject {
 
     private func savePendingCompletions(_ completions: [PendingCompletion]) {
         // Save on background queue to avoid blocking main thread (AMA-1075)
-        let queue = DispatchQueue(label: "com.amakaflow.workoutcompletion.save", qos: .utility)
-        queue.async {
+        // Uses class-level queue property to avoid O(n) queue allocations (AMA-1075)
+        saveQueue.async {
             do {
                 let encoder = JSONEncoder()
                 encoder.dateEncodingStrategy = .iso8601

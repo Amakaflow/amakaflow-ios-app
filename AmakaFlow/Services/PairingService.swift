@@ -93,7 +93,12 @@ class PairingService: ObservableObject {
                 let t = KeychainHelper.shared.readString(for: tokenKey)
                 let p: UserProfile? = {
                     guard let data = KeychainHelper.shared.read(for: profileKey) else { return nil }
-                    return try? JSONDecoder().decode(UserProfile.self, from: data)
+                    guard let profile = try? JSONDecoder().decode(UserProfile.self, from: data) else {
+                        // Log silent failure for debugging (AMA-1075)
+                        print("[PairingService] Failed to decode UserProfile from Keychain")
+                        return nil
+                    }
+                    return profile
                 }()
                 // Load last token refresh from UserDefaults in background (AMA-1075)
                 let lr = UserDefaults.standard.object(forKey: refreshKey) as? Date
@@ -372,7 +377,14 @@ class PairingService: ObservableObject {
             }
             return result
         case 400:
-            let error = try? JSONDecoder().decode(APIErrorResponse.self, from: data)
+            let error: APIErrorResponse? = {
+                guard let e = try? JSONDecoder().decode(APIErrorResponse.self, from: data) else {
+                    // Log silent failure for debugging (AMA-1075)
+                    print("[PairingService] Failed to decode APIErrorResponse")
+                    return nil
+                }
+                return e
+            }()
             print("[PairingService] Invalid code: \(error?.detail ?? "unknown")")
             throw PairingError.invalidCode(error?.detail ?? "Invalid code")
         case 410:

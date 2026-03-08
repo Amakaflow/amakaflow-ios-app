@@ -12,6 +12,13 @@ import Combine
 class WatchConnectivityManager: NSObject, ObservableObject {
     static let shared = WatchConnectivityManager()
 
+    // MARK: - Thread Safety (AMA-1075)
+    // Note: @MainActor was removed from this class to allow async methods that need to
+    // access the WCSession property without blocking. The session property is thread-safe
+    // by design (WCSession is UIKit/Foundation object with its own synchronization).
+    // All accesses to session are wrapped in async MainActor.run blocks where needed,
+    // ensuring proper main thread access for UI updates while allowing background execution.
+
     @Published var isWatchAppInstalled = false
     @Published var isWatchReachable = false
     @Published var lastError: Error?

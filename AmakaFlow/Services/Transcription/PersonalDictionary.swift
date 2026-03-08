@@ -138,6 +138,8 @@ final class PersonalDictionary: ObservableObject {
     private func loadFromStorageBackground() async -> ([String: String], [String], Date?) {
         guard let data = UserDefaults.standard.data(forKey: storageKey),
               let stored = try? JSONDecoder().decode(StoredDictionary.self, from: data) else {
+            // Log silent failure for debugging (AMA-1075)
+            print("[PersonalDictionary] Failed to load from storage - using defaults")
             return ([], [], nil)
         }
 
@@ -148,6 +150,8 @@ final class PersonalDictionary: ObservableObject {
     private func loadFromStorage() {
         guard let data = UserDefaults.standard.data(forKey: storageKey),
               let stored = try? JSONDecoder().decode(StoredDictionary.self, from: data) else {
+            // Log silent failure for debugging (AMA-1075)
+            print("[PersonalDictionary] Failed to load from storage - using defaults")
             return
         }
 
@@ -174,13 +178,7 @@ final class PersonalDictionary: ObservableObject {
     }
 
     private func saveToStorageBackground() {
-        let stored = StoredDictionary(
-            corrections: [:],  // Will be captured from main actor
-            customTerms: [],
-            lastSyncDate: nil
-        )
-
-        // Need to get current values from main actor
+        // Get current values from main actor and save to storage (AMA-1075)
         Task { @MainActor in
             let currentCorrections = self.corrections
             let currentCustomTerms = self.customTerms
@@ -194,6 +192,9 @@ final class PersonalDictionary: ObservableObject {
 
             if let data = try? JSONEncoder().encode(storedToSave) {
                 UserDefaults.standard.set(data, forKey: storageKey)
+            } else {
+                // Log silent failure for debugging (AMA-1075)
+                print("[PersonalDictionary] Failed to encode data for storage")
             }
         }
     }
@@ -215,6 +216,9 @@ final class PersonalDictionary: ObservableObject {
 
                 if let data = try? JSONEncoder().encode(stored) {
                     UserDefaults.standard.set(data, forKey: storageKey)
+                } else {
+                    // Log silent failure for debugging (AMA-1075)
+                    print("[PersonalDictionary] Failed to encode data for storage")
                 }
             }
         }
