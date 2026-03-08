@@ -61,6 +61,13 @@ struct AmakaFlowCompanionApp: App {
             // Enable experimental logging
             options.experimental.enableLogs = true
 
+            // Session Replay (AMA-1084)
+            // 10% of all sessions captured; 100% of sessions with errors/hangs.
+            // Auto-disabled on iOS 26+ / Xcode 26+ (Liquid Glass masking issue) by SDK 8.57+.
+            // Default masking: all text, images, and user input — no custom config needed.
+            options.experimental.sessionReplay.sessionSampleRate = 0.1
+            options.experimental.sessionReplay.onErrorSampleRate = 1.0
+
             // App hang tracking - detect when app freezes for at least 2000ms (AMA-971)
             options.enableAppHangTracking = true
             options.appHangTimeoutInterval = 2.0
