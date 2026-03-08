@@ -149,8 +149,15 @@ struct HomeView: View {
                 VoiceWorkoutView()
             }
             .onAppear {
-                // Check for saved workout progress
-                savedProgress = SavedWorkoutProgress.load()
+                // Load saved workout progress on background to avoid blocking main thread (AMA-1075)
+                Task {
+                    let progress = await Task.detached(priority: .utility) {
+                        SavedWorkoutProgress.load()
+                    }.value
+                    await MainActor.run {
+                        savedProgress = progress
+                    }
+                }
             }
             .overlay(alignment: .top) {
                 // Invisible marker for Maestro E2E tests (container views

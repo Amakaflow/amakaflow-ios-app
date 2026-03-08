@@ -25,8 +25,12 @@ final class BluetoothKick: NSObject, CBCentralManagerDelegate {
     private var mgr: CBCentralManager?
     var onStateChange: ((CBManagerState) -> Void)?
 
+    // Background queue for CBCentralManager to avoid blocking main thread (AMA-1075)
+    private let btQueue = DispatchQueue(label: "com.amakaflow.bluetoothkick", qos: .userInitiated)
+
     func start() {
-        mgr = CBCentralManager(delegate: self, queue: nil)
+        // Use explicit background queue instead of nil/main thread (AMA-1075)
+        mgr = CBCentralManager(delegate: self, queue: btQueue)
     }
 
     nonisolated func centralManagerDidUpdateState(_ central: CBCentralManager) {
@@ -136,7 +140,16 @@ class GarminConnectManager: NSObject, ObservableObject {
         }
 
         setupConnectIQ()
-        loadSavedDevice()
+        // Load saved device in background to avoid blocking main thread (AMA-1075)
+        Task.detached(priority: .utility) { [weak self] in
+            let device = await self?.loadSavedDeviceBackground()
+            await MainActor.run {
+                self?.savedDeviceInfo = device
+                if let device = device {
+                    print("⌚ [DEBUG] Loaded saved device: \(device.friendlyName) (\(device.uuid))")
+                }
+            }
+        }
         setupNotifications()
 
         // Defer Bluetooth initialization to avoid blocking app launch (AMA-1062)
@@ -251,7 +264,16 @@ class GarminConnectManager: NSObject, ObservableObject {
 
     // MARK: - Device Persistence
 
-    /// Loads saved device from UserDefaults
+    /// Loads saved device from UserDefaults on background thread (AMA-1075)
+    private func loadSavedDeviceBackground() async -> SavedDeviceInfo? {
+        guard let data = UserDefaults.standard.data(forKey: savedDeviceKey),
+              let deviceInfo = try? JSONDecoder().decode(SavedDeviceInfo.self, from: data) else {
+            return nil
+        }
+        return deviceInfo
+    }
+
+    /// Loads saved device from UserDefaults (synchronous version for compatibility)
     private func loadSavedDevice() {
         if let data = UserDefaults.standard.data(forKey: savedDeviceKey),
            let deviceInfo = try? JSONDecoder().decode(SavedDeviceInfo.self, from: data) {

@@ -70,8 +70,19 @@ class DebugLogService: ObservableObject {
 
     @Published private(set) var entries: [DebugLogEntry] = []
 
+    // Background serial queue for debounced saves
+    private let saveQueue = DispatchQueue(label: "com.amakaflow.debuglog.save", qos: .utility)
+    private var saveWorkItem: DispatchWorkItem?
+    private let saveDebounceInterval: TimeInterval = 0.5
+
     private init() {
-        loadEntries()
+        // Load entries on background queue to avoid blocking main thread (AMA-1075)
+        Task.detached(priority: .utility) { [weak self] in
+            let loadedEntries = await self?.loadEntriesBackground() ?? []
+            await MainActor.run {
+                self?.entries = loadedEntries
+            }
+        }
     }
 
     // MARK: - Public API
@@ -225,13 +236,32 @@ class DebugLogService: ObservableObject {
             entries = Array(entries.prefix(maxEntries))
         }
 
-        saveEntries()
+        // Debounced save to background queue (AMA-1075)
+        scheduleSaveEntries()
 
         // Also print to console for Xcode debugging
         print("[DebugLog] \(entry.type.rawValue): \(entry.title) - \(entry.details)")
     }
 
-    private func saveEntries() {
+    /// Schedule a debounced save to avoid writing on every log call
+    private func scheduleSaveEntries() {
+        // Cancel any pending save
+        saveWorkItem?.cancel()
+
+        // Create new debounced save
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            // Capture entries on main actor before going to background
+            let entriesToSave = self.entries
+            self.saveEntriesBackground(entries: entriesToSave)
+        }
+        saveWorkItem = workItem
+
+        // Schedule with debounce delay
+        saveQueue.asyncAfter(deadline: .now() + saveDebounceInterval, execute: workItem)
+    }
+
+    private func saveEntriesBackground(entries: [DebugLogEntry]) {
         do {
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
@@ -242,7 +272,33 @@ class DebugLogService: ObservableObject {
         }
     }
 
+    private func saveEntries() {
+        // For immediate saves (clearLog), save immediately on background queue
+        saveQueue.async { [weak self] in
+            guard let self = self else { return }
+            let entriesToSave = self.entries
+            self.saveEntriesBackground(entries: entriesToSave)
+        }
+    }
+
+    /// Load entries on background thread
+    private func loadEntriesBackground() async -> [DebugLogEntry] {
+        guard let data = UserDefaults.standard.data(forKey: storageKey) else {
+            return []
+        }
+
+        do {
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode([DebugLogEntry].self, from: data)
+        } catch {
+            print("[DebugLogService] Failed to load entries: \(error)")
+            return []
+        }
+    }
+
     private func loadEntries() {
+        // Synchronous version kept for compatibility, but init now uses async loading
         guard let data = UserDefaults.standard.data(forKey: storageKey) else {
             return
         }

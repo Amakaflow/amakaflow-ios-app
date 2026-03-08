@@ -35,10 +35,23 @@ final class PersonalDictionary: ObservableObject {
     private let storageKey = "personal_dictionary"
     private let apiService = APIService.shared
 
+    // Background serial queue for debounced saves (AMA-1075)
+    private let saveQueue = DispatchQueue(label: "com.amakaflow.personaldictionary.save", qos: .utility)
+    private var saveWorkItem: DispatchWorkItem?
+    private let saveDebounceInterval: TimeInterval = 0.5
+
     // MARK: - Initialization
 
     private init() {
-        loadFromStorage()
+        // Load from storage on background to avoid blocking main thread (AMA-1075)
+        Task.detached(priority: .utility) { [weak self] in
+            let (corrections, customTerms, lastSync) = await self?.loadFromStorageBackground() ?? ([:], [], nil)
+            await MainActor.run {
+                self?.corrections = corrections
+                self?.customTerms = customTerms
+                self?.lastSyncDate = lastSync
+            }
+        }
     }
 
     // MARK: - Correction Management
@@ -54,7 +67,7 @@ final class PersonalDictionary: ObservableObject {
         guard !normalizedWrong.isEmpty, !normalizedCorrect.isEmpty else { return }
 
         corrections[normalizedWrong] = normalizedCorrect
-        saveToStorage()
+        scheduleSaveToStorage()  // Debounced save on background (AMA-1075)
 
         // Trigger background sync
         Task {
@@ -66,7 +79,7 @@ final class PersonalDictionary: ObservableObject {
     func removeCorrection(wrong: String) {
         let normalized = wrong.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         corrections.removeValue(forKey: normalized)
-        saveToStorage()
+        scheduleSaveToStorage()  // Debounced save on background (AMA-1075)
 
         Task {
             await syncWithBackend()
@@ -79,7 +92,7 @@ final class PersonalDictionary: ObservableObject {
         guard !normalized.isEmpty, !customTerms.contains(normalized) else { return }
 
         customTerms.append(normalized)
-        saveToStorage()
+        scheduleSaveToStorage()  // Debounced save on background (AMA-1075)
 
         Task {
             await syncWithBackend()
@@ -89,7 +102,7 @@ final class PersonalDictionary: ObservableObject {
     /// Remove a custom term
     func removeCustomTerm(_ term: String) {
         customTerms.removeAll { $0 == term }
-        saveToStorage()
+        scheduleSaveToStorage()  // Debounced save on background (AMA-1075)
 
         Task {
             await syncWithBackend()
@@ -121,6 +134,17 @@ final class PersonalDictionary: ObservableObject {
 
     // MARK: - Persistence
 
+    /// Load from storage on background thread (AMA-1075)
+    private func loadFromStorageBackground() async -> ([String: String], [String], Date?) {
+        guard let data = UserDefaults.standard.data(forKey: storageKey),
+              let stored = try? JSONDecoder().decode(StoredDictionary.self, from: data) else {
+            return ([], [], nil)
+        }
+
+        print("[PersonalDictionary] Loaded \(stored.corrections.count) corrections and \(stored.customTerms.count) custom terms")
+        return (stored.corrections, stored.customTerms, stored.lastSyncDate)
+    }
+
     private func loadFromStorage() {
         guard let data = UserDefaults.standard.data(forKey: storageKey),
               let stored = try? JSONDecoder().decode(StoredDictionary.self, from: data) else {
@@ -134,15 +158,65 @@ final class PersonalDictionary: ObservableObject {
         print("[PersonalDictionary] Loaded \(corrections.count) corrections and \(customTerms.count) custom terms")
     }
 
-    private func saveToStorage() {
+    /// Schedule a debounced save to avoid writing on every mutation (AMA-1075)
+    private func scheduleSaveToStorage() {
+        // Cancel any pending save
+        saveWorkItem?.cancel()
+
+        // Create new debounced save
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.saveToStorageBackground()
+        }
+        saveWorkItem = workItem
+
+        // Schedule with debounce delay
+        saveQueue.asyncAfter(deadline: .now() + saveDebounceInterval, execute: workItem)
+    }
+
+    private func saveToStorageBackground() {
         let stored = StoredDictionary(
-            corrections: corrections,
-            customTerms: customTerms,
-            lastSyncDate: lastSyncDate
+            corrections: [:],  // Will be captured from main actor
+            customTerms: [],
+            lastSyncDate: nil
         )
 
-        if let data = try? JSONEncoder().encode(stored) {
-            UserDefaults.standard.set(data, forKey: storageKey)
+        // Need to get current values from main actor
+        Task { @MainActor in
+            let currentCorrections = self.corrections
+            let currentCustomTerms = self.customTerms
+            let currentLastSync = self.lastSyncDate
+
+            let storedToSave = StoredDictionary(
+                corrections: currentCorrections,
+                customTerms: currentCustomTerms,
+                lastSyncDate: currentLastSync
+            )
+
+            if let data = try? JSONEncoder().encode(storedToSave) {
+                UserDefaults.standard.set(data, forKey: storageKey)
+            }
+        }
+    }
+
+    private func saveToStorage() {
+        // Immediate save for backward compatibility - dispatch to background
+        saveQueue.async { [weak self] in
+            guard let self = self else { return }
+            Task { @MainActor in
+                let currentCorrections = self.corrections
+                let currentCustomTerms = self.customTerms
+                let currentLastSync = self.lastSyncDate
+
+                let stored = StoredDictionary(
+                    corrections: currentCorrections,
+                    customTerms: currentCustomTerms,
+                    lastSyncDate: currentLastSync
+                )
+
+                if let data = try? JSONEncoder().encode(stored) {
+                    UserDefaults.standard.set(data, forKey: storageKey)
+                }
+            }
         }
     }
 
@@ -171,7 +245,7 @@ final class PersonalDictionary: ObservableObject {
             }
 
             lastSyncDate = Date()
-            saveToStorage()
+            scheduleSaveToStorage()  // Debounced save on background (AMA-1075)
 
             print("[PersonalDictionary] Synced with backend - \(corrections.count) corrections, \(customTerms.count) terms")
 
@@ -194,7 +268,7 @@ final class PersonalDictionary: ObservableObject {
             corrections = response.corrections
             customTerms = response.customTerms
             lastSyncDate = Date()
-            saveToStorage()
+            scheduleSaveToStorage()  // Debounced save on background (AMA-1075)
 
             print("[PersonalDictionary] Fetched from backend - \(corrections.count) corrections, \(customTerms.count) terms")
 
@@ -208,7 +282,7 @@ final class PersonalDictionary: ObservableObject {
         corrections = [:]
         customTerms = []
         lastSyncDate = nil
-        saveToStorage()
+        scheduleSaveToStorage()  // Debounced save on background (AMA-1075)
     }
 }
 
@@ -260,6 +334,6 @@ extension PersonalDictionary {
             }
         }
 
-        saveToStorage()
+        scheduleSaveToStorage()  // Debounced save on background (AMA-1075)
     }
 }
