@@ -140,7 +140,7 @@ final class PersonalDictionary: ObservableObject {
               let stored = try? JSONDecoder().decode(StoredDictionary.self, from: data) else {
             // Log silent failure for debugging (AMA-1075)
             print("[PersonalDictionary] Failed to load from storage - using defaults")
-            return ([], [], nil)
+            return ([:], [], nil)
         }
 
         print("[PersonalDictionary] Loaded \(stored.corrections.count) corrections and \(stored.customTerms.count) custom terms")
@@ -215,7 +215,7 @@ final class PersonalDictionary: ObservableObject {
                 )
 
                 if let data = try? JSONEncoder().encode(stored) {
-                    UserDefaults.standard.set(data, forKey: storageKey)
+                    UserDefaults.standard.set(data, forKey: self.storageKey)
                 } else {
                     // Log silent failure for debugging (AMA-1075)
                     print("[PersonalDictionary] Failed to encode data for storage")
