@@ -47,7 +47,15 @@ class PairingService: ObservableObject {
             )
             print("[PairingService] E2E mode: created placeholder profile for \(testUserEmail ?? userId)")
 
-            lastTokenRefresh = loadLastTokenRefresh()
+            // Load last token refresh in background (AMA-1075)
+            Task.detached(priority: .utility) { [weak self] in
+                let lastRefresh = await Task.detached(priority: .utility) {
+                    UserDefaults.standard.object(forKey: self?.tokenRefreshKey ?? "") as? Date
+                }.value
+                await MainActor.run {
+                    self?.lastTokenRefresh = lastRefresh
+                }
+            }
             print("[PairingService] E2E mode initialized with isPaired=true (X-Test-Auth)")
 
             // Fetch actual user profile in background
@@ -74,22 +82,31 @@ class PairingService: ObservableObject {
         // Start with safe defaults and populate from Keychain on a background thread.
         isPaired = false
         userProfile = nil
-        lastTokenRefresh = loadLastTokenRefresh()
+        // Defer loadLastTokenRefresh() to background task below (AMA-1075)
 
         let tokenKey = self.tokenKey
         let profileKey = self.profileKey
+        let refreshKey = self.tokenRefreshKey
         Task {
             // Use await .value to properly suspend main actor instead of blocking (AMA-1063)
-            let (token, profile): (String?, UserProfile?) = await Task.detached(priority: .userInitiated) {
+            let (token, profile, lastRefresh): (String?, UserProfile?, Date?) = await Task.detached(priority: .userInitiated) {
                 let t = KeychainHelper.shared.readString(for: tokenKey)
                 let p: UserProfile? = {
                     guard let data = KeychainHelper.shared.read(for: profileKey) else { return nil }
-                    return try? JSONDecoder().decode(UserProfile.self, from: data)
+                    guard let profile = try? JSONDecoder().decode(UserProfile.self, from: data) else {
+                        // Log silent failure for debugging (AMA-1075)
+                        print("[PairingService] Failed to decode UserProfile from Keychain")
+                        return nil
+                    }
+                    return profile
                 }()
-                return (t, p)
+                // Load last token refresh from UserDefaults in background (AMA-1075)
+                let lr = UserDefaults.standard.object(forKey: refreshKey) as? Date
+                return (t, p, lr)
             }.value
             self.isPaired = token != nil
             self.userProfile = profile
+            self.lastTokenRefresh = lastRefresh
             // Cache token to avoid blocking getToken() calls (AMA-969)
             self.cachedToken = token
             // Mark initialization complete (AMA-969 fix)
@@ -360,7 +377,14 @@ class PairingService: ObservableObject {
             }
             return result
         case 400:
-            let error = try? JSONDecoder().decode(APIErrorResponse.self, from: data)
+            let error: APIErrorResponse? = {
+                guard let e = try? JSONDecoder().decode(APIErrorResponse.self, from: data) else {
+                    // Log silent failure for debugging (AMA-1075)
+                    print("[PairingService] Failed to decode APIErrorResponse")
+                    return nil
+                }
+                return e
+            }()
             print("[PairingService] Invalid code: \(error?.detail ?? "unknown")")
             throw PairingError.invalidCode(error?.detail ?? "Invalid code")
         case 410:
@@ -437,7 +461,11 @@ class PairingService: ObservableObject {
     // MARK: - Token Refresh Timestamp Storage
 
     private func storeLastTokenRefresh(_ date: Date) {
-        UserDefaults.standard.set(date, forKey: tokenRefreshKey)
+        // Save to UserDefaults in background to avoid blocking main thread (AMA-1075)
+        let key = tokenRefreshKey
+        Task.detached(priority: .utility) {
+            UserDefaults.standard.set(date, forKey: key)
+        }
     }
 
     private func loadLastTokenRefresh() -> Date? {

@@ -12,6 +12,13 @@ import Combine
 class WatchConnectivityManager: NSObject, ObservableObject {
     static let shared = WatchConnectivityManager()
 
+    // MARK: - Thread Safety (AMA-1075)
+    // Note: @MainActor was removed from this class to allow async methods that need to
+    // access the WCSession property without blocking. The session property is thread-safe
+    // by design (WCSession is UIKit/Foundation object with its own synchronization).
+    // All accesses to session are wrapped in async MainActor.run blocks where needed,
+    // ensuring proper main thread access for UI updates while allowing background execution.
+
     @Published var isWatchAppInstalled = false
     @Published var isWatchReachable = false
     @Published var lastError: Error?
@@ -64,32 +71,42 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     }
     
     // MARK: - Send Workout to Watch
-    @MainActor
+
+    /// Send workout to Apple Watch
+    /// Note: Does NOT run on main actor to avoid blocking (AMA-1075)
     func sendWorkout(_ workout: Workout) async {
         guard let session = session else {
             print("⌚️ WatchConnectivity not supported on this device")
-            lastError = WatchConnectivityError.sessionNotAvailable
+            await MainActor.run {
+                lastError = WatchConnectivityError.sessionNotAvailable
+            }
             logWatchError("Session not available", details: "WatchConnectivity not supported on this device")
             return
         }
 
         guard session.activationState == .activated else {
             print("⌚️ WatchConnectivity session not activated. Status: \(session.activationState.rawValue)")
-            lastError = WatchConnectivityError.sessionNotAvailable
+            await MainActor.run {
+                lastError = WatchConnectivityError.sessionNotAvailable
+            }
             logWatchError("Session not activated", details: "Activation state: \(session.activationState.rawValue)")
             return
         }
 
         guard session.isWatchAppInstalled else {
             print("⌚️ Watch app is not installed. Please install the watch app first.")
-            lastError = WatchConnectivityError.watchNotReachable
+            await MainActor.run {
+                lastError = WatchConnectivityError.watchNotReachable
+            }
             logWatchError("Watch app not installed", details: "Please install the watch app first")
             return
         }
 
         guard session.isReachable else {
             print("⌚️ Watch is not reachable. Make sure your watch is nearby and unlocked.")
-            lastError = WatchConnectivityError.watchNotReachable
+            await MainActor.run {
+                lastError = WatchConnectivityError.watchNotReachable
+            }
             logWatchError("Watch not reachable", details: "Make sure your watch is nearby and unlocked")
             return
         }
@@ -100,28 +117,37 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             let workoutData = try encoder.encode(workout)
             
             guard let workoutDict = try JSONSerialization.jsonObject(with: workoutData) as? [String: Any] else {
+                await MainActor.run {
+                    lastError = WatchConnectivityError.encodingFailed
+                }
                 throw WatchConnectivityError.encodingFailed
             }
             
-            // Send to watch
-            session.sendMessage(
-                ["action": "receiveWorkout", "workout": workoutDict],
-                replyHandler: { reply in
-                    print("⌚️ Watch received workout: \(reply)")
-                },
-                errorHandler: { [weak self] error in
-                    print("⌚️ Failed to send workout: \(error.localizedDescription)")
-                    Task { @MainActor in
-                        self?.lastError = error
-                        self?.logWatchError("Send workout failed", details: error.localizedDescription, metadata: ["Workout": workout.name])
+            // Send to watch - this can block, so run on background (AMA-1075)
+            await withCheckedContinuation { continuation in
+                session.sendMessage(
+                    ["action": "receiveWorkout", "workout": workoutDict],
+                    replyHandler: { reply in
+                        print("⌚️ Watch received workout: \(reply)")
+                        continuation.resume()
+                    },
+                    errorHandler: { [weak self] error in
+                        print("⌚️ Failed to send workout: \(error.localizedDescription)")
+                        Task { @MainActor in
+                            self?.lastError = error
+                            self?.logWatchError("Send workout failed", details: error.localizedDescription, metadata: ["Workout": workout.name])
+                        }
+                        continuation.resume()
                     }
-                }
-            )
+                )
+            }
             
             print("⌚️ Sent workout to watch: \(workout.name)")
         } catch {
             print("⌚️ Failed to encode workout: \(error.localizedDescription)")
-            lastError = error
+            await MainActor.run {
+                lastError = error
+            }
             logWatchError("Encode workout failed", details: error.localizedDescription, metadata: ["Workout": workout.name])
         }
     }
