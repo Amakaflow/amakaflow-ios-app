@@ -14,6 +14,7 @@ import Foundation
 import Combine
 import UIKit
 import CoreBluetooth
+import Sentry
 
 #if CONNECTIQ_ENABLED
 import ConnectIQ
@@ -87,6 +88,12 @@ class GarminConnectManager: NSObject, ObservableObject {
     private var myApp: IQApp?
     private var availableDevices: [IQDevice] = []
     #endif
+
+    // MARK: - Performance Tracing (AMA-1083)
+    /// Root transaction for a Garmin sync attempt; lives from connect → first message (or failure)
+    private var garminSyncTransaction: (any Span)?
+    private var garminBLESpan: (any Span)?
+    private var garminAppRegSpan: (any Span)?
 
     /// AmakaFlow Connect IQ App UUID (must match manifest.xml in Garmin app)
     /// This must match the id attribute in the Garmin watch app's manifest.xml
@@ -325,6 +332,17 @@ class GarminConnectManager: NSObject, ObservableObject {
         availableDevices = [device]
         knownDevices = [deviceInfo.friendlyName]
 
+        // Cancel any in-flight transaction before starting a new one (AMA-1083)
+        garminAppRegSpan?.finish(status: .cancelled)
+        garminAppRegSpan = nil
+        garminSyncTransaction?.finish(status: .cancelled)
+
+        // Start Sentry performance transaction for this sync attempt (AMA-1083)
+        garminSyncTransaction = SentryService.shared.startTransaction(
+            name: "garmin.sync",
+            operation: "garmin.connect"
+        )
+
         // Register for device events - this will trigger deviceStatusChanged callback
         log("Registering for device events...")
         ConnectIQ.sharedInstance()?.register(forDeviceEvents: device, delegate: self)
@@ -423,6 +441,15 @@ class GarminConnectManager: NSObject, ObservableObject {
 
         // Save for future reconnection
         saveDeviceInfo(uuid: uuidString, modelName: "Garmin Watch", friendlyName: friendlyName)
+
+        // Cancel any in-flight transaction and start a new one for this connect attempt (AMA-1083)
+        garminAppRegSpan?.finish(status: .cancelled)
+        garminAppRegSpan = nil
+        garminSyncTransaction?.finish(status: .cancelled)
+        garminSyncTransaction = SentryService.shared.startTransaction(
+            name: "garmin.sync",
+            operation: "garmin.connect"
+        )
 
         // Connect to the device
         connectToDevice(device)
@@ -1016,6 +1043,10 @@ extension GarminConnectManager: IQDeviceEventDelegate {
                 self.connectedDevice = device
                 self.connectedDeviceName = device?.friendlyName ?? "Garmin Watch"
                 self.isConnected = true
+                // BLE connection established — record as child span (AMA-1083)
+                self.garminBLESpan = self.garminSyncTransaction?.startChild(operation: "garmin.ble_connected")
+                self.garminBLESpan?.finish(status: .ok)
+                self.garminBLESpan = nil
                 if let device = device {
                     // Save device info for future reconnection (bypasses broken picker)
                     self.saveDeviceInfo(
@@ -1055,6 +1086,11 @@ extension GarminConnectManager: IQDeviceEventDelegate {
         myApp = nil
         isAppInstalled = false
         clearHealthMetrics()
+        // Abort any in-flight sync transaction (AMA-1083)
+        garminAppRegSpan?.finish(status: .internalError)
+        garminAppRegSpan = nil
+        garminSyncTransaction?.finish(status: .internalError)
+        garminSyncTransaction = nil
     }
 
     private func registerForAppMessages(_ device: IQDevice) {
@@ -1075,6 +1111,8 @@ extension GarminConnectManager: IQDeviceEventDelegate {
         connectIQ?.register(forAppMessages: app, delegate: self)
         log("Registered for app messages - waiting for first message to confirm app is reachable")
         // Note: Don't set isAppInstalled = true here - only after successful communication
+        // Start app-registration child span; finished on first message received (AMA-1083)
+        garminAppRegSpan = garminSyncTransaction?.startChild(operation: "garmin.app_registration")
 
         // Small delay before first message (common workaround per Garmin docs)
         Task {
@@ -1098,6 +1136,11 @@ extension GarminConnectManager: IQAppMessageDelegate {
             if !self.isAppInstalled {
                 self.log("✅ First message received - marking app as installed")
                 self.isAppInstalled = true
+                // Finish the app-registration and root sync transaction (AMA-1083)
+                self.garminAppRegSpan?.finish(status: .ok)
+                self.garminAppRegSpan = nil
+                self.garminSyncTransaction?.finish(status: .ok)
+                self.garminSyncTransaction = nil
             }
 
             if let dict = message as? [String: Any] {

@@ -7,6 +7,9 @@
 
 import Foundation
 import WorkoutKitSync
+#if canImport(Sentry)
+import Sentry
+#endif
 
 /// Service for converting Workout models to WorkoutKit DTO format
 @available(iOS 18.0, watchOS 11.0, *)
@@ -42,8 +45,37 @@ class WorkoutKitConverter {
     /// - Parameter workout: The workout to save
     /// - Throws: ConversionError or WorkoutPlanError
     func saveToWorkoutKit(_ workout: Workout) async throws {
+        #if canImport(Sentry)
+        // Sentry performance transaction for WorkoutKit / HealthKit write (AMA-1083)
+        let tx = SentryService.shared.startTransaction(name: "workoutkit.save", operation: "healthkit.write")
+        do {
+            let dto: WKPlanDTO
+            let convertSpan = tx.startChild(operation: "workoutkit.convert")
+            do {
+                dto = try convertToWKPlanDTO(workout)
+                convertSpan.finish(status: .ok)
+            } catch {
+                convertSpan.finish(status: .internalError)
+                tx.finish(status: .internalError)
+                throw error
+            }
+
+            let saveSpan = tx.startChild(operation: "healthkit.write")
+            do {
+                try await WorkoutKitSync.default.save(dto, scheduleAt: nil)
+                saveSpan.finish(status: .ok)
+            } catch {
+                saveSpan.finish(status: .internalError)
+                tx.finish(status: .internalError)
+                throw error
+            }
+
+            tx.finish(status: .ok)
+        }
+        #else
         let dto = try convertToWKPlanDTO(workout)
         try await WorkoutKitSync.default.save(dto, scheduleAt: nil)
+        #endif
     }
     
     /// Parse and save workout from JSON string

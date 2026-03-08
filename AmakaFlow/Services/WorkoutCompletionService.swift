@@ -9,6 +9,7 @@
 import Foundation
 import Combine
 import Network
+import Sentry
 
 // MARK: - Request/Response Models
 
@@ -429,6 +430,9 @@ class WorkoutCompletionService: ObservableObject {
     // MARK: - Private Methods
 
     private func postCompletion(_ request: WorkoutCompletionRequest) async throws -> WorkoutCompletionResponse? {
+        // Sentry performance transaction for workout save (AMA-1083)
+        let tx = SentryService.shared.startTransaction(name: "workout.save", operation: "api.post")
+
         // Check for valid auth - either pairing or E2E test mode
         #if DEBUG
         let hasAuth = PairingService.shared.isPaired || TestAuthStore.shared.isTestModeEnabled
@@ -443,16 +447,22 @@ class WorkoutCompletionService: ObservableObject {
                 error: NSError(domain: "WorkoutCompletion", code: -2, userInfo: [NSLocalizedDescriptionKey: "Not authenticated (no pairing and no E2E test mode)"]),
                 context: "postCompletion - no auth"
             )
+            tx.finish(status: .unauthenticated)
             return nil
         }
 
         // Try to post immediately
         if isNetworkAvailable {
+            let networkSpan = tx.startChild(operation: "http.post", description: "/workouts/completions")
             do {
                 let response = try await APIService.shared.postWorkoutCompletion(request)
+                networkSpan.finish(status: .ok)
+                tx.finish(status: .ok)
                 print("[WorkoutCompletion] Successfully posted completion: \(response.resolvedCompletionId)")
                 return response
             } catch {
+                networkSpan.finish(status: .internalError)
+                tx.finish(status: .internalError)
                 print("[WorkoutCompletion] Failed to post, queueing for retry: \(error)")
                 lastError = error
                 logCompletionError(workoutId: request.workoutId ?? request.followAlongWorkoutId, error: error, context: "postCompletion")
@@ -468,6 +478,7 @@ class WorkoutCompletionService: ObservableObject {
                 context: "Network unavailable - queued for later"
             )
             queueForRetry(request)
+            tx.finish(status: .resourceExhausted)
             return nil
         }
     }

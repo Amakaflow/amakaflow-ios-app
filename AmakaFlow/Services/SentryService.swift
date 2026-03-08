@@ -121,6 +121,19 @@ final class SentryService {
         SentrySDK.addBreadcrumb(crumb)
     }
 
+    // MARK: - Performance Transactions (AMA-1083)
+
+    /// Start a new performance transaction bound to no scope.
+    /// The caller owns the returned span and must call `finish()` on it.
+    nonisolated func startTransaction(name: String, operation: String) -> any Span {
+        SentrySDK.startTransaction(name: name, operation: operation, bindToScope: false)
+    }
+
+    /// Finish a span with a given status (convenience wrapper).
+    nonisolated func finish(_ span: any Span, status: SentrySpanStatus = .ok) {
+        span.finish(status: status)
+    }
+
     // MARK: - User Feedback
 
     /// Submit user feedback for a captured event

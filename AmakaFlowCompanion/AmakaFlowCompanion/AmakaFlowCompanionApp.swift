@@ -45,8 +45,8 @@ struct AmakaFlowCompanionApp: App {
             // Adds IP for users
             options.sendDefaultPii = true
 
-            // Performance monitoring (reduce in production)
-            options.tracesSampleRate = 1.0
+            // Performance monitoring (AMA-1083: reduced from 1.0 to 0.2 to limit quota usage)
+            options.tracesSampleRate = 0.2
 
             // Profiling
             options.configureProfiling = {
