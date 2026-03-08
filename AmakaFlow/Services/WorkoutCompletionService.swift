@@ -217,9 +217,17 @@ class WorkoutCompletionService: ObservableObject {
     private let networkMonitor = NWPathMonitor()
     private var isNetworkAvailable = true
     private var cancellables = Set<AnyCancellable>()
+    /// Reusable background queue for saving pending completions (AMA-1075)
+    private let saveQueue = DispatchQueue(label: "com.amakaflow.workoutcompletion.save", qos: .utility)
 
     private init() {
-        loadPendingQueue()
+        // Load pending queue in background to avoid blocking main thread (AMA-1075)
+        Task.detached(priority: .utility) { [weak self] in
+            let count = await self?.loadPendingQueueBackground() ?? 0
+            await MainActor.run {
+                self?.pendingCount = count
+            }
+        }
         setupNetworkMonitoring()
     }
 
@@ -474,6 +482,11 @@ class WorkoutCompletionService: ObservableObject {
 
     // MARK: - Persistence
 
+    /// Load pending completions count on background thread (AMA-1075)
+    private func loadPendingQueueBackground() async -> Int {
+        return loadPendingCompletions().count
+    }
+
     private func loadPendingCompletions() -> [PendingCompletion] {
         guard let data = UserDefaults.standard.data(forKey: pendingQueueKey) else {
             return []
@@ -490,13 +503,17 @@ class WorkoutCompletionService: ObservableObject {
     }
 
     private func savePendingCompletions(_ completions: [PendingCompletion]) {
-        do {
-            let encoder = JSONEncoder()
-            encoder.dateEncodingStrategy = .iso8601
-            let data = try encoder.encode(completions)
-            UserDefaults.standard.set(data, forKey: self.pendingQueueKey)
-        } catch {
-            print("[WorkoutCompletion] Failed to save pending queue: \(error)")
+        // Save on background queue to avoid blocking main thread (AMA-1075)
+        // Uses class-level queue property to avoid O(n) queue allocations (AMA-1075)
+        saveQueue.async {
+            do {
+                let encoder = JSONEncoder()
+                encoder.dateEncodingStrategy = .iso8601
+                let data = try encoder.encode(completions)
+                UserDefaults.standard.set(data, forKey: self.pendingQueueKey)
+            } catch {
+                print("[WorkoutCompletion] Failed to save pending queue: \(error)")
+            }
         }
     }
 
