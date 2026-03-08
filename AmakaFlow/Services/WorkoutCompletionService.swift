@@ -494,7 +494,7 @@ class WorkoutCompletionService: ObservableObject {
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
             let data = try encoder.encode(completions)
-            UserDefaults.standard.set(data, forKey: pendingQueueKey)
+            UserDefaults.standard.set(data, forKey: self.pendingQueueKey)
         } catch {
             print("[WorkoutCompletion] Failed to save pending queue: \(error)")
         }
