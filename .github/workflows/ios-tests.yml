@@ -308,3 +308,44 @@ jobs:
           name: watchos-test-results
           path: AmakaFlowCompanion/WatchTestResults
           retention-days: 7
+
+  # ---------------------------------------------------------
+  # Sentry Release (AMA-1082)
+  # Registers the release in Sentry with commit history so
+  # the Releases dashboard and regression detection work.
+  # Requires SENTRY_AUTH_TOKEN secret in GitHub repo settings.
+  # No-ops silently if the secret is not set.
+  # ---------------------------------------------------------
+  sentry-release:
+    name: Sentry Release
+    needs: [ios-tests, watchos-tests]
+    if: always() && needs.ios-tests.result == 'success'
+    runs-on: ubuntu-latest
+    env:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: me-6o
+
+    steps:
+      - name: Checkout (full history for commit association)
+        if: env.SENTRY_AUTH_TOKEN != ''
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract app version
+        if: env.SENTRY_AUTH_TOKEN != ''
+        id: version
+        run: |
+          MARKETING=$(grep 'MARKETING_VERSION' AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj | head -1 | sed 's/.*= //;s/;//;s/ //g')
+          BUILD=$(grep 'CURRENT_PROJECT_VERSION' AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj | head -1 | sed 's/.*= //;s/;//;s/ //g')
+          RELEASE="com.myamaka.AmakaFlowCompanion@${MARKETING}+${BUILD}"
+          echo "release=${RELEASE}" >> $GITHUB_OUTPUT
+          echo "Sentry release: ${RELEASE}"
+
+      - name: Register Sentry release with commits
+        if: env.SENTRY_AUTH_TOKEN != ''
+        run: |
+          npx --yes @sentry/cli releases new "${{ steps.version.outputs.release }}" --project amakaflow-ios
+          npx @sentry/cli releases set-commits "${{ steps.version.outputs.release }}" --auto || true
+          npx @sentry/cli releases finalize "${{ steps.version.outputs.release }}" --project amakaflow-ios
+          echo "Tagged Sentry release: ${{ steps.version.outputs.release }}"
