@@ -193,10 +193,13 @@ struct NotificationPreferencesView: View {
 
             Spacer()
 
-            Toggle("", isOn: isOn)
+            Toggle(title, isOn: isOn)
+                .labelsHidden()
                 .tint(Theme.Colors.accentBlue)
+                .accessibilityLabel(title)
         }
         .padding(.vertical, Theme.Spacing.xs)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Save Button
