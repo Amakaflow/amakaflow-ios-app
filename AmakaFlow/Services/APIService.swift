@@ -1301,6 +1301,249 @@ class APIService {
             throw APIError.serverError(httpResponse.statusCode)
         }
     }
+
+    // MARK: - Planning API (AMA-1147 / AMA-1133)
+
+    func fetchDayStates(from: String, to: String) async throws -> [DayState] {
+        let url = URL(string: "\(baseURL)/api/v1/planning/day-states?from=\(from)&to=\(to)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = authHeaders
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+
+        switch httpResponse.statusCode {
+        case 200:
+            return try Self.makeDecoder().decode([DayState].self, from: data)
+        case 401: throw APIError.unauthorized
+        default: throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func generateWeek(request genRequest: GenerateWeekRequest? = nil) async throws -> ProposedPlan {
+        let url = URL(string: "\(baseURL)/api/v1/planning/generate-week")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let genRequest = genRequest {
+            request.httpBody = try JSONEncoder().encode(genRequest)
+        } else {
+            request.httpBody = "{}".data(using: .utf8)
+        }
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+
+        switch httpResponse.statusCode {
+        case 200: return try Self.makeDecoder().decode(ProposedPlan.self, from: data)
+        case 401: throw APIError.unauthorized
+        default: throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func detectConflicts(startDate: String, endDate: String) async throws -> [Conflict] {
+        let url = URL(string: "\(baseURL)/api/v1/planning/conflicts?start_date=\(startDate)&end_date=\(endDate)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = authHeaders
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+
+        switch httpResponse.statusCode {
+        case 200: return try Self.makeDecoder().decode([Conflict].self, from: data)
+        case 401: throw APIError.unauthorized
+        default: throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func parseWorkoutText(text: String, context: String? = nil) async throws -> ParsedWorkout {
+        let url = URL(string: "\(baseURL)/api/v1/planning/parse-workout")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(ParseWorkoutRequest(text: text, context: context))
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+
+        switch httpResponse.statusCode {
+        case 200: return try Self.makeDecoder().decode(ParsedWorkout.self, from: data)
+        case 401: throw APIError.unauthorized
+        default: throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    // MARK: - Actions API (AMA-1147 / AMA-1133)
+
+    func fetchPendingActions() async throws -> [PendingAction] {
+        let url = URL(string: "\(baseURL)/api/v1/actions/pending")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = authHeaders
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+
+        switch httpResponse.statusCode {
+        case 200: return try Self.makeDecoder().decode([PendingAction].self, from: data)
+        case 401: throw APIError.unauthorized
+        default: throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func respondToAction(id: String, response actionResponse: String) async throws -> ActionResponse {
+        let url = URL(string: "\(baseURL)/api/v1/actions/\(id)/respond")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(["response": actionResponse])
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+
+        switch httpResponse.statusCode {
+        case 200: return try Self.makeDecoder().decode(ActionResponse.self, from: data)
+        case 401: throw APIError.unauthorized
+        default: throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    // MARK: - Coach API (AMA-1147 / AMA-1133)
+
+    func sendCoachMessage(message: String, context: CoachContext? = nil) async throws -> CoachResponse {
+        let chatURL = AppEnvironment.current.chatAPIURL
+        let url = URL(string: "\(chatURL)/api/v1/coach/message")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(CoachMessageRequest(message: message, context: context))
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+
+        switch httpResponse.statusCode {
+        case 200: return try Self.makeDecoder().decode(CoachResponse.self, from: data)
+        case 401: throw APIError.unauthorized
+        case 429:
+            let body = String(data: data, encoding: .utf8) ?? ""
+            throw APIError.serverErrorWithBody(429, body)
+        default: throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func getFatigueAdvice(fatigueScore: Double? = nil, loadHistory: [DailyLoad]? = nil) async throws -> FatigueAdvice {
+        let chatURL = AppEnvironment.current.chatAPIURL
+        let url = URL(string: "\(chatURL)/api/v1/coach/fatigue-advice")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(FatigueAdviceRequest(currentFatigueScore: fatigueScore, recentLoadHistory: loadHistory))
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+
+        switch httpResponse.statusCode {
+        case 200: return try Self.makeDecoder().decode(FatigueAdvice.self, from: data)
+        case 401: throw APIError.unauthorized
+        default: throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func fetchCoachMemories() async throws -> [CoachMemory] {
+        let chatURL = AppEnvironment.current.chatAPIURL
+        let url = URL(string: "\(chatURL)/api/v1/coach/memories")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = authHeaders
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+
+        switch httpResponse.statusCode {
+        case 200: return try Self.makeDecoder().decode([CoachMemory].self, from: data)
+        case 401: throw APIError.unauthorized
+        default: throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    // MARK: - Analytics API (AMA-1147 / AMA-1133)
+
+    func fetchShoeComparison() async throws -> [ShoeStats] {
+        let url = URL(string: "\(baseURL)/api/v1/analytics/shoes")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = authHeaders
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+
+        switch httpResponse.statusCode {
+        case 200: return try Self.makeDecoder().decode([ShoeStats].self, from: data)
+        case 401: throw APIError.unauthorized
+        default: throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    // MARK: - Billing API (AMA-1147 / AMA-1133)
+
+    func fetchSubscription() async throws -> Subscription {
+        let url = URL(string: "\(baseURL)/api/v1/billing/subscription")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = authHeaders
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+
+        switch httpResponse.statusCode {
+        case 200: return try Self.makeDecoder().decode(Subscription.self, from: data)
+        case 401: throw APIError.unauthorized
+        default: throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    // MARK: - Notification Preferences API (AMA-1147 / AMA-1133)
+
+    func fetchNotificationPreferences() async throws -> NotificationPreferences {
+        let url = URL(string: "\(baseURL)/api/v1/preferences/notifications")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = authHeaders
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+
+        switch httpResponse.statusCode {
+        case 200: return try Self.makeDecoder().decode(NotificationPreferences.self, from: data)
+        case 401: throw APIError.unauthorized
+        default: throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func updateNotificationPreferences(_ prefs: NotificationPreferences) async throws -> NotificationPreferences {
+        let url = URL(string: "\(baseURL)/api/v1/preferences/notifications")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.allHTTPHeaderFields = authHeaders
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(prefs)
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+
+        switch httpResponse.statusCode {
+        case 200: return try Self.makeDecoder().decode(NotificationPreferences.self, from: data)
+        case 401: throw APIError.unauthorized
+        default: throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
 }
 
 // MARK: - DayState API Response Models (AMA-1150)

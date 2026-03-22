@@ -38,6 +38,8 @@
 		A1IMP0RTV13W0002 /* AIImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1IMP0RTV13W0001 /* AIImportView.swift */; };
 		AA8C7E7D040E462BB1347220 /* RestPeriodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94AE3547CCCD41159C85554B /* RestPeriodView.swift */; };
 		AAA43473A50C02F82E139FED /* TrainingPreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1660F7A199C30F1FF9B8DFD /* TrainingPreferencesView.swift */; };
+		326A41D76E81D77EC7D4F76A /* NotificationPreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CC7221F93FB2C2C9982C2ED /* NotificationPreferencesView.swift */; };
+		97DAAC6C9C4F8BAC320D575E /* SyncDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0590FA2DB2E16FC868D6F303 /* SyncDashboardView.swift */; };
 		AF50AD9DC3B0E509ED0ED715 /* AnalyticsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68B54D3FBC9E8561760B53F0 /* AnalyticsModels.swift */; };
 		AK00SHARE001B /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SHARE001A /* ShareViewController.swift */; };
 		AK00SHARE00EB /* AmakaFlowShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AK00SHARE00EA /* AmakaFlowShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -271,6 +273,8 @@
 		AK00SHARE002A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AK00SHARE00EA /* AmakaFlowShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AmakaFlowShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1660F7A199C30F1FF9B8DFD /* TrainingPreferencesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TrainingPreferencesView.swift; path = ../AmakaFlow/Views/Settings/TrainingPreferencesView.swift; sourceTree = "<group>"; };
+		4CC7221F93FB2C2C9982C2ED /* NotificationPreferencesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationPreferencesView.swift; path = ../AmakaFlow/Views/Settings/NotificationPreferencesView.swift; sourceTree = "<group>"; };
+		0590FA2DB2E16FC868D6F303 /* SyncDashboardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SyncDashboardView.swift; path = ../AmakaFlow/Views/Settings/SyncDashboardView.swift; sourceTree = "<group>"; };
 		CC2192F9A69B4A51B54A138F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeView.swift; path = ../AmakaFlow/Views/HomeView.swift; sourceTree = SOURCE_ROOT; };
 		D3BUG10G00000001B0000001 /* DebugLogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogService.swift; path = ../AmakaFlow/Services/DebugLogService.swift; sourceTree = SOURCE_ROOT; };
 		D3BUG10G00000002B0000002 /* DebugLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogView.swift; path = ../AmakaFlow/Views/DebugLogView.swift; sourceTree = SOURCE_ROOT; };
@@ -625,6 +629,8 @@
 				4F945C56EB30A4BA6E5CAC50 /* ActivityFeedView.swift */,
 				887645B05D4D7BABC29CAB9A /* ShoeComparisonView.swift */,
 				C1660F7A199C30F1FF9B8DFD /* TrainingPreferencesView.swift */,
+				4CC7221F93FB2C2C9982C2ED /* NotificationPreferencesView.swift */,
+				0590FA2DB2E16FC868D6F303 /* SyncDashboardView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -1163,6 +1169,8 @@
 				DF8B91B894B9DEA16C43ABFB /* ActivityFeedView.swift in Sources */,
 				83FA8BE2A6AAF21B52B5B16A /* ShoeComparisonView.swift in Sources */,
 				AAA43473A50C02F82E139FED /* TrainingPreferencesView.swift in Sources */,
+				326A41D76E81D77EC7D4F76A /* NotificationPreferencesView.swift in Sources */,
+				97DAAC6C9C4F8BAC320D575E /* SyncDashboardView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

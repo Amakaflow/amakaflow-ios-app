@@ -37,14 +37,29 @@ struct CalendarView: View {
                 generateWeekButton
                     .padding(.horizontal, Theme.Spacing.lg)
 
-                // Upcoming workouts list
+                // Proposed plan or upcoming workouts
                 ScrollView {
                     VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                        // Show proposed plan if generated (AMA-1133)
+                        if let plan = calendarVM.proposedPlan {
+                            proposedPlanSection(plan)
+                        }
+
+                        // Day-state session cards for the selected week (AMA-1133)
+                        if !calendarVM.dayStates.isEmpty {
+                            dayStateSessionCards
+                        }
+
+                        // Conflict warnings (AMA-1133)
+                        if !calendarVM.conflicts.isEmpty {
+                            conflictWarningsSection
+                        }
+
                         Text("Upcoming Workouts")
                             .font(Theme.Typography.title2)
                             .foregroundColor(Theme.Colors.textPrimary)
 
-                        if upcomingWorkouts.isEmpty {
+                        if upcomingWorkouts.isEmpty && calendarVM.proposedPlan == nil {
                             emptyState
                         } else {
                             ForEach(upcomingWorkouts) { workout in
@@ -284,6 +299,119 @@ struct CalendarView: View {
         .padding(.bottom, Theme.Spacing.sm)
     }
 
+    // MARK: - Proposed Plan Section (AMA-1133)
+
+    private func proposedPlanSection(_ plan: ProposedPlan) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            HStack {
+                Image(systemName: "wand.and.stars")
+                    .foregroundColor(Theme.Colors.accentBlue)
+                Text("Proposed Week Plan")
+                    .font(Theme.Typography.title2)
+                    .foregroundColor(Theme.Colors.textPrimary)
+                Spacer()
+                if let score = plan.totalLoadScore {
+                    Text("Load: \(Int(score))")
+                        .font(Theme.Typography.captionBold)
+                        .foregroundColor(Theme.Colors.accentOrange)
+                        .padding(.horizontal, Theme.Spacing.sm)
+                        .padding(.vertical, Theme.Spacing.xs)
+                        .background(Theme.Colors.accentOrange.opacity(0.15))
+                        .cornerRadius(Theme.CornerRadius.sm)
+                }
+            }
+
+            if let rationale = plan.rationale {
+                Text(rationale)
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textSecondary)
+                    .padding(Theme.Spacing.md)
+                    .background(Theme.Colors.surface)
+                    .cornerRadius(Theme.CornerRadius.md)
+            }
+
+            ForEach(plan.days) { day in
+                ProposedDayCard(day: day)
+            }
+        }
+        .padding(.bottom, Theme.Spacing.md)
+    }
+
+    // MARK: - Day State Session Cards (AMA-1133)
+
+    private var dayStateSessionCards: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            Text("This Week")
+                .font(Theme.Typography.title2)
+                .foregroundColor(Theme.Colors.textPrimary)
+
+            ForEach(weekDates, id: \.self) { date in
+                let formatter = ISO8601DateFormatter()
+                let _ = formatter.formatOptions = [.withFullDate]
+                let key = formatter.string(from: date)
+
+                if let dayState = calendarVM.dayStates[key] {
+                    DayStateCard(dayState: dayState, date: date)
+                }
+            }
+        }
+        .padding(.bottom, Theme.Spacing.md)
+    }
+
+    // MARK: - Conflict Warnings (AMA-1133)
+
+    private var conflictWarningsSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            HStack(spacing: Theme.Spacing.sm) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(Theme.Colors.accentOrange)
+                Text("Conflicts Detected")
+                    .font(Theme.Typography.bodyBold)
+                    .foregroundColor(Theme.Colors.textPrimary)
+            }
+
+            ForEach(calendarVM.conflicts) { conflict in
+                HStack(alignment: .top, spacing: Theme.Spacing.sm) {
+                    Circle()
+                        .fill(conflictSeverityColor(conflict.severity))
+                        .frame(width: 8, height: 8)
+                        .padding(.top, 6)
+
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                        Text(conflict.description)
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(Theme.Colors.textPrimary)
+
+                        if let suggestion = conflict.suggestion {
+                            Text(suggestion)
+                                .font(Theme.Typography.footnote)
+                                .foregroundColor(Theme.Colors.accentBlue)
+                        }
+                    }
+                }
+                .padding(Theme.Spacing.sm)
+                .background(Theme.Colors.surface)
+                .cornerRadius(Theme.CornerRadius.sm)
+            }
+        }
+        .padding(Theme.Spacing.md)
+        .background(Theme.Colors.accentOrange.opacity(0.05))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
+                .stroke(Theme.Colors.accentOrange.opacity(0.3), lineWidth: 1)
+        )
+        .cornerRadius(Theme.CornerRadius.lg)
+        .padding(.bottom, Theme.Spacing.md)
+    }
+
+    private func conflictSeverityColor(_ severity: ConflictSeverity) -> Color {
+        switch severity {
+        case .low: return Theme.Colors.accentOrange
+        case .medium: return Theme.Colors.accentOrange
+        case .high: return Theme.Colors.accentRed
+        }
+    }
+
     // MARK: - Empty State
 
     private var emptyState: some View {
@@ -413,6 +541,219 @@ struct CalendarView: View {
         case .running: return Theme.Colors.accentGreen
         case .strength: return Theme.Colors.accentBlue
         case .mobility: return Color(hex: "9333EA")
+        default: return Theme.Colors.accentBlue
+        }
+    }
+}
+
+// MARK: - Proposed Day Card (AMA-1133)
+
+private struct ProposedDayCard: View {
+    let day: ProposedDay
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            HStack {
+                Text(day.date)
+                    .font(Theme.Typography.captionBold)
+                    .foregroundColor(Theme.Colors.textPrimary)
+
+                Spacer()
+
+                if day.isRestDay {
+                    Text("Rest Day")
+                        .font(Theme.Typography.footnote)
+                        .foregroundColor(Theme.Colors.accentBlue)
+                        .padding(.horizontal, Theme.Spacing.sm)
+                        .padding(.vertical, 2)
+                        .background(Theme.Colors.accentBlue.opacity(0.15))
+                        .cornerRadius(Theme.CornerRadius.sm)
+                }
+            }
+
+            if !day.isRestDay {
+                ForEach(day.workouts) { workout in
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Circle()
+                            .fill(sportColor(workout.sport))
+                            .frame(width: 8, height: 8)
+
+                        Text(workout.name)
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(Theme.Colors.textPrimary)
+
+                        Spacer()
+
+                        if let mins = workout.estimatedDurationMinutes {
+                            Text("\(mins)m")
+                                .font(Theme.Typography.footnote)
+                                .foregroundColor(Theme.Colors.textSecondary)
+                        }
+
+                        if let priority = workout.priority {
+                            Text(priority.rawValue.capitalized)
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(priorityColor(priority))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(priorityColor(priority).opacity(0.15))
+                                .cornerRadius(4)
+                        }
+                    }
+                }
+            }
+
+            if let rationale = day.rationale {
+                HStack(alignment: .top, spacing: Theme.Spacing.xs) {
+                    Image(systemName: "brain.head.profile")
+                        .font(.system(size: 11))
+                        .foregroundColor(Theme.Colors.accentBlue)
+                    Text(rationale)
+                        .font(Theme.Typography.footnote)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                }
+                .padding(.top, Theme.Spacing.xs)
+            }
+        }
+        .padding(Theme.Spacing.md)
+        .background(Theme.Colors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                .stroke(Theme.Colors.borderLight, lineWidth: 1)
+        )
+        .cornerRadius(Theme.CornerRadius.md)
+    }
+
+    private func sportColor(_ sport: String) -> Color {
+        switch sport.lowercased() {
+        case "running": return Theme.Colors.accentGreen
+        case "strength": return Theme.Colors.accentBlue
+        case "mobility": return Color(hex: "9333EA")
+        default: return Theme.Colors.accentBlue
+        }
+    }
+
+    private func priorityColor(_ priority: WorkoutPriority) -> Color {
+        switch priority {
+        case .key: return Theme.Colors.accentRed
+        case .normal: return Theme.Colors.accentBlue
+        case .optional: return Theme.Colors.textSecondary
+        }
+    }
+}
+
+// MARK: - Day State Card (AMA-1133)
+
+private struct DayStateCard: View {
+    let dayState: DayState
+    let date: Date
+
+    private let cal = Calendar.current
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            HStack {
+                Text(date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
+                    .font(Theme.Typography.captionBold)
+                    .foregroundColor(cal.isDateInToday(date) ? Theme.Colors.accentBlue : Theme.Colors.textPrimary)
+
+                Spacer()
+
+                // Readiness pill
+                readinessPill(dayState.readiness)
+
+                // Fatigue score
+                if let fatigue = dayState.fatigueScore {
+                    Text("Fatigue: \(Int(fatigue))")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(Theme.Colors.textSecondary)
+                }
+            }
+
+            // Planned workouts
+            if !dayState.plannedWorkouts.isEmpty {
+                ForEach(dayState.plannedWorkouts) { workout in
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Circle()
+                            .fill(sportColor(workout.sport))
+                            .frame(width: 6, height: 6)
+
+                        Text(workout.name)
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(Theme.Colors.textPrimary)
+                            .lineLimit(1)
+
+                        Spacer()
+
+                        if let time = workout.scheduledTime {
+                            Text(time)
+                                .font(Theme.Typography.footnote)
+                                .foregroundColor(Theme.Colors.textTertiary)
+                        }
+                    }
+                }
+            }
+
+            // Completed indicators
+            if !dayState.completedWorkouts.isEmpty {
+                HStack(spacing: Theme.Spacing.xs) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(Theme.Colors.accentGreen)
+                    Text("\(dayState.completedWorkouts.count) completed")
+                        .font(Theme.Typography.footnote)
+                        .foregroundColor(Theme.Colors.accentGreen)
+                }
+            }
+
+            // Notes
+            if let notes = dayState.notes {
+                Text(notes)
+                    .font(Theme.Typography.footnote)
+                    .foregroundColor(Theme.Colors.textTertiary)
+                    .italic()
+            }
+        }
+        .padding(Theme.Spacing.sm)
+        .background(Theme.Colors.surface)
+        .cornerRadius(Theme.CornerRadius.sm)
+    }
+
+    private func readinessPill(_ level: ReadinessLevel) -> some View {
+        Text(readinessLabel(level))
+            .font(.system(size: 10, weight: .medium))
+            .foregroundColor(readinessColor(level))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(readinessColor(level).opacity(0.15))
+            .cornerRadius(4)
+    }
+
+    private func readinessLabel(_ level: ReadinessLevel) -> String {
+        switch level {
+        case .green: return "Ready"
+        case .yellow: return "Moderate"
+        case .red: return "Fatigued"
+        case .rest: return "Rest"
+        case .unknown: return "Unknown"
+        }
+    }
+
+    private func readinessColor(_ level: ReadinessLevel) -> Color {
+        switch level {
+        case .green: return Theme.Colors.accentGreen
+        case .yellow: return Theme.Colors.accentOrange
+        case .red: return Theme.Colors.accentRed
+        case .rest: return Theme.Colors.accentBlue
+        case .unknown: return Theme.Colors.textTertiary
+        }
+    }
+
+    private func sportColor(_ sport: String) -> Color {
+        switch sport.lowercased() {
+        case "running": return Theme.Colors.accentGreen
+        case "strength": return Theme.Colors.accentBlue
+        case "mobility": return Color(hex: "9333EA")
         default: return Theme.Colors.accentBlue
         }
     }
