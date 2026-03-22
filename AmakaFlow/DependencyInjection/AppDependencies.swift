@@ -248,6 +248,120 @@ class MockAPIService: APIServiceProviding {
         }
         return try result.get()
     }
+
+    // MARK: - Planning (AMA-1147)
+
+    var fetchDayStatesResult: Result<[DayState], Error> = .success([])
+    var fetchDayStatesCalled = false
+    var generateWeekResult: Result<ProposedPlan, Error>?
+    var generateWeekCalled = false
+    var detectConflictsResult: Result<[Conflict], Error> = .success([])
+    var detectConflictsCalled = false
+    var parseWorkoutTextResult: Result<ParsedWorkout, Error>?
+    var parseWorkoutTextCalled = false
+
+    func fetchDayStates(from: String, to: String) async throws -> [DayState] {
+        fetchDayStatesCalled = true
+        return try fetchDayStatesResult.get()
+    }
+
+    func generateWeek(request: GenerateWeekRequest?) async throws -> ProposedPlan {
+        generateWeekCalled = true
+        guard let result = generateWeekResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
+
+    func detectConflicts(startDate: String, endDate: String) async throws -> [Conflict] {
+        detectConflictsCalled = true
+        return try detectConflictsResult.get()
+    }
+
+    func parseWorkoutText(text: String, context: String?) async throws -> ParsedWorkout {
+        parseWorkoutTextCalled = true
+        guard let result = parseWorkoutTextResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
+
+    // MARK: - Actions (AMA-1147)
+
+    var fetchPendingActionsResult: Result<[PendingAction], Error> = .success([])
+    var fetchPendingActionsCalled = false
+    var respondToActionResult: Result<ActionResponse, Error> = .success(ActionResponse(success: true, message: nil))
+    var respondToActionCalled = false
+
+    func fetchPendingActions() async throws -> [PendingAction] {
+        fetchPendingActionsCalled = true
+        return try fetchPendingActionsResult.get()
+    }
+
+    func respondToAction(id: String, response: String) async throws -> ActionResponse {
+        respondToActionCalled = true
+        return try respondToActionResult.get()
+    }
+
+    // MARK: - Coach (AMA-1147)
+
+    var sendCoachMessageResult: Result<CoachResponse, Error>?
+    var sendCoachMessageCalled = false
+    var getFatigueAdviceResult: Result<FatigueAdvice, Error>?
+    var getFatigueAdviceCalled = false
+    var fetchCoachMemoriesResult: Result<[CoachMemory], Error> = .success([])
+    var fetchCoachMemoriesCalled = false
+
+    func sendCoachMessage(message: String, context: CoachContext?) async throws -> CoachResponse {
+        sendCoachMessageCalled = true
+        guard let result = sendCoachMessageResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
+
+    func getFatigueAdvice(fatigueScore: Double?, loadHistory: [DailyLoad]?) async throws -> FatigueAdvice {
+        getFatigueAdviceCalled = true
+        guard let result = getFatigueAdviceResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
+
+    func fetchCoachMemories() async throws -> [CoachMemory] {
+        fetchCoachMemoriesCalled = true
+        return try fetchCoachMemoriesResult.get()
+    }
+
+    // MARK: - Analytics (AMA-1147)
+
+    var fetchShoeComparisonResult: Result<[ShoeStats], Error> = .success([])
+    var fetchShoeComparisonCalled = false
+
+    func fetchShoeComparison() async throws -> [ShoeStats] {
+        fetchShoeComparisonCalled = true
+        return try fetchShoeComparisonResult.get()
+    }
+
+    // MARK: - Billing (AMA-1147)
+
+    var fetchSubscriptionResult: Result<Subscription, Error>?
+    var fetchSubscriptionCalled = false
+
+    func fetchSubscription() async throws -> Subscription {
+        fetchSubscriptionCalled = true
+        guard let result = fetchSubscriptionResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
+
+    // MARK: - Notification Preferences (AMA-1147)
+
+    var fetchNotificationPreferencesResult: Result<NotificationPreferences, Error> = .success(NotificationPreferences())
+    var fetchNotificationPreferencesCalled = false
+    var updateNotificationPreferencesResult: Result<NotificationPreferences, Error> = .success(NotificationPreferences())
+    var updateNotificationPreferencesCalled = false
+
+    func fetchNotificationPreferences() async throws -> NotificationPreferences {
+        fetchNotificationPreferencesCalled = true
+        return try fetchNotificationPreferencesResult.get()
+    }
+
+    func updateNotificationPreferences(_ prefs: NotificationPreferences) async throws -> NotificationPreferences {
+        updateNotificationPreferencesCalled = true
+        return try updateNotificationPreferencesResult.get()
+    }
 }
 
 /// Mock pairing service for testing

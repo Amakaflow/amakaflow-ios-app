@@ -96,6 +96,57 @@ protocol APIServiceProviding {
 
     /// Fetch full workout completion detail
     func fetchCompletionDetail(id: String) async throws -> WorkoutCompletionDetail
+
+    // MARK: - Planning (AMA-1147)
+
+    /// Fetch day states for a date range
+    func fetchDayStates(from: String, to: String) async throws -> [DayState]
+
+    /// Generate a proposed training week
+    func generateWeek(request: GenerateWeekRequest?) async throws -> ProposedPlan
+
+    /// Detect scheduling conflicts
+    func detectConflicts(startDate: String, endDate: String) async throws -> [Conflict]
+
+    /// Parse free-text workout description
+    func parseWorkoutText(text: String, context: String?) async throws -> ParsedWorkout
+
+    // MARK: - Actions (AMA-1147)
+
+    /// Fetch pending actions
+    func fetchPendingActions() async throws -> [PendingAction]
+
+    /// Approve, reject, or undo a pending action
+    func respondToAction(id: String, response: String) async throws -> ActionResponse
+
+    // MARK: - Coach (AMA-1147)
+
+    /// Send a message to the AI coach
+    func sendCoachMessage(message: String, context: CoachContext?) async throws -> CoachResponse
+
+    /// Get fatigue advice from the coach
+    func getFatigueAdvice(fatigueScore: Double?, loadHistory: [DailyLoad]?) async throws -> FatigueAdvice
+
+    /// Fetch coach memories
+    func fetchCoachMemories() async throws -> [CoachMemory]
+
+    // MARK: - Analytics (AMA-1147)
+
+    /// Fetch shoe comparison stats
+    func fetchShoeComparison() async throws -> [ShoeStats]
+
+    // MARK: - Billing (AMA-1147)
+
+    /// Fetch subscription status
+    func fetchSubscription() async throws -> Subscription
+
+    // MARK: - Notification Preferences (AMA-1147)
+
+    /// Fetch notification preferences
+    func fetchNotificationPreferences() async throws -> NotificationPreferences
+
+    /// Update notification preferences
+    func updateNotificationPreferences(_ prefs: NotificationPreferences) async throws -> NotificationPreferences
 }
 
 // MARK: - Default Parameter Extensions
@@ -149,6 +200,26 @@ extension APIServiceProviding {
     /// Convenience method with default pagination
     func fetchCompletions() async throws -> [WorkoutCompletion] {
         try await fetchCompletions(limit: 50, offset: 0)
+    }
+
+    /// Convenience method with default generate-week request
+    func generateWeek() async throws -> ProposedPlan {
+        try await generateWeek(request: nil)
+    }
+
+    /// Convenience method with default coach context
+    func sendCoachMessage(message: String) async throws -> CoachResponse {
+        try await sendCoachMessage(message: message, context: nil)
+    }
+
+    /// Convenience method with default parse context
+    func parseWorkoutText(text: String) async throws -> ParsedWorkout {
+        try await parseWorkoutText(text: text, context: nil)
+    }
+
+    /// Convenience method with default fatigue params
+    func getFatigueAdvice() async throws -> FatigueAdvice {
+        try await getFatigueAdvice(fatigueScore: nil, loadHistory: nil)
     }
 }
 
