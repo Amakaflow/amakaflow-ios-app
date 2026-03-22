@@ -26,10 +26,17 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
     @Published var heartRate: Double = 0
     @Published var activeCalories: Double = 0
 
+    // AMA-1150: DayState ViewModel for routing push messages
+    weak var dayStateViewModel: DayStateViewModel?
+
     private(set) var session: WCSession?
     private var pendingCommandId: String?
     private var healthManager = HealthKitWorkoutManager.shared
     private var hrUpdateTimer: Timer?
+
+    // AMA-1150: Pending callbacks for DayState request/response
+    private var dayStateCallback: ((Result<DayState, Error>) -> Void)?
+    private var coachCallback: ((Result<CoachResponse, Error>) -> Void)?
 
     private override init() {
         super.init()
@@ -252,6 +259,153 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
     func clearWorkoutState() {
         workoutState = nil
     }
+
+    // MARK: - DayState Communication (AMA-1150)
+
+    /// Request today's DayState from the phone (phone calls backend API and relays response)
+    func sendDayStateRequest(completion: @escaping (Result<DayState, Error>) -> Void) {
+        guard let session = session, session.isReachable else {
+            print("⌚️ Phone not reachable, cannot request day state")
+            completion(.failure(WatchConnectivityBridgeError.phoneNotReachable))
+            return
+        }
+
+        dayStateCallback = completion
+
+        session.sendMessage(
+            ["action": DayStateAction.requestDayState.rawValue],
+            replyHandler: { [weak self] reply in
+                Task { @MainActor in
+                    self?.handleDayStateReply(reply)
+                }
+            },
+            errorHandler: { [weak self] error in
+                Task { @MainActor in
+                    print("⌚️ Failed to request day state: \(error)")
+                    self?.dayStateCallback?(.failure(error))
+                    self?.dayStateCallback = nil
+                }
+            }
+        )
+
+        print("⌚️ Sent day state request")
+    }
+
+    /// Ask the AI coach a question via the phone bridge
+    func sendCoachRequest(question: String, completion: @escaping (Result<CoachResponse, Error>) -> Void) {
+        guard let session = session, session.isReachable else {
+            print("⌚️ Phone not reachable, cannot ask coach")
+            completion(.failure(WatchConnectivityBridgeError.phoneNotReachable))
+            return
+        }
+
+        coachCallback = completion
+
+        session.sendMessage(
+            [
+                "action": DayStateAction.requestCoachAnswer.rawValue,
+                "question": question
+            ],
+            replyHandler: { [weak self] reply in
+                Task { @MainActor in
+                    self?.handleCoachReply(reply)
+                }
+            },
+            errorHandler: { [weak self] error in
+                Task { @MainActor in
+                    print("⌚️ Failed to send coach request: \(error)")
+                    self?.coachCallback?(.failure(error))
+                    self?.coachCallback = nil
+                }
+            }
+        )
+
+        print("⌚️ Sent coach question: \(question)")
+    }
+
+    /// Send conflict action (adjust/keep) to the phone
+    func sendConflictAction(action: String, message: String) {
+        guard let session = session, session.isReachable else {
+            print("⌚️ Phone not reachable, cannot send conflict action")
+            return
+        }
+
+        session.sendMessage(
+            [
+                "action": DayStateAction.conflictAction.rawValue,
+                "conflictAction": action,
+                "message": message
+            ],
+            replyHandler: { reply in
+                print("⌚️ Conflict action acknowledged: \(reply)")
+            },
+            errorHandler: { error in
+                print("⌚️ Failed to send conflict action: \(error)")
+            }
+        )
+
+        print("⌚️ Sent conflict action: \(action)")
+    }
+
+    // MARK: - DayState Response Handling (AMA-1150)
+
+    @MainActor
+    private func handleDayStateReply(_ reply: [String: Any]) {
+        guard let dayStateDict = reply["dayState"] as? [String: Any] else {
+            print("⌚️ Invalid day state reply")
+            dayStateCallback?(.failure(WatchConnectivityBridgeError.commandFailed("Invalid response")))
+            dayStateCallback = nil
+            return
+        }
+
+        do {
+            let data = try JSONSerialization.data(withJSONObject: dayStateDict)
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            let dayState = try decoder.decode(DayState.self, from: data)
+            dayStateCallback?(.success(dayState))
+            dayStateViewModel?.handleDayStateUpdate(dayState)
+        } catch {
+            print("⌚️ Failed to decode day state: \(error)")
+            dayStateCallback?(.failure(error))
+        }
+        dayStateCallback = nil
+    }
+
+    @MainActor
+    private func handleCoachReply(_ reply: [String: Any]) {
+        guard let answer = reply["answer"] as? String,
+              let question = reply["question"] as? String else {
+            print("⌚️ Invalid coach reply")
+            coachCallback?(.failure(WatchConnectivityBridgeError.commandFailed("Invalid response")))
+            coachCallback = nil
+            return
+        }
+
+        let response = CoachResponse(answer: answer, question: question)
+        coachCallback?(.success(response))
+        dayStateViewModel?.handleCoachResponse(response)
+        coachCallback = nil
+    }
+
+    @MainActor
+    private func handleDayStatePush(_ message: [String: Any]) {
+        guard let dayStateDict = message["dayState"] as? [String: Any] else {
+            print("⌚️ Invalid day state push")
+            return
+        }
+
+        do {
+            let data = try JSONSerialization.data(withJSONObject: dayStateDict)
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            let dayState = try decoder.decode(DayState.self, from: data)
+            dayStateViewModel?.handleDayStateUpdate(dayState)
+            print("⌚️ Received day state push update")
+        } catch {
+            print("⌚️ Failed to decode day state push: \(error)")
+        }
+    }
 }
 
 // MARK: - WCSessionDelegate
@@ -342,6 +496,17 @@ extension WatchConnectivityBridge: WCSessionDelegate {
             // applicationContext was cleared (workout is running, state sent via message only)
             // No action needed - this prevents phantom "Open on iPhone" card
             print("⌚️ Received cleared applicationContext (workout running)")
+
+        // AMA-1150: DayState push messages from phone
+        case DayStateAction.dayStateResponse.rawValue:
+            handleDayStatePush(message)
+
+        case DayStateAction.coachResponse.rawValue:
+            if let answer = message["answer"] as? String,
+               let question = message["question"] as? String {
+                let response = CoachResponse(answer: answer, question: question)
+                dayStateViewModel?.handleCoachResponse(response)
+            }
 
         default:
             print("⌚️ Unknown action: \(action)")

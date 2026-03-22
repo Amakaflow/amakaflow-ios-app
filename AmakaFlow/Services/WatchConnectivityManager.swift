@@ -351,6 +351,20 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 handleSetLog(message)
                 replyHandler(["status": "received"])
 
+            // AMA-1150: DayState features
+            case "requestDayState":
+                handleDayStateRequest(replyHandler: replyHandler)
+
+            case "requestCoachAnswer":
+                let question = message["question"] as? String ?? ""
+                handleCoachRequest(question: question, replyHandler: replyHandler)
+
+            case "conflictAction":
+                let conflictAction = message["conflictAction"] as? String ?? ""
+                let conflictMessage = message["message"] as? String ?? ""
+                handleConflictAction(action: conflictAction, message: conflictMessage)
+                replyHandler(["status": "received"])
+
             default:
                 replyHandler(["status": "unknown_action"])
             }
@@ -414,6 +428,72 @@ extension WatchConnectivityManager: WCSessionDelegate {
         watchMaxHeartRate = 0
         lastHealthUpdate = nil
         heartRateSamples = []
+    }
+
+    // MARK: - DayState Handlers (AMA-1150)
+
+    private func handleDayStateRequest(replyHandler: @escaping ([String: Any]) -> Void) {
+        Task { @MainActor in
+            do {
+                let dayState = try await APIService.shared.fetchDayState()
+                let data = try JSONEncoder().encode(dayState)
+                if let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    replyHandler(["status": "success", "dayState": dict])
+                } else {
+                    replyHandler(["status": "error", "message": "Encoding failed"])
+                }
+            } catch {
+                print("⌚️ Failed to fetch day state for watch: \(error)")
+                replyHandler(["status": "error", "message": error.localizedDescription])
+            }
+        }
+    }
+
+    private func handleCoachRequest(question: String, replyHandler: @escaping ([String: Any]) -> Void) {
+        Task { @MainActor in
+            do {
+                let answer = try await APIService.shared.askCoach(question: question)
+                replyHandler([
+                    "status": "success",
+                    "answer": answer,
+                    "question": question
+                ])
+            } catch {
+                print("⌚️ Failed to get coach answer for watch: \(error)")
+                replyHandler(["status": "error", "message": error.localizedDescription])
+            }
+        }
+    }
+
+    private func handleConflictAction(action: String, message: String) {
+        Task { @MainActor in
+            do {
+                try await APIService.shared.resolveConflict(action: action, message: message)
+                print("⌚️ Conflict action '\(action)' sent to backend")
+            } catch {
+                print("⌚️ Failed to resolve conflict: \(error)")
+            }
+        }
+    }
+
+    /// Push DayState update to watch (called from phone when data changes)
+    func sendDayStateToWatch(_ dayState: DayStateResponse) {
+        guard let session = session, session.isReachable else { return }
+
+        do {
+            let data = try JSONEncoder().encode(dayState)
+            guard let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+
+            session.sendMessage(
+                ["action": "dayStateResponse", "dayState": dict],
+                replyHandler: nil,
+                errorHandler: { error in
+                    print("⌚️ Failed to push day state to watch: \(error)")
+                }
+            )
+        } catch {
+            print("⌚️ Failed to encode day state for watch: \(error)")
+        }
     }
 
     private func handleWorkoutSummary(_ message: [String: Any]) {
