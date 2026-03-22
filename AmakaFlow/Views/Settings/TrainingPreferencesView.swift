@@ -13,6 +13,16 @@ struct TrainingPreferencesView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: Theme.Spacing.xl) {
+                // Planner constraints (AMA-1133)
+                plannerSection
+
+                divider
+
+                // Goal race (AMA-1133)
+                goalRaceSection
+
+                divider
+
                 // Notification toggles
                 notificationSection
 
@@ -39,6 +49,165 @@ struct TrainingPreferencesView: View {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Theme.Colors.background.opacity(0.8))
+            }
+        }
+    }
+
+    // MARK: - Planner Section (AMA-1133)
+
+    private var plannerSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            Text("Training Plan")
+                .font(Theme.Typography.title2)
+                .foregroundColor(Theme.Colors.textPrimary)
+
+            // Weekly volume slider
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                HStack {
+                    Text("Weekly Volume")
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    Spacer()
+                    Text("\(viewModel.preferences.weeklyVolume) km")
+                        .font(Theme.Typography.bodyBold)
+                        .foregroundColor(Theme.Colors.accentBlue)
+                }
+
+                Slider(
+                    value: Binding(
+                        get: { Double(viewModel.preferences.weeklyVolume) },
+                        set: { viewModel.preferences.weeklyVolume = Int($0) }
+                    ),
+                    in: 10...150,
+                    step: 5
+                )
+                .tint(Theme.Colors.accentBlue)
+
+                Text("Target weekly running volume in kilometers")
+                    .font(Theme.Typography.footnote)
+                    .foregroundColor(Theme.Colors.textTertiary)
+            }
+
+            // Hard day cap
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                HStack {
+                    Text("Hard Day Cap")
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    Spacer()
+                    Picker("", selection: $viewModel.preferences.hardDayCap) {
+                        ForEach(1...5, id: \.self) { count in
+                            Text("\(count)").tag(count)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(Theme.Colors.accentBlue)
+                }
+                Text("Maximum hard sessions per week")
+                    .font(Theme.Typography.footnote)
+                    .foregroundColor(Theme.Colors.textTertiary)
+            }
+
+            // Run days per week
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                HStack {
+                    Text("Run Days Per Week")
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    Spacer()
+                    Picker("", selection: $viewModel.preferences.runDaysPerWeek) {
+                        ForEach(2...7, id: \.self) { count in
+                            Text("\(count)").tag(count)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(Theme.Colors.accentBlue)
+                }
+            }
+
+            // Preferred long run day
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                HStack {
+                    Text("Long Run Day")
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    Spacer()
+                    Picker("", selection: Binding(
+                        get: { viewModel.preferences.preferredLongRunDay ?? 0 },
+                        set: { viewModel.preferences.preferredLongRunDay = $0 == 0 ? nil : $0 }
+                    )) {
+                        Text("Any").tag(0)
+                        Text("Mon").tag(2)
+                        Text("Tue").tag(3)
+                        Text("Wed").tag(4)
+                        Text("Thu").tag(5)
+                        Text("Fri").tag(6)
+                        Text("Sat").tag(7)
+                        Text("Sun").tag(1)
+                    }
+                    .pickerStyle(.menu)
+                    .tint(Theme.Colors.accentBlue)
+                }
+            }
+        }
+    }
+
+    // MARK: - Goal Race Section (AMA-1133)
+
+    private var goalRaceSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            Text("Goal Race")
+                .font(Theme.Typography.title2)
+                .foregroundColor(Theme.Colors.textPrimary)
+
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                Text("Race Distance")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textSecondary)
+
+                Picker("", selection: Binding(
+                    get: { viewModel.preferences.goalRace ?? "none" },
+                    set: { viewModel.preferences.goalRace = $0 == "none" ? nil : $0 }
+                )) {
+                    Text("None").tag("none")
+                    Text("5K").tag("5k")
+                    Text("10K").tag("10k")
+                    Text("Half Marathon").tag("half_marathon")
+                    Text("Marathon").tag("marathon")
+                    Text("Ultra").tag("ultra")
+                }
+                .pickerStyle(.segmented)
+            }
+
+            if viewModel.preferences.goalRace != nil {
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Text("Race Date")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+
+                    DatePicker(
+                        "",
+                        selection: Binding(
+                            get: {
+                                if let dateStr = viewModel.preferences.goalRaceDate {
+                                    let formatter = ISO8601DateFormatter()
+                                    formatter.formatOptions = [.withFullDate]
+                                    return formatter.date(from: dateStr) ?? Date()
+                                }
+                                return Date()
+                            },
+                            set: {
+                                let formatter = ISO8601DateFormatter()
+                                formatter.formatOptions = [.withFullDate]
+                                viewModel.preferences.goalRaceDate = formatter.string(from: $0)
+                            }
+                        ),
+                        in: Date()...,
+                        displayedComponents: .date
+                    )
+                    .datePickerStyle(.compact)
+                    .tint(Theme.Colors.accentBlue)
+                }
             }
         }
     }

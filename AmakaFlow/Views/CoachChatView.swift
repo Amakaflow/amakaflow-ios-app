@@ -56,6 +56,22 @@ struct CoachChatView: View {
                     }
                 }
 
+                // Rate limit indicator (AMA-1133)
+                if viewModel.rateLimitHit {
+                    rateLimitBanner
+                } else if viewModel.isNearRateLimit {
+                    rateLimitWarning
+                }
+
+                // Error message
+                if let error = viewModel.errorMessage, !viewModel.rateLimitHit {
+                    Text(error)
+                        .font(Theme.Typography.footnote)
+                        .foregroundColor(Theme.Colors.accentRed)
+                        .padding(.horizontal, Theme.Spacing.lg)
+                        .padding(.vertical, Theme.Spacing.xs)
+                }
+
                 // Input bar
                 inputBar
             }
@@ -117,11 +133,21 @@ struct CoachChatView: View {
         }
     }
 
-    // MARK: - Chat Bubble
+    // MARK: - Chat Bubble (AMA-1133 enhanced)
 
     private func chatBubble(_ message: ChatMessage) -> some View {
-        HStack {
+        HStack(alignment: .top) {
             if message.role == .user { Spacer() }
+
+            if message.role == .assistant {
+                // Coach avatar
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 16))
+                    .foregroundColor(Theme.Colors.accentBlue)
+                    .frame(width: 32, height: 32)
+                    .background(Theme.Colors.accentBlue.opacity(0.15))
+                    .cornerRadius(16)
+            }
 
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: Theme.Spacing.xs) {
                 Text(message.content)
@@ -130,6 +156,33 @@ struct CoachChatView: View {
                     .padding(Theme.Spacing.md)
                     .background(message.role == .user ? Theme.Colors.accentBlue : Theme.Colors.surface)
                     .cornerRadius(Theme.CornerRadius.lg)
+
+                // Source chips for assistant messages (AMA-1133)
+                if message.role == .assistant, let suggestions = message.suggestions, !suggestions.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: Theme.Spacing.xs) {
+                            ForEach(suggestions, id: \.stableId) { suggestion in
+                                sourceChip(suggestion)
+                            }
+                        }
+                    }
+                }
+
+                // Action items for assistant messages (AMA-1133)
+                if message.role == .assistant, let actions = message.actionItems, !actions.isEmpty {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                        ForEach(actions, id: \.stableId) { item in
+                            HStack(spacing: Theme.Spacing.xs) {
+                                Image(systemName: "arrow.right.circle.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(Theme.Colors.accentBlue)
+                                Text(item.title)
+                                    .font(Theme.Typography.caption)
+                                    .foregroundColor(Theme.Colors.accentBlue)
+                            }
+                        }
+                    }
+                }
 
                 Text(message.timestamp, style: .time)
                     .font(Theme.Typography.footnote)
@@ -140,6 +193,34 @@ struct CoachChatView: View {
             if message.role == .assistant { Spacer() }
         }
         .padding(.horizontal, Theme.Spacing.lg)
+    }
+
+    private func sourceChip(_ suggestion: CoachSuggestion) -> some View {
+        Button {
+            Task { await viewModel.sendMessage(suggestion.text) }
+        } label: {
+            HStack(spacing: Theme.Spacing.xs) {
+                Image(systemName: chipIcon(suggestion.type))
+                    .font(.system(size: 10))
+                Text(suggestion.text)
+                    .font(Theme.Typography.footnote)
+                    .lineLimit(1)
+            }
+            .foregroundColor(Theme.Colors.accentBlue)
+            .padding(.horizontal, Theme.Spacing.sm)
+            .padding(.vertical, Theme.Spacing.xs)
+            .background(Theme.Colors.accentBlue.opacity(0.1))
+            .cornerRadius(Theme.CornerRadius.md)
+        }
+    }
+
+    private func chipIcon(_ type: SuggestionType?) -> String {
+        switch type {
+        case .workout: return "figure.run"
+        case .recovery: return "bed.double.fill"
+        case .nutrition: return "fork.knife"
+        case .general, .none: return "lightbulb.fill"
+        }
     }
 
     // MARK: - Fatigue Banner
@@ -167,6 +248,35 @@ struct CoachChatView: View {
         case .moderate: return Theme.Colors.accentOrange
         case .high, .critical: return Theme.Colors.accentRed
         }
+    }
+
+    // MARK: - Rate Limit Indicators (AMA-1133)
+
+    private var rateLimitBanner: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Image(systemName: "clock.badge.exclamationmark")
+                .foregroundColor(Theme.Colors.accentRed)
+            Text("Rate limit reached. Please wait before sending more messages.")
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.accentRed)
+            Spacer()
+        }
+        .padding(Theme.Spacing.sm)
+        .background(Theme.Colors.accentRed.opacity(0.1))
+    }
+
+    private var rateLimitWarning: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Image(systemName: "exclamationmark.circle")
+                .foregroundColor(Theme.Colors.accentOrange)
+                .font(.system(size: 12))
+            Text("Approaching message limit (\(viewModel.messageCount)/\(CoachViewModel.rateLimitWarningThreshold))")
+                .font(Theme.Typography.footnote)
+                .foregroundColor(Theme.Colors.accentOrange)
+            Spacer()
+        }
+        .padding(.horizontal, Theme.Spacing.lg)
+        .padding(.vertical, Theme.Spacing.xs)
     }
 
     // MARK: - Input Bar

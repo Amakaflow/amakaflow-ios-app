@@ -1280,6 +1280,44 @@ struct SettingsView: View {
                         .foregroundColor(Theme.Colors.textTertiary)
                 }
             }
+
+            NavigationLink(destination: SyncDashboardView()) {
+                HStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 16))
+                        .foregroundColor(Theme.Colors.accentGreen)
+                        .frame(width: 28)
+
+                    Text("Sync Dashboard")
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                }
+            }
+
+            NavigationLink(destination: NotificationPreferencesView()) {
+                HStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: "bell.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(Color(hex: "9333EA"))
+                        .frame(width: 28)
+
+                    Text("Notification Preferences")
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                }
+            }
         }
     }
 

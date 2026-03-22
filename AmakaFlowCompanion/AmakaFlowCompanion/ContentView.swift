@@ -123,6 +123,19 @@ struct ContentView: View {
         .fullScreenCover(isPresented: $showingWorkoutPlayer) {
             WorkoutPlayerView()
         }
+        // Deep link notification handlers (AMA-1133)
+        .onReceive(NotificationCenter.default.publisher(for: .deepLinkToCalendar)) { _ in
+            selectedTab = .calendar
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .deepLinkToCoach)) { _ in
+            selectedTab = .coach
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .deepLinkToWorkout)) { _ in
+            selectedTab = .workouts
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .deepLinkToSync)) { _ in
+            selectedTab = .settings
+        }
     }
 }
 
