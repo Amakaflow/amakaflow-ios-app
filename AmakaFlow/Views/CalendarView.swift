@@ -241,7 +241,8 @@ struct CalendarView: View {
 
     private func readinessPill(_ level: ReadinessLevel, isToday: Bool) -> some View {
         Text(readinessLabel(level))
-            .font(.system(size: 9, weight: .medium))
+            .font(.caption2)
+            .fontWeight(.medium)
             .foregroundColor(isToday ? .white : readinessColor(level))
             .padding(.horizontal, 4)
             .padding(.vertical, 1)
@@ -592,7 +593,8 @@ private struct ProposedDayCard: View {
 
                         if let priority = workout.priority {
                             Text(priority.rawValue.capitalized)
-                                .font(.system(size: 10, weight: .medium))
+                                .font(.caption2)
+                                .fontWeight(.medium)
                                 .foregroundColor(priorityColor(priority))
                                 .padding(.horizontal, 4)
                                 .padding(.vertical, 1)
@@ -665,7 +667,8 @@ private struct DayStateCard: View {
                 // Fatigue score
                 if let fatigue = dayState.fatigueScore {
                     Text("Fatigue: \(Int(fatigue))")
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.caption2)
+                        .fontWeight(.medium)
                         .foregroundColor(Theme.Colors.textSecondary)
                 }
             }
@@ -681,7 +684,7 @@ private struct DayStateCard: View {
                         Text(workout.name)
                             .font(Theme.Typography.caption)
                             .foregroundColor(Theme.Colors.textPrimary)
-                            .lineLimit(1)
+                            .lineLimit(3)
 
                         Spacer()
 
@@ -721,7 +724,8 @@ private struct DayStateCard: View {
 
     private func readinessPill(_ level: ReadinessLevel) -> some View {
         Text(readinessLabel(level))
-            .font(.system(size: 10, weight: .medium))
+            .font(.caption2)
+            .fontWeight(.medium)
             .foregroundColor(readinessColor(level))
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
@@ -795,7 +799,7 @@ private struct CalendarWorkoutRow: View {
                         Text(workout.name)
                             .font(Theme.Typography.bodyBold)
                             .foregroundColor(Theme.Colors.textPrimary)
-                            .lineLimit(1)
+                            .lineLimit(3)
                     }
 
                     Text(workout.formattedDuration)

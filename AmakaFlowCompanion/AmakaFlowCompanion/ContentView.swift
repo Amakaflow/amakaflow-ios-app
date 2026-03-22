@@ -11,6 +11,7 @@ struct ContentView: View {
     @EnvironmentObject var viewModel: WorkoutsViewModel
     @State private var selectedTab: Tab = .home
     @State private var showingWorkoutPlayer = false
+    @State private var showSyncDashboard = false
 
     enum Tab: String, CaseIterable {
         case home = "Home"
@@ -93,7 +94,7 @@ struct ContentView: View {
                 .tag(Tab.history)
                 .accessibilityIdentifier("history_tab")
 
-            SettingsView()
+            SettingsView(navigateToSyncDashboard: $showSyncDashboard)
                 .tabItem {
                     Image(systemName: Tab.settings.icon)
                     Text(Tab.settings.rawValue)
@@ -135,6 +136,7 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToSync)) { _ in
             selectedTab = .settings
+            showSyncDashboard = true
         }
     }
 }

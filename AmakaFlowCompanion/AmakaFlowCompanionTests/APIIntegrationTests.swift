@@ -457,7 +457,7 @@ final class CoachViewModelTests: XCTestCase {
         let vm = CoachViewModel(dependencies: deps)
 
         await vm.sendMessage("Hello")
-        XCTAssertEqual(vm.messages.count, 1) // Only user message
+        XCTAssertEqual(vm.messages.count, 0) // User message removed on failure
         XCTAssertNotNil(vm.errorMessage)
     }
 

@@ -61,7 +61,7 @@ struct SyncDashboardView: View {
                         .foregroundColor(Theme.Colors.textPrimary)
 
                     if let syncTime = lastSyncTime {
-                        Text("Last checked: \(syncTime, style: .relative) ago")
+                        Text("Last checked: \(syncTime, style: .relative)")
                             .font(Theme.Typography.footnote)
                             .foregroundColor(Theme.Colors.textSecondary)
                     }

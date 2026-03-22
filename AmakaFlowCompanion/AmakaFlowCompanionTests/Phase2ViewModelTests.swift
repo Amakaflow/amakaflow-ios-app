@@ -185,7 +185,7 @@ final class Phase2CoachViewModelTests: XCTestCase {
 
         await viewModel.sendMessage("Hello")
 
-        XCTAssertEqual(viewModel.messages.count, 1) // only user message
+        XCTAssertEqual(viewModel.messages.count, 0) // user message removed on failure
         XCTAssertNotNil(viewModel.errorMessage)
         XCTAssertFalse(viewModel.isLoading)
     }

@@ -22,6 +22,7 @@ enum AudioBehavior: String, CaseIterable {
 }
 
 struct SettingsView: View {
+    @Binding var navigateToSyncDashboard: Bool
     @AppStorage("devicePreference") private var deviceMode: DevicePreference = .appleWatchPhone
     @AppStorage("instagramImportMode") private var instagramImportMode: InstagramImportMode = .manual
     @State private var voiceCuesEnabled = true
@@ -162,6 +163,9 @@ struct SettingsView: View {
                     .font(.system(size: 1))
                     .opacity(0.01)
                     .accessibilityIdentifier("settings_screen")
+            }
+            .navigationDestination(isPresented: $navigateToSyncDashboard) {
+                SyncDashboardView()
             }
         }
     }
@@ -1980,7 +1984,7 @@ private struct SettingsToggleRow: View {
 // MARK: - Preview
 
 #Preview {
-    SettingsView()
+    SettingsView(navigateToSyncDashboard: .constant(false))
         .environmentObject(GarminConnectManager.shared)
         .environmentObject(PairingService.shared)
         .environmentObject(WorkoutsViewModel())

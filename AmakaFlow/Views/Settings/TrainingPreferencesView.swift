@@ -95,13 +95,15 @@ struct TrainingPreferencesView: View {
                         .font(Theme.Typography.body)
                         .foregroundColor(Theme.Colors.textPrimary)
                     Spacer()
-                    Picker("", selection: $viewModel.preferences.hardDayCap) {
+                    Picker("Hard Day Cap", selection: $viewModel.preferences.hardDayCap) {
                         ForEach(1...5, id: \.self) { count in
                             Text("\(count)").tag(count)
                         }
                     }
+                    .labelsHidden()
                     .pickerStyle(.menu)
                     .tint(Theme.Colors.accentBlue)
+                    .accessibilityLabel("Hard Day Cap")
                 }
                 Text("Maximum hard sessions per week")
                     .font(Theme.Typography.footnote)
@@ -115,13 +117,15 @@ struct TrainingPreferencesView: View {
                         .font(Theme.Typography.body)
                         .foregroundColor(Theme.Colors.textPrimary)
                     Spacer()
-                    Picker("", selection: $viewModel.preferences.runDaysPerWeek) {
+                    Picker("Run Days Per Week", selection: $viewModel.preferences.runDaysPerWeek) {
                         ForEach(2...7, id: \.self) { count in
                             Text("\(count)").tag(count)
                         }
                     }
+                    .labelsHidden()
                     .pickerStyle(.menu)
                     .tint(Theme.Colors.accentBlue)
+                    .accessibilityLabel("Run Days Per Week")
                 }
             }
 
@@ -132,7 +136,7 @@ struct TrainingPreferencesView: View {
                         .font(Theme.Typography.body)
                         .foregroundColor(Theme.Colors.textPrimary)
                     Spacer()
-                    Picker("", selection: Binding(
+                    Picker("Long Run Day", selection: Binding(
                         get: { viewModel.preferences.preferredLongRunDay ?? 0 },
                         set: { viewModel.preferences.preferredLongRunDay = $0 == 0 ? nil : $0 }
                     )) {
@@ -145,8 +149,10 @@ struct TrainingPreferencesView: View {
                         Text("Sat").tag(7)
                         Text("Sun").tag(1)
                     }
+                    .labelsHidden()
                     .pickerStyle(.menu)
                     .tint(Theme.Colors.accentBlue)
+                    .accessibilityLabel("Long Run Day")
                 }
             }
         }
@@ -165,7 +171,7 @@ struct TrainingPreferencesView: View {
                     .font(Theme.Typography.caption)
                     .foregroundColor(Theme.Colors.textSecondary)
 
-                Picker("", selection: Binding(
+                Picker("Race Distance", selection: Binding(
                     get: { viewModel.preferences.goalRace ?? "none" },
                     set: { viewModel.preferences.goalRace = $0 == "none" ? nil : $0 }
                 )) {
@@ -176,7 +182,9 @@ struct TrainingPreferencesView: View {
                     Text("Marathon").tag("marathon")
                     Text("Ultra").tag("ultra")
                 }
+                .labelsHidden()
                 .pickerStyle(.segmented)
+                .accessibilityLabel("Race Distance")
             }
 
             if viewModel.preferences.goalRace != nil {
@@ -186,7 +194,7 @@ struct TrainingPreferencesView: View {
                         .foregroundColor(Theme.Colors.textSecondary)
 
                     DatePicker(
-                        "",
+                        "Race Date",
                         selection: Binding(
                             get: {
                                 if let dateStr = viewModel.preferences.goalRaceDate {
@@ -205,8 +213,10 @@ struct TrainingPreferencesView: View {
                         in: Date()...,
                         displayedComponents: .date
                     )
+                    .labelsHidden()
                     .datePickerStyle(.compact)
                     .tint(Theme.Colors.accentBlue)
+                    .accessibilityLabel("Race Date")
                 }
             }
         }
@@ -265,10 +275,13 @@ struct TrainingPreferencesView: View {
 
             Spacer()
 
-            Toggle("", isOn: isOn)
+            Toggle(title, isOn: isOn)
+                .labelsHidden()
                 .tint(Theme.Colors.accentBlue)
+                .accessibilityLabel(title)
         }
         .padding(.vertical, Theme.Spacing.xs)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Reminder Section
@@ -286,14 +299,16 @@ struct TrainingPreferencesView: View {
 
                 Spacer()
 
-                Picker("", selection: $viewModel.preferences.reminderMinutesBefore) {
+                Picker("Minutes before workout", selection: $viewModel.preferences.reminderMinutesBefore) {
                     Text("15 min").tag(15)
                     Text("30 min").tag(30)
                     Text("60 min").tag(60)
                     Text("120 min").tag(120)
                 }
+                .labelsHidden()
                 .pickerStyle(.menu)
                 .tint(Theme.Colors.accentBlue)
+                .accessibilityLabel("Reminder minutes before workout")
             }
         }
     }

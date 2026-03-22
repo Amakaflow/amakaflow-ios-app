@@ -35,7 +35,6 @@ class CoachViewModel: ObservableObject {
         messages.append(userMessage)
         isLoading = true
         errorMessage = nil
-        messageCount += 1
 
         do {
             let response = try await dependencies.apiService.sendCoachMessage(message: text)
@@ -46,8 +45,14 @@ class CoachViewModel: ObservableObject {
                 actionItems: response.actionItems
             )
             messages.append(assistantMessage)
+            messageCount += 1
             rateLimitHit = false
         } catch {
+            // Remove the optimistically-appended user message on failure
+            if let idx = messages.lastIndex(where: { $0.id == userMessage.id }) {
+                messages.remove(at: idx)
+            }
+
             if (error as? APIError)?.errorDescription?.contains("429") == true ||
                error.localizedDescription.contains("rate") {
                 rateLimitHit = true
