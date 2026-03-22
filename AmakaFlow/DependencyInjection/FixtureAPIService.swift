@@ -126,5 +126,48 @@ class FixtureAPIService: APIServiceProviding {
     func fetchCompletionDetail(id: String) async throws -> WorkoutCompletionDetail {
         return WorkoutCompletionDetail.sample
     }
+
+    // MARK: - Planning (AMA-1147)
+
+    func fetchDayStates(from: String, to: String) async throws -> [DayState] { [] }
+    func generateWeek(request: GenerateWeekRequest?) async throws -> ProposedPlan {
+        ProposedPlan(weekStartDate: "2026-03-21", days: [], rationale: "Fixture plan", totalLoadScore: nil)
+    }
+    func detectConflicts(startDate: String, endDate: String) async throws -> [Conflict] { [] }
+    func parseWorkoutText(text: String, context: String?) async throws -> ParsedWorkout {
+        ParsedWorkout(name: "Fixture Workout", sport: "running", intervals: [], estimatedDurationMinutes: 30, confidence: 0.9)
+    }
+
+    // MARK: - Actions (AMA-1147)
+
+    func fetchPendingActions() async throws -> [PendingAction] { [] }
+    func respondToAction(id: String, response: String) async throws -> ActionResponse {
+        ActionResponse(success: true, message: "OK")
+    }
+
+    // MARK: - Coach (AMA-1147)
+
+    func sendCoachMessage(message: String, context: CoachContext?) async throws -> CoachResponse {
+        CoachResponse(id: "fixture", message: "Fixture coach response", suggestions: nil, actionItems: nil)
+    }
+    func getFatigueAdvice(fatigueScore: Double?, loadHistory: [DailyLoad]?) async throws -> FatigueAdvice {
+        FatigueAdvice(level: .low, message: "You're recovering well", recommendations: ["Rest"], suggestedRestDays: 1, recoveryActivities: nil)
+    }
+    func fetchCoachMemories() async throws -> [CoachMemory] { [] }
+
+    // MARK: - Analytics (AMA-1147)
+
+    func fetchShoeComparison() async throws -> [ShoeStats] { [] }
+
+    // MARK: - Billing (AMA-1147)
+
+    func fetchSubscription() async throws -> Subscription {
+        Subscription(plan: "free", status: .active, currentPeriodEnd: nil, cancelAtPeriodEnd: nil, features: [])
+    }
+
+    // MARK: - Notification Preferences (AMA-1147)
+
+    func fetchNotificationPreferences() async throws -> NotificationPreferences { NotificationPreferences() }
+    func updateNotificationPreferences(_ prefs: NotificationPreferences) async throws -> NotificationPreferences { prefs }
 }
 #endif

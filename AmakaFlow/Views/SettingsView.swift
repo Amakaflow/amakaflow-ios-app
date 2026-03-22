@@ -65,6 +65,16 @@ struct SettingsView: View {
 
                     divider
 
+                    // Training Preferences (AMA-1147)
+                    trainingPreferencesSection
+
+                    divider
+
+                    // Analytics (AMA-1147)
+                    analyticsSection
+
+                    divider
+
                     // Integrations Section
                     integrationsSection
 
@@ -1222,6 +1232,83 @@ struct SettingsView: View {
                 .cornerRadius(Theme.CornerRadius.md)
             }
             .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - Training Preferences Section (AMA-1147)
+
+    private var trainingPreferencesSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            Text("TRAINING")
+                .font(Theme.Typography.footnote)
+                .foregroundColor(Theme.Colors.textSecondary)
+
+            NavigationLink(destination: TrainingPreferencesView()) {
+                HStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 16))
+                        .foregroundColor(Theme.Colors.accentBlue)
+                        .frame(width: 28)
+
+                    Text("Training Preferences")
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                }
+            }
+
+            NavigationLink(destination: ActivityFeedView()) {
+                HStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: "bell.badge.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(Theme.Colors.accentOrange)
+                        .frame(width: 28)
+
+                    Text("Activity Feed")
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                }
+            }
+        }
+    }
+
+    // MARK: - Analytics Section (AMA-1147)
+
+    private var analyticsSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            Text("ANALYTICS")
+                .font(Theme.Typography.footnote)
+                .foregroundColor(Theme.Colors.textSecondary)
+
+            NavigationLink(destination: ShoeComparisonView()) {
+                HStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: "shoe.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(Theme.Colors.accentGreen)
+                        .frame(width: 28)
+
+                    Text("Shoe Comparison")
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                }
+            }
         }
     }
 

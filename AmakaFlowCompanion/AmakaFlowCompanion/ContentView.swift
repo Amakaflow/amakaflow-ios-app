@@ -17,6 +17,7 @@ struct ContentView: View {
         case workouts = "Workouts"
         case sources = "Sources"
         case calendar = "Calendar"
+        case coach = "Coach"
         case history = "History"
         case settings = "Settings"
 
@@ -30,6 +31,8 @@ struct ContentView: View {
                 return "arrow.down.circle.fill"
             case .calendar:
                 return "calendar"
+            case .coach:
+                return "bubble.left.and.bubble.right.fill"
             case .history:
                 return "clock.fill"
             case .settings:
@@ -73,6 +76,14 @@ struct ContentView: View {
                 }
                 .tag(Tab.calendar)
                 .accessibilityIdentifier("calendar_tab")
+
+            CoachChatView()
+                .tabItem {
+                    Image(systemName: Tab.coach.icon)
+                    Text(Tab.coach.rawValue)
+                }
+                .tag(Tab.coach)
+                .accessibilityIdentifier("coach_tab")
 
             ActivityHistoryView()
                 .tabItem {

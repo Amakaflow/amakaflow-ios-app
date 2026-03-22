@@ -9,10 +9,12 @@ import SwiftUI
 
 struct CalendarView: View {
     @EnvironmentObject var viewModel: WorkoutsViewModel
+    @StateObject private var calendarVM = CalendarViewModel()
     @State private var currentDate = Date()
     @State private var selectedDate: Date?
     @State private var selectedWorkout: Workout?
     @State private var showingMonthPicker = false
+    @State private var showingGenerateWeek = false
 
     let onAddWorkout: () -> Void
 
@@ -30,6 +32,10 @@ struct CalendarView: View {
                 weekStrip
                     .padding(.horizontal, Theme.Spacing.lg)
                     .padding(.bottom, Theme.Spacing.lg)
+
+                // Generate Week button (AMA-1147)
+                generateWeekButton
+                    .padding(.horizontal, Theme.Spacing.lg)
 
                 // Upcoming workouts list
                 ScrollView {
@@ -106,7 +112,20 @@ struct CalendarView: View {
                     dayDetailSheet(for: date)
                 }
             }
+            .task {
+                await loadCalendarData()
+            }
+            .onChange(of: currentDate) { _ in
+                Task { await loadCalendarData() }
+            }
         }
+    }
+
+    /// Load day states and conflicts for the current week range
+    private func loadCalendarData() async {
+        guard let start = weekDates.first, let end = weekDates.last else { return }
+        await calendarVM.loadDayStates(from: start, to: end)
+        await calendarVM.detectConflicts(from: start, to: end)
     }
 
     // MARK: - Month Navigation
@@ -158,6 +177,8 @@ struct CalendarView: View {
     private func weekDayCell(for date: Date) -> some View {
         let isToday = calendar.isDateInToday(date)
         let workoutsForDay = workouts(for: date)
+        let readiness = calendarVM.readiness(for: date)
+        let hasConflict = calendarVM.hasConflict(on: date)
 
         return Button {
             selectedDate = date
@@ -171,19 +192,27 @@ struct CalendarView: View {
                     .font(Theme.Typography.bodyBold)
                     .foregroundColor(isToday ? .white : Theme.Colors.textPrimary)
 
-                // Workout dots
-                if !workoutsForDay.isEmpty {
-                    HStack(spacing: 2) {
+                // Readiness pill (AMA-1147)
+                if let readiness = readiness {
+                    readinessPill(readiness, isToday: isToday)
+                }
+
+                // Workout dots + conflict indicator
+                HStack(spacing: 2) {
+                    if hasConflict {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 8))
+                            .foregroundColor(isToday ? .white : Theme.Colors.accentOrange)
+                    }
+                    if !workoutsForDay.isEmpty {
                         ForEach(workoutsForDay.prefix(3)) { workout in
                             Circle()
                                 .fill(isToday ? .white : sportColor(for: workout.sport))
                                 .frame(width: 6, height: 6)
                         }
                     }
-                } else {
-                    Spacer()
-                        .frame(height: 6)
                 }
+                .frame(height: 8)
             }
             .padding(.vertical, Theme.Spacing.sm)
             .frame(maxWidth: .infinity)
@@ -191,6 +220,68 @@ struct CalendarView: View {
             .cornerRadius(Theme.CornerRadius.lg)
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Readiness Pill (AMA-1147)
+
+    private func readinessPill(_ level: ReadinessLevel, isToday: Bool) -> some View {
+        Text(readinessLabel(level))
+            .font(.system(size: 9, weight: .medium))
+            .foregroundColor(isToday ? .white : readinessColor(level))
+            .padding(.horizontal, 4)
+            .padding(.vertical, 1)
+            .background(
+                (isToday ? Color.white.opacity(0.25) : readinessColor(level).opacity(0.15))
+            )
+            .cornerRadius(4)
+    }
+
+    private func readinessLabel(_ level: ReadinessLevel) -> String {
+        switch level {
+        case .green: return "Ready"
+        case .yellow: return "Moderate"
+        case .red: return "Fatigued"
+        case .rest: return "Rest"
+        case .unknown: return ""
+        }
+    }
+
+    private func readinessColor(_ level: ReadinessLevel) -> Color {
+        switch level {
+        case .green: return Theme.Colors.accentGreen
+        case .yellow: return Theme.Colors.accentOrange
+        case .red: return Theme.Colors.accentRed
+        case .rest: return Theme.Colors.accentBlue
+        case .unknown: return Theme.Colors.textTertiary
+        }
+    }
+
+    // MARK: - Generate Week Button (AMA-1147)
+
+    private var generateWeekButton: some View {
+        Button {
+            Task { await calendarVM.generateWeek() }
+        } label: {
+            HStack(spacing: Theme.Spacing.sm) {
+                if calendarVM.isGeneratingWeek {
+                    ProgressView()
+                        .tint(.white)
+                        .scaleEffect(0.8)
+                } else {
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 14, weight: .medium))
+                }
+                Text("Generate My Week")
+                    .font(Theme.Typography.captionBold)
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, Theme.Spacing.sm)
+            .background(Theme.Colors.accentBlue)
+            .cornerRadius(Theme.CornerRadius.md)
+        }
+        .disabled(calendarVM.isGeneratingWeek)
+        .padding(.bottom, Theme.Spacing.sm)
     }
 
     // MARK: - Empty State
