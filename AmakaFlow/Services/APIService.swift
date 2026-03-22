@@ -1224,311 +1224,113 @@ class APIService {
             throw APIError.serverError(httpResponse.statusCode)
         }
     }
+    // MARK: - DayState / Coach / Conflict (AMA-1150)
 
-    // MARK: - Planning APIs (AMA-1147)
-
-    /// Fetch day states for a date range
-    func fetchDayStates(from: String, to: String) async throws -> [DayState] {
-        guard PairingService.shared.isPaired else { throw APIError.unauthorized }
-
-        let url = URL(string: "\(baseURL)/planning/days?from=\(from)&to=\(to)")!
+    /// Fetch today's DayState from the planning API
+    func fetchDayState() async throws -> DayStateResponse {
+        let url = URL(string: "\(baseURL)/api/v1/planning/day-state")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.allHTTPHeaderFields = authHeaders
 
         let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
 
         switch httpResponse.statusCode {
         case 200:
-            return try Self.makeDecoder().decode([DayState].self, from: data)
-        case 401: throw APIError.unauthorized
-        case 404: return []
-        default: throw APIError.serverError(httpResponse.statusCode)
-        }
-    }
-
-    /// Generate a proposed training week
-    func generateWeek(request body: GenerateWeekRequest? = nil) async throws -> ProposedPlan {
-        guard PairingService.shared.isPaired else { throw APIError.unauthorized }
-
-        let url = URL(string: "\(baseURL)/planning/generate-week")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
-
-        if let body = body {
-            request.httpBody = try JSONEncoder().encode(body)
-        } else {
-            request.httpBody = "{}".data(using: .utf8)
-        }
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200, 201:
-            return try Self.makeDecoder().decode(ProposedPlan.self, from: data)
-        case 401: throw APIError.unauthorized
+            return try Self.makeDecoder().decode(DayStateResponse.self, from: data)
+        case 401:
+            throw APIError.unauthorized
         default:
-            let body = String(data: data, encoding: .utf8)
-            logError(endpoint: "/planning/generate-week", method: "POST", statusCode: httpResponse.statusCode, response: body, error: nil)
+            let body = String(data: data, encoding: .utf8) ?? "empty"
+            logError(endpoint: "/api/v1/planning/day-state", method: "GET",
+                     statusCode: httpResponse.statusCode, response: body, error: nil)
             throw APIError.serverError(httpResponse.statusCode)
         }
     }
 
-    /// Detect scheduling conflicts
-    func detectConflicts(startDate: String, endDate: String) async throws -> [Conflict] {
-        guard PairingService.shared.isPaired else { throw APIError.unauthorized }
-
-        let url = URL(string: "\(baseURL)/planning/detect-conflicts")!
+    /// Ask the AI coach a quick question
+    func askCoach(question: String) async throws -> String {
+        let url = URL(string: "\(baseURL)/api/v1/coach/quick")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = authHeaders
-
-        let body = DetectConflictsRequest(startDate: startDate, endDate: endDate)
-        request.httpBody = try JSONEncoder().encode(body)
+        request.httpBody = try JSONEncoder().encode(["question": question])
 
         let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
 
         switch httpResponse.statusCode {
         case 200:
-            return try Self.makeDecoder().decode([Conflict].self, from: data)
-        case 401: throw APIError.unauthorized
-        case 404: return []
-        default: throw APIError.serverError(httpResponse.statusCode)
-        }
-    }
-
-    /// Parse free-text workout description
-    func parseWorkoutText(text: String, context: String? = nil) async throws -> ParsedWorkout {
-        guard PairingService.shared.isPaired else { throw APIError.unauthorized }
-
-        let url = URL(string: "\(baseURL)/planning/parse-workout")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
-
-        let body = ParseWorkoutRequest(text: text, context: context)
-        request.httpBody = try JSONEncoder().encode(body)
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200, 201:
-            return try Self.makeDecoder().decode(ParsedWorkout.self, from: data)
-        case 401: throw APIError.unauthorized
-        default: throw APIError.serverError(httpResponse.statusCode)
-        }
-    }
-
-    // MARK: - Actions APIs (AMA-1147)
-
-    /// Fetch pending actions
-    func fetchPendingActions() async throws -> [PendingAction] {
-        guard PairingService.shared.isPaired else { throw APIError.unauthorized }
-
-        let url = URL(string: "\(baseURL)/actions")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200:
-            return try Self.makeDecoder().decode([PendingAction].self, from: data)
-        case 401: throw APIError.unauthorized
-        case 404: return []
-        default: throw APIError.serverError(httpResponse.statusCode)
-        }
-    }
-
-    /// Approve, reject, or undo a pending action
-    func respondToAction(id: String, response actionResponse: String) async throws -> ActionResponse {
-        guard PairingService.shared.isPaired else { throw APIError.unauthorized }
-
-        let url = URL(string: "\(baseURL)/actions/\(id)/\(actionResponse)")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
-        request.httpBody = "{}".data(using: .utf8)
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200:
-            return try Self.makeDecoder().decode(ActionResponse.self, from: data)
-        case 401: throw APIError.unauthorized
-        default: throw APIError.serverError(httpResponse.statusCode)
-        }
-    }
-
-    // MARK: - Coach APIs (AMA-1147)
-
-    /// Send a message to the AI coach
-    func sendCoachMessage(message: String, context: CoachContext? = nil) async throws -> CoachResponse {
-        guard PairingService.shared.isPaired else { throw APIError.unauthorized }
-
-        let url = URL(string: "\(AppEnvironment.current.chatAPIURL)/coach/message")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
-
-        let body = CoachMessageRequest(message: message, context: context)
-        request.httpBody = try JSONEncoder().encode(body)
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200, 201:
-            return try Self.makeDecoder().decode(CoachResponse.self, from: data)
-        case 401: throw APIError.unauthorized
+            let result = try Self.makeDecoder().decode(CoachQuickResponse.self, from: data)
+            return result.answer
+        case 401:
+            throw APIError.unauthorized
         default:
-            let body = String(data: data, encoding: .utf8)
-            logError(endpoint: "/coach/message", method: "POST", statusCode: httpResponse.statusCode, response: body, error: nil)
+            let body = String(data: data, encoding: .utf8) ?? "empty"
+            logError(endpoint: "/api/v1/coach/quick", method: "POST",
+                     statusCode: httpResponse.statusCode, response: body, error: nil)
             throw APIError.serverError(httpResponse.statusCode)
         }
     }
 
-    /// Get fatigue advice from the coach
-    func getFatigueAdvice(fatigueScore: Double? = nil, loadHistory: [DailyLoad]? = nil) async throws -> FatigueAdvice {
-        guard PairingService.shared.isPaired else { throw APIError.unauthorized }
-
-        let url = URL(string: "\(AppEnvironment.current.chatAPIURL)/coach/fatigue-advice")!
+    /// Resolve a training conflict (adjust or keep)
+    func resolveConflict(action: String, message: String) async throws {
+        let url = URL(string: "\(baseURL)/api/v1/planning/resolve-conflict")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = authHeaders
-
-        let body = FatigueAdviceRequest(currentFatigueScore: fatigueScore, recentLoadHistory: loadHistory)
-        request.httpBody = try JSONEncoder().encode(body)
+        request.httpBody = try JSONEncoder().encode(["action": action, "message": message])
 
         let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
 
-        switch httpResponse.statusCode {
-        case 200, 201:
-            return try Self.makeDecoder().decode(FatigueAdvice.self, from: data)
-        case 401: throw APIError.unauthorized
-        default: throw APIError.serverError(httpResponse.statusCode)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            let body = String(data: data, encoding: .utf8) ?? "empty"
+            logError(endpoint: "/api/v1/planning/resolve-conflict", method: "POST",
+                     statusCode: httpResponse.statusCode, response: body, error: nil)
+            throw APIError.serverError(httpResponse.statusCode)
         }
     }
+}
 
-    /// Fetch coach memories
-    func fetchCoachMemories() async throws -> [CoachMemory] {
-        guard PairingService.shared.isPaired else { throw APIError.unauthorized }
+// MARK: - DayState API Response Models (AMA-1150)
 
-        let url = URL(string: "\(AppEnvironment.current.chatAPIURL)/coach/memories")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+struct DayStateResponse: Codable {
+    let date: String
+    let readinessScore: Int
+    let readinessLabel: String
+    let sessions: [DayStateSessionResponse]
+    let conflictAlert: DayStateConflictResponse?
+}
 
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+struct DayStateSessionResponse: Codable {
+    let id: String
+    let name: String
+    let scheduledTime: String?
+    let sport: String
+    let durationMinutes: Int?
+    let isCompleted: Bool
+    let isNext: Bool
+}
 
-        switch httpResponse.statusCode {
-        case 200:
-            return try Self.makeDecoder().decode([CoachMemory].self, from: data)
-        case 401: throw APIError.unauthorized
-        case 404: return []
-        default: throw APIError.serverError(httpResponse.statusCode)
-        }
-    }
+struct DayStateConflictResponse: Codable {
+    let message: String
+    let severity: String
+    let suggestedAction: String?
+}
 
-    // MARK: - Analytics APIs (AMA-1147)
-
-    /// Fetch shoe comparison stats
-    func fetchShoeComparison() async throws -> [ShoeStats] {
-        guard PairingService.shared.isPaired else { throw APIError.unauthorized }
-
-        let url = URL(string: "\(baseURL)/analytics/shoe-comparison")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200:
-            return try Self.makeDecoder().decode([ShoeStats].self, from: data)
-        case 401: throw APIError.unauthorized
-        case 404: return []
-        default: throw APIError.serverError(httpResponse.statusCode)
-        }
-    }
-
-    // MARK: - Billing APIs (AMA-1147)
-
-    /// Fetch subscription status
-    func fetchSubscription() async throws -> Subscription {
-        guard PairingService.shared.isPaired else { throw APIError.unauthorized }
-
-        let url = URL(string: "\(baseURL)/billing/subscription")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200:
-            return try Self.makeDecoder().decode(Subscription.self, from: data)
-        case 401: throw APIError.unauthorized
-        default: throw APIError.serverError(httpResponse.statusCode)
-        }
-    }
-
-    // MARK: - Notification Preferences APIs (AMA-1147)
-
-    /// Fetch notification preferences
-    func fetchNotificationPreferences() async throws -> NotificationPreferences {
-        guard PairingService.shared.isPaired else { throw APIError.unauthorized }
-
-        let url = URL(string: "\(baseURL)/notifications/preferences")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200:
-            return try Self.makeDecoder().decode(NotificationPreferences.self, from: data)
-        case 401: throw APIError.unauthorized
-        case 404:
-            return NotificationPreferences()
-        default: throw APIError.serverError(httpResponse.statusCode)
-        }
-    }
-
-    /// Update notification preferences
-    func updateNotificationPreferences(_ prefs: NotificationPreferences) async throws -> NotificationPreferences {
-        guard PairingService.shared.isPaired else { throw APIError.unauthorized }
-
-        let url = URL(string: "\(baseURL)/notifications/preferences")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "PUT"
-        request.allHTTPHeaderFields = authHeaders
-        request.httpBody = try JSONEncoder().encode(prefs)
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200:
-            return try Self.makeDecoder().decode(NotificationPreferences.self, from: data)
-        case 401: throw APIError.unauthorized
-        default: throw APIError.serverError(httpResponse.statusCode)
-        }
-    }
+struct CoachQuickResponse: Codable {
+    let answer: String
 }
 
 // MARK: - Completion History Responses
