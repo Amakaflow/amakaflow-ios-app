@@ -83,4 +83,20 @@ struct NotificationPreferences: Codable {
         self.goalRaceDate = goalRaceDate
         self.preferredLongRunDay = preferredLongRunDay
     }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        workoutReminders = try container.decodeIfPresent(Bool.self, forKey: .workoutReminders) ?? true
+        coachMessages = try container.decodeIfPresent(Bool.self, forKey: .coachMessages) ?? true
+        weeklyReport = try container.decodeIfPresent(Bool.self, forKey: .weeklyReport) ?? true
+        conflictAlerts = try container.decodeIfPresent(Bool.self, forKey: .conflictAlerts) ?? true
+        recoveryReminders = try container.decodeIfPresent(Bool.self, forKey: .recoveryReminders) ?? true
+        reminderMinutesBefore = try container.decodeIfPresent(Int.self, forKey: .reminderMinutesBefore) ?? 30
+        weeklyVolume = try container.decodeIfPresent(Int.self, forKey: .weeklyVolume) ?? 50
+        hardDayCap = try container.decodeIfPresent(Int.self, forKey: .hardDayCap) ?? 3
+        runDaysPerWeek = try container.decodeIfPresent(Int.self, forKey: .runDaysPerWeek) ?? 5
+        goalRace = try container.decodeIfPresent(String.self, forKey: .goalRace)
+        goalRaceDate = try container.decodeIfPresent(String.self, forKey: .goalRaceDate)
+        preferredLongRunDay = try container.decodeIfPresent(Int.self, forKey: .preferredLongRunDay)
+    }
 }

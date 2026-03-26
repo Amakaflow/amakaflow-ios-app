@@ -1,79 +1,192 @@
+//
+//  ShareViewController.swift
+//  AmakaFlowShare
+//
+//  Share Extension entry point — extracts URLs from shared content,
+//  shows a mini preview with platform detection, and imports workouts.
+//  AMA-1257: iOS Share Extension — one-tap workout import from any app
+//
+
 import UIKit
+import SwiftUI
 import UniformTypeIdentifiers
+import UserNotifications
 
 class ShareViewController: UIViewController {
 
+    private var hostingController: UIHostingController<ShareExtensionView>?
+    private var extractedURLs: [String] = []
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        extractURL()
+        view.backgroundColor = .clear
+        extractURLsFromContext()
     }
 
-    private func extractURL() {
-        guard let item = extensionContext?.inputItems.first as? NSExtensionItem,
-              let provider = item.attachments?.first(where: {
-                  $0.hasItemConformingToTypeIdentifier(UTType.url.identifier)
-              }) else {
+    // MARK: - URL Extraction
+
+    private func extractURLsFromContext() {
+        guard let items = extensionContext?.inputItems as? [NSExtensionItem] else {
             finish(success: false)
             return
         }
 
-        provider.loadItem(forTypeIdentifier: UTType.url.identifier) { [weak self] item, error in
-            guard let url = item as? URL else {
-                self?.finish(success: false)
+        let group = DispatchGroup()
+        var foundURLs: [String] = []
+
+        for item in items {
+            guard let attachments = item.attachments else { continue }
+
+            for provider in attachments {
+                // Try URL type first
+                if provider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
+                    group.enter()
+                    provider.loadItem(forTypeIdentifier: UTType.url.identifier) { item, _ in
+                        defer { group.leave() }
+                        if let url = item as? URL {
+                            foundURLs.append(url.absoluteString)
+                        }
+                    }
+                }
+
+                // Also try plain text — Instagram shares URLs embedded in text
+                if provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) {
+                    group.enter()
+                    provider.loadItem(forTypeIdentifier: UTType.plainText.identifier) { item, _ in
+                        defer { group.leave() }
+                        if let text = item as? String {
+                            let urls = PlatformDetector.extractURLs(from: text)
+                            foundURLs.append(contentsOf: urls)
+                        }
+                    }
+                }
+            }
+        }
+
+        group.notify(queue: .main) { [weak self] in
+            guard let self else { return }
+            // Deduplicate
+            let unique = Array(NSOrderedSet(array: foundURLs)) as? [String] ?? foundURLs
+            if unique.isEmpty {
+                self.finish(success: false)
                 return
             }
-            self?.postToKnowledgeBase(url: url.absoluteString)
+            self.extractedURLs = unique
+            self.showShareUI(urls: unique)
         }
     }
 
-    private func postToKnowledgeBase(url urlString: String) {
-        let defaults = UserDefaults(suiteName: "group.com.amakaflow.companion") ?? .standard
-        let token = defaults.string(forKey: "auth_token")
-        let testAuth = defaults.string(forKey: "test_auth_secret")
-        let testUserId = defaults.string(forKey: "test_user_id")
-        let envRaw = defaults.string(forKey: "app_environment") ?? "staging"
+    // MARK: - SwiftUI Hosting
 
-        let baseURL: String
-        switch envRaw {
-        case "development": baseURL = "http://localhost:8005"
-        case "production":  baseURL = "https://chat-api.amakaflow.com"
-        default:            baseURL = "https://chat-api.staging.amakaflow.com"
-        }
+    private func showShareUI(urls: [String]) {
+        let shareView = ShareExtensionView(
+            urls: urls,
+            onImport: { [weak self] in self?.performImport() },
+            onCancel: { [weak self] in self?.finish(success: false) }
+        )
 
-        guard testAuth?.isEmpty == false || token?.isEmpty == false else {
-            finish(success: false)
-            return
-        }
+        let hosting = UIHostingController(rootView: shareView)
+        hosting.view.backgroundColor = .clear
+        self.hostingController = hosting
 
-        guard let endpoint = URL(string: "\(baseURL)/api/knowledge/ingest") else {
-            finish(success: false)
-            return
-        }
+        addChild(hosting)
+        hosting.view.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(hosting.view)
 
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let testAuth, !testAuth.isEmpty {
-            request.setValue(testAuth, forHTTPHeaderField: "X-Test-Auth")
-            request.setValue(testUserId ?? "", forHTTPHeaderField: "X-Test-User-Id")
-        } else if let token {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
+        NSLayoutConstraint.activate([
+            hosting.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            hosting.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            hosting.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            hosting.view.heightAnchor.constraint(lessThanOrEqualTo: view.heightAnchor, multiplier: 0.55),
+        ])
 
-        let body: [String: Any] = ["source_type": "url", "source_url": urlString]
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        hosting.didMove(toParent: self)
+    }
 
-        URLSession.shared.dataTask(with: request) { [weak self] _, response, error in
-            DispatchQueue.main.async {
-                if let error {
-                    self?.finish(success: false)
-                    return
+    // MARK: - Import
+
+    private func performImport() {
+        guard !extractedURLs.isEmpty else { return }
+
+        // Update UI state
+        hostingController?.rootView.state = .importing
+
+        // Import all URLs concurrently
+        Task {
+            var successCount = 0
+            var lastTitle: String?
+            var lastError: String?
+
+            for urlString in extractedURLs {
+                let platform = PlatformDetector.detect(from: urlString)
+                do {
+                    let response = try await URLImportService.shared.importURL(urlString, platform: platform)
+
+                    // Save success result to shared container
+                    let result = SharedContainerManager.ImportResult(
+                        url: urlString,
+                        platform: platform.name,
+                        title: response.title,
+                        workoutType: response.workoutType,
+                        success: true,
+                        errorMessage: nil,
+                        timestamp: Date()
+                    )
+                    SharedContainerManager.saveImportResult(result)
+                    successCount += 1
+                    lastTitle = response.title
+                } catch {
+                    // Save error result to shared container
+                    let result = SharedContainerManager.ImportResult(
+                        url: urlString,
+                        platform: platform.name,
+                        title: nil,
+                        workoutType: nil,
+                        success: false,
+                        errorMessage: error.localizedDescription,
+                        timestamp: Date()
+                    )
+                    SharedContainerManager.saveImportResult(result)
+                    lastError = error.localizedDescription
                 }
-                let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-                self?.finish(success: (200..<300).contains(statusCode))
             }
-        }.resume()
+
+            await MainActor.run {
+                if successCount == extractedURLs.count {
+                    // All succeeded
+                    let title = lastTitle ?? "Workout imported"
+                    let displayTitle = extractedURLs.count > 1
+                        ? "\(successCount) workouts imported"
+                        : title
+                    hostingController?.rootView.state = .success(displayTitle)
+
+                    URLImportService.sendLocalNotification(
+                        title: "Workout Imported",
+                        body: displayTitle,
+                        success: true
+                    )
+
+                    // Auto-dismiss after short delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                        self?.finish(success: true)
+                    }
+                } else if successCount > 0 {
+                    // Partial success
+                    let msg = "\(successCount)/\(extractedURLs.count) imported"
+                    hostingController?.rootView.state = .success(msg)
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                        self?.finish(success: true)
+                    }
+                } else {
+                    // All failed
+                    hostingController?.rootView.state = .error(lastError ?? "Unknown error")
+                }
+            }
+        }
     }
+
+    // MARK: - Finish
 
     private func finish(success: Bool) {
         if success {
@@ -81,7 +194,7 @@ class ShareViewController: UIViewController {
         } else {
             extensionContext?.cancelRequest(withError:
                 NSError(domain: "com.amakaflow.share", code: 0,
-                        userInfo: [NSLocalizedDescriptionKey: "Failed to capture URL"]))
+                        userInfo: [NSLocalizedDescriptionKey: "Cancelled or failed"]))
         }
     }
 }

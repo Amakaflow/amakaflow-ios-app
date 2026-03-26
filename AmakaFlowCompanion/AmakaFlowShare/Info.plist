@@ -9,7 +9,9 @@
             <key>NSExtensionActivationRule</key>
             <dict>
                 <key>NSExtensionActivationSupportsWebURLWithMaxCount</key>
-                <integer>1</integer>
+                <integer>10</integer>
+                <key>NSExtensionActivationSupportsText</key>
+                <true/>
             </dict>
         </dict>
         <key>NSExtensionPointIdentifier</key>
@@ -20,7 +22,7 @@
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleDisplayName</key>
-    <string>Save to AmakaFlow</string>
+    <string>Import to AmakaFlow</string>
     <key>CFBundleIdentifier</key>
     <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
     <key>CFBundleInfoDictionaryVersion</key>
