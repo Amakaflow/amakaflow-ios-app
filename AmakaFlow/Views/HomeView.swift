@@ -22,6 +22,10 @@ struct HomeView: View {
     @State private var showingSuggestWorkout = false
     @StateObject private var suggestWorkoutViewModel = SuggestWorkoutViewModel()
     @State private var savedProgress: SavedWorkoutProgress?
+    @State private var xpData: XPData?
+    @State private var showLevelUp = false
+    @State private var levelUpLevel: Int = 0
+    @State private var levelUpName: String = ""
 
     private var today: Date { Date() }
 
@@ -71,6 +75,18 @@ struct HomeView: View {
                     SuggestWorkoutButton {
                         suggestWorkoutViewModel.requestSuggestion()
                         showingSuggestWorkout = true
+                    }
+
+                    // XP progress bar (AMA-1285)
+                    if let xp = xpData {
+                        XPBarView(
+                            xpTotal: xp.xpTotal,
+                            currentLevel: xp.currentLevel,
+                            levelName: xp.levelName,
+                            xpToNextLevel: xp.xpToNextLevel,
+                            xpToday: xp.xpToday,
+                            dailyCap: xp.dailyCap
+                        )
                     }
 
                     // Quick action buttons
@@ -168,6 +184,24 @@ struct HomeView: View {
                     await MainActor.run {
                         savedProgress = progress
                     }
+                }
+                // Fetch XP data (AMA-1285)
+                Task {
+                    do {
+                        xpData = try await APIService.shared.fetchXP()
+                    } catch {
+                        print("[HomeView] Failed to fetch XP: \(error)")
+                    }
+                }
+            }
+            .overlay {
+                // Level-up celebration overlay (AMA-1285)
+                if showLevelUp {
+                    LevelUpCelebrationView(
+                        newLevel: levelUpLevel,
+                        levelName: levelUpName,
+                        onDismiss: { showLevelUp = false }
+                    )
                 }
             }
             .overlay(alignment: .top) {
