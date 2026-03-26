@@ -17,6 +17,7 @@ struct WorkoutPlayerView: View {
     @State private var showStepList = false
     @State private var deviceMode: DevicePreference = .phoneOnly
     @State private var shouldDismissImmediately = false  // Track if workout was discarded or saved for later
+    @State private var showRPEFeedback = false  // AMA-1266: Show RPE prompt after completion
 
     var body: some View {
         ZStack {
@@ -55,22 +56,35 @@ struct WorkoutPlayerView: View {
                     // AMA-291: Use simulated health data when in simulation mode
                     let (calories, avgHR, maxHR, hrSamples) = getHealthDataForCompletion()
 
-                    WorkoutCompletionView(
-                        viewModel: WorkoutCompletionViewModel(
-                            workoutName: workout.name,
-                            durationSeconds: engine.elapsedSeconds,
-                            deviceMode: deviceMode,
-                            calories: calories,
-                            avgHeartRate: avgHR,
-                            maxHeartRate: maxHR,
-                            heartRateSamples: hrSamples,
-                            onDismiss: {
-                                watchManager.clearHealthMetrics()
-                                garminManager.clearHealthMetrics()
-                                dismiss()
-                            }
+                    if showRPEFeedback {
+                        // AMA-1266: RPE feedback prompt after completion
+                        RPEFeedbackView(
+                            viewModel: RPEFeedbackViewModel(
+                                workoutId: workout.id,
+                                onComplete: {
+                                    showRPEFeedback = false
+                                    watchManager.clearHealthMetrics()
+                                    garminManager.clearHealthMetrics()
+                                    dismiss()
+                                }
+                            )
                         )
-                    )
+                    } else {
+                        WorkoutCompletionView(
+                            viewModel: WorkoutCompletionViewModel(
+                                workoutName: workout.name,
+                                durationSeconds: engine.elapsedSeconds,
+                                deviceMode: deviceMode,
+                                calories: calories,
+                                avgHeartRate: avgHR,
+                                maxHeartRate: maxHR,
+                                heartRateSamples: hrSamples,
+                                onDismiss: {
+                                    showRPEFeedback = true
+                                }
+                            )
+                        )
+                    }
                 } else if engine.phase == .resting {
                     // Rest screen between exercises
                     RestPeriodView(engine: engine)
