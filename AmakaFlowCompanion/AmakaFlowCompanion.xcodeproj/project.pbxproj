@@ -56,6 +56,7 @@
 		AK00SHARE006B /* ShareExtensionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SHARE006A /* ShareExtensionView.swift */; };
 
 		B1910EAEA57AF40FBA6FEDD3 /* FollowAlongPlayerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */; };
+		A1B2C3D4E5F647889ABCDEF0 /* RPEFeedbackViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18D523D7E78245EBB81A469A /* RPEFeedbackViewModelTests.swift */; };
 
 		B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E57529578481B8991A91F /* SourcesView.swift */; };
 		B69E1808FE344A15848A3B67 /* WorkoutCompletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */; };
@@ -74,6 +75,9 @@
 		E33FF845EAAD4110B7D87FB0 /* DevicePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89321AF9D21D441198437105 /* DevicePreference.swift */; };
 		EB63D5EF54FF452580C70684 /* WorkoutCompletionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */; };
 		EB63D5EF54FF452580C70685 /* WorkoutCompletionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */; };
+		224589E0DBE4430DA0043265 /* RPEFeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BD17097D21D4FB48D023E24 /* RPEFeedbackView.swift */; };
+		33B4902461BE49098D5AA4B2 /* RPEFeedbackViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600ABA3EF2B2447396D7B39F /* RPEFeedbackViewModel.swift */; };
+		DA4F8A5D03D643BBA13BEAF8 /* RPEFeedbackViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18D523D7E78245EBB81A469A /* RPEFeedbackViewModelTests.swift */; };
 		EXEC10NL0G8U1LD3R0002 /* ExecutionLogBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = EXEC10NL0G8U1LD3R0001 /* ExecutionLogBuilder.swift */; };
 		F1XTUR34P15RV0000002 /* FixtureAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1XTUR34P15RV0000001 /* FixtureAPIService.swift */; };
 		F1XTUR3JS0N01000001 /* amrap_10min.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000001 /* amrap_10min.json */; };
@@ -256,6 +260,9 @@
 		0949526387D9FA932B940DF3 /* TrainingPreferencesViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TrainingPreferencesViewModel.swift; path = ../AmakaFlow/ViewModels/TrainingPreferencesViewModel.swift; sourceTree = "<group>"; };
 		0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionView.swift; path = ../AmakaFlow/Views/WorkoutCompletionView.swift; sourceTree = SOURCE_ROOT; };
 		0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionViewModel.swift; path = ../AmakaFlow/ViewModels/WorkoutCompletionViewModel.swift; sourceTree = SOURCE_ROOT; };
+		6BD17097D21D4FB48D023E24 /* RPEFeedbackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RPEFeedbackView.swift; path = ../AmakaFlow/Views/RPEFeedbackView.swift; sourceTree = SOURCE_ROOT; };
+		600ABA3EF2B2447396D7B39F /* RPEFeedbackViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RPEFeedbackViewModel.swift; path = ../AmakaFlow/ViewModels/RPEFeedbackViewModel.swift; sourceTree = SOURCE_ROOT; };
+		18D523D7E78245EBB81A469A /* RPEFeedbackViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RPEFeedbackViewModelTests.swift; path = AmakaFlowCompanionTests/RPEFeedbackViewModelTests.swift; sourceTree = SOURCE_ROOT; };
 		11B5892FB68A40CB890E3630 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainHelper.swift; path = ../AmakaFlow/Services/KeychainHelper.swift; sourceTree = SOURCE_ROOT; };
 		154769090318840B518509BF /* FollowAlongPlayerViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FollowAlongPlayerViewModel.swift; path = ../AmakaFlow/ViewModels/FollowAlongPlayerViewModel.swift; sourceTree = SOURCE_ROOT; };
 		1555CD79DFEAA04822AEB965 /* ActivityFeedViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ActivityFeedViewModel.swift; path = ../AmakaFlow/ViewModels/ActivityFeedViewModel.swift; sourceTree = "<group>"; };
@@ -602,7 +609,9 @@
 				F84E227D2ED0D5BF00459747 /* WorkoutCard.swift */,
 				F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */,
 				0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */,
+				6BD17097D21D4FB48D023E24 /* RPEFeedbackView.swift */,
 				0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */,
+				600ABA3EF2B2447396D7B39F /* RPEFeedbackViewModel.swift */,
 				A19401AA00000001B0000001 /* ActivityHistoryViewModel.swift */,
 				A19401AA00000002B0000002 /* CompletionDetailViewModel.swift */,
 				A19401AA00000003B0000003 /* ActivityHistoryView.swift */,
@@ -674,6 +683,7 @@
 				2E90D82F541D1AF7AE58A29B /* FollowAlongPlayerView.swift */,
 				154769090318840B518509BF /* FollowAlongPlayerViewModel.swift */,
 				167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */,
+				18D523D7E78245EBB81A469A /* RPEFeedbackViewModelTests.swift */,
 				D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */,
 				AMA12650021 /* SuggestWorkoutViewModelTests.swift */,
 			);
@@ -1151,6 +1161,8 @@
 				W41T1NG000000002C0000002 /* WaitingForWatchView.swift in Sources */,
 				EB63D5EF54FF452580C70684 /* WorkoutCompletionView.swift in Sources */,
 				EB63D5EF54FF452580C70685 /* WorkoutCompletionViewModel.swift in Sources */,
+				224589E0DBE4430DA0043265 /* RPEFeedbackView.swift in Sources */,
+				33B4902461BE49098D5AA4B2 /* RPEFeedbackViewModel.swift in Sources */,
 				A19401BB00000001C0000001 /* ActivityHistoryViewModel.swift in Sources */,
 				A19401BB00000002C0000002 /* CompletionDetailViewModel.swift in Sources */,
 				A19401BB00000003C0000003 /* ActivityHistoryView.swift in Sources */,
@@ -1239,6 +1251,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B1910EAEA57AF40FBA6FEDD3 /* FollowAlongPlayerViewModelTests.swift in Sources */,
+				A1B2C3D4E5F647889ABCDEF0 /* RPEFeedbackViewModelTests.swift in Sources */,
 				D33PL1NKT35T50002 /* DeepLinkManagerTests.swift in Sources */,
 				AMA12650022 /* SuggestWorkoutViewModelTests.swift in Sources */,
 			);
