@@ -1,0 +1,23 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "A9K5QG6YW8.com.myamaka.AmakaFlowCompanion"
+        ],
+        "components": [
+          {
+            "/": "/import",
+            "?": { "url": "?*" },
+            "comment": "Deep link import — pass ?url=ENCODED_URL to trigger workout import"
+          }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": [
+      "A9K5QG6YW8.com.myamaka.AmakaFlowCompanion"
+    ]
+  }
+}
