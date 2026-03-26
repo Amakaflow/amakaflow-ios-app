@@ -6,6 +6,7 @@
 //  AMA-1282
 //
 
+import Combine
 import SwiftUI
 
 struct PRHistoryView: View {
