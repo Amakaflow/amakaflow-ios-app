@@ -91,9 +91,9 @@ class WorkoutCompletionViewModel: ObservableObject {
     func onViewDetails() {
         showComingSoonToast = true
 
-        // Auto-dismiss toast after 2 seconds
+        // Auto-dismiss toast after 1 second (AMA-1301: reduced from 2s to fix app hang)
         Task {
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
             showComingSoonToast = false
         }
     }
