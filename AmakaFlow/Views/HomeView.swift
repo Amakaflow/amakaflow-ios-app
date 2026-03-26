@@ -19,6 +19,8 @@ struct HomeView: View {
     @State private var pendingQuickStartWorkout: Workout?
     @State private var waitingForWatchWorkout: Workout?
     @State private var showingVoiceWorkout = false
+    @State private var showingSuggestWorkout = false
+    @StateObject private var suggestWorkoutViewModel = SuggestWorkoutViewModel()
     @State private var savedProgress: SavedWorkoutProgress?
 
     private var today: Date { Date() }
@@ -63,6 +65,12 @@ struct HomeView: View {
                     // Resume Workout banner (if saved progress exists)
                     if let progress = savedProgress {
                         resumeWorkoutBanner(progress: progress)
+                    }
+
+                    // Suggest Workout button (AMA-1265)
+                    SuggestWorkoutButton {
+                        suggestWorkoutViewModel.requestSuggestion()
+                        showingSuggestWorkout = true
                     }
 
                     // Quick action buttons
@@ -144,6 +152,9 @@ struct HomeView: View {
                         }
                     }
                 )
+            }
+            .sheet(isPresented: $showingSuggestWorkout) {
+                SuggestWorkoutView(viewModel: suggestWorkoutViewModel)
             }
             .sheet(isPresented: $showingVoiceWorkout) {
                 VoiceWorkoutView()

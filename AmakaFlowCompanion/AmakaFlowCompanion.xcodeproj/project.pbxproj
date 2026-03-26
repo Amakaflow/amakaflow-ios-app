@@ -46,6 +46,7 @@
 		D33PL1NKMAN4G3R0002 /* DeepLinkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33PL1NKMAN4G3R0001 /* DeepLinkManager.swift */; };
 		D33PL1NK1MP0RTV0002 /* DeepLinkImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33PL1NK1MP0RTV0001 /* DeepLinkImportView.swift */; };
 		D33PL1NKT35T50002 /* DeepLinkManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */; };
+		AMA12650022 /* SuggestWorkoutViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA12650021 /* SuggestWorkoutViewModelTests.swift */; };
 		AK00SHARE001B /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SHARE001A /* ShareViewController.swift */; };
 		AK00SHARE00EB /* AmakaFlowShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AK00SHARE00EA /* AmakaFlowShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 
@@ -159,6 +160,10 @@
 		V01C301300000000000000 /* TranscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300300000000000000 /* TranscriptionService.swift */; };
 		V01C301400000000000000 /* WorkoutParsingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300400000000000000 /* WorkoutParsingService.swift */; };
 		V01C301500000000000000 /* VoiceWorkoutViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300500000000000000 /* VoiceWorkoutViewModel.swift */; };
+		AMA12650014 /* CoachingProfileOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA12650004 /* CoachingProfileOnboardingView.swift */; };
+		AMA12650013 /* SuggestWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA12650003 /* SuggestWorkoutView.swift */; };
+		AMA12650012 /* SuggestWorkoutButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA12650002 /* SuggestWorkoutButton.swift */; };
+		AMA12650011 /* SuggestWorkoutViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA12650001 /* SuggestWorkoutViewModel.swift */; };
 		V01C301600000000000000 /* VoiceWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300600000000000000 /* VoiceWorkoutView.swift */; };
 		V01C301700000000000000 /* VoiceRecordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300700000000000000 /* VoiceRecordingView.swift */; };
 		V01C301800000000000000 /* TranscriptionReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300800000000000000 /* TranscriptionReviewView.swift */; };
@@ -270,6 +275,7 @@
 		D33PL1NKMAN4G3R0001 /* DeepLinkManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkManager.swift; path = ../AmakaFlow/Services/DeepLinkManager.swift; sourceTree = "<group>"; };
 		D33PL1NK1MP0RTV0001 /* DeepLinkImportView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkImportView.swift; path = ../AmakaFlow/Views/DeepLinkImportView.swift; sourceTree = "<group>"; };
 		D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkManagerTests.swift; path = AmakaFlowCompanionTests/DeepLinkManagerTests.swift; sourceTree = "<group>"; };
+		AMA12650021 /* SuggestWorkoutViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SuggestWorkoutViewModelTests.swift; path = AmakaFlowCompanionTests/SuggestWorkoutViewModelTests.swift; sourceTree = "<group>"; };
 		83178781B2C087203EB17951 /* ShoeComparisonViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShoeComparisonViewModel.swift; path = ../AmakaFlow/ViewModels/ShoeComparisonViewModel.swift; sourceTree = "<group>"; };
 		85D3757E5B284286B341C75C /* PairingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingService.swift; path = ../AmakaFlow/Services/PairingService.swift; sourceTree = SOURCE_ROOT; };
 		887645B05D4D7BABC29CAB9A /* ShoeComparisonView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShoeComparisonView.swift; path = ../AmakaFlow/Views/ShoeComparisonView.swift; sourceTree = "<group>"; };
@@ -388,6 +394,10 @@
 		V01C300300000000000000 /* TranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionService.swift; path = ../AmakaFlow/Services/TranscriptionService.swift; sourceTree = SOURCE_ROOT; };
 		V01C300400000000000000 /* WorkoutParsingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutParsingService.swift; path = ../AmakaFlow/Services/WorkoutParsingService.swift; sourceTree = SOURCE_ROOT; };
 		V01C300500000000000000 /* VoiceWorkoutViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceWorkoutViewModel.swift; path = ../AmakaFlow/ViewModels/VoiceWorkoutViewModel.swift; sourceTree = SOURCE_ROOT; };
+		AMA12650004 /* CoachingProfileOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CoachingProfileOnboardingView.swift; path = ../AmakaFlow/Views/CoachingProfileOnboardingView.swift; sourceTree = SOURCE_ROOT; };
+		AMA12650003 /* SuggestWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SuggestWorkoutView.swift; path = ../AmakaFlow/Views/SuggestWorkoutView.swift; sourceTree = SOURCE_ROOT; };
+		AMA12650002 /* SuggestWorkoutButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SuggestWorkoutButton.swift; path = ../AmakaFlow/Views/Components/SuggestWorkoutButton.swift; sourceTree = SOURCE_ROOT; };
+		AMA12650001 /* SuggestWorkoutViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SuggestWorkoutViewModel.swift; path = ../AmakaFlow/ViewModels/SuggestWorkoutViewModel.swift; sourceTree = SOURCE_ROOT; };
 		V01C300600000000000000 /* VoiceWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceWorkoutView.swift; path = ../AmakaFlow/Views/VoiceWorkout/VoiceWorkoutView.swift; sourceTree = SOURCE_ROOT; };
 		V01C300700000000000000 /* VoiceRecordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceRecordingView.swift; path = ../AmakaFlow/Views/VoiceWorkout/VoiceRecordingView.swift; sourceTree = SOURCE_ROOT; };
 		V01C300800000000000000 /* TranscriptionReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/TranscriptionReviewView.swift; sourceTree = SOURCE_ROOT; };
@@ -605,6 +615,9 @@
 				A19401AA0000000AB000000A /* WorkoutStepsSection.swift */,
 				A19401AA0000000BB000000B /* ExecutionLogSection.swift */,
 				CC2192F9A69B4A51B54A138F /* HomeView.swift */,
+				AMA12650003 /* SuggestWorkoutView.swift */,
+				AMA12650004 /* CoachingProfileOnboardingView.swift */,
+				AMA12650002 /* SuggestWorkoutButton.swift */,
 				F8BFF8D1C38311406C868156 /* StepDisplayView.swift */,
 				94AE3547CCCD41159C85554B /* RestPeriodView.swift */,
 				F89DB8A09DD1694C469E6F54 /* PlayerControlsView.swift */,
@@ -662,6 +675,7 @@
 				154769090318840B518509BF /* FollowAlongPlayerViewModel.swift */,
 				167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */,
 				D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */,
+				AMA12650021 /* SuggestWorkoutViewModelTests.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -731,6 +745,7 @@
 				V01C300300000000000000 /* TranscriptionService.swift */,
 				V01C300400000000000000 /* WorkoutParsingService.swift */,
 				V01C300500000000000000 /* VoiceWorkoutViewModel.swift */,
+				AMA12650001 /* SuggestWorkoutViewModel.swift */,
 				V01C300600000000000000 /* VoiceWorkoutView.swift */,
 				V01C300700000000000000 /* VoiceRecordingView.swift */,
 				V01C300800000000000000 /* TranscriptionReviewView.swift */,
@@ -1170,6 +1185,10 @@
 				V01C301300000000000000 /* TranscriptionService.swift in Sources */,
 				V01C301400000000000000 /* WorkoutParsingService.swift in Sources */,
 				V01C301500000000000000 /* VoiceWorkoutViewModel.swift in Sources */,
+				AMA12650011 /* SuggestWorkoutViewModel.swift in Sources */,
+				AMA12650012 /* SuggestWorkoutButton.swift in Sources */,
+				AMA12650013 /* SuggestWorkoutView.swift in Sources */,
+				AMA12650014 /* CoachingProfileOnboardingView.swift in Sources */,
 				V01C301600000000000000 /* VoiceWorkoutView.swift in Sources */,
 				V01C301700000000000000 /* VoiceRecordingView.swift in Sources */,
 				V01C301800000000000000 /* TranscriptionReviewView.swift in Sources */,
@@ -1221,6 +1240,7 @@
 			files = (
 				B1910EAEA57AF40FBA6FEDD3 /* FollowAlongPlayerViewModelTests.swift in Sources */,
 				D33PL1NKT35T50002 /* DeepLinkManagerTests.swift in Sources */,
+				AMA12650022 /* SuggestWorkoutViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
