@@ -174,6 +174,12 @@
 		V01C301900000000000000 /* VoiceWorkoutReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300900000000000000 /* VoiceWorkoutReviewView.swift */; };
 		W41T1NG000000002C0000002 /* WaitingForWatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = W41T1NG000000001B0000001 /* WaitingForWatchView.swift */; };
 		XCT4H34LTH00000001 /* XCTHealthKit in Frameworks */ = {isa = PBXBuildFile; productRef = XCT4H34LTH00000002 /* XCTHealthKit */; };
+		AMA12820001B /* PRDetectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA12820001A /* PRDetectionService.swift */; };
+		AMA12820002B /* PRCelebrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA12820002A /* PRCelebrationView.swift */; };
+		AMA12820003B /* PRHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA12820003A /* PRHistoryView.swift */; };
+		AMA12840001B /* WorkoutShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA12840001A /* WorkoutShareCardView.swift */; };
+		AMA12840002B /* ShareCardGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA12840002A /* ShareCardGenerator.swift */; };
+		AMA12820010B /* PRDetectionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA12820010A /* PRDetectionServiceTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -410,6 +416,12 @@
 		V01C300800000000000000 /* TranscriptionReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/TranscriptionReviewView.swift; sourceTree = SOURCE_ROOT; };
 		V01C300900000000000000 /* VoiceWorkoutReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceWorkoutReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/VoiceWorkoutReviewView.swift; sourceTree = SOURCE_ROOT; };
 		W41T1NG000000001B0000001 /* WaitingForWatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WaitingForWatchView.swift; path = ../AmakaFlow/Views/Components/WaitingForWatchView.swift; sourceTree = SOURCE_ROOT; };
+		AMA12820001A /* PRDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PRDetectionService.swift; path = ../AmakaFlow/Services/PRDetectionService.swift; sourceTree = SOURCE_ROOT; };
+		AMA12820002A /* PRCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PRCelebrationView.swift; path = ../AmakaFlow/Views/PRCelebrationView.swift; sourceTree = SOURCE_ROOT; };
+		AMA12820003A /* PRHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PRHistoryView.swift; path = ../AmakaFlow/Views/PRHistoryView.swift; sourceTree = SOURCE_ROOT; };
+		AMA12840001A /* WorkoutShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutShareCardView.swift; path = ../AmakaFlow/Views/WorkoutShareCardView.swift; sourceTree = SOURCE_ROOT; };
+		AMA12840002A /* ShareCardGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ShareCardGenerator.swift; path = ../AmakaFlow/Services/ShareCardGenerator.swift; sourceTree = SOURCE_ROOT; };
+		AMA12820010A /* PRDetectionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDetectionServiceTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -610,6 +622,9 @@
 				F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */,
 				0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */,
 				6BD17097D21D4FB48D023E24 /* RPEFeedbackView.swift */,
+				AMA12820002A /* PRCelebrationView.swift */,
+				AMA12820003A /* PRHistoryView.swift */,
+				AMA12840001A /* WorkoutShareCardView.swift */,
 				0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */,
 				600ABA3EF2B2447396D7B39F /* RPEFeedbackViewModel.swift */,
 				A19401AA00000001B0000001 /* ActivityHistoryViewModel.swift */,
@@ -684,6 +699,7 @@
 				154769090318840B518509BF /* FollowAlongPlayerViewModel.swift */,
 				167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */,
 				18D523D7E78245EBB81A469A /* RPEFeedbackViewModelTests.swift */,
+				AMA12820010A /* PRDetectionServiceTests.swift */,
 				D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */,
 				AMA12650021 /* SuggestWorkoutViewModelTests.swift */,
 			);
@@ -748,6 +764,8 @@
 				F1XTUR3JS0N00000005 /* running_long.json */,
 				F1XTUR3JS0N00000006 /* hiit_follow_along.json */,
 				8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */,
+				AMA12820001A /* PRDetectionService.swift */,
+				AMA12840002A /* ShareCardGenerator.swift */,
 				29B50DC380A44F2D96E6E414 /* PairingView.swift */,
 				1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */,
 				V01C300100000000000000 /* PermissionManager.swift */,
@@ -1162,6 +1180,11 @@
 				EB63D5EF54FF452580C70684 /* WorkoutCompletionView.swift in Sources */,
 				EB63D5EF54FF452580C70685 /* WorkoutCompletionViewModel.swift in Sources */,
 				224589E0DBE4430DA0043265 /* RPEFeedbackView.swift in Sources */,
+				AMA12820001B /* PRDetectionService.swift in Sources */,
+				AMA12820002B /* PRCelebrationView.swift in Sources */,
+				AMA12820003B /* PRHistoryView.swift in Sources */,
+				AMA12840001B /* WorkoutShareCardView.swift in Sources */,
+				AMA12840002B /* ShareCardGenerator.swift in Sources */,
 				33B4902461BE49098D5AA4B2 /* RPEFeedbackViewModel.swift in Sources */,
 				A19401BB00000001C0000001 /* ActivityHistoryViewModel.swift in Sources */,
 				A19401BB00000002C0000002 /* CompletionDetailViewModel.swift in Sources */,
