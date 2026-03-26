@@ -43,6 +43,9 @@
 		AA8C7E7D040E462BB1347220 /* RestPeriodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94AE3547CCCD41159C85554B /* RestPeriodView.swift */; };
 		AAA43473A50C02F82E139FED /* TrainingPreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1660F7A199C30F1FF9B8DFD /* TrainingPreferencesView.swift */; };
 		AF50AD9DC3B0E509ED0ED715 /* AnalyticsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68B54D3FBC9E8561760B53F0 /* AnalyticsModels.swift */; };
+		D33PL1NKMAN4G3R0002 /* DeepLinkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33PL1NKMAN4G3R0001 /* DeepLinkManager.swift */; };
+		D33PL1NK1MP0RTV0002 /* DeepLinkImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33PL1NK1MP0RTV0001 /* DeepLinkImportView.swift */; };
+		D33PL1NKT35T50002 /* DeepLinkManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */; };
 		AK00SHARE001B /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SHARE001A /* ShareViewController.swift */; };
 		AK00SHARE00EB /* AmakaFlowShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AK00SHARE00EA /* AmakaFlowShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 
@@ -264,6 +267,9 @@
 		4F945C56EB30A4BA6E5CAC50 /* ActivityFeedView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ActivityFeedView.swift; path = ../AmakaFlow/Views/ActivityFeedView.swift; sourceTree = "<group>"; };
 		5F86F482904144B39B954F6A /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Environment.swift; path = ../AmakaFlow/Models/Environment.swift; sourceTree = SOURCE_ROOT; };
 		68B54D3FBC9E8561760B53F0 /* AnalyticsModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AnalyticsModels.swift; path = ../AmakaFlow/Models/AnalyticsModels.swift; sourceTree = "<group>"; };
+		D33PL1NKMAN4G3R0001 /* DeepLinkManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkManager.swift; path = ../AmakaFlow/Services/DeepLinkManager.swift; sourceTree = "<group>"; };
+		D33PL1NK1MP0RTV0001 /* DeepLinkImportView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkImportView.swift; path = ../AmakaFlow/Views/DeepLinkImportView.swift; sourceTree = "<group>"; };
+		D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkManagerTests.swift; path = AmakaFlowCompanionTests/DeepLinkManagerTests.swift; sourceTree = "<group>"; };
 		83178781B2C087203EB17951 /* ShoeComparisonViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShoeComparisonViewModel.swift; path = ../AmakaFlow/ViewModels/ShoeComparisonViewModel.swift; sourceTree = "<group>"; };
 		85D3757E5B284286B341C75C /* PairingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingService.swift; path = ../AmakaFlow/Services/PairingService.swift; sourceTree = SOURCE_ROOT; };
 		887645B05D4D7BABC29CAB9A /* ShoeComparisonView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShoeComparisonView.swift; path = ../AmakaFlow/Views/ShoeComparisonView.swift; sourceTree = "<group>"; };
@@ -655,6 +661,7 @@
 				2E90D82F541D1AF7AE58A29B /* FollowAlongPlayerView.swift */,
 				154769090318840B518509BF /* FollowAlongPlayerViewModel.swift */,
 				167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */,
+				D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -700,10 +707,12 @@
 				1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */,
 				M4NU4L1N5T4GR4M0001 /* ManualInstagramIngestionView.swift */,
 				A1IMP0RTV13W0001 /* AIImportView.swift */,
+				D33PL1NK1MP0RTV0001 /* DeepLinkImportView.swift */,
 				2AB8DFBA16CE406C95456EAD /* CalendarView.swift */,
 				08D9B67C13E34BAE804A9359 /* HistoryView.swift */,
 				5F86F482904144B39B954F6A /* Environment.swift */,
 				11B5892FB68A40CB890E3630 /* KeychainHelper.swift */,
+				D33PL1NKMAN4G3R0001 /* DeepLinkManager.swift */,
 				85D3757E5B284286B341C75C /* PairingService.swift */,
 				T35T4UTH5T0R300000001 /* TestAuthStore.swift */,
 				F1XTUR3L0AD3R0000001 /* FixtureLoader.swift */,
@@ -1089,6 +1098,8 @@
 			files = (
 				27599809E31D40308DBFA93A /* Environment.swift in Sources */,
 				444EFC17D69346B3B93C9ECA /* KeychainHelper.swift in Sources */,
+				D33PL1NKMAN4G3R0002 /* DeepLinkManager.swift in Sources */,
+				D33PL1NK1MP0RTV0002 /* DeepLinkImportView.swift in Sources */,
 				CA268753E918494FAD7CCD56 /* PairingService.swift in Sources */,
 				T35T4UTH5T0R300000002 /* TestAuthStore.swift in Sources */,
 				F1XTUR3L0AD3R0000002 /* FixtureLoader.swift in Sources */,
@@ -1209,6 +1220,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B1910EAEA57AF40FBA6FEDD3 /* FollowAlongPlayerViewModelTests.swift in Sources */,
+				D33PL1NKT35T50002 /* DeepLinkManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

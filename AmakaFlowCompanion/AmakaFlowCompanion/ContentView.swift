@@ -112,15 +112,6 @@ struct ContentView: View {
                 await viewModel.checkPendingWorkouts()
             }
         }
-        .onOpenURL { url in
-            // Handle deep link from Dynamic Island
-            if url.scheme == "amakaflow" && url.host == "workout" {
-                // Only show player if workout is running
-                if WorkoutEngine.shared.phase == .running || WorkoutEngine.shared.phase == .paused {
-                    showingWorkoutPlayer = true
-                }
-            }
-        }
         .fullScreenCover(isPresented: $showingWorkoutPlayer) {
             WorkoutPlayerView()
         }
@@ -133,6 +124,10 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToWorkout)) { _ in
             selectedTab = .workouts
+            // Show player if workout is running
+            if WorkoutEngine.shared.phase == .running || WorkoutEngine.shared.phase == .paused {
+                showingWorkoutPlayer = true
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToSync)) { _ in
             selectedTab = .settings

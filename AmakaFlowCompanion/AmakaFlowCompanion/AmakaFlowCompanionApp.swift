@@ -15,6 +15,7 @@ struct AmakaFlowCompanionApp: App {
     @StateObject private var workoutsViewModel: WorkoutsViewModel
     @StateObject private var watchConnectivity = WatchConnectivityManager.shared
     @StateObject private var garminConnectivity = GarminConnectManager.shared
+    @StateObject private var deepLinkManager = DeepLinkManager.shared
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -84,6 +85,7 @@ struct AmakaFlowCompanionApp: App {
                         .environmentObject(watchConnectivity)
                         .environmentObject(garminConnectivity)
                         .environmentObject(pairingService)
+                        .environmentObject(deepLinkManager)
                         .task {
                             // Wire up ViewModel for AppDelegate silent push handler (AMA-567)
                             appDelegate.workoutsViewModel = workoutsViewModel
@@ -110,18 +112,40 @@ struct AmakaFlowCompanionApp: App {
                             await workoutsViewModel.refreshWorkouts()
                         }
                         .onOpenURL { url in
-                            // Handle Garmin Connect IQ callbacks
-                            print("⌚ [APP] onOpenURL received: \(url.absoluteString)")
-                            print("⌚ [APP] URL scheme: \(url.scheme ?? "nil")")
-                            print("⌚ [APP] URL host: \(url.host ?? "nil")")
-                            print("⌚ [APP] URL path: \(url.path)")
-                            print("⌚ [APP] URL query: \(url.query ?? "nil")")
+                            // AMA-1259: Handle Universal Links and custom scheme deep links for import
+                            if deepLinkManager.handleIncomingURL(url) {
+                                return
+                            }
+
+                            // Handle Garmin Connect IQ callbacks (existing behavior)
+                            print("[APP] onOpenURL received: \(url.absoluteString)")
                             let handled = garminConnectivity.handleURL(url)
-                            print("⌚ [APP] URL handled: \(handled)")
+                            print("[APP] URL handled by Garmin: \(handled)")
+
+                            // Handle existing amakaflow://workout deep link (Dynamic Island)
+                            if url.scheme == "amakaflow" && url.host == "workout" {
+                                if WorkoutEngine.shared.phase == .running || WorkoutEngine.shared.phase == .paused {
+                                    NotificationCenter.default.post(name: .deepLinkToWorkout, object: nil)
+                                }
+                            }
+                        }
+                        .sheet(isPresented: $deepLinkManager.showImportSheet) {
+                            if let importURL = deepLinkManager.pendingImportURL {
+                                DeepLinkImportView(urlString: importURL) {
+                                    deepLinkManager.clearPendingImport()
+                                    // Refresh workouts after import
+                                    Task { await workoutsViewModel.refreshWorkouts() }
+                                }
+                            }
                         }
                 } else {
                     PairingView()
                         .environmentObject(pairingService)
+                        .onOpenURL { url in
+                            // AMA-1259: Still handle deep links when not paired —
+                            // store the URL so we can process it after pairing completes
+                            _ = deepLinkManager.handleIncomingURL(url)
+                        }
                 }
             }
             .preferredColorScheme(.dark) // Force dark mode
