@@ -12,15 +12,19 @@
 		1A7B03C2552441FEB810773A /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */; };
 		1N5T4GR4MR33L0002 /* InstagramReelIngestionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */; };
 		27599809E31D40308DBFA93A /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F86F482904144B39B954F6A /* Environment.swift */; };
+		326A41D76E81D77EC7D4F76A /* NotificationPreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CC7221F93FB2C2C9982C2ED /* NotificationPreferencesView.swift */; };
 		40E350E9B26F4574902587EF /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29B50DC380A44F2D96E6E414 /* PairingView.swift */; };
 		43F9F2E9369F4546B3AF005A /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D9B67C13E34BAE804A9359 /* HistoryView.swift */; };
 		444EFC17D69346B3B93C9ECA /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11B5892FB68A40CB890E3630 /* KeychainHelper.swift */; };
+		5016188D64111FBBE44B4A8D /* FollowAlongPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E90D82F541D1AF7AE58A29B /* FollowAlongPlayerView.swift */; };
 		521047C38D23474889C39F35 /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AB8DFBA16CE406C95456EAD /* CalendarView.swift */; };
+		5489774E90118791AFF14D8C /* FollowAlongPlayerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 154769090318840B518509BF /* FollowAlongPlayerViewModel.swift */; };
 		63D97E9B43FEB4A771D87EE8 /* ActionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC35C6AFFE23A2DA83D8C2E7 /* ActionModels.swift */; };
 		67283958B3E2475BA2DA974A /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2192F9A69B4A51B54A138F /* HomeView.swift */; };
 		76A4BDCCD65A2C7EB4B82ACB /* TrainingPreferencesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0949526387D9FA932B940DF3 /* TrainingPreferencesViewModel.swift */; };
 		83FA8BE2A6AAF21B52B5B16A /* ShoeComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 887645B05D4D7BABC29CAB9A /* ShoeComparisonView.swift */; };
 		868593590A9CA72F3E328DDD /* CoachChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA5BD907B0A6F491AC66198E /* CoachChatView.swift */; };
+		97DAAC6C9C4F8BAC320D575E /* SyncDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0590FA2DB2E16FC868D6F303 /* SyncDashboardView.swift */; };
 		997164A8636AF31DED75ACE1 /* CoachViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F87085CB2DDF9255246439F /* CoachViewModel.swift */; };
 		9D0C3D8A603340BC8364F188 /* PreWorkoutDeviceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3910753486A542ECAA1E5971 /* PreWorkoutDeviceSheet.swift */; };
 		A19401BB00000001C0000001 /* ActivityHistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA00000001B0000001 /* ActivityHistoryViewModel.swift */; };
@@ -38,15 +42,17 @@
 		A1IMP0RTV13W0002 /* AIImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1IMP0RTV13W0001 /* AIImportView.swift */; };
 		AA8C7E7D040E462BB1347220 /* RestPeriodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94AE3547CCCD41159C85554B /* RestPeriodView.swift */; };
 		AAA43473A50C02F82E139FED /* TrainingPreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1660F7A199C30F1FF9B8DFD /* TrainingPreferencesView.swift */; };
-		326A41D76E81D77EC7D4F76A /* NotificationPreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CC7221F93FB2C2C9982C2ED /* NotificationPreferencesView.swift */; };
-		97DAAC6C9C4F8BAC320D575E /* SyncDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0590FA2DB2E16FC868D6F303 /* SyncDashboardView.swift */; };
 		AF50AD9DC3B0E509ED0ED715 /* AnalyticsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68B54D3FBC9E8561760B53F0 /* AnalyticsModels.swift */; };
 		AK00SHARE001B /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SHARE001A /* ShareViewController.swift */; };
 		AK00SHARE00EB /* AmakaFlowShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AK00SHARE00EA /* AmakaFlowShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+
 		AK00SHARE003B /* PlatformDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SHARE003A /* PlatformDetector.swift */; };
 		AK00SHARE004B /* SharedContainerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SHARE004A /* SharedContainerManager.swift */; };
 		AK00SHARE005B /* URLImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SHARE005A /* URLImportService.swift */; };
 		AK00SHARE006B /* ShareExtensionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SHARE006A /* ShareExtensionView.swift */; };
+
+		B1910EAEA57AF40FBA6FEDD3 /* FollowAlongPlayerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */; };
+
 		B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E57529578481B8991A91F /* SourcesView.swift */; };
 		B69E1808FE344A15848A3B67 /* WorkoutCompletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */; };
 		BAB97A941DC233141997CA05 /* CalendarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AF716C8C0EE3CC5A4BA56C5 /* CalendarViewModel.swift */; };
@@ -237,19 +243,24 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0590FA2DB2E16FC868D6F303 /* SyncDashboardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SyncDashboardView.swift; path = ../AmakaFlow/Views/Settings/SyncDashboardView.swift; sourceTree = "<group>"; };
 		08D9B67C13E34BAE804A9359 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HistoryView.swift; path = ../AmakaFlow/Views/HistoryView.swift; sourceTree = SOURCE_ROOT; };
 		0949526387D9FA932B940DF3 /* TrainingPreferencesViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TrainingPreferencesViewModel.swift; path = ../AmakaFlow/ViewModels/TrainingPreferencesViewModel.swift; sourceTree = "<group>"; };
 		0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionView.swift; path = ../AmakaFlow/Views/WorkoutCompletionView.swift; sourceTree = SOURCE_ROOT; };
 		0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionViewModel.swift; path = ../AmakaFlow/ViewModels/WorkoutCompletionViewModel.swift; sourceTree = SOURCE_ROOT; };
 		11B5892FB68A40CB890E3630 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainHelper.swift; path = ../AmakaFlow/Services/KeychainHelper.swift; sourceTree = SOURCE_ROOT; };
+		154769090318840B518509BF /* FollowAlongPlayerViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FollowAlongPlayerViewModel.swift; path = ../AmakaFlow/ViewModels/FollowAlongPlayerViewModel.swift; sourceTree = SOURCE_ROOT; };
 		1555CD79DFEAA04822AEB965 /* ActivityFeedViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ActivityFeedViewModel.swift; path = ../AmakaFlow/ViewModels/ActivityFeedViewModel.swift; sourceTree = "<group>"; };
+		167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FollowAlongPlayerViewModelTests.swift; path = AmakaFlowCompanionTests/FollowAlongPlayerViewModelTests.swift; sourceTree = SOURCE_ROOT; };
 		1AF716C8C0EE3CC5A4BA56C5 /* CalendarViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CalendarViewModel.swift; path = ../AmakaFlow/ViewModels/CalendarViewModel.swift; sourceTree = "<group>"; };
 		1F87085CB2DDF9255246439F /* CoachViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CoachViewModel.swift; path = ../AmakaFlow/ViewModels/CoachViewModel.swift; sourceTree = "<group>"; };
 		1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QRScannerView.swift; path = ../AmakaFlow/Views/QRScannerView.swift; sourceTree = SOURCE_ROOT; };
 		1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = InstagramReelIngestionView.swift; path = ../AmakaFlow/Views/InstagramReelIngestionView.swift; sourceTree = SOURCE_ROOT; };
 		29B50DC380A44F2D96E6E414 /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingView.swift; path = ../AmakaFlow/Views/PairingView.swift; sourceTree = SOURCE_ROOT; };
 		2AB8DFBA16CE406C95456EAD /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarView.swift; path = ../AmakaFlow/Views/CalendarView.swift; sourceTree = SOURCE_ROOT; };
+		2E90D82F541D1AF7AE58A29B /* FollowAlongPlayerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FollowAlongPlayerView.swift; path = ../AmakaFlow/Views/FollowAlongPlayerView.swift; sourceTree = SOURCE_ROOT; };
 		3910753486A542ECAA1E5971 /* PreWorkoutDeviceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PreWorkoutDeviceSheet.swift; path = ../AmakaFlow/Views/Components/PreWorkoutDeviceSheet.swift; sourceTree = SOURCE_ROOT; };
+		4CC7221F93FB2C2C9982C2ED /* NotificationPreferencesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationPreferencesView.swift; path = ../AmakaFlow/Views/Settings/NotificationPreferencesView.swift; sourceTree = "<group>"; };
 		4F945C56EB30A4BA6E5CAC50 /* ActivityFeedView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ActivityFeedView.swift; path = ../AmakaFlow/Views/ActivityFeedView.swift; sourceTree = "<group>"; };
 		5F86F482904144B39B954F6A /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Environment.swift; path = ../AmakaFlow/Models/Environment.swift; sourceTree = SOURCE_ROOT; };
 		68B54D3FBC9E8561760B53F0 /* AnalyticsModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AnalyticsModels.swift; path = ../AmakaFlow/Models/AnalyticsModels.swift; sourceTree = "<group>"; };
@@ -281,8 +292,6 @@
 		AK00SHARE006A /* ShareExtensionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionView.swift; sourceTree = "<group>"; };
 		AK00SHARE00EA /* AmakaFlowShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AmakaFlowShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1660F7A199C30F1FF9B8DFD /* TrainingPreferencesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TrainingPreferencesView.swift; path = ../AmakaFlow/Views/Settings/TrainingPreferencesView.swift; sourceTree = "<group>"; };
-		4CC7221F93FB2C2C9982C2ED /* NotificationPreferencesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationPreferencesView.swift; path = ../AmakaFlow/Views/Settings/NotificationPreferencesView.swift; sourceTree = "<group>"; };
-		0590FA2DB2E16FC868D6F303 /* SyncDashboardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SyncDashboardView.swift; path = ../AmakaFlow/Views/Settings/SyncDashboardView.swift; sourceTree = "<group>"; };
 		CC2192F9A69B4A51B54A138F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeView.swift; path = ../AmakaFlow/Views/HomeView.swift; sourceTree = SOURCE_ROOT; };
 		D3BUG10G00000001B0000001 /* DebugLogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogService.swift; path = ../AmakaFlow/Services/DebugLogService.swift; sourceTree = SOURCE_ROOT; };
 		D3BUG10G00000002B0000002 /* DebugLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogView.swift; path = ../AmakaFlow/Views/DebugLogView.swift; sourceTree = SOURCE_ROOT; };
@@ -643,6 +652,9 @@
 				C1660F7A199C30F1FF9B8DFD /* TrainingPreferencesView.swift */,
 				4CC7221F93FB2C2C9982C2ED /* NotificationPreferencesView.swift */,
 				0590FA2DB2E16FC868D6F303 /* SyncDashboardView.swift */,
+				2E90D82F541D1AF7AE58A29B /* FollowAlongPlayerView.swift */,
+				154769090318840B518509BF /* FollowAlongPlayerViewModel.swift */,
+				167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -1187,6 +1199,8 @@
 				AAA43473A50C02F82E139FED /* TrainingPreferencesView.swift in Sources */,
 				326A41D76E81D77EC7D4F76A /* NotificationPreferencesView.swift in Sources */,
 				97DAAC6C9C4F8BAC320D575E /* SyncDashboardView.swift in Sources */,
+				5016188D64111FBBE44B4A8D /* FollowAlongPlayerView.swift in Sources */,
+				5489774E90118791AFF14D8C /* FollowAlongPlayerViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1194,6 +1208,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B1910EAEA57AF40FBA6FEDD3 /* FollowAlongPlayerViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

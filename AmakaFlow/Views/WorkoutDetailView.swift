@@ -17,6 +17,7 @@ struct WorkoutDetailView: View {
     @State private var showingCalendarSheet = false
     @State private var showingWorkoutPlayer = false
     @State private var showingDeviceSheet = false
+    @State private var showingFollowAlongPlayer = false  // AMA-1182
     @State private var watchSent = false
     @State private var calendarScheduled = false
     @State private var pendingWorkoutStart = false  // Track if we should start workout after sheet dismisses
@@ -90,6 +91,24 @@ struct WorkoutDetailView: View {
                             .cornerRadius(Theme.CornerRadius.md)
                         }
                         .accessibilityIdentifier("start_follow_along_button")
+
+                        // AMA-1182: Follow-Along Video Playback
+                        Button(action: {
+                            showingFollowAlongPlayer = true
+                        }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "play.rectangle.fill")
+                                    .font(.system(size: 16))
+                                Text("Follow-Along Video")
+                                    .font(Theme.Typography.bodyBold)
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 48)
+                            .background(Theme.Colors.accentBlue)
+                            .cornerRadius(Theme.CornerRadius.md)
+                        }
+                        .accessibilityIdentifier("start_follow_along_video_button")
 
                         // Convert to WorkoutKit (Save to Apple Fitness)
                         if #available(iOS 18.0, *) {
@@ -310,6 +329,9 @@ struct WorkoutDetailView: View {
                 )
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
+            }
+            .fullScreenCover(isPresented: $showingFollowAlongPlayer) {
+                FollowAlongPlayerView(workout: workout)
             }
             .fullScreenCover(isPresented: $showingWorkoutPlayer) {
                 WorkoutPlayerView()
