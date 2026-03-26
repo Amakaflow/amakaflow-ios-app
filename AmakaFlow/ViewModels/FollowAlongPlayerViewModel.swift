@@ -91,8 +91,21 @@ class FollowAlongPlayerViewModel: ObservableObject {
 
     deinit {
         timerCancellable?.cancel()
+        // Clean up notification observer
         if let obs = playerObserver {
             NotificationCenter.default.removeObserver(obs)
+        }
+        // Note: player will be released automatically when self is deallocated
+        // AVPlayer handles its own cleanup
+    }
+    
+    // MARK: - Private Helpers
+    
+    /// Remove the player observer safely
+    private func cleanupObserver() {
+        if let obs = playerObserver {
+            NotificationCenter.default.removeObserver(obs)
+            playerObserver = nil
         }
     }
 
@@ -103,6 +116,11 @@ class FollowAlongPlayerViewModel: ObservableObject {
     func loadWorkout(_ workout: Workout) {
         phase = .loading
         errorMessage = nil
+
+        // Clean up any existing player/observer before setting up new ones
+        cleanupObserver()
+        player?.pause()
+        player = nil
 
         let extracted = extractSteps(from: workout)
         guard !extracted.isEmpty else {
@@ -141,6 +159,12 @@ class FollowAlongPlayerViewModel: ObservableObject {
     /// Load from a simple list of steps (for testing or direct construction)
     func loadSteps(_ newSteps: [FollowAlongStep], videoURL: URL? = nil) {
         phase = .loading
+        
+        // Clean up any existing player/observer before setting up new ones
+        cleanupObserver()
+        player?.pause()
+        player = nil
+        
         steps = newSteps
         currentStepIndex = 0
         elapsedSeconds = 0
@@ -149,6 +173,17 @@ class FollowAlongPlayerViewModel: ObservableObject {
             let avPlayer = AVPlayer(playerItem: AVPlayerItem(url: url))
             avPlayer.actionAtItemEnd = .pause
             self.player = avPlayer
+            
+            // Observe when playback finishes
+            playerObserver = NotificationCenter.default.addObserver(
+                forName: .AVPlayerItemDidPlayToEndTime,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.handleVideoEnded()
+                }
+            }
         }
 
         setupStep(at: 0)
@@ -212,6 +247,8 @@ class FollowAlongPlayerViewModel: ObservableObject {
     func endWorkout() {
         stopTimer()
         player?.pause()
+        cleanupObserver()
+        player = nil
         phase = .ended
     }
 
