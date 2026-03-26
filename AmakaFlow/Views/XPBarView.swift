@@ -6,7 +6,21 @@
 //  AMA-1285
 //
 
+import Foundation
 import SwiftUI
+
+// MARK: - XP Data Model
+
+struct XPData: Codable {
+    let xpTotal: Int
+    let currentLevel: Int
+    let levelName: String
+    let xpToNextLevel: Int
+    let xpToday: Int
+    let dailyCap: Int
+}
+
+// MARK: - XP Bar View
 
 struct XPBarView: View {
     let xpTotal: Int
