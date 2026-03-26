@@ -3,7 +3,7 @@
     "details": [
       {
         "appIDs": [
-          "TEAM_ID.com.myamaka.AmakaFlowCompanion"
+          "A9K5QG6YW8.com.myamaka.AmakaFlowCompanion"
         ],
         "components": [
           {
@@ -17,7 +17,7 @@
   },
   "webcredentials": {
     "apps": [
-      "TEAM_ID.com.myamaka.AmakaFlowCompanion"
+      "A9K5QG6YW8.com.myamaka.AmakaFlowCompanion"
     ]
   }
 }

@@ -42,13 +42,17 @@ final class DeepLinkManager: ObservableObject {
 
         switch action {
         case .importURL(let workoutURL):
+            #if DEBUG
             print("[DeepLinkManager] Import URL received: \(workoutURL)")
+            #endif
             pendingImportURL = workoutURL
             showImportSheet = true
             return true
 
         case .unknown:
+            #if DEBUG
             print("[DeepLinkManager] Unrecognized deep link: \(url.absoluteString)")
+            #endif
             return false
         }
     }

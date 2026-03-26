@@ -16,6 +16,7 @@ class DeepLinkImportViewModel: ObservableObject {
 
     @Published var state: DeepLinkImportState = .ready
     @Published var importResponse: DeepLinkIngestResponse?
+    @Published var importTrigger: UUID?
 
     let urlString: String
     let platform: DeepLinkPlatform
@@ -23,6 +24,11 @@ class DeepLinkImportViewModel: ObservableObject {
     init(urlString: String) {
         self.urlString = urlString
         self.platform = DeepLinkImportViewModel.detectPlatform(from: urlString)
+    }
+
+    /// Request an import — sets a trigger that the view's .task(id:) picks up
+    func requestImport() {
+        importTrigger = UUID()
     }
 
     /// Start the import by calling POST /ingest/{source}
@@ -77,7 +83,9 @@ class DeepLinkImportViewModel: ObservableObject {
         let body: [String: Any] = ["url": urlString]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
+        #if DEBUG
         print("[DeepLinkImport] POST \(endpoint) for URL: \(urlString)")
+        #endif
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -85,7 +93,9 @@ class DeepLinkImportViewModel: ObservableObject {
             throw DeepLinkImportError.invalidResponse
         }
 
+        #if DEBUG
         print("[DeepLinkImport] Status: \(httpResponse.statusCode)")
+        #endif
 
         if httpResponse.statusCode == 401 {
             throw DeepLinkImportError.unauthorized
@@ -262,7 +272,7 @@ struct DeepLinkImportView: View {
                     switch viewModel.state {
                     case .ready:
                         Button {
-                            Task { await viewModel.startImport() }
+                            viewModel.requestImport()
                         } label: {
                             HStack {
                                 Image(systemName: "arrow.down.circle.fill")
@@ -327,7 +337,7 @@ struct DeepLinkImportView: View {
                                 .multilineTextAlignment(.center)
 
                             Button("Try Again") {
-                                Task { await viewModel.startImport() }
+                                viewModel.requestImport()
                             }
                             .font(.subheadline.weight(.medium))
                             .padding(.top, 4)
@@ -350,9 +360,13 @@ struct DeepLinkImportView: View {
                 }
             }
         }
-        .task {
-            // Auto-start import when the sheet appears
+        .task(id: viewModel.importTrigger) {
+            guard viewModel.importTrigger != nil else { return }
             await viewModel.startImport()
+        }
+        .onAppear {
+            // Auto-start import when the sheet appears
+            viewModel.requestImport()
         }
     }
 
