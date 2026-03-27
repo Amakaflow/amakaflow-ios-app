@@ -54,7 +54,7 @@ struct HomeView: View {
                             Text("Simulation Mode: \(simulationSettings.speedDisplayString)")
                                 .font(.system(size: 14, weight: .medium))
                             Spacer()
-                            Text("Settings → Version × 7")
+                            Text("Settings \u{2192} Version \u{00D7} 7")
                                 .font(.system(size: 11))
                                 .foregroundColor(.black.opacity(0.6))
                         }
@@ -70,6 +70,14 @@ struct HomeView: View {
                     if let progress = savedProgress {
                         resumeWorkoutBanner(progress: progress)
                     }
+
+                    // Weekly Progress Ring (AMA-1286)
+                    WeeklyProgressRing(
+                        workoutsCompleted: historyViewModel.weeklySummary.workoutCount,
+                        weeklyTarget: max(1, historyViewModel.weeklySummary.workoutCount + 1), // TODO: fetch from /gamification/weekly-progress
+                        ringPercentage: Double(historyViewModel.weeklySummary.workoutCount) / Double(max(1, historyViewModel.weeklySummary.workoutCount + 1)),
+                        motivationalText: weeklyMotivationalText
+                    )
 
                     // Suggest Workout button (AMA-1265)
                     SuggestWorkoutButton {
@@ -96,6 +104,11 @@ struct HomeView: View {
 
                         // Voice Workout button (AMA-5)
                         voiceWorkoutButton
+                    }
+
+                    // Rest Day Button (AMA-1286)
+                    RestDayButton {
+                        // TODO: call POST /gamification/rest-day
                     }
 
                     // Today's Workouts
@@ -215,6 +228,23 @@ struct HomeView: View {
         }
     }
 
+    // MARK: - Weekly Progress Helper
+
+    private var weeklyMotivationalText: String {
+        let completed = historyViewModel.weeklySummary.workoutCount
+        let target = max(1, completed + 1) // TODO: use actual weekly_target from API
+        let remaining = max(0, target - completed)
+        if completed >= target {
+            return "Target hit! \(completed) of \(target) \u{2014} crushing it!"
+        } else if remaining == 1 {
+            return "\(completed) of \(target) \u{2014} one more to go!"
+        } else if completed == 0 {
+            return "0 of \(target) \u{2014} let\u{2019}s get started this week!"
+        } else {
+            return "\(completed) of \(target) \u{2014} \(remaining) more to go!"
+        }
+    }
+
     // MARK: - Resume Workout Banner
 
     private func resumeWorkoutBanner(progress: SavedWorkoutProgress) -> some View {
@@ -296,7 +326,7 @@ struct HomeView: View {
 
         guard let workout = workout else {
             // Workout no longer available, clear progress
-            print("🏋️ Saved workout no longer available, clearing progress")
+            print("Saved workout no longer available, clearing progress")
             SavedWorkoutProgress.clear()
             savedProgress = nil
             return
