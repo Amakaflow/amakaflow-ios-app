@@ -49,18 +49,14 @@ struct AmakaFlowCompanionApp: App {
             // Performance monitoring (AMA-1083: reduced from 1.0 to 0.2 to limit quota usage)
             options.tracesSampleRate = 0.2
 
-            // Profiling
-            options.configureProfiling = {
-                $0.sessionSampleRate = 1.0
-                $0.lifecycle = .trace
-            }
+            // Profiling - disabled due to SIGABRT crash (AMA-1334)
+            // The configureProfiling closure caused memory management issues
+            // with "pointer being freed was not allocated" crashes.
+            // options.profilesSampleRate = 0.2
 
             // Screenshots and view hierarchy for debugging
             options.attachScreenshot = true
             options.attachViewHierarchy = true
-
-            // Enable experimental logging
-            options.experimental.enableLogs = true
 
             // Session Replay (AMA-1084)
             // 10% of all sessions captured; 100% of sessions with errors/hangs.
