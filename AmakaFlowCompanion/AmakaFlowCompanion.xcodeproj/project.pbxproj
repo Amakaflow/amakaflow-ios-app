@@ -259,6 +259,10 @@
 		AK00NUT006B /* NutritionSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT006A /* NutritionSettingsView.swift */; };
 		AK00NUT007B /* NutritionOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT007A /* NutritionOnboardingView.swift */; };
 		AK00NUT008B /* NutritionViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT008A /* NutritionViewModelTests.swift */; };
+		AK00FUL001B /* FuelingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FUL001A /* FuelingViewModel.swift */; };
+		AK00FUL002B /* FuelingStatusCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FUL002A /* FuelingStatusCard.swift */; };
+		AK00FUL003B /* ProteinNudgeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FUL003A /* ProteinNudgeService.swift */; };
+		AK00FUL004B /* FuelingViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FUL004A /* FuelingViewModelTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -580,6 +584,10 @@
 		AK00NUT006A /* NutritionSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionSettingsView.swift; path = ../AmakaFlow/Views/Nutrition/NutritionSettingsView.swift; sourceTree = "<group>"; };
 		AK00NUT007A /* NutritionOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionOnboardingView.swift; path = ../AmakaFlow/Views/Nutrition/NutritionOnboardingView.swift; sourceTree = "<group>"; };
 		AK00NUT008A /* NutritionViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionViewModelTests.swift; path = AmakaFlowCompanionTests/NutritionViewModelTests.swift; sourceTree = "<group>"; };
+		AK00FUL001A /* FuelingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FuelingViewModel.swift; path = ../AmakaFlow/ViewModels/FuelingViewModel.swift; sourceTree = "<group>"; };
+		AK00FUL002A /* FuelingStatusCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FuelingStatusCard.swift; path = ../AmakaFlow/Views/Nutrition/FuelingStatusCard.swift; sourceTree = "<group>"; };
+		AK00FUL003A /* ProteinNudgeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProteinNudgeService.swift; path = ../AmakaFlow/Services/ProteinNudgeService.swift; sourceTree = "<group>"; };
+		AK00FUL004A /* FuelingViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FuelingViewModelTests.swift; path = AmakaFlowCompanionTests/FuelingViewModelTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -885,6 +893,10 @@
 				AK00NUT006A /* NutritionSettingsView.swift */,
 				AK00NUT007A /* NutritionOnboardingView.swift */,
 				AK00NUT008A /* NutritionViewModelTests.swift */,
+				AK00FUL001A /* FuelingViewModel.swift */,
+				AK00FUL002A /* FuelingStatusCard.swift */,
+				AK00FUL003A /* ProteinNudgeService.swift */,
+				AK00FUL004A /* FuelingViewModelTests.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -1501,6 +1513,9 @@
 				AK00NUT005B /* WaterTrackerView.swift in Sources */,
 				AK00NUT006B /* NutritionSettingsView.swift in Sources */,
 				AK00NUT007B /* NutritionOnboardingView.swift in Sources */,
+				AK00FUL001B /* FuelingViewModel.swift in Sources */,
+				AK00FUL002B /* FuelingStatusCard.swift in Sources */,
+				AK00FUL003B /* ProteinNudgeService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1540,6 +1555,7 @@
 				AMA12820010B /* PRDetectionServiceTests.swift in Sources */,
 				AK00CHL007B /* ChallengesViewModelTests.swift in Sources */,
 				AK00NUT008B /* NutritionViewModelTests.swift in Sources */,
+				AK00FUL004B /* FuelingViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
