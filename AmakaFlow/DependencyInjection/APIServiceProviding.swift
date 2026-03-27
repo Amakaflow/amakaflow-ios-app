@@ -130,6 +130,32 @@ protocol APIServiceProviding {
     /// Fetch coach memories
     func fetchCoachMemories() async throws -> [CoachMemory]
 
+    // MARK: - Social Feed (AMA-1273)
+
+    /// Fetch paginated community feed
+    func fetchSocialFeed(cursor: String?, limit: Int) async throws -> FeedResponse
+
+    /// Add a reaction to a post
+    func addSocialReaction(postId: String, emoji: String) async throws
+
+    /// Remove a reaction from a post
+    func removeSocialReaction(postId: String, emoji: String) async throws
+
+    /// Fetch comments for a post
+    func fetchSocialComments(postId: String) async throws -> CommentsResponse
+
+    /// Post a comment on a feed post
+    func postSocialComment(postId: String, text: String) async throws
+
+    /// Fetch social/privacy settings
+    func fetchSocialSettings() async throws -> SocialSettings
+
+    /// Update social/privacy settings
+    func updateSocialSettings(_ settings: SocialSettings) async throws
+
+    /// Fetch a user's public profile
+    func fetchUserPublicProfile(userId: String) async throws -> UserPublicProfile
+
     // MARK: - Analytics (AMA-1147)
 
     /// Fetch shoe comparison stats
