@@ -1544,6 +1544,31 @@ class APIService {
         default: throw APIError.serverError(httpResponse.statusCode)
         }
     }
+
+    // MARK: - XP + Level (AMA-1285)
+
+    func fetchXP() async throws -> XPData {
+        let url = URL(string: "\(AppEnvironment.current.chatAPIURL)/gamification/xp")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        for (key, value) in authHeaders {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            if httpResponse.statusCode == 401 { throw APIError.unauthorized }
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+
+        let decoder = Self.makeDecoder()
+        return try decoder.decode(XPData.self, from: data)
+    }
 }
 
 // MARK: - DayState API Response Models (AMA-1150)
@@ -1650,30 +1675,6 @@ struct PersonalDictionaryResponse: Codable {
 }
 
 // MARK: - API Errors
-
-    // MARK: - XP + Level (AMA-1285)
-
-    func fetchXP() async throws -> XPData {
-        let url = URL(string: "\(AppEnvironment.current.chatAPIURL)/gamification/xp")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        for (key, value) in authHeaders {
-            request.setValue(value, forHTTPHeaderField: key)
-        }
-
-        let (data, response) = try await session.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        guard httpResponse.statusCode == 200 else {
-            if httpResponse.statusCode == 401 { throw APIError.unauthorized }
-            throw APIError.serverError(httpResponse.statusCode)
-        }
-
-        return try Self.makeDecoder().decode(XPData.self, from: data)
-    }
 
 enum APIError: LocalizedError {
     case notImplemented
