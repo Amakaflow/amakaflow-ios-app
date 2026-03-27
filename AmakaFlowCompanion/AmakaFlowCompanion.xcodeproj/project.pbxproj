@@ -251,6 +251,14 @@
 		AK00TST023B /* WorkoutModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST023A /* WorkoutModelTests.swift */; };
 		AK00TST024B /* WorkoutsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST024A /* WorkoutsViewModelTests.swift */; };
 		AK00TST025B /* XPBarViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST025A /* XPBarViewTests.swift */; };
+		AK00NUT001B /* NutritionHealthKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT001A /* NutritionHealthKitService.swift */; };
+		AK00NUT002B /* NutritionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT002A /* NutritionViewModel.swift */; };
+		AK00NUT003B /* NutritionDashboardCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT003A /* NutritionDashboardCard.swift */; };
+		AK00NUT004B /* ProteinTrackerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT004A /* ProteinTrackerView.swift */; };
+		AK00NUT005B /* WaterTrackerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT005A /* WaterTrackerView.swift */; };
+		AK00NUT006B /* NutritionSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT006A /* NutritionSettingsView.swift */; };
+		AK00NUT007B /* NutritionOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT007A /* NutritionOnboardingView.swift */; };
+		AK00NUT008B /* NutritionViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT008A /* NutritionViewModelTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -564,6 +572,14 @@
 		AK00TST023A /* WorkoutModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutModelTests.swift; path = AmakaFlowCompanionTests/WorkoutModelTests.swift; sourceTree = "<group>"; };
 		AK00TST024A /* WorkoutsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutsViewModelTests.swift; path = AmakaFlowCompanionTests/WorkoutsViewModelTests.swift; sourceTree = "<group>"; };
 		AK00TST025A /* XPBarViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = XPBarViewTests.swift; path = AmakaFlowCompanionTests/XPBarViewTests.swift; sourceTree = "<group>"; };
+		AK00NUT001A /* NutritionHealthKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionHealthKitService.swift; path = ../AmakaFlow/Services/NutritionHealthKitService.swift; sourceTree = "<group>"; };
+		AK00NUT002A /* NutritionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionViewModel.swift; path = ../AmakaFlow/ViewModels/NutritionViewModel.swift; sourceTree = "<group>"; };
+		AK00NUT003A /* NutritionDashboardCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionDashboardCard.swift; path = ../AmakaFlow/Views/Nutrition/NutritionDashboardCard.swift; sourceTree = "<group>"; };
+		AK00NUT004A /* ProteinTrackerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProteinTrackerView.swift; path = ../AmakaFlow/Views/Nutrition/ProteinTrackerView.swift; sourceTree = "<group>"; };
+		AK00NUT005A /* WaterTrackerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WaterTrackerView.swift; path = ../AmakaFlow/Views/Nutrition/WaterTrackerView.swift; sourceTree = "<group>"; };
+		AK00NUT006A /* NutritionSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionSettingsView.swift; path = ../AmakaFlow/Views/Nutrition/NutritionSettingsView.swift; sourceTree = "<group>"; };
+		AK00NUT007A /* NutritionOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionOnboardingView.swift; path = ../AmakaFlow/Views/Nutrition/NutritionOnboardingView.swift; sourceTree = "<group>"; };
+		AK00NUT008A /* NutritionViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionViewModelTests.swift; path = AmakaFlowCompanionTests/NutritionViewModelTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -861,6 +877,14 @@
 				AK00LDR003A /* LeaderboardView.swift */,
 				AK00LDR004A /* LeaderboardEntryRow.swift */,
 				AK00CHL007A /* ChallengesViewModelTests.swift */,
+				AK00NUT001A /* NutritionHealthKitService.swift */,
+				AK00NUT002A /* NutritionViewModel.swift */,
+				AK00NUT003A /* NutritionDashboardCard.swift */,
+				AK00NUT004A /* ProteinTrackerView.swift */,
+				AK00NUT005A /* WaterTrackerView.swift */,
+				AK00NUT006A /* NutritionSettingsView.swift */,
+				AK00NUT007A /* NutritionOnboardingView.swift */,
+				AK00NUT008A /* NutritionViewModelTests.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -1470,6 +1494,13 @@
 				AK00LDR002B /* LeaderboardViewModel.swift in Sources */,
 				AK00LDR003B /* LeaderboardView.swift in Sources */,
 				AK00LDR004B /* LeaderboardEntryRow.swift in Sources */,
+				AK00NUT001B /* NutritionHealthKitService.swift in Sources */,
+				AK00NUT002B /* NutritionViewModel.swift in Sources */,
+				AK00NUT003B /* NutritionDashboardCard.swift in Sources */,
+				AK00NUT004B /* ProteinTrackerView.swift in Sources */,
+				AK00NUT005B /* WaterTrackerView.swift in Sources */,
+				AK00NUT006B /* NutritionSettingsView.swift in Sources */,
+				AK00NUT007B /* NutritionOnboardingView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1508,6 +1539,7 @@
 				AK00TST025B /* XPBarViewTests.swift in Sources */,
 				AMA12820010B /* PRDetectionServiceTests.swift in Sources */,
 				AK00CHL007B /* ChallengesViewModelTests.swift in Sources */,
+				AK00NUT008B /* NutritionViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

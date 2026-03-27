@@ -39,6 +39,8 @@ struct SettingsView: View {
     @State private var showingDisconnectAlert = false
     @State private var showingWorkoutDebugSheet = false
     @State private var showingVoiceTranscriptionSettings = false
+    @StateObject private var nutritionViewModel = NutritionViewModel()
+    @State private var showingNutritionSettings = false
     @State private var showingErrorLogSheet = false
     @State private var showDebugSettings = false
     @State private var debugTapCount = 0
@@ -68,6 +70,11 @@ struct SettingsView: View {
 
                     // Training Preferences (AMA-1147)
                     trainingPreferencesSection
+
+                    divider
+
+                    // Nutrition Settings (AMA-1292)
+                    nutritionSection
 
                     divider
 
@@ -1312,6 +1319,35 @@ struct SettingsView: View {
                         .frame(width: 28)
 
                     Text("Notification Preferences")
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                }
+            }
+        }
+    }
+
+    // MARK: - Nutrition Section (AMA-1292)
+
+    private var nutritionSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            Text("NUTRITION")
+                .font(Theme.Typography.footnote)
+                .foregroundColor(Theme.Colors.textSecondary)
+
+            NavigationLink(destination: NutritionSettingsView(viewModel: nutritionViewModel)) {
+                HStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: "leaf.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(Theme.Colors.accentGreen)
+                        .frame(width: 28)
+
+                    Text("Nutrition Settings")
                         .font(Theme.Typography.body)
                         .foregroundColor(Theme.Colors.textPrimary)
 
