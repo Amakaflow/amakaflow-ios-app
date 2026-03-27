@@ -21,6 +21,9 @@ struct HomeView: View {
     @State private var showingVoiceWorkout = false
     @State private var showingSuggestWorkout = false
     @StateObject private var suggestWorkoutViewModel = SuggestWorkoutViewModel()
+    @StateObject private var nutritionViewModel = NutritionViewModel()
+    @State private var showingProteinTracker = false
+    @State private var showingWaterTracker = false
     @State private var savedProgress: SavedWorkoutProgress?
     @State private var xpData: XPData?
     @State private var showLevelUp = false
@@ -78,6 +81,14 @@ struct HomeView: View {
                         ringPercentage: Double(historyViewModel.weeklySummary.workoutCount) / Double(max(1, historyViewModel.weeklySummary.workoutCount + 1)),
                         motivationalText: weeklyMotivationalText
                     )
+
+                    // Nutrition Dashboard Card (AMA-1290)
+                    if nutritionViewModel.settings.isEnabled {
+                        NutritionDashboardCard(viewModel: nutritionViewModel)
+                            .onTapGesture {
+                                showingProteinTracker = true
+                            }
+                    }
 
                     // Suggest Workout button (AMA-1265)
                     SuggestWorkoutButton {
@@ -182,6 +193,15 @@ struct HomeView: View {
                     }
                 )
             }
+            .sheet(isPresented: $showingProteinTracker) {
+                ProteinTrackerView(viewModel: nutritionViewModel)
+            }
+            .sheet(isPresented: $showingWaterTracker) {
+                WaterTrackerView(viewModel: nutritionViewModel)
+            }
+            .sheet(isPresented: $nutritionViewModel.showOnboarding) {
+                NutritionOnboardingView(viewModel: nutritionViewModel)
+            }
             .sheet(isPresented: $showingSuggestWorkout) {
                 SuggestWorkoutView(viewModel: suggestWorkoutViewModel)
             }
@@ -196,6 +216,13 @@ struct HomeView: View {
                     }.value
                     await MainActor.run {
                         savedProgress = progress
+                    }
+                }
+                // Nutrition refresh (AMA-1290)
+                nutritionViewModel.checkOnboardingNeeded()
+                if nutritionViewModel.settings.isEnabled {
+                    Task {
+                        await nutritionViewModel.refreshNutrition()
                     }
                 }
                 // Fetch XP data (AMA-1285)
