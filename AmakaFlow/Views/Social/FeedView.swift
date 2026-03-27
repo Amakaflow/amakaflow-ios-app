@@ -45,6 +45,32 @@ struct FeedView: View {
     private var feedList: some View {
         ScrollView {
             LazyVStack(spacing: Theme.Spacing.md) {
+                // Challenges section (AMA-1276)
+                NavigationLink {
+                    ChallengesView()
+                } label: {
+                    HStack {
+                        Image(systemName: "trophy.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(Color(hex: "FFD700"))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Challenges")
+                                .font(Theme.Typography.bodyBold)
+                                .foregroundColor(Theme.Colors.textPrimary)
+                            Text("Browse and join challenges")
+                                .font(.system(size: 12))
+                                .foregroundColor(Theme.Colors.textSecondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(Theme.Colors.textTertiary)
+                    }
+                    .padding(Theme.Spacing.md)
+                    .background(Theme.Colors.surface)
+                    .cornerRadius(12)
+                }
+                .buttonStyle(.plain)
+
                 ForEach(viewModel.posts) { post in
                     FeedPostCard(
                         post: post,

@@ -203,5 +203,20 @@ class FixtureAPIService: APIServiceProviding {
     func fetchUserPublicProfile(userId: String) async throws -> UserPublicProfile {
         UserPublicProfile(userId: userId, userName: "Fixture User", avatarUrl: nil, workoutCount: 0, totalVolume: 0, streakDays: 0, isFollowing: false, recentWorkouts: [])
     }
+
+    // MARK: - Challenges (AMA-1276)
+
+    func fetchChallenges() async throws -> ChallengesResponse {
+        ChallengesResponse(challenges: [])
+    }
+    func fetchChallengeDetail(id: String) async throws -> ChallengeDetailResponse {
+        ChallengeDetailResponse(
+            challenge: Challenge(id: id, title: "Fixture", type: .volume, status: .active, description: nil, target: 1000, targetUnit: "kg", startDate: Date(), endDate: Date(), creatorId: "fix", creatorName: "Fixture", participantCount: 0, isTeamMode: false, isJoined: false, myProgress: nil, myProgressPercentage: nil),
+            leaderboard: [],
+            myProgress: nil
+        )
+    }
+    func createChallenge(_ request: CreateChallengeRequest) async throws {}
+    func joinChallenge(id: String) async throws {}
 }
 #endif

@@ -422,6 +422,34 @@ class MockAPIService: APIServiceProviding {
     func fetchUserPublicProfile(userId: String) async throws -> UserPublicProfile {
         return try fetchUserPublicProfileResult.get()
     }
+
+    // MARK: - Challenges (AMA-1276)
+
+    var fetchChallengesResult: Result<ChallengesResponse, Error> = .success(ChallengesResponse(challenges: []))
+    var fetchChallengesCalled = false
+    var fetchChallengeDetailResult: Result<ChallengeDetailResponse, Error>?
+    var fetchChallengeDetailCalled = false
+    var createChallengeCalled = false
+    var joinChallengeCalled = false
+
+    func fetchChallenges() async throws -> ChallengesResponse {
+        fetchChallengesCalled = true
+        return try fetchChallengesResult.get()
+    }
+
+    func fetchChallengeDetail(id: String) async throws -> ChallengeDetailResponse {
+        fetchChallengeDetailCalled = true
+        guard let result = fetchChallengeDetailResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
+
+    func createChallenge(_ request: CreateChallengeRequest) async throws {
+        createChallengeCalled = true
+    }
+
+    func joinChallenge(id: String) async throws {
+        joinChallengeCalled = true
+    }
 }
 
 /// Mock pairing service for testing

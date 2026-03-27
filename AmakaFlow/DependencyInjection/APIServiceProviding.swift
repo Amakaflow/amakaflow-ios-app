@@ -156,6 +156,20 @@ protocol APIServiceProviding {
     /// Fetch a user's public profile
     func fetchUserPublicProfile(userId: String) async throws -> UserPublicProfile
 
+    // MARK: - Challenges (AMA-1276)
+
+    /// Fetch list of challenges
+    func fetchChallenges() async throws -> ChallengesResponse
+
+    /// Fetch challenge detail with leaderboard
+    func fetchChallengeDetail(id: String) async throws -> ChallengeDetailResponse
+
+    /// Create a new challenge
+    func createChallenge(_ request: CreateChallengeRequest) async throws
+
+    /// Join a challenge
+    func joinChallenge(id: String) async throws
+
 
 
     // MARK: - Workout Save (AMA-1231)
