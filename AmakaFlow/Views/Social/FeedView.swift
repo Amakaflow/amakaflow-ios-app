@@ -45,6 +45,32 @@ struct FeedView: View {
     private var feedList: some View {
         ScrollView {
             LazyVStack(spacing: Theme.Spacing.md) {
+                // Crews section (AMA-1277)
+                NavigationLink {
+                    CrewsView()
+                } label: {
+                    HStack {
+                        Image(systemName: "person.3.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(Theme.Colors.accentBlue)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Crews")
+                                .font(Theme.Typography.bodyBold)
+                                .foregroundColor(Theme.Colors.textPrimary)
+                            Text("Private training groups")
+                                .font(.system(size: 12))
+                                .foregroundColor(Theme.Colors.textSecondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(Theme.Colors.textTertiary)
+                    }
+                    .padding(Theme.Spacing.md)
+                    .background(Theme.Colors.surface)
+                    .cornerRadius(12)
+                }
+                .buttonStyle(.plain)
+
                 // Challenges section (AMA-1276)
                 NavigationLink {
                     ChallengesView()

@@ -1828,6 +1828,83 @@ extension APIService {
         }
     }
 
+    // MARK: - Training Crews (AMA-1277)
+
+    func fetchMyCrews() async throws -> CrewListResponse {
+        guard let url = URL(string: "\(baseURL)/social/crews") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        req.allHTTPHeaderFields = authHeaders
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+        return try APIService.makeDecoder().decode(CrewListResponse.self, from: data)
+    }
+
+    func fetchCrewDetail(id: String) async throws -> CrewDetail {
+        guard let url = URL(string: "\(baseURL)/social/crews/\(id)") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        req.allHTTPHeaderFields = authHeaders
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+        return try APIService.makeDecoder().decode(CrewDetail.self, from: data)
+    }
+
+    func fetchCrewFeed(crewId: String) async throws -> CrewFeedResponse {
+        guard let url = URL(string: "\(baseURL)/social/crews/\(crewId)/feed") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        req.allHTTPHeaderFields = authHeaders
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+        return try APIService.makeDecoder().decode(CrewFeedResponse.self, from: data)
+    }
+
+    func createCrew(_ request: CreateCrewRequest) async throws {
+        guard let url = URL(string: "\(baseURL)/social/crews") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.allHTTPHeaderFields = authHeaders
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        req.httpBody = try encoder.encode(request)
+        let (_, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+    }
+
+    func joinCrew(crewId: String, request: JoinCrewRequest) async throws {
+        guard let url = URL(string: "\(baseURL)/social/crews/\(crewId)/join") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.allHTTPHeaderFields = authHeaders
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        req.httpBody = try encoder.encode(request)
+        let (_, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+    }
+
+    func leaveCrew(crewId: String) async throws {
+        guard let url = URL(string: "\(baseURL)/social/crews/\(crewId)/leave") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "DELETE"
+        req.allHTTPHeaderFields = authHeaders
+        let (_, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+    }
+
     // MARK: - Workout Editor (AMA-1231)
 
     /// Save a new or edited workout
