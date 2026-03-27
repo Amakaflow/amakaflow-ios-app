@@ -156,6 +156,27 @@ protocol APIServiceProviding {
     /// Fetch a user's public profile
     func fetchUserPublicProfile(userId: String) async throws -> UserPublicProfile
 
+
+
+    // MARK: - Workout Save (AMA-1231)
+
+    /// Save a new or edited workout
+    func saveWorkout(_ request: WorkoutSaveRequest) async throws -> Workout
+
+    // MARK: - Calendar Sync (AMA-1238)
+
+    /// Fetch connected calendars
+    func fetchConnectedCalendars() async throws -> [ConnectedCalendar]
+
+    /// Connect a calendar provider (returns OAuth URL)
+    func connectCalendar(provider: String) async throws -> String
+
+    /// Sync a specific calendar
+    func syncCalendar(calendarId: String) async throws -> CalendarSyncResponse
+
+    /// Disconnect a calendar
+    func disconnectCalendar(calendarId: String) async throws
+
     // MARK: - Analytics (AMA-1147)
 
     /// Fetch shoe comparison stats

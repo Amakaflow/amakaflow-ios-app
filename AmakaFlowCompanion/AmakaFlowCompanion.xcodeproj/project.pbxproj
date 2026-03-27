@@ -184,6 +184,56 @@
 		AMA12840001B /* WorkoutShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA12840001A /* WorkoutShareCardView.swift */; };
 		AMA12840002B /* ShareCardGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA12840002A /* ShareCardGenerator.swift */; };
 		AMA12820010B /* PRDetectionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA12820010A /* PRDetectionServiceTests.swift */; };
+		AK00FIX001B /* SocialModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX001A /* SocialModels.swift */; };
+		AK00FIX002B /* TrainingProgram.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX002A /* TrainingProgram.swift */; };
+		AK00FIX003B /* WorkoutSaveRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX003A /* WorkoutSaveRequest.swift */; };
+		AK00FIX004B /* StravaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX004A /* StravaService.swift */; };
+		AK00FIX005B /* AnalyticsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX005A /* AnalyticsViewModel.swift */; };
+		AK00FIX006B /* CalendarSyncViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX006A /* CalendarSyncViewModel.swift */; };
+		AK00FIX007B /* FeedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX007A /* FeedViewModel.swift */; };
+		AK00FIX008B /* ProgramsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX008A /* ProgramsViewModel.swift */; };
+		AK00FIX009B /* StravaViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX009A /* StravaViewModel.swift */; };
+		AK00FIX010B /* WorkoutEditorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX010A /* WorkoutEditorViewModel.swift */; };
+		AK00FIX011B /* AnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX011A /* AnalyticsView.swift */; };
+		AK00FIX012B /* ExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX012A /* ExportView.swift */; };
+		AK00FIX013B /* ImportURLView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX013A /* ImportURLView.swift */; };
+		AK00FIX014B /* ProgramDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX014A /* ProgramDetailView.swift */; };
+		AK00FIX015B /* ProgramsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX015A /* ProgramsListView.swift */; };
+		AK00FIX016B /* CalendarSyncView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX016A /* CalendarSyncView.swift */; };
+		AK00FIX017B /* CommentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX017A /* CommentSheet.swift */; };
+		AK00FIX018B /* FeedPostCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX018A /* FeedPostCard.swift */; };
+		AK00FIX019B /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX019A /* FeedView.swift */; };
+		AK00FIX020B /* ReactionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX020A /* ReactionBar.swift */; };
+		AK00FIX021B /* SocialSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX021A /* SocialSettingsView.swift */; };
+		AK00FIX022B /* UserProfileMiniView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX022A /* UserProfileMiniView.swift */; };
+		AK00FIX023B /* StravaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX023A /* StravaView.swift */; };
+		AK00FIX024B /* TeamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX024A /* TeamView.swift */; };
+		AK00FIX025B /* WorkoutEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX025A /* WorkoutEditorView.swift */; };
+		AK00TST001B /* ActivityHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST001A /* ActivityHistoryTests.swift */; };
+		AK00TST002B /* ActivityHistoryViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST002A /* ActivityHistoryViewModelTests.swift */; };
+		AK00TST003B /* AmakaFlowCompanionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST003A /* AmakaFlowCompanionTests.swift */; };
+		AK00TST004B /* APIIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST004A /* APIIntegrationTests.swift */; };
+		AK00TST005B /* CompletionDetailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST005A /* CompletionDetailTests.swift */; };
+		AK00TST006B /* CompletionDetailViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST006A /* CompletionDetailViewModelTests.swift */; };
+		AK00TST007B /* FeedViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST007A /* FeedViewModelTests.swift */; };
+		AK00TST008B /* InstagramImportModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST008A /* InstagramImportModeTests.swift */; };
+		AK00TST009B /* ManualInstagramIngestionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST009A /* ManualInstagramIngestionTests.swift */; };
+		AK00TST010B /* MockURLProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST010A /* MockURLProtocol.swift */; };
+		AK00TST011B /* PairingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST011A /* PairingTests.swift */; };
+		AK00TST012B /* Phase2ViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST012A /* Phase2ViewModelTests.swift */; };
+		AK00TST013B /* PlatformDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST013A /* PlatformDetectorTests.swift */; };
+		AK00TST014B /* TestAuthStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST014A /* TestAuthStoreTests.swift */; };
+		AK00TST015B /* TestClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST015A /* TestClock.swift */; };
+		AK00TST016B /* TestDoubles.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST016A /* TestDoubles.swift */; };
+		AK00TST017B /* TranscriptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST017A /* TranscriptionTests.swift */; };
+		AK00TST018B /* URLImportServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST018A /* URLImportServiceTests.swift */; };
+		AK00TST019B /* WatchConnectivityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST019A /* WatchConnectivityTests.swift */; };
+		AK00TST020B /* WorkoutCompletionViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST020A /* WorkoutCompletionViewModelTests.swift */; };
+		AK00TST021B /* WorkoutEngineEdgeCaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST021A /* WorkoutEngineEdgeCaseTests.swift */; };
+		AK00TST022B /* WorkoutEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST022A /* WorkoutEngineTests.swift */; };
+		AK00TST023B /* WorkoutModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST023A /* WorkoutModelTests.swift */; };
+		AK00TST024B /* WorkoutsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST024A /* WorkoutsViewModelTests.swift */; };
+		AK00TST025B /* XPBarViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST025A /* XPBarViewTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -429,7 +479,57 @@
 		AMA12820003A /* PRHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PRHistoryView.swift; path = ../AmakaFlow/Views/PRHistoryView.swift; sourceTree = SOURCE_ROOT; };
 		AMA12840001A /* WorkoutShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutShareCardView.swift; path = ../AmakaFlow/Views/WorkoutShareCardView.swift; sourceTree = SOURCE_ROOT; };
 		AMA12840002A /* ShareCardGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ShareCardGenerator.swift; path = ../AmakaFlow/Services/ShareCardGenerator.swift; sourceTree = SOURCE_ROOT; };
-		AMA12820010A /* PRDetectionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDetectionServiceTests.swift; sourceTree = "<group>"; };
+		AMA12820010A /* PRDetectionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PRDetectionServiceTests.swift; path = AmakaFlowCompanionTests/PRDetectionServiceTests.swift; sourceTree = SOURCE_ROOT; };
+		AK00FIX001A /* SocialModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialModels.swift; path = ../AmakaFlow/Models/SocialModels.swift; sourceTree = "<group>"; };
+		AK00FIX002A /* TrainingProgram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TrainingProgram.swift; path = ../AmakaFlow/Models/TrainingProgram.swift; sourceTree = "<group>"; };
+		AK00FIX003A /* WorkoutSaveRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSaveRequest.swift; path = ../AmakaFlow/Models/WorkoutSaveRequest.swift; sourceTree = "<group>"; };
+		AK00FIX004A /* StravaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StravaService.swift; path = ../AmakaFlow/Services/StravaService.swift; sourceTree = "<group>"; };
+		AK00FIX005A /* AnalyticsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AnalyticsViewModel.swift; path = ../AmakaFlow/ViewModels/AnalyticsViewModel.swift; sourceTree = "<group>"; };
+		AK00FIX006A /* CalendarSyncViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarSyncViewModel.swift; path = ../AmakaFlow/ViewModels/CalendarSyncViewModel.swift; sourceTree = "<group>"; };
+		AK00FIX007A /* FeedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FeedViewModel.swift; path = ../AmakaFlow/ViewModels/FeedViewModel.swift; sourceTree = "<group>"; };
+		AK00FIX008A /* ProgramsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProgramsViewModel.swift; path = ../AmakaFlow/ViewModels/ProgramsViewModel.swift; sourceTree = "<group>"; };
+		AK00FIX009A /* StravaViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StravaViewModel.swift; path = ../AmakaFlow/ViewModels/StravaViewModel.swift; sourceTree = "<group>"; };
+		AK00FIX010A /* WorkoutEditorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEditorViewModel.swift; path = ../AmakaFlow/ViewModels/WorkoutEditorViewModel.swift; sourceTree = "<group>"; };
+		AK00FIX011A /* AnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AnalyticsView.swift; path = ../AmakaFlow/Views/AnalyticsView.swift; sourceTree = "<group>"; };
+		AK00FIX012A /* ExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ExportView.swift; path = ../AmakaFlow/Views/ExportView.swift; sourceTree = "<group>"; };
+		AK00FIX013A /* ImportURLView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ImportURLView.swift; path = ../AmakaFlow/Views/ImportURLView.swift; sourceTree = "<group>"; };
+		AK00FIX014A /* ProgramDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProgramDetailView.swift; path = ../AmakaFlow/Views/ProgramDetailView.swift; sourceTree = "<group>"; };
+		AK00FIX015A /* ProgramsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProgramsListView.swift; path = ../AmakaFlow/Views/ProgramsListView.swift; sourceTree = "<group>"; };
+		AK00FIX016A /* CalendarSyncView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarSyncView.swift; path = ../AmakaFlow/Views/Settings/CalendarSyncView.swift; sourceTree = "<group>"; };
+		AK00FIX017A /* CommentSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CommentSheet.swift; path = ../AmakaFlow/Views/Social/CommentSheet.swift; sourceTree = "<group>"; };
+		AK00FIX018A /* FeedPostCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FeedPostCard.swift; path = ../AmakaFlow/Views/Social/FeedPostCard.swift; sourceTree = "<group>"; };
+		AK00FIX019A /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FeedView.swift; path = ../AmakaFlow/Views/Social/FeedView.swift; sourceTree = "<group>"; };
+		AK00FIX020A /* ReactionBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReactionBar.swift; path = ../AmakaFlow/Views/Social/ReactionBar.swift; sourceTree = "<group>"; };
+		AK00FIX021A /* SocialSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialSettingsView.swift; path = ../AmakaFlow/Views/Social/SocialSettingsView.swift; sourceTree = "<group>"; };
+		AK00FIX022A /* UserProfileMiniView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserProfileMiniView.swift; path = ../AmakaFlow/Views/Social/UserProfileMiniView.swift; sourceTree = "<group>"; };
+		AK00FIX023A /* StravaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StravaView.swift; path = ../AmakaFlow/Views/StravaView.swift; sourceTree = "<group>"; };
+		AK00FIX024A /* TeamView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TeamView.swift; path = ../AmakaFlow/Views/TeamView.swift; sourceTree = "<group>"; };
+		AK00FIX025A /* WorkoutEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEditorView.swift; path = ../AmakaFlow/Views/WorkoutEditorView.swift; sourceTree = "<group>"; };
+		AK00TST001A /* ActivityHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivityHistoryTests.swift; path = AmakaFlowCompanionTests/ActivityHistoryTests.swift; sourceTree = "<group>"; };
+		AK00TST002A /* ActivityHistoryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivityHistoryViewModelTests.swift; path = AmakaFlowCompanionTests/ActivityHistoryViewModelTests.swift; sourceTree = "<group>"; };
+		AK00TST003A /* AmakaFlowCompanionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AmakaFlowCompanionTests.swift; path = AmakaFlowCompanionTests/AmakaFlowCompanionTests.swift; sourceTree = "<group>"; };
+		AK00TST004A /* APIIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIIntegrationTests.swift; path = AmakaFlowCompanionTests/APIIntegrationTests.swift; sourceTree = "<group>"; };
+		AK00TST005A /* CompletionDetailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CompletionDetailTests.swift; path = AmakaFlowCompanionTests/CompletionDetailTests.swift; sourceTree = "<group>"; };
+		AK00TST006A /* CompletionDetailViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CompletionDetailViewModelTests.swift; path = AmakaFlowCompanionTests/CompletionDetailViewModelTests.swift; sourceTree = "<group>"; };
+		AK00TST007A /* FeedViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FeedViewModelTests.swift; path = AmakaFlowCompanionTests/FeedViewModelTests.swift; sourceTree = "<group>"; };
+		AK00TST008A /* InstagramImportModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = InstagramImportModeTests.swift; path = AmakaFlowCompanionTests/InstagramImportModeTests.swift; sourceTree = "<group>"; };
+		AK00TST009A /* ManualInstagramIngestionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ManualInstagramIngestionTests.swift; path = AmakaFlowCompanionTests/ManualInstagramIngestionTests.swift; sourceTree = "<group>"; };
+		AK00TST010A /* MockURLProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MockURLProtocol.swift; path = AmakaFlowCompanionTests/MockURLProtocol.swift; sourceTree = "<group>"; };
+		AK00TST011A /* PairingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingTests.swift; path = AmakaFlowCompanionTests/PairingTests.swift; sourceTree = "<group>"; };
+		AK00TST012A /* Phase2ViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Phase2ViewModelTests.swift; path = AmakaFlowCompanionTests/Phase2ViewModelTests.swift; sourceTree = "<group>"; };
+		AK00TST013A /* PlatformDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PlatformDetectorTests.swift; path = AmakaFlowCompanionTests/PlatformDetectorTests.swift; sourceTree = "<group>"; };
+		AK00TST014A /* TestAuthStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TestAuthStoreTests.swift; path = AmakaFlowCompanionTests/TestAuthStoreTests.swift; sourceTree = "<group>"; };
+		AK00TST015A /* TestClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TestClock.swift; path = AmakaFlowCompanionTests/TestClock.swift; sourceTree = "<group>"; };
+		AK00TST016A /* TestDoubles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TestDoubles.swift; path = AmakaFlowCompanionTests/TestDoubles.swift; sourceTree = "<group>"; };
+		AK00TST017A /* TranscriptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionTests.swift; path = AmakaFlowCompanionTests/TranscriptionTests.swift; sourceTree = "<group>"; };
+		AK00TST018A /* URLImportServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = URLImportServiceTests.swift; path = AmakaFlowCompanionTests/URLImportServiceTests.swift; sourceTree = "<group>"; };
+		AK00TST019A /* WatchConnectivityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchConnectivityTests.swift; path = AmakaFlowCompanionTests/WatchConnectivityTests.swift; sourceTree = "<group>"; };
+		AK00TST020A /* WorkoutCompletionViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionViewModelTests.swift; path = AmakaFlowCompanionTests/WorkoutCompletionViewModelTests.swift; sourceTree = "<group>"; };
+		AK00TST021A /* WorkoutEngineEdgeCaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEngineEdgeCaseTests.swift; path = AmakaFlowCompanionTests/WorkoutEngineEdgeCaseTests.swift; sourceTree = "<group>"; };
+		AK00TST022A /* WorkoutEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEngineTests.swift; path = AmakaFlowCompanionTests/WorkoutEngineTests.swift; sourceTree = "<group>"; };
+		AK00TST023A /* WorkoutModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutModelTests.swift; path = AmakaFlowCompanionTests/WorkoutModelTests.swift; sourceTree = "<group>"; };
+		AK00TST024A /* WorkoutsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutsViewModelTests.swift; path = AmakaFlowCompanionTests/WorkoutsViewModelTests.swift; sourceTree = "<group>"; };
+		AK00TST025A /* XPBarViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = XPBarViewTests.swift; path = AmakaFlowCompanionTests/XPBarViewTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -1278,6 +1378,31 @@
 				97DAAC6C9C4F8BAC320D575E /* SyncDashboardView.swift in Sources */,
 				5016188D64111FBBE44B4A8D /* FollowAlongPlayerView.swift in Sources */,
 				5489774E90118791AFF14D8C /* FollowAlongPlayerViewModel.swift in Sources */,
+				AK00FIX001B /* SocialModels.swift in Sources */,
+				AK00FIX002B /* TrainingProgram.swift in Sources */,
+				AK00FIX003B /* WorkoutSaveRequest.swift in Sources */,
+				AK00FIX004B /* StravaService.swift in Sources */,
+				AK00FIX005B /* AnalyticsViewModel.swift in Sources */,
+				AK00FIX006B /* CalendarSyncViewModel.swift in Sources */,
+				AK00FIX007B /* FeedViewModel.swift in Sources */,
+				AK00FIX008B /* ProgramsViewModel.swift in Sources */,
+				AK00FIX009B /* StravaViewModel.swift in Sources */,
+				AK00FIX010B /* WorkoutEditorViewModel.swift in Sources */,
+				AK00FIX011B /* AnalyticsView.swift in Sources */,
+				AK00FIX012B /* ExportView.swift in Sources */,
+				AK00FIX013B /* ImportURLView.swift in Sources */,
+				AK00FIX014B /* ProgramDetailView.swift in Sources */,
+				AK00FIX015B /* ProgramsListView.swift in Sources */,
+				AK00FIX016B /* CalendarSyncView.swift in Sources */,
+				AK00FIX017B /* CommentSheet.swift in Sources */,
+				AK00FIX018B /* FeedPostCard.swift in Sources */,
+				AK00FIX019B /* FeedView.swift in Sources */,
+				AK00FIX020B /* ReactionBar.swift in Sources */,
+				AK00FIX021B /* SocialSettingsView.swift in Sources */,
+				AK00FIX022B /* UserProfileMiniView.swift in Sources */,
+				AK00FIX023B /* StravaView.swift in Sources */,
+				AK00FIX024B /* TeamView.swift in Sources */,
+				AK00FIX025B /* WorkoutEditorView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1289,6 +1414,32 @@
 				A1B2C3D4E5F647889ABCDEF0 /* RPEFeedbackViewModelTests.swift in Sources */,
 				D33PL1NKT35T50002 /* DeepLinkManagerTests.swift in Sources */,
 				AMA12650022 /* SuggestWorkoutViewModelTests.swift in Sources */,
+				AK00TST001B /* ActivityHistoryTests.swift in Sources */,
+				AK00TST002B /* ActivityHistoryViewModelTests.swift in Sources */,
+				AK00TST003B /* AmakaFlowCompanionTests.swift in Sources */,
+				AK00TST004B /* APIIntegrationTests.swift in Sources */,
+				AK00TST005B /* CompletionDetailTests.swift in Sources */,
+				AK00TST006B /* CompletionDetailViewModelTests.swift in Sources */,
+				AK00TST007B /* FeedViewModelTests.swift in Sources */,
+				AK00TST008B /* InstagramImportModeTests.swift in Sources */,
+				AK00TST009B /* ManualInstagramIngestionTests.swift in Sources */,
+				AK00TST010B /* MockURLProtocol.swift in Sources */,
+				AK00TST011B /* PairingTests.swift in Sources */,
+				AK00TST012B /* Phase2ViewModelTests.swift in Sources */,
+				AK00TST013B /* PlatformDetectorTests.swift in Sources */,
+				AK00TST014B /* TestAuthStoreTests.swift in Sources */,
+				AK00TST015B /* TestClock.swift in Sources */,
+				AK00TST016B /* TestDoubles.swift in Sources */,
+				AK00TST017B /* TranscriptionTests.swift in Sources */,
+				AK00TST018B /* URLImportServiceTests.swift in Sources */,
+				AK00TST019B /* WatchConnectivityTests.swift in Sources */,
+				AK00TST020B /* WorkoutCompletionViewModelTests.swift in Sources */,
+				AK00TST021B /* WorkoutEngineEdgeCaseTests.swift in Sources */,
+				AK00TST022B /* WorkoutEngineTests.swift in Sources */,
+				AK00TST023B /* WorkoutModelTests.swift in Sources */,
+				AK00TST024B /* WorkoutsViewModelTests.swift in Sources */,
+				AK00TST025B /* XPBarViewTests.swift in Sources */,
+				AMA12820010B /* PRDetectionServiceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

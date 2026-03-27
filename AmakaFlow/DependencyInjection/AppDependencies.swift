@@ -363,6 +363,22 @@ class MockAPIService: APIServiceProviding {
         return try updateNotificationPreferencesResult.get()
     }
 
+
+    // MARK: - Workout Save (AMA-1231)
+
+    var saveWorkoutCalled = false
+    func saveWorkout(_ request: WorkoutSaveRequest) async throws -> Workout {
+        saveWorkoutCalled = true
+        throw APIError.notImplemented
+    }
+
+    // MARK: - Calendar Sync (AMA-1238)
+
+    func fetchConnectedCalendars() async throws -> [ConnectedCalendar] { [] }
+    func connectCalendar(provider: String) async throws -> String { "https://example.com/auth" }
+    func syncCalendar(calendarId: String) async throws -> CalendarSyncResponse { CalendarSyncResponse(syncedEvents: 0) }
+    func disconnectCalendar(calendarId: String) async throws {}
+
     // MARK: - Social Feed (AMA-1273)
 
     var fetchSocialFeedResult: Result<FeedResponse, Error> = .success(FeedResponse(posts: [], nextCursor: nil, hasMore: false))
