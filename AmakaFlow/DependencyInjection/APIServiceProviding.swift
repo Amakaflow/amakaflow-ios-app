@@ -192,6 +192,14 @@ protocol APIServiceProviding {
 
 
 
+    // MARK: - Leaderboards (AMA-1278)
+
+    /// Fetch friends leaderboard
+    func fetchFriendsLeaderboard(dimension: String, period: String) async throws -> LeaderboardAPIResponse
+
+    /// Fetch crew leaderboard
+    func fetchCrewLeaderboard(crewId: String, dimension: String, period: String) async throws -> LeaderboardAPIResponse
+
     // MARK: - Workout Save (AMA-1231)
 
     /// Save a new or edited workout

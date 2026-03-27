@@ -238,5 +238,15 @@ class FixtureAPIService: APIServiceProviding {
     func joinCrew(crewId: String, request: JoinCrewRequest) async throws {}
 
     func leaveCrew(crewId: String) async throws {}
+
+    // MARK: - Leaderboards (AMA-1278)
+
+    func fetchFriendsLeaderboard(dimension: String, period: String) async throws -> LeaderboardAPIResponse {
+        LeaderboardAPIResponse(dimension: dimension, period: period, entries: [])
+    }
+
+    func fetchCrewLeaderboard(crewId: String, dimension: String, period: String) async throws -> LeaderboardAPIResponse {
+        LeaderboardAPIResponse(dimension: dimension, period: period, entries: [])
+    }
 }
 #endif

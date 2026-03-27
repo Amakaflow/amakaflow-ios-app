@@ -97,6 +97,33 @@ struct FeedView: View {
                 }
                 .buttonStyle(.plain)
 
+                // Leaderboards section (AMA-1278)
+                NavigationLink {
+                    LeaderboardView()
+                } label: {
+                    HStack {
+                        Image(systemName: "chart.bar.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(Theme.Colors.accentBlue)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Leaderboards")
+                                .font(Theme.Typography.bodyBold)
+                                .foregroundColor(Theme.Colors.textPrimary)
+                            Text("See how you rank among friends")
+                                .font(.system(size: 12))
+                                .foregroundColor(Theme.Colors.textSecondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(Theme.Colors.textTertiary)
+                    }
+                    .padding(Theme.Spacing.md)
+                    .background(Theme.Colors.surface)
+                    .cornerRadius(12)
+                }
+                .buttonStyle(.plain)
+
+
                 ForEach(viewModel.posts) { post in
                     FeedPostCard(
                         post: post,
