@@ -20,6 +20,7 @@ struct ContentView: View {
         case calendar = "Calendar"
         case coach = "Coach"
         case history = "History"
+        case social = "Social"
         case settings = "Settings"
 
         var icon: String {
@@ -36,6 +37,8 @@ struct ContentView: View {
                 return "bubble.left.and.bubble.right.fill"
             case .history:
                 return "clock.fill"
+            case .social:
+                return "person.2.fill"
             case .settings:
                 return "gearshape.fill"
             }
@@ -94,6 +97,14 @@ struct ContentView: View {
                 .tag(Tab.history)
                 .accessibilityIdentifier("history_tab")
 
+
+            FeedView()
+                .tabItem {
+                    Image(systemName: Tab.social.icon)
+                    Text(Tab.social.rawValue)
+                }
+                .tag(Tab.social)
+                .accessibilityIdentifier("social_tab")
             SettingsView(navigateToSyncDashboard: $showSyncDashboard)
                 .tabItem {
                     Image(systemName: Tab.settings.icon)

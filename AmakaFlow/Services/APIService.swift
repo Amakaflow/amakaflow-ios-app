@@ -1674,6 +1674,111 @@ struct PersonalDictionaryResponse: Codable {
     let customTerms: [String]
 }
 
+// MARK: - Social Feed (AMA-1273)
+
+extension APIService {
+    func fetchSocialFeed(cursor: String?, limit: Int) async throws -> FeedResponse {
+        var urlString = "\(baseURL)/social/feed?limit=\(limit)"
+        if let cursor = cursor {
+            urlString += "&cursor=\(cursor)"
+        }
+        guard let url = URL(string: urlString) else { throw APIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = authHeaders
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+        return try APIService.makeDecoder().decode(FeedResponse.self, from: data)
+    }
+
+    func addSocialReaction(postId: String, emoji: String) async throws {
+        guard let url = URL(string: "\(baseURL)/social/posts/\(postId)/react") else { throw APIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders
+        request.httpBody = try JSONEncoder().encode(["emoji": emoji])
+        let (_, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+    }
+
+    func removeSocialReaction(postId: String, emoji: String) async throws {
+        guard let url = URL(string: "\(baseURL)/social/posts/\(postId)/react/\(emoji)") else { throw APIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.allHTTPHeaderFields = authHeaders
+        let (_, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+    }
+
+    func fetchSocialComments(postId: String) async throws -> CommentsResponse {
+        guard let url = URL(string: "\(baseURL)/social/posts/\(postId)/comments") else { throw APIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = authHeaders
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+        return try APIService.makeDecoder().decode(CommentsResponse.self, from: data)
+    }
+
+    func postSocialComment(postId: String, text: String) async throws {
+        guard let url = URL(string: "\(baseURL)/social/posts/\(postId)/comment") else { throw APIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders
+        request.httpBody = try JSONEncoder().encode(["text": text])
+        let (_, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+    }
+
+    func fetchSocialSettings() async throws -> SocialSettings {
+        guard let url = URL(string: "\(baseURL)/social/settings") else { throw APIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = authHeaders
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+        return try APIService.makeDecoder().decode(SocialSettings.self, from: data)
+    }
+
+    func updateSocialSettings(_ settings: SocialSettings) async throws {
+        guard let url = URL(string: "\(baseURL)/social/settings") else { throw APIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.allHTTPHeaderFields = authHeaders
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        request.httpBody = try encoder.encode(settings)
+        let (_, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+    }
+
+    func fetchUserPublicProfile(userId: String) async throws -> UserPublicProfile {
+        guard let url = URL(string: "\(baseURL)/social/users/\(userId)/profile") else { throw APIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = authHeaders
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+        return try APIService.makeDecoder().decode(UserPublicProfile.self, from: data)
+    }
+}
+
 // MARK: - API Errors
 
 enum APIError: LocalizedError {

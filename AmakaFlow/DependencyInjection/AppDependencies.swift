@@ -362,6 +362,50 @@ class MockAPIService: APIServiceProviding {
         updateNotificationPreferencesCalled = true
         return try updateNotificationPreferencesResult.get()
     }
+
+    // MARK: - Social Feed (AMA-1273)
+
+    var fetchSocialFeedResult: Result<FeedResponse, Error> = .success(FeedResponse(posts: [], nextCursor: nil, hasMore: false))
+    var addSocialReactionCalled = false
+    var removeSocialReactionCalled = false
+    var fetchSocialCommentsCalled = false
+    var postSocialCommentCalled = false
+    var fetchSocialSettingsResult: Result<SocialSettings, Error> = .success(.default)
+    var updateSocialSettingsCalled = false
+    var fetchUserPublicProfileResult: Result<UserPublicProfile, Error> = .failure(APIError.notImplemented)
+
+    func fetchSocialFeed(cursor: String?, limit: Int) async throws -> FeedResponse {
+        return try fetchSocialFeedResult.get()
+    }
+
+    func addSocialReaction(postId: String, emoji: String) async throws {
+        addSocialReactionCalled = true
+    }
+
+    func removeSocialReaction(postId: String, emoji: String) async throws {
+        removeSocialReactionCalled = true
+    }
+
+    func fetchSocialComments(postId: String) async throws -> CommentsResponse {
+        fetchSocialCommentsCalled = true
+        return CommentsResponse(comments: [])
+    }
+
+    func postSocialComment(postId: String, text: String) async throws {
+        postSocialCommentCalled = true
+    }
+
+    func fetchSocialSettings() async throws -> SocialSettings {
+        return try fetchSocialSettingsResult.get()
+    }
+
+    func updateSocialSettings(_ settings: SocialSettings) async throws {
+        updateSocialSettingsCalled = true
+    }
+
+    func fetchUserPublicProfile(userId: String) async throws -> UserPublicProfile {
+        return try fetchUserPublicProfileResult.get()
+    }
 }
 
 /// Mock pairing service for testing
