@@ -247,6 +247,52 @@ final class FollowAlongPlayerViewModelTests: XCTestCase {
         XCTAssertEqual(sut.phase, .ready)
     }
 
+    // MARK: - Reload Workout (AMA-1358)
+
+    func testLoadWorkoutTwiceDoesNotLeakObservers() {
+        let workout1 = TestFixtures.workout(
+            intervals: [
+                .warmup(seconds: 60, target: "Workout 1")
+            ]
+        )
+        let workout2 = TestFixtures.workout(
+            intervals: [
+                .warmup(seconds: 30, target: "Workout 2")
+            ]
+        )
+
+        // Load first workout
+        sut.loadWorkout(workout1)
+        XCTAssertEqual(sut.steps.count, 1)
+        XCTAssertEqual(sut.steps[0].name, "Workout 1")
+
+        // Load second workout - should not leak observer from first
+        sut.loadWorkout(workout2)
+        XCTAssertEqual(sut.steps.count, 1)
+        XCTAssertEqual(sut.steps[0].name, "Workout 2")
+    }
+
+    func testLoadWorkoutClearsObserverWhenNoVideoURL() {
+        let workoutWithVideo = TestFixtures.workout(
+            intervals: [
+                .reps(sets: nil, reps: 10, name: "Exercise", load: nil, restSec: nil, followAlongUrl: "https://example.com/video.mp4")
+            ]
+        )
+        let workoutWithoutVideo = TestFixtures.workout(
+            intervals: [
+                .warmup(seconds: 30, target: "Warmup")
+            ]
+        )
+
+        // Load workout with video URL
+        sut.loadWorkout(workoutWithVideo)
+        XCTAssertEqual(sut.phase, .ready)
+
+        // Load workout without video URL - should clean up observer
+        sut.loadWorkout(workoutWithoutVideo)
+        XCTAssertEqual(sut.phase, .ready)
+    }
+
     // MARK: - Helpers
 
     private func loadSampleWorkout() {

@@ -117,6 +117,11 @@ class FollowAlongPlayerViewModel: ObservableObject {
 
         // Set up AVPlayer with the first video URL found
         if let firstVideoURL = extracted.first(where: { $0.videoURL != nil })?.videoURL {
+            // Remove any existing observer before registering a new one (AMA-1358)
+            if let existingObserver = playerObserver {
+                NotificationCenter.default.removeObserver(existingObserver)
+            }
+
             let playerItem = AVPlayerItem(url: firstVideoURL)
             let avPlayer = AVPlayer(playerItem: playerItem)
             avPlayer.actionAtItemEnd = .pause
@@ -131,6 +136,12 @@ class FollowAlongPlayerViewModel: ObservableObject {
                 Task { @MainActor in
                     self?.handleVideoEnded()
                 }
+            }
+        } else {
+            // If no video URL, clean up any existing observer
+            if let existingObserver = playerObserver {
+                NotificationCenter.default.removeObserver(existingObserver)
+                playerObserver = nil
             }
         }
 
