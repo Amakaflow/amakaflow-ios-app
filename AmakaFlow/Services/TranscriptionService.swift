@@ -114,9 +114,15 @@ class TranscriptionService: ObservableObject {
         }
 
         return try await withCheckedThrowingContinuation { continuation in
+            var hasResumed = false
+
             recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
+                // Prevent multiple resumes (causes SIGABRT)
+                guard !hasResumed else { return }
+
                 Task { @MainActor in
                     if let error = error {
+                        hasResumed = true
                         self?.error = .recognitionFailed(error)
                         continuation.resume(throwing: TranscriptionError.recognitionFailed(error))
                         return
@@ -130,6 +136,7 @@ class TranscriptionService: ObservableObject {
 
                     // Check if final result
                     if result.isFinal {
+                        hasResumed = true
                         let finalText = result.bestTranscription.formattedString
 
                         if finalText.isEmpty {
