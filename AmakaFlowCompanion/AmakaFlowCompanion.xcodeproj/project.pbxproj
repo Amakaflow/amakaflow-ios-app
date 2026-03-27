@@ -315,8 +315,8 @@
 		AK00SHARE002A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AK00SHARE003A /* PlatformDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformDetector.swift; sourceTree = "<group>"; };
 		AK00SHARE004A /* SharedContainerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedContainerManager.swift; sourceTree = "<group>"; };
-		AK00XP001A /* XPBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPBarView.swift; sourceTree = "<group>"; };
-		AK00XP002A /* LevelUpCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelUpCelebrationView.swift; sourceTree = "<group>"; };
+		AK00XP001A /* XPBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = XPBarView.swift; path = ../AmakaFlow/Views/XPBarView.swift; sourceTree = "<group>"; };
+		AK00XP002A /* LevelUpCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LevelUpCelebrationView.swift; path = ../AmakaFlow/Views/LevelUpCelebrationView.swift; sourceTree = "<group>"; };
 		AK00SHARE005A /* URLImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLImportService.swift; sourceTree = "<group>"; };
 		AK00SHARE006A /* ShareExtensionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionView.swift; sourceTree = "<group>"; };
 		AK00SHARE00EA /* AmakaFlowShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AmakaFlowShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
