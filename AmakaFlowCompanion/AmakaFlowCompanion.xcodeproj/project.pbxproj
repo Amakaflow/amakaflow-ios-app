@@ -54,6 +54,8 @@
 		AK00SHARE004B /* SharedContainerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SHARE004A /* SharedContainerManager.swift */; };
 		AK00SHARE005B /* URLImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SHARE005A /* URLImportService.swift */; };
 		AK00SHARE006B /* ShareExtensionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SHARE006A /* ShareExtensionView.swift */; };
+		AK00XP001B /* XPBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00XP001A /* XPBarView.swift */; };
+		AK00XP002B /* LevelUpCelebrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00XP002A /* LevelUpCelebrationView.swift */; };
 
 		B1910EAEA57AF40FBA6FEDD3 /* FollowAlongPlayerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */; };
 		A1B2C3D4E5F647889ABCDEF0 /* RPEFeedbackViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18D523D7E78245EBB81A469A /* RPEFeedbackViewModelTests.swift */; };
@@ -313,6 +315,8 @@
 		AK00SHARE002A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AK00SHARE003A /* PlatformDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformDetector.swift; sourceTree = "<group>"; };
 		AK00SHARE004A /* SharedContainerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedContainerManager.swift; sourceTree = "<group>"; };
+		AK00XP001A /* XPBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPBarView.swift; sourceTree = "<group>"; };
+		AK00XP002A /* LevelUpCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelUpCelebrationView.swift; sourceTree = "<group>"; };
 		AK00SHARE005A /* URLImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLImportService.swift; sourceTree = "<group>"; };
 		AK00SHARE006A /* ShareExtensionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionView.swift; sourceTree = "<group>"; };
 		AK00SHARE00EA /* AmakaFlowShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AmakaFlowShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1142,6 +1146,8 @@
 				27599809E31D40308DBFA93A /* Environment.swift in Sources */,
 				444EFC17D69346B3B93C9ECA /* KeychainHelper.swift in Sources */,
 				D33PL1NKMAN4G3R0002 /* DeepLinkManager.swift in Sources */,
+				AK00XP001B /* XPBarView.swift in Sources */,
+				AK00XP002B /* LevelUpCelebrationView.swift in Sources */,
 				D33PL1NK1MP0RTV0002 /* DeepLinkImportView.swift in Sources */,
 				CA268753E918494FAD7CCD56 /* PairingService.swift in Sources */,
 				T35T4UTH5T0R300000002 /* TestAuthStore.swift in Sources */,
