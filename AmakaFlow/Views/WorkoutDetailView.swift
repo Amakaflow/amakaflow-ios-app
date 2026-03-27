@@ -21,6 +21,7 @@ struct WorkoutDetailView: View {
     @State private var watchSent = false
     @State private var calendarScheduled = false
     @State private var pendingWorkoutStart = false  // Track if we should start workout after sheet dismisses
+    @StateObject private var fuelingViewModel = FuelingViewModel()  // AMA-1293
     
     var body: some View {
         NavigationStack {
@@ -31,6 +32,10 @@ struct WorkoutDetailView: View {
                         .padding(.horizontal, Theme.Spacing.lg)
                         .padding(.top, Theme.Spacing.md)
                     
+                    // Fueling Status (AMA-1293)
+                    FuelingStatusCard(viewModel: fuelingViewModel)
+                        .padding(.horizontal, Theme.Spacing.lg)
+
                     // Step-by-Step Breakdown
                     VStack(alignment: .leading, spacing: Theme.Spacing.md) {
                         Text("Step-by-Step Breakdown")
