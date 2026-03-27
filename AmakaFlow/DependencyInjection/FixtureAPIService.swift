@@ -218,5 +218,25 @@ class FixtureAPIService: APIServiceProviding {
     }
     func createChallenge(_ request: CreateChallengeRequest) async throws {}
     func joinChallenge(id: String) async throws {}
+
+    // MARK: - Training Crews (AMA-1277)
+
+    func fetchMyCrews() async throws -> CrewListResponse {
+        return CrewListResponse(crews: [], count: 0)
+    }
+
+    func fetchCrewDetail(id: String) async throws -> CrewDetail {
+        throw APIError.notFound
+    }
+
+    func fetchCrewFeed(crewId: String) async throws -> CrewFeedResponse {
+        return CrewFeedResponse(posts: [], nextCursor: nil)
+    }
+
+    func createCrew(_ request: CreateCrewRequest) async throws {}
+
+    func joinCrew(crewId: String, request: JoinCrewRequest) async throws {}
+
+    func leaveCrew(crewId: String) async throws {}
 }
 #endif

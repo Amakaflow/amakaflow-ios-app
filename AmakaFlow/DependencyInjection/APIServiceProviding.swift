@@ -170,6 +170,26 @@ protocol APIServiceProviding {
     /// Join a challenge
     func joinChallenge(id: String) async throws
 
+    // MARK: - Training Crews (AMA-1277)
+
+    /// Fetch my crews
+    func fetchMyCrews() async throws -> CrewListResponse
+
+    /// Fetch crew detail
+    func fetchCrewDetail(id: String) async throws -> CrewDetail
+
+    /// Fetch crew feed
+    func fetchCrewFeed(crewId: String) async throws -> CrewFeedResponse
+
+    /// Create a new crew
+    func createCrew(_ request: CreateCrewRequest) async throws
+
+    /// Join a crew with invite code
+    func joinCrew(crewId: String, request: JoinCrewRequest) async throws
+
+    /// Leave a crew
+    func leaveCrew(crewId: String) async throws
+
 
 
     // MARK: - Workout Save (AMA-1231)
