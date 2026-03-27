@@ -106,6 +106,10 @@ class GarminConnectManager: NSObject, ObservableObject {
     static let urlScheme = "amakaflow-ciq"
 
     private var cancellables = Set<AnyCancellable>()
+    
+    // MARK: - Notification Observers
+    private var willEnterForegroundObserver: NSObjectProtocol?
+    private var didBecomeActiveObserver: NSObjectProtocol?
 
     // MARK: - Initialization
 
@@ -224,7 +228,7 @@ class GarminConnectManager: NSObject, ObservableObject {
     }
 
     private func setupNotifications() {
-        NotificationCenter.default.addObserver(
+        willEnterForegroundObserver = NotificationCenter.default.addObserver(
             forName: UIApplication.willEnterForegroundNotification,
             object: nil,
             queue: .main
@@ -235,7 +239,7 @@ class GarminConnectManager: NSObject, ObservableObject {
             }
         }
 
-        NotificationCenter.default.addObserver(
+        didBecomeActiveObserver = NotificationCenter.default.addObserver(
             forName: UIApplication.didBecomeActiveNotification,
             object: nil,
             queue: .main
@@ -248,6 +252,15 @@ class GarminConnectManager: NSObject, ObservableObject {
                     print("⌚ [DEBUG] No devices yet after returning from GCM")
                 }
             }
+        }
+    }
+    
+    deinit {
+        if let observer = willEnterForegroundObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        if let observer = didBecomeActiveObserver {
+            NotificationCenter.default.removeObserver(observer)
         }
     }
 

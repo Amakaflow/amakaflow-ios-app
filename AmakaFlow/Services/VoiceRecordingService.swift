@@ -26,6 +26,7 @@ class VoiceRecordingService: NSObject, ObservableObject {
     private var meterTimer: Timer?
     private var durationTimer: Timer?
     private var audioSession: AVAudioSession { AVAudioSession.sharedInstance() }
+    private var notificationObserver: NSObjectProtocol?
 
     /// Maximum recording duration (5 minutes)
     let maxDuration: TimeInterval = 300
@@ -81,7 +82,9 @@ class VoiceRecordingService: NSObject, ObservableObject {
     }
 
     deinit {
-        NotificationCenter.default.removeObserver(self)
+        if let observer = notificationObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     // MARK: - Recording Control
@@ -247,34 +250,35 @@ class VoiceRecordingService: NSObject, ObservableObject {
     // MARK: - Notifications
 
     private func setupNotifications() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleInterruption),
-            name: AVAudioSession.interruptionNotification,
-            object: nil
-        )
+        notificationObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            Task { @MainActor in
+                self?.handleInterruption(notification)
+            }
+        }
     }
 
-    @objc private func handleInterruption(_ notification: Notification) {
+    private func handleInterruption(_ notification: Notification) {
         guard let userInfo = notification.userInfo,
               let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
               let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
             return
         }
 
-        Task { @MainActor in
-            switch type {
-            case .began:
-                // Interruption started (e.g., phone call)
-                if isRecording {
-                    cancelRecording()
-                }
-            case .ended:
-                // Interruption ended - user can restart if needed
-                break
-            @unknown default:
-                break
+        switch type {
+        case .began:
+            // Interruption started (e.g., phone call)
+            if isRecording {
+                cancelRecording()
             }
+        case .ended:
+            // Interruption ended - user can restart if needed
+            break
+        @unknown default:
+            break
         }
     }
 }

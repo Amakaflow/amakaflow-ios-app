@@ -83,7 +83,7 @@ class FollowAlongPlayerViewModel: ObservableObject {
     // MARK: - Private
 
     private var timerCancellable: AnyCancellable?
-    private var playerObserver: Any?
+    private var playerObserver: NSObjectProtocol?
 
     // MARK: - Init
 
