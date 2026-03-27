@@ -1778,7 +1778,55 @@ extension APIService {
         return try APIService.makeDecoder().decode(UserPublicProfile.self, from: data)
     }
 
+    // MARK: - Challenges (AMA-1276)
 
+    func fetchChallenges() async throws -> ChallengesResponse {
+        guard let url = URL(string: "\(baseURL)/social/challenges") else { throw APIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = authHeaders
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+        return try APIService.makeDecoder().decode(ChallengesResponse.self, from: data)
+    }
+
+    func fetchChallengeDetail(id: String) async throws -> ChallengeDetailResponse {
+        guard let url = URL(string: "\(baseURL)/social/challenges/\(id)") else { throw APIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = authHeaders
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+        return try APIService.makeDecoder().decode(ChallengeDetailResponse.self, from: data)
+    }
+
+    func createChallenge(_ request: CreateChallengeRequest) async throws {
+        guard let url = URL(string: "\(baseURL)/social/challenges") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.allHTTPHeaderFields = authHeaders
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONEncoder().encode(request)
+        let (_, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+    }
+
+    func joinChallenge(id: String) async throws {
+        guard let url = URL(string: "\(baseURL)/social/challenges/\(id)/join") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.allHTTPHeaderFields = authHeaders
+        let (_, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+    }
 
     // MARK: - Workout Editor (AMA-1231)
 

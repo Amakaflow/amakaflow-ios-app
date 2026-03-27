@@ -209,6 +209,13 @@
 		AK00FIX023B /* StravaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX023A /* StravaView.swift */; };
 		AK00FIX024B /* TeamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX024A /* TeamView.swift */; };
 		AK00FIX025B /* WorkoutEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX025A /* WorkoutEditorView.swift */; };
+		AK00CHL001B /* ChallengeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00CHL001A /* ChallengeModels.swift */; };
+		AK00CHL002B /* ChallengesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00CHL002A /* ChallengesViewModel.swift */; };
+		AK00CHL003B /* ChallengesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00CHL003A /* ChallengesView.swift */; };
+		AK00CHL004B /* ChallengeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00CHL004A /* ChallengeDetailView.swift */; };
+		AK00CHL005B /* CreateChallengeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00CHL005A /* CreateChallengeView.swift */; };
+		AK00CHL006B /* ChallengeCompletionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00CHL006A /* ChallengeCompletionView.swift */; };
+		AK00CHL007B /* ChallengesViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00CHL007A /* ChallengesViewModelTests.swift */; };
 		AK00TST001B /* ActivityHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST001A /* ActivityHistoryTests.swift */; };
 		AK00TST002B /* ActivityHistoryViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST002A /* ActivityHistoryViewModelTests.swift */; };
 		AK00TST003B /* AmakaFlowCompanionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST003A /* AmakaFlowCompanionTests.swift */; };
@@ -505,6 +512,13 @@
 		AK00FIX023A /* StravaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StravaView.swift; path = ../AmakaFlow/Views/StravaView.swift; sourceTree = "<group>"; };
 		AK00FIX024A /* TeamView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TeamView.swift; path = ../AmakaFlow/Views/TeamView.swift; sourceTree = "<group>"; };
 		AK00FIX025A /* WorkoutEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEditorView.swift; path = ../AmakaFlow/Views/WorkoutEditorView.swift; sourceTree = "<group>"; };
+		AK00CHL001A /* ChallengeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ChallengeModels.swift; path = ../AmakaFlow/Models/ChallengeModels.swift; sourceTree = "<group>"; };
+		AK00CHL002A /* ChallengesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ChallengesViewModel.swift; path = ../AmakaFlow/ViewModels/ChallengesViewModel.swift; sourceTree = "<group>"; };
+		AK00CHL003A /* ChallengesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ChallengesView.swift; path = ../AmakaFlow/Views/Social/ChallengesView.swift; sourceTree = "<group>"; };
+		AK00CHL004A /* ChallengeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ChallengeDetailView.swift; path = ../AmakaFlow/Views/Social/ChallengeDetailView.swift; sourceTree = "<group>"; };
+		AK00CHL005A /* CreateChallengeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CreateChallengeView.swift; path = ../AmakaFlow/Views/Social/CreateChallengeView.swift; sourceTree = "<group>"; };
+		AK00CHL006A /* ChallengeCompletionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ChallengeCompletionView.swift; path = ../AmakaFlow/Views/Social/ChallengeCompletionView.swift; sourceTree = "<group>"; };
+		AK00CHL007A /* ChallengesViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ChallengesViewModelTests.swift; path = AmakaFlowCompanionTests/ChallengesViewModelTests.swift; sourceTree = "<group>"; };
 		AK00TST001A /* ActivityHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivityHistoryTests.swift; path = AmakaFlowCompanionTests/ActivityHistoryTests.swift; sourceTree = "<group>"; };
 		AK00TST002A /* ActivityHistoryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivityHistoryViewModelTests.swift; path = AmakaFlowCompanionTests/ActivityHistoryViewModelTests.swift; sourceTree = "<group>"; };
 		AK00TST003A /* AmakaFlowCompanionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AmakaFlowCompanionTests.swift; path = AmakaFlowCompanionTests/AmakaFlowCompanionTests.swift; sourceTree = "<group>"; };
@@ -810,6 +824,13 @@
 				AMA12820010A /* PRDetectionServiceTests.swift */,
 				D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */,
 				AMA12650021 /* SuggestWorkoutViewModelTests.swift */,
+				AK00CHL001A /* ChallengeModels.swift */,
+				AK00CHL002A /* ChallengesViewModel.swift */,
+				AK00CHL003A /* ChallengesView.swift */,
+				AK00CHL004A /* ChallengeDetailView.swift */,
+				AK00CHL005A /* CreateChallengeView.swift */,
+				AK00CHL006A /* ChallengeCompletionView.swift */,
+				AK00CHL007A /* ChallengesViewModelTests.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -1403,6 +1424,12 @@
 				AK00FIX023B /* StravaView.swift in Sources */,
 				AK00FIX024B /* TeamView.swift in Sources */,
 				AK00FIX025B /* WorkoutEditorView.swift in Sources */,
+				AK00CHL001B /* ChallengeModels.swift in Sources */,
+				AK00CHL002B /* ChallengesViewModel.swift in Sources */,
+				AK00CHL003B /* ChallengesView.swift in Sources */,
+				AK00CHL004B /* ChallengeDetailView.swift in Sources */,
+				AK00CHL005B /* CreateChallengeView.swift in Sources */,
+				AK00CHL006B /* ChallengeCompletionView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1440,6 +1467,7 @@
 				AK00TST024B /* WorkoutsViewModelTests.swift in Sources */,
 				AK00TST025B /* XPBarViewTests.swift in Sources */,
 				AMA12820010B /* PRDetectionServiceTests.swift in Sources */,
+				AK00CHL007B /* ChallengesViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
