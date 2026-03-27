@@ -70,9 +70,15 @@ struct AmakaFlowCompanionApp: App {
             options.sessionReplay.sessionSampleRate = 0.1
             options.sessionReplay.onErrorSampleRate = 1.0
 
-            // App hang tracking - detect when app freezes for at least 2000ms (AMA-971)
+            // App hang tracking - detect when app freezes (AMA-971, AMA-1324)
             options.enableAppHangTracking = true
+            #if targetEnvironment(simulator)
+            // AMA-1324: Simulator XPC calls (e.g. Activity.request) are much slower
+            // than on real devices, causing false-positive hang reports and SIGABRTs.
+            options.appHangTimeoutInterval = 10.0
+            #else
             options.appHangTimeoutInterval = 2.0
+            #endif
         }
     }
 

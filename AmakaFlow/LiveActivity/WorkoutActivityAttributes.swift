@@ -105,22 +105,32 @@ final class LiveActivityManager {
         print("🔵 Requesting new Live Activity for workout: \(workoutName)")
         print("🔵 Initial state: step=\(initialState.stepName), phase=\(initialState.phase)")
 
-        do {
-            currentActivity = try Activity.request(
-                attributes: attributes,
-                content: content,
-                pushType: nil  // Local updates only
-            )
-            print("🟢 Live Activity started successfully!")
-            print("   - Activity ID: \(currentActivity?.id ?? "unknown")")
-            print("   - Activity state: \(String(describing: currentActivity?.activityState))")
+        // AMA-1324: Activity.request() makes a synchronous XPC call that can block
+        // the main thread for 2000ms+, triggering Sentry app-hang detection and
+        // potential SIGABRTs. Dispatch to a background thread to avoid blocking.
+        Task.detached {
+            do {
+                let activity = try Activity.request(
+                    attributes: attributes,
+                    content: content,
+                    pushType: nil  // Local updates only
+                )
+                await MainActor.run {
+                    self.currentActivity = activity
+                    print("🟢 Live Activity started successfully!")
+                    print("   - Activity ID: \(activity.id)")
+                    print("   - Activity state: \(activity.activityState)")
 
-            // Verify it's in the activities list
-            let allActivities = Activity<WorkoutActivityAttributes>.activities
-            print("🔵 Total activities after start: \(allActivities.count)")
-        } catch {
-            print("🔴 Failed to start Live Activity: \(error)")
-            print("🔴 Error details: \(String(describing: error))")
+                    // Verify it's in the activities list
+                    let allActivities = Activity<WorkoutActivityAttributes>.activities
+                    print("🔵 Total activities after start: \(allActivities.count)")
+                }
+            } catch {
+                await MainActor.run {
+                    print("🔴 Failed to start Live Activity: \(error)")
+                    print("🔴 Error details: \(String(describing: error))")
+                }
+            }
         }
     }
 
