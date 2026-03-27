@@ -259,6 +259,12 @@
 		AK00NUT006B /* NutritionSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT006A /* NutritionSettingsView.swift */; };
 		AK00NUT007B /* NutritionOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT007A /* NutritionOnboardingView.swift */; };
 		AK00NUT008B /* NutritionViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT008A /* NutritionViewModelTests.swift */; };
+		AK00AFL001B /* FoodLoggingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00AFL001A /* FoodLoggingView.swift */; };
+		AK00AFL002B /* MealPhotoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00AFL002A /* MealPhotoView.swift */; };
+		AK00AFL003B /* BarcodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00AFL003A /* BarcodeScannerView.swift */; };
+		AK00AFL004B /* TextFoodEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00AFL004A /* TextFoodEntryView.swift */; };
+		AK00AFL005B /* FoodLoggingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00AFL005A /* FoodLoggingViewModel.swift */; };
+		AK00AFL006B /* FoodLoggingViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00AFL006A /* FoodLoggingViewModelTests.swift */; };
 		AK00FUL001B /* FuelingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FUL001A /* FuelingViewModel.swift */; };
 		AK00FUL002B /* FuelingStatusCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FUL002A /* FuelingStatusCard.swift */; };
 		AK00FUL003B /* ProteinNudgeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FUL003A /* ProteinNudgeService.swift */; };
@@ -584,6 +590,12 @@
 		AK00NUT006A /* NutritionSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionSettingsView.swift; path = ../AmakaFlow/Views/Nutrition/NutritionSettingsView.swift; sourceTree = "<group>"; };
 		AK00NUT007A /* NutritionOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionOnboardingView.swift; path = ../AmakaFlow/Views/Nutrition/NutritionOnboardingView.swift; sourceTree = "<group>"; };
 		AK00NUT008A /* NutritionViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionViewModelTests.swift; path = AmakaFlowCompanionTests/NutritionViewModelTests.swift; sourceTree = "<group>"; };
+		AK00AFL001A /* FoodLoggingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FoodLoggingView.swift; path = ../AmakaFlow/Views/Nutrition/FoodLoggingView.swift; sourceTree = "<group>"; };
+		AK00AFL002A /* MealPhotoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MealPhotoView.swift; path = ../AmakaFlow/Views/Nutrition/MealPhotoView.swift; sourceTree = "<group>"; };
+		AK00AFL003A /* BarcodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BarcodeScannerView.swift; path = ../AmakaFlow/Views/Nutrition/BarcodeScannerView.swift; sourceTree = "<group>"; };
+		AK00AFL004A /* TextFoodEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TextFoodEntryView.swift; path = ../AmakaFlow/Views/Nutrition/TextFoodEntryView.swift; sourceTree = "<group>"; };
+		AK00AFL005A /* FoodLoggingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FoodLoggingViewModel.swift; path = ../AmakaFlow/ViewModels/FoodLoggingViewModel.swift; sourceTree = "<group>"; };
+		AK00AFL006A /* FoodLoggingViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FoodLoggingViewModelTests.swift; path = AmakaFlowCompanionTests/FoodLoggingViewModelTests.swift; sourceTree = "<group>"; };
 		AK00FUL001A /* FuelingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FuelingViewModel.swift; path = ../AmakaFlow/ViewModels/FuelingViewModel.swift; sourceTree = "<group>"; };
 		AK00FUL002A /* FuelingStatusCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FuelingStatusCard.swift; path = ../AmakaFlow/Views/Nutrition/FuelingStatusCard.swift; sourceTree = "<group>"; };
 		AK00FUL003A /* ProteinNudgeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProteinNudgeService.swift; path = ../AmakaFlow/Services/ProteinNudgeService.swift; sourceTree = "<group>"; };
@@ -887,12 +899,18 @@
 				AK00CHL007A /* ChallengesViewModelTests.swift */,
 				AK00NUT001A /* NutritionHealthKitService.swift */,
 				AK00NUT002A /* NutritionViewModel.swift */,
+				AK00AFL005A /* FoodLoggingViewModel.swift */,
 				AK00NUT003A /* NutritionDashboardCard.swift */,
 				AK00NUT004A /* ProteinTrackerView.swift */,
 				AK00NUT005A /* WaterTrackerView.swift */,
 				AK00NUT006A /* NutritionSettingsView.swift */,
 				AK00NUT007A /* NutritionOnboardingView.swift */,
+				AK00AFL001A /* FoodLoggingView.swift */,
+				AK00AFL002A /* MealPhotoView.swift */,
+				AK00AFL003A /* BarcodeScannerView.swift */,
+				AK00AFL004A /* TextFoodEntryView.swift */,
 				AK00NUT008A /* NutritionViewModelTests.swift */,
+				AK00AFL006A /* FoodLoggingViewModelTests.swift */,
 				AK00FUL001A /* FuelingViewModel.swift */,
 				AK00FUL002A /* FuelingStatusCard.swift */,
 				AK00FUL003A /* ProteinNudgeService.swift */,
@@ -1513,6 +1531,11 @@
 				AK00NUT005B /* WaterTrackerView.swift in Sources */,
 				AK00NUT006B /* NutritionSettingsView.swift in Sources */,
 				AK00NUT007B /* NutritionOnboardingView.swift in Sources */,
+				AK00AFL001B /* FoodLoggingView.swift in Sources */,
+				AK00AFL002B /* MealPhotoView.swift in Sources */,
+				AK00AFL003B /* BarcodeScannerView.swift in Sources */,
+				AK00AFL004B /* TextFoodEntryView.swift in Sources */,
+				AK00AFL005B /* FoodLoggingViewModel.swift in Sources */,
 				AK00FUL001B /* FuelingViewModel.swift in Sources */,
 				AK00FUL002B /* FuelingStatusCard.swift in Sources */,
 				AK00FUL003B /* ProteinNudgeService.swift in Sources */,
@@ -1555,6 +1578,7 @@
 				AMA12820010B /* PRDetectionServiceTests.swift in Sources */,
 				AK00CHL007B /* ChallengesViewModelTests.swift in Sources */,
 				AK00NUT008B /* NutritionViewModelTests.swift in Sources */,
+				AK00AFL006B /* FoodLoggingViewModelTests.swift in Sources */,
 				AK00FUL004B /* FuelingViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
