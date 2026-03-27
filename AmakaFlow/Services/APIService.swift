@@ -2041,6 +2041,32 @@ extension APIService {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
         }
     }
+
+    // MARK: - Leaderboards (AMA-1278)
+
+    func fetchFriendsLeaderboard(dimension: String, period: String) async throws -> LeaderboardAPIResponse {
+        guard let url = URL(string: "\(baseURL)/social/leaderboards/friends?dimension=\(dimension)&period=\(period)") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        req.allHTTPHeaderFields = authHeaders
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+        return try APIService.makeDecoder().decode(LeaderboardAPIResponse.self, from: data)
+    }
+
+    func fetchCrewLeaderboard(crewId: String, dimension: String, period: String) async throws -> LeaderboardAPIResponse {
+        guard let url = URL(string: "\(baseURL)/social/leaderboards/crew/\(crewId)?dimension=\(dimension)&period=\(period)") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        req.allHTTPHeaderFields = authHeaders
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+        return try APIService.makeDecoder().decode(LeaderboardAPIResponse.self, from: data)
+    }
 }
 
 // MARK: - API Errors

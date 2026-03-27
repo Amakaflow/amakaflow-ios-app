@@ -222,6 +222,10 @@
 		AK00CRW004B /* CrewDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00CRW004A /* CrewDetailView.swift */; };
 		AK00CRW005B /* CreateCrewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00CRW005A /* CreateCrewView.swift */; };
 		AK00CRW006B /* JoinCrewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00CRW006A /* JoinCrewView.swift */; };
+		AK00LDR001B /* LeaderboardModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00LDR001A /* LeaderboardModels.swift */; };
+		AK00LDR002B /* LeaderboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00LDR002A /* LeaderboardViewModel.swift */; };
+		AK00LDR003B /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00LDR003A /* LeaderboardView.swift */; };
+		AK00LDR004B /* LeaderboardEntryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00LDR004A /* LeaderboardEntryRow.swift */; };
 		AK00TST001B /* ActivityHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST001A /* ActivityHistoryTests.swift */; };
 		AK00TST002B /* ActivityHistoryViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST002A /* ActivityHistoryViewModelTests.swift */; };
 		AK00TST003B /* AmakaFlowCompanionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST003A /* AmakaFlowCompanionTests.swift */; };
@@ -531,6 +535,10 @@
 		AK00CRW004A /* CrewDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CrewDetailView.swift; path = ../AmakaFlow/Views/Social/CrewDetailView.swift; sourceTree = "<group>"; };
 		AK00CRW005A /* CreateCrewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CreateCrewView.swift; path = ../AmakaFlow/Views/Social/CreateCrewView.swift; sourceTree = "<group>"; };
 		AK00CRW006A /* JoinCrewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = JoinCrewView.swift; path = ../AmakaFlow/Views/Social/JoinCrewView.swift; sourceTree = "<group>"; };
+		AK00LDR001A /* LeaderboardModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LeaderboardModels.swift; path = ../AmakaFlow/Models/LeaderboardModels.swift; sourceTree = "<group>"; };
+		AK00LDR002A /* LeaderboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LeaderboardViewModel.swift; path = ../AmakaFlow/ViewModels/LeaderboardViewModel.swift; sourceTree = "<group>"; };
+		AK00LDR003A /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LeaderboardView.swift; path = ../AmakaFlow/Views/Social/LeaderboardView.swift; sourceTree = "<group>"; };
+		AK00LDR004A /* LeaderboardEntryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LeaderboardEntryRow.swift; path = ../AmakaFlow/Views/Social/LeaderboardEntryRow.swift; sourceTree = "<group>"; };
 		AK00TST001A /* ActivityHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivityHistoryTests.swift; path = AmakaFlowCompanionTests/ActivityHistoryTests.swift; sourceTree = "<group>"; };
 		AK00TST002A /* ActivityHistoryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivityHistoryViewModelTests.swift; path = AmakaFlowCompanionTests/ActivityHistoryViewModelTests.swift; sourceTree = "<group>"; };
 		AK00TST003A /* AmakaFlowCompanionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AmakaFlowCompanionTests.swift; path = AmakaFlowCompanionTests/AmakaFlowCompanionTests.swift; sourceTree = "<group>"; };
@@ -848,6 +856,10 @@
 				AK00CRW004A /* CrewDetailView.swift */,
 				AK00CRW005A /* CreateCrewView.swift */,
 				AK00CRW006A /* JoinCrewView.swift */,
+				AK00LDR001A /* LeaderboardModels.swift */,
+				AK00LDR002A /* LeaderboardViewModel.swift */,
+				AK00LDR003A /* LeaderboardView.swift */,
+				AK00LDR004A /* LeaderboardEntryRow.swift */,
 				AK00CHL007A /* ChallengesViewModelTests.swift */,
 			);
 			sourceTree = "<group>";
@@ -1454,6 +1466,10 @@
 				AK00CRW004B /* CrewDetailView.swift in Sources */,
 				AK00CRW005B /* CreateCrewView.swift in Sources */,
 				AK00CRW006B /* JoinCrewView.swift in Sources */,
+				AK00LDR001B /* LeaderboardModels.swift in Sources */,
+				AK00LDR002B /* LeaderboardViewModel.swift in Sources */,
+				AK00LDR003B /* LeaderboardView.swift in Sources */,
+				AK00LDR004B /* LeaderboardEntryRow.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
