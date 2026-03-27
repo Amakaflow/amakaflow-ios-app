@@ -169,5 +169,39 @@ class FixtureAPIService: APIServiceProviding {
 
     func fetchNotificationPreferences() async throws -> NotificationPreferences { NotificationPreferences() }
     func updateNotificationPreferences(_ prefs: NotificationPreferences) async throws -> NotificationPreferences { prefs }
+
+
+    // MARK: - Workout Save (AMA-1231)
+
+    func saveWorkout(_ request: WorkoutSaveRequest) async throws -> Workout {
+        print("[FixtureAPIService] Stub: saveWorkout -> fixture workout")
+        return try FixtureLoader.loadWorkouts().first!
+    }
+
+    // MARK: - Calendar Sync (AMA-1238)
+
+    func fetchConnectedCalendars() async throws -> [ConnectedCalendar] { [] }
+    func connectCalendar(provider: String) async throws -> String { "https://example.com/auth" }
+    func syncCalendar(calendarId: String) async throws -> CalendarSyncResponse { CalendarSyncResponse(syncedEvents: 0) }
+    func disconnectCalendar(calendarId: String) async throws {}
+
+    // MARK: - Social Feed (AMA-1273)
+
+    func fetchSocialFeed(cursor: String?, limit: Int) async throws -> FeedResponse {
+        FeedResponse(posts: [], nextCursor: nil, hasMore: false)
+    }
+    func addSocialReaction(postId: String, emoji: String) async throws {}
+    func removeSocialReaction(postId: String, emoji: String) async throws {}
+    func fetchSocialComments(postId: String) async throws -> CommentsResponse {
+        CommentsResponse(comments: [])
+    }
+    func postSocialComment(postId: String, text: String) async throws {}
+    func fetchSocialSettings() async throws -> SocialSettings {
+        SocialSettings(discoverable: true, shareWorkouts: true, hideWeights: false)
+    }
+    func updateSocialSettings(_ settings: SocialSettings) async throws {}
+    func fetchUserPublicProfile(userId: String) async throws -> UserPublicProfile {
+        UserPublicProfile(userId: userId, userName: "Fixture User", avatarUrl: nil, workoutCount: 0, totalVolume: 0, streakDays: 0, isFollowing: false, recentWorkouts: [])
+    }
 }
 #endif

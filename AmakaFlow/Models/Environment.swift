@@ -107,6 +107,15 @@ enum AppEnvironment: String, CaseIterable {
         }
     }
 
+
+    var stravaAPIURL: String {
+        switch self {
+        case .development: return "http://localhost:8000"
+        case .staging: return "https://strava-sync-api.staging.amakaflow.com"
+        case .production: return "https://strava-sync-api.amakaflow.com"
+        }
+    }
+
     var displayName: String {
         // Show custom API URL hostname when using UITEST_API_BASE_URL / TEST_API_BASE_URL override
         #if DEBUG
