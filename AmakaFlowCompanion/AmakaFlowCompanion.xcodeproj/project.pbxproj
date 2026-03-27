@@ -47,16 +47,6 @@
 		D33PL1NK1MP0RTV0002 /* DeepLinkImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33PL1NK1MP0RTV0001 /* DeepLinkImportView.swift */; };
 		D33PL1NKT35T50002 /* DeepLinkManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */; };
 		AMA12650022 /* SuggestWorkoutViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA12650021 /* SuggestWorkoutViewModelTests.swift */; };
-				AK00SOC001A /* SocialModels.swift */,
-				AK00SOC002A /* FeedViewModel.swift */,
-				AK00SOC003A /* FeedView.swift */,
-				AK00SOC004A /* FeedPostCard.swift */,
-				AK00SOC005A /* ReactionBar.swift */,
-				AK00SOC006A /* CommentSheet.swift */,
-				AK00SOC007A /* UserProfileMiniView.swift */,
-				AK00SOC008A /* SocialSettingsView.swift */,
-				AK00SOC009A /* FeedViewModelTests.swift */,
-				AK00SOC009B /* FeedViewModelTests.swift in Sources */,
 		AK00SHARE001B /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SHARE001A /* ShareViewController.swift */; };
 		AK00SHARE00EB /* AmakaFlowShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AK00SHARE00EA /* AmakaFlowShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 
@@ -68,32 +58,6 @@
 		AK00XP002B /* LevelUpCelebrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00XP002A /* LevelUpCelebrationView.swift */; };
 		AK00RD001B /* WeeklyProgressRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00RD001A /* WeeklyProgressRing.swift */; };
 		AK00RD002B /* RestDayButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00RD002A /* RestDayButton.swift */; };
-				AK00SOC001B /* SocialModels.swift in Sources */,
-				AK00SOC002B /* FeedViewModel.swift in Sources */,
-				AK00SOC003B /* FeedView.swift in Sources */,
-				AK00SOC004B /* FeedPostCard.swift in Sources */,
-				AK00SOC005B /* ReactionBar.swift in Sources */,
-				AK00SOC006B /* CommentSheet.swift in Sources */,
-				AK00SOC007B /* UserProfileMiniView.swift in Sources */,
-				AK00SOC008B /* SocialSettingsView.swift in Sources */,
-		AK00SOC001A /* SocialModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialModels.swift; path = ../AmakaFlow/Models/SocialModels.swift; sourceTree = "<group>"; };
-		AK00SOC002A /* FeedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FeedViewModel.swift; path = ../AmakaFlow/ViewModels/FeedViewModel.swift; sourceTree = "<group>"; };
-		AK00SOC003A /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FeedView.swift; path = ../AmakaFlow/Views/Social/FeedView.swift; sourceTree = "<group>"; };
-		AK00SOC004A /* FeedPostCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FeedPostCard.swift; path = ../AmakaFlow/Views/Social/FeedPostCard.swift; sourceTree = "<group>"; };
-		AK00SOC005A /* ReactionBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReactionBar.swift; path = ../AmakaFlow/Views/Social/ReactionBar.swift; sourceTree = "<group>"; };
-		AK00SOC006A /* CommentSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CommentSheet.swift; path = ../AmakaFlow/Views/Social/CommentSheet.swift; sourceTree = "<group>"; };
-		AK00SOC007A /* UserProfileMiniView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserProfileMiniView.swift; path = ../AmakaFlow/Views/Social/UserProfileMiniView.swift; sourceTree = "<group>"; };
-		AK00SOC008A /* SocialSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialSettingsView.swift; path = ../AmakaFlow/Views/Social/SocialSettingsView.swift; sourceTree = "<group>"; };
-		AK00SOC009A /* FeedViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FeedViewModelTests.swift; path = AmakaFlowCompanionTests/FeedViewModelTests.swift; sourceTree = "<group>"; };
-		AK00SOC001B /* SocialModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SOC001A /* SocialModels.swift */; };
-		AK00SOC002B /* FeedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SOC002A /* FeedViewModel.swift */; };
-		AK00SOC003B /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SOC003A /* FeedView.swift */; };
-		AK00SOC004B /* FeedPostCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SOC004A /* FeedPostCard.swift */; };
-		AK00SOC005B /* ReactionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SOC005A /* ReactionBar.swift */; };
-		AK00SOC006B /* CommentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SOC006A /* CommentSheet.swift */; };
-		AK00SOC007B /* UserProfileMiniView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SOC007A /* UserProfileMiniView.swift */; };
-		AK00SOC008B /* SocialSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SOC008A /* SocialSettingsView.swift */; };
-		AK00SOC009B /* FeedViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SOC009A /* FeedViewModelTests.swift */; };
 
 		B1910EAEA57AF40FBA6FEDD3 /* FollowAlongPlayerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */; };
 		A1B2C3D4E5F647889ABCDEF0 /* RPEFeedbackViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18D523D7E78245EBB81A469A /* RPEFeedbackViewModelTests.swift */; };
@@ -329,15 +293,6 @@
 		D33PL1NK1MP0RTV0001 /* DeepLinkImportView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkImportView.swift; path = ../AmakaFlow/Views/DeepLinkImportView.swift; sourceTree = "<group>"; };
 		D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkManagerTests.swift; path = AmakaFlowCompanionTests/DeepLinkManagerTests.swift; sourceTree = "<group>"; };
 		AMA12650021 /* SuggestWorkoutViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SuggestWorkoutViewModelTests.swift; path = AmakaFlowCompanionTests/SuggestWorkoutViewModelTests.swift; sourceTree = "<group>"; };
-				AK00SOC001A /* SocialModels.swift */,
-				AK00SOC002A /* FeedViewModel.swift */,
-				AK00SOC003A /* FeedView.swift */,
-				AK00SOC004A /* FeedPostCard.swift */,
-				AK00SOC005A /* ReactionBar.swift */,
-				AK00SOC006A /* CommentSheet.swift */,
-				AK00SOC007A /* UserProfileMiniView.swift */,
-				AK00SOC008A /* SocialSettingsView.swift */,
-				AK00SOC009A /* FeedViewModelTests.swift */,
 		83178781B2C087203EB17951 /* ShoeComparisonViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShoeComparisonViewModel.swift; path = ../AmakaFlow/ViewModels/ShoeComparisonViewModel.swift; sourceTree = "<group>"; };
 		85D3757E5B284286B341C75C /* PairingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingService.swift; path = ../AmakaFlow/Services/PairingService.swift; sourceTree = SOURCE_ROOT; };
 		887645B05D4D7BABC29CAB9A /* ShoeComparisonView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShoeComparisonView.swift; path = ../AmakaFlow/Views/ShoeComparisonView.swift; sourceTree = "<group>"; };
@@ -366,15 +321,6 @@
 		AK00XP002A /* LevelUpCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LevelUpCelebrationView.swift; path = ../AmakaFlow/Views/LevelUpCelebrationView.swift; sourceTree = "<group>"; };
 		AK00RD001A /* WeeklyProgressRing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WeeklyProgressRing.swift; path = ../AmakaFlow/Views/WeeklyProgressRing.swift; sourceTree = "<group>"; };
 		AK00RD002A /* RestDayButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RestDayButton.swift; path = ../AmakaFlow/Views/RestDayButton.swift; sourceTree = "<group>"; };
-		AK00SOC001A /* SocialModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialModels.swift; path = ../AmakaFlow/Models/SocialModels.swift; sourceTree = "<group>"; };
-		AK00SOC002A /* FeedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FeedViewModel.swift; path = ../AmakaFlow/ViewModels/FeedViewModel.swift; sourceTree = "<group>"; };
-		AK00SOC003A /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FeedView.swift; path = ../AmakaFlow/Views/Social/FeedView.swift; sourceTree = "<group>"; };
-		AK00SOC004A /* FeedPostCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FeedPostCard.swift; path = ../AmakaFlow/Views/Social/FeedPostCard.swift; sourceTree = "<group>"; };
-		AK00SOC005A /* ReactionBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReactionBar.swift; path = ../AmakaFlow/Views/Social/ReactionBar.swift; sourceTree = "<group>"; };
-		AK00SOC006A /* CommentSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CommentSheet.swift; path = ../AmakaFlow/Views/Social/CommentSheet.swift; sourceTree = "<group>"; };
-		AK00SOC007A /* UserProfileMiniView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserProfileMiniView.swift; path = ../AmakaFlow/Views/Social/UserProfileMiniView.swift; sourceTree = "<group>"; };
-		AK00SOC008A /* SocialSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialSettingsView.swift; path = ../AmakaFlow/Views/Social/SocialSettingsView.swift; sourceTree = "<group>"; };
-		AK00SOC009A /* FeedViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FeedViewModelTests.swift; path = AmakaFlowCompanionTests/FeedViewModelTests.swift; sourceTree = "<group>"; };
 		AK00SHARE005A /* URLImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLImportService.swift; sourceTree = "<group>"; };
 		AK00SHARE006A /* ShareExtensionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtensionView.swift; sourceTree = "<group>"; };
 		AK00SHARE00EA /* AmakaFlowShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AmakaFlowShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -764,15 +710,6 @@
 				AMA12820010A /* PRDetectionServiceTests.swift */,
 				D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */,
 				AMA12650021 /* SuggestWorkoutViewModelTests.swift */,
-				AK00SOC001A /* SocialModels.swift */,
-				AK00SOC002A /* FeedViewModel.swift */,
-				AK00SOC003A /* FeedView.swift */,
-				AK00SOC004A /* FeedPostCard.swift */,
-				AK00SOC005A /* ReactionBar.swift */,
-				AK00SOC006A /* CommentSheet.swift */,
-				AK00SOC007A /* UserProfileMiniView.swift */,
-				AK00SOC008A /* SocialSettingsView.swift */,
-				AK00SOC009A /* FeedViewModelTests.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -1217,23 +1154,6 @@
 				AK00XP002B /* LevelUpCelebrationView.swift in Sources */,
 				AK00RD001B /* WeeklyProgressRing.swift in Sources */,
 				AK00RD002B /* RestDayButton.swift in Sources */,
-				AK00SOC001B /* SocialModels.swift in Sources */,
-				AK00SOC002B /* FeedViewModel.swift in Sources */,
-				AK00SOC003B /* FeedView.swift in Sources */,
-				AK00SOC004B /* FeedPostCard.swift in Sources */,
-				AK00SOC005B /* ReactionBar.swift in Sources */,
-				AK00SOC006B /* CommentSheet.swift in Sources */,
-				AK00SOC007B /* UserProfileMiniView.swift in Sources */,
-				AK00SOC008B /* SocialSettingsView.swift in Sources */,
-		AK00SOC001B /* SocialModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SOC001A /* SocialModels.swift */; };
-		AK00SOC002B /* FeedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SOC002A /* FeedViewModel.swift */; };
-		AK00SOC003B /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SOC003A /* FeedView.swift */; };
-		AK00SOC004B /* FeedPostCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SOC004A /* FeedPostCard.swift */; };
-		AK00SOC005B /* ReactionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SOC005A /* ReactionBar.swift */; };
-		AK00SOC006B /* CommentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SOC006A /* CommentSheet.swift */; };
-		AK00SOC007B /* UserProfileMiniView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SOC007A /* UserProfileMiniView.swift */; };
-		AK00SOC008B /* SocialSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SOC008A /* SocialSettingsView.swift */; };
-		AK00SOC009B /* FeedViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SOC009A /* FeedViewModelTests.swift */; };
 				D33PL1NK1MP0RTV0002 /* DeepLinkImportView.swift in Sources */,
 				CA268753E918494FAD7CCD56 /* PairingService.swift in Sources */,
 				T35T4UTH5T0R300000002 /* TestAuthStore.swift in Sources */,
@@ -1369,7 +1289,6 @@
 				A1B2C3D4E5F647889ABCDEF0 /* RPEFeedbackViewModelTests.swift in Sources */,
 				D33PL1NKT35T50002 /* DeepLinkManagerTests.swift in Sources */,
 				AMA12650022 /* SuggestWorkoutViewModelTests.swift in Sources */,
-				AK00SOC009B /* FeedViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
