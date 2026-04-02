@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 // MARK: - Coach Message
 
@@ -77,6 +78,14 @@ enum FatigueLevel: String, Codable {
     case moderate
     case high
     case critical
+
+    var displayColor: Color {
+        switch self {
+        case .low: return Theme.Colors.accentGreen
+        case .moderate: return Theme.Colors.accentOrange
+        case .high, .critical: return Theme.Colors.accentRed
+        }
+    }
 }
 
 // MARK: - Coach Memory

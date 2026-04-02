@@ -152,7 +152,7 @@ struct CoachChatView: View {
     private func fatigueBanner(_ advice: FatigueAdvice) -> some View {
         HStack(spacing: Theme.Spacing.sm) {
             Circle()
-                .fill(fatigueColor(advice.level))
+                .fill(advice.level.displayColor)
                 .frame(width: 10, height: 10)
             Text(advice.message)
                 .font(Theme.Typography.caption)
@@ -162,14 +162,6 @@ struct CoachChatView: View {
         }
         .padding(Theme.Spacing.sm)
         .background(Theme.Colors.surface)
-    }
-
-    private func fatigueColor(_ level: FatigueLevel) -> Color {
-        switch level {
-        case .low: return Theme.Colors.accentGreen
-        case .moderate: return Theme.Colors.accentOrange
-        case .high, .critical: return Theme.Colors.accentRed
-        }
     }
 
     // MARK: - Rate Limit
@@ -396,6 +388,9 @@ struct TypingIndicator: View {
             }
         }
         .onAppear { animating = true }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Coach is typing")
+        .accessibilityAddTraits(.updatesFrequently)
     }
 }
 
@@ -419,10 +414,10 @@ struct FatigueAdvisorView: View {
                         Spacer()
                         Text(advice.level.rawValue.capitalized)
                             .font(Theme.Typography.bodyBold)
-                            .foregroundColor(fatigueColor(advice.level))
+                            .foregroundColor(advice.level.displayColor)
                             .padding(.horizontal, Theme.Spacing.md)
                             .padding(.vertical, Theme.Spacing.xs)
-                            .background(fatigueColor(advice.level).opacity(0.15))
+                            .background(advice.level.displayColor.opacity(0.15))
                             .cornerRadius(Theme.CornerRadius.md)
                     }
 
@@ -479,13 +474,6 @@ struct FatigueAdvisorView: View {
         }
     }
 
-    private func fatigueColor(_ level: FatigueLevel) -> Color {
-        switch level {
-        case .low: return Theme.Colors.accentGreen
-        case .moderate: return Theme.Colors.accentOrange
-        case .high, .critical: return Theme.Colors.accentRed
-        }
-    }
 }
 
 #Preview {

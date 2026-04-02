@@ -185,6 +185,7 @@ class CoachViewModel: ObservableObject {
     private func tryParseWorkoutData(result: String, message: ChatMessage) {
         guard let data = result.data(using: .utf8) else { return }
         let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
 
         if let workout = try? decoder.decode(GeneratedWorkout.self, from: data),
            !workout.exercises.isEmpty {
