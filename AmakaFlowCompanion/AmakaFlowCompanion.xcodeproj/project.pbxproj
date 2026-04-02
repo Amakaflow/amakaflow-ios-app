@@ -92,6 +92,17 @@
 		F1XTUR3JS0N01000006 /* hiit_follow_along.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000006 /* hiit_follow_along.json */; };
 		F1XTUR3L0AD3R0000002 /* FixtureLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1XTUR3L0AD3R0000001 /* FixtureLoader.swift */; };
 		F4E8733C34C4B41F73806D0A /* PlanningModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBCE80D8EA7940E025E8D41D /* PlanningModels.swift */; };
+		D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000001B0000001 /* DebugLogService.swift */; };
+		D3BUG10G00000002C0000002 /* DebugLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000002B0000002 /* DebugLogView.swift */; };
+		BL0CK5W1FT00000002 /* Block.swift in Sources */ = {isa = PBXBuildFile; fileRef = BL0CK5W1FT00000001 /* Block.swift */; };
+		BL0CK5W1FT00000004 /* Block.swift in Sources */ = {isa = PBXBuildFile; fileRef = BL0CK5W1FT00000001 /* Block.swift */; };
+		3X3RC1S35W1FT000002 /* Exercise.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3X3RC1S35W1FT000001 /* Exercise.swift */; };
+		3X3RC1S35W1FT000004 /* Exercise.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3X3RC1S35W1FT000001 /* Exercise.swift */; };
+		BL0CK2INT3RVAL00002 /* BlockToIntervalConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = BL0CK2INT3RVAL00001 /* BlockToIntervalConverter.swift */; };
+		BL0CK2INT3RVAL00004 /* BlockToIntervalConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = BL0CK2INT3RVAL00001 /* BlockToIntervalConverter.swift */; };
+		E33FF845EAAD4110B7D87FB0 /* DevicePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89321AF9D21D441198437105 /* DevicePreference.swift */; };
+		EB63D5EF54FF452580C70684 /* WorkoutCompletionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */; };
+		EB63D5EF54FF452580C70685 /* WorkoutCompletionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */; };
 		F818DA94C6BD4F40EE8313B0 /* StepDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8BFF8D1C38311406C868156 /* StepDisplayView.swift */; };
 		F84682B9F2FD8A45578F0E68 /* WorkoutPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */; };
 		F84E226F2ED0D55600459747 /* AmakaFlowApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E226D2ED0D55600459747 /* AmakaFlowApp.swift */; };
@@ -382,6 +393,9 @@
 		85D3757E5B284286B341C75C /* PairingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingService.swift; path = ../AmakaFlow/Services/PairingService.swift; sourceTree = SOURCE_ROOT; };
 		887645B05D4D7BABC29CAB9A /* ShoeComparisonView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShoeComparisonView.swift; path = ../AmakaFlow/Views/ShoeComparisonView.swift; sourceTree = "<group>"; };
 		89321AF9D21D441198437105 /* DevicePreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DevicePreference.swift; path = ../AmakaFlow/Models/DevicePreference.swift; sourceTree = SOURCE_ROOT; };
+		BL0CK5W1FT00000001 /* Block.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Block.swift; path = ../AmakaFlow/Models/Block.swift; sourceTree = SOURCE_ROOT; };
+		3X3RC1S35W1FT000001 /* Exercise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Exercise.swift; path = ../AmakaFlow/Models/Exercise.swift; sourceTree = SOURCE_ROOT; };
+		BL0CK2INT3RVAL00001 /* BlockToIntervalConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BlockToIntervalConverter.swift; path = ../AmakaFlow/Services/BlockToIntervalConverter.swift; sourceTree = SOURCE_ROOT; };
 		8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionService.swift; path = ../AmakaFlow/Services/WorkoutCompletionService.swift; sourceTree = SOURCE_ROOT; };
 		94AE3547CCCD41159C85554B /* RestPeriodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RestPeriodView.swift; path = ../AmakaFlow/Views/Components/RestPeriodView.swift; sourceTree = SOURCE_ROOT; };
 		A19401AA00000001B0000001 /* ActivityHistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivityHistoryViewModel.swift; path = ../AmakaFlow/ViewModels/ActivityHistoryViewModel.swift; sourceTree = SOURCE_ROOT; };
@@ -845,6 +859,9 @@
 				F84E22732ED0D58300459747 /* WorkoutsViewModel.swift */,
 				F84E22712ED0D56C00459747 /* Workout.swift */,
 				89321AF9D21D441198437105 /* DevicePreference.swift */,
+				BL0CK5W1FT00000001 /* Block.swift */,
+				3X3RC1S35W1FT000001 /* Exercise.swift */,
+				BL0CK2INT3RVAL00001 /* BlockToIntervalConverter.swift */,
 				F84E226D2ED0D55600459747 /* AmakaFlowApp.swift */,
 				F84E226E2ED0D55600459747 /* Theme.swift */,
 				F84E21762ED0B0C800459747 /* AmakaFlowCompanion */,
@@ -1392,6 +1409,9 @@
 				F8B8C2FBBE453C44649F8E94 /* PlayerControlsView.swift in Sources */,
 				F87ADA7721B76045D5938EA4 /* WorkoutActivityAttributes.swift in Sources */,
 				E33FF845EAAD4110B7D87FB0 /* DevicePreference.swift in Sources */,
+				BL0CK5W1FT00000002 /* Block.swift in Sources */,
+				3X3RC1S35W1FT000002 /* Exercise.swift in Sources */,
+				BL0CK2INT3RVAL00002 /* BlockToIntervalConverter.swift in Sources */,
 				9D0C3D8A603340BC8364F188 /* PreWorkoutDeviceSheet.swift in Sources */,
 				W41T1NG000000002C0000002 /* WaitingForWatchView.swift in Sources */,
 				EB63D5EF54FF452580C70684 /* WorkoutCompletionView.swift in Sources */,
@@ -1595,6 +1615,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				F84E22A32ED0E1BB00459747 /* Workout.swift in Sources */,
+				BL0CK5W1FT00000004 /* Block.swift in Sources */,
+				3X3RC1S35W1FT000004 /* Exercise.swift in Sources */,
+				BL0CK2INT3RVAL00004 /* BlockToIntervalConverter.swift in Sources */,
 				F84E22A42ED0E68300459747 /* WorkoutKitConverter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
