@@ -45,7 +45,7 @@ struct BlockSectionView: View {
 
             // Exercises
             let showSuperset = block.structure == .superset
-            ForEach(Array(block.exercises.enumerated()), id: \.offset) { index, exercise in
+            ForEach(Array(block.exercises.enumerated()), id: \.element.id) { index, exercise in
                 ExerciseRowView(exercise: exercise, showSupersetIndicator: showSuperset)
 
                 if index < block.exercises.count - 1 {
@@ -55,8 +55,8 @@ struct BlockSectionView: View {
                 }
             }
 
-            // Footer: rest between rounds
-            if let restSec = block.restBetweenSeconds, restSec > 0, block.rounds > 1 {
+            // Footer: rest info
+            if let restSec = block.restBetweenSeconds, restSec > 0 {
                 Divider()
                     .background(Theme.Colors.borderLight)
 
@@ -64,7 +64,9 @@ struct BlockSectionView: View {
                     Image(systemName: "pause.circle")
                         .font(.system(size: 12))
                         .foregroundColor(Theme.Colors.textSecondary)
-                    Text("\(restSec)s rest between rounds")
+                    Text(block.rounds > 1
+                         ? "\(restSec)s rest between rounds"
+                         : "\(restSec)s rest between exercises")
                         .font(.caption)
                         .foregroundColor(Theme.Colors.textSecondary)
                 }

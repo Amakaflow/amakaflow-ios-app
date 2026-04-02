@@ -16,18 +16,67 @@ enum BlockToIntervalConverter {
         let isWarmup  = block.label.map { $0.lowercased().contains("warm") } ?? false
         let isCooldown = block.label.map { $0.lowercased().contains("cool") } ?? false
 
+        switch block.structure {
+        case .tabata:
+            return buildTabataIntervals(block: block)
+        case .emom:
+            return buildEmomIntervals(block: block)
+        default:
+            break
+        }
+
         let exerciseIntervals = buildExerciseIntervals(
             block: block,
             isWarmup: isWarmup,
             isCooldown: isCooldown
         )
 
-        // Multi-round superset / circuit → wrap in repeat
-        if (block.structure == .superset || block.structure == .circuit) && block.rounds > 1 {
-            return [.repeat(reps: block.rounds, intervals: exerciseIntervals)]
+        // Multi-round superset / circuit / amrap → wrap in repeat
+        let isMultiRound = block.structure == .superset
+            || block.structure == .circuit
+            || block.structure == .amrap
+        if isMultiRound && block.rounds > 1 {
+            var roundIntervals = exerciseIntervals
+            // Add rest at end of round (between rounds) for multi-round blocks
+            if let restSec = block.restBetweenSeconds {
+                roundIntervals.append(.rest(seconds: restSec))
+            }
+            return [.repeat(reps: block.rounds, intervals: roundIntervals)]
         }
 
         return exerciseIntervals
+    }
+
+    // MARK: - Specialised structure builders
+
+    /// Tabata: 20s work / 10s rest per exercise, wrapped in repeat for rounds.
+    private static func buildTabataIntervals(block: Block) -> [WorkoutInterval] {
+        var roundIntervals: [WorkoutInterval] = []
+        for exercise in block.exercises {
+            let target = exercise.notes ?? exercise.name
+            roundIntervals.append(.time(seconds: 20, target: target))
+            roundIntervals.append(.rest(seconds: 10))
+        }
+        let rounds = max(block.rounds, 1)
+        if rounds > 1 {
+            return [.repeat(reps: rounds, intervals: roundIntervals)]
+        }
+        return roundIntervals
+    }
+
+    /// EMOM: each exercise fills one minute (or block-level period via restBetweenSeconds).
+    private static func buildEmomIntervals(block: Block) -> [WorkoutInterval] {
+        let period = block.restBetweenSeconds ?? 60 // default 60s EMOM period
+        var roundIntervals: [WorkoutInterval] = []
+        for exercise in block.exercises {
+            let target = exercise.notes ?? exercise.name
+            roundIntervals.append(.time(seconds: period, target: target))
+        }
+        let rounds = max(block.rounds, 1)
+        if rounds > 1 {
+            return [.repeat(reps: rounds, intervals: roundIntervals)]
+        }
+        return roundIntervals
     }
 
     // MARK: - Private helpers

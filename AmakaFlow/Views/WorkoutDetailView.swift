@@ -60,7 +60,7 @@ struct WorkoutDetailView: View {
                                 .padding(.vertical, Theme.Spacing.lg)
                         } else {
                             VStack(spacing: 12) {
-                                ForEach(Array(workout.blocks.enumerated()), id: \.offset) { index, block in
+                                ForEach(Array(workout.blocks.enumerated()), id: \.element.id) { index, block in
                                     BlockSectionView(block: block, blockIndex: index)
                                 }
                             }

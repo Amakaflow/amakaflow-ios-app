@@ -46,7 +46,12 @@ struct Block: Codable, Hashable, Identifiable {
         let decodedLabel = try container.decodeIfPresent(String.self, forKey: .label)
         self.label = decodedLabel
         self.id = decodedLabel ?? UUID().uuidString
-        structure = try container.decodeIfPresent(BlockStructure.self, forKey: .structure) ?? .straight
+        // Decode structure gracefully — unknown values fall back to .straight
+        if let rawStructure = try container.decodeIfPresent(String.self, forKey: .structure) {
+            structure = BlockStructure(rawValue: rawStructure) ?? .straight
+        } else {
+            structure = .straight
+        }
         rounds = try container.decodeIfPresent(Int.self, forKey: .rounds) ?? 1
         exercises = try container.decodeIfPresent([Exercise].self, forKey: .exercises) ?? []
         restBetweenSeconds = try container.decodeIfPresent(Int.self, forKey: .restBetweenSeconds)

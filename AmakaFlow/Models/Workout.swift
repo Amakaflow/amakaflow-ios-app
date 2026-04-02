@@ -275,84 +275,76 @@ struct Workout: Identifiable, Codable, Hashable {
     }
 
     /// Convert legacy flat WorkoutInterval array into Block array.
-    /// Groups all intervals into a single "Main" block.
+    /// Groups intervals into separate blocks to preserve warmup/cooldown types and repeat structure.
     static func blocksFromLegacyIntervals(_ intervals: [WorkoutInterval]) -> [Block] {
         guard !intervals.isEmpty else { return [] }
 
-        // Convert each interval into an Exercise approximation
-        var exercises: [Exercise] = []
+        var blocks: [Block] = []
+        var mainExercises: [Exercise] = []
+
+        /// Flush accumulated main exercises into a block.
+        func flushMain() {
+            guard !mainExercises.isEmpty else { return }
+            blocks.append(Block(label: nil, structure: .straight, rounds: 1, exercises: mainExercises))
+            mainExercises = []
+        }
+
         for interval in intervals {
             switch interval {
             case .warmup(let seconds, let target):
-                exercises.append(Exercise(
+                flushMain()
+                let exercise = Exercise(
                     name: target ?? "Warm Up",
                     canonicalName: nil, sets: nil, reps: nil,
                     durationSeconds: seconds, load: nil, restSeconds: nil,
                     distance: nil, notes: target, supersetGroup: nil
-                ))
+                )
+                blocks.append(Block(label: "Warm-up", structure: .straight, rounds: 1, exercises: [exercise]))
+
             case .cooldown(let seconds, let target):
-                exercises.append(Exercise(
+                flushMain()
+                let exercise = Exercise(
                     name: target ?? "Cool Down",
                     canonicalName: nil, sets: nil, reps: nil,
                     durationSeconds: seconds, load: nil, restSeconds: nil,
                     distance: nil, notes: target, supersetGroup: nil
-                ))
+                )
+                blocks.append(Block(label: "Cool-down", structure: .straight, rounds: 1, exercises: [exercise]))
+
             case .time(let seconds, let target):
-                exercises.append(Exercise(
+                mainExercises.append(Exercise(
                     name: target ?? "Timed Work",
                     canonicalName: nil, sets: nil, reps: nil,
                     durationSeconds: seconds, load: nil, restSeconds: nil,
                     distance: nil, notes: target, supersetGroup: nil
                 ))
+
             case .reps(let sets, let reps, let name, let load, let restSec, _):
-                let exerciseLoad: ExerciseLoad? = load.map { ExerciseLoad(value: 0, unit: $0) }
-                exercises.append(Exercise(
+                let exerciseLoad = load.flatMap { Workout.parseLegacyLoad($0) }
+                mainExercises.append(Exercise(
                     name: name,
                     canonicalName: nil, sets: sets, reps: "\(reps)",
                     durationSeconds: nil, load: exerciseLoad, restSeconds: restSec,
                     distance: nil, notes: nil, supersetGroup: nil
                 ))
+
             case .distance(let meters, let target):
-                exercises.append(Exercise(
+                mainExercises.append(Exercise(
                     name: target ?? "Distance",
                     canonicalName: nil, sets: nil, reps: nil,
                     durationSeconds: nil, load: nil, restSeconds: nil,
                     distance: Double(meters), notes: target, supersetGroup: nil
                 ))
+
             case .repeat(let reps, let subIntervals):
-                // Recursively convert sub-intervals and wrap in a circuit block
-                let subExercises = subIntervals.compactMap { interval -> Exercise? in
-                    switch interval {
-                    case .reps(let sets, let r, let name, let load, let restSec, _):
-                        let exerciseLoad: ExerciseLoad? = load.map { ExerciseLoad(value: 0, unit: $0) }
-                        return Exercise(name: name, canonicalName: nil, sets: sets, reps: "\(r)",
-                                        durationSeconds: nil, load: exerciseLoad, restSeconds: restSec,
-                                        distance: nil, notes: nil, supersetGroup: nil)
-                    case .time(let seconds, let target):
-                        return Exercise(name: target ?? "Timed Work", canonicalName: nil, sets: nil, reps: nil,
-                                        durationSeconds: seconds, load: nil, restSeconds: nil,
-                                        distance: nil, notes: target, supersetGroup: nil)
-                    case .distance(let meters, let target):
-                        return Exercise(name: target ?? "Distance", canonicalName: nil, sets: nil, reps: nil,
-                                        durationSeconds: nil, load: nil, restSeconds: nil,
-                                        distance: Double(meters), notes: target, supersetGroup: nil)
-                    case .rest(let seconds):
-                        return Exercise(name: "Rest", canonicalName: nil, sets: nil, reps: nil,
-                                        durationSeconds: seconds, load: nil, restSeconds: nil,
-                                        distance: nil, notes: nil, supersetGroup: nil)
-                    default:
-                        return nil
-                    }
-                }
-                // Don't add to exercises — create a separate block below handled via the main block
-                // Instead, just append a placeholder; we'll create a real block for repeats
+                flushMain()
+                let subExercises = subIntervals.compactMap { Workout.exerciseFromLegacyInterval($0) }
                 if !subExercises.isEmpty {
-                    // We need to handle this differently — break out into separate blocks
-                    // For simplicity in legacy conversion, we flatten repeat exercises into main
-                    exercises.append(contentsOf: subExercises)
+                    blocks.append(Block(label: nil, structure: .circuit, rounds: reps, exercises: subExercises))
                 }
+
             case .rest(let seconds):
-                exercises.append(Exercise(
+                mainExercises.append(Exercise(
                     name: "Rest",
                     canonicalName: nil, sets: nil, reps: nil,
                     durationSeconds: seconds, load: nil, restSeconds: nil,
@@ -361,7 +353,57 @@ struct Workout: Identifiable, Codable, Hashable {
             }
         }
 
-        return [Block(label: nil, structure: .straight, rounds: 1, exercises: exercises)]
+        flushMain()
+        return blocks
+    }
+
+    // MARK: - Legacy conversion helpers
+
+    /// Convert a single legacy interval into an Exercise (used for repeat sub-intervals).
+    private static func exerciseFromLegacyInterval(_ interval: WorkoutInterval) -> Exercise? {
+        switch interval {
+        case .reps(let sets, let r, let name, let load, let restSec, _):
+            let exerciseLoad = load.flatMap { parseLegacyLoad($0) }
+            return Exercise(name: name, canonicalName: nil, sets: sets, reps: "\(r)",
+                            durationSeconds: nil, load: exerciseLoad, restSeconds: restSec,
+                            distance: nil, notes: nil, supersetGroup: nil)
+        case .time(let seconds, let target):
+            return Exercise(name: target ?? "Timed Work", canonicalName: nil, sets: nil, reps: nil,
+                            durationSeconds: seconds, load: nil, restSeconds: nil,
+                            distance: nil, notes: target, supersetGroup: nil)
+        case .distance(let meters, let target):
+            return Exercise(name: target ?? "Distance", canonicalName: nil, sets: nil, reps: nil,
+                            durationSeconds: nil, load: nil, restSeconds: nil,
+                            distance: Double(meters), notes: target, supersetGroup: nil)
+        case .rest(let seconds):
+            return Exercise(name: "Rest", canonicalName: nil, sets: nil, reps: nil,
+                            durationSeconds: seconds, load: nil, restSeconds: nil,
+                            distance: nil, notes: nil, supersetGroup: nil)
+        default:
+            return nil
+        }
+    }
+
+    /// Parse a legacy load string like "80kg" or "135lbs" into an ExerciseLoad.
+    /// Falls back to value 0 with the original string as unit if unparseable.
+    static func parseLegacyLoad(_ loadString: String) -> ExerciseLoad {
+        // Match a leading number (int or decimal) followed by a unit suffix
+        let pattern = #"^(\d+(?:\.\d+)?)\s*(.+)$"#
+        if let match = loadString.range(of: pattern, options: .regularExpression) {
+            let str = String(loadString[match])
+            // Extract numeric and unit parts
+            let scanner = Scanner(string: str)
+            if let value = scanner.scanDouble() {
+                let unit = str[str.index(str.startIndex, offsetBy: scanner.currentIndex.utf16Offset(in: str))...]
+                    .trimmingCharacters(in: .whitespaces)
+                if !unit.isEmpty {
+                    return ExerciseLoad(value: value, unit: unit)
+                }
+                return ExerciseLoad(value: value, unit: "")
+            }
+        }
+        // Unparseable — store original string as unit, value 0
+        return ExerciseLoad(value: 0, unit: loadString)
     }
 }
 
