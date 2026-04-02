@@ -56,6 +56,7 @@ class CoachViewModel: ObservableObject {
 
         isStreaming = true
         errorMessage = nil
+        rateLimitInfo = nil
         currentStage = nil
         completedStages = []
 
@@ -73,28 +74,35 @@ class CoachViewModel: ObservableObject {
             context: nil
         )
 
-        let stream = dependencies.chatStreamService.stream(request: request, token: token)
+        streamTask?.cancel()
 
-        do {
-            for try await event in stream {
-                processEvent(event, message: assistantMessage)
-            }
-        } catch {
-            if !Task.isCancelled {
-                if assistantMessage.content.isEmpty {
-                    if let idx = messages.lastIndex(where: { $0.id == assistantMessage.id }) {
-                        messages.remove(at: idx)
-                    }
-                    if let idx = messages.lastIndex(where: { $0.id == userMessage.id }) {
-                        messages.remove(at: idx)
-                    }
+        streamTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            let stream = self.dependencies.chatStreamService.stream(request: request, token: token)
+            do {
+                for try await event in stream {
+                    guard !Task.isCancelled else { break }
+                    self.processEvent(event, message: assistantMessage)
                 }
-                errorMessage = error.localizedDescription
+            } catch {
+                if !Task.isCancelled {
+                    if assistantMessage.content.isEmpty {
+                        if let idx = self.messages.lastIndex(where: { $0.id == assistantMessage.id }) {
+                            self.messages.remove(at: idx)
+                        }
+                        if let idx = self.messages.lastIndex(where: { $0.id == userMessage.id }) {
+                            self.messages.remove(at: idx)
+                        }
+                    }
+                    self.errorMessage = error.localizedDescription
+                }
             }
+            assistantMessage.isStreaming = false
+            self.isStreaming = false
         }
 
-        assistantMessage.isStreaming = false
-        isStreaming = false
+        // Wait for stream to complete
+        await streamTask?.value
     }
 
     // MARK: - Process SSE Event
@@ -130,8 +138,12 @@ class CoachViewModel: ObservableObject {
                 currentStage = nil
             }
 
-        case .heartbeat(_, _, let elapsed):
-            if let idx = message.toolCalls.lastIndex(where: { $0.status == .running }) {
+        case .heartbeat(_, let toolName, let elapsed):
+            // Match by toolName if available, fall back to last running tool call
+            if let toolName,
+               let idx = message.toolCalls.lastIndex(where: { $0.name == toolName && $0.status == .running }) {
+                message.toolCalls[idx].elapsedSeconds = elapsed
+            } else if let idx = message.toolCalls.lastIndex(where: { $0.status == .running }) {
                 message.toolCalls[idx].elapsedSeconds = elapsed
             }
 

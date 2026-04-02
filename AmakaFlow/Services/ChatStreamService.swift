@@ -39,6 +39,7 @@ enum SSEParser {
         return decodeEvent(type: eventType, data: data)
     }
 
+    /// Utility for non-line-based SSE parsing. Currently unused but tested.
     /// Split a buffer into complete SSE blocks and a remainder (incomplete trailing data).
     static func splitBuffer(_ buffer: String) -> (blocks: [String], remainder: String) {
         let normalized = buffer

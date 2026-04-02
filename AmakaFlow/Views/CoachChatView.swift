@@ -29,8 +29,10 @@ struct CoachChatView: View {
                             }
 
                             ForEach(viewModel.messages) { message in
-                                chatBubble(message)
-                                    .id(message.id)
+                                MessageBubbleView(message: message, onSendMessage: { text in
+                                    Task { await viewModel.sendMessage(text) }
+                                })
+                                .id(message.id)
                             }
                         }
                         .padding(.vertical, Theme.Spacing.md)
@@ -142,145 +144,6 @@ struct CoachChatView: View {
         .disabled(viewModel.isStreaming)
     }
 
-    // MARK: - Chat Bubble
-
-    private func chatBubble(_ message: ChatMessage) -> some View {
-        HStack(alignment: .top) {
-            if message.role == .user { Spacer() }
-
-            if message.role == .assistant {
-                Image(systemName: "brain.head.profile")
-                    .font(.system(size: 16))
-                    .foregroundColor(Theme.Colors.accentBlue)
-                    .frame(width: 32, height: 32)
-                    .background(Theme.Colors.accentBlue.opacity(0.15))
-                    .cornerRadius(16)
-            }
-
-            VStack(alignment: message.role == .user ? .trailing : .leading, spacing: Theme.Spacing.xs) {
-                // Message content
-                if message.role == .assistant {
-                    assistantBubbleContent(message)
-                } else {
-                    Text(message.content)
-                        .font(Theme.Typography.body)
-                        .foregroundColor(.white)
-                        .padding(Theme.Spacing.md)
-                        .background(Theme.Colors.accentBlue)
-                        .cornerRadius(Theme.CornerRadius.lg)
-                }
-
-                // Tool calls
-                if !message.toolCalls.isEmpty {
-                    VStack(spacing: Theme.Spacing.xs) {
-                        ForEach(message.toolCalls) { toolCall in
-                            ToolCallCard(toolCall: toolCall)
-                        }
-                    }
-                }
-
-                // Workout preview
-                if let workout = message.workoutData {
-                    WorkoutPreviewCard(workout: workout)
-                }
-
-                // Suggestion chips
-                if message.role == .assistant, let suggestions = message.suggestions, !suggestions.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: Theme.Spacing.xs) {
-                            ForEach(suggestions, id: \.stableId) { suggestion in
-                                sourceChip(suggestion)
-                            }
-                        }
-                    }
-                }
-
-                // Action items
-                if message.role == .assistant, let actions = message.actionItems, !actions.isEmpty {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                        ForEach(actions, id: \.stableId) { item in
-                            HStack(spacing: Theme.Spacing.xs) {
-                                Image(systemName: "arrow.right.circle.fill")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(Theme.Colors.accentBlue)
-                                Text(item.title)
-                                    .font(Theme.Typography.caption)
-                                    .foregroundColor(Theme.Colors.accentBlue)
-                            }
-                        }
-                    }
-                }
-
-                Text(message.timestamp, style: .time)
-                    .font(Theme.Typography.footnote)
-                    .foregroundColor(Theme.Colors.textTertiary)
-            }
-            .frame(maxWidth: 280, alignment: message.role == .user ? .trailing : .leading)
-
-            if message.role == .assistant { Spacer() }
-        }
-        .padding(.horizontal, Theme.Spacing.lg)
-    }
-
-    @ViewBuilder
-    private func assistantBubbleContent(_ message: ChatMessage) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if !message.content.isEmpty {
-                if let attributed = try? AttributedString(markdown: message.content) {
-                    Text(attributed)
-                        .font(Theme.Typography.body)
-                        .foregroundColor(Theme.Colors.textPrimary)
-                        .padding(Theme.Spacing.md)
-                } else {
-                    Text(message.content)
-                        .font(Theme.Typography.body)
-                        .foregroundColor(Theme.Colors.textPrimary)
-                        .padding(Theme.Spacing.md)
-                }
-            }
-
-            if message.isStreaming && message.content.isEmpty {
-                HStack(spacing: Theme.Spacing.xs) {
-                    TypingIndicator()
-                    Text("Coach is thinking...")
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                }
-                .padding(Theme.Spacing.md)
-            }
-        }
-        .background(Theme.Colors.surface)
-        .cornerRadius(Theme.CornerRadius.lg)
-    }
-
-    private func sourceChip(_ suggestion: CoachSuggestion) -> some View {
-        Button {
-            Task { await viewModel.sendMessage(suggestion.text) }
-        } label: {
-            HStack(spacing: Theme.Spacing.xs) {
-                Image(systemName: chipIcon(suggestion.type))
-                    .font(.system(size: 10))
-                Text(suggestion.text)
-                    .font(Theme.Typography.footnote)
-                    .lineLimit(1)
-            }
-            .foregroundColor(Theme.Colors.accentBlue)
-            .padding(.horizontal, Theme.Spacing.sm)
-            .padding(.vertical, Theme.Spacing.xs)
-            .background(Theme.Colors.accentBlue.opacity(0.1))
-            .cornerRadius(Theme.CornerRadius.md)
-        }
-    }
-
-    private func chipIcon(_ type: SuggestionType?) -> String {
-        switch type {
-        case .workout: return "figure.run"
-        case .recovery: return "bed.double.fill"
-        case .nutrition: return "fork.knife"
-        case .general, .none: return "lightbulb.fill"
-        }
-    }
-
     // MARK: - Fatigue Banner
 
     private func fatigueBanner(_ advice: FatigueAdvice) -> some View {
@@ -353,6 +216,153 @@ struct CoachChatView: View {
         .padding(.horizontal, Theme.Spacing.lg)
         .padding(.vertical, Theme.Spacing.sm)
         .background(Theme.Colors.background)
+    }
+}
+
+// MARK: - Message Bubble View
+// Uses @ObservedObject so SwiftUI re-renders whenever ChatMessage @Published properties
+// change during streaming (content, toolCalls, isStreaming, workoutData, etc.).
+
+struct MessageBubbleView: View {
+    @ObservedObject var message: ChatMessage
+    let onSendMessage: (String) -> Void
+
+    var body: some View {
+        HStack(alignment: .top) {
+            if message.role == .user { Spacer() }
+
+            if message.role == .assistant {
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 16))
+                    .foregroundColor(Theme.Colors.accentBlue)
+                    .frame(width: 32, height: 32)
+                    .background(Theme.Colors.accentBlue.opacity(0.15))
+                    .cornerRadius(16)
+            }
+
+            VStack(alignment: message.role == .user ? .trailing : .leading, spacing: Theme.Spacing.xs) {
+                // Message content
+                if message.role == .assistant {
+                    assistantBubbleContent
+                } else {
+                    Text(message.content)
+                        .font(Theme.Typography.body)
+                        .foregroundColor(.white)
+                        .padding(Theme.Spacing.md)
+                        .background(Theme.Colors.accentBlue)
+                        .cornerRadius(Theme.CornerRadius.lg)
+                }
+
+                // Tool calls
+                if !message.toolCalls.isEmpty {
+                    VStack(spacing: Theme.Spacing.xs) {
+                        ForEach(message.toolCalls) { toolCall in
+                            ToolCallCard(toolCall: toolCall)
+                        }
+                    }
+                }
+
+                // Workout preview
+                if let workout = message.workoutData {
+                    WorkoutPreviewCard(workout: workout)
+                }
+
+                // Suggestion chips — legacy fields populated by old non-streaming endpoint.
+                // SSE mode does not send suggestions; the if-let guard gracefully skips rendering.
+                if message.role == .assistant, let suggestions = message.suggestions, !suggestions.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: Theme.Spacing.xs) {
+                            ForEach(suggestions, id: \.stableId) { suggestion in
+                                sourceChip(suggestion)
+                            }
+                        }
+                    }
+                }
+
+                // Action items — legacy fields, see note above.
+                if message.role == .assistant, let actions = message.actionItems, !actions.isEmpty {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                        ForEach(actions, id: \.stableId) { item in
+                            HStack(spacing: Theme.Spacing.xs) {
+                                Image(systemName: "arrow.right.circle.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(Theme.Colors.accentBlue)
+                                Text(item.title)
+                                    .font(Theme.Typography.caption)
+                                    .foregroundColor(Theme.Colors.accentBlue)
+                            }
+                        }
+                    }
+                }
+
+                Text(message.timestamp, style: .time)
+                    .font(Theme.Typography.footnote)
+                    .foregroundColor(Theme.Colors.textTertiary)
+            }
+            .frame(maxWidth: 280, alignment: message.role == .user ? .trailing : .leading)
+
+            if message.role == .assistant { Spacer() }
+        }
+        .padding(.horizontal, Theme.Spacing.lg)
+    }
+
+    @ViewBuilder
+    private var assistantBubbleContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if !message.content.isEmpty {
+                if let attributed = try? AttributedString(markdown: message.content) {
+                    Text(attributed)
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                        .padding(Theme.Spacing.md)
+                } else {
+                    Text(message.content)
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                        .padding(Theme.Spacing.md)
+                }
+            }
+
+            if message.isStreaming && message.content.isEmpty {
+                HStack(spacing: Theme.Spacing.xs) {
+                    TypingIndicator()
+                    Text("Coach is thinking...")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                }
+                .padding(Theme.Spacing.md)
+            }
+        }
+        .background(Theme.Colors.surface)
+        .cornerRadius(Theme.CornerRadius.lg)
+    }
+
+    private func sourceChip(_ suggestion: CoachSuggestion) -> some View {
+        Button {
+            onSendMessage(suggestion.text)
+        } label: {
+            HStack(spacing: Theme.Spacing.xs) {
+                Image(systemName: chipIcon(suggestion.type))
+                    .font(.system(size: 10))
+                Text(suggestion.text)
+                    .font(Theme.Typography.footnote)
+                    .lineLimit(1)
+            }
+            .foregroundColor(Theme.Colors.accentBlue)
+            .padding(.horizontal, Theme.Spacing.sm)
+            .padding(.vertical, Theme.Spacing.xs)
+            .background(Theme.Colors.accentBlue.opacity(0.1))
+            .cornerRadius(Theme.CornerRadius.md)
+        }
+    }
+
+    private func chipIcon(_ type: SuggestionType?) -> String {
+        switch type {
+        case .workout: return "figure.run"
+        case .recovery: return "bed.double.fill"
+        case .nutrition: return "fork.knife"
+        case .general, .none: return "lightbulb.fill"
+        }
     }
 }
 
