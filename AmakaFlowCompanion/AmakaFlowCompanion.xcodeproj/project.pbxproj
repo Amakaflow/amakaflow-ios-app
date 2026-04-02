@@ -115,6 +115,8 @@
 		F84E227E2ED0D5BF00459747 /* IntervalRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E227B2ED0D5BF00459747 /* IntervalRow.swift */; };
 		F84E227F2ED0D5BF00459747 /* ScheduleCalendarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E227C2ED0D5BF00459747 /* ScheduleCalendarSheet.swift */; };
 		F84E22802ED0D5BF00459747 /* WorkoutCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E227D2ED0D5BF00459747 /* WorkoutCard.swift */; };
+		AMA14090000000001000001 /* ExerciseRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14090000000001000002 /* ExerciseRowView.swift */; };
+		AMA14090000000002000001 /* BlockSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14090000000002000002 /* BlockSectionView.swift */; };
 		F84E22862ED0D5D100459747 /* WorkoutKitConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22852ED0D5D100459747 /* WorkoutKitConverter.swift */; };
 		F84E22872ED0D5D100459747 /* CalendarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22832ED0D5D100459747 /* CalendarManager.swift */; };
 		F84E22882ED0D5D100459747 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22842ED0D5D100459747 /* WatchConnectivityManager.swift */; };
@@ -463,6 +465,8 @@
 		F84E227B2ED0D5BF00459747 /* IntervalRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = IntervalRow.swift; path = ../AmakaFlow/Views/Components/IntervalRow.swift; sourceTree = SOURCE_ROOT; };
 		F84E227C2ED0D5BF00459747 /* ScheduleCalendarSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ScheduleCalendarSheet.swift; path = ../AmakaFlow/Views/Components/ScheduleCalendarSheet.swift; sourceTree = SOURCE_ROOT; };
 		F84E227D2ED0D5BF00459747 /* WorkoutCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCard.swift; path = ../AmakaFlow/Views/Components/WorkoutCard.swift; sourceTree = SOURCE_ROOT; };
+		AMA14090000000001000002 /* ExerciseRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ExerciseRowView.swift; path = ../AmakaFlow/Views/Components/ExerciseRowView.swift; sourceTree = SOURCE_ROOT; };
+		AMA14090000000002000002 /* BlockSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BlockSectionView.swift; path = ../AmakaFlow/Views/Components/BlockSectionView.swift; sourceTree = SOURCE_ROOT; };
 		F84E22812ED0D5D100459747 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIService.swift; path = ../AmakaFlow/Services/APIService.swift; sourceTree = SOURCE_ROOT; };
 		F84E22822ED0D5D100459747 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AuthService.swift; path = ../AmakaFlow/Services/AuthService.swift; sourceTree = SOURCE_ROOT; };
 		F84E22832ED0D5D100459747 /* CalendarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarManager.swift; path = ../AmakaFlow/Services/CalendarManager.swift; sourceTree = SOURCE_ROOT; };
@@ -811,6 +815,8 @@
 				F84E227B2ED0D5BF00459747 /* IntervalRow.swift */,
 				F84E227C2ED0D5BF00459747 /* ScheduleCalendarSheet.swift */,
 				F84E227D2ED0D5BF00459747 /* WorkoutCard.swift */,
+				AMA14090000000001000002 /* ExerciseRowView.swift */,
+				AMA14090000000002000002 /* BlockSectionView.swift */,
 				F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */,
 				0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */,
 				6BD17097D21D4FB48D023E24 /* RPEFeedbackView.swift */,
@@ -1447,6 +1453,8 @@
 				F84E227E2ED0D5BF00459747 /* IntervalRow.swift in Sources */,
 				F84E227F2ED0D5BF00459747 /* ScheduleCalendarSheet.swift in Sources */,
 				F84E22802ED0D5BF00459747 /* WorkoutCard.swift in Sources */,
+				AMA14090000000001000001 /* ExerciseRowView.swift in Sources */,
+				AMA14090000000002000001 /* BlockSectionView.swift in Sources */,
 				F84E22702ED0D55600459747 /* Theme.swift in Sources */,
 				F84E22722ED0D56C00459747 /* Workout.swift in Sources */,
 				D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */,
