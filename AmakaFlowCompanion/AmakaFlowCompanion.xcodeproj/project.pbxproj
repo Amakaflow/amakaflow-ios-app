@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
 		11C72B7C6EA17FC8DEA354FB /* CoachModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */; };
+		AMA14100001BLDFILE /* ChatStreamModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100001FILEREF /* ChatStreamModels.swift */; };
 		1A7B03C2552441FEB810773A /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */; };
 		1N5T4GR4MR33L0002 /* InstagramReelIngestionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */; };
 		27599809E31D40308DBFA93A /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F86F482904144B39B954F6A /* Environment.swift */; };
@@ -414,6 +415,7 @@
 		A1IMP0RTV13W00000000 /* AIImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AIImportView.swift; path = ../AmakaFlow/Views/AIImportView.swift; sourceTree = SOURCE_ROOT; };
 		A1IMP0RTV13W0001 /* AIImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AIImportView.swift; path = ../AmakaFlow/Views/AIImportView.swift; sourceTree = SOURCE_ROOT; };
 		A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CoachModels.swift; path = ../AmakaFlow/Models/CoachModels.swift; sourceTree = "<group>"; };
+		AMA14100001FILEREF /* ChatStreamModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ChatStreamModels.swift; path = ../AmakaFlow/Models/ChatStreamModels.swift; sourceTree = "<group>"; };
 		AK00SHARE001A /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		AK00SHARE002A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AK00SHARE003A /* PlatformDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformDetector.swift; sourceTree = "<group>"; };
@@ -883,6 +885,7 @@
 				F8B356932EF8B94000E88B51 /* Recovered References */,
 				EBCE80D8EA7940E025E8D41D /* PlanningModels.swift */,
 				A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */,
+				AMA14100001FILEREF /* ChatStreamModels.swift */,
 				FC35C6AFFE23A2DA83D8C2E7 /* ActionModels.swift */,
 				68B54D3FBC9E8561760B53F0 /* AnalyticsModels.swift */,
 				1AF716C8C0EE3CC5A4BA56C5 /* CalendarViewModel.swift */,
@@ -1496,6 +1499,7 @@
 				D3P3ND1NJ3CT10N1006 /* WatchSessionProviding.swift in Sources */,
 				F4E8733C34C4B41F73806D0A /* PlanningModels.swift in Sources */,
 				11C72B7C6EA17FC8DEA354FB /* CoachModels.swift in Sources */,
+				AMA14100001BLDFILE /* ChatStreamModels.swift in Sources */,
 				63D97E9B43FEB4A771D87EE8 /* ActionModels.swift in Sources */,
 				AF50AD9DC3B0E509ED0ED715 /* AnalyticsModels.swift in Sources */,
 				BAB97A941DC233141997CA05 /* CalendarViewModel.swift in Sources */,
