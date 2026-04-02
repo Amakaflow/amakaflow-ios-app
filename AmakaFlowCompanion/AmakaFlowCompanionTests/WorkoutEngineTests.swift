@@ -77,7 +77,9 @@ final class WorkoutEngineTests: XCTestCase {
         XCTAssertEqual(engine.phase, .running)
         XCTAssertEqual(engine.workout?.id, workout.id)
         XCTAssertEqual(engine.currentStepIndex, 0)
-        XCTAssertEqual(engine.flattenedSteps.count, 4)
+        // Legacy intervals [warmup, reps(restSec:15), time, cooldown] become blocks
+        // then flatten to [warmup, reps, rest(15), time, cooldown] = 5 steps
+        XCTAssertEqual(engine.flattenedSteps.count, 5)
         XCTAssertTrue(engine.isActive)
     }
 
@@ -275,8 +277,8 @@ final class WorkoutEngineTests: XCTestCase {
         let workout = createTestWorkout()
         engine.start(workout: workout)
 
-        // 1 of 4 steps = 0.25
-        XCTAssertEqual(engine.progress, 0.25, accuracy: 0.01)
+        // 1 of 5 steps = 0.2 (legacy intervals expand to 5 via block round-trip)
+        XCTAssertEqual(engine.progress, 0.2, accuracy: 0.01)
     }
 
     func testProgressAtMiddle() {
@@ -300,15 +302,16 @@ final class WorkoutEngineTests: XCTestCase {
         let workout = createTestWorkout()
         engine.start(workout: workout)
 
-        XCTAssertEqual(engine.formattedStepProgress, "1 of 4")
+        // Legacy intervals expand to 5 steps via block round-trip
+        XCTAssertEqual(engine.formattedStepProgress, "1 of 5")
 
         // First nextStep enters rest phase (warmup has rest after)
         engine.nextStep()
-        XCTAssertEqual(engine.formattedStepProgress, "1 of 4") // Still on step 1 during rest
+        XCTAssertEqual(engine.formattedStepProgress, "1 of 5") // Still on step 1 during rest
 
         // Second nextStep advances to step 2
         engine.nextStep()
-        XCTAssertEqual(engine.formattedStepProgress, "2 of 4")
+        XCTAssertEqual(engine.formattedStepProgress, "2 of 5")
     }
 
     // MARK: - Flattened Interval Tests

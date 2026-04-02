@@ -20,7 +20,7 @@ This matches the backend's own pattern: it stores blocks internally and converts
 
 ```swift
 struct Block: Codable, Hashable, Identifiable {
-    var id: String { label ?? UUID().uuidString }
+    let id: String  // Stored UUID — never derived from label (labels can repeat)
     let label: String?           // "Warm-up", "Big Lifts", "Superset Cluster 1"
     let structure: BlockStructure // straight, superset, circuit, amrap, emom, tabata
     let rounds: Int              // default 1
@@ -42,7 +42,7 @@ struct Block: Codable, Hashable, Identifiable {
 
 ```swift
 struct Exercise: Codable, Hashable, Identifiable {
-    var id: String { name + String(sets ?? 0) }
+    let id: String  // Stored UUID — avoids collisions for repeated exercises
     let name: String
     let canonicalName: String?
     let sets: Int?

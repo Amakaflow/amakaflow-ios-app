@@ -96,10 +96,10 @@ enum BlockToIntervalConverter {
             )
             result.append(interval)
 
-            // Insert rest between exercises, not after the last one
+            // Insert rest between exercises only when there's an actual rest value.
+            // Nil rest would emit .rest(seconds: nil) which renders as manual/indefinite rest.
             let isLast = index == block.exercises.count - 1
-            if !isLast {
-                let restSecs = exercise.restSeconds ?? block.restBetweenSeconds
+            if !isLast, let restSecs = exercise.restSeconds ?? block.restBetweenSeconds {
                 result.append(.rest(seconds: restSecs))
             }
         }

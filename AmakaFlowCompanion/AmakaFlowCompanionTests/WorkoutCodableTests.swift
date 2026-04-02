@@ -86,19 +86,16 @@ final class WorkoutCodableTests: XCTestCase {
         XCTAssertEqual(workout.name, "Old Workout")
         XCTAssertEqual(workout.duration, 1800)
 
-        // Legacy intervals should be wrapped in a single block
+        // Legacy intervals should be wrapped in a single block.
+        // .rest intervals are skipped — rest is structural, not an exercise.
         XCTAssertEqual(workout.blocks.count, 1, "Legacy intervals should be wrapped in one block")
         XCTAssertEqual(workout.blocks[0].structure, .straight)
-        XCTAssertEqual(workout.blocks[0].exercises.count, 2, "Both intervals should become exercises in the block")
+        XCTAssertEqual(workout.blocks[0].exercises.count, 1, "Only non-rest intervals become exercises")
 
         // First exercise: Push-up
         XCTAssertEqual(workout.blocks[0].exercises[0].name, "Push-up")
         XCTAssertEqual(workout.blocks[0].exercises[0].sets, 3)
         XCTAssertEqual(workout.blocks[0].exercises[0].reps, "10")
-
-        // Second exercise: Rest
-        XCTAssertEqual(workout.blocks[0].exercises[1].name, "Rest")
-        XCTAssertEqual(workout.blocks[0].exercises[1].durationSeconds, 60)
     }
 
     // MARK: - Decode workout with both blocks and intervals — prefers blocks

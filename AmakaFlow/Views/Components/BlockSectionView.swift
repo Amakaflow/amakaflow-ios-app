@@ -15,7 +15,10 @@ struct BlockSectionView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Header
             HStack(spacing: Theme.Spacing.sm) {
-                Text(block.label ?? "Block \(blockIndex + 1)")
+                Text({
+                    let trimmed = block.label?.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return (trimmed?.isEmpty == false) ? trimmed! : "Block \(blockIndex + 1)"
+                }())
                     .font(.headline)
                     .foregroundColor(Theme.Colors.textPrimary)
 

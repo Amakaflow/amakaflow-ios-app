@@ -123,8 +123,8 @@ final class BlockToIntervalConverterTests: XCTestCase {
 
         if case .repeat(let reps, let innerIntervals) = intervals[0] {
             XCTAssertEqual(reps, 3)
-            // 2 exercises + 1 rest between them = 3 inner intervals
-            XCTAssertEqual(innerIntervals.count, 3)
+            // 2 exercises, no rest (neither exercise nor block specifies rest)
+            XCTAssertEqual(innerIntervals.count, 2)
 
             if case .reps(_, let r, let name, _, _, _) = innerIntervals[0] {
                 XCTAssertEqual(name, "Burpees")
@@ -133,13 +133,7 @@ final class BlockToIntervalConverterTests: XCTestCase {
                 XCTFail("Expected reps interval for Burpees")
             }
 
-            if case .rest = innerIntervals[1] {
-                // rest between exercises — OK
-            } else {
-                XCTFail("Expected rest between circuit exercises")
-            }
-
-            if case .reps(_, let r, let name, _, _, _) = innerIntervals[2] {
+            if case .reps(_, let r, let name, _, _, _) = innerIntervals[1] {
                 XCTAssertEqual(name, "Mountain Climbers")
                 XCTAssertEqual(r, 20)
             } else {

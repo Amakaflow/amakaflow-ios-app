@@ -343,13 +343,12 @@ struct Workout: Identifiable, Codable, Hashable {
                     blocks.append(Block(label: nil, structure: .circuit, rounds: reps, exercises: subExercises))
                 }
 
-            case .rest(let seconds):
-                mainExercises.append(Exercise(
-                    name: "Rest",
-                    canonicalName: nil, sets: nil, reps: nil,
-                    durationSeconds: seconds, load: nil, restSeconds: nil,
-                    distance: nil, notes: nil, supersetGroup: nil
-                ))
+            case .rest:
+                // Skip — rest is structural, handled by restSeconds on exercises
+                // and restBetweenSeconds on blocks. Converting rest intervals into
+                // Exercise objects would cause BlockToIntervalConverter to emit
+                // spurious .time intervals.
+                break
             }
         }
 
@@ -375,10 +374,9 @@ struct Workout: Identifiable, Codable, Hashable {
             return Exercise(name: target ?? "Distance", canonicalName: nil, sets: nil, reps: nil,
                             durationSeconds: nil, load: nil, restSeconds: nil,
                             distance: Double(meters), notes: target, supersetGroup: nil)
-        case .rest(let seconds):
-            return Exercise(name: "Rest", canonicalName: nil, sets: nil, reps: nil,
-                            durationSeconds: seconds, load: nil, restSeconds: nil,
-                            distance: nil, notes: nil, supersetGroup: nil)
+        case .rest:
+            // Skip — rest is structural, not an exercise
+            return nil
         default:
             return nil
         }

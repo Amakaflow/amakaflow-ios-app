@@ -17,13 +17,59 @@ struct Exercise: Codable, Hashable, Identifiable {
     let notes: String?
     let supersetGroup: Int?
 
-    var id: String { "\(name)-\(sets ?? 0)-\(reps ?? "")" }
+    /// Stable unique identity. Stored UUID avoids collisions when the same
+    /// exercise appears multiple times in a block.
+    let id: String
 
+    // CodingKeys use default camelCase case names so they work correctly
+    // with JSONDecoder's .convertFromSnakeCase strategy (which the app uses
+    // everywhere). Explicit snake_case raw values would double-convert and break.
+    // id is excluded — generated locally, not in API JSON.
     enum CodingKeys: String, CodingKey {
-        case name, canonicalName = "canonical_name", sets, reps
-        case durationSeconds = "duration_seconds", load
-        case restSeconds = "rest_seconds", distance, notes
-        case supersetGroup = "superset_group"
+        case name, canonicalName, sets, reps
+        case durationSeconds, load
+        case restSeconds, distance, notes
+        case supersetGroup
+    }
+
+    init(
+        name: String,
+        canonicalName: String?,
+        sets: Int?,
+        reps: String?,
+        durationSeconds: Int?,
+        load: ExerciseLoad?,
+        restSeconds: Int?,
+        distance: Double?,
+        notes: String?,
+        supersetGroup: Int?
+    ) {
+        self.id = UUID().uuidString
+        self.name = name
+        self.canonicalName = canonicalName
+        self.sets = sets
+        self.reps = reps
+        self.durationSeconds = durationSeconds
+        self.load = load
+        self.restSeconds = restSeconds
+        self.distance = distance
+        self.notes = notes
+        self.supersetGroup = supersetGroup
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = UUID().uuidString
+        self.name = try container.decode(String.self, forKey: .name)
+        self.canonicalName = try container.decodeIfPresent(String.self, forKey: .canonicalName)
+        self.sets = try container.decodeIfPresent(Int.self, forKey: .sets)
+        self.reps = try container.decodeIfPresent(String.self, forKey: .reps)
+        self.durationSeconds = try container.decodeIfPresent(Int.self, forKey: .durationSeconds)
+        self.load = try container.decodeIfPresent(ExerciseLoad.self, forKey: .load)
+        self.restSeconds = try container.decodeIfPresent(Int.self, forKey: .restSeconds)
+        self.distance = try container.decodeIfPresent(Double.self, forKey: .distance)
+        self.notes = try container.decodeIfPresent(String.self, forKey: .notes)
+        self.supersetGroup = try container.decodeIfPresent(Int.self, forKey: .supersetGroup)
     }
 
     var formattedDetail: String {

@@ -22,18 +22,20 @@ struct Block: Codable, Hashable, Identifiable {
     let exercises: [Exercise]
     let restBetweenSeconds: Int?
 
-    /// Stable identity for SwiftUI. Stored (not computed) to avoid generating
-    /// a new UUID on every access when label is nil.
+    /// Stable identity for SwiftUI. Always a unique UUID — never derived from label,
+    /// which can repeat across blocks.
     let id: String
 
     enum CodingKeys: String, CodingKey {
         case label, structure, rounds, exercises
-        case restBetweenSeconds = "rest_between_sec"
-        // id is excluded — it's derived from label or generated, not in API JSON
+        // The backend sends "rest_between_sec" which .convertFromSnakeCase converts
+        // to "restBetweenSec". We use camelCase raw value to match the converted key.
+        case restBetweenSeconds = "restBetweenSec"
+        // id is excluded — generated locally, not in API JSON
     }
 
     init(label: String?, structure: BlockStructure = .straight, rounds: Int = 1, exercises: [Exercise], restBetweenSeconds: Int? = nil) {
-        self.id = label ?? UUID().uuidString
+        self.id = UUID().uuidString
         self.label = label
         self.structure = structure
         self.rounds = rounds
@@ -45,7 +47,7 @@ struct Block: Codable, Hashable, Identifiable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let decodedLabel = try container.decodeIfPresent(String.self, forKey: .label)
         self.label = decodedLabel
-        self.id = decodedLabel ?? UUID().uuidString
+        self.id = UUID().uuidString
         // Decode structure gracefully — unknown values fall back to .straight
         if let rawStructure = try container.decodeIfPresent(String.self, forKey: .structure) {
             structure = BlockStructure(rawValue: rawStructure) ?? .straight
