@@ -94,7 +94,7 @@ struct Workout: Identifiable, Codable, Hashable {
 
 Custom decoder for backward compatibility:
 
-```
+```text
 1. Try to decode `blocks` from JSON
 2. If blocks exist → use them (new format)
 3. If no blocks → decode `intervals`, wrap in single Block(label: "Workout", structure: .straight)
@@ -141,7 +141,7 @@ Update Workout decoder to parse blocks. Falls back to intervals if blocks missin
 
 Replace flat interval list with block-structured rendering:
 
-```
+```text
 [Block Header: "Warm-up"]
   1. Jumping Jacks — 30 reps
   2. Arm Circles — 30 sec
