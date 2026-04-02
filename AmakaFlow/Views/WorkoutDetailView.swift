@@ -36,39 +36,37 @@ struct WorkoutDetailView: View {
                     FuelingStatusCard(viewModel: fuelingViewModel)
                         .padding(.horizontal, Theme.Spacing.lg)
 
-                    // Step-by-Step Breakdown
+                    // Workout Structure
                     VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                        Text("Step-by-Step Breakdown")
-                            .font(Theme.Typography.title2)
-                            .foregroundColor(Theme.Colors.textPrimary)
-                            .padding(.horizontal, Theme.Spacing.lg)
-                        
-                        Group {
-                            if workout.intervals.isEmpty {
-                                Text("No intervals defined for this workout")
-                                    .font(Theme.Typography.body)
+                        HStack(spacing: Theme.Spacing.sm) {
+                            Text("Workout Structure")
+                                .font(Theme.Typography.title2)
+                                .foregroundColor(Theme.Colors.textPrimary)
+
+                            if workout.exerciseCount > 0 {
+                                Text("\(workout.exerciseCount) exercises")
+                                    .font(Theme.Typography.caption)
                                     .foregroundColor(Theme.Colors.textSecondary)
-                                    .padding(.horizontal, Theme.Spacing.lg)
-                                    .padding(.vertical, Theme.Spacing.lg)
-                            } else {
-                                VStack(spacing: 0) {
-                                    ForEach(Array(workout.intervals.enumerated()), id: \.offset) { index, interval in
-                                        IntervalRow(
-                                            interval: interval,
-                                            stepNumber: index + 1,
-                                            isLast: index == workout.intervals.count - 1
-                                        )
-                                    }
-                                }
                             }
                         }
-                        .background(Theme.Colors.surface)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
-                                .stroke(Theme.Colors.borderLight, lineWidth: 1)
-                        )
-                        .cornerRadius(Theme.CornerRadius.xl)
                         .padding(.horizontal, Theme.Spacing.lg)
+
+                        if workout.blocks.isEmpty {
+                            Text("No workout structure available")
+                                .font(Theme.Typography.body)
+                                .foregroundColor(Theme.Colors.textSecondary)
+                                .italic()
+                                .padding(.horizontal, Theme.Spacing.lg)
+                                .padding(.vertical, Theme.Spacing.lg)
+                        } else {
+                            VStack(spacing: 12) {
+                                ForEach(Array(workout.blocks.enumerated()), id: \.offset) { index, block in
+                                    BlockSectionView(block: block, blockIndex: index)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, Theme.Spacing.lg)
+                        }
                     }
                     
                     // Action Buttons
