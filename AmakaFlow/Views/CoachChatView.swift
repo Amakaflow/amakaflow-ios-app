@@ -43,6 +43,9 @@ struct CoachChatView: View {
                     .onChange(of: viewModel.isStreaming) { streaming in
                         if !streaming { scrollToBottom(proxy) }
                     }
+                    .onChange(of: viewModel.scrollTrigger) { _ in
+                        scrollToBottom(proxy)
+                    }
                 }
 
                 // Stage indicator (visible during streaming)
@@ -310,7 +313,13 @@ struct MessageBubbleView: View {
     private var assistantBubbleContent: some View {
         VStack(alignment: .leading, spacing: 0) {
             if !message.content.isEmpty {
-                if let attributed = try? AttributedString(markdown: message.content) {
+                if message.isStreaming {
+                    // Plain text during streaming to avoid reparsing markdown on every delta
+                    Text(message.content)
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                        .padding(Theme.Spacing.md)
+                } else if let attributed = try? AttributedString(markdown: message.content) {
                     Text(attributed)
                         .font(Theme.Typography.body)
                         .foregroundColor(Theme.Colors.textPrimary)

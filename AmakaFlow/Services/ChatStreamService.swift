@@ -191,8 +191,8 @@ enum ChatStreamError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .httpError(let code, let body):
-            return "Chat API error: \(code) — \(body)"
+        case .httpError(let code, _):
+            return "Chat API error (\(code)). Please try again."
         }
     }
 }

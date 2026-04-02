@@ -18,6 +18,7 @@ class CoachViewModel: ObservableObject {
     @Published var completedStages: [ChatStage] = []
     @Published var errorMessage: String? = nil
     @Published var rateLimitInfo: RateLimitInfo? = nil
+    @Published var scrollTrigger = UUID()
     @Published var sessionId: String? {
         didSet { persistSessionId() }
     }
@@ -31,13 +32,17 @@ class CoachViewModel: ObservableObject {
     private let dependencies: AppDependencies
     private var streamTask: Task<Void, Never>?
 
-    private static let sessionIdKey = "coach_chat_session_id"
+    private var sessionIdKey: String {
+        let userId = dependencies.pairingService.userProfile?.id ?? "unknown"
+        return "coach_chat_session_id_\(userId)"
+    }
 
     // MARK: - Init
 
     init(dependencies: AppDependencies = .live) {
         self.dependencies = dependencies
-        self.sessionId = UserDefaults.standard.string(forKey: Self.sessionIdKey)
+        let userId = dependencies.pairingService.userProfile?.id ?? "unknown"
+        self.sessionId = UserDefaults.standard.string(forKey: "coach_chat_session_id_\(userId)")
     }
 
     // MARK: - Send Message (Streaming)
@@ -97,6 +102,15 @@ class CoachViewModel: ObservableObject {
                     self.errorMessage = error.localizedDescription
                 }
             }
+            // Clean up empty placeholder on terminal SSE .error events (non-throwing)
+            if assistantMessage.content.isEmpty && self.errorMessage != nil {
+                if let idx = self.messages.lastIndex(where: { $0.id == assistantMessage.id }) {
+                    self.messages.remove(at: idx)
+                }
+                if let idx = self.messages.lastIndex(where: { $0.id == userMessage.id }) {
+                    self.messages.remove(at: idx)
+                }
+            }
             assistantMessage.isStreaming = false
             self.isStreaming = false
         }
@@ -116,6 +130,7 @@ class CoachViewModel: ObservableObject {
 
         case .contentDelta(let text):
             message.content += text
+            scrollTrigger = UUID()
 
         case .functionCall(let id, let name):
             let toolCall = ChatToolCall(id: id, name: name, status: .running)
@@ -185,6 +200,8 @@ class CoachViewModel: ObservableObject {
 
     func startNewChat() {
         streamTask?.cancel()
+        streamTask = nil
+        isStreaming = false
         messages.removeAll()
         sessionId = nil
         errorMessage = nil
@@ -195,13 +212,18 @@ class CoachViewModel: ObservableObject {
 
     func cancelStream() {
         streamTask?.cancel()
+        streamTask = nil
+        isStreaming = false
+        currentStage = nil
+        completedStages = []
+        messages.last?.isStreaming = false
     }
 
     private func persistSessionId() {
         if let sessionId {
-            UserDefaults.standard.set(sessionId, forKey: Self.sessionIdKey)
+            UserDefaults.standard.set(sessionId, forKey: self.sessionIdKey)
         } else {
-            UserDefaults.standard.removeObject(forKey: Self.sessionIdKey)
+            UserDefaults.standard.removeObject(forKey: self.sessionIdKey)
         }
     }
 
