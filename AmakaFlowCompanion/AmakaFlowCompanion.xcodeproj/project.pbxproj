@@ -11,6 +11,9 @@
 		11C72B7C6EA17FC8DEA354FB /* CoachModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */; };
 		AMA14100001BLDFILE /* ChatStreamModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100001FILEREF /* ChatStreamModels.swift */; };
 		AMA14100002BLDFILE /* ChatStreamService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100002FILEREF /* ChatStreamService.swift */; };
+		AMA14100003BLDFILE /* ToolCallCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100003FILEREF /* ToolCallCard.swift */; };
+		AMA14100004BLDFILE /* WorkoutPreviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100004FILEREF /* WorkoutPreviewCard.swift */; };
+		AMA14100005BLDFILE /* StageIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100005FILEREF /* StageIndicator.swift */; };
 		1A7B03C2552441FEB810773A /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */; };
 		1N5T4GR4MR33L0002 /* InstagramReelIngestionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */; };
 		27599809E31D40308DBFA93A /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F86F482904144B39B954F6A /* Environment.swift */; };
@@ -418,6 +421,9 @@
 		A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CoachModels.swift; path = ../AmakaFlow/Models/CoachModels.swift; sourceTree = "<group>"; };
 		AMA14100001FILEREF /* ChatStreamModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ChatStreamModels.swift; path = ../AmakaFlow/Models/ChatStreamModels.swift; sourceTree = "<group>"; };
 		AMA14100002FILEREF /* ChatStreamService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ChatStreamService.swift; path = ../AmakaFlow/Services/ChatStreamService.swift; sourceTree = "<group>"; };
+		AMA14100003FILEREF /* ToolCallCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ToolCallCard.swift; path = ../AmakaFlow/Views/Components/ToolCallCard.swift; sourceTree = SOURCE_ROOT; };
+		AMA14100004FILEREF /* WorkoutPreviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutPreviewCard.swift; path = ../AmakaFlow/Views/Components/WorkoutPreviewCard.swift; sourceTree = SOURCE_ROOT; };
+		AMA14100005FILEREF /* StageIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StageIndicator.swift; path = ../AmakaFlow/Views/Components/StageIndicator.swift; sourceTree = SOURCE_ROOT; };
 		AK00SHARE001A /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		AK00SHARE002A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AK00SHARE003A /* PlatformDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformDetector.swift; sourceTree = "<group>"; };
@@ -822,6 +828,9 @@
 				F84E227D2ED0D5BF00459747 /* WorkoutCard.swift */,
 				AMA14090000000001000002 /* ExerciseRowView.swift */,
 				AMA14090000000002000002 /* BlockSectionView.swift */,
+				AMA14100003FILEREF /* ToolCallCard.swift */,
+				AMA14100004FILEREF /* WorkoutPreviewCard.swift */,
+				AMA14100005FILEREF /* StageIndicator.swift */,
 				F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */,
 				0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */,
 				6BD17097D21D4FB48D023E24 /* RPEFeedbackView.swift */,
@@ -1461,6 +1470,9 @@
 				F84E22802ED0D5BF00459747 /* WorkoutCard.swift in Sources */,
 				AMA14090000000001000001 /* ExerciseRowView.swift in Sources */,
 				AMA14090000000002000001 /* BlockSectionView.swift in Sources */,
+				AMA14100003BLDFILE /* ToolCallCard.swift in Sources */,
+				AMA14100004BLDFILE /* WorkoutPreviewCard.swift in Sources */,
+				AMA14100005BLDFILE /* StageIndicator.swift in Sources */,
 				F84E22702ED0D55600459747 /* Theme.swift in Sources */,
 				F84E22722ED0D56C00459747 /* Workout.swift in Sources */,
 				D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */,
