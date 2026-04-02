@@ -49,7 +49,7 @@ struct CoachChatView: View {
                 }
 
                 // Stage indicator (visible during streaming)
-                if viewModel.isStreaming, (viewModel.currentStage != nil || !viewModel.completedStages.isEmpty) {
+                if viewModel.isStreaming, viewModel.currentStage != nil || !viewModel.completedStages.isEmpty {
                     StageIndicator(
                         completedStages: viewModel.completedStages,
                         currentStage: viewModel.currentStage

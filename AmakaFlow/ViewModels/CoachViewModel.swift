@@ -138,8 +138,10 @@ class CoachViewModel: ObservableObject {
 
         case .functionResult(let toolUseId, _, let result):
             if let idx = message.toolCalls.firstIndex(where: { $0.id == toolUseId }) {
-                message.toolCalls[idx].status = .completed
-                message.toolCalls[idx].result = result
+                var updated = message.toolCalls[idx]
+                updated.status = .completed
+                updated.result = result
+                message.toolCalls[idx] = updated
             }
             tryParseWorkoutData(result: result, message: message)
 
@@ -157,9 +159,13 @@ class CoachViewModel: ObservableObject {
             // Match by toolName if available, fall back to last running tool call
             if let toolName,
                let idx = message.toolCalls.lastIndex(where: { $0.name == toolName && $0.status == .running }) {
-                message.toolCalls[idx].elapsedSeconds = elapsed
+                var updated = message.toolCalls[idx]
+                updated.elapsedSeconds = elapsed
+                message.toolCalls[idx] = updated
             } else if let idx = message.toolCalls.lastIndex(where: { $0.status == .running }) {
-                message.toolCalls[idx].elapsedSeconds = elapsed
+                var updated = message.toolCalls[idx]
+                updated.elapsedSeconds = elapsed
+                message.toolCalls[idx] = updated
             }
 
         case .messageEnd(_, let tokens, let latency):
