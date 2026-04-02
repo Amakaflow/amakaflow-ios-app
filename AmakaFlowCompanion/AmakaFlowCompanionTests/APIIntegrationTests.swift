@@ -381,7 +381,8 @@ final class CalendarViewModelTests: XCTestCase {
             pairingService: await MockPairingService(),
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
-            watchSession: MockWatchSession()
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
         )
         let vm = CalendarViewModel(dependencies: deps)
 
@@ -406,7 +407,8 @@ final class CalendarViewModelTests: XCTestCase {
             pairingService: await MockPairingService(),
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
-            watchSession: MockWatchSession()
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
         )
         let vm = CalendarViewModel(dependencies: deps)
 
@@ -416,21 +418,29 @@ final class CalendarViewModelTests: XCTestCase {
     }
 }
 
+// NOTE: CoachViewModelTests updated for AMA-1410 streaming ViewModel.
+// Full streaming coverage is in CoachViewModelStreamingTests.swift.
 final class CoachViewModelTests: XCTestCase {
 
     @MainActor
     func testSendMessageAppendsMessages() async {
-        let mock = MockAPIService()
-        mock.sendCoachMessageResult = .success(
-            CoachResponse(id: "1", message: "Coach reply", suggestions: nil, actionItems: nil)
-        )
+        let mockStream = MockChatStreamService()
+        mockStream.eventsToYield = [
+            .messageStart(sessionId: "s1", traceId: nil),
+            .contentDelta(text: "Coach reply"),
+            .messageEnd(sessionId: "s1", tokensUsed: 10, latencyMs: 100)
+        ]
+        let mockPairing = MockPairingService()
+        mockPairing.storedToken = "test-token"
+        mockPairing.isPaired = true
 
         let deps = AppDependencies(
-            apiService: mock,
-            pairingService: await MockPairingService(),
+            apiService: MockAPIService(),
+            pairingService: mockPairing,
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
-            watchSession: MockWatchSession()
+            watchSession: MockWatchSession(),
+            chatStreamService: mockStream
         )
         let vm = CoachViewModel(dependencies: deps)
 
@@ -444,15 +454,19 @@ final class CoachViewModelTests: XCTestCase {
 
     @MainActor
     func testSendMessageHandlesError() async {
-        let mock = MockAPIService()
-        // sendCoachMessageResult is nil, so it throws notImplemented
+        let mockStream = MockChatStreamService()
+        mockStream.errorToThrow = APIError.serverError(500)
+        let mockPairing = MockPairingService()
+        mockPairing.storedToken = "test-token"
+        mockPairing.isPaired = true
 
         let deps = AppDependencies(
-            apiService: mock,
-            pairingService: await MockPairingService(),
+            apiService: MockAPIService(),
+            pairingService: mockPairing,
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
-            watchSession: MockWatchSession()
+            watchSession: MockWatchSession(),
+            chatStreamService: mockStream
         )
         let vm = CoachViewModel(dependencies: deps)
 
@@ -473,7 +487,8 @@ final class CoachViewModelTests: XCTestCase {
             pairingService: await MockPairingService(),
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
-            watchSession: MockWatchSession()
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
         )
         let vm = CoachViewModel(dependencies: deps)
 
@@ -499,7 +514,8 @@ final class ActivityFeedViewModelTests: XCTestCase {
             pairingService: await MockPairingService(),
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
-            watchSession: MockWatchSession()
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
         )
         let vm = ActivityFeedViewModel(dependencies: deps)
 
@@ -522,7 +538,8 @@ final class ActivityFeedViewModelTests: XCTestCase {
             pairingService: await MockPairingService(),
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
-            watchSession: MockWatchSession()
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
         )
         let vm = ActivityFeedViewModel(dependencies: deps)
 
@@ -547,7 +564,8 @@ final class ShoeComparisonViewModelTests: XCTestCase {
             pairingService: await MockPairingService(),
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
-            watchSession: MockWatchSession()
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
         )
         let vm = ShoeComparisonViewModel(dependencies: deps)
 
@@ -578,7 +596,8 @@ final class TrainingPreferencesViewModelTests: XCTestCase {
             pairingService: await MockPairingService(),
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
-            watchSession: MockWatchSession()
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
         )
         let vm = TrainingPreferencesViewModel(dependencies: deps)
 
@@ -595,7 +614,8 @@ final class TrainingPreferencesViewModelTests: XCTestCase {
             pairingService: await MockPairingService(),
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
-            watchSession: MockWatchSession()
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
         )
         let vm = TrainingPreferencesViewModel(dependencies: deps)
 

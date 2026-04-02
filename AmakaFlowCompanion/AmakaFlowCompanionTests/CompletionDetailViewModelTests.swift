@@ -31,7 +31,8 @@ final class CompletionDetailViewModelTests: XCTestCase {
             pairingService: mockPairingService,
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
-            watchSession: MockWatchSession()
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
         )
 
         viewModel = CompletionDetailViewModel(

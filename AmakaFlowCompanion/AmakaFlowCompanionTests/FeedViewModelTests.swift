@@ -21,7 +21,8 @@ final class FeedViewModelTests: XCTestCase {
             pairingService: MockPairingService(),
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
-            watchSession: MockWatchSession()
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
         )
         sut = FeedViewModel(dependencies: deps)
     }

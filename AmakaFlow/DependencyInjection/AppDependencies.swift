@@ -18,6 +18,7 @@ struct AppDependencies {
     let audioService: AudioProviding
     let progressStore: ProgressStoreProviding
     let watchSession: WatchSessionProviding
+    let chatStreamService: ChatStreamProviding
 
     /// Live dependencies using real service implementations
     @MainActor
@@ -26,7 +27,8 @@ struct AppDependencies {
         pairingService: PairingService.shared,
         audioService: AudioCueManager(),
         progressStore: LiveProgressStore.shared,
-        watchSession: LiveWatchSession.shared
+        watchSession: LiveWatchSession.shared,
+        chatStreamService: ChatStreamService()
     )
 
     /// Mock dependencies for unit testing
@@ -36,7 +38,8 @@ struct AppDependencies {
         pairingService: MockPairingService(),
         audioService: MockAudioService(),
         progressStore: MockProgressStore(),
-        watchSession: MockWatchSession()
+        watchSession: MockWatchSession(),
+        chatStreamService: MockChatStreamService()
     )
 
     #if DEBUG
@@ -49,7 +52,8 @@ struct AppDependencies {
         pairingService: PairingService.shared,
         audioService: AudioCueManager(),
         progressStore: LiveProgressStore.shared,
-        watchSession: MockWatchSession()
+        watchSession: MockWatchSession(),
+        chatStreamService: MockChatStreamService()
     )
 
     /// Returns the appropriate dependencies based on environment:

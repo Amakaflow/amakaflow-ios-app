@@ -33,7 +33,7 @@ struct CoachChatView: View {
                                     .id(message.id)
                             }
 
-                            if viewModel.isLoading {
+                            if viewModel.isStreaming {
                                 HStack {
                                     ProgressView()
                                         .tint(Theme.Colors.accentBlue)
@@ -57,14 +57,12 @@ struct CoachChatView: View {
                 }
 
                 // Rate limit indicator (AMA-1133)
-                if viewModel.rateLimitHit {
+                if viewModel.rateLimitInfo != nil {
                     rateLimitBanner
-                } else if viewModel.isNearRateLimit {
-                    rateLimitWarning
                 }
 
                 // Error message
-                if let error = viewModel.errorMessage, !viewModel.rateLimitHit {
+                if let error = viewModel.errorMessage, viewModel.rateLimitInfo == nil {
                     Text(error)
                         .font(Theme.Typography.footnote)
                         .foregroundColor(Theme.Colors.accentRed)
@@ -263,20 +261,6 @@ struct CoachChatView: View {
         }
         .padding(Theme.Spacing.sm)
         .background(Theme.Colors.accentRed.opacity(0.1))
-    }
-
-    private var rateLimitWarning: some View {
-        HStack(spacing: Theme.Spacing.sm) {
-            Image(systemName: "exclamationmark.circle")
-                .foregroundColor(Theme.Colors.accentOrange)
-                .font(.system(size: 12))
-            Text("Approaching message limit (\(viewModel.messageCount)/\(CoachViewModel.rateLimitWarningThreshold))")
-                .font(Theme.Typography.footnote)
-                .foregroundColor(Theme.Colors.accentOrange)
-            Spacer()
-        }
-        .padding(.horizontal, Theme.Spacing.lg)
-        .padding(.vertical, Theme.Spacing.xs)
     }
 
     // MARK: - Input Bar
