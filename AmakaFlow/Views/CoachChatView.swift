@@ -10,6 +10,7 @@ import SwiftUI
 struct CoachChatView: View {
     @StateObject private var viewModel = CoachViewModel()
     @State private var inputText = ""
+    @State private var showNewChatConfirmation = false
     @FocusState private var isInputFocused: Bool
 
     var body: some View {
@@ -79,7 +80,9 @@ struct CoachChatView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
-                        viewModel.startNewChat()
+                        if !viewModel.messages.isEmpty {
+                            showNewChatConfirmation = true
+                        }
                     } label: {
                         Image(systemName: "plus.bubble")
                             .foregroundColor(Theme.Colors.accentBlue)
@@ -91,6 +94,12 @@ struct CoachChatView: View {
                             .foregroundColor(Theme.Colors.accentBlue)
                     }
                 }
+            }
+            .confirmationDialog("Start new chat?", isPresented: $showNewChatConfirmation) {
+                Button("New Chat", role: .destructive) { viewModel.startNewChat() }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("This will clear your current conversation.")
             }
             .task {
                 await viewModel.loadFatigueAdvice()
