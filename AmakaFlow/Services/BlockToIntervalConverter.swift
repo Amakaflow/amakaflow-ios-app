@@ -7,7 +7,7 @@ enum BlockToIntervalConverter {
     // MARK: - Public API
 
     /// Convert an array of blocks into a flat interval list.
-    static func convert(blocks: [Block]) -> [WorkoutInterval] {
+    static func flatten(_ blocks: [Block]) -> [WorkoutInterval] {
         blocks.flatMap { convert(block: $0) }
     }
 

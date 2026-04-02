@@ -22,14 +22,18 @@ struct Block: Codable, Hashable, Identifiable {
     let exercises: [Exercise]
     let restBetweenSeconds: Int?
 
-    var id: String { label ?? UUID().uuidString }
+    /// Stable identity for SwiftUI. Stored (not computed) to avoid generating
+    /// a new UUID on every access when label is nil.
+    let id: String
 
     enum CodingKeys: String, CodingKey {
         case label, structure, rounds, exercises
         case restBetweenSeconds = "rest_between_sec"
+        // id is excluded — it's derived from label or generated, not in API JSON
     }
 
     init(label: String?, structure: BlockStructure = .straight, rounds: Int = 1, exercises: [Exercise], restBetweenSeconds: Int? = nil) {
+        self.id = label ?? UUID().uuidString
         self.label = label
         self.structure = structure
         self.rounds = rounds
@@ -39,7 +43,9 @@ struct Block: Codable, Hashable, Identifiable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        label = try container.decodeIfPresent(String.self, forKey: .label)
+        let decodedLabel = try container.decodeIfPresent(String.self, forKey: .label)
+        self.label = decodedLabel
+        self.id = decodedLabel ?? UUID().uuidString
         structure = try container.decodeIfPresent(BlockStructure.self, forKey: .structure) ?? .straight
         rounds = try container.decodeIfPresent(Int.self, forKey: .rounds) ?? 1
         exercises = try container.decodeIfPresent([Exercise].self, forKey: .exercises) ?? []
