@@ -234,6 +234,8 @@
 		AK00CHL005B /* CreateChallengeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00CHL005A /* CreateChallengeView.swift */; };
 		AK00CHL006B /* ChallengeCompletionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00CHL006A /* ChallengeCompletionView.swift */; };
 		AK00CHL007B /* ChallengesViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00CHL007A /* ChallengesViewModelTests.swift */; };
+		AK00CRW007B /* CrewsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00CRW007A /* CrewsViewModelTests.swift */; };
+		AK00LDR005B /* LeaderboardViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00LDR005A /* LeaderboardViewModelTests.swift */; };
 		AK00CRW001B /* CrewModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00CRW001A /* CrewModels.swift */; };
 		AK00CRW002B /* CrewsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00CRW002A /* CrewsViewModel.swift */; };
 		AK00CRW003B /* CrewsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00CRW003A /* CrewsView.swift */; };
@@ -575,6 +577,8 @@
 		AK00CHL005A /* CreateChallengeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CreateChallengeView.swift; path = ../AmakaFlow/Views/Social/CreateChallengeView.swift; sourceTree = "<group>"; };
 		AK00CHL006A /* ChallengeCompletionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ChallengeCompletionView.swift; path = ../AmakaFlow/Views/Social/ChallengeCompletionView.swift; sourceTree = "<group>"; };
 		AK00CHL007A /* ChallengesViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ChallengesViewModelTests.swift; path = AmakaFlowCompanionTests/ChallengesViewModelTests.swift; sourceTree = "<group>"; };
+		AK00CRW007A /* CrewsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CrewsViewModelTests.swift; path = AmakaFlowCompanionTests/CrewsViewModelTests.swift; sourceTree = "<group>"; };
+		AK00LDR005A /* LeaderboardViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LeaderboardViewModelTests.swift; path = AmakaFlowCompanionTests/LeaderboardViewModelTests.swift; sourceTree = "<group>"; };
 		AK00CRW001A /* CrewModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CrewModels.swift; path = ../AmakaFlow/Models/CrewModels.swift; sourceTree = "<group>"; };
 		AK00CRW002A /* CrewsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CrewsViewModel.swift; path = ../AmakaFlow/ViewModels/CrewsViewModel.swift; sourceTree = "<group>"; };
 		AK00CRW003A /* CrewsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CrewsView.swift; path = ../AmakaFlow/Views/Social/CrewsView.swift; sourceTree = "<group>"; };
@@ -935,6 +939,8 @@
 				AK00LDR003A /* LeaderboardView.swift */,
 				AK00LDR004A /* LeaderboardEntryRow.swift */,
 				AK00CHL007A /* ChallengesViewModelTests.swift */,
+				AK00CRW007A /* CrewsViewModelTests.swift */,
+				AK00LDR005A /* LeaderboardViewModelTests.swift */,
 				AK00NUT001A /* NutritionHealthKitService.swift */,
 				AK00NUT002A /* NutritionViewModel.swift */,
 				AK00AFL005A /* FoodLoggingViewModel.swift */,
@@ -1625,6 +1631,8 @@
 				AK00TST025B /* XPBarViewTests.swift in Sources */,
 				AMA12820010B /* PRDetectionServiceTests.swift in Sources */,
 				AK00CHL007B /* ChallengesViewModelTests.swift in Sources */,
+				AK00CRW007B /* CrewsViewModelTests.swift in Sources */,
+				AK00LDR005B /* LeaderboardViewModelTests.swift in Sources */,
 				AK00NUT008B /* NutritionViewModelTests.swift in Sources */,
 				AK00AFL006B /* FoodLoggingViewModelTests.swift in Sources */,
 				AK00FUL004B /* FuelingViewModelTests.swift in Sources */,

@@ -393,6 +393,8 @@ class MockAPIService: APIServiceProviding {
     var fetchSocialSettingsResult: Result<SocialSettings, Error> = .success(.default)
     var updateSocialSettingsCalled = false
     var fetchUserPublicProfileResult: Result<UserPublicProfile, Error> = .failure(APIError.notImplemented)
+    var followUserCalled = false
+    var unfollowUserCalled = false
 
     func fetchSocialFeed(cursor: String?, limit: Int) async throws -> FeedResponse {
         return try fetchSocialFeedResult.get()
@@ -427,6 +429,14 @@ class MockAPIService: APIServiceProviding {
         return try fetchUserPublicProfileResult.get()
     }
 
+    func followUser(userId: String) async throws {
+        followUserCalled = true
+    }
+
+    func unfollowUser(userId: String) async throws {
+        unfollowUserCalled = true
+    }
+
     // MARK: - Challenges (AMA-1276)
 
     var fetchChallengesResult: Result<ChallengesResponse, Error> = .success(ChallengesResponse(challenges: []))
@@ -457,32 +467,58 @@ class MockAPIService: APIServiceProviding {
 
     // MARK: - Training Crews (AMA-1277)
 
+    var fetchMyCrewsResult: Result<CrewListResponse, Error> = .success(CrewListResponse(crews: [], count: 0))
+    var fetchMyCrewsCalled = false
+    var fetchCrewDetailResult: Result<CrewDetail, Error> = .failure(APIError.notFound)
+    var fetchCrewDetailCalled = false
+    var fetchCrewFeedResult: Result<CrewFeedResponse, Error> = .success(CrewFeedResponse(posts: [], nextCursor: nil))
+    var fetchCrewFeedCalled = false
+    var createCrewCalled = false
+    var joinCrewCalled = false
+    var leaveCrewCalled = false
+
     func fetchMyCrews() async throws -> CrewListResponse {
-        return CrewListResponse(crews: [], count: 0)
+        fetchMyCrewsCalled = true
+        return try fetchMyCrewsResult.get()
     }
 
     func fetchCrewDetail(id: String) async throws -> CrewDetail {
-        throw APIError.notFound
+        fetchCrewDetailCalled = true
+        return try fetchCrewDetailResult.get()
     }
 
     func fetchCrewFeed(crewId: String) async throws -> CrewFeedResponse {
-        return CrewFeedResponse(posts: [], nextCursor: nil)
+        fetchCrewFeedCalled = true
+        return try fetchCrewFeedResult.get()
     }
 
-    func createCrew(_ request: CreateCrewRequest) async throws {}
+    func createCrew(_ request: CreateCrewRequest) async throws {
+        createCrewCalled = true
+    }
 
-    func joinCrew(crewId: String, request: JoinCrewRequest) async throws {}
+    func joinCrew(crewId: String, request: JoinCrewRequest) async throws {
+        joinCrewCalled = true
+    }
 
-    func leaveCrew(crewId: String) async throws {}
+    func leaveCrew(crewId: String) async throws {
+        leaveCrewCalled = true
+    }
 
     // MARK: - Leaderboards (AMA-1278)
 
+    var fetchFriendsLeaderboardResult: Result<LeaderboardAPIResponse, Error> = .success(LeaderboardAPIResponse(dimension: "volume", period: "month", entries: []))
+    var fetchFriendsLeaderboardCalled = false
+    var fetchCrewLeaderboardResult: Result<LeaderboardAPIResponse, Error> = .success(LeaderboardAPIResponse(dimension: "volume", period: "month", entries: []))
+    var fetchCrewLeaderboardCalled = false
+
     func fetchFriendsLeaderboard(dimension: String, period: String) async throws -> LeaderboardAPIResponse {
-        LeaderboardAPIResponse(dimension: dimension, period: period, entries: [])
+        fetchFriendsLeaderboardCalled = true
+        return try fetchFriendsLeaderboardResult.get()
     }
 
     func fetchCrewLeaderboard(crewId: String, dimension: String, period: String) async throws -> LeaderboardAPIResponse {
-        LeaderboardAPIResponse(dimension: dimension, period: period, entries: [])
+        fetchCrewLeaderboardCalled = true
+        return try fetchCrewLeaderboardResult.get()
     }
 }
 

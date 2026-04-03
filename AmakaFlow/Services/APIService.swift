@@ -1778,6 +1778,34 @@ extension APIService {
         return try APIService.makeDecoder().decode(UserPublicProfile.self, from: data)
     }
 
+    func followUser(userId: String) async throws {
+        guard let url = URL(string: "\(baseURL)/social/users/\(userId)/follow") else { throw APIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders
+        let (_, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        switch httpResponse.statusCode {
+        case 200, 204: return
+        case 401: throw APIError.unauthorized
+        default: throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func unfollowUser(userId: String) async throws {
+        guard let url = URL(string: "\(baseURL)/social/users/\(userId)/unfollow") else { throw APIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders
+        let (_, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        switch httpResponse.statusCode {
+        case 200, 204: return
+        case 401: throw APIError.unauthorized
+        default: throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
     // MARK: - Challenges (AMA-1276)
 
     func fetchChallenges() async throws -> ChallengesResponse {

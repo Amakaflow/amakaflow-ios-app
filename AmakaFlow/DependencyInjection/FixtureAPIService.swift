@@ -14,6 +14,7 @@ import Foundation
 /// Conforming to APIServiceProviding allows it to be injected via AppDependencies
 /// without changes to ViewModels, Engine, or UI.
 class FixtureAPIService: APIServiceProviding {
+    private var followedUserIds = Set<String>()
 
     // MARK: - Reads (from fixtures)
 
@@ -201,8 +202,10 @@ class FixtureAPIService: APIServiceProviding {
     }
     func updateSocialSettings(_ settings: SocialSettings) async throws {}
     func fetchUserPublicProfile(userId: String) async throws -> UserPublicProfile {
-        UserPublicProfile(userId: userId, userName: "Fixture User", avatarUrl: nil, workoutCount: 0, totalVolume: 0, streakDays: 0, isFollowing: false, recentWorkouts: [])
+        UserPublicProfile(userId: userId, userName: "Fixture User", avatarUrl: nil, workoutCount: 0, totalVolume: 0, streakDays: 0, isFollowing: followedUserIds.contains(userId), recentWorkouts: [])
     }
+    func followUser(userId: String) async throws { followedUserIds.insert(userId) }
+    func unfollowUser(userId: String) async throws { followedUserIds.remove(userId) }
 
     // MARK: - Challenges (AMA-1276)
 

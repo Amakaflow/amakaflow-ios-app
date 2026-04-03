@@ -156,6 +156,12 @@ protocol APIServiceProviding {
     /// Fetch a user's public profile
     func fetchUserPublicProfile(userId: String) async throws -> UserPublicProfile
 
+    /// Follow a user
+    func followUser(userId: String) async throws
+
+    /// Unfollow a user
+    func unfollowUser(userId: String) async throws
+
     // MARK: - Challenges (AMA-1276)
 
     /// Fetch list of challenges
