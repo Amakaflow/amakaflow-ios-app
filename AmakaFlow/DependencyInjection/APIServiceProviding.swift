@@ -267,6 +267,11 @@ protocol APIServiceProviding {
 
     /// Post RPE feedback for a completed workout
     func postRPEFeedback(_ feedback: RPEFeedbackRequest) async throws -> RPEFeedbackResponse
+
+    // MARK: - Volume Analytics (AMA-1414)
+
+    /// Fetch volume analytics by muscle group for a date range
+    func fetchVolumeAnalytics(startDate: String, endDate: String, granularity: String) async throws -> VolumeAnalyticsResponse
 }
 
 // MARK: - Default Parameter Extensions

@@ -283,5 +283,16 @@ class FixtureAPIService: APIServiceProviding {
     func postRPEFeedback(_ feedback: RPEFeedbackRequest) async throws -> RPEFeedbackResponse {
         RPEFeedbackResponse(success: true, message: "Feedback recorded", deloadRecommended: false)
     }
+
+    // MARK: - Volume Analytics (AMA-1414)
+
+    func fetchVolumeAnalytics(startDate: String, endDate: String, granularity: String) async throws -> VolumeAnalyticsResponse {
+        VolumeAnalyticsResponse(
+            data: [],
+            summary: VolumeSummary(totalVolume: 0, totalSets: 0, totalReps: 0, muscleGroupBreakdown: [:]),
+            period: VolumePeriod(startDate: startDate, endDate: endDate),
+            granularity: granularity
+        )
+    }
 }
 #endif
