@@ -736,11 +736,18 @@ final class EnvironmentE2ETests: RealWorkoutTestCase {
         XCTAssertTrue(TestAuthHelper.waitForMainContent(app, timeout: 15),
                      "App should load main content")
 
-        // Navigate to Settings/More to check environment
+        // Navigate to More tab
         let moreTab = app.tabBars.buttons["More"]
         if moreTab.exists {
             moreTab.tap()
             sleep(1)
+
+            // Tap into Settings (nested inside More tab after tab consolidation)
+            let settingsButton = app.staticTexts["Settings"]
+            if settingsButton.waitForExistence(timeout: 5) {
+                settingsButton.tap()
+                sleep(1)
+            }
 
             // Look for "Development" or "localhost" indicator
             let devIndicator = app.staticTexts.matching(
