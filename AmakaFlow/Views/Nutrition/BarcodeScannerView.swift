@@ -232,7 +232,8 @@ class BarcodeScannerViewController: UIViewController, AVCaptureMetadataOutputObj
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         if let session = captureSession, !session.isRunning {
-            DispatchQueue.global(qos: .userInitiated).async {
+            metadataOutput?.setMetadataObjectsDelegate(self, queue: DispatchQueue.main)
+            sessionQueue.async {
                 session.startRunning()
             }
         }
@@ -240,7 +241,11 @@ class BarcodeScannerViewController: UIViewController, AVCaptureMetadataOutputObj
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        cleanup()
+        // Only pause — don't teardown in case the VC reappears
+        metadataOutput?.setMetadataObjectsDelegate(nil, queue: nil)
+        sessionQueue.async { [weak self] in
+            self?.captureSession?.stopRunning()
+        }
     }
 
     deinit {
