@@ -294,5 +294,113 @@ class FixtureAPIService: APIServiceProviding {
             granularity: granularity
         )
     }
+
+    // MARK: - Bulk Import (AMA-1415)
+
+    func detectImport(request: BulkDetectRequest) async throws -> BulkDetectResponse {
+        print("[FixtureAPIService] Stub: detectImport -> canned response")
+        return BulkDetectResponse(
+            success: true,
+            jobId: "fixture-job-001",
+            items: [
+                DetectedItem(
+                    id: "item-001",
+                    sourceRef: request.sources.first ?? "fixture-source",
+                    parsedTitle: "Fixture Workout A",
+                    parsedExerciseCount: 6,
+                    confidence: 90,
+                    errors: nil,
+                    warnings: nil
+                )
+            ],
+            total: 1,
+            successCount: 1,
+            errorCount: 0
+        )
+    }
+
+    func matchExercises(request: BulkMatchRequest) async throws -> BulkMatchResponse {
+        print("[FixtureAPIService] Stub: matchExercises -> canned response")
+        return BulkMatchResponse(
+            success: true,
+            jobId: request.jobId,
+            exercises: [
+                ExerciseMatch(
+                    id: "ex-001",
+                    originalName: "Bench Press",
+                    matchedGarminName: "Bench Press",
+                    confidence: 95,
+                    suggestions: nil,
+                    status: "matched",
+                    userSelection: nil
+                )
+            ],
+            totalExercises: 1,
+            matched: 1,
+            needsReview: 0
+        )
+    }
+
+    func previewImport(request: BulkPreviewRequest) async throws -> BulkPreviewResponse {
+        print("[FixtureAPIService] Stub: previewImport -> canned response")
+        return BulkPreviewResponse(
+            success: true,
+            jobId: request.jobId,
+            workouts: [
+                PreviewWorkout(
+                    id: "workout-preview-001",
+                    title: "Fixture Workout A",
+                    exerciseCount: 6,
+                    blockCount: 2,
+                    validationIssues: nil,
+                    selected: true,
+                    isDuplicate: false
+                )
+            ],
+            stats: ImportStats(
+                totalDetected: 1,
+                totalSelected: 1,
+                exercisesMatched: 1,
+                exercisesNeedingReview: 0,
+                duplicatesFound: 0,
+                validationErrors: 0,
+                validationWarnings: 0
+            )
+        )
+    }
+
+    func executeImport(request: BulkExecuteRequest) async throws -> BulkExecuteResponse {
+        print("[FixtureAPIService] Stub: executeImport -> canned response")
+        return BulkExecuteResponse(
+            success: true,
+            jobId: request.jobId,
+            status: "running",
+            message: "Import started"
+        )
+    }
+
+    func fetchImportStatus(jobId: String, profileId: String) async throws -> BulkImportStatus {
+        print("[FixtureAPIService] Stub: fetchImportStatus -> complete")
+        return BulkImportStatus(
+            success: true,
+            jobId: jobId,
+            status: "complete",
+            progress: 100,
+            results: [
+                ImportResult(
+                    workoutId: "workout-preview-001",
+                    title: "Fixture Workout A",
+                    status: "success",
+                    error: nil,
+                    savedWorkoutId: "saved-001"
+                )
+            ],
+            error: nil
+        )
+    }
+
+    func cancelImport(jobId: String, profileId: String) async throws {
+        print("[FixtureAPIService] Stub: cancelImport(\(jobId)) -> success")
+    }
 }
 #endif

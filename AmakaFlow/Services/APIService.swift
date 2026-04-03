@@ -2280,6 +2280,155 @@ extension APIService {
             throw APIError.serverError(httpResponse.statusCode)
         }
     }
+
+    // MARK: - Bulk Import (AMA-1415)
+
+    func detectImport(request: BulkDetectRequest) async throws -> BulkDetectResponse {
+        let ingestorURL = AppEnvironment.current.ingestorAPIURL
+        guard let url = URL(string: "\(ingestorURL)/import/detect") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.allHTTPHeaderFields = authHeaders
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        req.httpBody = try encoder.encode(request)
+        print("[APIService] detectImport - URL: \(url.absoluteString)")
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        let responseString = String(data: data, encoding: .utf8)
+        print("[APIService] detectImport - Status: \(httpResponse.statusCode)")
+        switch httpResponse.statusCode {
+        case 200, 201:
+            return try APIService.makeDecoder().decode(BulkDetectResponse.self, from: data)
+        case 401: throw APIError.unauthorized
+        default:
+            logError(endpoint: "/import/detect", method: "POST",
+                     statusCode: httpResponse.statusCode, response: responseString, error: nil)
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func matchExercises(request: BulkMatchRequest) async throws -> BulkMatchResponse {
+        let ingestorURL = AppEnvironment.current.ingestorAPIURL
+        guard let url = URL(string: "\(ingestorURL)/import/match") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.allHTTPHeaderFields = authHeaders
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        req.httpBody = try encoder.encode(request)
+        print("[APIService] matchExercises - URL: \(url.absoluteString)")
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        let responseString = String(data: data, encoding: .utf8)
+        print("[APIService] matchExercises - Status: \(httpResponse.statusCode)")
+        switch httpResponse.statusCode {
+        case 200, 201:
+            return try APIService.makeDecoder().decode(BulkMatchResponse.self, from: data)
+        case 401: throw APIError.unauthorized
+        default:
+            logError(endpoint: "/import/match", method: "POST",
+                     statusCode: httpResponse.statusCode, response: responseString, error: nil)
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func previewImport(request: BulkPreviewRequest) async throws -> BulkPreviewResponse {
+        let ingestorURL = AppEnvironment.current.ingestorAPIURL
+        guard let url = URL(string: "\(ingestorURL)/import/preview") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.allHTTPHeaderFields = authHeaders
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        req.httpBody = try encoder.encode(request)
+        print("[APIService] previewImport - URL: \(url.absoluteString)")
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        let responseString = String(data: data, encoding: .utf8)
+        print("[APIService] previewImport - Status: \(httpResponse.statusCode)")
+        switch httpResponse.statusCode {
+        case 200, 201:
+            return try APIService.makeDecoder().decode(BulkPreviewResponse.self, from: data)
+        case 401: throw APIError.unauthorized
+        default:
+            logError(endpoint: "/import/preview", method: "POST",
+                     statusCode: httpResponse.statusCode, response: responseString, error: nil)
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func executeImport(request: BulkExecuteRequest) async throws -> BulkExecuteResponse {
+        let ingestorURL = AppEnvironment.current.ingestorAPIURL
+        guard let url = URL(string: "\(ingestorURL)/import/execute") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.allHTTPHeaderFields = authHeaders
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        req.httpBody = try encoder.encode(request)
+        print("[APIService] executeImport - URL: \(url.absoluteString)")
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        let responseString = String(data: data, encoding: .utf8)
+        print("[APIService] executeImport - Status: \(httpResponse.statusCode)")
+        switch httpResponse.statusCode {
+        case 200, 201, 202:
+            return try APIService.makeDecoder().decode(BulkExecuteResponse.self, from: data)
+        case 401: throw APIError.unauthorized
+        default:
+            logError(endpoint: "/import/execute", method: "POST",
+                     statusCode: httpResponse.statusCode, response: responseString, error: nil)
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func fetchImportStatus(jobId: String, profileId: String) async throws -> BulkImportStatus {
+        let ingestorURL = AppEnvironment.current.ingestorAPIURL
+        guard let url = URL(string: "\(ingestorURL)/import/status/\(jobId)?profile_id=\(profileId)") else {
+            throw APIError.invalidURL
+        }
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        req.allHTTPHeaderFields = authHeaders
+        print("[APIService] fetchImportStatus - URL: \(url.absoluteString)")
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        let responseString = String(data: data, encoding: .utf8)
+        print("[APIService] fetchImportStatus - Status: \(httpResponse.statusCode)")
+        switch httpResponse.statusCode {
+        case 200:
+            return try APIService.makeDecoder().decode(BulkImportStatus.self, from: data)
+        case 401: throw APIError.unauthorized
+        case 404: throw APIError.notFound
+        default:
+            logError(endpoint: "/import/status/\(jobId)", method: "GET",
+                     statusCode: httpResponse.statusCode, response: responseString, error: nil)
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func cancelImport(jobId: String, profileId: String) async throws {
+        let ingestorURL = AppEnvironment.current.ingestorAPIURL
+        guard let url = URL(string: "\(ingestorURL)/import/cancel/\(jobId)?profile_id=\(profileId)") else {
+            throw APIError.invalidURL
+        }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.allHTTPHeaderFields = authHeaders
+        print("[APIService] cancelImport - URL: \(url.absoluteString)")
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        switch httpResponse.statusCode {
+        case 200, 204: return
+        case 401: throw APIError.unauthorized
+        default:
+            let responseString = String(data: data, encoding: .utf8)
+            logError(endpoint: "/import/cancel/\(jobId)", method: "POST",
+                     statusCode: httpResponse.statusCode, response: responseString, error: nil)
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
 }
 
 // MARK: - API Errors
