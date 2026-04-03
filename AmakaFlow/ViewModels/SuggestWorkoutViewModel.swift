@@ -161,10 +161,8 @@ class SuggestWorkoutViewModel: ObservableObject {
             let workout = buildWorkout(from: decoded)
             suggestedWorkout = workout
             state = .success(workout)
-        } catch APIError.unauthorized {
-            state = .error("Session expired. Please reconnect.")
         } catch {
-            state = .error("Network error: \(error.localizedDescription)")
+            state = .error(error.localizedDescription)
         }
     }
 

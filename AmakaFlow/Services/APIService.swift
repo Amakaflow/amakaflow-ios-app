@@ -2242,10 +2242,12 @@ extension APIService {
         guard let url = URL(string: "\(chatURL)/coach/rpe-feedback") else {
             throw APIError.invalidURL
         }
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.allHTTPHeaderFields = authHeaders
-        req.httpBody = try JSONEncoder().encode(feedback)
+        req.httpBody = try encoder.encode(feedback)
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         switch httpResponse.statusCode {
