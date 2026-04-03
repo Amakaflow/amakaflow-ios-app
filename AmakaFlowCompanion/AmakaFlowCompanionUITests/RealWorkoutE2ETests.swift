@@ -736,20 +736,26 @@ final class EnvironmentE2ETests: RealWorkoutTestCase {
         XCTAssertTrue(TestAuthHelper.waitForMainContent(app, timeout: 15),
                      "App should load main content")
 
-        // Navigate to Settings/More to check environment
+        // Navigate to More tab
         let moreTab = app.tabBars.buttons["More"]
-        if moreTab.exists {
-            moreTab.tap()
-            sleep(1)
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 5), "More tab should exist")
+        moreTab.tap()
+        sleep(1)
 
-            // Look for "Development" or "localhost" indicator
-            let devIndicator = app.staticTexts.matching(
-                NSPredicate(format: "label CONTAINS[c] 'development' OR label CONTAINS[c] 'localhost'")
-            ).firstMatch
+        // Tap into Settings (nested inside More tab after tab consolidation)
+        let settingsCell = app.cells.containing(.staticText, identifier: "Settings").firstMatch
+        let settingsButton = settingsCell.exists ? settingsCell : app.staticTexts["Settings"]
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 5), "Settings should be visible in More tab")
+        settingsButton.tap()
+        sleep(1)
 
-            XCTAssertTrue(devIndicator.waitForExistence(timeout: 5),
-                         "App should show Development environment (not Staging)")
-        }
+        // Look for "Development" or "localhost" indicator
+        let devIndicator = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS[c] 'development' OR label CONTAINS[c] 'localhost'")
+        ).firstMatch
+
+        XCTAssertTrue(devIndicator.waitForExistence(timeout: 5),
+                     "App should show Development environment (not Staging)")
     }
 
     /// Verify workouts can be loaded from localhost API
