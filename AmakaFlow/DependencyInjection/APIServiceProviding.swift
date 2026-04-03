@@ -287,6 +287,11 @@ protocol APIServiceProviding {
 
     /// Mark a program workout as completed
     func completeWorkout(workoutId: String) async throws
+
+    // MARK: - Volume Analytics (AMA-1414)
+
+    /// Fetch volume analytics by muscle group for a date range
+    func fetchVolumeAnalytics(startDate: String, endDate: String, granularity: String) async throws -> VolumeAnalyticsResponse
 }
 
 // MARK: - Default Parameter Extensions

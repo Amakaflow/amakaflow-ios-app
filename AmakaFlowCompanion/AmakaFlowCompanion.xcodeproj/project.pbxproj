@@ -306,6 +306,13 @@
 		AMA14120011B /* FatigueHistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14120011A /* FatigueHistoryViewModel.swift */; };
 		AMA14120012B /* FatigueHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14120012A /* FatigueHistoryView.swift */; };
 		AMA14120013B /* FatigueHistoryViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14120013A /* FatigueHistoryViewModelTests.swift */; };
+		AMA14140001B /* VolumeAnalyticsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14140001A /* VolumeAnalyticsModels.swift */; };
+		AMA14140002B /* VolumeAnalyticsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14140002A /* VolumeAnalyticsViewModel.swift */; };
+		AMA14140003B /* VolumeBarChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14140003A /* VolumeBarChart.swift */; };
+		AMA14140004B /* BalanceIndicatorsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14140004A /* BalanceIndicatorsView.swift */; };
+		AMA14140005B /* MuscleGroupBreakdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14140005A /* MuscleGroupBreakdown.swift */; };
+		AMA14140006B /* VolumeAnalyticsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14140006A /* VolumeAnalyticsSection.swift */; };
+		AMA14140007B /* VolumeAnalyticsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14140007A /* VolumeAnalyticsViewModelTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -666,6 +673,13 @@
 		AMA14120012A /* FatigueHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FatigueHistoryView.swift; path = ../AmakaFlow/Views/FatigueHistoryView.swift; sourceTree = "<group>"; };
 		AMA14120013A /* FatigueHistoryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FatigueHistoryViewModelTests.swift; path = AmakaFlowCompanionTests/FatigueHistoryViewModelTests.swift; sourceTree = "<group>"; };
 		AMA14120015FILEREF /* MoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MoreView.swift; path = ../AmakaFlow/Views/MoreView.swift; sourceTree = "<group>"; };
+		AMA14140001A /* VolumeAnalyticsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VolumeAnalyticsModels.swift; path = ../AmakaFlow/Models/VolumeAnalyticsModels.swift; sourceTree = "<group>"; };
+		AMA14140002A /* VolumeAnalyticsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VolumeAnalyticsViewModel.swift; path = ../AmakaFlow/ViewModels/VolumeAnalyticsViewModel.swift; sourceTree = "<group>"; };
+		AMA14140003A /* VolumeBarChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VolumeBarChart.swift; path = ../AmakaFlow/Views/Analytics/VolumeBarChart.swift; sourceTree = "<group>"; };
+		AMA14140004A /* BalanceIndicatorsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BalanceIndicatorsView.swift; path = ../AmakaFlow/Views/Analytics/BalanceIndicatorsView.swift; sourceTree = "<group>"; };
+		AMA14140005A /* MuscleGroupBreakdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MuscleGroupBreakdown.swift; path = ../AmakaFlow/Views/Analytics/MuscleGroupBreakdown.swift; sourceTree = "<group>"; };
+		AMA14140006A /* VolumeAnalyticsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VolumeAnalyticsSection.swift; path = ../AmakaFlow/Views/Analytics/VolumeAnalyticsSection.swift; sourceTree = "<group>"; };
+		AMA14140007A /* VolumeAnalyticsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VolumeAnalyticsViewModelTests.swift; path = AmakaFlowCompanionTests/VolumeAnalyticsViewModelTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -1010,6 +1024,13 @@
 				AMA14130009A /* PreferencesStepView.swift */,
 				AMA14130010A /* ReviewStepView.swift */,
 				AMA14130011A /* ProgramWizardViewModelTests.swift */,
+				AMA14140001A /* VolumeAnalyticsModels.swift */,
+				AMA14140002A /* VolumeAnalyticsViewModel.swift */,
+				AMA14140003A /* VolumeBarChart.swift */,
+				AMA14140004A /* BalanceIndicatorsView.swift */,
+				AMA14140005A /* MuscleGroupBreakdown.swift */,
+				AMA14140006A /* VolumeAnalyticsSection.swift */,
+				AMA14140007A /* VolumeAnalyticsViewModelTests.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -1659,6 +1680,12 @@
 				AMA14130008B /* EquipmentStepView.swift in Sources */,
 				AMA14130009B /* PreferencesStepView.swift in Sources */,
 				AMA14130010B /* ReviewStepView.swift in Sources */,
+				AMA14140001B /* VolumeAnalyticsModels.swift in Sources */,
+				AMA14140002B /* VolumeAnalyticsViewModel.swift in Sources */,
+				AMA14140003B /* VolumeBarChart.swift in Sources */,
+				AMA14140004B /* BalanceIndicatorsView.swift in Sources */,
+				AMA14140005B /* MuscleGroupBreakdown.swift in Sources */,
+				AMA14140006B /* VolumeAnalyticsSection.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1704,6 +1731,7 @@
 				AK00FUL004B /* FuelingViewModelTests.swift in Sources */,
 				AMA14120013B /* FatigueHistoryViewModelTests.swift in Sources */,
 				AMA14130011B /* ProgramWizardViewModelTests.swift in Sources */,
+				AMA14140007B /* VolumeAnalyticsViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

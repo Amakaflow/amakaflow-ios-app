@@ -311,5 +311,16 @@ class FixtureAPIService: APIServiceProviding {
     func completeWorkout(workoutId: String) async throws {
         print("[FixtureAPIService] Stub: completeWorkout(\(workoutId)) -> success")
     }
+
+    // MARK: - Volume Analytics (AMA-1414)
+
+    func fetchVolumeAnalytics(startDate: String, endDate: String, granularity: String) async throws -> VolumeAnalyticsResponse {
+        VolumeAnalyticsResponse(
+            data: [],
+            summary: VolumeSummary(totalVolume: 0, totalSets: 0, totalReps: 0, muscleGroupBreakdown: [:]),
+            period: VolumePeriod(startDate: startDate, endDate: endDate),
+            granularity: granularity
+        )
+    }
 }
 #endif

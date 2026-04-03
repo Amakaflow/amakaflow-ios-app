@@ -635,6 +635,23 @@ class MockAPIService: APIServiceProviding {
         completeWorkoutCalled = true
         lastCompleteWorkoutId = workoutId
     }
+
+    // MARK: - Volume Analytics (AMA-1414)
+
+    var fetchVolumeAnalyticsResult: Result<VolumeAnalyticsResponse, Error>?
+    var fetchVolumeAnalyticsCalled = false
+    var lastFetchVolumeStartDate: String?
+    var lastFetchVolumeEndDate: String?
+    var lastFetchVolumeGranularity: String?
+
+    func fetchVolumeAnalytics(startDate: String, endDate: String, granularity: String) async throws -> VolumeAnalyticsResponse {
+        fetchVolumeAnalyticsCalled = true
+        lastFetchVolumeStartDate = startDate
+        lastFetchVolumeEndDate = endDate
+        lastFetchVolumeGranularity = granularity
+        guard let result = fetchVolumeAnalyticsResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
 }
 
 /// Mock pairing service for testing
