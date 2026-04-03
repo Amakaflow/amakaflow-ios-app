@@ -90,10 +90,17 @@ struct CoachChatView: View {
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink(destination: FatigueAdvisorView(viewModel: viewModel)) {
-                        Image(systemName: "heart.text.square")
-                            .foregroundColor(Theme.Colors.accentBlue)
-                            .accessibilityLabel("Open fatigue advisor")
+                    HStack(spacing: Theme.Spacing.sm) {
+                        NavigationLink(destination: FatigueHistoryView()) {
+                            Image(systemName: "chart.line.uptrend.xyaxis")
+                                .foregroundColor(Theme.Colors.accentBlue)
+                                .accessibilityLabel("Readiness history")
+                        }
+                        NavigationLink(destination: FatigueAdvisorView(viewModel: viewModel)) {
+                            Image(systemName: "heart.text.square")
+                                .foregroundColor(Theme.Colors.accentBlue)
+                                .accessibilityLabel("Open fatigue advisor")
+                        }
                     }
                 }
             }
