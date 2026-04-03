@@ -278,6 +278,7 @@
 		AK00NUT004B /* ProteinTrackerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT004A /* ProteinTrackerView.swift */; };
 		AK00NUT005B /* WaterTrackerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT005A /* WaterTrackerView.swift */; };
 		AK00NUT006B /* NutritionSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT006A /* NutritionSettingsView.swift */; };
+		AMA14120014B /* FatigueSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14120014A /* FatigueSettingsView.swift */; };
 		AK00NUT007B /* NutritionOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT007A /* NutritionOnboardingView.swift */; };
 		AK00NUT008B /* NutritionViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT008A /* NutritionViewModelTests.swift */; };
 		AK00AFL001B /* FoodLoggingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00AFL001A /* FoodLoggingView.swift */; };
@@ -625,6 +626,7 @@
 		AK00NUT004A /* ProteinTrackerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProteinTrackerView.swift; path = ../AmakaFlow/Views/Nutrition/ProteinTrackerView.swift; sourceTree = "<group>"; };
 		AK00NUT005A /* WaterTrackerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WaterTrackerView.swift; path = ../AmakaFlow/Views/Nutrition/WaterTrackerView.swift; sourceTree = "<group>"; };
 		AK00NUT006A /* NutritionSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionSettingsView.swift; path = ../AmakaFlow/Views/Nutrition/NutritionSettingsView.swift; sourceTree = "<group>"; };
+		AMA14120014A /* FatigueSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FatigueSettingsView.swift; path = ../AmakaFlow/Views/Settings/FatigueSettingsView.swift; sourceTree = "<group>"; };
 		AK00NUT007A /* NutritionOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionOnboardingView.swift; path = ../AmakaFlow/Views/Nutrition/NutritionOnboardingView.swift; sourceTree = "<group>"; };
 		AK00NUT008A /* NutritionViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionViewModelTests.swift; path = AmakaFlowCompanionTests/NutritionViewModelTests.swift; sourceTree = "<group>"; };
 		AK00AFL001A /* FoodLoggingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FoodLoggingView.swift; path = ../AmakaFlow/Views/Nutrition/FoodLoggingView.swift; sourceTree = "<group>"; };
@@ -924,6 +926,7 @@
 				C1660F7A199C30F1FF9B8DFD /* TrainingPreferencesView.swift */,
 				4CC7221F93FB2C2C9982C2ED /* NotificationPreferencesView.swift */,
 				0590FA2DB2E16FC868D6F303 /* SyncDashboardView.swift */,
+				AMA14120014A /* FatigueSettingsView.swift */,
 				2E90D82F541D1AF7AE58A29B /* FollowAlongPlayerView.swift */,
 				154769090318840B518509BF /* FollowAlongPlayerViewModel.swift */,
 				167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */,
@@ -1548,6 +1551,7 @@
 				AAA43473A50C02F82E139FED /* TrainingPreferencesView.swift in Sources */,
 				326A41D76E81D77EC7D4F76A /* NotificationPreferencesView.swift in Sources */,
 				97DAAC6C9C4F8BAC320D575E /* SyncDashboardView.swift in Sources */,
+				AMA14120014B /* FatigueSettingsView.swift in Sources */,
 				5016188D64111FBBE44B4A8D /* FollowAlongPlayerView.swift in Sources */,
 				5489774E90118791AFF14D8C /* FollowAlongPlayerViewModel.swift in Sources */,
 				AK00FIX001B /* SocialModels.swift in Sources */,

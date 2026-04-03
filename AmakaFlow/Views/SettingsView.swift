@@ -78,6 +78,11 @@ struct SettingsView: View {
 
                     divider
 
+                    // Fatigue Tracking (AMA-1412)
+                    fatigueSection
+
+                    divider
+
                     // Analytics (AMA-1147)
                     analyticsSection
 
@@ -1348,6 +1353,35 @@ struct SettingsView: View {
                         .frame(width: 28)
 
                     Text("Nutrition Settings")
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                }
+            }
+        }
+    }
+
+    // MARK: - Fatigue Section (AMA-1412)
+
+    private var fatigueSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            Text("READINESS")
+                .font(Theme.Typography.footnote)
+                .foregroundColor(Theme.Colors.textSecondary)
+
+            NavigationLink(destination: FatigueSettingsView()) {
+                HStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: "heart.text.square")
+                        .font(.system(size: 16))
+                        .foregroundColor(Theme.Colors.accentBlue)
+                        .frame(width: 28)
+
+                    Text("Fatigue Tracking")
                         .font(Theme.Typography.body)
                         .foregroundColor(Theme.Colors.textPrimary)
 
