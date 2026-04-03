@@ -738,25 +738,24 @@ final class EnvironmentE2ETests: RealWorkoutTestCase {
 
         // Navigate to More tab
         let moreTab = app.tabBars.buttons["More"]
-        if moreTab.exists {
-            moreTab.tap()
-            sleep(1)
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 5), "More tab should exist")
+        moreTab.tap()
+        sleep(1)
 
-            // Tap into Settings (nested inside More tab after tab consolidation)
-            let settingsButton = app.staticTexts["Settings"]
-            if settingsButton.waitForExistence(timeout: 5) {
-                settingsButton.tap()
-                sleep(1)
-            }
+        // Tap into Settings (nested inside More tab after tab consolidation)
+        let settingsCell = app.cells.containing(.staticText, identifier: "Settings").firstMatch
+        let settingsButton = settingsCell.exists ? settingsCell : app.staticTexts["Settings"]
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 5), "Settings should be visible in More tab")
+        settingsButton.tap()
+        sleep(1)
 
-            // Look for "Development" or "localhost" indicator
-            let devIndicator = app.staticTexts.matching(
-                NSPredicate(format: "label CONTAINS[c] 'development' OR label CONTAINS[c] 'localhost'")
-            ).firstMatch
+        // Look for "Development" or "localhost" indicator
+        let devIndicator = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS[c] 'development' OR label CONTAINS[c] 'localhost'")
+        ).firstMatch
 
-            XCTAssertTrue(devIndicator.waitForExistence(timeout: 5),
-                         "App should show Development environment (not Staging)")
-        }
+        XCTAssertTrue(devIndicator.waitForExistence(timeout: 5),
+                     "App should show Development environment (not Staging)")
     }
 
     /// Verify workouts can be loaded from localhost API
