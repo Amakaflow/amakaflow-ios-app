@@ -30,9 +30,9 @@ struct CoachChatView: View {
                             }
 
                             ForEach(viewModel.messages) { message in
-                                MessageBubbleView(message: message, onSendMessage: { text in
+                                MessageBubbleView(message: message) { text in
                                     Task { await viewModel.sendMessage(text) }
-                                })
+                                }
                                 .id(message.id)
                             }
                         }
@@ -45,7 +45,7 @@ struct CoachChatView: View {
                         if !streaming { scrollToBottom(proxy) }
                     }
                     .onChange(of: viewModel.scrollTrigger) { _ in
-                        scrollToBottom(proxy)
+                        scrollToBottom(proxy, animated: false)
                     }
                 }
 
@@ -86,12 +86,14 @@ struct CoachChatView: View {
                     } label: {
                         Image(systemName: "plus.bubble")
                             .foregroundColor(Theme.Colors.accentBlue)
+                            .accessibilityLabel("Start new chat")
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink(destination: FatigueAdvisorView(viewModel: viewModel)) {
                         Image(systemName: "heart.text.square")
                             .foregroundColor(Theme.Colors.accentBlue)
+                            .accessibilityLabel("Open fatigue advisor")
                     }
                 }
             }
@@ -107,9 +109,13 @@ struct CoachChatView: View {
         }
     }
 
-    private func scrollToBottom(_ proxy: ScrollViewProxy) {
+    private func scrollToBottom(_ proxy: ScrollViewProxy, animated: Bool = true) {
         if let last = viewModel.messages.last {
-            withAnimation(.easeOut(duration: 0.2)) {
+            if animated {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    proxy.scrollTo(last.id, anchor: .bottom)
+                }
+            } else {
                 proxy.scrollTo(last.id, anchor: .bottom)
             }
         }
