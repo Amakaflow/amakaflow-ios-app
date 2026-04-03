@@ -203,6 +203,8 @@ class FixtureAPIService: APIServiceProviding {
     func fetchUserPublicProfile(userId: String) async throws -> UserPublicProfile {
         UserPublicProfile(userId: userId, userName: "Fixture User", avatarUrl: nil, workoutCount: 0, totalVolume: 0, streakDays: 0, isFollowing: false, recentWorkouts: [])
     }
+    func followUser(userId: String) async throws {}
+    func unfollowUser(userId: String) async throws {}
 
     // MARK: - Challenges (AMA-1276)
 

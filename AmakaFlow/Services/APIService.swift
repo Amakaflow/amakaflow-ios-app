@@ -1778,6 +1778,28 @@ extension APIService {
         return try APIService.makeDecoder().decode(UserPublicProfile.self, from: data)
     }
 
+    func followUser(userId: String) async throws {
+        let url = URL(string: "\(baseURL)/social/users/\(userId)/follow")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders
+        let (_, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 || httpResponse.statusCode == 204 else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 500)
+        }
+    }
+
+    func unfollowUser(userId: String) async throws {
+        let url = URL(string: "\(baseURL)/social/users/\(userId)/unfollow")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders
+        let (_, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 || httpResponse.statusCode == 204 else {
+            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 500)
+        }
+    }
+
     // MARK: - Challenges (AMA-1276)
 
     func fetchChallenges() async throws -> ChallengesResponse {

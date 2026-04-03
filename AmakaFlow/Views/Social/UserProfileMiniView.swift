@@ -167,8 +167,19 @@ struct UserProfileMiniView: View {
     }
 
     private func toggleFollow() async {
+        guard let currentProfile = profile else { return }
         isFollowLoading = true
-        // TODO: Call follow/unfollow API
+        do {
+            if currentProfile.isFollowing {
+                try await APIService.shared.unfollowUser(userId: userId)
+            } else {
+                try await APIService.shared.followUser(userId: userId)
+            }
+            // Reload profile to get updated isFollowing state
+            profile = try await APIService.shared.fetchUserPublicProfile(userId: userId)
+        } catch {
+            print("[UserProfileMiniView] toggleFollow failed: \(error)")
+        }
         isFollowLoading = false
     }
 }
