@@ -18,6 +18,7 @@ struct ContentView: View {
         case workouts = "Workouts"
         case sources = "Sources"
         case calendar = "Calendar"
+        case nutrition = "Nutrition"
         case coach = "Coach"
         case history = "History"
         case social = "Social"
@@ -33,6 +34,8 @@ struct ContentView: View {
                 return "arrow.down.circle.fill"
             case .calendar:
                 return "calendar"
+            case .nutrition:
+                return "fork.knife"
             case .coach:
                 return "bubble.left.and.bubble.right.fill"
             case .history:
@@ -80,6 +83,14 @@ struct ContentView: View {
                 }
                 .tag(Tab.calendar)
                 .accessibilityIdentifier("calendar_tab")
+
+            FoodLoggingView()
+                .tabItem {
+                    Image(systemName: Tab.nutrition.icon)
+                    Text(Tab.nutrition.rawValue)
+                }
+                .tag(Tab.nutrition)
+                .accessibilityIdentifier("nutrition_tab")
 
             CoachChatView()
                 .tabItem {
@@ -143,6 +154,9 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToSync)) { _ in
             selectedTab = .settings
             showSyncDashboard = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .deepLinkToNutrition)) { _ in
+            selectedTab = .nutrition
         }
     }
 }

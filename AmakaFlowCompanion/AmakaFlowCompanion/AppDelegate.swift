@@ -153,4 +153,5 @@ extension Notification.Name {
     static let deepLinkToSync = Notification.Name("deepLinkToSync")
     static let deepLinkToCalendar = Notification.Name("deepLinkToCalendar")
     static let deepLinkToCoach = Notification.Name("deepLinkToCoach")
+    static let deepLinkToNutrition = Notification.Name("deepLinkToNutrition")
 }
