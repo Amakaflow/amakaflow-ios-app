@@ -59,24 +59,31 @@ class VolumeAnalyticsViewModel: ObservableObject {
         let previousStart = Calendar.current.date(byAdding: .day, value: -selectedPeriod.days, to: currentStart) ?? currentStart
 
         do {
-            async let current = dependencies.apiService.fetchVolumeAnalytics(
+            async let currentResult = dependencies.apiService.fetchVolumeAnalytics(
                 startDate: formatter.string(from: currentStart),
                 endDate: formatter.string(from: today),
                 granularity: selectedPeriod.granularity
             )
-            async let previous = dependencies.apiService.fetchVolumeAnalytics(
+            async let previousResult = dependencies.apiService.fetchVolumeAnalytics(
                 startDate: formatter.string(from: previousStart),
                 endDate: formatter.string(from: currentStart),
                 granularity: selectedPeriod.granularity
             )
-            currentData = try await current
-            previousData = try await previous
+            let current = try await currentResult
+            let previous = try await previousResult
+
+            guard !Task.isCancelled else { return }
+            currentData = current
+            previousData = previous
         } catch {
+            guard !Task.isCancelled else { return }
             print("[VolumeAnalyticsVM] loadVolume failed: \(error)")
             errorMessage = "Could not load volume data"
         }
 
-        isLoading = false
+        if !Task.isCancelled {
+            isLoading = false
+        }
     }
 
     func changePeriod(_ period: AnalyticsPeriod) {
