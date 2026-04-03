@@ -247,13 +247,17 @@ class BarcodeScannerViewController: UIViewController, AVCaptureMetadataOutputObj
         cleanup()
     }
 
+    private let sessionQueue = DispatchQueue(label: "com.amakaflow.barcode.session")
+
     private func cleanup() {
         metadataOutput?.setMetadataObjectsDelegate(nil, queue: nil)
-        if let session = captureSession, session.isRunning {
-            session.stopRunning()
+        sessionQueue.sync {
+            if let session = captureSession, session.isRunning {
+                session.stopRunning()
+            }
+            captureSession?.outputs.forEach { captureSession?.removeOutput($0) }
+            captureSession?.inputs.forEach { captureSession?.removeInput($0) }
         }
-        captureSession?.outputs.forEach { captureSession?.removeOutput($0) }
-        captureSession?.inputs.forEach { captureSession?.removeInput($0) }
         captureSession = nil
         previewLayer?.removeFromSuperlayer()
         previewLayer = nil
@@ -289,7 +293,7 @@ class BarcodeScannerViewController: UIViewController, AVCaptureMetadataOutputObj
         self.captureSession = session
         self.previewLayer = preview
 
-        DispatchQueue.global(qos: .userInitiated).async {
+        sessionQueue.async {
             session.startRunning()
         }
     }
