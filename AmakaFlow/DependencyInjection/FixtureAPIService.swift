@@ -284,6 +284,34 @@ class FixtureAPIService: APIServiceProviding {
         RPEFeedbackResponse(success: true, message: "Feedback recorded", deloadRecommended: false)
     }
 
+    // MARK: - Program Generation (AMA-1413)
+
+    func generateProgram(request: ProgramGenerationRequest) async throws -> ProgramGenerationResponse {
+        print("[FixtureAPIService] Stub: generateProgram -> fixture job")
+        return ProgramGenerationResponse(jobId: "fixture-job-001", status: "queued", programId: nil, error: nil)
+    }
+
+    func fetchGenerationStatus(jobId: String) async throws -> ProgramGenerationStatus {
+        print("[FixtureAPIService] Stub: fetchGenerationStatus(\(jobId)) -> completed")
+        return ProgramGenerationStatus(jobId: jobId, status: "completed", progress: 100, programId: "fixture-program-001", error: nil)
+    }
+
+    func updateProgramStatus(id: String, status: String) async throws {
+        print("[FixtureAPIService] Stub: updateProgramStatus(\(id), \(status)) -> success")
+    }
+
+    func updateProgramProgress(id: String, currentWeek: Int) async throws {
+        print("[FixtureAPIService] Stub: updateProgramProgress(\(id), week \(currentWeek)) -> success")
+    }
+
+    func deleteProgram(id: String) async throws {
+        print("[FixtureAPIService] Stub: deleteProgram(\(id)) -> success")
+    }
+
+    func completeWorkout(workoutId: String) async throws {
+        print("[FixtureAPIService] Stub: completeWorkout(\(workoutId)) -> success")
+    }
+
     // MARK: - Volume Analytics (AMA-1414)
 
     func fetchVolumeAnalytics(startDate: String, endDate: String, granularity: String) async throws -> VolumeAnalyticsResponse {

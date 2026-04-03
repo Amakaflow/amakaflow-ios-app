@@ -2011,6 +2011,111 @@ extension APIService {
         return try APIService.makeDecoder().decode(TrainingProgram.self, from: data)
     }
 
+    // MARK: - Program Generation (AMA-1413)
+
+    func generateProgram(request: ProgramGenerationRequest) async throws -> ProgramGenerationResponse {
+        guard let url = URL(string: "\(baseURL)/programs/generate") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.allHTTPHeaderFields = authHeaders
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        req.httpBody = try encoder.encode(request)
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard httpResponse.statusCode == 200 || httpResponse.statusCode == 202 else {
+            if httpResponse.statusCode == 401 { throw APIError.unauthorized }
+            let body = String(data: data, encoding: .utf8) ?? "empty"
+            logError(endpoint: "/programs/generate", method: "POST",
+                     statusCode: httpResponse.statusCode, response: body, error: nil)
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+        return try APIService.makeDecoder().decode(ProgramGenerationResponse.self, from: data)
+    }
+
+    func fetchGenerationStatus(jobId: String) async throws -> ProgramGenerationStatus {
+        guard let url = URL(string: "\(baseURL)/programs/generate/\(jobId)/status") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        req.allHTTPHeaderFields = authHeaders
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard httpResponse.statusCode == 200 else {
+            if httpResponse.statusCode == 401 { throw APIError.unauthorized }
+            let body = String(data: data, encoding: .utf8) ?? "empty"
+            logError(endpoint: "/programs/generate/\(jobId)/status", method: "GET",
+                     statusCode: httpResponse.statusCode, response: body, error: nil)
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+        return try APIService.makeDecoder().decode(ProgramGenerationStatus.self, from: data)
+    }
+
+    func updateProgramStatus(id: String, status: String) async throws {
+        guard let url = URL(string: "\(baseURL)/training-programs/\(id)/status") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "PATCH"
+        req.allHTTPHeaderFields = authHeaders
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["status": status])
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            if httpResponse.statusCode == 401 { throw APIError.unauthorized }
+            let body = String(data: data, encoding: .utf8) ?? "empty"
+            logError(endpoint: "/training-programs/\(id)/status", method: "PATCH",
+                     statusCode: httpResponse.statusCode, response: body, error: nil)
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func updateProgramProgress(id: String, currentWeek: Int) async throws {
+        guard let url = URL(string: "\(baseURL)/training-programs/\(id)/progress") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "PATCH"
+        req.allHTTPHeaderFields = authHeaders
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["current_week": currentWeek])
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            if httpResponse.statusCode == 401 { throw APIError.unauthorized }
+            let body = String(data: data, encoding: .utf8) ?? "empty"
+            logError(endpoint: "/training-programs/\(id)/progress", method: "PATCH",
+                     statusCode: httpResponse.statusCode, response: body, error: nil)
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func deleteProgram(id: String) async throws {
+        guard let url = URL(string: "\(baseURL)/training-programs/\(id)") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "DELETE"
+        req.allHTTPHeaderFields = authHeaders
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            if httpResponse.statusCode == 401 { throw APIError.unauthorized }
+            let body = String(data: data, encoding: .utf8) ?? "empty"
+            logError(endpoint: "/training-programs/\(id)", method: "DELETE",
+                     statusCode: httpResponse.statusCode, response: body, error: nil)
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func completeWorkout(workoutId: String) async throws {
+        guard let url = URL(string: "\(baseURL)/training-programs/workouts/\(workoutId)/complete") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "PATCH"
+        req.allHTTPHeaderFields = authHeaders
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            if httpResponse.statusCode == 401 { throw APIError.unauthorized }
+            let body = String(data: data, encoding: .utf8) ?? "empty"
+            logError(endpoint: "/training-programs/workouts/\(workoutId)/complete", method: "PATCH",
+                     statusCode: httpResponse.statusCode, response: body, error: nil)
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
     // MARK: - Calendar Sync (AMA-1238)
 
     func fetchConnectedCalendars() async throws -> [ConnectedCalendar] {

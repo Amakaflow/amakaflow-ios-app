@@ -229,6 +229,17 @@
 		AK00FIX023B /* StravaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX023A /* StravaView.swift */; };
 		AK00FIX024B /* TeamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX024A /* TeamView.swift */; };
 		AK00FIX025B /* WorkoutEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX025A /* WorkoutEditorView.swift */; };
+		AMA14130001B /* ProgramGenerationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14130001A /* ProgramGenerationModels.swift */; };
+		AMA14130002B /* ProgramWizardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14130002A /* ProgramWizardViewModel.swift */; };
+		AMA14130003B /* ProgramManagementViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14130003A /* ProgramManagementViewModel.swift */; };
+		AMA14130004B /* ProgramWizardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14130004A /* ProgramWizardView.swift */; };
+		AMA14130005B /* GoalStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14130005A /* GoalStepView.swift */; };
+		AMA14130006B /* ExperienceStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14130006A /* ExperienceStepView.swift */; };
+		AMA14130007B /* ScheduleStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14130007A /* ScheduleStepView.swift */; };
+		AMA14130008B /* EquipmentStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14130008A /* EquipmentStepView.swift */; };
+		AMA14130009B /* PreferencesStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14130009A /* PreferencesStepView.swift */; };
+		AMA14130010B /* ReviewStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14130010A /* ReviewStepView.swift */; };
+		AMA14130011B /* ProgramWizardViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14130011A /* ProgramWizardViewModelTests.swift */; };
 		AK00CHL001B /* ChallengeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00CHL001A /* ChallengeModels.swift */; };
 		AK00CHL002B /* ChallengesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00CHL002A /* ChallengesViewModel.swift */; };
 		AK00CHL003B /* ChallengesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00CHL003A /* ChallengesView.swift */; };
@@ -584,6 +595,17 @@
 		AK00FIX023A /* StravaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StravaView.swift; path = ../AmakaFlow/Views/StravaView.swift; sourceTree = "<group>"; };
 		AK00FIX024A /* TeamView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TeamView.swift; path = ../AmakaFlow/Views/TeamView.swift; sourceTree = "<group>"; };
 		AK00FIX025A /* WorkoutEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEditorView.swift; path = ../AmakaFlow/Views/WorkoutEditorView.swift; sourceTree = "<group>"; };
+		AMA14130001A /* ProgramGenerationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProgramGenerationModels.swift; path = ../AmakaFlow/Models/ProgramGenerationModels.swift; sourceTree = "<group>"; };
+		AMA14130002A /* ProgramWizardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProgramWizardViewModel.swift; path = ../AmakaFlow/ViewModels/ProgramWizardViewModel.swift; sourceTree = "<group>"; };
+		AMA14130003A /* ProgramManagementViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProgramManagementViewModel.swift; path = ../AmakaFlow/ViewModels/ProgramManagementViewModel.swift; sourceTree = "<group>"; };
+		AMA14130004A /* ProgramWizardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProgramWizardView.swift; path = ../AmakaFlow/Views/Programs/ProgramWizardView.swift; sourceTree = "<group>"; };
+		AMA14130005A /* GoalStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GoalStepView.swift; path = ../AmakaFlow/Views/Programs/GoalStepView.swift; sourceTree = "<group>"; };
+		AMA14130006A /* ExperienceStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ExperienceStepView.swift; path = ../AmakaFlow/Views/Programs/ExperienceStepView.swift; sourceTree = "<group>"; };
+		AMA14130007A /* ScheduleStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ScheduleStepView.swift; path = ../AmakaFlow/Views/Programs/ScheduleStepView.swift; sourceTree = "<group>"; };
+		AMA14130008A /* EquipmentStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EquipmentStepView.swift; path = ../AmakaFlow/Views/Programs/EquipmentStepView.swift; sourceTree = "<group>"; };
+		AMA14130009A /* PreferencesStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PreferencesStepView.swift; path = ../AmakaFlow/Views/Programs/PreferencesStepView.swift; sourceTree = "<group>"; };
+		AMA14130010A /* ReviewStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReviewStepView.swift; path = ../AmakaFlow/Views/Programs/ReviewStepView.swift; sourceTree = "<group>"; };
+		AMA14130011A /* ProgramWizardViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProgramWizardViewModelTests.swift; path = AmakaFlowCompanionTests/ProgramWizardViewModelTests.swift; sourceTree = "<group>"; };
 		AK00CHL001A /* ChallengeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ChallengeModels.swift; path = ../AmakaFlow/Models/ChallengeModels.swift; sourceTree = "<group>"; };
 		AK00CHL002A /* ChallengesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ChallengesViewModel.swift; path = ../AmakaFlow/ViewModels/ChallengesViewModel.swift; sourceTree = "<group>"; };
 		AK00CHL003A /* ChallengesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ChallengesView.swift; path = ../AmakaFlow/Views/Social/ChallengesView.swift; sourceTree = "<group>"; };
@@ -991,6 +1013,17 @@
 				AMA14120012A /* FatigueHistoryView.swift */,
 				AMA14120013A /* FatigueHistoryViewModelTests.swift */,
 				AMA14120015FILEREF /* MoreView.swift */,
+				AMA14130001A /* ProgramGenerationModels.swift */,
+				AMA14130002A /* ProgramWizardViewModel.swift */,
+				AMA14130003A /* ProgramManagementViewModel.swift */,
+				AMA14130004A /* ProgramWizardView.swift */,
+				AMA14130005A /* GoalStepView.swift */,
+				AMA14130006A /* ExperienceStepView.swift */,
+				AMA14130007A /* ScheduleStepView.swift */,
+				AMA14130008A /* EquipmentStepView.swift */,
+				AMA14130009A /* PreferencesStepView.swift */,
+				AMA14130010A /* ReviewStepView.swift */,
+				AMA14130011A /* ProgramWizardViewModelTests.swift */,
 				AMA14140001A /* VolumeAnalyticsModels.swift */,
 				AMA14140002A /* VolumeAnalyticsViewModel.swift */,
 				AMA14140003A /* VolumeBarChart.swift */,
@@ -1637,6 +1670,16 @@
 				AMA14120011B /* FatigueHistoryViewModel.swift in Sources */,
 				AMA14120012B /* FatigueHistoryView.swift in Sources */,
 				AMA14120015BLDFILE /* MoreView.swift in Sources */,
+				AMA14130001B /* ProgramGenerationModels.swift in Sources */,
+				AMA14130002B /* ProgramWizardViewModel.swift in Sources */,
+				AMA14130003B /* ProgramManagementViewModel.swift in Sources */,
+				AMA14130004B /* ProgramWizardView.swift in Sources */,
+				AMA14130005B /* GoalStepView.swift in Sources */,
+				AMA14130006B /* ExperienceStepView.swift in Sources */,
+				AMA14130007B /* ScheduleStepView.swift in Sources */,
+				AMA14130008B /* EquipmentStepView.swift in Sources */,
+				AMA14130009B /* PreferencesStepView.swift in Sources */,
+				AMA14130010B /* ReviewStepView.swift in Sources */,
 				AMA14140001B /* VolumeAnalyticsModels.swift in Sources */,
 				AMA14140002B /* VolumeAnalyticsViewModel.swift in Sources */,
 				AMA14140003B /* VolumeBarChart.swift in Sources */,
@@ -1687,6 +1730,7 @@
 				AK00AFL006B /* FoodLoggingViewModelTests.swift in Sources */,
 				AK00FUL004B /* FuelingViewModelTests.swift in Sources */,
 				AMA14120013B /* FatigueHistoryViewModelTests.swift in Sources */,
+				AMA14130011B /* ProgramWizardViewModelTests.swift in Sources */,
 				AMA14140007B /* VolumeAnalyticsViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

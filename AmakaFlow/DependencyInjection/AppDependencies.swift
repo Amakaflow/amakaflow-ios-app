@@ -583,6 +583,59 @@ class MockAPIService: APIServiceProviding {
         return try result.get()
     }
 
+    // MARK: - Program Generation (AMA-1413)
+
+    var generateProgramResult: Result<ProgramGenerationResponse, Error>?
+    var generateProgramCalled = false
+    var lastGenerateProgramRequest: ProgramGenerationRequest?
+    var fetchGenerationStatusResult: Result<ProgramGenerationStatus, Error>?
+    var fetchGenerationStatusCalled = false
+    var updateProgramStatusCalled = false
+    var lastUpdateProgramStatusId: String?
+    var lastUpdateProgramStatus: String?
+    var updateProgramProgressCalled = false
+    var lastUpdateProgramProgressId: String?
+    var lastUpdateProgramProgressWeek: Int?
+    var deleteProgramCalled = false
+    var lastDeleteProgramId: String?
+    var completeWorkoutCalled = false
+    var lastCompleteWorkoutId: String?
+
+    func generateProgram(request: ProgramGenerationRequest) async throws -> ProgramGenerationResponse {
+        generateProgramCalled = true
+        lastGenerateProgramRequest = request
+        guard let result = generateProgramResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
+
+    func fetchGenerationStatus(jobId: String) async throws -> ProgramGenerationStatus {
+        fetchGenerationStatusCalled = true
+        guard let result = fetchGenerationStatusResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
+
+    func updateProgramStatus(id: String, status: String) async throws {
+        updateProgramStatusCalled = true
+        lastUpdateProgramStatusId = id
+        lastUpdateProgramStatus = status
+    }
+
+    func updateProgramProgress(id: String, currentWeek: Int) async throws {
+        updateProgramProgressCalled = true
+        lastUpdateProgramProgressId = id
+        lastUpdateProgramProgressWeek = currentWeek
+    }
+
+    func deleteProgram(id: String) async throws {
+        deleteProgramCalled = true
+        lastDeleteProgramId = id
+    }
+
+    func completeWorkout(workoutId: String) async throws {
+        completeWorkoutCalled = true
+        lastCompleteWorkoutId = workoutId
+    }
+
     // MARK: - Volume Analytics (AMA-1414)
 
     var fetchVolumeAnalyticsResult: Result<VolumeAnalyticsResponse, Error>?

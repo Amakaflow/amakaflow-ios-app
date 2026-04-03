@@ -58,7 +58,10 @@ struct ProgramDetailView: View {
     let programName: String
 
     @StateObject private var viewModel = ProgramsViewModel()
+    @StateObject private var managementViewModel = ProgramManagementViewModel()
     @State private var expandedWeeks: Set<String> = []
+    @State private var showDeleteConfirmation = false
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         Group {
@@ -75,6 +78,82 @@ struct ProgramDetailView: View {
         .background(Theme.Colors.background.ignoresSafeArea())
         .navigationTitle(programName)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    if let program = viewModel.selectedProgram {
+                        // Pause / Resume
+                        if program.status == "active" {
+                            Button {
+                                Task {
+                                    let ok = await managementViewModel.updateStatus(programId: programId, status: "paused")
+                                    if ok { await viewModel.loadProgramDetail(id: programId) }
+                                }
+                            } label: {
+                                Label("Pause Program", systemImage: "pause.circle")
+                            }
+                        } else if program.status == "paused" {
+                            Button {
+                                Task {
+                                    let ok = await managementViewModel.updateStatus(programId: programId, status: "active")
+                                    if ok { await viewModel.loadProgramDetail(id: programId) }
+                                }
+                            } label: {
+                                Label("Resume Program", systemImage: "play.circle")
+                            }
+                        }
+
+                        // Archive
+                        if program.status != "archived" {
+                            Button {
+                                Task {
+                                    let ok = await managementViewModel.updateStatus(programId: programId, status: "archived")
+                                    if ok { await viewModel.loadProgramDetail(id: programId) }
+                                }
+                            } label: {
+                                Label("Archive Program", systemImage: "archivebox")
+                            }
+                        }
+
+                        Divider()
+
+                        // Delete
+                        Button(role: .destructive) {
+                            showDeleteConfirmation = true
+                        } label: {
+                            Label("Delete Program", systemImage: "trash")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .foregroundColor(Theme.Colors.accentBlue)
+                }
+            }
+        }
+        .confirmationDialog(
+            "Delete Program",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                Task {
+                    let success = await managementViewModel.deleteProgram(programId: programId)
+                    if success {
+                        dismiss()
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will permanently delete your training program and cannot be undone.")
+        }
+        .alert("Error", isPresented: .constant(managementViewModel.errorMessage != nil)) {
+            Button("OK") { managementViewModel.errorMessage = nil }
+        } message: {
+            if let error = managementViewModel.errorMessage {
+                Text(error)
+            }
+        }
         .task {
             await viewModel.loadProgramDetail(id: programId)
             // Auto-expand first week
@@ -272,10 +351,20 @@ struct ProgramDetailView: View {
     private func workoutRow(_ workout: ProgramWorkout) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             HStack {
-                // Completion indicator
-                Image(systemName: workout.isCompleted == true ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 16))
-                    .foregroundColor(workout.isCompleted == true ? Theme.Colors.accentGreen : Theme.Colors.textTertiary)
+                // Completion indicator (tappable to complete)
+                Button {
+                    guard workout.isCompleted != true else { return }
+                    Task {
+                        let ok = await managementViewModel.completeWorkout(workoutId: workout.id)
+                        if ok { await viewModel.loadProgramDetail(id: programId) }
+                    }
+                } label: {
+                    Image(systemName: workout.isCompleted == true ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 16))
+                        .foregroundColor(workout.isCompleted == true ? Theme.Colors.accentGreen : Theme.Colors.textTertiary)
+                }
+                .buttonStyle(.plain)
+                .disabled(workout.isCompleted == true || managementViewModel.isWorking)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(workout.name)
