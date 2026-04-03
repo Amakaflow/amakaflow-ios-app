@@ -26,6 +26,14 @@ struct ProgramsListView: View {
             .background(Theme.Colors.background.ignoresSafeArea())
             .navigationTitle("Programs")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink(destination: ProgramWizardView()) {
+                        Image(systemName: "plus")
+                            .foregroundColor(Theme.Colors.accentBlue)
+                    }
+                }
+            }
             .refreshable {
                 await viewModel.loadPrograms()
             }

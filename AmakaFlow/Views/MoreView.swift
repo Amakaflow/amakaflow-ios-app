@@ -40,6 +40,12 @@ struct MoreView: View {
                     } label: {
                         moreRow(icon: "arrow.down.circle.fill", title: "Sources")
                     }
+
+                    NavigationLink {
+                        ProgramsListView()
+                    } label: {
+                        moreRow(icon: "list.bullet.clipboard", title: "Programs")
+                    }
                 } header: {
                     Text("Features")
                 }

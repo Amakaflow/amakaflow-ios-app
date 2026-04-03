@@ -267,6 +267,26 @@ protocol APIServiceProviding {
 
     /// Post RPE feedback for a completed workout
     func postRPEFeedback(_ feedback: RPEFeedbackRequest) async throws -> RPEFeedbackResponse
+
+    // MARK: - Program Generation (AMA-1413)
+
+    /// Start AI program generation job
+    func generateProgram(request: ProgramGenerationRequest) async throws -> ProgramGenerationResponse
+
+    /// Poll program generation job status
+    func fetchGenerationStatus(jobId: String) async throws -> ProgramGenerationStatus
+
+    /// Update a program's status (active, paused, archived, completed)
+    func updateProgramStatus(id: String, status: String) async throws
+
+    /// Update the current week progress for a program
+    func updateProgramProgress(id: String, currentWeek: Int) async throws
+
+    /// Delete a training program
+    func deleteProgram(id: String) async throws
+
+    /// Mark a program workout as completed
+    func completeWorkout(workoutId: String) async throws
 }
 
 // MARK: - Default Parameter Extensions
