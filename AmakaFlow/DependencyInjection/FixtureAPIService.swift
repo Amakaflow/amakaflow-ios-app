@@ -251,5 +251,37 @@ class FixtureAPIService: APIServiceProviding {
     func fetchCrewLeaderboard(crewId: String, dimension: String, period: String) async throws -> LeaderboardAPIResponse {
         LeaderboardAPIResponse(dimension: dimension, period: period, entries: [])
     }
+
+    // MARK: - Nutrition (AMA-1412)
+
+    func analyzePhoto(imageBase64: String) async throws -> AnalyzePhotoAPIResponse {
+        AnalyzePhotoAPIResponse(items: [], totals: MacroTotalsResponse(calories: 0, proteinG: 0, carbsG: 0, fatG: 0), notes: nil)
+    }
+
+    func lookupBarcode(code: String) async throws -> BarcodeNutritionAPIResponse {
+        throw APIError.notImplemented
+    }
+
+    func parseText(text: String) async throws -> ParseTextAPIResponse {
+        ParseTextAPIResponse(items: [], totals: MacroTotalsResponse(calories: 0, proteinG: 0, carbsG: 0, fatG: 0), rawText: text)
+    }
+
+    func getFuelingStatus() async throws -> FuelingStatusResponse {
+        FuelingStatusResponse(status: "green", proteinPct: 0.75, caloriesPct: 0.8, hydrationPct: 0.6, message: "You're fueling well")
+    }
+
+    func checkProteinNudge() async throws -> ProteinNudgeResponse {
+        ProteinNudgeResponse(shouldNudge: false, proteinCurrent: 100, proteinTarget: 150, message: "Protein on track")
+    }
+
+    // MARK: - Coach Suggestions (AMA-1412)
+
+    func suggestWorkout(request: SuggestWorkoutRequest) async throws -> SuggestWorkoutResponse {
+        throw APIError.notImplemented
+    }
+
+    func postRPEFeedback(_ feedback: RPEFeedbackRequest) async throws -> RPEFeedbackResponse {
+        RPEFeedbackResponse(success: true, message: "Feedback recorded", deloadRecommended: false)
+    }
 }
 #endif

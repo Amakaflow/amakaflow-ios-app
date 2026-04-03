@@ -2095,6 +2095,168 @@ extension APIService {
         }
         return try APIService.makeDecoder().decode(LeaderboardAPIResponse.self, from: data)
     }
+
+    // MARK: - Nutrition (AMA-1412)
+
+    func analyzePhoto(imageBase64: String) async throws -> AnalyzePhotoAPIResponse {
+        let chatURL = AppEnvironment.current.chatAPIURL
+        guard let url = URL(string: "\(chatURL)/nutrition/analyze-photo") else {
+            throw APIError.invalidURL
+        }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.allHTTPHeaderFields = authHeaders
+        let payload = ["image_base64": imageBase64]
+        req.httpBody = try JSONEncoder().encode(payload)
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        switch httpResponse.statusCode {
+        case 200:
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            return try decoder.decode(AnalyzePhotoAPIResponse.self, from: data)
+        case 401:
+            throw APIError.unauthorized
+        default:
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func lookupBarcode(code: String) async throws -> BarcodeNutritionAPIResponse {
+        let chatURL = AppEnvironment.current.chatAPIURL
+        guard let url = URL(string: "\(chatURL)/nutrition/barcode/\(code)") else {
+            throw APIError.invalidURL
+        }
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        req.allHTTPHeaderFields = authHeaders
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        switch httpResponse.statusCode {
+        case 200:
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            return try decoder.decode(BarcodeNutritionAPIResponse.self, from: data)
+        case 401:
+            throw APIError.unauthorized
+        default:
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func parseText(text: String) async throws -> ParseTextAPIResponse {
+        let chatURL = AppEnvironment.current.chatAPIURL
+        guard let url = URL(string: "\(chatURL)/nutrition/parse-text") else {
+            throw APIError.invalidURL
+        }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.allHTTPHeaderFields = authHeaders
+        let payload = ["text": text]
+        req.httpBody = try JSONEncoder().encode(payload)
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        switch httpResponse.statusCode {
+        case 200:
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            return try decoder.decode(ParseTextAPIResponse.self, from: data)
+        case 401:
+            throw APIError.unauthorized
+        default:
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func getFuelingStatus() async throws -> FuelingStatusResponse {
+        let chatURL = AppEnvironment.current.chatAPIURL
+        guard let url = URL(string: "\(chatURL)/nutrition/fueling-status") else {
+            throw APIError.invalidURL
+        }
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        req.allHTTPHeaderFields = authHeaders
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        switch httpResponse.statusCode {
+        case 200:
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            return try decoder.decode(FuelingStatusResponse.self, from: data)
+        case 401:
+            throw APIError.unauthorized
+        default:
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func checkProteinNudge() async throws -> ProteinNudgeResponse {
+        let chatURL = AppEnvironment.current.chatAPIURL
+        guard let url = URL(string: "\(chatURL)/nutrition/protein-nudge/check") else {
+            throw APIError.invalidURL
+        }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.allHTTPHeaderFields = authHeaders
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        switch httpResponse.statusCode {
+        case 200:
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            return try decoder.decode(ProteinNudgeResponse.self, from: data)
+        case 401:
+            throw APIError.unauthorized
+        default:
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    // MARK: - Coach Suggestions (AMA-1412)
+
+    func suggestWorkout(request: SuggestWorkoutRequest) async throws -> SuggestWorkoutResponse {
+        let chatURL = AppEnvironment.current.chatAPIURL
+        guard let url = URL(string: "\(chatURL)/api/v1/coach/suggest-workout") else {
+            throw APIError.invalidURL
+        }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.allHTTPHeaderFields = authHeaders
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        req.httpBody = try encoder.encode(request)
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        switch httpResponse.statusCode {
+        case 200:
+            return try APIService.makeDecoder().decode(SuggestWorkoutResponse.self, from: data)
+        case 401:
+            throw APIError.unauthorized
+        default:
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
+    func postRPEFeedback(_ feedback: RPEFeedbackRequest) async throws -> RPEFeedbackResponse {
+        let chatURL = AppEnvironment.current.chatAPIURL
+        guard let url = URL(string: "\(chatURL)/coach/rpe-feedback") else {
+            throw APIError.invalidURL
+        }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.allHTTPHeaderFields = authHeaders
+        req.httpBody = try JSONEncoder().encode(feedback)
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        switch httpResponse.statusCode {
+        case 200:
+            return try APIService.makeDecoder().decode(RPEFeedbackResponse.self, from: data)
+        case 401:
+            throw APIError.unauthorized
+        default:
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
 }
 
 // MARK: - API Errors

@@ -31,6 +31,14 @@ enum FoodLoggingTab: String, CaseIterable {
 @MainActor
 final class FoodLoggingViewModel: ObservableObject {
 
+    // MARK: - Dependencies
+
+    private let dependencies: AppDependencies
+
+    init(dependencies: AppDependencies = .live) {
+        self.dependencies = dependencies
+    }
+
     // MARK: - Shared State
 
     @Published var selectedTab: FoodLoggingTab = .photo
@@ -74,7 +82,7 @@ final class FoodLoggingViewModel: ObservableObject {
         photoNotes = nil
 
         do {
-            let response = try await postAnalyzePhoto(imageBase64: imageBase64)
+            let response = try await dependencies.apiService.analyzePhoto(imageBase64: imageBase64)
             photoItems = response.items
             photoTotals = response.totals
             photoNotes = response.notes
@@ -94,7 +102,7 @@ final class FoodLoggingViewModel: ObservableObject {
         barcodeResult = nil
 
         do {
-            let response = try await getBarcode(code: code)
+            let response = try await dependencies.apiService.lookupBarcode(code: code)
             barcodeResult = response
         } catch let apiError as APIError {
             switch apiError {
@@ -122,7 +130,7 @@ final class FoodLoggingViewModel: ObservableObject {
         textTotals = nil
 
         do {
-            let response = try await postParseText(text: text)
+            let response = try await dependencies.apiService.parseText(text: text)
             textItems = response.items
             textTotals = response.totals
         } catch {
@@ -133,95 +141,4 @@ final class FoodLoggingViewModel: ObservableObject {
         isLoading = false
     }
 
-    // MARK: - API Calls
-
-    private func makeAuthenticatedRequest(url: URL, method: String = "GET", body: Data? = nil) -> URLRequest {
-        var request = URLRequest(url: url)
-        request.httpMethod = method
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = body
-
-        #if DEBUG
-        if let testAuthSecret = TestAuthStore.shared.authSecret,
-           let testUserId = TestAuthStore.shared.userId,
-           !testAuthSecret.isEmpty {
-            request.setValue(testAuthSecret, forHTTPHeaderField: "X-Test-Auth")
-            request.setValue(testUserId, forHTTPHeaderField: "X-Test-User-Id")
-        } else if let token = PairingService.shared.getToken() {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        #else
-        if let token = PairingService.shared.getToken() {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        #endif
-
-        return request
-    }
-
-    private func postAnalyzePhoto(imageBase64: String) async throws -> AnalyzePhotoAPIResponse {
-        let baseURL = AppEnvironment.current.chatAPIURL
-        guard let url = URL(string: "\(baseURL)/nutrition/analyze-photo") else {
-            throw APIError.invalidResponse
-        }
-
-        let payload = ["image_base64": imageBase64]
-        let body = try JSONEncoder().encode(payload)
-
-        let request = makeAuthenticatedRequest(url: url, method: "POST", body: body)
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-            throw APIError.serverError(statusCode)
-        }
-
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        return try decoder.decode(AnalyzePhotoAPIResponse.self, from: data)
-    }
-
-    private func getBarcode(code: String) async throws -> BarcodeNutritionAPIResponse {
-        let baseURL = AppEnvironment.current.chatAPIURL
-        guard let url = URL(string: "\(baseURL)/nutrition/barcode/\(code)") else {
-            throw APIError.invalidResponse
-        }
-
-        let request = makeAuthenticatedRequest(url: url, method: "GET")
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        guard httpResponse.statusCode == 200 else {
-            throw APIError.serverError(httpResponse.statusCode)
-        }
-
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        return try decoder.decode(BarcodeNutritionAPIResponse.self, from: data)
-    }
-
-    private func postParseText(text: String) async throws -> ParseTextAPIResponse {
-        let baseURL = AppEnvironment.current.chatAPIURL
-        guard let url = URL(string: "\(baseURL)/nutrition/parse-text") else {
-            throw APIError.invalidResponse
-        }
-
-        let payload = ["text": text]
-        let body = try JSONEncoder().encode(payload)
-
-        let request = makeAuthenticatedRequest(url: url, method: "POST", body: body)
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-            throw APIError.serverError(statusCode)
-        }
-
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        return try decoder.decode(ParseTextAPIResponse.self, from: data)
-    }
 }

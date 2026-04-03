@@ -45,6 +45,15 @@ enum FuelingStatus: String {
 
 @MainActor
 final class FuelingViewModel: ObservableObject {
+
+    // MARK: - Dependencies
+
+    private let dependencies: AppDependencies
+
+    init(dependencies: AppDependencies = .live) {
+        self.dependencies = dependencies
+    }
+
     @Published var fuelingStatus: FuelingStatus = .unknown
     @Published var proteinPct: Double = 0
     @Published var caloriesPct: Double = 0
@@ -60,7 +69,7 @@ final class FuelingViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            let response = try await getFuelingStatus()
+            let response = try await dependencies.apiService.getFuelingStatus()
             fuelingStatus = FuelingStatus(from: response.status)
             proteinPct = response.proteinPct
             caloriesPct = response.caloriesPct
@@ -76,47 +85,4 @@ final class FuelingViewModel: ObservableObject {
         isLoading = false
     }
 
-    // MARK: - API
-
-    private func getFuelingStatus() async throws -> FuelingStatusResponse {
-        let baseURL = AppEnvironment.current.chatAPIURL
-        guard let url = URL(string: "\(baseURL)/nutrition/fueling-status") else {
-            throw APIError.invalidResponse
-        }
-
-        var urlRequest = URLRequest(url: url)
-        urlRequest.httpMethod = "GET"
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        #if DEBUG
-        if let testAuthSecret = TestAuthStore.shared.authSecret,
-           let testUserId = TestAuthStore.shared.userId,
-           !testAuthSecret.isEmpty {
-            urlRequest.setValue(testAuthSecret, forHTTPHeaderField: "X-Test-Auth")
-            urlRequest.setValue(testUserId, forHTTPHeaderField: "X-Test-User-Id")
-        } else if let token = PairingService.shared.getToken() {
-            urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        #else
-        if let token = PairingService.shared.getToken() {
-            urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        #endif
-
-        let (data, response) = try await URLSession.shared.data(for: urlRequest)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        guard httpResponse.statusCode == 200 else {
-            let body = String(data: data, encoding: .utf8) ?? "unknown"
-            print("[FuelingViewModel] API error \(httpResponse.statusCode): \(body)")
-            throw APIError.serverError(httpResponse.statusCode)
-        }
-
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        return try decoder.decode(FuelingStatusResponse.self, from: data)
-    }
 }

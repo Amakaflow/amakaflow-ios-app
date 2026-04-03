@@ -242,6 +242,31 @@ protocol APIServiceProviding {
 
     /// Update notification preferences
     func updateNotificationPreferences(_ prefs: NotificationPreferences) async throws -> NotificationPreferences
+
+    // MARK: - Nutrition (AMA-1412)
+
+    /// Analyze a food photo and return nutrition breakdown
+    func analyzePhoto(imageBase64: String) async throws -> AnalyzePhotoAPIResponse
+
+    /// Look up nutrition info by barcode
+    func lookupBarcode(code: String) async throws -> BarcodeNutritionAPIResponse
+
+    /// Parse a free-text food description into nutrition data
+    func parseText(text: String) async throws -> ParseTextAPIResponse
+
+    /// Get today's fueling status summary
+    func getFuelingStatus() async throws -> FuelingStatusResponse
+
+    /// Check whether the user should be nudged to eat more protein
+    func checkProteinNudge() async throws -> ProteinNudgeResponse
+
+    // MARK: - Coach Suggestions (AMA-1412)
+
+    /// Request an AI-generated workout suggestion
+    func suggestWorkout(request: SuggestWorkoutRequest) async throws -> SuggestWorkoutResponse
+
+    /// Post RPE feedback for a completed workout
+    func postRPEFeedback(_ feedback: RPEFeedbackRequest) async throws -> RPEFeedbackResponse
 }
 
 // MARK: - Default Parameter Extensions
