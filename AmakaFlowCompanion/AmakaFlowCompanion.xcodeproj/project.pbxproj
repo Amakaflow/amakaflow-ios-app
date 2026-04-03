@@ -9,6 +9,11 @@
 /* Begin PBXBuildFile section */
 		0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
 		11C72B7C6EA17FC8DEA354FB /* CoachModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */; };
+		AMA14100001BLDFILE /* ChatStreamModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100001FILEREF /* ChatStreamModels.swift */; };
+		AMA14100002BLDFILE /* ChatStreamService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100002FILEREF /* ChatStreamService.swift */; };
+		AMA14100003BLDFILE /* ToolCallCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100003FILEREF /* ToolCallCard.swift */; };
+		AMA14100004BLDFILE /* WorkoutPreviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100004FILEREF /* WorkoutPreviewCard.swift */; };
+		AMA14100005BLDFILE /* StageIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100005FILEREF /* StageIndicator.swift */; };
 		1A7B03C2552441FEB810773A /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */; };
 		1N5T4GR4MR33L0002 /* InstagramReelIngestionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */; };
 		27599809E31D40308DBFA93A /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F86F482904144B39B954F6A /* Environment.swift */; };
@@ -92,6 +97,17 @@
 		F1XTUR3JS0N01000006 /* hiit_follow_along.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000006 /* hiit_follow_along.json */; };
 		F1XTUR3L0AD3R0000002 /* FixtureLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1XTUR3L0AD3R0000001 /* FixtureLoader.swift */; };
 		F4E8733C34C4B41F73806D0A /* PlanningModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBCE80D8EA7940E025E8D41D /* PlanningModels.swift */; };
+		D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000001B0000001 /* DebugLogService.swift */; };
+		D3BUG10G00000002C0000002 /* DebugLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000002B0000002 /* DebugLogView.swift */; };
+		BL0CK5W1FT00000002 /* Block.swift in Sources */ = {isa = PBXBuildFile; fileRef = BL0CK5W1FT00000001 /* Block.swift */; };
+		BL0CK5W1FT00000004 /* Block.swift in Sources */ = {isa = PBXBuildFile; fileRef = BL0CK5W1FT00000001 /* Block.swift */; };
+		3X3RC1S35W1FT000002 /* Exercise.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3X3RC1S35W1FT000001 /* Exercise.swift */; };
+		3X3RC1S35W1FT000004 /* Exercise.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3X3RC1S35W1FT000001 /* Exercise.swift */; };
+		BL0CK2INT3RVAL00002 /* BlockToIntervalConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = BL0CK2INT3RVAL00001 /* BlockToIntervalConverter.swift */; };
+		BL0CK2INT3RVAL00004 /* BlockToIntervalConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = BL0CK2INT3RVAL00001 /* BlockToIntervalConverter.swift */; };
+		E33FF845EAAD4110B7D87FB0 /* DevicePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89321AF9D21D441198437105 /* DevicePreference.swift */; };
+		EB63D5EF54FF452580C70684 /* WorkoutCompletionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */; };
+		EB63D5EF54FF452580C70685 /* WorkoutCompletionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */; };
 		F818DA94C6BD4F40EE8313B0 /* StepDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8BFF8D1C38311406C868156 /* StepDisplayView.swift */; };
 		F84682B9F2FD8A45578F0E68 /* WorkoutPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */; };
 		F84E226F2ED0D55600459747 /* AmakaFlowApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E226D2ED0D55600459747 /* AmakaFlowApp.swift */; };
@@ -104,6 +120,8 @@
 		F84E227E2ED0D5BF00459747 /* IntervalRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E227B2ED0D5BF00459747 /* IntervalRow.swift */; };
 		F84E227F2ED0D5BF00459747 /* ScheduleCalendarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E227C2ED0D5BF00459747 /* ScheduleCalendarSheet.swift */; };
 		F84E22802ED0D5BF00459747 /* WorkoutCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E227D2ED0D5BF00459747 /* WorkoutCard.swift */; };
+		AMA14090000000001000001 /* ExerciseRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14090000000001000002 /* ExerciseRowView.swift */; };
+		AMA14090000000002000001 /* BlockSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14090000000002000002 /* BlockSectionView.swift */; };
 		F84E22862ED0D5D100459747 /* WorkoutKitConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22852ED0D5D100459747 /* WorkoutKitConverter.swift */; };
 		F84E22872ED0D5D100459747 /* CalendarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22832ED0D5D100459747 /* CalendarManager.swift */; };
 		F84E22882ED0D5D100459747 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22842ED0D5D100459747 /* WatchConnectivityManager.swift */; };
@@ -382,6 +400,9 @@
 		85D3757E5B284286B341C75C /* PairingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingService.swift; path = ../AmakaFlow/Services/PairingService.swift; sourceTree = SOURCE_ROOT; };
 		887645B05D4D7BABC29CAB9A /* ShoeComparisonView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShoeComparisonView.swift; path = ../AmakaFlow/Views/ShoeComparisonView.swift; sourceTree = "<group>"; };
 		89321AF9D21D441198437105 /* DevicePreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DevicePreference.swift; path = ../AmakaFlow/Models/DevicePreference.swift; sourceTree = SOURCE_ROOT; };
+		BL0CK5W1FT00000001 /* Block.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Block.swift; path = ../AmakaFlow/Models/Block.swift; sourceTree = SOURCE_ROOT; };
+		3X3RC1S35W1FT000001 /* Exercise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Exercise.swift; path = ../AmakaFlow/Models/Exercise.swift; sourceTree = SOURCE_ROOT; };
+		BL0CK2INT3RVAL00001 /* BlockToIntervalConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BlockToIntervalConverter.swift; path = ../AmakaFlow/Services/BlockToIntervalConverter.swift; sourceTree = SOURCE_ROOT; };
 		8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionService.swift; path = ../AmakaFlow/Services/WorkoutCompletionService.swift; sourceTree = SOURCE_ROOT; };
 		94AE3547CCCD41159C85554B /* RestPeriodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RestPeriodView.swift; path = ../AmakaFlow/Views/Components/RestPeriodView.swift; sourceTree = SOURCE_ROOT; };
 		A19401AA00000001B0000001 /* ActivityHistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivityHistoryViewModel.swift; path = ../AmakaFlow/ViewModels/ActivityHistoryViewModel.swift; sourceTree = SOURCE_ROOT; };
@@ -398,6 +419,11 @@
 		A1IMP0RTV13W00000000 /* AIImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AIImportView.swift; path = ../AmakaFlow/Views/AIImportView.swift; sourceTree = SOURCE_ROOT; };
 		A1IMP0RTV13W0001 /* AIImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AIImportView.swift; path = ../AmakaFlow/Views/AIImportView.swift; sourceTree = SOURCE_ROOT; };
 		A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CoachModels.swift; path = ../AmakaFlow/Models/CoachModels.swift; sourceTree = "<group>"; };
+		AMA14100001FILEREF /* ChatStreamModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ChatStreamModels.swift; path = ../AmakaFlow/Models/ChatStreamModels.swift; sourceTree = "<group>"; };
+		AMA14100002FILEREF /* ChatStreamService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ChatStreamService.swift; path = ../AmakaFlow/Services/ChatStreamService.swift; sourceTree = "<group>"; };
+		AMA14100003FILEREF /* ToolCallCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ToolCallCard.swift; path = ../AmakaFlow/Views/Components/ToolCallCard.swift; sourceTree = SOURCE_ROOT; };
+		AMA14100004FILEREF /* WorkoutPreviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutPreviewCard.swift; path = ../AmakaFlow/Views/Components/WorkoutPreviewCard.swift; sourceTree = SOURCE_ROOT; };
+		AMA14100005FILEREF /* StageIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StageIndicator.swift; path = ../AmakaFlow/Views/Components/StageIndicator.swift; sourceTree = SOURCE_ROOT; };
 		AK00SHARE001A /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		AK00SHARE002A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AK00SHARE003A /* PlatformDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformDetector.swift; sourceTree = "<group>"; };
@@ -449,6 +475,8 @@
 		F84E227B2ED0D5BF00459747 /* IntervalRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = IntervalRow.swift; path = ../AmakaFlow/Views/Components/IntervalRow.swift; sourceTree = SOURCE_ROOT; };
 		F84E227C2ED0D5BF00459747 /* ScheduleCalendarSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ScheduleCalendarSheet.swift; path = ../AmakaFlow/Views/Components/ScheduleCalendarSheet.swift; sourceTree = SOURCE_ROOT; };
 		F84E227D2ED0D5BF00459747 /* WorkoutCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCard.swift; path = ../AmakaFlow/Views/Components/WorkoutCard.swift; sourceTree = SOURCE_ROOT; };
+		AMA14090000000001000002 /* ExerciseRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ExerciseRowView.swift; path = ../AmakaFlow/Views/Components/ExerciseRowView.swift; sourceTree = SOURCE_ROOT; };
+		AMA14090000000002000002 /* BlockSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BlockSectionView.swift; path = ../AmakaFlow/Views/Components/BlockSectionView.swift; sourceTree = SOURCE_ROOT; };
 		F84E22812ED0D5D100459747 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIService.swift; path = ../AmakaFlow/Services/APIService.swift; sourceTree = SOURCE_ROOT; };
 		F84E22822ED0D5D100459747 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AuthService.swift; path = ../AmakaFlow/Services/AuthService.swift; sourceTree = SOURCE_ROOT; };
 		F84E22832ED0D5D100459747 /* CalendarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarManager.swift; path = ../AmakaFlow/Services/CalendarManager.swift; sourceTree = SOURCE_ROOT; };
@@ -778,6 +806,7 @@
 			isa = PBXGroup;
 			children = (
 				F84E22812ED0D5D100459747 /* APIService.swift */,
+				AMA14100002FILEREF /* ChatStreamService.swift */,
 				KBSVC00000000000 /* KnowledgeService.swift */,
 				F84E22822ED0D5D100459747 /* AuthService.swift */,
 				F84E22832ED0D5D100459747 /* CalendarManager.swift */,
@@ -797,6 +826,11 @@
 				F84E227B2ED0D5BF00459747 /* IntervalRow.swift */,
 				F84E227C2ED0D5BF00459747 /* ScheduleCalendarSheet.swift */,
 				F84E227D2ED0D5BF00459747 /* WorkoutCard.swift */,
+				AMA14090000000001000002 /* ExerciseRowView.swift */,
+				AMA14090000000002000002 /* BlockSectionView.swift */,
+				AMA14100003FILEREF /* ToolCallCard.swift */,
+				AMA14100004FILEREF /* WorkoutPreviewCard.swift */,
+				AMA14100005FILEREF /* StageIndicator.swift */,
 				F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */,
 				0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */,
 				6BD17097D21D4FB48D023E24 /* RPEFeedbackView.swift */,
@@ -845,6 +879,9 @@
 				F84E22732ED0D58300459747 /* WorkoutsViewModel.swift */,
 				F84E22712ED0D56C00459747 /* Workout.swift */,
 				89321AF9D21D441198437105 /* DevicePreference.swift */,
+				BL0CK5W1FT00000001 /* Block.swift */,
+				3X3RC1S35W1FT000001 /* Exercise.swift */,
+				BL0CK2INT3RVAL00001 /* BlockToIntervalConverter.swift */,
 				F84E226D2ED0D55600459747 /* AmakaFlowApp.swift */,
 				F84E226E2ED0D55600459747 /* Theme.swift */,
 				F84E21762ED0B0C800459747 /* AmakaFlowCompanion */,
@@ -860,6 +897,7 @@
 				F8B356932EF8B94000E88B51 /* Recovered References */,
 				EBCE80D8EA7940E025E8D41D /* PlanningModels.swift */,
 				A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */,
+				AMA14100001FILEREF /* ChatStreamModels.swift */,
 				FC35C6AFFE23A2DA83D8C2E7 /* ActionModels.swift */,
 				68B54D3FBC9E8561760B53F0 /* AnalyticsModels.swift */,
 				1AF716C8C0EE3CC5A4BA56C5 /* CalendarViewModel.swift */,
@@ -1392,6 +1430,9 @@
 				F8B8C2FBBE453C44649F8E94 /* PlayerControlsView.swift in Sources */,
 				F87ADA7721B76045D5938EA4 /* WorkoutActivityAttributes.swift in Sources */,
 				E33FF845EAAD4110B7D87FB0 /* DevicePreference.swift in Sources */,
+				BL0CK5W1FT00000002 /* Block.swift in Sources */,
+				3X3RC1S35W1FT000002 /* Exercise.swift in Sources */,
+				BL0CK2INT3RVAL00002 /* BlockToIntervalConverter.swift in Sources */,
 				9D0C3D8A603340BC8364F188 /* PreWorkoutDeviceSheet.swift in Sources */,
 				W41T1NG000000002C0000002 /* WaitingForWatchView.swift in Sources */,
 				EB63D5EF54FF452580C70684 /* WorkoutCompletionView.swift in Sources */,
@@ -1427,6 +1468,11 @@
 				F84E227E2ED0D5BF00459747 /* IntervalRow.swift in Sources */,
 				F84E227F2ED0D5BF00459747 /* ScheduleCalendarSheet.swift in Sources */,
 				F84E22802ED0D5BF00459747 /* WorkoutCard.swift in Sources */,
+				AMA14090000000001000001 /* ExerciseRowView.swift in Sources */,
+				AMA14090000000002000001 /* BlockSectionView.swift in Sources */,
+				AMA14100003BLDFILE /* ToolCallCard.swift in Sources */,
+				AMA14100004BLDFILE /* WorkoutPreviewCard.swift in Sources */,
+				AMA14100005BLDFILE /* StageIndicator.swift in Sources */,
 				F84E22702ED0D55600459747 /* Theme.swift in Sources */,
 				F84E22722ED0D56C00459747 /* Workout.swift in Sources */,
 				D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */,
@@ -1468,6 +1514,8 @@
 				D3P3ND1NJ3CT10N1006 /* WatchSessionProviding.swift in Sources */,
 				F4E8733C34C4B41F73806D0A /* PlanningModels.swift in Sources */,
 				11C72B7C6EA17FC8DEA354FB /* CoachModels.swift in Sources */,
+				AMA14100001BLDFILE /* ChatStreamModels.swift in Sources */,
+				AMA14100002BLDFILE /* ChatStreamService.swift in Sources */,
 				63D97E9B43FEB4A771D87EE8 /* ActionModels.swift in Sources */,
 				AF50AD9DC3B0E509ED0ED715 /* AnalyticsModels.swift in Sources */,
 				BAB97A941DC233141997CA05 /* CalendarViewModel.swift in Sources */,
@@ -1595,6 +1643,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				F84E22A32ED0E1BB00459747 /* Workout.swift in Sources */,
+				BL0CK5W1FT00000004 /* Block.swift in Sources */,
+				3X3RC1S35W1FT000004 /* Exercise.swift in Sources */,
+				BL0CK2INT3RVAL00004 /* BlockToIntervalConverter.swift in Sources */,
 				F84E22A42ED0E68300459747 /* WorkoutKitConverter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -19,8 +19,11 @@ struct AmakaFlowApp: App {
                 .environmentObject(watchConnectivity)
                 .preferredColorScheme(.dark) // Force dark mode
                 .onAppear {
-                    // Initialize WatchConnectivity
-                    watchConnectivity.activate()
+                    // Skip Apple Watch connectivity during E2E tests
+                    let isUITestMode = ProcessInfo.processInfo.environment["UITEST_MODE"] == "true"
+                    if !isUITestMode {
+                        watchConnectivity.activate()
+                    }
                 }
         }
     }

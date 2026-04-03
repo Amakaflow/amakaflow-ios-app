@@ -2,7 +2,7 @@
 //  CoachChatView.swift
 //  AmakaFlow
 //
-//  AI coach chat interface (AMA-1147)
+//  AI coach chat interface with SSE streaming (AMA-1410)
 //
 
 import SwiftUI
@@ -10,6 +10,7 @@ import SwiftUI
 struct CoachChatView: View {
     @StateObject private var viewModel = CoachViewModel()
     @State private var inputText = ""
+    @State private var showNewChatConfirmation = false
     @FocusState private var isInputFocused: Bool
 
     var body: some View {
@@ -29,42 +30,40 @@ struct CoachChatView: View {
                             }
 
                             ForEach(viewModel.messages) { message in
-                                chatBubble(message)
-                                    .id(message.id)
-                            }
-
-                            if viewModel.isLoading {
-                                HStack {
-                                    ProgressView()
-                                        .tint(Theme.Colors.accentBlue)
-                                    Text("Coach is thinking...")
-                                        .font(Theme.Typography.caption)
-                                        .foregroundColor(Theme.Colors.textSecondary)
-                                    Spacer()
+                                MessageBubbleView(message: message) { text in
+                                    Task { await viewModel.sendMessage(text) }
                                 }
-                                .padding(.horizontal, Theme.Spacing.lg)
+                                .id(message.id)
                             }
                         }
                         .padding(.vertical, Theme.Spacing.md)
                     }
                     .onChange(of: viewModel.messages.count) { _ in
-                        if let last = viewModel.messages.last {
-                            withAnimation {
-                                proxy.scrollTo(last.id, anchor: .bottom)
-                            }
-                        }
+                        scrollToBottom(proxy)
+                    }
+                    .onChange(of: viewModel.isStreaming) { streaming in
+                        if !streaming { scrollToBottom(proxy) }
+                    }
+                    .onChange(of: viewModel.scrollTrigger) { _ in
+                        scrollToBottom(proxy, animated: false)
                     }
                 }
 
-                // Rate limit indicator (AMA-1133)
-                if viewModel.rateLimitHit {
-                    rateLimitBanner
-                } else if viewModel.isNearRateLimit {
-                    rateLimitWarning
+                // Stage indicator (visible during streaming)
+                if viewModel.isStreaming, viewModel.currentStage != nil || !viewModel.completedStages.isEmpty {
+                    StageIndicator(
+                        completedStages: viewModel.completedStages,
+                        currentStage: viewModel.currentStage
+                    )
+                }
+
+                // Rate limit banner
+                if let info = viewModel.rateLimitInfo {
+                    rateLimitBanner(info)
                 }
 
                 // Error message
-                if let error = viewModel.errorMessage, !viewModel.rateLimitHit {
+                if let error = viewModel.errorMessage, viewModel.rateLimitInfo == nil {
                     Text(error)
                         .font(Theme.Typography.footnote)
                         .foregroundColor(Theme.Colors.accentRed)
@@ -79,15 +78,45 @@ struct CoachChatView: View {
             .navigationTitle("Coach")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        if !viewModel.messages.isEmpty {
+                            showNewChatConfirmation = true
+                        }
+                    } label: {
+                        Image(systemName: "plus.bubble")
+                            .foregroundColor(Theme.Colors.accentBlue)
+                            .accessibilityLabel("Start new chat")
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink(destination: FatigueAdvisorView(viewModel: viewModel)) {
                         Image(systemName: "heart.text.square")
                             .foregroundColor(Theme.Colors.accentBlue)
+                            .accessibilityLabel("Open fatigue advisor")
                     }
                 }
             }
+            .confirmationDialog("Start new chat?", isPresented: $showNewChatConfirmation) {
+                Button("New Chat", role: .destructive) { viewModel.startNewChat() }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("This will clear your current conversation.")
+            }
             .task {
                 await viewModel.loadFatigueAdvice()
+            }
+        }
+    }
+
+    private func scrollToBottom(_ proxy: ScrollViewProxy, animated: Bool = true) {
+        if let last = viewModel.messages.last {
+            if animated {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    proxy.scrollTo(last.id, anchor: .bottom)
+                }
+            } else {
+                proxy.scrollTo(last.id, anchor: .bottom)
             }
         }
     }
@@ -109,7 +138,6 @@ struct CoachChatView: View {
                 .foregroundColor(Theme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
 
-            // Quick prompts
             VStack(spacing: Theme.Spacing.sm) {
                 quickPromptButton("How should I train this week?")
                 quickPromptButton("Am I overtraining?")
@@ -131,16 +159,89 @@ struct CoachChatView: View {
                 .background(Theme.Colors.accentBlue.opacity(0.1))
                 .cornerRadius(Theme.CornerRadius.lg)
         }
+        .disabled(viewModel.isStreaming)
     }
 
-    // MARK: - Chat Bubble (AMA-1133 enhanced)
+    // MARK: - Fatigue Banner
 
-    private func chatBubble(_ message: ChatMessage) -> some View {
+    private func fatigueBanner(_ advice: FatigueAdvice) -> some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Circle()
+                .fill(advice.level.displayColor)
+                .frame(width: 10, height: 10)
+            Text(advice.message)
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.textPrimary)
+                .lineLimit(1)
+            Spacer()
+        }
+        .padding(Theme.Spacing.sm)
+        .background(Theme.Colors.surface)
+    }
+
+    // MARK: - Rate Limit
+
+    private func rateLimitBanner(_ info: RateLimitInfo) -> some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Image(systemName: "clock.badge.exclamationmark")
+                .foregroundColor(Theme.Colors.accentRed)
+            Text("Rate limit reached (\(info.usage)/\(info.limit) messages)")
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.accentRed)
+            Spacer()
+        }
+        .padding(Theme.Spacing.sm)
+        .background(Theme.Colors.accentRed.opacity(0.1))
+    }
+
+    // MARK: - Input Bar
+
+    private var inputBar: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            TextField("Ask your coach...", text: $inputText)
+                .font(Theme.Typography.body)
+                .foregroundColor(Theme.Colors.textPrimary)
+                .padding(Theme.Spacing.md)
+                .background(Theme.Colors.surface)
+                .cornerRadius(Theme.CornerRadius.lg)
+                .focused($isInputFocused)
+                .disabled(viewModel.isStreaming)
+
+            Button {
+                let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty else { return }
+                inputText = ""
+                Task { await viewModel.sendMessage(text) }
+            } label: {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.system(size: 32))
+                    .foregroundColor(
+                        inputText.isEmpty || viewModel.isStreaming
+                        ? Theme.Colors.textTertiary
+                        : Theme.Colors.accentBlue
+                    )
+            }
+            .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isStreaming)
+        }
+        .padding(.horizontal, Theme.Spacing.lg)
+        .padding(.vertical, Theme.Spacing.sm)
+        .background(Theme.Colors.background)
+    }
+}
+
+// MARK: - Message Bubble View
+// Uses @ObservedObject so SwiftUI re-renders whenever ChatMessage @Published properties
+// change during streaming (content, toolCalls, isStreaming, workoutData, etc.).
+
+struct MessageBubbleView: View {
+    @ObservedObject var message: ChatMessage
+    let onSendMessage: (String) -> Void
+
+    var body: some View {
         HStack(alignment: .top) {
             if message.role == .user { Spacer() }
 
             if message.role == .assistant {
-                // Coach avatar
                 Image(systemName: "brain.head.profile")
                     .font(.system(size: 16))
                     .foregroundColor(Theme.Colors.accentBlue)
@@ -150,14 +251,34 @@ struct CoachChatView: View {
             }
 
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: Theme.Spacing.xs) {
-                Text(message.content)
-                    .font(Theme.Typography.body)
-                    .foregroundColor(message.role == .user ? .white : Theme.Colors.textPrimary)
-                    .padding(Theme.Spacing.md)
-                    .background(message.role == .user ? Theme.Colors.accentBlue : Theme.Colors.surface)
-                    .cornerRadius(Theme.CornerRadius.lg)
+                // Message content
+                if message.role == .assistant {
+                    assistantBubbleContent
+                } else {
+                    Text(message.content)
+                        .font(Theme.Typography.body)
+                        .foregroundColor(.white)
+                        .padding(Theme.Spacing.md)
+                        .background(Theme.Colors.accentBlue)
+                        .cornerRadius(Theme.CornerRadius.lg)
+                }
 
-                // Source chips for assistant messages (AMA-1133)
+                // Tool calls
+                if !message.toolCalls.isEmpty {
+                    VStack(spacing: Theme.Spacing.xs) {
+                        ForEach(message.toolCalls) { toolCall in
+                            ToolCallCard(toolCall: toolCall)
+                        }
+                    }
+                }
+
+                // Workout preview
+                if let workout = message.workoutData {
+                    WorkoutPreviewCard(workout: workout)
+                }
+
+                // Suggestion chips — legacy fields populated by old non-streaming endpoint.
+                // SSE mode does not send suggestions; the if-let guard gracefully skips rendering.
                 if message.role == .assistant, let suggestions = message.suggestions, !suggestions.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: Theme.Spacing.xs) {
@@ -168,7 +289,7 @@ struct CoachChatView: View {
                     }
                 }
 
-                // Action items for assistant messages (AMA-1133)
+                // Action items — legacy fields, see note above.
                 if message.role == .assistant, let actions = message.actionItems, !actions.isEmpty {
                     VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                         ForEach(actions, id: \.stableId) { item in
@@ -195,9 +316,46 @@ struct CoachChatView: View {
         .padding(.horizontal, Theme.Spacing.lg)
     }
 
+    @ViewBuilder
+    private var assistantBubbleContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if !message.content.isEmpty {
+                if message.isStreaming {
+                    // Plain text during streaming to avoid reparsing markdown on every delta
+                    Text(message.content)
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                        .padding(Theme.Spacing.md)
+                } else if let attributed = try? AttributedString(markdown: message.content) {
+                    Text(attributed)
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                        .padding(Theme.Spacing.md)
+                } else {
+                    Text(message.content)
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                        .padding(Theme.Spacing.md)
+                }
+            }
+
+            if message.isStreaming && message.content.isEmpty {
+                HStack(spacing: Theme.Spacing.xs) {
+                    TypingIndicator()
+                    Text("Coach is thinking...")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                }
+                .padding(Theme.Spacing.md)
+            }
+        }
+        .background(Theme.Colors.surface)
+        .cornerRadius(Theme.CornerRadius.lg)
+    }
+
     private func sourceChip(_ suggestion: CoachSuggestion) -> some View {
         Button {
-            Task { await viewModel.sendMessage(suggestion.text) }
+            onSendMessage(suggestion.text)
         } label: {
             HStack(spacing: Theme.Spacing.xs) {
                 Image(systemName: chipIcon(suggestion.type))
@@ -222,90 +380,32 @@ struct CoachChatView: View {
         case .general, .none: return "lightbulb.fill"
         }
     }
+}
 
-    // MARK: - Fatigue Banner
+// MARK: - Typing Indicator
 
-    private func fatigueBanner(_ advice: FatigueAdvice) -> some View {
-        HStack(spacing: Theme.Spacing.sm) {
-            Circle()
-                .fill(fatigueColor(advice.level))
-                .frame(width: 10, height: 10)
+struct TypingIndicator: View {
+    @State private var animating = false
 
-            Text(advice.message)
-                .font(Theme.Typography.caption)
-                .foregroundColor(Theme.Colors.textPrimary)
-                .lineLimit(1)
-
-            Spacer()
-        }
-        .padding(Theme.Spacing.sm)
-        .background(Theme.Colors.surface)
-    }
-
-    private func fatigueColor(_ level: FatigueLevel) -> Color {
-        switch level {
-        case .low: return Theme.Colors.accentGreen
-        case .moderate: return Theme.Colors.accentOrange
-        case .high, .critical: return Theme.Colors.accentRed
-        }
-    }
-
-    // MARK: - Rate Limit Indicators (AMA-1133)
-
-    private var rateLimitBanner: some View {
-        HStack(spacing: Theme.Spacing.sm) {
-            Image(systemName: "clock.badge.exclamationmark")
-                .foregroundColor(Theme.Colors.accentRed)
-            Text("Rate limit reached. Please wait before sending more messages.")
-                .font(Theme.Typography.caption)
-                .foregroundColor(Theme.Colors.accentRed)
-            Spacer()
-        }
-        .padding(Theme.Spacing.sm)
-        .background(Theme.Colors.accentRed.opacity(0.1))
-    }
-
-    private var rateLimitWarning: some View {
-        HStack(spacing: Theme.Spacing.sm) {
-            Image(systemName: "exclamationmark.circle")
-                .foregroundColor(Theme.Colors.accentOrange)
-                .font(.system(size: 12))
-            Text("Approaching message limit (\(viewModel.messageCount)/\(CoachViewModel.rateLimitWarningThreshold))")
-                .font(Theme.Typography.footnote)
-                .foregroundColor(Theme.Colors.accentOrange)
-            Spacer()
-        }
-        .padding(.horizontal, Theme.Spacing.lg)
-        .padding(.vertical, Theme.Spacing.xs)
-    }
-
-    // MARK: - Input Bar
-
-    private var inputBar: some View {
-        HStack(spacing: Theme.Spacing.sm) {
-            TextField("Ask your coach...", text: $inputText)
-                .font(Theme.Typography.body)
-                .foregroundColor(Theme.Colors.textPrimary)
-                .padding(Theme.Spacing.md)
-                .background(Theme.Colors.surface)
-                .cornerRadius(Theme.CornerRadius.lg)
-                .focused($isInputFocused)
-
-            Button {
-                let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !text.isEmpty else { return }
-                inputText = ""
-                Task { await viewModel.sendMessage(text) }
-            } label: {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 32))
-                    .foregroundColor(inputText.isEmpty ? Theme.Colors.textTertiary : Theme.Colors.accentBlue)
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<3, id: \.self) { index in
+                Circle()
+                    .fill(Theme.Colors.accentBlue)
+                    .frame(width: 6, height: 6)
+                    .scaleEffect(animating ? 1.0 : 0.5)
+                    .animation(
+                        .easeInOut(duration: 0.5)
+                            .repeatForever(autoreverses: true)
+                            .delay(Double(index) * 0.15),
+                        value: animating
+                    )
             }
-            .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
-        .padding(.horizontal, Theme.Spacing.lg)
-        .padding(.vertical, Theme.Spacing.sm)
-        .background(Theme.Colors.background)
+        .onAppear { animating = true }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Coach is typing")
+        .accessibilityAddTraits(.updatesFrequently)
     }
 }
 
@@ -322,7 +422,6 @@ struct FatigueAdvisorView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.top, Theme.Spacing.xl)
                 } else if let advice = viewModel.fatigueAdvice {
-                    // Level indicator
                     HStack {
                         Text("Fatigue Level")
                             .font(Theme.Typography.title2)
@@ -330,10 +429,10 @@ struct FatigueAdvisorView: View {
                         Spacer()
                         Text(advice.level.rawValue.capitalized)
                             .font(Theme.Typography.bodyBold)
-                            .foregroundColor(fatigueColor(advice.level))
+                            .foregroundColor(advice.level.displayColor)
                             .padding(.horizontal, Theme.Spacing.md)
                             .padding(.vertical, Theme.Spacing.xs)
-                            .background(fatigueColor(advice.level).opacity(0.15))
+                            .background(advice.level.displayColor.opacity(0.15))
                             .cornerRadius(Theme.CornerRadius.md)
                     }
 
@@ -341,7 +440,6 @@ struct FatigueAdvisorView: View {
                         .font(Theme.Typography.body)
                         .foregroundColor(Theme.Colors.textPrimary)
 
-                    // Recommendations
                     VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                         Text("Recommendations")
                             .font(Theme.Typography.bodyBold)
@@ -391,13 +489,6 @@ struct FatigueAdvisorView: View {
         }
     }
 
-    private func fatigueColor(_ level: FatigueLevel) -> Color {
-        switch level {
-        case .low: return Theme.Colors.accentGreen
-        case .moderate: return Theme.Colors.accentOrange
-        case .high, .critical: return Theme.Colors.accentRed
-        }
-    }
 }
 
 #Preview {

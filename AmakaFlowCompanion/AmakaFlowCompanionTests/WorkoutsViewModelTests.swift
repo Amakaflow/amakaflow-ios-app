@@ -47,7 +47,8 @@ final class WorkoutsViewModelTests: XCTestCase {
             pairingService: mockPairingService,
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
-            watchSession: MockWatchSession()
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
         )
 
         // Create ViewModel with mock dependencies

@@ -29,7 +29,8 @@ final class ActivityHistoryViewModelTests: XCTestCase {
             pairingService: mockPairingService,
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
-            watchSession: MockWatchSession()
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
         )
 
         viewModel = ActivityHistoryViewModel(dependencies: dependencies)

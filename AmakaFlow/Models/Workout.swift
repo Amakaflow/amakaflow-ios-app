@@ -176,17 +176,32 @@ struct Workout: Identifiable, Codable, Hashable {
     let name: String
     let sport: WorkoutSport
     let duration: Int // seconds
-    let intervals: [WorkoutInterval]
+    let blocks: [Block]
     let description: String?
     let source: WorkoutSource
     let sourceUrl: String?
+
+    /// Computed flat interval list for playback (backward-compatible).
+    var intervals: [WorkoutInterval] {
+        BlockToIntervalConverter.flatten(blocks)
+    }
+
+    /// Total number of unique exercises across all blocks.
+    var exerciseCount: Int {
+        blocks.reduce(0) { $0 + $1.exercises.count }
+    }
+
+    /// Number of blocks in this workout.
+    var blockCount: Int {
+        blocks.count
+    }
 
     init(
         id: String = UUID().uuidString,
         name: String,
         sport: WorkoutSport,
         duration: Int,
-        intervals: [WorkoutInterval] = [],
+        blocks: [Block] = [],
         description: String? = nil,
         source: WorkoutSource,
         sourceUrl: String? = nil
@@ -195,7 +210,28 @@ struct Workout: Identifiable, Codable, Hashable {
         self.name = name
         self.sport = sport
         self.duration = duration
-        self.intervals = intervals
+        self.blocks = blocks
+        self.description = description
+        self.source = source
+        self.sourceUrl = sourceUrl
+    }
+
+    /// Legacy convenience init that accepts intervals and wraps them in blocks.
+    init(
+        id: String = UUID().uuidString,
+        name: String,
+        sport: WorkoutSport,
+        duration: Int,
+        intervals: [WorkoutInterval],
+        description: String? = nil,
+        source: WorkoutSource,
+        sourceUrl: String? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.sport = sport
+        self.duration = duration
+        self.blocks = Workout.blocksFromLegacyIntervals(intervals)
         self.description = description
         self.source = source
         self.sourceUrl = sourceUrl
@@ -208,14 +244,164 @@ struct Workout: Identifiable, Codable, Hashable {
         name = try container.decode(String.self, forKey: .name)
         sport = try container.decodeIfPresent(WorkoutSport.self, forKey: .sport) ?? .other
         duration = try container.decodeIfPresent(Int.self, forKey: .duration) ?? 0
-        intervals = try container.decodeIfPresent([WorkoutInterval].self, forKey: .intervals) ?? []
         description = try container.decodeIfPresent(String.self, forKey: .description)
         source = try container.decodeIfPresent(WorkoutSource.self, forKey: .source) ?? .other
         sourceUrl = try container.decodeIfPresent(String.self, forKey: .sourceUrl)
+
+        // Try blocks first (new format), fall back to legacy intervals
+        if let decodedBlocks = try container.decodeIfPresent([Block].self, forKey: .blocks), !decodedBlocks.isEmpty {
+            blocks = decodedBlocks
+        } else if let legacyIntervals = try container.decodeIfPresent([WorkoutInterval].self, forKey: .intervals) {
+            blocks = Workout.blocksFromLegacyIntervals(legacyIntervals)
+        } else {
+            blocks = []
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(sport, forKey: .sport)
+        try container.encode(duration, forKey: .duration)
+        try container.encode(blocks, forKey: .blocks)
+        try container.encodeIfPresent(description, forKey: .description)
+        try container.encode(source, forKey: .source)
+        try container.encodeIfPresent(sourceUrl, forKey: .sourceUrl)
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, sport, duration, intervals, description, source, sourceUrl
+        case id, name, sport, duration, blocks, intervals, description, source, sourceUrl
+    }
+
+    /// Convert legacy flat WorkoutInterval array into Block array.
+    /// Groups intervals into separate blocks to preserve warmup/cooldown types and repeat structure.
+    static func blocksFromLegacyIntervals(_ intervals: [WorkoutInterval]) -> [Block] {
+        guard !intervals.isEmpty else { return [] }
+
+        var blocks: [Block] = []
+        var mainExercises: [Exercise] = []
+
+        /// Flush accumulated main exercises into a block.
+        func flushMain() {
+            guard !mainExercises.isEmpty else { return }
+            blocks.append(Block(label: nil, structure: .straight, rounds: 1, exercises: mainExercises))
+            mainExercises = []
+        }
+
+        for interval in intervals {
+            switch interval {
+            case .warmup(let seconds, let target):
+                flushMain()
+                let exercise = Exercise(
+                    name: target ?? "Warm Up",
+                    canonicalName: nil, sets: nil, reps: nil,
+                    durationSeconds: seconds, load: nil, restSeconds: nil,
+                    distance: nil, notes: target, supersetGroup: nil
+                )
+                blocks.append(Block(label: "Warm-up", structure: .straight, rounds: 1, exercises: [exercise]))
+
+            case .cooldown(let seconds, let target):
+                flushMain()
+                let exercise = Exercise(
+                    name: target ?? "Cool Down",
+                    canonicalName: nil, sets: nil, reps: nil,
+                    durationSeconds: seconds, load: nil, restSeconds: nil,
+                    distance: nil, notes: target, supersetGroup: nil
+                )
+                blocks.append(Block(label: "Cool-down", structure: .straight, rounds: 1, exercises: [exercise]))
+
+            case .time(let seconds, let target):
+                mainExercises.append(Exercise(
+                    name: target ?? "Timed Work",
+                    canonicalName: nil, sets: nil, reps: nil,
+                    durationSeconds: seconds, load: nil, restSeconds: nil,
+                    distance: nil, notes: target, supersetGroup: nil
+                ))
+
+            case .reps(let sets, let reps, let name, let load, let restSec, _):
+                let exerciseLoad = load.flatMap { Workout.parseLegacyLoad($0) }
+                mainExercises.append(Exercise(
+                    name: name,
+                    canonicalName: nil, sets: sets, reps: "\(reps)",
+                    durationSeconds: nil, load: exerciseLoad, restSeconds: restSec,
+                    distance: nil, notes: nil, supersetGroup: nil
+                ))
+
+            case .distance(let meters, let target):
+                mainExercises.append(Exercise(
+                    name: target ?? "Distance",
+                    canonicalName: nil, sets: nil, reps: nil,
+                    durationSeconds: nil, load: nil, restSeconds: nil,
+                    distance: Double(meters), notes: target, supersetGroup: nil
+                ))
+
+            case .repeat(let reps, let subIntervals):
+                flushMain()
+                let subExercises = subIntervals.compactMap { Workout.exerciseFromLegacyInterval($0) }
+                if !subExercises.isEmpty {
+                    blocks.append(Block(label: nil, structure: .circuit, rounds: reps, exercises: subExercises))
+                }
+
+            case .rest:
+                // Skip — rest is structural, handled by restSeconds on exercises
+                // and restBetweenSeconds on blocks. Converting rest intervals into
+                // Exercise objects would cause BlockToIntervalConverter to emit
+                // spurious .time intervals.
+                break
+            }
+        }
+
+        flushMain()
+        return blocks
+    }
+
+    // MARK: - Legacy conversion helpers
+
+    /// Convert a single legacy interval into an Exercise (used for repeat sub-intervals).
+    private static func exerciseFromLegacyInterval(_ interval: WorkoutInterval) -> Exercise? {
+        switch interval {
+        case .reps(let sets, let r, let name, let load, let restSec, _):
+            let exerciseLoad = load.flatMap { parseLegacyLoad($0) }
+            return Exercise(name: name, canonicalName: nil, sets: sets, reps: "\(r)",
+                            durationSeconds: nil, load: exerciseLoad, restSeconds: restSec,
+                            distance: nil, notes: nil, supersetGroup: nil)
+        case .time(let seconds, let target):
+            return Exercise(name: target ?? "Timed Work", canonicalName: nil, sets: nil, reps: nil,
+                            durationSeconds: seconds, load: nil, restSeconds: nil,
+                            distance: nil, notes: target, supersetGroup: nil)
+        case .distance(let meters, let target):
+            return Exercise(name: target ?? "Distance", canonicalName: nil, sets: nil, reps: nil,
+                            durationSeconds: nil, load: nil, restSeconds: nil,
+                            distance: Double(meters), notes: target, supersetGroup: nil)
+        case .rest:
+            // Skip — rest is structural, not an exercise
+            return nil
+        default:
+            return nil
+        }
+    }
+
+    /// Parse a legacy load string like "80kg" or "135lbs" into an ExerciseLoad.
+    /// Falls back to value 0 with the original string as unit if unparseable.
+    static func parseLegacyLoad(_ loadString: String) -> ExerciseLoad {
+        // Match a leading number (int or decimal) followed by a unit suffix
+        let pattern = #"^(\d+(?:\.\d+)?)\s*(.+)$"#
+        if let match = loadString.range(of: pattern, options: .regularExpression) {
+            let str = String(loadString[match])
+            // Extract numeric and unit parts
+            let scanner = Scanner(string: str)
+            if let value = scanner.scanDouble() {
+                let unit = str[str.index(str.startIndex, offsetBy: scanner.currentIndex.utf16Offset(in: str))...]
+                    .trimmingCharacters(in: .whitespaces)
+                if !unit.isEmpty {
+                    return ExerciseLoad(value: value, unit: unit)
+                }
+                return ExerciseLoad(value: value, unit: "")
+            }
+        }
+        // Unparseable — store original string as unit, value 0
+        return ExerciseLoad(value: 0, unit: loadString)
     }
 }
 

@@ -21,7 +21,8 @@ final class Phase2CalendarViewModelTests: XCTestCase {
             pairingService: MockPairingService(),
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
-            watchSession: MockWatchSession()
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
         )
         viewModel = CalendarViewModel(dependencies: deps)
     }
@@ -132,21 +133,29 @@ final class Phase2CalendarViewModelTests: XCTestCase {
 }
 
 // MARK: - Coach ViewModel Tests
+// NOTE: Updated for AMA-1410 streaming ViewModel. Full streaming tests are in CoachViewModelStreamingTests.swift.
 
 @MainActor
 final class Phase2CoachViewModelTests: XCTestCase {
 
     var viewModel: CoachViewModel!
     var mockAPI: MockAPIService!
+    var mockStreamService: MockChatStreamService!
+    var mockPairingService: MockPairingService!
 
     override func setUp() async throws {
         mockAPI = MockAPIService()
+        mockStreamService = MockChatStreamService()
+        mockPairingService = MockPairingService()
+        mockPairingService.storedToken = "test-token"
+        mockPairingService.isPaired = true
         let deps = AppDependencies(
             apiService: mockAPI,
-            pairingService: MockPairingService(),
+            pairingService: mockPairingService,
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
-            watchSession: MockWatchSession()
+            watchSession: MockWatchSession(),
+            chatStreamService: mockStreamService
         )
         viewModel = CoachViewModel(dependencies: deps)
     }
@@ -154,40 +163,37 @@ final class Phase2CoachViewModelTests: XCTestCase {
     override func tearDown() async throws {
         viewModel = nil
         mockAPI = nil
+        mockStreamService = nil
+        mockPairingService = nil
     }
 
     func testSendMessage() async {
-        let coachResponse = CoachResponse(
-            id: "resp-1",
-            message: "Great question! Here is my advice...",
-            suggestions: [
-                CoachSuggestion(id: "s1", text: "Try a recovery run", type: .recovery)
-            ],
-            actionItems: nil
-        )
-        mockAPI.sendCoachMessageResult = .success(coachResponse)
+        mockStreamService.eventsToYield = [
+            .messageStart(sessionId: "s1", traceId: nil),
+            .contentDelta(text: "Great question! Here is my advice..."),
+            .messageEnd(sessionId: "s1", tokensUsed: 50, latencyMs: 500)
+        ]
 
         await viewModel.sendMessage("How should I train today?")
 
-        XCTAssertTrue(mockAPI.sendCoachMessageCalled)
+        XCTAssertTrue(mockStreamService.streamCalled)
         XCTAssertEqual(viewModel.messages.count, 2) // user + assistant
         XCTAssertEqual(viewModel.messages[0].role, .user)
         XCTAssertEqual(viewModel.messages[0].content, "How should I train today?")
         XCTAssertEqual(viewModel.messages[1].role, .assistant)
         XCTAssertEqual(viewModel.messages[1].content, "Great question! Here is my advice...")
-        XCTAssertEqual(viewModel.messages[1].suggestions?.count, 1)
-        XCTAssertFalse(viewModel.isLoading)
-        XCTAssertEqual(viewModel.messageCount, 1)
+        XCTAssertFalse(viewModel.isStreaming)
     }
 
     func testSendMessageError() async {
-        mockAPI.sendCoachMessageResult = .failure(APIError.serverError(500))
+        mockStreamService.errorToThrow = APIError.serverError(500)
 
         await viewModel.sendMessage("Hello")
 
-        XCTAssertEqual(viewModel.messages.count, 0) // user message removed on failure
+        // Both user and assistant messages removed when stream errors with no content
+        XCTAssertEqual(viewModel.messages.count, 0)
         XCTAssertNotNil(viewModel.errorMessage)
-        XCTAssertFalse(viewModel.isLoading)
+        XCTAssertFalse(viewModel.isStreaming)
     }
 
     func testLoadFatigueAdvice() async {
@@ -208,24 +214,15 @@ final class Phase2CoachViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.fatigueAdvice?.recommendations.count, 2)
     }
 
-    func testRateLimitThreshold() async {
-        XCTAssertFalse(viewModel.isNearRateLimit)
-
-        // Simulate many messages
-        viewModel.messageCount = 20
-        XCTAssertTrue(viewModel.isNearRateLimit)
-    }
-
-    func testLoadCoachMemories() async {
-        let memories = [
-            CoachMemory(id: "m1", content: "Prefers morning runs", category: "preferences", createdAt: nil, relevance: 0.9)
+    func testRateLimitEventSetsRateLimitInfo() async {
+        mockStreamService.eventsToYield = [
+            .error(type: "rate_limit_exceeded", message: "Limit reached", usage: 50, limit: 50)
         ]
-        mockAPI.fetchCoachMemoriesResult = .success(memories)
 
-        await viewModel.loadCoachMemories()
+        await viewModel.sendMessage("Hello")
 
-        XCTAssertTrue(mockAPI.fetchCoachMemoriesCalled)
-        XCTAssertEqual(viewModel.coachMemories.count, 1)
+        XCTAssertNotNil(viewModel.rateLimitInfo)
+        XCTAssertEqual(viewModel.rateLimitInfo?.limit, 50)
     }
 }
 
@@ -244,7 +241,8 @@ final class Phase2ActivityFeedViewModelTests: XCTestCase {
             pairingService: MockPairingService(),
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
-            watchSession: MockWatchSession()
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
         )
         viewModel = ActivityFeedViewModel(dependencies: deps)
     }
@@ -364,7 +362,8 @@ final class Phase2TrainingPreferencesViewModelTests: XCTestCase {
             pairingService: MockPairingService(),
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
-            watchSession: MockWatchSession()
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
         )
         viewModel = TrainingPreferencesViewModel(dependencies: deps)
     }
