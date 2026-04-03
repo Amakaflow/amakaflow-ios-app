@@ -102,15 +102,6 @@ class CoachViewModel: ObservableObject {
                     self.errorMessage = error.localizedDescription
                 }
             }
-            // Clean up empty placeholder on terminal SSE .error events (non-throwing)
-            if assistantMessage.content.isEmpty && self.errorMessage != nil {
-                if let idx = self.messages.lastIndex(where: { $0.id == assistantMessage.id }) {
-                    self.messages.remove(at: idx)
-                }
-                if let idx = self.messages.lastIndex(where: { $0.id == userMessage.id }) {
-                    self.messages.remove(at: idx)
-                }
-            }
             assistantMessage.isStreaming = false
             self.isStreaming = false
         }
