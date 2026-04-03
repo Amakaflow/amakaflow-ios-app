@@ -125,6 +125,11 @@ struct ImportProgressView: View {
             }
             .padding(.bottom, Theme.Spacing.lg)
         }
+        .onDisappear {
+            if !viewModel.importComplete {
+                viewModel.cancelImport()
+            }
+        }
     }
 }
 

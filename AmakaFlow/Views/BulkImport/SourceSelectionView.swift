@@ -70,13 +70,24 @@ struct SourceSelectionView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, Theme.Spacing.md)
-                    .background(Theme.Colors.accentBlue)
+                    .background(canDetect && !viewModel.isLoading ? Theme.Colors.accentBlue : Theme.Colors.borderMedium)
                     .cornerRadius(Theme.CornerRadius.md)
                 }
-                .disabled(viewModel.isLoading)
+                .disabled(viewModel.isLoading || !canDetect)
                 .padding(.horizontal, Theme.Spacing.md)
             }
             .padding(.vertical, Theme.Spacing.md)
+        }
+    }
+
+    // MARK: - Detect Validation
+
+    private var canDetect: Bool {
+        switch viewModel.inputType {
+        case .urls:
+            return viewModel.urlInputs.contains { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        case .images, .file:
+            return false  // Not yet implemented
         }
     }
 

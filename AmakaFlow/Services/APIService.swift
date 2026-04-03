@@ -2385,7 +2385,8 @@ extension APIService {
 
     func fetchImportStatus(jobId: String, profileId: String) async throws -> BulkImportStatus {
         let ingestorURL = AppEnvironment.current.ingestorAPIURL
-        guard let url = URL(string: "\(ingestorURL)/import/status/\(jobId)?profile_id=\(profileId)") else {
+        let encodedProfileId = profileId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? profileId
+        guard let url = URL(string: "\(ingestorURL)/import/status/\(jobId)?profile_id=\(encodedProfileId)") else {
             throw APIError.invalidURL
         }
         var req = URLRequest(url: url)
@@ -2410,7 +2411,8 @@ extension APIService {
 
     func cancelImport(jobId: String, profileId: String) async throws {
         let ingestorURL = AppEnvironment.current.ingestorAPIURL
-        guard let url = URL(string: "\(ingestorURL)/import/cancel/\(jobId)?profile_id=\(profileId)") else {
+        let encodedProfileId = profileId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? profileId
+        guard let url = URL(string: "\(ingestorURL)/import/cancel/\(jobId)?profile_id=\(encodedProfileId)") else {
             throw APIError.invalidURL
         }
         var req = URLRequest(url: url)

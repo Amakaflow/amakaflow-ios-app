@@ -117,7 +117,7 @@ struct DetectedItemCard: View {
 
             // Errors
             if let errors = item.errors, !errors.isEmpty {
-                ForEach(errors, id: \.self) { error in
+                ForEach(Array(errors.enumerated()), id: \.offset) { _, error in
                     Label(error, systemImage: "exclamationmark.circle.fill")
                         .font(Theme.Typography.footnote)
                         .foregroundColor(Theme.Colors.accentRed)
@@ -126,7 +126,7 @@ struct DetectedItemCard: View {
 
             // Warnings
             if let warnings = item.warnings, !warnings.isEmpty {
-                ForEach(warnings, id: \.self) { warning in
+                ForEach(Array(warnings.enumerated()), id: \.offset) { _, warning in
                     Label(warning, systemImage: "exclamationmark.triangle.fill")
                         .font(Theme.Typography.footnote)
                         .foregroundColor(Theme.Colors.accentOrange)

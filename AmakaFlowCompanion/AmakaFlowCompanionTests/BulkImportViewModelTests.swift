@@ -12,14 +12,18 @@ import XCTest
 final class BulkImportViewModelTests: XCTestCase {
 
     private var mockAPI: MockAPIService!
+    private var mockPairing: MockPairingService!
     private var sut: BulkImportViewModel!
 
     override func setUp() async throws {
         try await super.setUp()
         mockAPI = await MockAPIService()
+        mockPairing = await MockPairingService()
+        // Provide a stub profile so auth guard passes in all wizard steps
+        mockPairing.userProfile = UserProfile(id: "test-profile-001", email: "test@example.com", name: "Test User", avatarUrl: nil)
         let deps = await AppDependencies(
             apiService: mockAPI,
-            pairingService: MockPairingService(),
+            pairingService: mockPairing,
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
             watchSession: MockWatchSession(),
@@ -31,6 +35,7 @@ final class BulkImportViewModelTests: XCTestCase {
     override func tearDown() async throws {
         sut = nil
         mockAPI = nil
+        mockPairing = nil
         try await super.tearDown()
     }
 
@@ -272,8 +277,12 @@ final class BulkImportViewModelTests: XCTestCase {
 
         await sut.executeImport()
 
-        // Wait briefly for polling to complete
-        try? await Task.sleep(nanoseconds: 100_000_000)  // 0.1s
+        // Poll until importComplete or timeout (up to 2s in 50ms increments)
+        var waited = 0
+        while !sut.importComplete && waited < 40 {
+            try? await Task.sleep(nanoseconds: 50_000_000)  // 50ms
+            waited += 1
+        }
 
         XCTAssertTrue(sut.importComplete)
         XCTAssertEqual(sut.importProgress, 100)

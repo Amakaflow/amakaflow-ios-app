@@ -101,6 +101,11 @@ class BulkImportViewModel: ObservableObject {
     // MARK: - Step 1 → 2: Detect
 
     func detect() async {
+        guard let profileId = dependencies.pairingService.userProfile?.id, !profileId.isEmpty else {
+            errorMessage = "Not authenticated. Please pair your device first."
+            return
+        }
+
         let validURLs = urlInputs.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
         guard !validURLs.isEmpty else {
             errorMessage = "Please enter at least one URL."
@@ -109,8 +114,6 @@ class BulkImportViewModel: ObservableObject {
 
         isLoading = true
         errorMessage = nil
-
-        let profileId = PairingService.shared.userProfile?.id ?? ""
         let request = BulkDetectRequest(
             profileId: profileId,
             sourceType: inputType.rawValue,
@@ -134,12 +137,14 @@ class BulkImportViewModel: ObservableObject {
     // MARK: - Step 2 → 3: Match Exercises
 
     func matchExercises() async {
+        guard let profileId = dependencies.pairingService.userProfile?.id, !profileId.isEmpty else {
+            errorMessage = "Not authenticated. Please pair your device first."
+            return
+        }
         guard let currentJobId = jobId else { return }
 
         isLoading = true
         errorMessage = nil
-
-        let profileId = PairingService.shared.userProfile?.id ?? ""
         let request = BulkMatchRequest(
             jobId: currentJobId,
             profileId: profileId,
@@ -163,12 +168,14 @@ class BulkImportViewModel: ObservableObject {
     // MARK: - Step 3 → 4: Preview
 
     func preview() async {
+        guard let profileId = dependencies.pairingService.userProfile?.id, !profileId.isEmpty else {
+            errorMessage = "Not authenticated. Please pair your device first."
+            return
+        }
         guard let currentJobId = jobId else { return }
 
         isLoading = true
         errorMessage = nil
-
-        let profileId = PairingService.shared.userProfile?.id ?? ""
         let selectedIds = detectedItems.map { $0.id }
         let request = BulkPreviewRequest(
             jobId: currentJobId,
@@ -193,6 +200,10 @@ class BulkImportViewModel: ObservableObject {
     // MARK: - Step 4 → 5: Execute Import
 
     func executeImport() async {
+        guard let profileId = dependencies.pairingService.userProfile?.id, !profileId.isEmpty else {
+            errorMessage = "Not authenticated. Please pair your device first."
+            return
+        }
         guard let currentJobId = jobId else { return }
 
         let selectedIds = previewWorkouts.filter { $0.selected }.map { $0.id }
@@ -206,8 +217,6 @@ class BulkImportViewModel: ObservableObject {
         importProgress = 0
         importComplete = false
         currentStep = .importing
-
-        let profileId = PairingService.shared.userProfile?.id ?? ""
         let request = BulkExecuteRequest(
             jobId: currentJobId,
             profileId: profileId,
@@ -231,9 +240,14 @@ class BulkImportViewModel: ObservableObject {
     func cancelImport() {
         pollingTask?.cancel()
         pollingTask = nil
+        isLoading = false
+        importComplete = true  // Mark as terminal so view shows done state
+        if importResults.isEmpty {
+            errorMessage = "Import cancelled"
+        }
 
         guard let currentJobId = jobId,
-              let profileId = PairingService.shared.userProfile?.id else { return }
+              let profileId = dependencies.pairingService.userProfile?.id else { return }
 
         Task {
             do {
