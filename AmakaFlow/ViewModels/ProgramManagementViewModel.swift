@@ -15,36 +15,47 @@ class ProgramManagementViewModel: ObservableObject {
 
     private let apiService = APIService.shared
 
-    func updateStatus(programId: String, status: String) async {
+    /// Updates the program status and returns `true` on success.
+    @discardableResult
+    func updateStatus(programId: String, status: String) async -> Bool {
         isWorking = true
         errorMessage = nil
+        defer { isWorking = false }
         do {
             try await apiService.updateProgramStatus(id: programId, status: status)
+            return true
         } catch {
             errorMessage = "Failed to update status: \(error.localizedDescription)"
+            return false
         }
-        isWorking = false
     }
 
-    func deleteProgram(programId: String) async {
+    /// Deletes the program and returns `true` on success.
+    func deleteProgram(programId: String) async -> Bool {
         isWorking = true
         errorMessage = nil
+        defer { isWorking = false }
         do {
             try await apiService.deleteProgram(id: programId)
+            return true
         } catch {
             errorMessage = "Failed to delete program: \(error.localizedDescription)"
+            return false
         }
-        isWorking = false
     }
 
-    func completeWorkout(workoutId: String) async {
+    /// Marks a workout complete and returns `true` on success.
+    @discardableResult
+    func completeWorkout(workoutId: String) async -> Bool {
         isWorking = true
         errorMessage = nil
+        defer { isWorking = false }
         do {
             try await apiService.completeWorkout(workoutId: workoutId)
+            return true
         } catch {
             errorMessage = "Failed to mark workout complete: \(error.localizedDescription)"
+            return false
         }
-        isWorking = false
     }
 }

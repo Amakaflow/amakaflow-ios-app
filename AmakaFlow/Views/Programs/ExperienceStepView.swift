@@ -7,13 +7,20 @@
 
 import SwiftUI
 
+private struct ExperienceLevelOption: Identifiable {
+    let id: String
+    let label: String
+    let description: String
+    let icon: String
+}
+
 struct ExperienceStepView: View {
     @ObservedObject var viewModel: ProgramWizardViewModel
 
-    private let levels: [(id: String, label: String, description: String, icon: String)] = [
-        ("beginner", "Beginner", "Less than 1 year of consistent training", "leaf.fill"),
-        ("intermediate", "Intermediate", "1–3 years of consistent training", "chart.line.uptrend.xyaxis"),
-        ("advanced", "Advanced", "3+ years of structured training", "trophy.fill")
+    private let levels: [ExperienceLevelOption] = [
+        ExperienceLevelOption(id: "beginner", label: "Beginner", description: "Less than 1 year of consistent training", icon: "leaf.fill"),
+        ExperienceLevelOption(id: "intermediate", label: "Intermediate", description: "1–3 years of consistent training", icon: "chart.line.uptrend.xyaxis"),
+        ExperienceLevelOption(id: "advanced", label: "Advanced", description: "3+ years of structured training", icon: "trophy.fill")
     ]
 
     var body: some View {
@@ -30,7 +37,7 @@ struct ExperienceStepView: View {
                 .padding(.bottom, Theme.Spacing.sm)
 
             VStack(spacing: Theme.Spacing.sm) {
-                ForEach(levels, id: \.id) { level in
+                ForEach(levels) { level in
                     ExperienceButton(
                         id: level.id,
                         label: level.label,

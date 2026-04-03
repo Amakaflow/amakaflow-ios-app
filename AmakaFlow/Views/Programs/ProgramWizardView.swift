@@ -16,43 +16,41 @@ struct ProgramWizardView: View {
     @State private var navigateToProgram = false
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Step progress bar
-                stepProgressBar
-                    .padding(.horizontal, Theme.Spacing.lg)
-                    .padding(.top, Theme.Spacing.md)
+        VStack(spacing: 0) {
+            // Step progress bar
+            stepProgressBar
+                .padding(.horizontal, Theme.Spacing.lg)
+                .padding(.top, Theme.Spacing.md)
 
-                // Step content
-                ScrollView {
-                    VStack {
-                        stepContent
-                            .padding(.horizontal, Theme.Spacing.lg)
-                            .padding(.vertical, Theme.Spacing.lg)
-                    }
-                }
-
-                // Navigation buttons
-                navigationButtons
-                    .padding(.horizontal, Theme.Spacing.lg)
-                    .padding(.bottom, Theme.Spacing.lg)
-                    .background(Theme.Colors.background)
-            }
-            .background(Theme.Colors.background.ignoresSafeArea())
-            .navigationTitle(viewModel.currentStep.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .foregroundColor(Theme.Colors.textSecondary)
+            // Step content
+            ScrollView {
+                VStack {
+                    stepContent
+                        .padding(.horizontal, Theme.Spacing.lg)
+                        .padding(.vertical, Theme.Spacing.lg)
                 }
             }
-            .navigationDestination(isPresented: $navigateToProgram) {
-                if let id = navigateToProgramId {
-                    ProgramDetailView(programId: id, programName: "Your Program")
+
+            // Navigation buttons
+            navigationButtons
+                .padding(.horizontal, Theme.Spacing.lg)
+                .padding(.bottom, Theme.Spacing.lg)
+                .background(Theme.Colors.background)
+        }
+        .background(Theme.Colors.background.ignoresSafeArea())
+        .navigationTitle(viewModel.currentStep.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Cancel") {
+                    dismiss()
                 }
+                .foregroundColor(Theme.Colors.textSecondary)
+            }
+        }
+        .navigationDestination(isPresented: $navigateToProgram) {
+            if let id = navigateToProgramId {
+                ProgramDetailView(programId: id, programName: "Your Program")
             }
         }
     }

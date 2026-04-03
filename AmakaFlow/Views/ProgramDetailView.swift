@@ -85,13 +85,19 @@ struct ProgramDetailView: View {
                         // Pause / Resume
                         if program.status == "active" {
                             Button {
-                                Task { await managementViewModel.updateStatus(programId: programId, status: "paused") }
+                                Task {
+                                    let ok = await managementViewModel.updateStatus(programId: programId, status: "paused")
+                                    if ok { await viewModel.loadProgramDetail(id: programId) }
+                                }
                             } label: {
                                 Label("Pause Program", systemImage: "pause.circle")
                             }
                         } else if program.status == "paused" {
                             Button {
-                                Task { await managementViewModel.updateStatus(programId: programId, status: "active") }
+                                Task {
+                                    let ok = await managementViewModel.updateStatus(programId: programId, status: "active")
+                                    if ok { await viewModel.loadProgramDetail(id: programId) }
+                                }
                             } label: {
                                 Label("Resume Program", systemImage: "play.circle")
                             }
@@ -100,7 +106,10 @@ struct ProgramDetailView: View {
                         // Archive
                         if program.status != "archived" {
                             Button {
-                                Task { await managementViewModel.updateStatus(programId: programId, status: "archived") }
+                                Task {
+                                    let ok = await managementViewModel.updateStatus(programId: programId, status: "archived")
+                                    if ok { await viewModel.loadProgramDetail(id: programId) }
+                                }
                             } label: {
                                 Label("Archive Program", systemImage: "archivebox")
                             }
@@ -128,8 +137,10 @@ struct ProgramDetailView: View {
         ) {
             Button("Delete", role: .destructive) {
                 Task {
-                    await managementViewModel.deleteProgram(programId: programId)
-                    dismiss()
+                    let success = await managementViewModel.deleteProgram(programId: programId)
+                    if success {
+                        dismiss()
+                    }
                 }
             }
             Button("Cancel", role: .cancel) {}
@@ -343,7 +354,10 @@ struct ProgramDetailView: View {
                 // Completion indicator (tappable to complete)
                 Button {
                     guard workout.isCompleted != true else { return }
-                    Task { await managementViewModel.completeWorkout(workoutId: workout.id) }
+                    Task {
+                        let ok = await managementViewModel.completeWorkout(workoutId: workout.id)
+                        if ok { await viewModel.loadProgramDetail(id: programId) }
+                    }
                 } label: {
                     Image(systemName: workout.isCompleted == true ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 16))

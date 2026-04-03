@@ -84,6 +84,7 @@ struct PreferencesStepView: View {
                         .padding(Theme.Spacing.sm)
                         .background(Theme.Colors.surfaceElevated)
                         .cornerRadius(Theme.CornerRadius.sm)
+                        .onSubmit { addAvoidExercise() }
 
                     Button {
                         addAvoidExercise()

@@ -28,7 +28,9 @@ struct ProgramsListView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink(destination: ProgramWizardView()) {
+                    NavigationLink {
+                        ProgramWizardView()
+                    } label: {
                         Image(systemName: "plus")
                             .foregroundColor(Theme.Colors.accentBlue)
                     }

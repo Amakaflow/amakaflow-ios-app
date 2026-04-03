@@ -135,8 +135,9 @@ class ProgramWizardViewModel: ObservableObject {
 
         do {
             let response = try await dependencies.apiService.generateProgram(request: request)
-            // Start polling
-            await pollGeneration(jobId: response.jobId)
+            // Store polling task so it can be cancelled via cancelGeneration()
+            pollingTask = Task { await pollGeneration(jobId: response.jobId) }
+            await pollingTask?.value
         } catch {
             errorMessage = "Failed to start generation: \(error.localizedDescription)"
             isGenerating = false
@@ -171,6 +172,7 @@ class ProgramWizardViewModel: ObservableObject {
 
     func cancelGeneration() {
         pollingTask?.cancel()
+        pollingTask = nil
         isGenerating = false
     }
 }
