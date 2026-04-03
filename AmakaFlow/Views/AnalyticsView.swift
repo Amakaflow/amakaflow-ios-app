@@ -39,6 +39,9 @@ struct AnalyticsView: View {
                         if !viewModel.sportDistribution.isEmpty {
                             sportDistributionCard
                         }
+
+                        // Volume Analytics (AMA-1414)
+                        VolumeAnalyticsSection()
                     }
                 }
                 .padding(.horizontal, Theme.Spacing.lg)

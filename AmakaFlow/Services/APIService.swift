@@ -2236,6 +2236,28 @@ extension APIService {
         }
     }
 
+    // MARK: - Volume Analytics (AMA-1414)
+
+    func fetchVolumeAnalytics(startDate: String, endDate: String, granularity: String) async throws -> VolumeAnalyticsResponse {
+        guard let url = URL(string: "\(baseURL)/progression/volume?start_date=\(startDate)&end_date=\(endDate)&granularity=\(granularity)") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        req.allHTTPHeaderFields = authHeaders
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        switch httpResponse.statusCode {
+        case 200:
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            return try decoder.decode(VolumeAnalyticsResponse.self, from: data)
+        case 401: throw APIError.unauthorized
+        default:
+            let body = String(data: data, encoding: .utf8) ?? "empty"
+            logError(endpoint: "/progression/volume", method: "GET", statusCode: httpResponse.statusCode, response: body, error: nil)
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
     func postRPEFeedback(_ feedback: RPEFeedbackRequest) async throws -> RPEFeedbackResponse {
         let chatURL = AppEnvironment.current.chatAPIURL
         guard let url = URL(string: "\(chatURL)/coach/rpe-feedback") else { throw APIError.invalidURL }
