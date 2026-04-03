@@ -16,34 +16,17 @@ struct ContentView: View {
     enum Tab: String, CaseIterable {
         case home = "Home"
         case workouts = "Workouts"
-        case sources = "Sources"
         case calendar = "Calendar"
-        case nutrition = "Nutrition"
-        case coach = "Coach"
-        case history = "History"
         case social = "Social"
-        case settings = "Settings"
+        case more = "More"
 
         var icon: String {
             switch self {
-            case .home:
-                return "house.fill"
-            case .workouts:
-                return "figure.run"
-            case .sources:
-                return "arrow.down.circle.fill"
-            case .calendar:
-                return "calendar"
-            case .nutrition:
-                return "fork.knife"
-            case .coach:
-                return "bubble.left.and.bubble.right.fill"
-            case .history:
-                return "clock.fill"
-            case .social:
-                return "person.2.fill"
-            case .settings:
-                return "gearshape.fill"
+            case .home: return "house.fill"
+            case .workouts: return "figure.run"
+            case .calendar: return "calendar"
+            case .social: return "person.2.fill"
+            case .more: return "ellipsis.circle.fill"
             }
         }
     }
@@ -66,14 +49,6 @@ struct ContentView: View {
                 .tag(Tab.workouts)
                 .accessibilityIdentifier("workouts_tab")
 
-            SourcesView()
-                .tabItem {
-                    Image(systemName: Tab.sources.icon)
-                    Text(Tab.sources.rawValue)
-                }
-                .tag(Tab.sources)
-                .accessibilityIdentifier("sources_tab")
-
             CalendarView(onAddWorkout: {
                     selectedTab = .workouts
                 })
@@ -84,31 +59,6 @@ struct ContentView: View {
                 .tag(Tab.calendar)
                 .accessibilityIdentifier("calendar_tab")
 
-            FoodLoggingView()
-                .tabItem {
-                    Image(systemName: Tab.nutrition.icon)
-                    Text(Tab.nutrition.rawValue)
-                }
-                .tag(Tab.nutrition)
-                .accessibilityIdentifier("nutrition_tab")
-
-            CoachChatView()
-                .tabItem {
-                    Image(systemName: Tab.coach.icon)
-                    Text(Tab.coach.rawValue)
-                }
-                .tag(Tab.coach)
-                .accessibilityIdentifier("coach_tab")
-
-            ActivityHistoryView()
-                .tabItem {
-                    Image(systemName: Tab.history.icon)
-                    Text(Tab.history.rawValue)
-                }
-                .tag(Tab.history)
-                .accessibilityIdentifier("history_tab")
-
-
             FeedView()
                 .tabItem {
                     Image(systemName: Tab.social.icon)
@@ -116,13 +66,14 @@ struct ContentView: View {
                 }
                 .tag(Tab.social)
                 .accessibilityIdentifier("social_tab")
-            SettingsView(navigateToSyncDashboard: $showSyncDashboard)
+
+            MoreView(navigateToSyncDashboard: $showSyncDashboard)
                 .tabItem {
-                    Image(systemName: Tab.settings.icon)
-                    Text(Tab.settings.rawValue)
+                    Image(systemName: Tab.more.icon)
+                    Text(Tab.more.rawValue)
                 }
-                .tag(Tab.settings)
-                .accessibilityIdentifier("settings_tab")
+                .tag(Tab.more)
+                .accessibilityIdentifier("more_tab")
         }
         .tint(Theme.Colors.accentBlue)
         .task {
@@ -142,7 +93,7 @@ struct ContentView: View {
             selectedTab = .calendar
         }
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToCoach)) { _ in
-            selectedTab = .coach
+            selectedTab = .more
         }
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToWorkout)) { _ in
             selectedTab = .workouts
@@ -152,11 +103,11 @@ struct ContentView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToSync)) { _ in
-            selectedTab = .settings
+            selectedTab = .more
             showSyncDashboard = true
         }
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToNutrition)) { _ in
-            selectedTab = .nutrition
+            selectedTab = .more
         }
     }
 }

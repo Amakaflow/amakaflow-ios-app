@@ -11,6 +11,7 @@
 		11C72B7C6EA17FC8DEA354FB /* CoachModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */; };
 		AMA14100001BLDFILE /* ChatStreamModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100001FILEREF /* ChatStreamModels.swift */; };
 		AMA14120001BLDFILE /* NutritionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14120001FILEREF /* NutritionModels.swift */; };
+		AMA14120015BLDFILE /* MoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14120015FILEREF /* MoreView.swift */; };
 		AMA14100002BLDFILE /* ChatStreamService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100002FILEREF /* ChatStreamService.swift */; };
 		AMA14100003BLDFILE /* ToolCallCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100003FILEREF /* ToolCallCard.swift */; };
 		AMA14100004BLDFILE /* WorkoutPreviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100004FILEREF /* WorkoutPreviewCard.swift */; };
@@ -642,6 +643,7 @@
 		AMA14120011A /* FatigueHistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FatigueHistoryViewModel.swift; path = ../AmakaFlow/ViewModels/FatigueHistoryViewModel.swift; sourceTree = "<group>"; };
 		AMA14120012A /* FatigueHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FatigueHistoryView.swift; path = ../AmakaFlow/Views/FatigueHistoryView.swift; sourceTree = "<group>"; };
 		AMA14120013A /* FatigueHistoryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FatigueHistoryViewModelTests.swift; path = AmakaFlowCompanionTests/FatigueHistoryViewModelTests.swift; sourceTree = "<group>"; };
+		AMA14120015FILEREF /* MoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MoreView.swift; path = ../AmakaFlow/Views/MoreView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -974,6 +976,7 @@
 				AMA14120011A /* FatigueHistoryViewModel.swift */,
 				AMA14120012A /* FatigueHistoryView.swift */,
 				AMA14120013A /* FatigueHistoryViewModelTests.swift */,
+				AMA14120015FILEREF /* MoreView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -1612,6 +1615,7 @@
 				AK00FUL003B /* ProteinNudgeService.swift in Sources */,
 				AMA14120011B /* FatigueHistoryViewModel.swift in Sources */,
 				AMA14120012B /* FatigueHistoryView.swift in Sources */,
+				AMA14120015BLDFILE /* MoreView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
