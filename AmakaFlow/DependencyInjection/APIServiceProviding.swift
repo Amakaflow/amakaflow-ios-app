@@ -292,6 +292,26 @@ protocol APIServiceProviding {
 
     /// Fetch volume analytics by muscle group for a date range
     func fetchVolumeAnalytics(startDate: String, endDate: String, granularity: String) async throws -> VolumeAnalyticsResponse
+
+    // MARK: - Bulk Import (AMA-1415)
+
+    /// Detect workouts from sources (URLs, images, or file references)
+    func detectImport(request: BulkDetectRequest) async throws -> BulkDetectResponse
+
+    /// Match detected exercises to Garmin exercise library
+    func matchExercises(request: BulkMatchRequest) async throws -> BulkMatchResponse
+
+    /// Preview the workouts that would be imported
+    func previewImport(request: BulkPreviewRequest) async throws -> BulkPreviewResponse
+
+    /// Execute the import for selected workouts
+    func executeImport(request: BulkExecuteRequest) async throws -> BulkExecuteResponse
+
+    /// Poll the import job status
+    func fetchImportStatus(jobId: String, profileId: String) async throws -> BulkImportStatus
+
+    /// Cancel an in-progress import job
+    func cancelImport(jobId: String, profileId: String) async throws
 }
 
 // MARK: - Default Parameter Extensions

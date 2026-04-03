@@ -313,6 +313,15 @@
 		AMA14140005B /* MuscleGroupBreakdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14140005A /* MuscleGroupBreakdown.swift */; };
 		AMA14140006B /* VolumeAnalyticsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14140006A /* VolumeAnalyticsSection.swift */; };
 		AMA14140007B /* VolumeAnalyticsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14140007A /* VolumeAnalyticsViewModelTests.swift */; };
+		AMA14150001B /* BulkImportModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14150001A /* BulkImportModels.swift */; };
+		AMA14150002B /* BulkImportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14150002A /* BulkImportViewModel.swift */; };
+		AMA14150003B /* BulkImportWizardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14150003A /* BulkImportWizardView.swift */; };
+		AMA14150004B /* SourceSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14150004A /* SourceSelectionView.swift */; };
+		AMA14150005B /* DetectionResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14150005A /* DetectionResultsView.swift */; };
+		AMA14150006B /* ExerciseMatchingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14150006A /* ExerciseMatchingView.swift */; };
+		AMA14150007B /* ImportPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14150007A /* ImportPreviewView.swift */; };
+		AMA14150008B /* ImportProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14150008A /* ImportProgressView.swift */; };
+		AMA14150009B /* BulkImportViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14150009A /* BulkImportViewModelTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -680,6 +689,15 @@
 		AMA14140005A /* MuscleGroupBreakdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MuscleGroupBreakdown.swift; path = ../AmakaFlow/Views/Analytics/MuscleGroupBreakdown.swift; sourceTree = "<group>"; };
 		AMA14140006A /* VolumeAnalyticsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VolumeAnalyticsSection.swift; path = ../AmakaFlow/Views/Analytics/VolumeAnalyticsSection.swift; sourceTree = "<group>"; };
 		AMA14140007A /* VolumeAnalyticsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VolumeAnalyticsViewModelTests.swift; path = AmakaFlowCompanionTests/VolumeAnalyticsViewModelTests.swift; sourceTree = "<group>"; };
+		AMA14150001A /* BulkImportModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BulkImportModels.swift; path = ../AmakaFlow/Models/BulkImportModels.swift; sourceTree = "<group>"; };
+		AMA14150002A /* BulkImportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BulkImportViewModel.swift; path = ../AmakaFlow/ViewModels/BulkImportViewModel.swift; sourceTree = "<group>"; };
+		AMA14150003A /* BulkImportWizardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BulkImportWizardView.swift; path = ../AmakaFlow/Views/BulkImport/BulkImportWizardView.swift; sourceTree = "<group>"; };
+		AMA14150004A /* SourceSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SourceSelectionView.swift; path = ../AmakaFlow/Views/BulkImport/SourceSelectionView.swift; sourceTree = "<group>"; };
+		AMA14150005A /* DetectionResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DetectionResultsView.swift; path = ../AmakaFlow/Views/BulkImport/DetectionResultsView.swift; sourceTree = "<group>"; };
+		AMA14150006A /* ExerciseMatchingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ExerciseMatchingView.swift; path = ../AmakaFlow/Views/BulkImport/ExerciseMatchingView.swift; sourceTree = "<group>"; };
+		AMA14150007A /* ImportPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ImportPreviewView.swift; path = ../AmakaFlow/Views/BulkImport/ImportPreviewView.swift; sourceTree = "<group>"; };
+		AMA14150008A /* ImportProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ImportProgressView.swift; path = ../AmakaFlow/Views/BulkImport/ImportProgressView.swift; sourceTree = "<group>"; };
+		AMA14150009A /* BulkImportViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BulkImportViewModelTests.swift; path = AmakaFlowCompanionTests/BulkImportViewModelTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -1031,6 +1049,15 @@
 				AMA14140005A /* MuscleGroupBreakdown.swift */,
 				AMA14140006A /* VolumeAnalyticsSection.swift */,
 				AMA14140007A /* VolumeAnalyticsViewModelTests.swift */,
+				AMA14150001A /* BulkImportModels.swift */,
+				AMA14150002A /* BulkImportViewModel.swift */,
+				AMA14150003A /* BulkImportWizardView.swift */,
+				AMA14150004A /* SourceSelectionView.swift */,
+				AMA14150005A /* DetectionResultsView.swift */,
+				AMA14150006A /* ExerciseMatchingView.swift */,
+				AMA14150007A /* ImportPreviewView.swift */,
+				AMA14150008A /* ImportProgressView.swift */,
+				AMA14150009A /* BulkImportViewModelTests.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -1686,6 +1713,14 @@
 				AMA14140004B /* BalanceIndicatorsView.swift in Sources */,
 				AMA14140005B /* MuscleGroupBreakdown.swift in Sources */,
 				AMA14140006B /* VolumeAnalyticsSection.swift in Sources */,
+				AMA14150001B /* BulkImportModels.swift in Sources */,
+				AMA14150002B /* BulkImportViewModel.swift in Sources */,
+				AMA14150003B /* BulkImportWizardView.swift in Sources */,
+				AMA14150004B /* SourceSelectionView.swift in Sources */,
+				AMA14150005B /* DetectionResultsView.swift in Sources */,
+				AMA14150006B /* ExerciseMatchingView.swift in Sources */,
+				AMA14150007B /* ImportPreviewView.swift in Sources */,
+				AMA14150008B /* ImportProgressView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1732,6 +1767,7 @@
 				AMA14120013B /* FatigueHistoryViewModelTests.swift in Sources */,
 				AMA14130011B /* ProgramWizardViewModelTests.swift in Sources */,
 				AMA14140007B /* VolumeAnalyticsViewModelTests.swift in Sources */,
+				AMA14150009B /* BulkImportViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

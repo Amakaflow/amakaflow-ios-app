@@ -63,6 +63,12 @@ struct MoreView: View {
                     } label: {
                         moreRow(icon: "heart.text.square", title: "Fatigue Advisor")
                     }
+
+                    NavigationLink {
+                        BulkImportWizardView()
+                    } label: {
+                        moreRow(icon: "square.and.arrow.down.on.square", title: "Bulk Import")
+                    }
                 } header: {
                     Text("Tools")
                 }

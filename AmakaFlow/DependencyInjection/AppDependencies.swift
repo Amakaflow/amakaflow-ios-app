@@ -652,6 +652,71 @@ class MockAPIService: APIServiceProviding {
         guard let result = fetchVolumeAnalyticsResult else { throw APIError.notImplemented }
         return try result.get()
     }
+
+    // MARK: - Bulk Import (AMA-1415)
+
+    var detectImportResult: Result<BulkDetectResponse, Error>?
+    var detectImportCalled = false
+    var lastDetectRequest: BulkDetectRequest?
+
+    var matchExercisesResult: Result<BulkMatchResponse, Error>?
+    var matchExercisesCalled = false
+    var lastMatchRequest: BulkMatchRequest?
+
+    var previewImportResult: Result<BulkPreviewResponse, Error>?
+    var previewImportCalled = false
+    var lastPreviewRequest: BulkPreviewRequest?
+
+    var executeImportResult: Result<BulkExecuteResponse, Error>?
+    var executeImportCalled = false
+    var lastExecuteRequest: BulkExecuteRequest?
+
+    var fetchImportStatusResult: Result<BulkImportStatus, Error>?
+    var fetchImportStatusCalled = false
+    var lastFetchImportStatusJobId: String?
+
+    var cancelImportCalled = false
+    var lastCancelImportJobId: String?
+
+    func detectImport(request: BulkDetectRequest) async throws -> BulkDetectResponse {
+        detectImportCalled = true
+        lastDetectRequest = request
+        guard let result = detectImportResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
+
+    func matchExercises(request: BulkMatchRequest) async throws -> BulkMatchResponse {
+        matchExercisesCalled = true
+        lastMatchRequest = request
+        guard let result = matchExercisesResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
+
+    func previewImport(request: BulkPreviewRequest) async throws -> BulkPreviewResponse {
+        previewImportCalled = true
+        lastPreviewRequest = request
+        guard let result = previewImportResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
+
+    func executeImport(request: BulkExecuteRequest) async throws -> BulkExecuteResponse {
+        executeImportCalled = true
+        lastExecuteRequest = request
+        guard let result = executeImportResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
+
+    func fetchImportStatus(jobId: String, profileId: String) async throws -> BulkImportStatus {
+        fetchImportStatusCalled = true
+        lastFetchImportStatusJobId = jobId
+        guard let result = fetchImportStatusResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
+
+    func cancelImport(jobId: String, profileId: String) async throws {
+        cancelImportCalled = true
+        lastCancelImportJobId = jobId
+    }
 }
 
 /// Mock pairing service for testing
