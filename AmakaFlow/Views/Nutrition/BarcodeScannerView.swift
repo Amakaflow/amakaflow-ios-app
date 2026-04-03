@@ -216,6 +216,7 @@ class BarcodeScannerViewController: UIViewController, AVCaptureMetadataOutputObj
 
     private var captureSession: AVCaptureSession?
     private var previewLayer: AVCaptureVideoPreviewLayer?
+    private var metadataOutput: AVCaptureMetadataOutput?
     private var hasScanned = false
 
     override func viewDidLoad() {
@@ -239,9 +240,24 @@ class BarcodeScannerViewController: UIViewController, AVCaptureMetadataOutputObj
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        cleanup()
+    }
+
+    deinit {
+        cleanup()
+    }
+
+    private func cleanup() {
+        metadataOutput?.setMetadataObjectsDelegate(nil, queue: nil)
         if let session = captureSession, session.isRunning {
             session.stopRunning()
         }
+        captureSession?.outputs.forEach { captureSession?.removeOutput($0) }
+        captureSession?.inputs.forEach { captureSession?.removeInput($0) }
+        captureSession = nil
+        previewLayer?.removeFromSuperlayer()
+        previewLayer = nil
+        metadataOutput = nil
     }
 
     private func setupScanner() {
@@ -263,6 +279,7 @@ class BarcodeScannerViewController: UIViewController, AVCaptureMetadataOutputObj
             metadataOutput.setMetadataObjectsDelegate(self, queue: DispatchQueue.main)
             metadataOutput.metadataObjectTypes = [.ean8, .ean13, .upce, .code128, .code39]
         }
+        self.metadataOutput = metadataOutput
 
         let preview = AVCaptureVideoPreviewLayer(session: session)
         preview.frame = view.bounds
