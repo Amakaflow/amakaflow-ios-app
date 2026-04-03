@@ -25,7 +25,7 @@ struct VolumeAnalyticsSection: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 150)
-                .onChange(of: viewModel.selectedPeriod) { newPeriod in
+                .onChange(of: viewModel.selectedPeriod, initial: false) { _, newPeriod in
                     viewModel.changePeriod(newPeriod)
                 }
             }

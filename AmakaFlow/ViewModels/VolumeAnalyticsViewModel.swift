@@ -39,6 +39,7 @@ class VolumeAnalyticsViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private let dependencies: AppDependencies
+    private var loadTask: Task<Void, Never>?
     private let formatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
@@ -80,7 +81,8 @@ class VolumeAnalyticsViewModel: ObservableObject {
 
     func changePeriod(_ period: AnalyticsPeriod) {
         selectedPeriod = period
-        Task { await loadVolume() }
+        loadTask?.cancel()
+        loadTask = Task { await loadVolume() }
     }
 
     // MARK: - Balance Ratios
