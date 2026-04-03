@@ -520,6 +520,68 @@ class MockAPIService: APIServiceProviding {
         fetchCrewLeaderboardCalled = true
         return try fetchCrewLeaderboardResult.get()
     }
+
+    // MARK: - Nutrition (AMA-1412)
+
+    var analyzePhotoResult: Result<AnalyzePhotoAPIResponse, Error>?
+    var analyzePhotoCalled = false
+    var lookupBarcodeResult: Result<BarcodeNutritionAPIResponse, Error>?
+    var lookupBarcodeCalled = false
+    var parseTextResult: Result<ParseTextAPIResponse, Error>?
+    var parseTextCalled = false
+    var getFuelingStatusResult: Result<FuelingStatusResponse, Error>?
+    var getFuelingStatusCalled = false
+    var checkProteinNudgeResult: Result<ProteinNudgeResponse, Error>?
+    var checkProteinNudgeCalled = false
+
+    func analyzePhoto(imageBase64: String) async throws -> AnalyzePhotoAPIResponse {
+        analyzePhotoCalled = true
+        guard let result = analyzePhotoResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
+
+    func lookupBarcode(code: String) async throws -> BarcodeNutritionAPIResponse {
+        lookupBarcodeCalled = true
+        guard let result = lookupBarcodeResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
+
+    func parseText(text: String) async throws -> ParseTextAPIResponse {
+        parseTextCalled = true
+        guard let result = parseTextResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
+
+    func getFuelingStatus() async throws -> FuelingStatusResponse {
+        getFuelingStatusCalled = true
+        guard let result = getFuelingStatusResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
+
+    func checkProteinNudge() async throws -> ProteinNudgeResponse {
+        checkProteinNudgeCalled = true
+        guard let result = checkProteinNudgeResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
+
+    // MARK: - Coach Suggestions (AMA-1412)
+
+    var suggestWorkoutResult: Result<SuggestWorkoutResponse, Error>?
+    var suggestWorkoutCalled = false
+    var postRPEFeedbackResult: Result<RPEFeedbackResponse, Error>?
+    var postRPEFeedbackCalled = false
+
+    func suggestWorkout(request: SuggestWorkoutRequest) async throws -> SuggestWorkoutResponse {
+        suggestWorkoutCalled = true
+        guard let result = suggestWorkoutResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
+
+    func postRPEFeedback(_ feedback: RPEFeedbackRequest) async throws -> RPEFeedbackResponse {
+        postRPEFeedbackCalled = true
+        guard let result = postRPEFeedbackResult else { throw APIError.notImplemented }
+        return try result.get()
+    }
 }
 
 /// Mock pairing service for testing

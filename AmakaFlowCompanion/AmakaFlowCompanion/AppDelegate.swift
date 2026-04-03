@@ -136,6 +136,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             NotificationCenter.default.post(name: .deepLinkToCalendar, object: nil, userInfo: userInfo)
         case "coach_message":
             NotificationCenter.default.post(name: .deepLinkToCoach, object: nil, userInfo: userInfo)
+        case "nutrition_update":
+            NotificationCenter.default.post(name: .deepLinkToNutrition, object: nil, userInfo: userInfo)
         default:
             NotificationCenter.default.post(name: .refreshPendingWorkouts, object: nil, userInfo: userInfo)
         }
@@ -153,4 +155,5 @@ extension Notification.Name {
     static let deepLinkToSync = Notification.Name("deepLinkToSync")
     static let deepLinkToCalendar = Notification.Name("deepLinkToCalendar")
     static let deepLinkToCoach = Notification.Name("deepLinkToCoach")
+    static let deepLinkToNutrition = Notification.Name("deepLinkToNutrition")
 }

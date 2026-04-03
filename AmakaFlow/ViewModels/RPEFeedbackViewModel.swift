@@ -104,11 +104,16 @@ class RPEFeedbackViewModel: ObservableObject {
     let workoutId: String?
     var onComplete: (() -> Void)?
 
+    // MARK: - Dependencies
+
+    private let dependencies: AppDependencies
+
     // MARK: - Init
 
-    init(workoutId: String?, onComplete: (() -> Void)? = nil) {
+    init(workoutId: String?, onComplete: (() -> Void)? = nil, dependencies: AppDependencies = .live) {
         self.workoutId = workoutId
         self.onComplete = onComplete
+        self.dependencies = dependencies
     }
 
     // MARK: - Actions
@@ -139,7 +144,7 @@ class RPEFeedbackViewModel: ObservableObject {
         )
 
         do {
-            let response = try await postRPEFeedback(request)
+            let response = try await dependencies.apiService.postRPEFeedback(request)
             deloadRecommended = response.deloadRecommended ?? false
             isSubmitted = true
 
@@ -161,50 +166,4 @@ class RPEFeedbackViewModel: ObservableObject {
         onComplete?()
     }
 
-    // MARK: - API
-
-    private func postRPEFeedback(_ request: RPEFeedbackRequest) async throws -> RPEFeedbackResponse {
-        let baseURL = AppEnvironment.current.chatAPIURL
-        guard let url = URL(string: "\(baseURL)/coach/rpe-feedback") else {
-            throw APIError.invalidResponse
-        }
-
-        var urlRequest = URLRequest(url: url)
-        urlRequest.httpMethod = "POST"
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        #if DEBUG
-        if let testAuthSecret = TestAuthStore.shared.authSecret,
-           let testUserId = TestAuthStore.shared.userId,
-           !testAuthSecret.isEmpty {
-            urlRequest.setValue(testAuthSecret, forHTTPHeaderField: "X-Test-Auth")
-            urlRequest.setValue(testUserId, forHTTPHeaderField: "X-Test-User-Id")
-        } else if let token = PairingService.shared.getToken() {
-            urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        #else
-        if let token = PairingService.shared.getToken() {
-            urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        #endif
-
-        let encoder = JSONEncoder()
-        urlRequest.httpBody = try encoder.encode(request)
-
-        let (data, response) = try await URLSession.shared.data(for: urlRequest)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        guard httpResponse.statusCode == 200 else {
-            let body = String(data: data, encoding: .utf8) ?? "unknown"
-            print("[RPEFeedbackViewModel] API error \(httpResponse.statusCode): \(body)")
-            throw APIError.serverError(httpResponse.statusCode)
-        }
-
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        return try decoder.decode(RPEFeedbackResponse.self, from: data)
-    }
 }

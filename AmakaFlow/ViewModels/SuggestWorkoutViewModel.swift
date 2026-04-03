@@ -150,35 +150,6 @@ class SuggestWorkoutViewModel: ObservableObject {
     func suggestWorkout(durationMinutes: Int? = nil, focusMuscleGroups: [String]? = nil, notes: String? = nil) async {
         state = .loading
 
-        let chatURL = AppEnvironment.current.chatAPIURL
-        guard let url = URL(string: "\(chatURL)/api/v1/coach/suggest-workout") else {
-            state = .error("Invalid API URL")
-            return
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-
-        // Build auth headers the same way APIService does
-        var headers = ["Content-Type": "application/json"]
-
-        #if DEBUG
-        if let testAuthSecret = TestAuthStore.shared.authSecret,
-           let testUserId = TestAuthStore.shared.userId,
-           !testAuthSecret.isEmpty {
-            headers["X-Test-Auth"] = testAuthSecret
-            headers["X-Test-User-Id"] = testUserId
-        } else if let token = PairingService.shared.getToken() {
-            headers["Authorization"] = "Bearer \(token)"
-        }
-        #else
-        if let token = PairingService.shared.getToken() {
-            headers["Authorization"] = "Bearer \(token)"
-        }
-        #endif
-
-        request.allHTTPHeaderFields = headers
-
         let body = SuggestWorkoutRequest(
             durationMinutes: durationMinutes,
             focusMuscleGroups: focusMuscleGroups,
@@ -186,42 +157,12 @@ class SuggestWorkoutViewModel: ObservableObject {
         )
 
         do {
-            let encoder = JSONEncoder()
-            encoder.keyEncodingStrategy = .convertToSnakeCase
-            request.httpBody = try encoder.encode(body)
+            let decoded = try await dependencies.apiService.suggestWorkout(request: body)
+            let workout = buildWorkout(from: decoded)
+            suggestedWorkout = workout
+            state = .success(workout)
         } catch {
-            state = .error("Failed to encode request: \(error.localizedDescription)")
-            return
-        }
-
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                state = .error("Invalid response from server")
-                return
-            }
-
-            switch httpResponse.statusCode {
-            case 200:
-                let decoded = try APIService.makeDecoder().decode(SuggestWorkoutResponse.self, from: data)
-                let workout = buildWorkout(from: decoded)
-                suggestedWorkout = workout
-                state = .success(workout)
-
-            case 401:
-                state = .error("Session expired. Please reconnect.")
-
-            case 429:
-                let body = String(data: data, encoding: .utf8) ?? ""
-                state = .error("Rate limited. Please try again later. \(body)")
-
-            default:
-                let body = String(data: data, encoding: .utf8) ?? ""
-                state = .error("Server error (\(httpResponse.statusCode)): \(body)")
-            }
-        } catch {
-            state = .error("Network error: \(error.localizedDescription)")
+            state = .error(error.localizedDescription)
         }
     }
 

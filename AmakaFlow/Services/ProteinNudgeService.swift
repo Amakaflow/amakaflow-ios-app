@@ -27,7 +27,7 @@ final class ProteinNudgeService {
     /// notification if the user should be nudged.
     func schedulePostWorkoutNudge() async {
         do {
-            let response = try await checkProteinNudge()
+            let response = try await APIService.shared.checkProteinNudge()
 
             guard response.shouldNudge else {
                 print("[ProteinNudgeService] No nudge needed — protein at \(response.proteinCurrent)g/\(response.proteinTarget)g")
@@ -96,61 +96,5 @@ final class ProteinNudgeService {
         }
     }
 
-    // MARK: - API
-
-    private func checkProteinNudge() async throws -> ProteinNudgeResponse {
-        let baseURL = AppEnvironment.current.chatAPIURL
-        guard let url = URL(string: "\(baseURL)/nutrition/protein-nudge/check") else {
-            throw APIError.invalidResponse
-        }
-
-        var urlRequest = URLRequest(url: url)
-        urlRequest.httpMethod = "POST"
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        #if DEBUG
-        if let testAuthSecret = TestAuthStore.shared.authSecret,
-           let testUserId = TestAuthStore.shared.userId,
-           !testAuthSecret.isEmpty {
-            urlRequest.setValue(testAuthSecret, forHTTPHeaderField: "X-Test-Auth")
-            urlRequest.setValue(testUserId, forHTTPHeaderField: "X-Test-User-Id")
-        } else if let token = PairingService.shared.getToken() {
-            urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        #else
-        if let token = PairingService.shared.getToken() {
-            urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        #endif
-
-        let (data, response) = try await URLSession.shared.data(for: urlRequest)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        guard httpResponse.statusCode == 200 else {
-            throw APIError.serverError(httpResponse.statusCode)
-        }
-
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        return try decoder.decode(ProteinNudgeResponse.self, from: data)
-    }
 }
 
-// MARK: - Response Model
-
-struct ProteinNudgeResponse: Codable, Equatable {
-    let shouldNudge: Bool
-    let proteinCurrent: Int
-    let proteinTarget: Int
-    let message: String
-
-    enum CodingKeys: String, CodingKey {
-        case shouldNudge = "should_nudge"
-        case proteinCurrent = "protein_current"
-        case proteinTarget = "protein_target"
-        case message
-    }
-}
