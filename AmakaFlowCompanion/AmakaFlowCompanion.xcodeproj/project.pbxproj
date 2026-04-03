@@ -10,6 +10,7 @@
 		0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
 		11C72B7C6EA17FC8DEA354FB /* CoachModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */; };
 		AMA14100001BLDFILE /* ChatStreamModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100001FILEREF /* ChatStreamModels.swift */; };
+		AMA14120001BLDFILE /* NutritionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14120001FILEREF /* NutritionModels.swift */; };
 		AMA14100002BLDFILE /* ChatStreamService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100002FILEREF /* ChatStreamService.swift */; };
 		AMA14100003BLDFILE /* ToolCallCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100003FILEREF /* ToolCallCard.swift */; };
 		AMA14100004BLDFILE /* WorkoutPreviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100004FILEREF /* WorkoutPreviewCard.swift */; };
@@ -422,6 +423,7 @@
 		A1IMP0RTV13W0001 /* AIImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AIImportView.swift; path = ../AmakaFlow/Views/AIImportView.swift; sourceTree = SOURCE_ROOT; };
 		A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CoachModels.swift; path = ../AmakaFlow/Models/CoachModels.swift; sourceTree = "<group>"; };
 		AMA14100001FILEREF /* ChatStreamModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ChatStreamModels.swift; path = ../AmakaFlow/Models/ChatStreamModels.swift; sourceTree = "<group>"; };
+		AMA14120001FILEREF /* NutritionModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NutritionModels.swift; path = ../AmakaFlow/Models/NutritionModels.swift; sourceTree = "<group>"; };
 		AMA14100002FILEREF /* ChatStreamService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ChatStreamService.swift; path = ../AmakaFlow/Services/ChatStreamService.swift; sourceTree = "<group>"; };
 		AMA14100003FILEREF /* ToolCallCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ToolCallCard.swift; path = ../AmakaFlow/Views/Components/ToolCallCard.swift; sourceTree = SOURCE_ROOT; };
 		AMA14100004FILEREF /* WorkoutPreviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutPreviewCard.swift; path = ../AmakaFlow/Views/Components/WorkoutPreviewCard.swift; sourceTree = SOURCE_ROOT; };
@@ -902,6 +904,7 @@
 				EBCE80D8EA7940E025E8D41D /* PlanningModels.swift */,
 				A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */,
 				AMA14100001FILEREF /* ChatStreamModels.swift */,
+				AMA14120001FILEREF /* NutritionModels.swift */,
 				FC35C6AFFE23A2DA83D8C2E7 /* ActionModels.swift */,
 				68B54D3FBC9E8561760B53F0 /* AnalyticsModels.swift */,
 				1AF716C8C0EE3CC5A4BA56C5 /* CalendarViewModel.swift */,
@@ -1521,6 +1524,7 @@
 				F4E8733C34C4B41F73806D0A /* PlanningModels.swift in Sources */,
 				11C72B7C6EA17FC8DEA354FB /* CoachModels.swift in Sources */,
 				AMA14100001BLDFILE /* ChatStreamModels.swift in Sources */,
+				AMA14120001BLDFILE /* NutritionModels.swift in Sources */,
 				AMA14100002BLDFILE /* ChatStreamService.swift in Sources */,
 				63D97E9B43FEB4A771D87EE8 /* ActionModels.swift in Sources */,
 				AF50AD9DC3B0E509ED0ED715 /* AnalyticsModels.swift in Sources */,

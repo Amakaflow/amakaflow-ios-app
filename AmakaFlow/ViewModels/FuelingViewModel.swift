@@ -10,24 +10,6 @@ import Foundation
 import Combine
 import SwiftUI
 
-// MARK: - API Response Models
-
-struct FuelingStatusResponse: Codable, Equatable {
-    let status: String          // "green" | "yellow" | "red"
-    let proteinPct: Double
-    let caloriesPct: Double
-    let hydrationPct: Double
-    let message: String
-
-    enum CodingKeys: String, CodingKey {
-        case status
-        case proteinPct = "protein_pct"
-        case caloriesPct = "calories_pct"
-        case hydrationPct = "hydration_pct"
-        case message
-    }
-}
-
 // MARK: - Fueling Status Enum
 
 enum FuelingStatus: String {

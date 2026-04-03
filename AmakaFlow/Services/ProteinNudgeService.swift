@@ -139,18 +139,3 @@ final class ProteinNudgeService {
     }
 }
 
-// MARK: - Response Model
-
-struct ProteinNudgeResponse: Codable, Equatable {
-    let shouldNudge: Bool
-    let proteinCurrent: Int
-    let proteinTarget: Int
-    let message: String
-
-    enum CodingKeys: String, CodingKey {
-        case shouldNudge = "should_nudge"
-        case proteinCurrent = "protein_current"
-        case proteinTarget = "protein_target"
-        case message
-    }
-}
