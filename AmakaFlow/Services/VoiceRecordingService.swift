@@ -27,8 +27,14 @@ class VoiceRecordingService: NSObject, ObservableObject {
     private var durationTimer: Timer?
     private var audioSession: AVAudioSession { AVAudioSession.sharedInstance() }
 
-    /// Maximum recording duration (5 minutes)
-    let maxDuration: TimeInterval = 300
+    /// Maximum recording duration (30 minutes).
+    ///
+    /// AMA-1320: Previously 5 minutes. Bumped to 30 minutes so the cap feels
+    /// like a Telegram voice-note — effectively unbounded from the user's
+    /// POV. Still present as a safety backstop so a forgotten recording in
+    /// a backgrounded app can't run indefinitely. Matches the web side
+    /// (`amakaflow-ui/src/hooks/useVoiceInput.ts` DEFAULT_MAX_DURATION_MS).
+    let maxDuration: TimeInterval = 1800
 
     // MARK: - Recording Settings
 
