@@ -96,7 +96,11 @@ struct ContentView: View {
         }
         // Deep link notification handlers (AMA-1133)
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToCalendar)) { _ in
-            selectedTab = .calendar
+            // AMA-1588: Calendar tab is hidden in MVP. If a deep-link fires
+            // while the tab is gated off, fall back to Workouts (closest
+            // adjacent surface) so the user doesn't land on a non-existent
+            // tab state.
+            selectedTab = FeatureFlags.nonMvp ? .calendar : .workouts
         }
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToCoach)) { _ in
             selectedTab = .more
