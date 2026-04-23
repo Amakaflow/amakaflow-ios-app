@@ -49,23 +49,29 @@ struct ContentView: View {
                 .tag(Tab.workouts)
                 .accessibilityIdentifier("workouts_tab")
 
-            CalendarView(onAddWorkout: {
-                    selectedTab = .workouts
-                })
-                .tabItem {
-                    Image(systemName: Tab.calendar.icon)
-                    Text(Tab.calendar.rawValue)
-                }
-                .tag(Tab.calendar)
-                .accessibilityIdentifier("calendar_tab")
+            // AMA-1588: Calendar + Social tabs are non-MVP.
+            // Hidden until FeatureFlags.nonMvp is enabled. Code stays in
+            // the app so we can re-enable once the willingness-to-pay test
+            // resolves.
+            if FeatureFlags.nonMvp {
+                CalendarView(onAddWorkout: {
+                        selectedTab = .workouts
+                    })
+                    .tabItem {
+                        Image(systemName: Tab.calendar.icon)
+                        Text(Tab.calendar.rawValue)
+                    }
+                    .tag(Tab.calendar)
+                    .accessibilityIdentifier("calendar_tab")
 
-            FeedView()
-                .tabItem {
-                    Image(systemName: Tab.social.icon)
-                    Text(Tab.social.rawValue)
-                }
-                .tag(Tab.social)
-                .accessibilityIdentifier("social_tab")
+                FeedView()
+                    .tabItem {
+                        Image(systemName: Tab.social.icon)
+                        Text(Tab.social.rawValue)
+                    }
+                    .tag(Tab.social)
+                    .accessibilityIdentifier("social_tab")
+            }
 
             MoreView(navigateToSyncDashboard: $showSyncDashboard)
                 .tabItem {
@@ -90,7 +96,11 @@ struct ContentView: View {
         }
         // Deep link notification handlers (AMA-1133)
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToCalendar)) { _ in
-            selectedTab = .calendar
+            // AMA-1588: Calendar tab is hidden in MVP. If a deep-link fires
+            // while the tab is gated off, fall back to Workouts (closest
+            // adjacent surface) so the user doesn't land on a non-existent
+            // tab state.
+            selectedTab = FeatureFlags.nonMvp ? .calendar : .workouts
         }
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToCoach)) { _ in
             selectedTab = .more

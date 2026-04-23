@@ -15,18 +15,24 @@ struct MoreView: View {
     var body: some View {
         NavigationStack {
             List {
-                // Primary features
+                // Primary features — MVP scope keeps History only.
+                // AI Coach / Log Food / Sources / Programs are non-MVP and
+                // hidden behind FeatureFlags.nonMvp. Code stays in the app
+                // so we can re-enable without a re-implementation when the
+                // willingness-to-pay test resolves (AMA-1588 / AMA-MVP-06).
                 Section {
-                    NavigationLink {
-                        CoachChatView()
-                    } label: {
-                        moreRow(icon: "bubble.left.and.bubble.right.fill", title: "AI Coach")
-                    }
+                    if FeatureFlags.nonMvp {
+                        NavigationLink {
+                            CoachChatView()
+                        } label: {
+                            moreRow(icon: "bubble.left.and.bubble.right.fill", title: "AI Coach")
+                        }
 
-                    NavigationLink {
-                        FoodLoggingView()
-                    } label: {
-                        moreRow(icon: "fork.knife", title: "Log Food")
+                        NavigationLink {
+                            FoodLoggingView()
+                        } label: {
+                            moreRow(icon: "fork.knife", title: "Log Food")
+                        }
                     }
 
                     NavigationLink {
@@ -35,45 +41,49 @@ struct MoreView: View {
                         moreRow(icon: "clock.fill", title: "History")
                     }
 
-                    NavigationLink {
-                        SourcesView()
-                    } label: {
-                        moreRow(icon: "arrow.down.circle.fill", title: "Sources")
-                    }
+                    if FeatureFlags.nonMvp {
+                        NavigationLink {
+                            SourcesView()
+                        } label: {
+                            moreRow(icon: "arrow.down.circle.fill", title: "Sources")
+                        }
 
-                    NavigationLink {
-                        ProgramsListView()
-                    } label: {
-                        moreRow(icon: "list.bullet.clipboard", title: "Programs")
+                        NavigationLink {
+                            ProgramsListView()
+                        } label: {
+                            moreRow(icon: "list.bullet.clipboard", title: "Programs")
+                        }
                     }
                 } header: {
                     Text("Features")
                 }
 
-                // Tools
-                Section {
-                    NavigationLink {
-                        FatigueHistoryView()
-                    } label: {
-                        moreRow(icon: "chart.line.uptrend.xyaxis", title: "Readiness History")
-                    }
+                // Tools — all non-MVP for the first cut.
+                if FeatureFlags.nonMvp {
+                    Section {
+                        NavigationLink {
+                            FatigueHistoryView()
+                        } label: {
+                            moreRow(icon: "chart.line.uptrend.xyaxis", title: "Readiness History")
+                        }
 
-                    NavigationLink {
-                        FatigueAdvisorStandaloneView()
-                    } label: {
-                        moreRow(icon: "heart.text.square", title: "Fatigue Advisor")
-                    }
+                        NavigationLink {
+                            FatigueAdvisorStandaloneView()
+                        } label: {
+                            moreRow(icon: "heart.text.square", title: "Fatigue Advisor")
+                        }
 
-                    NavigationLink {
-                        BulkImportWizardView()
-                    } label: {
-                        moreRow(icon: "square.and.arrow.down.on.square", title: "Bulk Import")
+                        NavigationLink {
+                            BulkImportWizardView()
+                        } label: {
+                            moreRow(icon: "square.and.arrow.down.on.square", title: "Bulk Import")
+                        }
+                    } header: {
+                        Text("Tools")
                     }
-                } header: {
-                    Text("Tools")
                 }
 
-                // Settings
+                // Settings — always visible.
                 Section {
                     NavigationLink {
                         SettingsView(navigateToSyncDashboard: $navigateToSyncDashboard)
