@@ -1,5 +1,5 @@
 {
-  "originHash" : "8728fe79a5e32499ea219e671642fc965fa4eddc0ccf01eac09ec3e1e6a55e04",
+  "originHash" : "c92e1a92f87e06a7972a532a59d8dea59840f19da5623699145da38627e49ea4",
   "pins" : [
     {
       "identity" : "sentry-cocoa",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "8627bbc0e663238d516b541d8fc7edd62a627fde",
         "version" : "8.57.3"
+      }
+    },
+    {
+      "identity" : "workoutkit-sync",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Amakaflow/workoutkit-sync",
+      "state" : {
+        "branch" : "main",
+        "revision" : "6314b211b52ade5d838ecd37fdd9a9c57edf0087"
       }
     },
     {
