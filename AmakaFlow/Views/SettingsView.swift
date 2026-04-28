@@ -52,7 +52,6 @@ struct SettingsView: View {
     @State private var debugTapCount = 0
     @State private var debugTapResetTask: DispatchWorkItem?
     @State private var showingTelegramSetup = false
-    @AppStorage("telegram_linked") private var isTelegramLinked = false
     @EnvironmentObject private var garminConnectivity: GarminConnectManager
     @EnvironmentObject private var pairingService: PairingService
     @EnvironmentObject private var workoutsViewModel: WorkoutsViewModel
@@ -2040,6 +2039,7 @@ struct SettingsView: View {
         }
         .confirmationDialog("Disconnect Account?", isPresented: $showingDisconnectAlert, titleVisibility: .visible) {
             Button("Disconnect", role: .destructive) {
+                clearTelegramLinked()
                 pairingService.unpair()
             }
             Button("Cancel", role: .cancel) {}
@@ -2065,9 +2065,23 @@ struct SettingsView: View {
         }
     }
 
+    private var telegramLinkedKey: String {
+        "telegram_linked_\(pairingService.userProfile?.id ?? "anon")"
+    }
+
+    private var isTelegramLinked: Bool {
+        get { UserDefaults.standard.bool(forKey: telegramLinkedKey) }
+        nonmutating set { UserDefaults.standard.set(newValue, forKey: telegramLinkedKey) }
+    }
+
+    private func clearTelegramLinked() {
+        UserDefaults.standard.removeObject(forKey: telegramLinkedKey)
+    }
+
     private func deleteAccount() async {
         do {
             try await APIService.shared.deleteAccount()
+            clearTelegramLinked()
             pairingService.unpair()
             UserDefaults.standard.set(false, forKey: "biometric_consent_v1")
         } catch {

@@ -75,7 +75,7 @@ class APIService {
 
     // MARK: - Auth Headers
 
-    private var authHeaders: [String: String] {
+    var authHeaders: [String: String] {
         var headers = ["Content-Type": "application/json"]
 
         // E2E Test mode: Use X-Test-Auth header bypass instead of JWT

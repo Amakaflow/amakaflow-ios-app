@@ -14,7 +14,7 @@ struct TelegramSetupView: View {
     let onSkip: () -> Void
 
     @State private var phase: Phase = .idle
-    @State private var token: String?
+    @State private var linkTask: Task<Void, Never>?
     @State private var pollTask: Task<Void, Never>?
 
     private enum Phase {
@@ -94,7 +94,7 @@ struct TelegramSetupView: View {
                     Text("Waiting for Telegram confirmation…")
                         .font(Theme.Typography.caption)
                         .foregroundColor(Theme.Colors.textSecondary)
-                    Button("Cancel", action: cancelPolling)
+                    Button("Cancel", action: cancelAll)
                         .font(Theme.Typography.caption)
                         .foregroundColor(Theme.Colors.textTertiary)
                 }
@@ -113,36 +113,64 @@ struct TelegramSetupView: View {
             Spacer()
         }
         .background(Theme.Colors.background.ignoresSafeArea())
-        .onDisappear { pollTask?.cancel() }
+        .onDisappear {
+            linkTask?.cancel()
+            pollTask?.cancel()
+        }
     }
 
     private func openTelegram() {
         phase = .loading
-        Task {
+        linkTask?.cancel()
+        linkTask = Task {
             do {
                 let baseURL = AppEnvironment.current.mapperAPIURL
-                let url = URL(string: "\(baseURL)/api/telegram/link-token")!
+                guard let url = URL(string: "\(baseURL)/api/telegram/link-token") else {
+                    await MainActor.run { phase = .error("Invalid server URL.") }
+                    return
+                }
                 var request = URLRequest(url: url)
                 request.httpMethod = "POST"
-                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                addAuthHeaders(to: &request)
+                request.allHTTPHeaderFields = APIService.shared.authHeaders
 
+                guard !Task.isCancelled else { return }
                 let (data, response) = try await URLSession.shared.data(for: request)
+                guard !Task.isCancelled else { return }
+
                 guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
                     await MainActor.run { phase = .error("Failed to generate link. Try again.") }
                     return
                 }
 
                 let json = try JSONDecoder().decode(LinkTokenResponse.self, from: data)
-                let deepLink = URL(string: json.nativeLink) ?? URL(string: json.deepLink)!
+
+                var components = URLComponents(string: json.nativeLink)
+                    ?? URLComponents(string: json.deepLink)
+                guard let deepLink = components?.url ?? URL(string: json.deepLink) else {
+                    await MainActor.run { phase = .error("Invalid deep link from server.") }
+                    return
+                }
 
                 await MainActor.run {
-                    token = json.token
                     phase = .polling
-                    UIApplication.shared.open(deepLink)
+                    UIApplication.shared.open(deepLink) { opened in
+                        if !opened {
+                            // tg:// unavailable — try https://t.me fallback
+                            if let fallback = URL(string: json.deepLink) {
+                                UIApplication.shared.open(fallback) { fallbackOpened in
+                                    if !fallbackOpened {
+                                        phase = .error("Could not open Telegram. Please install it and try again.")
+                                    }
+                                }
+                            } else {
+                                phase = .error("Could not open Telegram. Please install it and try again.")
+                            }
+                        }
+                    }
                     startPolling(token: json.token)
                 }
             } catch {
+                guard !Task.isCancelled else { return }
                 await MainActor.run { phase = .error("Network error. Please try again.") }
             }
         }
@@ -157,9 +185,11 @@ struct TelegramSetupView: View {
                 guard !Task.isCancelled else { return }
                 do {
                     let baseURL = AppEnvironment.current.mapperAPIURL
-                    let url = URL(string: "\(baseURL)/api/telegram/link-status?token=\(token)")!
+                    var components = URLComponents(string: "\(baseURL)/api/telegram/link-status")
+                    components?.queryItems = [URLQueryItem(name: "token", value: token)]
+                    guard let url = components?.url else { continue }
                     var request = URLRequest(url: url)
-                    addAuthHeaders(to: &request)
+                    request.allHTTPHeaderFields = APIService.shared.authHeaders
                     let (data, response) = try await URLSession.shared.data(for: request)
                     guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { continue }
                     let status = try JSONDecoder().decode(LinkStatusResponse.self, from: data)
@@ -174,7 +204,6 @@ struct TelegramSetupView: View {
                     }
                 } catch { }
             }
-            // 5-minute timeout
             await MainActor.run {
                 if case .polling = phase {
                     phase = .error("Timed out. Tap Open Telegram to try again.")
@@ -183,25 +212,12 @@ struct TelegramSetupView: View {
         }
     }
 
-    private func cancelPolling() {
+    private func cancelAll() {
+        linkTask?.cancel()
+        linkTask = nil
         pollTask?.cancel()
         pollTask = nil
         phase = .idle
-    }
-
-    private func addAuthHeaders(to request: inout URLRequest) {
-        #if DEBUG
-        if let secret = TestAuthStore.shared.authSecret,
-           let userId = TestAuthStore.shared.userId,
-           !secret.isEmpty {
-            request.setValue(secret, forHTTPHeaderField: "X-Test-Auth")
-            request.setValue(userId, forHTTPHeaderField: "X-Test-User-Id")
-            return
-        }
-        #endif
-        if let token = PairingService.shared.getToken() {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
     }
 }
 
