@@ -20,6 +20,7 @@
 		3X3RC1S35W1FT000004 /* Exercise.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3X3RC1S35W1FT000001 /* Exercise.swift */; };
 		40E350E9B26F4574902587EF /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29B50DC380A44F2D96E6E414 /* PairingView.swift */; };
 		43F9F2E9369F4546B3AF005A /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D9B67C13E34BAE804A9359 /* HistoryView.swift */; };
+		AMA1617TG001B /* TelegramSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1617TG001A /* TelegramSetupView.swift */; };
 		444EFC17D69346B3B93C9ECA /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11B5892FB68A40CB890E3630 /* KeychainHelper.swift */; };
 		5016188D64111FBBE44B4A8D /* FollowAlongPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E90D82F541D1AF7AE58A29B /* FollowAlongPlayerView.swift */; };
 		521047C38D23474889C39F35 /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AB8DFBA16CE406C95456EAD /* CalendarView.swift */; };
@@ -412,6 +413,7 @@
 		1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = QRScannerView.swift; path = ../AmakaFlow/Views/QRScannerView.swift; sourceTree = SOURCE_ROOT; };
 		1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = InstagramReelIngestionView.swift; path = ../AmakaFlow/Views/InstagramReelIngestionView.swift; sourceTree = SOURCE_ROOT; };
 		29B50DC380A44F2D96E6E414 /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingView.swift; path = ../AmakaFlow/Views/PairingView.swift; sourceTree = SOURCE_ROOT; };
+		AMA1617TG001A /* TelegramSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TelegramSetupView.swift; path = ../AmakaFlow/Views/TelegramSetupView.swift; sourceTree = SOURCE_ROOT; };
 		2AB8DFBA16CE406C95456EAD /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarView.swift; path = ../AmakaFlow/Views/CalendarView.swift; sourceTree = SOURCE_ROOT; };
 		2E90D82F541D1AF7AE58A29B /* FollowAlongPlayerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FollowAlongPlayerView.swift; path = ../AmakaFlow/Views/FollowAlongPlayerView.swift; sourceTree = SOURCE_ROOT; };
 		3910753486A542ECAA1E5971 /* PreWorkoutDeviceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PreWorkoutDeviceSheet.swift; path = ../AmakaFlow/Views/Components/PreWorkoutDeviceSheet.swift; sourceTree = SOURCE_ROOT; };
@@ -1120,6 +1122,7 @@
 				AMA12820001A /* PRDetectionService.swift */,
 				AMA12840002A /* ShareCardGenerator.swift */,
 				29B50DC380A44F2D96E6E414 /* PairingView.swift */,
+				AMA1617TG001A /* TelegramSetupView.swift */,
 				1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */,
 				V01C300100000000000000 /* PermissionManager.swift */,
 				V01C300200000000000000 /* VoiceRecordingService.swift */,
@@ -1517,6 +1520,7 @@
 				A1IMP0RTV13W0002 /* AIImportView.swift in Sources */,
 				521047C38D23474889C39F35 /* CalendarView.swift in Sources */,
 				43F9F2E9369F4546B3AF005A /* HistoryView.swift in Sources */,
+				AMA1617TG001B /* TelegramSetupView.swift in Sources */,
 				F84E22782ED0D59B00459747 /* SettingsView.swift in Sources */,
 				F84E22792ED0D59B00459747 /* WorkoutDetailView.swift in Sources */,
 				F84E227A2ED0D59B00459747 /* WorkoutsView.swift in Sources */,

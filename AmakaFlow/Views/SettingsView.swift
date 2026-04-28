@@ -51,6 +51,8 @@ struct SettingsView: View {
     @State private var showDebugSettings = false
     @State private var debugTapCount = 0
     @State private var debugTapResetTask: DispatchWorkItem?
+    @State private var showingTelegramSetup = false
+    @AppStorage("telegram_linked") private var isTelegramLinked = false
     @EnvironmentObject private var garminConnectivity: GarminConnectManager
     @EnvironmentObject private var pairingService: PairingService
     @EnvironmentObject private var workoutsViewModel: WorkoutsViewModel
@@ -1518,6 +1520,72 @@ struct SettingsView: View {
 
             // Instagram Import Mode
             instagramImportCard
+
+            // Telegram
+            telegramCard
+        }
+    }
+
+    // MARK: - Telegram Card
+
+    private var telegramCard: some View {
+        Button(action: { showingTelegramSetup = true }) {
+            HStack(spacing: Theme.Spacing.md) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                        .fill(Color(hex: "29B6F6").opacity(0.1))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "paperplane.fill")
+                        .font(.system(size: 22))
+                        .foregroundColor(Color(hex: "29B6F6"))
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Telegram")
+                        .font(Theme.Typography.bodyBold)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    Text(isTelegramLinked ? "Morning briefings & coach messages" : "Connect for morning briefings")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                }
+
+                Spacer()
+
+                if isTelegramLinked {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 10, weight: .bold))
+                        Text("Connected")
+                            .font(Theme.Typography.footnote)
+                    }
+                    .foregroundColor(Theme.Colors.accentGreen)
+                    .padding(.horizontal, Theme.Spacing.sm)
+                    .padding(.vertical, 2)
+                    .background(Theme.Colors.accentGreen.opacity(0.1))
+                    .cornerRadius(Theme.CornerRadius.sm)
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .padding(Theme.Spacing.md)
+        .background(Theme.Colors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                .stroke(Theme.Colors.borderLight, lineWidth: 1)
+        )
+        .cornerRadius(Theme.CornerRadius.md)
+        .sheet(isPresented: $showingTelegramSetup) {
+            TelegramSetupView(
+                onConnected: {
+                    isTelegramLinked = true
+                    showingTelegramSetup = false
+                },
+                onSkip: { showingTelegramSetup = false }
+            )
         }
     }
 
