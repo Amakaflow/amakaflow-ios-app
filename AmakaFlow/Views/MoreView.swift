@@ -14,13 +14,41 @@ struct MoreView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                // Primary features — MVP scope keeps History only.
-                // AI Coach / Log Food / Sources / Programs are non-MVP and
-                // hidden behind FeatureFlags.nonMvp. Code stays in the app
-                // so we can re-enable without a re-implementation when the
-                // willingness-to-pay test resolves (AMA-1588 / AMA-MVP-06).
-                Section {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                    AFTopBar(title: "You") {
+                        EmptyView()
+                    } right: {
+                        EmptyView()
+                    }
+
+                    AFCard(padding: 16) {
+                        HStack(spacing: 12) {
+                            Circle()
+                                .fill(Theme.Colors.accentBackground)
+                                .frame(width: 44, height: 44)
+                                .overlay(
+                                    Image(systemName: "person.fill")
+                                        .foregroundColor(Theme.Colors.textPrimary)
+                                )
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("AmakaFlow Athlete")
+                                    .font(Theme.Typography.title3)
+                                    .foregroundColor(Theme.Colors.textPrimary)
+                                Text("Hybrid · 8h/wk · Intermediate")
+                                    .font(.system(size: 11, weight: .regular, design: .monospaced))
+                                    .foregroundColor(Theme.Colors.textSecondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12))
+                                .foregroundColor(Theme.Colors.textTertiary)
+                        }
+                    }
+
+                    AFLabel(text: "Features")
+
+                    VStack(spacing: 0) {
                     if FeatureFlags.nonMvp {
                         NavigationLink {
                             CoachChatView()
@@ -54,13 +82,13 @@ struct MoreView: View {
                             moreRow(icon: "list.bullet.clipboard", title: "Programs")
                         }
                     }
-                } header: {
-                    Text("Features")
-                }
+                    }
+                    .rowCard()
 
                 // Tools — all non-MVP for the first cut.
                 if FeatureFlags.nonMvp {
-                    Section {
+                    AFLabel(text: "Tools")
+                    VStack(spacing: 0) {
                         NavigationLink {
                             FatigueHistoryView()
                         } label: {
@@ -78,35 +106,57 @@ struct MoreView: View {
                         } label: {
                             moreRow(icon: "square.and.arrow.down.on.square", title: "Bulk Import")
                         }
-                    } header: {
-                        Text("Tools")
                     }
+                    .rowCard()
                 }
 
                 // Settings — always visible.
-                Section {
+                    AFLabel(text: "Settings")
+                    VStack(spacing: 0) {
                     NavigationLink {
                         SettingsView(navigateToSyncDashboard: $navigateToSyncDashboard)
                     } label: {
                         moreRow(icon: "gearshape.fill", title: "Settings")
                     }
+                    }
+                    .rowCard()
                 }
+                .padding(.horizontal, Theme.Spacing.lg)
+                .padding(.bottom, 100)
             }
-            .listStyle(.insetGrouped)
-            .navigationTitle("More")
-            .navigationBarTitleDisplayMode(.large)
+            .background(Theme.Colors.background.ignoresSafeArea())
+            .navigationBarHidden(true)
         }
     }
 
     private func moreRow(icon: String, title: String) -> some View {
         HStack(spacing: Theme.Spacing.md) {
             Image(systemName: icon)
-                .foregroundColor(Theme.Colors.accentBlue)
+                .foregroundColor(Theme.Colors.textPrimary)
                 .frame(width: 24)
             Text(title)
                 .font(Theme.Typography.body)
                 .foregroundColor(Theme.Colors.textPrimary)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(Theme.Colors.textTertiary)
         }
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
+    }
+}
+
+private extension View {
+    func rowCard() -> some View {
+        self
+            .padding(.horizontal, 14)
+            .background(Theme.Colors.surface)
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                    .stroke(Theme.Colors.borderLight, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
     }
 }
 

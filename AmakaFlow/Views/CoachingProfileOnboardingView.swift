@@ -31,20 +31,19 @@ struct CoachingProfileOnboardingView: View {
             ScrollView {
                 VStack(spacing: Theme.Spacing.xl) {
                     // Header
-                    VStack(spacing: Theme.Spacing.md) {
-                        Image(systemName: "person.fill.questionmark")
-                            .font(.system(size: 40))
-                            .foregroundColor(Theme.Colors.accentOrange)
+                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                        AFLabel(text: "Coaching Profile")
 
-                        Text("Quick Setup")
-                            .font(Theme.Typography.title2)
+                        Text("What are you training for?")
+                            .font(Theme.Typography.largeTitle)
                             .foregroundColor(Theme.Colors.textPrimary)
 
-                        Text("Tell us a little about yourself so we can suggest the right workout for you.")
+                        Text("Quick setup — tell us a little about yourself so coach can suggest the right workout.")
                             .font(Theme.Typography.body)
                             .foregroundColor(Theme.Colors.textSecondary)
-                            .multilineTextAlignment(.center)
+                            .lineSpacing(3)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, Theme.Spacing.lg)
 
                     // Experience Level
@@ -62,7 +61,11 @@ struct CoachingProfileOnboardingView: View {
                     }
                     .padding(Theme.Spacing.lg)
                     .background(Theme.Colors.surface)
-                    .cornerRadius(Theme.CornerRadius.lg)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                            .stroke(Theme.Colors.borderLight, lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
 
                     // Training Goal
                     VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
@@ -81,10 +84,10 @@ struct CoachingProfileOnboardingView: View {
                                     Spacer()
                                     if goal == goalOption {
                                         Image(systemName: "checkmark.circle.fill")
-                                            .foregroundColor(Theme.Colors.accentOrange)
+                                            .foregroundColor(Theme.Colors.textPrimary)
                                     } else {
                                         Image(systemName: "circle")
-                                            .foregroundColor(Theme.Colors.textSecondary)
+                                            .foregroundColor(Theme.Colors.borderMedium)
                                     }
                                 }
                                 .padding(.vertical, Theme.Spacing.sm)
@@ -97,7 +100,11 @@ struct CoachingProfileOnboardingView: View {
                     }
                     .padding(Theme.Spacing.lg)
                     .background(Theme.Colors.surface)
-                    .cornerRadius(Theme.CornerRadius.lg)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                            .stroke(Theme.Colors.borderLight, lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
 
                     // Days Per Week
                     VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
@@ -112,17 +119,21 @@ struct CoachingProfileOnboardingView: View {
                                 } label: {
                                     Text("\(day)")
                                         .font(Theme.Typography.bodyBold)
-                                        .foregroundColor(daysPerWeek == day ? .white : Theme.Colors.textPrimary)
+                                        .foregroundColor(daysPerWeek == day ? Theme.Colors.surface : Theme.Colors.textPrimary)
                                         .frame(width: 40, height: 40)
-                                        .background(daysPerWeek == day ? Theme.Colors.accentOrange : Theme.Colors.surfaceElevated)
-                                        .cornerRadius(Theme.CornerRadius.md)
+                                        .background(daysPerWeek == day ? Theme.Colors.textPrimary : Theme.Colors.accentBackground)
+                                        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.sm))
                                 }
                             }
                         }
                     }
                     .padding(Theme.Spacing.lg)
                     .background(Theme.Colors.surface)
-                    .cornerRadius(Theme.CornerRadius.lg)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                            .stroke(Theme.Colors.borderLight, lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
 
                     // Submit button
                     Button {
@@ -137,11 +148,11 @@ struct CoachingProfileOnboardingView: View {
                             Text("Generate My Workout")
                         }
                         .font(Theme.Typography.bodyBold)
-                        .foregroundColor(.white)
+                        .foregroundColor(Theme.Colors.surface)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Theme.Spacing.md)
-                        .background(Theme.Colors.accentOrange)
-                        .cornerRadius(Theme.CornerRadius.lg)
+                        .background(Theme.Colors.textPrimary)
+                        .clipShape(Capsule())
                     }
                     .accessibilityIdentifier("generate_workout_button")
                 }

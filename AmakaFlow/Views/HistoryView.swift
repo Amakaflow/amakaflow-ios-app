@@ -43,39 +43,86 @@ struct HistoryView: View {
                     emptyState
                         .padding(.top, Theme.Spacing.xl * 2)
                 } else {
-                    VStack(spacing: Theme.Spacing.xl) {
+                    VStack(spacing: Theme.Spacing.lg) {
+                        AFTopBar(title: "History", subtitle: "\(historyItems.count) sessions · last 30 days") {
+                            EmptyView()
+                        } right: {
+                            Image(systemName: "plus")
+                                .font(.system(size: 16, weight: .semibold))
+                                .onTapGesture { showingAddWorkout = true }
+                        }
+
+                        trainingLoadCard
+
+                        HStack(spacing: 3) {
+                            Text("All").historySegment(isSelected: true)
+                            Text("Run").historySegment(isSelected: false)
+                            Text("Strength").historySegment(isSelected: false)
+                            Text("Ride").historySegment(isSelected: false)
+                        }
+                        .padding(3)
+                        .background(Theme.Colors.inputBackground)
+                        .clipShape(Capsule())
+                        .padding(.horizontal, Theme.Spacing.lg)
+
                         ForEach(groupedItems, id: \.title) { group in
                             historySection(title: group.title, items: group.items)
+                                .padding(.horizontal, Theme.Spacing.lg)
                         }
                     }
-                    .padding(.horizontal, Theme.Spacing.lg)
-                    .padding(.vertical, Theme.Spacing.lg)
+                    .padding(.vertical, Theme.Spacing.sm)
                     .padding(.bottom, 100)
                 }
             }
             .background(Theme.Colors.background.ignoresSafeArea())
-            .navigationTitle("Completed Workouts")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showingAddWorkout = true
-                    } label: {
-                        HStack(spacing: Theme.Spacing.xs) {
-                            Image(systemName: "plus")
-                                .font(.system(size: 14, weight: .semibold))
-                            Text("Add")
-                                .font(Theme.Typography.bodyBold)
+            .navigationBarHidden(true)
+        }
+    }
+
+    private var trainingLoadCard: some View {
+        AFCard(padding: 14) {
+            VStack(spacing: 10) {
+                HStack(alignment: .bottom) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        AFLabel(text: "Load · Last 4 Weeks")
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text("412")
+                                .font(.system(size: 22, weight: .medium, design: .monospaced))
+                                .foregroundColor(Theme.Colors.textPrimary)
+                            Text("TSS")
+                                .font(.system(size: 11, weight: .regular, design: .monospaced))
+                                .foregroundColor(Theme.Colors.textSecondary)
                         }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, Theme.Spacing.md)
-                        .padding(.vertical, Theme.Spacing.sm)
-                        .background(Theme.Colors.accentGreen)
-                        .cornerRadius(Theme.CornerRadius.md)
+                    }
+                    Spacer()
+                    HStack(spacing: 6) {
+                        Circle().fill(Theme.Colors.readyHigh).frame(width: 8, height: 8)
+                        Text("Optimal")
+                    }
+                    .font(Theme.Typography.captionBold)
+                    .foregroundColor(Theme.Colors.textPrimary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(Theme.Colors.chipBackground)
+                    .clipShape(Capsule())
+                }
+
+                HStack(alignment: .bottom, spacing: 10) {
+                    ForEach(Array([0.62, 0.76, 0.86, 1.0].enumerated()), id: \.offset) { index, value in
+                        VStack(spacing: 6) {
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(index == 3 ? Theme.Colors.textPrimary : Theme.Colors.accentBackground)
+                                .frame(height: 36 * value)
+                            Text(index == 3 ? "THIS" : "W-\(3 - index)")
+                                .font(.system(size: 10, weight: .regular, design: .monospaced))
+                                .foregroundColor(Theme.Colors.textSecondary)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: 48, alignment: .bottom)
                     }
                 }
             }
         }
+        .padding(.horizontal, Theme.Spacing.lg)
     }
 
     // MARK: - History Section
@@ -233,16 +280,30 @@ private struct HistoryRow: View {
             Spacer()
         }
         .padding(Theme.Spacing.md)
-        .background(Theme.Colors.surface)
+        .background(Color.clear)
         .overlay(
             RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
-                .stroke(Theme.Colors.borderLight, lineWidth: 1)
+                .stroke(Color.clear, lineWidth: 1)
         )
-        .cornerRadius(Theme.CornerRadius.md)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(Theme.Colors.borderLight).frame(height: 1)
+        }
     }
 
     private var formattedDate: String {
         item.completedAt.formatted(.dateTime.month(.abbreviated).day())
+    }
+}
+
+private extension Text {
+    func historySegment(isSelected: Bool) -> some View {
+        self
+            .font(Theme.Typography.captionBold)
+            .foregroundColor(isSelected ? Theme.Colors.textPrimary : Theme.Colors.textSecondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 7)
+            .background(isSelected ? Theme.Colors.surface : Color.clear)
+            .clipShape(Capsule())
     }
 }
 

@@ -18,104 +18,32 @@ struct WorkoutsView: View {
                 Theme.Colors.background.ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: 0) {
-                        // Search Bar
+                    VStack(spacing: Theme.Spacing.md) {
+                        AFTopBar(title: "This week", subtitle: currentWeekSubtitle) {
+                            EmptyView()
+                        } right: {
+                            Image(systemName: "calendar")
+                                .font(.system(size: 18))
+                        }
+
                         SearchBar(text: $viewModel.searchQuery)
                             .padding(.horizontal, Theme.Spacing.lg)
-                            .padding(.vertical, Theme.Spacing.md)
-                        
-                        // Upcoming Workouts Section
-                        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                            HStack {
-                                Text("Upcoming Workouts")
-                                    .font(Theme.Typography.title1)
-                                    .foregroundColor(Theme.Colors.textPrimary)
-                                
-                                Spacer()
-                                
-                                if !viewModel.upcomingWorkouts.isEmpty {
-                                    Text("\(viewModel.upcomingWorkouts.count) saved")
-                                        .font(Theme.Typography.caption)
-                                        .foregroundColor(Theme.Colors.textSecondary)
-                                }
-                            }
-                            .padding(.horizontal, Theme.Spacing.lg)
-                            
-                            if viewModel.filteredUpcoming.isEmpty {
-                                EmptyStateView(
-                                    icon: "calendar",
-                                    title: "No Upcoming Workouts",
-                                    message: "Workouts you save will appear here"
-                                )
-                                .padding(.horizontal, Theme.Spacing.lg)
-                            } else {
-                                VStack(spacing: 12) {
-                                    ForEach(Array(viewModel.filteredUpcoming.enumerated()), id: \.element.id) { index, scheduled in
-                                        WorkoutCard(
-                                            workout: scheduled.workout,
-                                            scheduledDate: scheduled.scheduledDate,
-                                            scheduledTime: scheduled.scheduledTime,
-                                            isPrimary: true
-                                        )
-                                        .accessibilityIdentifier("workout_card_\(index)")
-                                        .onTapGesture {
-                                            print("🔵 TAPPED WORKOUT: \(scheduled.workout.name)")
-                                            selectedWorkout = scheduled.workout
-                                            print("🔵 Selected workout: \(selectedWorkout?.name ?? "nil")")
-                                            showingDetail = true
-                                            print("🔵 showingDetail = true")
-                                        }
-                                    }
-                                }
-                                .padding(.horizontal, Theme.Spacing.lg)
-                            }
-                        }
-                        .padding(.bottom, 40)
 
-                        // Incoming Workouts Section (pending workouts from API)
-                        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                            HStack {
-                                Text("Incoming Workouts")
-                                    .font(Theme.Typography.title1)
-                                    .foregroundColor(Theme.Colors.textPrimary)
-
-                                Spacer()
-
-                                if !viewModel.incomingWorkouts.isEmpty {
-                                    Text("\(viewModel.incomingWorkouts.count) pending")
-                                        .font(Theme.Typography.caption)
-                                        .foregroundColor(Theme.Colors.textSecondary)
-                                }
-                            }
+                        segmentedRange
                             .padding(.horizontal, Theme.Spacing.lg)
 
-                            if viewModel.filteredIncoming.isEmpty {
-                                EmptyStateView(
-                                    icon: "arrow.down.circle",
-                                    title: "No Incoming Workouts",
-                                    message: "Workouts synced from the web will appear here"
-                                )
-                                .padding(.horizontal, Theme.Spacing.lg)
-                            } else {
-                                VStack(spacing: 12) {
-                                    ForEach(viewModel.filteredIncoming) { workout in
-                                        WorkoutCard(
-                                            workout: workout,
-                                            scheduledDate: nil,
-                                            scheduledTime: nil,
-                                            isPrimary: false
-                                        )
-                                        .onTapGesture {
-                                            print("🔵 TAPPED INCOMING WORKOUT: \(workout.name)")
-                                            selectedWorkout = workout
-                                            showingDetail = true
-                                        }
+                        VStack(spacing: Theme.Spacing.sm) {
+                            ForEach(Array(planRows.enumerated()), id: \.offset) { index, row in
+                                PlanRowView(row: row) {
+                                    if let workout = row.workout {
+                                        selectedWorkout = workout
+                                        showingDetail = true
                                     }
                                 }
-                                .padding(.horizontal, Theme.Spacing.lg)
+                                .accessibilityIdentifier("workout_card_\(index)")
                             }
                         }
-                        .padding(.bottom, 40)
+                        .padding(.horizontal, Theme.Spacing.lg)
 
                         // Add Sample Workout Button (for testing)
                         VStack(spacing: Theme.Spacing.md) {
@@ -138,10 +66,10 @@ struct WorkoutsView: View {
                         }
                         .padding(.bottom, Theme.Spacing.lg)
                     }
+                    .padding(.bottom, 100)
                 }
             }
-            .navigationTitle("Workouts")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarHidden(true)
             .sheet(isPresented: $showingDetail) {
                 if let workout = selectedWorkout {
                     WorkoutDetailView(workout: workout)
@@ -175,6 +103,158 @@ struct WorkoutsView: View {
                     .accessibilityIdentifier("workouts_screen")
             }
         }
+    }
+
+    private var currentWeekSubtitle: String {
+        "Block 2 of 4 · \(viewModel.upcomingWorkouts.count + viewModel.incomingWorkouts.count) planned"
+    }
+
+    private var segmentedRange: some View {
+        HStack(spacing: 3) {
+            Text("Week")
+                .segmentPill(isSelected: true)
+            Text("Block")
+                .segmentPill(isSelected: false)
+            Text("Month")
+                .segmentPill(isSelected: false)
+        }
+        .padding(3)
+        .background(Theme.Colors.inputBackground)
+        .clipShape(Capsule())
+    }
+
+    private var planRows: [PlanRow] {
+        let allWorkouts = viewModel.filteredUpcoming.map(\.workout) + viewModel.filteredIncoming
+        let fallback: [PlanRow] = [
+            PlanRow(day: "Mon", date: "21", type: "Strength", title: "Lower body — posterior", duration: "52m", zone: "Z2", icon: "dumbbell.fill", done: true, today: false, rest: false, workout: nil),
+            PlanRow(day: "Tue", date: "22", type: "Easy run", title: "Aerobic base, 75% MAF", duration: "48m", zone: "Z2", icon: "figure.run", done: true, today: false, rest: false, workout: nil),
+            PlanRow(day: "Wed", date: "23", type: "Ride", title: "Recovery spin", duration: "40m", zone: "Z1", icon: "bicycle", done: true, today: false, rest: false, workout: nil),
+            PlanRow(day: "Thu", date: "24", type: "Run", title: "4×8 min @ threshold", duration: "64m", zone: "Z3–4", icon: "figure.run", done: false, today: true, rest: false, workout: allWorkouts.first),
+            PlanRow(day: "Fri", date: "25", type: "Strength", title: "Upper body — pull focus", duration: "45m", zone: "Z2", icon: "dumbbell.fill", done: false, today: false, rest: false, workout: allWorkouts.dropFirst().first),
+            PlanRow(day: "Sat", date: "26", type: "Ride", title: "Long endurance ride", duration: "2h 10m", zone: "Z2", icon: "bicycle", done: false, today: false, rest: false, workout: allWorkouts.dropFirst(2).first),
+            PlanRow(day: "Sun", date: "27", type: "Rest", title: "Rest / mobility", duration: "20m", zone: "—", icon: "heart.fill", done: false, today: false, rest: true, workout: nil)
+        ]
+
+        guard !allWorkouts.isEmpty else { return fallback }
+        return fallback.enumerated().map { index, row in
+            guard index < allWorkouts.count else { return row }
+            let workout = allWorkouts[index]
+            return PlanRow(
+                day: row.day,
+                date: row.date,
+                type: workout.sport.rawValue.capitalized,
+                title: workout.name,
+                duration: workout.formattedDuration,
+                zone: workout.sport == .running ? "Z3–4" : "Ready",
+                icon: icon(for: workout.sport),
+                done: row.done,
+                today: row.today,
+                rest: false,
+                workout: workout
+            )
+        }
+    }
+
+    private func icon(for sport: WorkoutSport) -> String {
+        switch sport {
+        case .running: return "figure.run"
+        case .cycling: return "bicycle"
+        case .strength: return "dumbbell.fill"
+        case .mobility: return "figure.yoga"
+        case .swimming: return "figure.pool.swim"
+        case .cardio: return "heart.fill"
+        case .other: return "flag.fill"
+        }
+    }
+}
+
+private struct PlanRow {
+    let day: String
+    let date: String
+    let type: String
+    let title: String
+    let duration: String
+    let zone: String
+    let icon: String
+    let done: Bool
+    let today: Bool
+    let rest: Bool
+    let workout: Workout?
+}
+
+private struct PlanRowView: View {
+    let row: PlanRow
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                VStack(spacing: 2) {
+                    AFLabel(text: row.day)
+                    Text(row.date)
+                        .font(.system(size: 15, weight: .medium, design: .monospaced))
+                        .foregroundColor(Theme.Colors.textPrimary)
+                }
+                .frame(width: 38)
+
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
+                    .fill(Theme.Colors.accentBackground)
+                    .frame(width: 32, height: 32)
+                    .overlay(
+                        Image(systemName: row.icon)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(row.rest ? Theme.Colors.textSecondary : Theme.Colors.textPrimary)
+                    )
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        AFLabel(text: row.type)
+                        if row.today { AFChip(text: "TODAY") }
+                        if row.done {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(Theme.Colors.readyHigh)
+                        }
+                    }
+
+                    Text(row.title)
+                        .font(Theme.Typography.bodyBold)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                        .lineLimit(1)
+
+                    Text("\(row.duration) · \(row.zone)")
+                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .foregroundColor(Theme.Colors.textSecondary)
+                }
+
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(Theme.Colors.textTertiary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Theme.Colors.surface)
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                    .stroke(row.today ? Theme.Colors.textPrimary : Theme.Colors.borderLight, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
+            .opacity(row.done ? 0.6 : 1)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private extension Text {
+    func segmentPill(isSelected: Bool) -> some View {
+        self
+            .font(Theme.Typography.captionBold)
+            .foregroundColor(isSelected ? Theme.Colors.textPrimary : Theme.Colors.textSecondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 7)
+            .background(isSelected ? Theme.Colors.surface : Color.clear)
+            .clipShape(Capsule())
     }
 }
 
