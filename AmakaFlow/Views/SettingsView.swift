@@ -1570,7 +1570,16 @@ struct SettingsView: View {
         .cornerRadius(Theme.CornerRadius.md)
         .sheet(isPresented: $showingWatchDelivery) {
             WatchDeliveryView(
-                onResend: { print("[SettingsView] Resend to watch requested") },
+                onResend: {
+                    Task {
+                        let baseURL = AppEnvironment.current.mapperAPIURL
+                        guard let url = URL(string: "\(baseURL)/api/watch-delivery/resend") else { return }
+                        var request = URLRequest(url: url)
+                        request.httpMethod = "POST"
+                        request.allHTTPHeaderFields = APIService.shared.authHeaders
+                        _ = try? await URLSession.shared.data(for: request)
+                    }
+                },
                 onDismiss: { showingWatchDelivery = false }
             )
         }

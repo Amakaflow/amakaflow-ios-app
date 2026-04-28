@@ -163,7 +163,7 @@ struct AmakaFlowCompanionApp: App {
     @ViewBuilder
     private var unpairedRoot: some View {
         let _ = mentalModelGateRefresh
-        let userId = pairingService.userProfile?.id ?? "anon"
+        let userId = pairingService.userProfile?.id ?? UIDevice.current.identifierForVendor?.uuidString ?? "device"
         let seenKey = "mental_model_seen_\(userId)"
 
         if UserDefaults.standard.bool(forKey: seenKey) {

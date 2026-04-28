@@ -15,7 +15,10 @@ struct WatchDeliveryView: View {
     var body: some View {
         VStack(spacing: 0) {
             AFTopBar(title: "Watch delivery", subtitle: "All Garmin workout send states.") {
-                Button(action: onDismiss) { Image(systemName: "chevron.left") }
+                Button(action: onDismiss) {
+                    Image(systemName: "chevron.left")
+                }
+                .accessibilityLabel("Back")
             } right: {
                 Button("Done", action: onDismiss).font(Theme.Typography.captionBold)
             }

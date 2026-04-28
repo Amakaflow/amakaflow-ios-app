@@ -91,13 +91,6 @@ struct HomeView: View {
 
                     todaysWorkoutHero
 
-                    if case .some(.redFlag) = homeBannerKind {
-                        Button("Safe to continue") {
-                            homeBannerKind = nil
-                        }
-                        .buttonStyle(AFGhostButtonStyle())
-                    }
-
                     coachVisibilitySection
 
                     // Nutrition Dashboard Card (AMA-1290)
@@ -387,7 +380,24 @@ struct HomeView: View {
                         }
                         .padding(.top, Theme.Spacing.sm)
                     }
+
+                    if case .redFlag = kind {
+                        Button("Safe to continue") { homeBannerKind = nil }
+                            .buttonStyle(AFGhostButtonStyle())
+                            .padding(.top, Theme.Spacing.sm)
+                    }
                 }
+
+                Spacer()
+
+                Button {
+                    homeBannerKind = nil
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                }
+                .accessibilityLabel("Dismiss")
             }
         }
         .background(spec.color.opacity(0.12))
