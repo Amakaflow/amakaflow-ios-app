@@ -19,8 +19,6 @@ struct WorkoutCompletionView: View {
 
             ScrollView {
                 VStack(spacing: Theme.Spacing.xl) {
-                    Spacer(minLength: Theme.Spacing.xl)
-
                     // Success icon
                     successIcon
 
@@ -90,33 +88,13 @@ struct WorkoutCompletionView: View {
 
     private var successIcon: some View {
         ZStack {
-            // Pulse animation
-            if showPulse {
-                Circle()
-                    .fill(Theme.Colors.accentGreen.opacity(0.3))
-                    .frame(width: 128, height: 128)
-                    .scaleEffect(showPulse ? 1.3 : 1)
-                    .opacity(showPulse ? 0 : 1)
-                    .animation(
-                        .easeOut(duration: 1.5).repeatForever(autoreverses: false),
-                        value: showPulse
-                    )
-            }
-
-            // Outer ring
             Circle()
-                .fill(Theme.Colors.accentGreen.opacity(0.2))
-                .frame(width: 128, height: 128)
+                .fill(Theme.Colors.readyHigh.opacity(0.18))
+                .frame(width: 48, height: 48)
 
-            // Inner circle
-            Circle()
-                .fill(Theme.Colors.accentGreen)
-                .frame(width: 96, height: 96)
-
-            // Checkmark
             Image(systemName: "checkmark")
-                .font(.system(size: 48, weight: .bold))
-                .foregroundColor(.white)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundColor(Theme.Colors.readyHigh)
         }
     }
 
@@ -292,12 +270,12 @@ struct WorkoutCompletionView: View {
             // Done button
             Button(action: viewModel.onDone) {
                 Text("Done")
-                    .font(Theme.Typography.bodyBold)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Theme.Spacing.md)
-                    .background(Theme.Colors.accentBlue)
-                    .cornerRadius(Theme.CornerRadius.md)
+                .font(Theme.Typography.bodyBold)
+                .foregroundColor(Theme.Colors.surface)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Theme.Spacing.md)
+                .background(Theme.Colors.textPrimary)
+                .clipShape(Capsule())
             }
             .accessibilityIdentifier("completion_done_button")
         }

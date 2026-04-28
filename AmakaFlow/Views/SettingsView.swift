@@ -59,6 +59,12 @@ struct SettingsView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: Theme.Spacing.xl) {
+                    AFTopBar(title: "You") {
+                        EmptyView()
+                    } right: {
+                        EmptyView()
+                    }
+
                     // Workout Device Section
                     deviceSection
 
@@ -112,8 +118,7 @@ struct SettingsView: View {
                 .padding(.bottom, 100)
             }
             .background(Theme.Colors.background.ignoresSafeArea())
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarHidden(true)
             .alert("Sign Out", isPresented: $showingSignOutAlert) {
                 Button("Cancel", role: .cancel) {}
                 Button("Sign Out", role: .destructive) {

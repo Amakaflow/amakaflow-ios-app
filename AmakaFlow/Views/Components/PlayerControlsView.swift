@@ -34,16 +34,13 @@ struct PlayerControlsView: View {
                 Button {
                     engine.togglePlayPause()
                 } label: {
-                    ZStack {
-                        Circle()
-                            .fill(Theme.Colors.accentBlue)
-                            .frame(width: 72, height: 72)
-
+                    HStack(spacing: 8) {
                         Image(systemName: engine.phase == .running ? "pause.fill" : "play.fill")
-                            .font(.system(size: 32))
-                            .foregroundColor(.white)
+                            .font(.system(size: 14, weight: .semibold))
+                        Text(engine.phase == .running ? "Pause" : "Resume")
                     }
                 }
+                .buttonStyle(AFPrimaryButtonStyle())
 
                 // Next button
                 Button {
@@ -89,6 +86,10 @@ struct PlayerControlsView: View {
             }
         }
         .padding(Theme.Spacing.lg)
+        .background(Theme.Colors.surface)
+        .overlay(alignment: .top) {
+            Rectangle().fill(Theme.Colors.borderLight).frame(height: 1)
+        }
         .sheet(isPresented: $showSkipSheet) {
             SkipIntervalSheet(isPresented: $showSkipSheet) { reason in
                 engine.skipInterval(reason: reason)
@@ -107,17 +108,17 @@ struct PlayerControlsView: View {
                 ZStack(alignment: .leading) {
                     // Background track
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Theme.Colors.borderLight)
-                        .frame(height: 8)
+                        .fill(Theme.Colors.inputBackground)
+                        .frame(height: 3)
 
                     // Progress fill
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Theme.Colors.accentBlue)
-                        .frame(width: geometry.size.width * engine.progress, height: 8)
+                        .fill(Theme.Colors.textPrimary)
+                        .frame(width: geometry.size.width * engine.progress, height: 3)
                         .animation(.easeInOut(duration: 0.3), value: engine.progress)
                 }
             }
-            .frame(height: 8)
+            .frame(height: 3)
 
             // Time labels
             HStack {

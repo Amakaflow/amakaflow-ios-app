@@ -16,27 +16,28 @@ struct PairingView: View {
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 32) {
+            VStack(spacing: 28) {
                 Spacer()
 
-                // App Icon
-                Image("AppIcon")
-                    .resizable()
-                    .frame(width: 100, height: 100)
-                    .cornerRadius(22)
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
+                    .fill(Theme.Colors.accentBackground)
+                    .frame(width: 56, height: 56)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 22)
-                            .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                        Image(systemName: "applewatch")
+                            .font(.system(size: 26, weight: .medium))
+                            .foregroundColor(Theme.Colors.textPrimary)
                     )
 
                 VStack(spacing: 8) {
-                    Text("Connect to AmakaFlow")
-                        .font(.title)
-                        .fontWeight(.bold)
+                    AFLabel(text: "Pair Watch")
 
-                    Text("Scan the QR code or enter the 6-character code from the AmakaFlow web app")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                    Text("Enter the 6-character code")
+                        .font(Theme.Typography.title1)
+                        .foregroundColor(Theme.Colors.textPrimary)
+
+                    Text("Scan the QR code or enter the 6-character alphanumeric code from the AmakaFlow web app.")
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 32)
                 }
@@ -49,9 +50,9 @@ struct PairingView: View {
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
+                        .background(Theme.Colors.textPrimary)
+                        .foregroundColor(Theme.Colors.surface)
+                        .clipShape(Capsule())
                 }
                 .padding(.horizontal, 32)
 
@@ -98,9 +99,9 @@ struct PairingView: View {
                         .frame(maxWidth: .infinity)
                         .padding()
                     }
-                    .background(manualCode.count == 6 ? Color.blue : Color.gray.opacity(0.5))
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
+                    .background(manualCode.count == 6 ? Theme.Colors.textPrimary : Theme.Colors.borderMedium)
+                    .foregroundColor(manualCode.count == 6 ? Theme.Colors.surface : Theme.Colors.textSecondary)
+                    .clipShape(Capsule())
                     .disabled(manualCode.count != 6 || isLoading)
                 }
                 .padding(.horizontal, 32)
@@ -144,6 +145,7 @@ struct PairingView: View {
                 #endif
             }
             .navigationBarHidden(true)
+            .background(Theme.Colors.background.ignoresSafeArea())
             .sheet(isPresented: $showScanner) {
                 QRScannerView { code in
                     showScanner = false

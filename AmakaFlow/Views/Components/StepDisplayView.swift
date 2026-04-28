@@ -34,8 +34,10 @@ struct StepDisplayView: View {
                 }
 
                 // Step name - shows set info if applicable (e.g., "Squat - Set 1 of 3")
+                AFLabel(text: "Current")
+
                 Text(engine.currentStep?.displayLabel ?? "")
-                    .font(Theme.Typography.title1)
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(Theme.Colors.textPrimary)
                     .multilineTextAlignment(.center)
 
@@ -68,33 +70,24 @@ struct StepDisplayView: View {
         VStack(spacing: Theme.Spacing.sm) {
             // Large timer text
             Text(engine.formattedRemainingTime)
-                .font(.system(size: 72, weight: .bold, design: .rounded))
-                .foregroundColor(timerColor)
+                .font(.system(size: 72, weight: .medium, design: .monospaced))
+                .foregroundColor(Theme.Colors.textPrimary)
                 .monospacedDigit()
 
-            // Progress ring
-            ZStack {
-                Circle()
-                    .stroke(Theme.Colors.borderLight, lineWidth: 8)
-                    .frame(width: 200, height: 200)
+            Text("remaining")
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.textSecondary)
 
-                Circle()
-                    .trim(from: 0, to: engine.stepProgress)
-                    .stroke(
-                        timerColor,
-                        style: StrokeStyle(lineWidth: 8, lineCap: .round)
-                    )
-                    .frame(width: 200, height: 200)
-                    .rotationEffect(.degrees(-90))
-                    .animation(.linear(duration: 0.5), value: engine.stepProgress)
-            }
-            .overlay {
-                VStack {
-                    Text("remaining")
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.textTertiary)
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Theme.Colors.inputBackground)
+                    Capsule()
+                        .fill(timerColor)
+                        .frame(width: proxy.size.width * engine.stepProgress)
+                        .animation(.linear(duration: 0.5), value: engine.stepProgress)
                 }
             }
+            .frame(width: 200, height: 3)
         }
     }
 
