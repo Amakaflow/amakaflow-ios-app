@@ -126,55 +126,44 @@ struct WorkoutsView: View {
     }
 
     private var planRows: [PlanRow] {
-        let allWorkouts = viewModel.filteredUpcoming.map(\.workout) + viewModel.filteredIncoming
+        let scheduled = viewModel.filteredUpcoming
         let weekDates = currentWeekDates
         let calendar = Calendar.current
         let todayStart = calendar.startOfDay(for: Date())
-        let templates: [(type: String, title: String, duration: String, zone: String, icon: String, done: Bool, rest: Bool)] = [
-            ("Strength", "Lower body — posterior", "52m", "Z2", "dumbbell.fill", true, false),
-            ("Easy run", "Aerobic base, 75% MAF", "48m", "Z2", "figure.run", true, false),
-            ("Ride", "Recovery spin", "40m", "Z1", "bicycle", true, false),
-            ("Run", "4×8 min @ threshold", "64m", "Z3–4", "figure.run", false, false),
-            ("Strength", "Upper body — pull focus", "45m", "Z2", "dumbbell.fill", false, false),
-            ("Ride", "Long endurance ride", "2h 10m", "Z2", "bicycle", false, false),
-            ("Rest", "Rest / mobility", "20m", "—", "heart.fill", false, true)
-        ]
-        let fallback: [PlanRow] = templates.enumerated().map { index, template in
-            let date = weekDates[index]
-            return PlanRow(
-                id: "fallback-\(isoDayString(date))-\(template.type)",
-                day: date.formatted(.dateTime.weekday(.abbreviated)),
-                date: date.formatted(.dateTime.day()),
-                type: template.type,
-                title: template.title,
-                duration: template.duration,
-                zone: template.zone,
-                icon: template.icon,
-                done: template.done,
-                today: calendar.isDate(calendar.startOfDay(for: date), inSameDayAs: todayStart),
-                rest: template.rest,
-                workout: index < allWorkouts.count ? allWorkouts[index] : nil
-            )
-        }
 
-        guard !allWorkouts.isEmpty else { return fallback }
-        return fallback.enumerated().map { index, row in
-            guard index < allWorkouts.count else { return row }
-            let workout = allWorkouts[index]
-            return PlanRow(
-                id: "workout-\(workout.id)-\(row.date)",
-                day: row.day,
-                date: row.date,
-                type: workout.sport.rawValue.capitalized,
-                title: workout.name,
-                duration: workout.formattedDuration,
-                zone: workout.sport == .running ? "Z3–4" : "Ready",
-                icon: icon(for: workout.sport),
-                done: row.done,
-                today: row.today,
-                rest: false,
-                workout: workout
-            )
+        // Build one row per day using only real ScheduledWorkout data.
+        // Days with no scheduled workout show an empty-state row — no fabricated sessions.
+        return weekDates.map { date in
+            let dayStart = calendar.startOfDay(for: date)
+            let isToday = calendar.isDate(dayStart, inSameDayAs: todayStart)
+            let dayLabel = date.formatted(.dateTime.weekday(.abbreviated))
+            let dateLabel = date.formatted(.dateTime.day())
+
+            if let scheduledWorkout = scheduled.first(where: {
+                guard let d = $0.scheduledDate else { return false }
+                return calendar.isDate(calendar.startOfDay(for: d), inSameDayAs: dayStart)
+            }) {
+                let workout = scheduledWorkout.workout
+                return PlanRow(
+                    id: "workout-\(workout.id)-\(isoDayString(date))",
+                    day: dayLabel, date: dateLabel,
+                    type: workout.sport.rawValue.capitalized,
+                    title: workout.name,
+                    duration: workout.formattedDuration,
+                    zone: workout.sport == .running ? "Z3–4" : "Ready",
+                    icon: icon(for: workout.sport),
+                    done: false, today: isToday, rest: false, workout: workout
+                )
+            } else {
+                return PlanRow(
+                    id: "empty-\(isoDayString(date))",
+                    day: dayLabel, date: dateLabel,
+                    type: "—", title: "No session",
+                    duration: "—", zone: "—",
+                    icon: "minus.circle", done: false,
+                    today: isToday, rest: true, workout: nil
+                )
+            }
         }
     }
 

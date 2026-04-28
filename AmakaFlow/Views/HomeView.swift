@@ -480,7 +480,7 @@ struct HomeView: View {
                         }
 
                         HStack(spacing: 0) {
-                            heroStat(label: "Duration", value: primaryWorkout?.formattedDuration ?? "64m")
+                            heroStat(label: "Duration", value: primaryWorkout?.formattedDuration ?? "—")
                             heroStat(label: "Steps", value: primaryWorkout.map { "\($0.intervalCount)" } ?? "—")
                             heroStat(label: "Type", value: primaryWorkout?.sport.rawValue.capitalized ?? "—")
                         }
@@ -539,7 +539,8 @@ struct HomeView: View {
     }
 
     private var primaryWorkoutIcon: String {
-        switch primaryWorkout?.sport ?? .running {
+        guard let sport = primaryWorkout?.sport else { return "calendar.badge.clock" }
+        switch sport {
         case .running: return "figure.run"
         case .cycling: return "bicycle"
         case .strength: return "dumbbell.fill"
@@ -551,7 +552,7 @@ struct HomeView: View {
     }
 
     private var primaryWorkoutType: String {
-        (primaryWorkout?.sport.rawValue ?? "threshold run").uppercased()
+        primaryWorkout?.sport.rawValue.uppercased() ?? "REST DAY"
     }
 
     private var primaryWorkoutSubtitle: String {
@@ -560,7 +561,10 @@ struct HomeView: View {
         return "\(workout.formattedDuration) · \(workout.sport.rawValue.capitalized) · \(steps)"
     }
 
-    private var primaryWorkoutZone: String { primaryWorkout?.sport == .running ? "Zone 3–4" : "Ready" }
+    private var primaryWorkoutZone: String {
+        guard let sport = primaryWorkout?.sport else { return "—" }
+        return sport == .running ? "Zone 3–4" : "Ready"
+    }
 
     private var weekGlanceCard: some View {
         let completedCount = min(historyViewModel.weeklySummary.workoutCount, 7)

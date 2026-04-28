@@ -13,6 +13,7 @@ struct HistoryItem: Identifiable {
     let id: String
     let workoutId: String
     let workoutName: String
+    let workoutType: WorkoutSport?
     let completedAt: Date
     let duration: Int
     let device: DeviceType
@@ -52,12 +53,15 @@ private enum HistoryFilter: CaseIterable {
         case .all:
             return true
         case .run:
+            if let type = item.workoutType { return type == .running }
             return item.workoutName.localizedCaseInsensitiveContains("run")
         case .strength:
+            if let type = item.workoutType { return type == .strength }
             return item.workoutName.localizedCaseInsensitiveContains("strength")
                 || item.workoutName.localizedCaseInsensitiveContains("body")
                 || item.workoutName.localizedCaseInsensitiveContains("lift")
         case .ride:
+            if let type = item.workoutType { return type == .cycling }
             return item.workoutName.localizedCaseInsensitiveContains("ride")
                 || item.workoutName.localizedCaseInsensitiveContains("bike")
                 || item.workoutName.localizedCaseInsensitiveContains("cycle")
@@ -288,46 +292,21 @@ struct HistoryView: View {
     static var sampleHistory: [HistoryItem] {
         let now = Date()
         return [
-            HistoryItem(
-                id: "1",
-                workoutId: "w1",
-                workoutName: "Morning Strength",
-                completedAt: now.addingTimeInterval(-86400),
-                duration: 2700,
-                device: .appleWatch
-            ),
-            HistoryItem(
-                id: "2",
-                workoutId: "w2",
-                workoutName: "HIIT Cardio",
-                completedAt: now.addingTimeInterval(-172800),
-                duration: 1800,
-                device: .appleWatch
-            ),
-            HistoryItem(
-                id: "3",
-                workoutId: "w3",
-                workoutName: "Evening Run",
-                completedAt: now.addingTimeInterval(-259200),
-                duration: 3600,
-                device: .manual
-            ),
-            HistoryItem(
-                id: "4",
-                workoutId: "w4",
-                workoutName: "Mobility Session",
-                completedAt: now.addingTimeInterval(-604800),
-                duration: 1200,
-                device: .appleWatch
-            ),
-            HistoryItem(
-                id: "5",
-                workoutId: "w5",
-                workoutName: "Full Body Workout",
-                completedAt: now.addingTimeInterval(-691200),
-                duration: 2400,
-                device: .voiceRecording
-            )
+            HistoryItem(id: "1", workoutId: "w1", workoutName: "Morning Strength",
+                        workoutType: .strength, completedAt: now.addingTimeInterval(-86400),
+                        duration: 2700, device: .appleWatch),
+            HistoryItem(id: "2", workoutId: "w2", workoutName: "HIIT Cardio",
+                        workoutType: .cardio, completedAt: now.addingTimeInterval(-172800),
+                        duration: 1800, device: .appleWatch),
+            HistoryItem(id: "3", workoutId: "w3", workoutName: "Evening Run",
+                        workoutType: .running, completedAt: now.addingTimeInterval(-259200),
+                        duration: 3600, device: .manual),
+            HistoryItem(id: "4", workoutId: "w4", workoutName: "Mobility Session",
+                        workoutType: .mobility, completedAt: now.addingTimeInterval(-604800),
+                        duration: 1200, device: .appleWatch),
+            HistoryItem(id: "5", workoutId: "w5", workoutName: "Full Body Workout",
+                        workoutType: .strength, completedAt: now.addingTimeInterval(-691200),
+                        duration: 2400, device: .voiceRecording)
         ]
     }
 }
