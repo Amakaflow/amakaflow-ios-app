@@ -17,6 +17,7 @@ struct AmakaFlowCompanionApp: App {
     @StateObject private var garminConnectivity = GarminConnectManager.shared
     @StateObject private var deepLinkManager = DeepLinkManager.shared
     @Environment(\.scenePhase) private var scenePhase
+    @State private var mentalModelGateRefresh = false
 
     init() {
         // Note: E2E test auth bypass (AMA-232) is handled in PairingService.init()
@@ -145,13 +146,7 @@ struct AmakaFlowCompanionApp: App {
                             }
                         }
                 } else {
-                    PairingView()
-                        .environmentObject(pairingService)
-                        .onOpenURL { url in
-                            // AMA-1259: Still handle deep links when not paired —
-                            // store the URL so we can process it after pairing completes
-                            _ = deepLinkManager.handleIncomingURL(url)
-                        }
+                    unpairedRoot
                 }
             }
             .preferredColorScheme(.dark) // Force dark mode
@@ -164,4 +159,35 @@ struct AmakaFlowCompanionApp: App {
             }
         }
     }
+
+    @ViewBuilder
+    private var unpairedRoot: some View {
+        let _ = mentalModelGateRefresh
+        let userId = pairingService.userProfile?.id ?? "anon"
+        let seenKey = "mental_model_seen_\(userId)"
+
+        if UserDefaults.standard.bool(forKey: seenKey) {
+            PairingView()
+                .environmentObject(pairingService)
+                .onOpenURL { url in
+                    // AMA-1259: Still handle deep links when not paired —
+                    // store the URL so we can process it after pairing completes
+                    _ = deepLinkManager.handleIncomingURL(url)
+                }
+        } else {
+            MentalModelView(
+                onContinue: { markMentalModelSeen(seenKey) },
+                onSkip: { markMentalModelSeen(seenKey) }
+            )
+            .onOpenURL { url in
+                _ = deepLinkManager.handleIncomingURL(url)
+            }
+        }
+    }
+
+    private func markMentalModelSeen(_ key: String) {
+        UserDefaults.standard.set(true, forKey: key)
+        mentalModelGateRefresh.toggle()
+    }
+
 }

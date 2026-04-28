@@ -52,6 +52,7 @@ struct SettingsView: View {
     @State private var debugTapCount = 0
     @State private var debugTapResetTask: DispatchWorkItem?
     @State private var showingTelegramSetup = false
+    @State private var showingWatchDelivery = false
     @EnvironmentObject private var garminConnectivity: GarminConnectManager
     @EnvironmentObject private var pairingService: PairingService
     @EnvironmentObject private var workoutsViewModel: WorkoutsViewModel
@@ -1520,8 +1521,58 @@ struct SettingsView: View {
             // Instagram Import Mode
             instagramImportCard
 
+            // Watch Delivery
+            watchDeliveryCard
+
             // Telegram
             telegramCard
+        }
+    }
+
+
+    // MARK: - Watch Delivery Card
+
+    private var watchDeliveryCard: some View {
+        Button(action: { showingWatchDelivery = true }) {
+            HStack(spacing: Theme.Spacing.md) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                        .fill(Theme.Colors.garminBlue.opacity(0.1))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "applewatch")
+                        .font(.system(size: 22))
+                        .foregroundColor(Theme.Colors.garminBlue)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Watch Delivery")
+                        .font(Theme.Typography.bodyBold)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    Text("View Garmin send states and resend failed workouts")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(Theme.Colors.textTertiary)
+            }
+        }
+        .buttonStyle(.plain)
+        .padding(Theme.Spacing.md)
+        .background(Theme.Colors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                .stroke(Theme.Colors.borderLight, lineWidth: 1)
+        )
+        .cornerRadius(Theme.CornerRadius.md)
+        .sheet(isPresented: $showingWatchDelivery) {
+            WatchDeliveryView(
+                onResend: { print("[SettingsView] Resend to watch requested") },
+                onDismiss: { showingWatchDelivery = false }
+            )
         }
     }
 
