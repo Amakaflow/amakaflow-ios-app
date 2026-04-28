@@ -1953,6 +1953,39 @@ extension APIService {
         return try APIService.makeDecoder().decode(Workout.self, from: data)
     }
 
+    // MARK: - Privacy (AMA-1608)
+
+    /// Export the authenticated user's full account data as JSON.
+    func exportUserData() async throws -> Data {
+        guard let url = URL(string: "\(baseURL)/api/privacy/export") else { throw APIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = authHeaders
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            if httpResponse.statusCode == 401 { throw APIError.unauthorized }
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+        return data
+    }
+
+    /// Delete the authenticated account and all associated backend data.
+    func deleteAccount() async throws {
+        guard let url = URL(string: "\(baseURL)/account") else { throw APIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.allHTTPHeaderFields = authHeaders
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            if httpResponse.statusCode == 401 { throw APIError.unauthorized }
+            let body = String(data: data, encoding: .utf8) ?? "empty"
+            logError(endpoint: "/account", method: "DELETE", statusCode: httpResponse.statusCode, response: body, error: nil)
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+    }
+
     // MARK: - Workout Export (AMA-1231)
 
     /// Export workout as FIT binary data

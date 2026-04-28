@@ -37,6 +37,12 @@ struct SettingsView: View {
     @State private var manualDeviceName = ""
     @State private var showingDebugLog = false
     @State private var showingDisconnectAlert = false
+    @State private var showingDeleteAccountAlert = false
+    @State private var isExportingPrivacyData = false
+    @State private var privacyErrorMessage: String?
+    @State private var showingPrivacyErrorAlert = false
+    @State private var privacyExportFileURL: URL?
+    @State private var showingPrivacyShareSheet = false
     @State private var showingWorkoutDebugSheet = false
     @State private var showingVoiceTranscriptionSettings = false
     @StateObject private var nutritionViewModel = NutritionViewModel()
@@ -120,6 +126,16 @@ struct SettingsView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(garminDebugMessage)
+            }
+            .alert("Privacy", isPresented: $showingPrivacyErrorAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(privacyErrorMessage ?? "Something went wrong. Please try again.")
+            }
+            .sheet(isPresented: $showingPrivacyShareSheet) {
+                if let privacyExportFileURL {
+                    ShareSheet(activityItems: [privacyExportFileURL])
+                }
             }
             .sheet(isPresented: $showingManualUUIDSheet) {
                 manualUUIDSheet
@@ -1545,6 +1561,80 @@ struct SettingsView: View {
         .cornerRadius(Theme.CornerRadius.md)
     }
 
+    // MARK: - Privacy Section
+
+    private var privacySection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            Text("PRIVACY")
+                .font(Theme.Typography.footnote)
+                .foregroundColor(Theme.Colors.textSecondary)
+                .tracking(1)
+                .padding(.horizontal, Theme.Spacing.xs)
+
+            VStack(spacing: 0) {
+                Button {
+                    Task { await exportUserData() }
+                } label: {
+                    HStack {
+                        Label("Export my data", systemImage: "square.and.arrow.up")
+                            .foregroundColor(Theme.Colors.textPrimary)
+                        Spacer()
+                        if isExportingPrivacyData {
+                            ProgressView().scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(Theme.Colors.textTertiary)
+                        }
+                    }
+                    .padding(Theme.Spacing.md)
+                }
+                .disabled(isExportingPrivacyData)
+                .buttonStyle(.plain)
+
+                Divider().padding(.leading, Theme.Spacing.lg)
+
+                Link(destination: URL(string: "https://app.amakaflow.com/privacy")!) {
+                    HStack {
+                        Label("Privacy notice", systemImage: "doc.text")
+                            .foregroundColor(Theme.Colors.textPrimary)
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .foregroundColor(Theme.Colors.textTertiary)
+                    }
+                    .padding(Theme.Spacing.md)
+                }
+
+                Divider().padding(.leading, Theme.Spacing.lg)
+
+                Button {
+                    showingDeleteAccountAlert = true
+                } label: {
+                    HStack {
+                        Label("Delete my account", systemImage: "trash")
+                            .foregroundColor(Theme.Colors.accentRed)
+                        Spacer()
+                    }
+                    .padding(Theme.Spacing.md)
+                }
+                .buttonStyle(.plain)
+            }
+            .background(Theme.Colors.surface)
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                    .stroke(Theme.Colors.borderLight, lineWidth: 1)
+            )
+            .cornerRadius(Theme.CornerRadius.md)
+        }
+        .confirmationDialog("Delete account?", isPresented: $showingDeleteAccountAlert, titleVisibility: .visible) {
+            Button("Delete permanently", role: .destructive) {
+                Task { await deleteAccount() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This permanently deletes all your workouts, programs, profile, and connected data. This cannot be undone.")
+        }
+    }
+
     // MARK: - Account Section
 
     private var accountSection: some View {
@@ -1554,6 +1644,8 @@ struct SettingsView: View {
                 .foregroundColor(Theme.Colors.textSecondary)
                 .tracking(1)
                 .padding(.horizontal, Theme.Spacing.xs)
+
+            privacySection
 
             VStack(spacing: Theme.Spacing.md) {
                 // User Profile Card
@@ -1880,6 +1972,34 @@ struct SettingsView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("You'll need to pair again to sync workouts from AmakaFlow.")
+        }
+    }
+
+    private func exportUserData() async {
+        isExportingPrivacyData = true
+        defer { isExportingPrivacyData = false }
+
+        do {
+            let data = try await APIService.shared.exportUserData()
+            let tempURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("amakaflow-data-export.json")
+            try data.write(to: tempURL, options: .atomic)
+            privacyExportFileURL = tempURL
+            showingPrivacyShareSheet = true
+        } catch {
+            privacyErrorMessage = "Export failed: \(error.localizedDescription)"
+            showingPrivacyErrorAlert = true
+        }
+    }
+
+    private func deleteAccount() async {
+        do {
+            try await APIService.shared.deleteAccount()
+            pairingService.unpair()
+            UserDefaults.standard.set(false, forKey: "biometric_consent_v1")
+        } catch {
+            privacyErrorMessage = "Account deletion failed: \(error.localizedDescription)"
+            showingPrivacyErrorAlert = true
         }
     }
 

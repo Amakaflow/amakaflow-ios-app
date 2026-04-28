@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AMA16080002 /* BiometricConsentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA16080001 /* BiometricConsentView.swift */; };
 		0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
 		11C72B7C6EA17FC8DEA354FB /* CoachModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */; };
 		1A7B03C2552441FEB810773A /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */; };
@@ -395,6 +396,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AMA16080001 /* BiometricConsentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BiometricConsentView.swift; path = ../AmakaFlow/Views/BiometricConsentView.swift; sourceTree = SOURCE_ROOT; };
 		0590FA2DB2E16FC868D6F303 /* SyncDashboardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SyncDashboardView.swift; path = ../AmakaFlow/Views/Settings/SyncDashboardView.swift; sourceTree = "<group>"; };
 		08D9B67C13E34BAE804A9359 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HistoryView.swift; path = ../AmakaFlow/Views/HistoryView.swift; sourceTree = SOURCE_ROOT; };
 		0949526387D9FA932B940DF3 /* TrainingPreferencesViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TrainingPreferencesViewModel.swift; path = ../AmakaFlow/ViewModels/TrainingPreferencesViewModel.swift; sourceTree = "<group>"; };
@@ -915,6 +917,7 @@
 				A19401AA0000000BB000000B /* ExecutionLogSection.swift */,
 				CC2192F9A69B4A51B54A138F /* HomeView.swift */,
 				AMA12650003 /* SuggestWorkoutView.swift */,
+				AMA16080001 /* BiometricConsentView.swift */,
 				AMA12650004 /* CoachingProfileOnboardingView.swift */,
 				AMA12650002 /* SuggestWorkoutButton.swift */,
 				F8BFF8D1C38311406C868156 /* StepDisplayView.swift */,
@@ -1367,7 +1370,7 @@
 			mainGroup = F84E216B2ED0B0C800459747;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				F84E225F2ED0B84300459747 /* XCLocalSwiftPackageReference "workoutkit-sync" */,
+				F84E225F2ED0B84300459747 /* XCRemoteSwiftPackageReference "workoutkit-sync" */,
 				F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "ConnectIQ" */,
 				6EFD6A06E1264416B1103D42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 				XCT4H34LTH00000003 /* XCRemoteSwiftPackageReference "XCTHealthKit" */,
@@ -1585,6 +1588,7 @@
 				AMA12650011 /* SuggestWorkoutViewModel.swift in Sources */,
 				AMA12650012 /* SuggestWorkoutButton.swift in Sources */,
 				AMA12650013 /* SuggestWorkoutView.swift in Sources */,
+				AMA16080002 /* BiometricConsentView.swift in Sources */,
 				AMA12650014 /* CoachingProfileOnboardingView.swift in Sources */,
 				V01C301600000000000000 /* VoiceWorkoutView.swift in Sources */,
 				V01C301700000000000000 /* VoiceRecordingView.swift in Sources */,
@@ -2494,10 +2498,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		F84E225F2ED0B84300459747 /* XCLocalSwiftPackageReference "workoutkit-sync" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = "../../../workoutkit-sync";
-		};
 		F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "ConnectIQ" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Vendor/ConnectIQ;
@@ -2505,6 +2505,14 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		F84E225F2ED0B84300459747 /* XCRemoteSwiftPackageReference "workoutkit-sync" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Amakaflow/workoutkit-sync";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
 		6EFD6A06E1264416B1103D42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/getsentry/sentry-cocoa/";
@@ -2531,12 +2539,12 @@
 		};
 		F84E22982ED0DA1F00459747 /* WorkoutKitSync */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F84E225F2ED0B84300459747 /* XCLocalSwiftPackageReference "workoutkit-sync" */;
+			package = F84E225F2ED0B84300459747 /* XCRemoteSwiftPackageReference "workoutkit-sync" */;
 			productName = WorkoutKitSync;
 		};
 		F84E22A02ED0DC2700459747 /* WorkoutKitSync */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F84E225F2ED0B84300459747 /* XCLocalSwiftPackageReference "workoutkit-sync" */;
+			package = F84E225F2ED0B84300459747 /* XCRemoteSwiftPackageReference "workoutkit-sync" */;
 			productName = WorkoutKitSync;
 		};
 		F8C125B12EFAC00000459747 /* ConnectIQ */ = {
