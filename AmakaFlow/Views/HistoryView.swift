@@ -32,9 +32,42 @@ struct HistoryItem: Identifiable {
     }
 }
 
+private enum HistoryFilter: CaseIterable {
+    case all
+    case run
+    case strength
+    case ride
+
+    var title: String {
+        switch self {
+        case .all: return "All"
+        case .run: return "Run"
+        case .strength: return "Strength"
+        case .ride: return "Ride"
+        }
+    }
+
+    func matches(_ item: HistoryItem) -> Bool {
+        switch self {
+        case .all:
+            return true
+        case .run:
+            return item.workoutName.localizedCaseInsensitiveContains("run")
+        case .strength:
+            return item.workoutName.localizedCaseInsensitiveContains("strength")
+                || item.workoutName.localizedCaseInsensitiveContains("body")
+                || item.workoutName.localizedCaseInsensitiveContains("lift")
+        case .ride:
+            return item.workoutName.localizedCaseInsensitiveContains("ride")
+                || item.workoutName.localizedCaseInsensitiveContains("bike")
+                || item.workoutName.localizedCaseInsensitiveContains("cycle")
+        }
+    }
+}
+
 struct HistoryView: View {
     @State private var historyItems: [HistoryItem] = HistoryView.sampleHistory
-    @State private var showingAddWorkout = false
+    @State private var selectedFilter: HistoryFilter = .all
 
     var body: some View {
         NavigationStack {
@@ -47,18 +80,23 @@ struct HistoryView: View {
                         AFTopBar(title: "History", subtitle: "\(historyItems.count) sessions · last 30 days") {
                             EmptyView()
                         } right: {
-                            Image(systemName: "plus")
-                                .font(.system(size: 16, weight: .semibold))
-                                .onTapGesture { showingAddWorkout = true }
+                            EmptyView()
                         }
 
-                        trainingLoadCard
+                        if !loadWeeks.isEmpty {
+                            trainingLoadCard
+                        }
 
                         HStack(spacing: 3) {
-                            Text("All").historySegment(isSelected: true)
-                            Text("Run").historySegment(isSelected: false)
-                            Text("Strength").historySegment(isSelected: false)
-                            Text("Ride").historySegment(isSelected: false)
+                            ForEach(HistoryFilter.allCases, id: \.self) { filter in
+                                Button {
+                                    selectedFilter = filter
+                                } label: {
+                                    Text(filter.title)
+                                        .historySegment(isSelected: selectedFilter == filter)
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
                         .padding(3)
                         .background(Theme.Colors.inputBackground)
@@ -80,24 +118,28 @@ struct HistoryView: View {
     }
 
     private var trainingLoadCard: some View {
-        AFCard(padding: 14) {
+        let totalMinutes = loadWeeks.reduce(0) { $0 + $1.minutes }
+        let maxMinutes = max(loadWeeks.map(\.minutes).max() ?? 1, 1)
+        let status = trainingLoadStatus(totalMinutes: totalMinutes)
+
+        return AFCard(padding: 14) {
             VStack(spacing: 10) {
                 HStack(alignment: .bottom) {
                     VStack(alignment: .leading, spacing: 4) {
                         AFLabel(text: "Load · Last 4 Weeks")
                         HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text("412")
+                            Text("\(totalMinutes)")
                                 .font(.system(size: 22, weight: .medium, design: .monospaced))
                                 .foregroundColor(Theme.Colors.textPrimary)
-                            Text("TSS")
+                            Text("MIN")
                                 .font(.system(size: 11, weight: .regular, design: .monospaced))
                                 .foregroundColor(Theme.Colors.textSecondary)
                         }
                     }
                     Spacer()
                     HStack(spacing: 6) {
-                        Circle().fill(Theme.Colors.readyHigh).frame(width: 8, height: 8)
-                        Text("Optimal")
+                        Circle().fill(status.color).frame(width: 8, height: 8)
+                        Text(status.title)
                     }
                     .font(Theme.Typography.captionBold)
                     .foregroundColor(Theme.Colors.textPrimary)
@@ -108,12 +150,12 @@ struct HistoryView: View {
                 }
 
                 HStack(alignment: .bottom, spacing: 10) {
-                    ForEach(Array([0.62, 0.76, 0.86, 1.0].enumerated()), id: \.offset) { index, value in
+                    ForEach(loadWeeks) { week in
                         VStack(spacing: 6) {
                             RoundedRectangle(cornerRadius: 3)
-                                .fill(index == 3 ? Theme.Colors.textPrimary : Theme.Colors.accentBackground)
-                                .frame(height: 36 * value)
-                            Text(index == 3 ? "THIS" : "W-\(3 - index)")
+                                .fill(week.isCurrent ? Theme.Colors.textPrimary : Theme.Colors.accentBackground)
+                                .frame(height: 36 * CGFloat(Double(week.minutes) / Double(maxMinutes)))
+                            Text(week.label)
                                 .font(.system(size: 10, weight: .regular, design: .monospaced))
                                 .foregroundColor(Theme.Colors.textSecondary)
                         }
@@ -180,9 +222,10 @@ struct HistoryView: View {
         let oneWeekAgo = Calendar.current.date(byAdding: .weekOfYear, value: -1, to: now)!
         let twoWeeksAgo = Calendar.current.date(byAdding: .weekOfYear, value: -2, to: now)!
 
-        let thisWeek = historyItems.filter { $0.completedAt >= oneWeekAgo }
-        let lastWeek = historyItems.filter { $0.completedAt >= twoWeeksAgo && $0.completedAt < oneWeekAgo }
-        let older = historyItems.filter { $0.completedAt < twoWeeksAgo }
+        let source = filteredHistoryItems
+        let thisWeek = source.filter { $0.completedAt >= oneWeekAgo }
+        let lastWeek = source.filter { $0.completedAt >= twoWeeksAgo && $0.completedAt < oneWeekAgo }
+        let older = source.filter { $0.completedAt < twoWeeksAgo }
 
         var groups: [HistoryGroup] = []
 
@@ -197,6 +240,47 @@ struct HistoryView: View {
         }
 
         return groups
+    }
+
+    private var filteredHistoryItems: [HistoryItem] {
+        historyItems.filter { selectedFilter.matches($0) }
+    }
+
+    private struct LoadWeek: Identifiable {
+        let id: Int
+        let label: String
+        let minutes: Int
+        let isCurrent: Bool
+    }
+
+    private var loadWeeks: [LoadWeek] {
+        let calendar = Calendar.current
+        let now = Date()
+        return (0..<4).compactMap { offset in
+            guard
+                let start = calendar.dateInterval(of: .weekOfYear, for: now)?.start,
+                let weekStart = calendar.date(byAdding: .weekOfYear, value: offset - 3, to: start),
+                let weekEnd = calendar.date(byAdding: .weekOfYear, value: 1, to: weekStart)
+            else { return nil }
+
+            let minutes = historyItems
+                .filter { $0.completedAt >= weekStart && $0.completedAt < weekEnd }
+                .reduce(0) { $0 + ($1.duration / 60) }
+
+            return LoadWeek(
+                id: offset,
+                label: offset == 3 ? "THIS" : "W-\(3 - offset)",
+                minutes: minutes,
+                isCurrent: offset == 3
+            )
+        }
+        .filter { $0.minutes > 0 }
+    }
+
+    private func trainingLoadStatus(totalMinutes: Int) -> (title: String, color: Color) {
+        if totalMinutes >= 180 { return ("Active", Theme.Colors.readyHigh) }
+        if totalMinutes > 0 { return ("Building", Theme.Colors.readyModerate) }
+        return ("No data", Theme.Colors.textSecondary)
     }
 
     // MARK: - Sample Data

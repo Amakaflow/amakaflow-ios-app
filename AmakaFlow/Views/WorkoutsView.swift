@@ -33,7 +33,7 @@ struct WorkoutsView: View {
                             .padding(.horizontal, Theme.Spacing.lg)
 
                         VStack(spacing: Theme.Spacing.sm) {
-                            ForEach(Array(planRows.enumerated()), id: \.offset) { index, row in
+                            ForEach(Array(planRows.enumerated()), id: \.element.id) { index, row in
                                 PlanRowView(row: row) {
                                     if let workout = row.workout {
                                         selectedWorkout = workout
@@ -45,6 +45,7 @@ struct WorkoutsView: View {
                         }
                         .padding(.horizontal, Theme.Spacing.lg)
 
+                        #if DEBUG
                         // Add Sample Workout Button (for testing)
                         VStack(spacing: Theme.Spacing.md) {
                             Button(action: {
@@ -65,6 +66,7 @@ struct WorkoutsView: View {
                             .padding(.horizontal, Theme.Spacing.lg)
                         }
                         .padding(.bottom, Theme.Spacing.lg)
+                        #endif
                     }
                     .padding(.bottom, 100)
                 }
@@ -125,21 +127,42 @@ struct WorkoutsView: View {
 
     private var planRows: [PlanRow] {
         let allWorkouts = viewModel.filteredUpcoming.map(\.workout) + viewModel.filteredIncoming
-        let fallback: [PlanRow] = [
-            PlanRow(day: "Mon", date: "21", type: "Strength", title: "Lower body — posterior", duration: "52m", zone: "Z2", icon: "dumbbell.fill", done: true, today: false, rest: false, workout: nil),
-            PlanRow(day: "Tue", date: "22", type: "Easy run", title: "Aerobic base, 75% MAF", duration: "48m", zone: "Z2", icon: "figure.run", done: true, today: false, rest: false, workout: nil),
-            PlanRow(day: "Wed", date: "23", type: "Ride", title: "Recovery spin", duration: "40m", zone: "Z1", icon: "bicycle", done: true, today: false, rest: false, workout: nil),
-            PlanRow(day: "Thu", date: "24", type: "Run", title: "4×8 min @ threshold", duration: "64m", zone: "Z3–4", icon: "figure.run", done: false, today: true, rest: false, workout: allWorkouts.first),
-            PlanRow(day: "Fri", date: "25", type: "Strength", title: "Upper body — pull focus", duration: "45m", zone: "Z2", icon: "dumbbell.fill", done: false, today: false, rest: false, workout: allWorkouts.dropFirst().first),
-            PlanRow(day: "Sat", date: "26", type: "Ride", title: "Long endurance ride", duration: "2h 10m", zone: "Z2", icon: "bicycle", done: false, today: false, rest: false, workout: allWorkouts.dropFirst(2).first),
-            PlanRow(day: "Sun", date: "27", type: "Rest", title: "Rest / mobility", duration: "20m", zone: "—", icon: "heart.fill", done: false, today: false, rest: true, workout: nil)
+        let weekDates = currentWeekDates
+        let calendar = Calendar.current
+        let todayStart = calendar.startOfDay(for: Date())
+        let templates: [(type: String, title: String, duration: String, zone: String, icon: String, done: Bool, rest: Bool)] = [
+            ("Strength", "Lower body — posterior", "52m", "Z2", "dumbbell.fill", true, false),
+            ("Easy run", "Aerobic base, 75% MAF", "48m", "Z2", "figure.run", true, false),
+            ("Ride", "Recovery spin", "40m", "Z1", "bicycle", true, false),
+            ("Run", "4×8 min @ threshold", "64m", "Z3–4", "figure.run", false, false),
+            ("Strength", "Upper body — pull focus", "45m", "Z2", "dumbbell.fill", false, false),
+            ("Ride", "Long endurance ride", "2h 10m", "Z2", "bicycle", false, false),
+            ("Rest", "Rest / mobility", "20m", "—", "heart.fill", false, true)
         ]
+        let fallback: [PlanRow] = templates.enumerated().map { index, template in
+            let date = weekDates[index]
+            return PlanRow(
+                id: "fallback-\(isoDayString(date))-\(template.type)",
+                day: date.formatted(.dateTime.weekday(.abbreviated)),
+                date: date.formatted(.dateTime.day()),
+                type: template.type,
+                title: template.title,
+                duration: template.duration,
+                zone: template.zone,
+                icon: template.icon,
+                done: template.done,
+                today: calendar.isDate(calendar.startOfDay(for: date), inSameDayAs: todayStart),
+                rest: template.rest,
+                workout: index < allWorkouts.count ? allWorkouts[index] : nil
+            )
+        }
 
         guard !allWorkouts.isEmpty else { return fallback }
         return fallback.enumerated().map { index, row in
             guard index < allWorkouts.count else { return row }
             let workout = allWorkouts[index]
             return PlanRow(
+                id: "workout-\(workout.id)-\(row.date)",
                 day: row.day,
                 date: row.date,
                 type: workout.sport.rawValue.capitalized,
@@ -166,9 +189,21 @@ struct WorkoutsView: View {
         case .other: return "flag.fill"
         }
     }
+
+    private var currentWeekDates: [Date] {
+        let calendar = Calendar.current
+        let today = Date()
+        let start = calendar.dateInterval(of: .weekOfYear, for: today)?.start ?? calendar.startOfDay(for: today)
+        return (0..<7).map { calendar.date(byAdding: .day, value: $0, to: start) ?? today }
+    }
+
+    private func isoDayString(_ date: Date) -> String {
+        date.formatted(.iso8601.year().month().day())
+    }
 }
 
 private struct PlanRow {
+    let id: String
     let day: String
     let date: String
     let type: String

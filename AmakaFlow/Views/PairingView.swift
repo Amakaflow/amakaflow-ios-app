@@ -31,11 +31,11 @@ struct PairingView: View {
                 VStack(spacing: 8) {
                     AFLabel(text: "Pair Watch")
 
-                    Text("Enter the 6-digit code")
+                    Text("Enter the 6-character code")
                         .font(Theme.Typography.title1)
                         .foregroundColor(Theme.Colors.textPrimary)
 
-                    Text("Scan the QR code or enter the 6-character code from the AmakaFlow web app.")
+                    Text("Scan the QR code or enter the 6-character alphanumeric code from the AmakaFlow web app.")
                         .font(Theme.Typography.body)
                         .foregroundColor(Theme.Colors.textSecondary)
                         .multilineTextAlignment(.center)

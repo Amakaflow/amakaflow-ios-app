@@ -65,25 +65,6 @@ struct SettingsView: View {
                         EmptyView()
                     }
 
-                    AFCard(padding: 16) {
-                        HStack(spacing: 12) {
-                            Circle()
-                                .fill(Theme.Colors.accentBackground)
-                                .frame(width: 44, height: 44)
-                                .overlay(Image(systemName: "person.fill").foregroundColor(Theme.Colors.textPrimary))
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("AmakaFlow Athlete")
-                                    .font(Theme.Typography.title3)
-                                    .foregroundColor(Theme.Colors.textPrimary)
-                                Text("Hyrox · 8h/wk · Intermediate")
-                                    .font(.system(size: 11, weight: .regular, design: .monospaced))
-                                    .foregroundColor(Theme.Colors.textSecondary)
-                            }
-                            Spacer()
-                            AFChip(text: "Free")
-                        }
-                    }
-
                     // Workout Device Section
                     deviceSection
 

@@ -414,25 +414,25 @@ struct HomeView: View {
         .padding(.bottom, Theme.Spacing.xs)
     }
 
-    private var readinessScore: Int { 78 }
+    private var readinessScore: Int? { nil }
 
     private var readinessCard: some View {
         AFCard(padding: 16) {
             HStack(spacing: Theme.Spacing.md) {
-                AFReadinessRing(value: readinessScore)
+                AFReadinessRing(value: readinessScore ?? 0)
 
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
                         Circle()
-                            .fill(Theme.Ready.color(for: readinessScore))
+                            .fill(readinessScore.map { Theme.Ready.color(for: $0) } ?? Theme.Colors.borderMedium)
                             .frame(width: 8, height: 8)
-                            .shadow(color: Theme.Ready.color(for: readinessScore).opacity(0.4), radius: 4)
-                        Text(Theme.Ready.label(for: readinessScore))
+                            .shadow(color: readinessScore.map { Theme.Ready.color(for: $0).opacity(0.4) } ?? Color.clear, radius: 4)
+                        Text(readinessScore.map { Theme.Ready.label(for: $0) } ?? "No readiness data")
                             .font(Theme.Typography.title3)
                             .foregroundColor(Theme.Colors.textPrimary)
                     }
 
-                    Text("HRV +8 vs baseline. Sleep 7h 42m. Go as planned.")
+                    Text(readinessScore == nil ? "Connect a wearable or complete workouts to unlock readiness guidance." : "Readiness guidance is based on your latest wearable and training history.")
                         .font(Theme.Typography.caption)
                         .foregroundColor(Theme.Colors.textSecondary)
                         .lineSpacing(2)
@@ -451,7 +451,7 @@ struct HomeView: View {
     }
 
     private var todaysWorkoutHero: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+        return VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             AFLabel(text: "Today")
 
             AFCard(padding: 0) {
@@ -466,7 +466,7 @@ struct HomeView: View {
                                 }
                                 .foregroundColor(Theme.Colors.textPrimary)
 
-                                Text(primaryWorkout?.name ?? "4×8 min @ threshold")
+                                Text(primaryWorkout?.name ?? "No workout scheduled")
                                     .font(Theme.Typography.title2)
                                     .foregroundColor(Theme.Colors.textPrimary)
 
@@ -481,8 +481,8 @@ struct HomeView: View {
 
                         HStack(spacing: 0) {
                             heroStat(label: "Duration", value: primaryWorkout?.formattedDuration ?? "64m")
-                            heroStat(label: "TSS", value: "78")
-                            heroStat(label: "Intensity", value: "0.87")
+                            heroStat(label: "Steps", value: primaryWorkout.map { "\($0.intervalCount)" } ?? "—")
+                            heroStat(label: "Type", value: primaryWorkout?.sport.rawValue.capitalized ?? "—")
                         }
                         .padding(.top, 10)
                         .overlay(alignment: .top) {
@@ -555,7 +555,7 @@ struct HomeView: View {
     }
 
     private var primaryWorkoutSubtitle: String {
-        guard let workout = primaryWorkout else { return "64 min · Z3–Z4 · 10.2 km" }
+        guard let workout = primaryWorkout else { return "Rest, mobility, or log a manual session." }
         let steps = workout.intervalCount == 1 ? "1 step" : "\(workout.intervalCount) steps"
         return "\(workout.formattedDuration) · \(workout.sport.rawValue.capitalized) · \(steps)"
     }
@@ -563,7 +563,15 @@ struct HomeView: View {
     private var primaryWorkoutZone: String { primaryWorkout?.sport == .running ? "Zone 3–4" : "Ready" }
 
     private var weekGlanceCard: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+        let completedCount = min(historyViewModel.weeklySummary.workoutCount, 7)
+        let weeklyTarget = max(1, completedCount + 2)
+        let progress = min(1, Double(completedCount) / Double(weeklyTarget))
+        let percent = Int(progress * 100)
+        let calendar = Calendar.current
+        let weekday = calendar.component(.weekday, from: today)
+        let todayIndex = (weekday + 5) % 7 // Calendar: Sun=1; design index: Mon=0
+
+        return VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             AFLabel(text: "This Week")
             AFCard(padding: 14) {
                 VStack(spacing: 12) {
@@ -572,7 +580,7 @@ struct HomeView: View {
                             .font(Theme.Typography.caption)
                             .foregroundColor(Theme.Colors.textSecondary)
                         Spacer()
-                        Text("\(min(100, Int(Double(historyViewModel.weeklySummary.workoutCount) / Double(max(1, historyViewModel.weeklySummary.workoutCount + 2)) * 100)))%")
+                        Text("\(percent)%")
                             .font(Theme.Typography.mono)
                             .foregroundColor(Theme.Colors.textPrimary)
                     }
@@ -582,7 +590,7 @@ struct HomeView: View {
                             Capsule().fill(Theme.Colors.inputBackground)
                             Capsule()
                                 .fill(Theme.Colors.textPrimary)
-                                .frame(width: proxy.size.width * 0.67)
+                                .frame(width: proxy.size.width * progress)
                         }
                     }
                     .frame(height: 3)
@@ -592,10 +600,10 @@ struct HomeView: View {
                             VStack(spacing: 5) {
                                 AFLabel(text: day)
                                 RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
-                                    .fill(index == 3 ? Theme.Colors.textPrimary : (index < 3 ? Theme.Colors.accentBackground : Color.clear))
+                                    .fill(index == todayIndex ? Theme.Colors.textPrimary : (index < completedCount ? Theme.Colors.accentBackground : Color.clear))
                                     .overlay(
                                         RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
-                                            .stroke(Theme.Colors.borderLight, lineWidth: index > 3 ? 1 : 0)
+                                            .stroke(Theme.Colors.borderLight, lineWidth: (index != todayIndex && index >= completedCount) ? 1 : 0)
                                     )
                                     .frame(width: 24, height: 24)
                             }

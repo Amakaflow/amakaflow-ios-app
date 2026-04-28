@@ -209,19 +209,23 @@ struct AFReadinessRing: View {
     var size: CGFloat = 76
     var stroke: CGFloat = 6
 
+    private var clampedValue: Int {
+        min(max(value, 0), 100)
+    }
+
     var body: some View {
         ZStack {
             Circle()
                 .stroke(Theme.Colors.borderLight, lineWidth: stroke)
             Circle()
-                .trim(from: 0, to: CGFloat(value) / 100)
+                .trim(from: 0, to: CGFloat(clampedValue) / 100)
                 .stroke(
-                    Theme.Ready.color(for: value),
+                    Theme.Ready.color(for: clampedValue),
                     style: StrokeStyle(lineWidth: stroke, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
             VStack(spacing: 2) {
-                Text("\(value)")
+                Text("\(clampedValue)")
                     .font(.system(size: size * 0.32, weight: .semibold, design: .monospaced))
                     .foregroundColor(Theme.Colors.textPrimary)
                 AFLabel(text: "Readiness")
