@@ -7,6 +7,12 @@
 
 import SwiftUI
 
+enum HomeBannerKind {
+    case replan(title: String, body: String)
+    case redFlag(body: String)
+    case lowConfidence(body: String)
+}
+
 struct HomeView: View {
     @EnvironmentObject var viewModel: WorkoutsViewModel
     @StateObject private var historyViewModel = ActivityHistoryViewModel()
@@ -29,6 +35,11 @@ struct HomeView: View {
     @State private var showLevelUp = false
     @State private var levelUpLevel: Int = 0
     @State private var levelUpName: String = ""
+    @State private var homeBannerKind: HomeBannerKind?
+    @State private var showingPlanReveal = false
+    @State private var planRevealReady = false
+    @State private var showingWeeklyReview = false
+    @State private var showingAgentInbox = false
 
     private var today: Date { Date() }
 
@@ -74,7 +85,13 @@ struct HomeView: View {
 
                     readinessCard
 
+                    if let homeBannerKind {
+                        homeBanner(homeBannerKind)
+                    }
+
                     todaysWorkoutHero
+
+                    coachVisibilitySection
 
                     // Nutrition Dashboard Card (AMA-1290)
                     if nutritionViewModel.settings.isEnabled {
@@ -114,6 +131,10 @@ struct HomeView: View {
                     }
 
                     weekGlanceCard
+
+                    #if DEBUG
+                    homeBannerDebugControls
+                    #endif
                 }
                 .padding(.horizontal, Theme.Spacing.lg)
                 .padding(.bottom, 100) // Space for tab bar
@@ -195,6 +216,23 @@ struct HomeView: View {
             .sheet(isPresented: $showingVoiceWorkout) {
                 VoiceWorkoutView()
             }
+            .sheet(isPresented: $showingPlanReveal) {
+                PlanRevealView(isReady: planRevealReady) {
+                    showingPlanReveal = false
+                }
+                .onAppear {
+                    planRevealReady = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        planRevealReady = true
+                    }
+                }
+            }
+            .sheet(isPresented: $showingWeeklyReview) {
+                WeeklyReviewView { showingWeeklyReview = false }
+            }
+            .sheet(isPresented: $showingAgentInbox) {
+                AgentInboxView { showingAgentInbox = false }
+            }
             .onAppear {
                 // Load saved workout progress on background to avoid blocking main thread (AMA-1075)
                 Task {
@@ -241,6 +279,174 @@ struct HomeView: View {
             }
         }
     }
+
+
+
+    // MARK: - Coach Visibility
+
+    private var coachVisibilitySection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            AFLabel(text: "Coach")
+            AFCard(padding: Theme.Spacing.md) {
+                VStack(spacing: Theme.Spacing.sm) {
+                    coachVisibilityButton(
+                        icon: "sparkles",
+                        title: "Plan reveal",
+                        subtitle: "See how the next block is built"
+                    ) {
+                        showingPlanReveal = true
+                    }
+
+                    Divider().overlay(Theme.Colors.borderLight)
+
+                    HStack(spacing: Theme.Spacing.sm) {
+                        coachVisibilityButton(
+                            icon: "tray.full",
+                            title: "Activity",
+                            subtitle: "Agent decisions"
+                        ) {
+                            showingAgentInbox = true
+                        }
+
+                        coachVisibilityButton(
+                            icon: "chart.bar.doc.horizontal",
+                            title: "Review",
+                            subtitle: "Sunday summary"
+                        ) {
+                            showingWeeklyReview = true
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func coachVisibilityButton(icon: String, title: String, subtitle: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: Theme.Spacing.sm) {
+                Image(systemName: icon)
+                    .font(Theme.Typography.title3)
+                    .foregroundColor(Theme.Colors.textPrimary)
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text(title)
+                        .font(Theme.Typography.captionBold)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    Text(subtitle)
+                        .font(Theme.Typography.footnote)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(Theme.Typography.footnote)
+                    .foregroundColor(Theme.Colors.textTertiary)
+            }
+            .padding(Theme.Spacing.sm)
+            .background(Theme.Colors.backgroundSubtle)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Agent Visibility Banners
+
+    private func homeBanner(_ kind: HomeBannerKind) -> some View {
+        let spec = bannerSpec(for: kind)
+        return AFCard(padding: Theme.Spacing.md) {
+            HStack(alignment: .top, spacing: Theme.Spacing.md) {
+                Image(systemName: spec.icon)
+                    .font(Theme.Typography.title2)
+                    .foregroundColor(spec.color)
+                    .frame(width: Theme.Spacing.lg, alignment: .center)
+
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text(spec.label)
+                        .font(Theme.Typography.label)
+                        .tracking(0.8)
+                        .foregroundColor(spec.color)
+                    Text(spec.title)
+                        .font(Theme.Typography.title3)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    Text(spec.body)
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                        .lineSpacing(Theme.Spacing.xs)
+
+                    if case .replan = kind {
+                        HStack(spacing: Theme.Spacing.sm) {
+                            Button("Approve") { homeBannerKind = nil }
+                                .buttonStyle(AFPrimaryButtonStyle())
+                            Button("Edit") { }
+                                .buttonStyle(AFGhostButtonStyle())
+                        }
+                        .padding(.top, Theme.Spacing.sm)
+                    }
+
+                    if case .redFlag = kind {
+                        Button("Safe to continue") { homeBannerKind = nil }
+                            .buttonStyle(AFGhostButtonStyle())
+                            .padding(.top, Theme.Spacing.sm)
+                    }
+                }
+
+                Spacer()
+
+                Button {
+                    homeBannerKind = nil
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                }
+                .accessibilityLabel("Dismiss")
+            }
+        }
+        .background(spec.color.opacity(0.12))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                .stroke(spec.color.opacity(0.32), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
+    }
+
+    private func bannerSpec(for kind: HomeBannerKind) -> (icon: String, label: String, title: String, body: String, color: Color) {
+        switch kind {
+        case .replan(let title, let body):
+            return ("arrow.triangle.2.circlepath", "REPLAN PENDING", title, body, Theme.Colors.readyModerate)
+        case .redFlag(let body):
+            return ("flag.fill", "RED FLAG", "Rest day recommended.", body, Theme.Colors.accentRed)
+        case .lowConfidence(let body):
+            return ("info.circle.fill", "LOW CONFIDENCE", "Readiness is estimated today.", body, Theme.Colors.accentBlue)
+        }
+    }
+
+    #if DEBUG
+    private var homeBannerDebugControls: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            AFLabel(text: "Agent banner debug")
+            HStack(spacing: Theme.Spacing.sm) {
+                Button("Replan") {
+                    homeBannerKind = .replan(
+                        title: "Coach moved today’s hard run to Friday.",
+                        body: "Your recovery dipped overnight. Approve the safer sequence or edit the change."
+                    )
+                }
+                .buttonStyle(AFGhostButtonStyle())
+
+                Button("Red flag") {
+                    homeBannerKind = .redFlag(body: "Stacked fatigue and calf symptoms make intensity risky today. The coach replaced training with mobility and a walk.")
+                }
+                .buttonStyle(AFGhostButtonStyle())
+
+                Button("Low conf") {
+                    homeBannerKind = .lowConfidence(body: "Garmin sleep did not sync. Connect your watch or train by feel; the coach will update when data lands.")
+                }
+                .buttonStyle(AFGhostButtonStyle())
+            }
+            Button("Hide banner") { homeBannerKind = nil }
+                .buttonStyle(AFGhostButtonStyle())
+        }
+    }
+    #endif
 
     // MARK: - Weekly Progress Helper
 
