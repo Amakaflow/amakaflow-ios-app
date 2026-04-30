@@ -13,6 +13,7 @@ struct WeeklyReviewView: View {
         VStack(spacing: 0) {
             AFTopBar(title: "Sunday review", subtitle: "Apr 20–26 · adherence and next-week coaching note") {
                 Button(action: onDismiss) { Image(systemName: "chevron.left") }
+                    .accessibilityLabel("Back")
             } right: {
                 Button("Done", action: onDismiss).font(Theme.Typography.captionBold)
             }

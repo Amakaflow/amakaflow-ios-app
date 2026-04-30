@@ -65,9 +65,11 @@ class DeepLinkImportViewModel: ObservableObject {
             } else {
                 throw DeepLinkImportError.unauthorized
             }
+        } catch let tokenError as DeepLinkImportError {
+            throw tokenError
         } catch {
             print("[DeepLinkImport] Failed to get Clerk token: \(error.localizedDescription)")
-            throw DeepLinkImportError.unauthorized
+            throw DeepLinkImportError.tokenFetchFailed(error)
         }
 
         request.allHTTPHeaderFields = headers
@@ -207,6 +209,7 @@ enum DeepLinkImportError: LocalizedError {
     case invalidURL
     case invalidResponse
     case unauthorized
+    case tokenFetchFailed(Error)
     case serverError(Int, String)
 
     var errorDescription: String? {
@@ -214,6 +217,7 @@ enum DeepLinkImportError: LocalizedError {
         case .invalidURL: return "Invalid URL"
         case .invalidResponse: return "Invalid server response"
         case .unauthorized: return "Not signed in. Open AmakaFlow and sign in first."
+        case .tokenFetchFailed(let underlying): return "Failed to get auth token: \(underlying.localizedDescription)"
         case .serverError(let code, let body):
             return "Server error (\(code)): \(String(body.prefix(200)))"
         }

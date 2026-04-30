@@ -20,10 +20,22 @@ enum TestAuthHelper {
         // Real Clerk test-user pattern. Tests should drive the Clerk UI with these credentials
         // instead of bypassing backend auth headers. Values are supplied by CI/local env.
         let processEnvironment = ProcessInfo.processInfo.environment
+        let clerkEmail = processEnvironment["UITEST_CLERK_EMAIL"] ?? ""
+        let clerkPassword = processEnvironment["UITEST_CLERK_PASSWORD"] ?? ""
+        let clerkKey = processEnvironment["UITEST_CLERK_PUBLISHABLE_KEY"] ?? ""
+
+        if clerkEmail.isEmpty || clerkPassword.isEmpty || clerkKey.isEmpty {
+            XCTFail(
+                "Missing required Clerk test credentials. Set UITEST_CLERK_EMAIL, " +
+                "UITEST_CLERK_PASSWORD, and UITEST_CLERK_PUBLISHABLE_KEY in the environment " +
+                "or CI secrets before running UI tests."
+            )
+        }
+
         app.launchEnvironment = [
-            "UITEST_CLERK_EMAIL": processEnvironment["UITEST_CLERK_EMAIL"] ?? "",
-            "UITEST_CLERK_PASSWORD": processEnvironment["UITEST_CLERK_PASSWORD"] ?? "",
-            "UITEST_CLERK_PUBLISHABLE_KEY": processEnvironment["UITEST_CLERK_PUBLISHABLE_KEY"] ?? "",
+            "UITEST_CLERK_EMAIL": clerkEmail,
+            "UITEST_CLERK_PASSWORD": clerkPassword,
+            "UITEST_CLERK_PUBLISHABLE_KEY": clerkKey,
             "TEST_API_BASE_URL": processEnvironment["TEST_API_BASE_URL"] ?? "http://localhost:8001",
             "TEST_ENVIRONMENT": environment
         ]

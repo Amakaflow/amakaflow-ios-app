@@ -408,14 +408,22 @@ struct HomeView: View {
         .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
     }
 
-    private func bannerSpec(for kind: HomeBannerKind) -> (icon: String, label: String, title: String, body: String, color: Color) {
+    private struct BannerSpec {
+        let icon: String
+        let label: String
+        let title: String
+        let body: String
+        let color: Color
+    }
+
+    private func bannerSpec(for kind: HomeBannerKind) -> BannerSpec {
         switch kind {
         case .replan(let title, let body):
-            return ("arrow.triangle.2.circlepath", "REPLAN PENDING", title, body, Theme.Colors.readyModerate)
+            return BannerSpec(icon: "arrow.triangle.2.circlepath", label: "REPLAN PENDING", title: title, body: body, color: Theme.Colors.readyModerate)
         case .redFlag(let body):
-            return ("flag.fill", "RED FLAG", "Rest day recommended.", body, Theme.Colors.accentRed)
+            return BannerSpec(icon: "flag.fill", label: "RED FLAG", title: "Rest day recommended.", body: body, color: Theme.Colors.accentRed)
         case .lowConfidence(let body):
-            return ("info.circle.fill", "LOW CONFIDENCE", "Readiness is estimated today.", body, Theme.Colors.accentBlue)
+            return BannerSpec(icon: "info.circle.fill", label: "LOW CONFIDENCE", title: "Readiness is estimated today.", body: body, color: Theme.Colors.accentBlue)
         }
     }
 

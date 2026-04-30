@@ -45,6 +45,8 @@ struct SettingsView: View {
     @State private var showingPrivacyShareSheet = false
     @State private var showingWorkoutDebugSheet = false
     @State private var showingVoiceTranscriptionSettings = false
+    @State private var showingResendErrorAlert = false
+    @State private var resendErrorMessage: String?
     @StateObject private var nutritionViewModel = NutritionViewModel()
     @State private var showingNutritionSettings = false
     @State private var showingErrorLogSheet = false
@@ -1575,12 +1577,18 @@ struct SettingsView: View {
                         do {
                             try await APIService.shared.resendWatchDelivery()
                         } catch {
-                            print("[SettingsView] Failed to resend watch delivery: \(error.localizedDescription)")
+                            resendErrorMessage = error.localizedDescription
+                            showingResendErrorAlert = true
                         }
                     }
                 },
                 onDismiss: { showingWatchDelivery = false }
             )
+        }
+        .alert("Failed to Resend", isPresented: $showingResendErrorAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(resendErrorMessage ?? "An unknown error occurred.")
         }
     }
 
