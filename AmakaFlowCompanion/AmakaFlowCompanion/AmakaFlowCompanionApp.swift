@@ -23,8 +23,10 @@ struct AmakaFlowCompanionApp: App {
 
     init() {
         #if DEBUG
-        // Unit tests: skip all SDK initialisation — tests don't need Clerk, Sentry, etc.
+        // Unit tests: configure Clerk with a placeholder key so Clerk.shared doesn't
+        // fatal-error when SwiftUI evaluates the body. Skip all other SDK init.
         if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
+            Clerk.configure(publishableKey: "pk_test_ZXhhbXBsZS5jb20k")
             _workoutsViewModel = StateObject(wrappedValue: WorkoutsViewModel())
             return
         }
