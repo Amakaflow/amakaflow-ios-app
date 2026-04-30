@@ -83,7 +83,7 @@ enum AppEnvironment: String, CaseIterable {
     var chatAPIURL: String {
         switch self {
         case .development: return "http://localhost:8005"
-        case .staging: return "https://chat-api.staging.amakaflow.com"
+        case .staging: return "https://chat-api-whkq.onrender.com"
         case .production: return "https://chat-api.amakaflow.com"
         }
     }
