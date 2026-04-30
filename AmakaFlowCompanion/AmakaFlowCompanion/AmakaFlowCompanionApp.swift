@@ -23,14 +23,15 @@ struct AmakaFlowCompanionApp: App {
 
     init() {
         #if DEBUG
-        let isUnitTesting = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
-        #else
-        let isUnitTesting = false
-        #endif
-        if !isUnitTesting {
-            Clerk.configure(publishableKey: AppEnvironment.current.clerkPublishableKey)
-            AuthViewModel.shared.start()
+        // Unit tests: skip all SDK initialisation — tests don't need Clerk, Sentry, etc.
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
+            _workoutsViewModel = StateObject(wrappedValue: WorkoutsViewModel())
+            return
         }
+        #endif
+
+        Clerk.configure(publishableKey: AppEnvironment.current.clerkPublishableKey)
+        AuthViewModel.shared.start()
 
         // Wire up fixture dependencies when UITEST_USE_FIXTURES=true (AMA-544)
         #if DEBUG
