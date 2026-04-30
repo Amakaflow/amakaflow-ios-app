@@ -61,7 +61,7 @@ struct AppDependencies {
     /// - `.live` otherwise
     @MainActor
     static var current: AppDependencies {
-        if TestAuthStore.shared.useFixtures {
+        if UITestEnvironment.shared.useFixtures {
             return .fixture
         }
         return .live

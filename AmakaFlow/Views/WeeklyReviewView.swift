@@ -28,7 +28,7 @@ struct WeeklyReviewView: View {
                     AFLabel(text: "Session notes").padding(.top, Theme.Spacing.xs)
                     AFCard(padding: 0) {
                         VStack(spacing: 0) {
-                            ForEach(Array(sessions.enumerated()), id: \.element.title) { index, session in
+                            ForEach(Array(sessions.enumerated()), id: \.offset) { index, session in
                                 sessionRow(session)
                                 if index < sessions.count - 1 { Divider().overlay(Theme.Colors.borderLight) }
                             }
@@ -113,6 +113,6 @@ private struct ReviewSession {
 }
 
 #Preview {
-    WeeklyReviewView(onDismiss: {})
+    WeeklyReviewView {}
         .preferredColorScheme(.dark)
 }

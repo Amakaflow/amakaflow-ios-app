@@ -7,28 +7,25 @@
 
 import XCTest
 
-/// Configures XCUIApplication for E2E testing with auth bypass
+/// Configures XCUIApplication for E2E testing with Clerk test authentication
 enum TestAuthHelper {
 
-    /// Configure app with test credentials to bypass pairing flow
+    /// Configure app with test credentials to sign in with a real Clerk test user
     /// - Parameters:
     ///   - app: The XCUIApplication instance to configure
     ///   - environment: The environment to use (default: development for localhost)
     static func configureApp(_ app: XCUIApplication, environment: String = "development") {
-        // Launch arguments to trigger test mode in the app
-        app.launchArguments = [
-            "--uitesting",
-            "--skip-pairing"
-        ]
+        app.launchArguments = ["--uitesting"]
 
-        // Environment variables with test credentials
-        // Uses X-Test-Auth header bypass instead of JWT tokens
+        // Real Clerk test-user pattern. Tests should drive the Clerk UI with these credentials
+        // instead of bypassing backend auth headers. Values are supplied by CI/local env.
+        let processEnvironment = ProcessInfo.processInfo.environment
         app.launchEnvironment = [
-            "TEST_AUTH_SECRET": TestCredentials.testAuthSecret,
-            "TEST_USER_ID": TestCredentials.userId,
-            "TEST_USER_EMAIL": TestCredentials.userEmail,
-            "TEST_API_BASE_URL": TestCredentials.apiBaseURL,
-            "TEST_ENVIRONMENT": environment  // "development", "staging", or "production"
+            "UITEST_CLERK_EMAIL": processEnvironment["UITEST_CLERK_EMAIL"] ?? "",
+            "UITEST_CLERK_PASSWORD": processEnvironment["UITEST_CLERK_PASSWORD"] ?? "",
+            "UITEST_CLERK_PUBLISHABLE_KEY": processEnvironment["UITEST_CLERK_PUBLISHABLE_KEY"] ?? "",
+            "TEST_API_BASE_URL": processEnvironment["TEST_API_BASE_URL"] ?? "http://localhost:8001",
+            "TEST_ENVIRONMENT": environment
         ]
     }
 

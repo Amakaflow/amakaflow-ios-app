@@ -57,26 +57,18 @@ class DeepLinkImportViewModel: ObservableObject {
         request.httpMethod = "POST"
         request.timeoutInterval = 30
 
-        // Auth headers — same pattern as APIService
+        // Auth headers — Clerk session token
         var headers = ["Content-Type": "application/json"]
-        #if DEBUG
-        if let testAuthSecret = TestAuthStore.shared.authSecret,
-           let testUserId = TestAuthStore.shared.userId,
-           !testAuthSecret.isEmpty {
-            headers["X-Test-Auth"] = testAuthSecret
-            headers["X-Test-User-Id"] = testUserId
-        } else if let token = PairingService.shared.getToken() {
-            headers["Authorization"] = "Bearer \(token)"
-        } else {
+        do {
+            if let token = try await AuthViewModel.shared.token() {
+                headers["Authorization"] = "Bearer \(token)"
+            } else {
+                throw DeepLinkImportError.unauthorized
+            }
+        } catch {
+            print("[DeepLinkImport] Failed to get Clerk token: \(error.localizedDescription)")
             throw DeepLinkImportError.unauthorized
         }
-        #else
-        if let token = PairingService.shared.getToken() {
-            headers["Authorization"] = "Bearer \(token)"
-        } else {
-            throw DeepLinkImportError.unauthorized
-        }
-        #endif
 
         request.allHTTPHeaderFields = headers
 

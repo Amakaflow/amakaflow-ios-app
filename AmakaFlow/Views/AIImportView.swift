@@ -26,31 +26,21 @@ struct AIImportView: View {
         AppEnvironment.current.mcpAPIURL
     }
 
-    /// Auth headers matching APIService.authHeaders, covering E2E and production.
-    private var authHeaders: [String: String] {
+    /// Auth headers matching APIService.authHeaders.
+    private func authHeaders() async -> [String: String] {
         var headers = [String: String]()
-        #if DEBUG
-        if let testAuthSecret = TestAuthStore.shared.authSecret,
-           let testUserId = TestAuthStore.shared.userId,
-           !testAuthSecret.isEmpty {
-            headers["X-Test-Auth"] = testAuthSecret
-            headers["X-Test-User-Id"] = testUserId
-            return headers
-        }
-        #endif
-        if let token = PairingService.shared.getToken() {
-            headers["Authorization"] = "Bearer \(token)"
+        do {
+            if let token = try await AuthViewModel.shared.token() {
+                headers["Authorization"] = "Bearer \(token)"
+            }
+        } catch {
+            print("[AIImportView] Failed to get Clerk token: \(error.localizedDescription)")
         }
         return headers
     }
 
     private var profileId: String {
-        #if DEBUG
-        if let testUserId = TestAuthStore.shared.userId, !testUserId.isEmpty {
-            return testUserId
-        }
-        #endif
-        return PairingService.shared.userProfile?.id ?? "unknown"
+        return AuthViewModel.shared.userProfile?.id ?? "unknown"
     }
 
     var body: some View {
@@ -150,7 +140,7 @@ struct AIImportView: View {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
-        for (key, value) in authHeaders {
+        for (key, value) in await authHeaders() {
             request.setValue(value, forHTTPHeaderField: key)
         }
 

@@ -41,7 +41,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         super.init()
 
         #if DEBUG
-        if TestAuthStore.shared.skipAppleWatch {
+        if UITestEnvironment.shared.skipAppleWatch {
             print("[WatchConnectivityManager] Skipping WCSession setup (UITEST_SKIP_APPLE_WATCH=true)")
             return
         }

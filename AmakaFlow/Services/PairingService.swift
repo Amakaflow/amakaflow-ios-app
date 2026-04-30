@@ -1,221 +1,52 @@
+import Combine
 import Foundation
 import UIKit
-import Combine
 
+/// Compatibility facade for legacy "pairing" call sites.
+/// AMA-1620 replaces device-pairing JWTs with Clerk sessions; this service now mirrors Clerk auth state.
 @MainActor
 class PairingService: ObservableObject {
     static let shared = PairingService()
-
-    private var baseURL: String { AppEnvironment.current.mapperAPIURL }
-    private let tokenKey = "jwt_token"
-    private let profileKey = "user_profile"
-    private let tokenRefreshKey = "last_token_refresh"
 
     @Published var isPaired: Bool = false
     @Published var userProfile: UserProfile?
     @Published var needsReauth: Bool = false
     @Published var lastTokenRefresh: Date?
-    @Published var isInitialized: Bool = false  // Track when cache is ready (AMA-969 fix)
-
-    // Cache token in memory to avoid blocking main thread with Keychain reads (AMA-969)
-    private var cachedToken: String?
+    @Published var isInitialized: Bool = true
 
     private init() {
-        // Handle E2E test auth bypass (AMA-232)
-        // Check for test mode BEFORE setting isPaired so SwiftUI sees the correct initial state
-        #if DEBUG
-        let hasUITesting = CommandLine.arguments.contains("--uitesting")
-        let hasSkipPairing = CommandLine.arguments.contains("--skip-pairing")
-        print("[PairingService] Init - hasUITesting=\(hasUITesting), hasSkipPairing=\(hasSkipPairing)")
-
-        // Check for X-Test-Auth header bypass via TestAuthStore
-        // This handles both environment variables AND stored credentials from UI
-        if let authSecret = TestAuthStore.shared.authSecret,
-           let userId = TestAuthStore.shared.userId,
-           !authSecret.isEmpty {
-            print("[E2E] Using X-Test-Auth header bypass for user: \(userId)")
-            // Set isPaired directly since auth is via headers, not token
-            isPaired = true
-
-            // Create a placeholder profile - will fetch actual profile async
-            let testUserEmail = TestAuthStore.shared.userEmail
-            userProfile = UserProfile(
-                id: userId,
-                email: testUserEmail,
-                name: "Loading...",
-                avatarUrl: nil
-            )
-            print("[PairingService] E2E mode: created placeholder profile for \(testUserEmail ?? userId)")
-
-            // Load last token refresh in background (AMA-1075)
-            Task.detached(priority: .utility) { [weak self] in
-                let lastRefresh = await Task.detached(priority: .utility) {
-                    UserDefaults.standard.object(forKey: self?.tokenRefreshKey ?? "") as? Date
-                }.value
-                await MainActor.run {
-                    self?.lastTokenRefresh = lastRefresh
-                }
-            }
-            print("[PairingService] E2E mode initialized with isPaired=true (X-Test-Auth)")
-
-            // Fetch actual user profile in background
-            Task {
-                await self.fetchAndUpdateProfile()
-            }
-            return
-        }
-
-        if hasUITesting && hasSkipPairing {
-            // Legacy: JWT token in keychain (has expiry issues)
-            if let testToken = ProcessInfo.processInfo.environment["TEST_JWT"] {
-                print("[E2E] Found TEST_JWT, length=\(testToken.count)")
-                let saveResult = KeychainHelper.shared.save(testToken, for: tokenKey)
-                if saveResult {
-                    print("[E2E] Test JWT stored in keychain during PairingService init")
-                }
-            }
-        }
-        #endif
-
-        // Do NOT read Keychain synchronously on @MainActor — SecItemCopyMatching blocks
-        // the main thread, causing >2 s ANR reported by Sentry (AMA-680).
-        // Start with safe defaults and populate from Keychain on a background thread.
-        isPaired = false
-        userProfile = nil
-        // Defer loadLastTokenRefresh() to background task below (AMA-1075)
-
-        let tokenKey = self.tokenKey
-        let profileKey = self.profileKey
-        let refreshKey = self.tokenRefreshKey
-        Task {
-            // Use await .value to properly suspend main actor instead of blocking (AMA-1063)
-            let (token, profile, lastRefresh): (String?, UserProfile?, Date?) = await Task.detached(priority: .userInitiated) {
-                let t = KeychainHelper.shared.readString(for: tokenKey)
-                let p: UserProfile? = {
-                    guard let data = KeychainHelper.shared.read(for: profileKey) else { return nil }
-                    guard let profile = try? JSONDecoder().decode(UserProfile.self, from: data) else {
-                        // Log silent failure for debugging (AMA-1075)
-                        print("[PairingService] Failed to decode UserProfile from Keychain")
-                        return nil
-                    }
-                    return profile
-                }()
-                // Load last token refresh from UserDefaults in background (AMA-1075)
-                let lr = UserDefaults.standard.object(forKey: refreshKey) as? Date
-                return (t, p, lr)
-            }.value
-            self.isPaired = token != nil
-            self.userProfile = profile
-            self.lastTokenRefresh = lastRefresh
-            // Cache token to avoid blocking getToken() calls (AMA-969)
-            self.cachedToken = token
-            // Mark initialization complete (AMA-969 fix)
-            self.isInitialized = true
-            #if DEBUG
-            print("[PairingService] Initialized with isPaired=\(self.isPaired), hasToken=\(token != nil)")
-            #endif
-        }
+        bindAuthState()
     }
 
-    /// Mark authentication as invalid (e.g., on 401 response)
-    /// This preserves queued data while signaling that re-pairing is needed
-    func markAuthInvalid() {
-        needsReauth = true
-        // Don't clear isPaired immediately - let the UI handle showing re-pair prompt
-        // The queued completions will be processed after re-pairing
+    private func bindAuthState() {
+        let auth = AuthViewModel.shared
+        isPaired = auth.isAuthenticated
+        userProfile = auth.userProfile
+        needsReauth = auth.needsReauth
+        lastTokenRefresh = auth.lastTokenRefresh
+
+        auth.$isAuthenticated
+            .assign(to: &$isPaired)
+        auth.$userProfile
+            .assign(to: &$userProfile)
+        auth.$needsReauth
+            .assign(to: &$needsReauth)
+        auth.$lastTokenRefresh
+            .assign(to: &$lastTokenRefresh)
     }
 
-    /// Called after successful re-pairing to clear the needsReauth flag
-    func authRestored() {
-        needsReauth = false
-    }
+    func markAuthInvalid() { AuthViewModel.shared.markAuthInvalid() }
+    func authRestored() { AuthViewModel.shared.authRestored() }
 
-    // MARK: - E2E Test Mode
-
-    /// Enable E2E test mode with provided credentials (for manual testing on simulators)
-    /// - Parameters:
-    ///   - authSecret: The test auth secret
-    ///   - userId: The test user ID
-    func enableTestMode(authSecret: String, userId: String) {
-        #if DEBUG
-        guard AppEnvironment.current != .production else {
-            print("[PairingService] Cannot enable test mode in production")
-            return
-        }
-
-        // Store credentials first so API calls will work
-        TestAuthStore.shared.storeCredentials(authSecret: authSecret, userId: userId)
-
-        // Set paired state with placeholder profile
-        isPaired = true
-        userProfile = UserProfile(
-            id: userId,
-            email: nil,
-            name: "Loading...",
-            avatarUrl: nil
-        )
-        needsReauth = false
-
-        print("[PairingService] E2E test mode enabled for user: \(userId)")
-
-        // Fetch actual user profile in background
-        Task {
-            await fetchAndUpdateProfile()
-        }
-        #endif
-    }
-
-    /// Fetch user profile from API and update the stored profile
-    private func fetchAndUpdateProfile() async {
-        #if DEBUG
-        do {
-            let profile = try await APIService.shared.fetchProfile()
-            await MainActor.run {
-                self.userProfile = profile
-                print("[PairingService] Updated profile: \(profile.name ?? profile.email ?? profile.id)")
-            }
-        } catch {
-            print("[PairingService] Failed to fetch profile: \(error.localizedDescription)")
-            // Keep the placeholder profile - user can still use the app
-        }
-        #endif
-    }
-
-    /// Disable E2E test mode and clear stored credentials
-    func disableTestMode() {
-        #if DEBUG
-        TestAuthStore.shared.clearCredentials()
-        isPaired = false
-        userProfile = nil
-        print("[PairingService] E2E test mode disabled")
-        #endif
-    }
-
-    /// Check if currently in E2E test mode
-    var isInTestMode: Bool {
-        #if DEBUG
-        return TestAuthStore.shared.isTestModeEnabled
-        #else
-        return false
-        #endif
-    }
-
-    // MARK: - APNs Push Token Registration (AMA-567)
-
-    /// Register the APNs device token with the backend for push notifications
     func registerAPNsToken(_ token: String) async {
         guard isPaired else {
-            print("[PairingService] Not paired, skipping APNs token registration")
+            print("[PairingService] Not authenticated, skipping APNs token registration")
             return
         }
-
         guard let deviceId = UIDevice.current.identifierForVendor?.uuidString else {
             print("[PairingService] No device ID available for APNs registration")
             return
         }
-
-        print("[PairingService] Registering APNs token \(token.prefix(16))...")
-
         do {
             try await APIService.shared.registerPushToken(apnsToken: token, deviceId: deviceId)
             print("[PairingService] APNs token registered successfully")
@@ -224,319 +55,34 @@ class PairingService: ObservableObject {
         }
     }
 
-    // MARK: - Token Refresh
-
-    /// Silently refresh the JWT using device ID
-    /// Returns true if refresh succeeded, false if device not found (needs re-pair)
+    @discardableResult
     func refreshToken() async -> Bool {
-        guard let deviceId = UIDevice.current.identifierForVendor?.uuidString else {
-            print("[PairingService] No device ID available for refresh")
-            return false
-        }
-
-        print("[PairingService] Attempting silent token refresh")
-
-        let url = URL(string: "\(baseURL)/mobile/pairing/refresh")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        let body = TokenRefreshRequest(deviceId: deviceId)
-        let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
-
-        do {
-            request.httpBody = try encoder.encode(body)
-
-            let (data, response) = try await URLSession.shared.data(for: request)
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                print("[PairingService] Invalid response type during refresh")
-                return false
-            }
-
-            print("[PairingService] Refresh response status = \(httpResponse.statusCode)")
-
-            switch httpResponse.statusCode {
-            case 200:
-                let decoder = JSONDecoder()
-                decoder.keyDecodingStrategy = .convertFromSnakeCase
-                decoder.dateDecodingStrategy = .iso8601
-                let result = try decoder.decode(TokenRefreshResponse.self, from: data)
-
-                storeToken(result.jwt)
-                storeLastTokenRefresh(result.refreshedAt)
-
-                await MainActor.run {
-                    self.needsReauth = false
-                    self.lastTokenRefresh = result.refreshedAt
-                }
-
-                print("[PairingService] Token refreshed successfully")
-
-                // Process any queued workout completions after refresh
-                Task {
-                    await WorkoutCompletionService.shared.retryPendingCompletions()
-                }
-
-                return true
-
-            case 401:
-                // Device not found or not paired - need to re-pair
-                print("[PairingService] Refresh failed: device not found")
-                await MainActor.run {
-                    self.needsReauth = true
-                }
-                return false
-
-            default:
-                print("[PairingService] Refresh failed with status \(httpResponse.statusCode)")
-                return false
-            }
-        } catch {
-            print("[PairingService] Refresh error: \(error)")
-            return false
-        }
+        await AuthViewModel.shared.refreshToken()
     }
 
-    // MARK: - Pairing
-
-    /// Exchange a pairing code (from QR or manual entry) for a JWT
     func pair(code: String) async throws -> PairingResponse {
-        print("[PairingService] Starting pair request to \(baseURL)")
-
-        let url = URL(string: "\(baseURL)/mobile/pairing/pair")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        // Send code in appropriate field based on length:
-        // - 6 chars = short_code (manual entry)
-        // - > 6 chars = token (from QR code)
-        let isShortCode = code.count == 6
-        let modelIdentifier = getDeviceModel()
-        let body = PairingRequest(
-            token: isShortCode ? nil : code,
-            shortCode: isShortCode ? code.uppercased() : nil,
-            deviceInfo: DeviceInfo(
-                device: getDeviceName(for: modelIdentifier),
-                os: "iOS \(UIDevice.current.systemVersion)",
-                appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
-                deviceId: UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
-            )
-        )
-
-        let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
-        let bodyData = try encoder.encode(body)
-        request.httpBody = bodyData
-
-        // Log the request body for debugging
-        if let bodyString = String(data: bodyData, encoding: .utf8) {
-            print("[PairingService] Request body: \(bodyString)")
-        }
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        // Log the response body for debugging
-        if let responseBody = String(data: data, encoding: .utf8) {
-            print("[PairingService] Response body: \(responseBody)")
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            print("[PairingService] Invalid response type")
-            throw PairingError.invalidResponse
-        }
-
-        print("[PairingService] Response status = \(httpResponse.statusCode)")
-
-        switch httpResponse.statusCode {
-        case 200:
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-            let result = try decoder.decode(PairingResponse.self, from: data)
-            storeToken(result.jwt)
-            print("[PairingService] JWT stored successfully")
-            if let profile = result.profile {
-                storeProfile(profile)
-            }
-            await MainActor.run {
-                self.isPaired = true
-                self.userProfile = result.profile
-                self.needsReauth = false
-
-                // Set Sentry user context for error tracking (AMA-225)
-                if let profile = result.profile {
-                    SentryService.shared.setUser(userId: profile.id, email: profile.email)
-                    SentryService.shared.trackPairingAction("Device paired successfully")
-                }
-            }
-            // Process any queued workout completions after re-pairing
-            Task {
-                await WorkoutCompletionService.shared.retryPendingCompletions()
-            }
-            return result
-        case 400:
-            let error: APIErrorResponse? = {
-                guard let e = try? JSONDecoder().decode(APIErrorResponse.self, from: data) else {
-                    // Log silent failure for debugging (AMA-1075)
-                    print("[PairingService] Failed to decode APIErrorResponse")
-                    return nil
-                }
-                return e
-            }()
-            print("[PairingService] Invalid code: \(error?.detail ?? "unknown")")
-            throw PairingError.invalidCode(error?.detail ?? "Invalid code")
-        case 410:
-            print("[PairingService] Code expired")
-            throw PairingError.codeExpired
-        default:
-            print("[PairingService] Server error \(httpResponse.statusCode)")
-            throw PairingError.serverError(httpResponse.statusCode)
-        }
-    }
-
-    // MARK: - Token Management
-
-    func storeToken(_ jwt: String) {
-        // Save to Keychain in background to avoid blocking main thread (AMA-969)
-        // Update cache immediately on main thread
-        cachedToken = jwt
-        
-        let key = tokenKey
-        Task.detached(priority: .userInitiated) {
-            let success = KeychainHelper.shared.save(jwt, for: key)
-            if !success {
-                print("[PairingService] ERROR: Failed to store token in Keychain - token will be lost on app restart")
-            }
-        }
-        UserDefaults(suiteName: "group.com.amakaflow.companion")?.set(jwt, forKey: "auth_token")
+        throw PairingError.invalidCode("Pairing codes are no longer supported. Please sign in with Clerk.")
     }
 
     func getToken() -> String? {
-        // Return cached token to avoid blocking main thread with Keychain reads (AMA-969)
-        // The cache is updated by storeToken() and initialized in init()
-        return cachedToken
+        AuthViewModel.shared.cachedBearerToken()
     }
 
     func unpair() {
-        // Clear cache immediately
-        cachedToken = nil
-        
-        // Delete from Keychain in background to avoid blocking (AMA-969)
-        let tk = tokenKey
-        let pk = profileKey
-        Task.detached(priority: .userInitiated) {
-            KeychainHelper.shared.delete(for: tk)
-            KeychainHelper.shared.delete(for: pk)
-        }
-        
-        Task { @MainActor in
-            self.isPaired = false
-            self.userProfile = nil
-
-            // Clear Sentry user context (AMA-225)
-            SentryService.shared.trackPairingAction("Device unpaired")
-            SentryService.shared.clearUser()
-        }
+        // Legacy synchronous API: signOut logs Clerk errors internally.
+        Task { await AuthViewModel.shared.signOut() }
     }
 
-    // MARK: - Profile Storage
-
-    private func storeProfile(_ profile: UserProfile) {
-        // Save to Keychain in background to avoid blocking main thread (AMA-969)
-        guard let data = try? JSONEncoder().encode(profile) else {
-            print("[PairingService] ERROR: Failed to encode profile for storage")
-            return
-        }
-        let key = profileKey
-        Task.detached(priority: .userInitiated) {
-            let success = KeychainHelper.shared.save(data, for: key)
-            if !success {
-                print("[PairingService] ERROR: Failed to store profile in Keychain")
-            }
-        }
+    #if DEBUG
+    func enableTestMode(authSecret: String, userId: String) {
+        print("[PairingService] Test auth bypass was removed in AMA-1620. Use a real Clerk test user.")
     }
 
-    // MARK: - Token Refresh Timestamp Storage
+    func disableTestMode() {}
 
-    private func storeLastTokenRefresh(_ date: Date) {
-        // Save to UserDefaults in background to avoid blocking main thread (AMA-1075)
-        let key = tokenRefreshKey
-        Task.detached(priority: .utility) {
-            UserDefaults.standard.set(date, forKey: key)
-        }
-    }
-
-    private func loadLastTokenRefresh() -> Date? {
-        return UserDefaults.standard.object(forKey: tokenRefreshKey) as? Date
-    }
-
-    // MARK: - Device Info
-
-    private func getDeviceModel() -> String {
-        var systemInfo = utsname()
-        uname(&systemInfo)
-        let machineMirror = Mirror(reflecting: systemInfo.machine)
-        return machineMirror.children.reduce("") { identifier, element in
-            guard let value = element.value as? Int8, value != 0 else { return identifier }
-            return identifier + String(UnicodeScalar(UInt8(value)))
-        }
-    }
-
-    private func getDeviceName(for identifier: String) -> String {
-        // Map device identifiers to friendly names
-        // See: https://gist.github.com/adamawolf/3048717
-        let deviceNames: [String: String] = [
-            // iPhone
-            "iPhone14,2": "iPhone 13 Pro",
-            "iPhone14,3": "iPhone 13 Pro Max",
-            "iPhone14,4": "iPhone 13 mini",
-            "iPhone14,5": "iPhone 13",
-            "iPhone14,6": "iPhone SE (3rd gen)",
-            "iPhone14,7": "iPhone 14",
-            "iPhone14,8": "iPhone 14 Plus",
-            "iPhone15,2": "iPhone 14 Pro",
-            "iPhone15,3": "iPhone 14 Pro Max",
-            "iPhone15,4": "iPhone 15",
-            "iPhone15,5": "iPhone 15 Plus",
-            "iPhone16,1": "iPhone 15 Pro",
-            "iPhone16,2": "iPhone 15 Pro Max",
-            "iPhone17,1": "iPhone 16 Pro",
-            "iPhone17,2": "iPhone 16 Pro Max",
-            "iPhone17,3": "iPhone 16",
-            "iPhone17,4": "iPhone 16 Plus",
-            "iPhone17,5": "iPhone 16e",
-            "iPhone18,1": "iPhone 17 Pro",
-            "iPhone18,2": "iPhone 17 Pro Max",
-            "iPhone18,3": "iPhone 17",
-            "iPhone18,4": "iPhone 17 Plus",
-            "iPhone18,5": "iPhone 17 Air",
-            // iPad
-            "iPad13,4": "iPad Pro 11-inch (3rd gen)",
-            "iPad13,5": "iPad Pro 11-inch (3rd gen)",
-            "iPad13,6": "iPad Pro 11-inch (3rd gen)",
-            "iPad13,7": "iPad Pro 11-inch (3rd gen)",
-            "iPad13,8": "iPad Pro 12.9-inch (5th gen)",
-            "iPad13,9": "iPad Pro 12.9-inch (5th gen)",
-            "iPad13,10": "iPad Pro 12.9-inch (5th gen)",
-            "iPad13,11": "iPad Pro 12.9-inch (5th gen)",
-            "iPad14,1": "iPad mini (6th gen)",
-            "iPad14,2": "iPad mini (6th gen)",
-            "iPad14,3": "iPad Pro 11-inch (4th gen)",
-            "iPad14,4": "iPad Pro 11-inch (4th gen)",
-            "iPad14,5": "iPad Pro 12.9-inch (6th gen)",
-            "iPad14,6": "iPad Pro 12.9-inch (6th gen)",
-            // Simulator
-            "x86_64": "Simulator",
-            "arm64": "Simulator"
-        ]
-
-        return deviceNames[identifier] ?? identifier
-    }
+    var isInTestMode: Bool { UITestEnvironment.shared.hasClerkTestUser }
+    #endif
 }
-
-// MARK: - Models
 
 struct PairingRequest: Codable {
     let token: String?
@@ -545,10 +91,17 @@ struct PairingRequest: Codable {
 }
 
 struct DeviceInfo: Codable {
-    let device: String      // Friendly name like "iPhone 15 Pro"
-    let os: String          // Formatted like "iOS 17.2"
-    let appVersion: String  // App version like "1.0.17"
-    let deviceId: String    // Unique device identifier
+    let device: String
+    let osVersion: String
+    let appVersion: String
+    let deviceId: String
+
+    enum CodingKeys: String, CodingKey {
+        case device
+        case osVersion = "os"
+        case appVersion
+        case deviceId
+    }
 }
 
 struct PairingResponse: Codable {
@@ -570,10 +123,7 @@ struct APIErrorResponse: Codable {
     let message: String?
 }
 
-struct TokenRefreshRequest: Codable {
-    let deviceId: String
-}
-
+struct TokenRefreshRequest: Codable { let deviceId: String }
 struct TokenRefreshResponse: Codable {
     let jwt: String
     let expiresAt: Date
@@ -590,7 +140,7 @@ enum PairingError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidCode(let msg): return msg
-        case .codeExpired: return "Code has expired. Please generate a new one."
+        case .codeExpired: return "Code has expired. Please sign in again."
         case .invalidResponse: return "Invalid server response"
         case .serverError(let code): return "Server error: \(code)"
         case .tokenStorageFailed: return "Failed to save credentials"

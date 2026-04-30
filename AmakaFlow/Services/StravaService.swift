@@ -110,23 +110,15 @@ class StravaService {
 
     // MARK: - Auth Headers
 
-    private var authHeaders: [String: String] {
+    private func authHeaders() async -> [String: String] {
         var headers = ["Content-Type": "application/json"]
-
-        #if DEBUG
-        if let authSecret = TestAuthStore.shared.authSecret,
-           let userId = TestAuthStore.shared.userId,
-           !authSecret.isEmpty {
-            headers["X-Test-Auth"] = authSecret
-            headers["X-Test-User-Id"] = userId
-            return headers
+        do {
+            if let token = try await AuthViewModel.shared.token() {
+                headers["Authorization"] = "Bearer \(token)"
+            }
+        } catch {
+            print("[StravaService] Failed to get Clerk token: \(error.localizedDescription)")
         }
-        #endif
-
-        if let token = PairingService.shared.getToken() {
-            headers["Authorization"] = "Bearer \(token)"
-        }
-
         return headers
     }
 
@@ -145,7 +137,7 @@ class StravaService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        for (key, value) in authHeaders {
+        for (key, value) in await authHeaders() {
             request.setValue(value, forHTTPHeaderField: key)
         }
 
@@ -187,7 +179,7 @@ class StravaService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        for (key, value) in authHeaders {
+        for (key, value) in await authHeaders() {
             request.setValue(value, forHTTPHeaderField: key)
         }
 
@@ -230,7 +222,7 @@ class StravaService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        for (key, value) in authHeaders {
+        for (key, value) in await authHeaders() {
             request.setValue(value, forHTTPHeaderField: key)
         }
 

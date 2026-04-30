@@ -1572,12 +1572,11 @@ struct SettingsView: View {
             WatchDeliveryView(
                 onResend: {
                     Task {
-                        let baseURL = AppEnvironment.current.mapperAPIURL
-                        guard let url = URL(string: "\(baseURL)/api/watch-delivery/resend") else { return }
-                        var request = URLRequest(url: url)
-                        request.httpMethod = "POST"
-                        request.allHTTPHeaderFields = APIService.shared.authHeaders
-                        _ = try? await URLSession.shared.data(for: request)
+                        do {
+                            try await APIService.shared.resendWatchDelivery()
+                        } catch {
+                            print("[SettingsView] Failed to resend watch delivery: \(error.localizedDescription)")
+                        }
                     }
                 },
                 onDismiss: { showingWatchDelivery = false }

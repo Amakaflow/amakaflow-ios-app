@@ -131,12 +131,8 @@ class ActivityHistoryViewModel: ObservableObject {
             return
         }
 
-        // Check if we have valid auth - either pairing or E2E test mode
-        #if DEBUG
-        let hasAuth = dependencies.pairingService.isPaired || TestAuthStore.shared.isTestModeEnabled
-        #else
+        // Check if we have valid auth
         let hasAuth = dependencies.pairingService.isPaired
-        #endif
 
         // If not authenticated, show empty state (no mock data)
         if !hasAuth {
@@ -213,11 +209,7 @@ class ActivityHistoryViewModel: ObservableObject {
         isLoadingMore = true
 
         // Check if we have valid auth
-        #if DEBUG
-        let hasAuth = dependencies.pairingService.isPaired || TestAuthStore.shared.isTestModeEnabled
-        #else
         let hasAuth = dependencies.pairingService.isPaired
-        #endif
 
         if useDemoMode || !hasAuth {
             // No more data to load in demo mode or when not authenticated

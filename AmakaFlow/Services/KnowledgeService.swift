@@ -80,24 +80,14 @@ class KnowledgeService: ObservableObject {
 
     // MARK: - Auth Headers
 
-    private var authHeaders: [String: String] {
+    private func authHeaders() async -> [String: String] {
         var headers = ["Content-Type": "application/json"]
-
-        // E2E Test mode: Use X-Test-Auth header bypass instead of JWT
-        #if DEBUG
-        if let testAuthSecret = TestAuthStore.shared.authSecret,
-           let testUserId = TestAuthStore.shared.userId,
-           !testAuthSecret.isEmpty {
-            headers["X-Test-Auth"] = testAuthSecret
-            headers["X-Test-User-Id"] = testUserId
-            print("[KnowledgeService] Using X-Test-Auth header bypass for E2E tests")
-            return headers
-        }
-        #endif
-
-        // Normal auth: Use JWT token
-        if let token = PairingService.shared.getToken() {
-            headers["Authorization"] = "Bearer \(token)"
+        do {
+            if let token = try await AuthViewModel.shared.token() {
+                headers["Authorization"] = "Bearer \(token)"
+            }
+        } catch {
+            print("[KnowledgeService] Failed to get Clerk token: \(error.localizedDescription)")
         }
         return headers
     }
@@ -112,7 +102,7 @@ class KnowledgeService: ObservableObject {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await authHeaders()
 
         print("[KnowledgeService] listCards - URL: \(url.absoluteString)")
 
@@ -147,7 +137,7 @@ class KnowledgeService: ObservableObject {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await authHeaders()
 
         print("[KnowledgeService] searchCards - URL: \(url.absoluteString)")
 
@@ -182,7 +172,7 @@ class KnowledgeService: ObservableObject {
 
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await authHeaders()
 
         var body: [String: String] = [:]
         if let url {
@@ -223,7 +213,7 @@ class KnowledgeService: ObservableObject {
 
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await authHeaders()
 
         print("[KnowledgeService] deleteCard - id: \(id), URL: \(url.absoluteString)")
 

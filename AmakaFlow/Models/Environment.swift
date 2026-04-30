@@ -107,6 +107,38 @@ enum AppEnvironment: String, CaseIterable {
         }
     }
 
+    /// Clerk publishable key for the current environment.
+    /// Values must be supplied by build settings/Info.plist or process environment, never hardcoded.
+    var clerkPublishableKey: String {
+        #if DEBUG
+        if let override = ProcessInfo.processInfo.environment["UITEST_CLERK_PUBLISHABLE_KEY"], !override.isEmpty {
+            return override
+        }
+        if let override = ProcessInfo.processInfo.environment["CLERK_PUBLISHABLE_KEY"], !override.isEmpty {
+            return override
+        }
+        #endif
+
+        let keyName: String
+        switch self {
+        case .development, .staging:
+            keyName = "CLERK_PUBLISHABLE_KEY_STAGING"
+        case .production:
+            keyName = "CLERK_PUBLISHABLE_KEY_PRODUCTION"
+        }
+
+        if let value = Bundle.main.object(forInfoDictionaryKey: keyName) as? String,
+           !value.isEmpty, !value.hasPrefix("$(") {
+            return value
+        }
+
+        if let value = ProcessInfo.processInfo.environment[keyName], !value.isEmpty {
+            return value
+        }
+
+        preconditionFailure("Missing \(keyName). Provide the Clerk publishable key via build configuration or environment.")
+    }
+
 
     var stravaAPIURL: String {
         switch self {
