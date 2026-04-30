@@ -24,12 +24,13 @@ enum TestAuthHelper {
         let clerkPassword = processEnvironment["UITEST_CLERK_PASSWORD"] ?? ""
         let clerkKey = processEnvironment["UITEST_CLERK_PUBLISHABLE_KEY"] ?? ""
 
-        if clerkEmail.isEmpty || clerkPassword.isEmpty || clerkKey.isEmpty {
+        guard !clerkEmail.isEmpty, !clerkPassword.isEmpty, !clerkKey.isEmpty else {
             XCTFail(
                 "Missing required Clerk test credentials. Set UITEST_CLERK_EMAIL, " +
                 "UITEST_CLERK_PASSWORD, and UITEST_CLERK_PUBLISHABLE_KEY in the environment " +
                 "or CI secrets before running UI tests."
             )
+            return
         }
 
         app.launchEnvironment = [
