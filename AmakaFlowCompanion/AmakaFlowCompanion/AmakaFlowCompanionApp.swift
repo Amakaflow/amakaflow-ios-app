@@ -22,8 +22,15 @@ struct AmakaFlowCompanionApp: App {
     @State private var mentalModelGateRefresh = false
 
     init() {
-        Clerk.configure(publishableKey: AppEnvironment.current.clerkPublishableKey)
-        AuthViewModel.shared.start()
+        #if DEBUG
+        let isUnitTesting = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        #else
+        let isUnitTesting = false
+        #endif
+        if !isUnitTesting {
+            Clerk.configure(publishableKey: AppEnvironment.current.clerkPublishableKey)
+            AuthViewModel.shared.start()
+        }
 
         // Wire up fixture dependencies when UITEST_USE_FIXTURES=true (AMA-544)
         #if DEBUG

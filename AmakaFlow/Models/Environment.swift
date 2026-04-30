@@ -117,10 +117,6 @@ enum AppEnvironment: String, CaseIterable {
         if let override = ProcessInfo.processInfo.environment["CLERK_PUBLISHABLE_KEY"], !override.isEmpty {
             return override
         }
-        // Unit test runner sets XCTestConfigurationFilePath; return a stub so tests don't crash on startup.
-        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
-            return "pk_test_stub_unit_tests_only"
-        }
         #endif
 
         let keyName: String
