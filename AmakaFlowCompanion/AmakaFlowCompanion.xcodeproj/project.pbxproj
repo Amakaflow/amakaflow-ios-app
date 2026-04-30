@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AMA1620AUTHVM001B /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620AUTHVM001A /* AuthViewModel.swift */; };
+		AMA1620AUTHINT01B /* ClerkAuthorizationInterceptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620AUTHINT01A /* ClerkAuthorizationInterceptor.swift */; };
+		AMA1620UITEST01B /* UITestEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620UITEST01A /* UITestEnvironment.swift */; };
+		AMA1620CLKKIT01B /* ClerkKit in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1620CLKKIT01P /* ClerkKit */; };
+		AMA1620CLKUI001B /* ClerkKitUI in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1620CLKUI001P /* ClerkKitUI */; };
 		00CBD8759EE7C769D1D7F82B /* AgentInboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EB7457100F5C1B6E4488558 /* AgentInboxView.swift */; };
 		0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
 		11C72B7C6EA17FC8DEA354FB /* CoachModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */; };
@@ -136,7 +141,6 @@
 		AK00TST011B /* PairingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST011A /* PairingTests.swift */; };
 		AK00TST012B /* Phase2ViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST012A /* Phase2ViewModelTests.swift */; };
 		AK00TST013B /* PlatformDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST013A /* PlatformDetectorTests.swift */; };
-		AK00TST014B /* TestAuthStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST014A /* TestAuthStoreTests.swift */; };
 		AK00TST015B /* TestClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST015A /* TestClock.swift */; };
 		AK00TST016B /* TestDoubles.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST016A /* TestDoubles.swift */; };
 		AK00TST017B /* TranscriptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST017A /* TranscriptionTests.swift */; };
@@ -302,7 +306,6 @@
 		S1MUL4T10N00000018 /* SimulatedWeightProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MUL4T10N00000008 /* SimulatedWeightProvider.swift */; };
 		S3NTR1S3RV1C300000002 /* SentryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = S3NTR1S3RV1C300000001 /* SentryService.swift */; };
 		SK1P1NT3RV4L5H33T0002 /* SkipIntervalSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = SK1P1NT3RV4L5H33T0001 /* SkipIntervalSheet.swift */; };
-		T35T4UTH5T0R300000002 /* TestAuthStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = T35T4UTH5T0R300000001 /* TestAuthStore.swift */; };
 		TR4N5CR1PT10N3NG1N31001 /* TranscriptionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30001 /* TranscriptionEngine.swift */; };
 		TR4N5CR1PT10N3NG1N31002 /* OnDeviceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30002 /* OnDeviceEngine.swift */; };
 		TR4N5CR1PT10N3NG1N31003 /* CloudTranscriptionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TR4N5CR1PT10N3NG1N30003 /* CloudTranscriptionEngine.swift */; };
@@ -402,6 +405,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AMA1620AUTHVM001A /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AuthViewModel.swift; path = ../AmakaFlow/ViewModels/AuthViewModel.swift; sourceTree = SOURCE_ROOT; };
+		AMA1620AUTHINT01A /* ClerkAuthorizationInterceptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ClerkAuthorizationInterceptor.swift; path = ../AmakaFlow/Services/ClerkAuthorizationInterceptor.swift; sourceTree = SOURCE_ROOT; };
+		AMA1620UITEST01A /* UITestEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UITestEnvironment.swift; path = ../AmakaFlow/Services/UITestEnvironment.swift; sourceTree = SOURCE_ROOT; };
 		0590FA2DB2E16FC868D6F303 /* SyncDashboardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SyncDashboardView.swift; path = ../AmakaFlow/Views/Settings/SyncDashboardView.swift; sourceTree = "<group>"; };
 		08D9B67C13E34BAE804A9359 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HistoryView.swift; path = ../AmakaFlow/Views/HistoryView.swift; sourceTree = SOURCE_ROOT; };
 		0949526387D9FA932B940DF3 /* TrainingPreferencesViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TrainingPreferencesViewModel.swift; path = ../AmakaFlow/ViewModels/TrainingPreferencesViewModel.swift; sourceTree = "<group>"; };
@@ -533,7 +539,6 @@
 		AK00TST011A /* PairingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingTests.swift; path = AmakaFlowCompanionTests/PairingTests.swift; sourceTree = "<group>"; };
 		AK00TST012A /* Phase2ViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Phase2ViewModelTests.swift; path = AmakaFlowCompanionTests/Phase2ViewModelTests.swift; sourceTree = "<group>"; };
 		AK00TST013A /* PlatformDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PlatformDetectorTests.swift; path = AmakaFlowCompanionTests/PlatformDetectorTests.swift; sourceTree = "<group>"; };
-		AK00TST014A /* TestAuthStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TestAuthStoreTests.swift; path = AmakaFlowCompanionTests/TestAuthStoreTests.swift; sourceTree = "<group>"; };
 		AK00TST015A /* TestClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TestClock.swift; path = AmakaFlowCompanionTests/TestClock.swift; sourceTree = "<group>"; };
 		AK00TST016A /* TestDoubles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TestDoubles.swift; path = AmakaFlowCompanionTests/TestDoubles.swift; sourceTree = "<group>"; };
 		AK00TST017A /* TranscriptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionTests.swift; path = AmakaFlowCompanionTests/TranscriptionTests.swift; sourceTree = "<group>"; };
@@ -687,7 +692,6 @@
 		S1MUL4T10N00000008 /* SimulatedWeightProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SimulatedWeightProvider.swift; path = ../AmakaFlow/Simulation/SimulatedWeightProvider.swift; sourceTree = SOURCE_ROOT; };
 		S3NTR1S3RV1C300000001 /* SentryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SentryService.swift; path = ../AmakaFlow/Services/SentryService.swift; sourceTree = SOURCE_ROOT; };
 		SK1P1NT3RV4L5H33T0001 /* SkipIntervalSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SkipIntervalSheet.swift; path = ../AmakaFlow/Views/Components/SkipIntervalSheet.swift; sourceTree = SOURCE_ROOT; };
-		T35T4UTH5T0R300000001 /* TestAuthStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TestAuthStore.swift; path = ../AmakaFlow/Services/TestAuthStore.swift; sourceTree = SOURCE_ROOT; };
 		TR4N5CR1PT10N3NG1N30001 /* TranscriptionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionEngine.swift; path = ../AmakaFlow/Services/Transcription/TranscriptionEngine.swift; sourceTree = SOURCE_ROOT; };
 		TR4N5CR1PT10N3NG1N30002 /* OnDeviceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnDeviceEngine.swift; path = ../AmakaFlow/Services/Transcription/OnDeviceEngine.swift; sourceTree = SOURCE_ROOT; };
 		TR4N5CR1PT10N3NG1N30003 /* CloudTranscriptionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CloudTranscriptionEngine.swift; path = ../AmakaFlow/Services/Transcription/CloudTranscriptionEngine.swift; sourceTree = SOURCE_ROOT; };
@@ -798,6 +802,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AMA1620CLKKIT01B /* ClerkKit in Frameworks */,
+				AMA1620CLKUI001B /* ClerkKitUI in Frameworks */,
 				F880AD622F09559A00E8D7D3 /* Sentry in Frameworks */,
 				F84E22932ED0D9FA00459747 /* EventKit.framework in Frameworks */,
 				F84E22952ED0DA0200459747 /* HealthKit.framework in Frameworks */,
@@ -1124,7 +1130,9 @@
 				11B5892FB68A40CB890E3630 /* KeychainHelper.swift */,
 				D33PL1NKMAN4G3R0001 /* DeepLinkManager.swift */,
 				85D3757E5B284286B341C75C /* PairingService.swift */,
-				T35T4UTH5T0R300000001 /* TestAuthStore.swift */,
+				AMA1620AUTHVM001A /* AuthViewModel.swift */,
+				AMA1620AUTHINT01A /* ClerkAuthorizationInterceptor.swift */,
+				AMA1620UITEST01A /* UITestEnvironment.swift */,
 				F1XTUR3L0AD3R0000001 /* FixtureLoader.swift */,
 				F1XTUR34P15RV0000001 /* FixtureAPIService.swift */,
 				F1XTUR3JS0N00000001 /* amrap_10min.json */,
@@ -1206,6 +1214,8 @@
 				F84E22982ED0DA1F00459747 /* WorkoutKitSync */,
 				F8C125B12EFAC00000459747 /* ConnectIQ */,
 				2F0C8DCE03694CF3A60D12F9 /* Sentry */,
+				AMA1620CLKKIT01P /* ClerkKit */,
+				AMA1620CLKUI001P /* ClerkKitUI */,
 			);
 			productName = AmakaFlowCompanion;
 			productReference = F84E21742ED0B0C800459747 /* AmakaFlowCompanion.app */;
@@ -1392,6 +1402,7 @@
 				F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "ConnectIQ" */,
 				6EFD6A06E1264416B1103D42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 				XCT4H34LTH00000003 /* XCRemoteSwiftPackageReference "XCTHealthKit" */,
+				AMA1620CLERKPKG /* XCRemoteSwiftPackageReference "clerk-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F84E21752ED0B0C800459747 /* Products */;
@@ -1519,7 +1530,9 @@
 				AK00RD002B /* RestDayButton.swift in Sources */,
 				D33PL1NK1MP0RTV0002 /* DeepLinkImportView.swift in Sources */,
 				CA268753E918494FAD7CCD56 /* PairingService.swift in Sources */,
-				T35T4UTH5T0R300000002 /* TestAuthStore.swift in Sources */,
+				AMA1620AUTHVM001B /* AuthViewModel.swift in Sources */,
+				AMA1620AUTHINT01B /* ClerkAuthorizationInterceptor.swift in Sources */,
+				AMA1620UITEST01B /* UITestEnvironment.swift in Sources */,
 				F1XTUR3L0AD3R0000002 /* FixtureLoader.swift in Sources */,
 				F1XTUR34P15RV0000002 /* FixtureAPIService.swift in Sources */,
 				B69E1808FE344A15848A3B67 /* WorkoutCompletionService.swift in Sources */,
@@ -1768,7 +1781,6 @@
 				AK00TST011B /* PairingTests.swift in Sources */,
 				AK00TST012B /* Phase2ViewModelTests.swift in Sources */,
 				AK00TST013B /* PlatformDetectorTests.swift in Sources */,
-				AK00TST014B /* TestAuthStoreTests.swift in Sources */,
 				AK00TST015B /* TestClock.swift in Sources */,
 				AK00TST016B /* TestDoubles.swift in Sources */,
 				AK00TST017B /* TranscriptionTests.swift in Sources */,
@@ -2050,6 +2062,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLERK_PUBLISHABLE_KEY_PRODUCTION = "";
+				CLERK_PUBLISHABLE_KEY_STAGING = "";
 				CODE_SIGN_ENTITLEMENTS = AmakaFlowCompanion/AmakaFlowCompanion.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 17;
@@ -2090,6 +2104,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLERK_PUBLISHABLE_KEY_PRODUCTION = "";
+				CLERK_PUBLISHABLE_KEY_STAGING = "";
 				CODE_SIGN_ENTITLEMENTS = AmakaFlowCompanion/AmakaFlowCompanion.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 17;
@@ -2553,6 +2569,14 @@
 				minimumVersion = 1.0.0;
 			};
 		};
+		AMA1620CLERKPKG /* XCRemoteSwiftPackageReference "clerk-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/clerk/clerk-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -2580,6 +2604,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = XCT4H34LTH00000003 /* XCRemoteSwiftPackageReference "XCTHealthKit" */;
 			productName = XCTHealthKit;
+		};
+		AMA1620CLKKIT01P /* ClerkKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AMA1620CLERKPKG /* XCRemoteSwiftPackageReference "clerk-ios" */;
+			productName = ClerkKit;
+		};
+		AMA1620CLKUI001P /* ClerkKitUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AMA1620CLERKPKG /* XCRemoteSwiftPackageReference "clerk-ios" */;
+			productName = ClerkKitUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

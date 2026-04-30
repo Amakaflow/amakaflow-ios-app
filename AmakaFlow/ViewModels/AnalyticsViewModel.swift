@@ -80,11 +80,7 @@ class AnalyticsViewModel: ObservableObject {
         errorMessage = nil
 
         // Check auth
-        #if DEBUG
-        let hasAuth = dependencies.pairingService.isPaired || TestAuthStore.shared.isTestModeEnabled
-        #else
         let hasAuth = dependencies.pairingService.isPaired
-        #endif
 
         guard hasAuth else {
             isLoading = false

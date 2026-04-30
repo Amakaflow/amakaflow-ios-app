@@ -112,12 +112,8 @@ class CompletionDetailViewModel: ObservableObject {
         }
         #endif
 
-        // Check if we have valid auth - either pairing or E2E test mode
-        #if DEBUG
-        let hasAuth = dependencies.pairingService.isPaired || TestAuthStore.shared.isTestModeEnabled
-        #else
+        // Check if we have valid auth
         let hasAuth = dependencies.pairingService.isPaired
-        #endif
 
         if !hasAuth {
             loadMockData()

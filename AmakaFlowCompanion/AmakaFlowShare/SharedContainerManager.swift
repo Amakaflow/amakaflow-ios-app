@@ -20,12 +20,6 @@ enum SharedContainerManager {
     /// Key for the auth token written by the main app
     static let authTokenKey = "auth_token"
 
-    /// Key for the test auth secret (E2E testing)
-    static let testAuthSecretKey = "test_auth_secret"
-
-    /// Key for the test user ID (E2E testing)
-    static let testUserIdKey = "test_user_id"
-
     /// Key for the app environment (development/staging/production)
     static let appEnvironmentKey = "app_environment"
 
@@ -41,17 +35,6 @@ enum SharedContainerManager {
     static func readAuthToken() -> String? {
         sharedDefaults?.string(forKey: authTokenKey)
     }
-
-    /// Read test auth credentials (E2E)
-    static func readTestAuth() -> (secret: String, userId: String)? {
-        guard let secret = sharedDefaults?.string(forKey: testAuthSecretKey),
-              !secret.isEmpty,
-              let userId = sharedDefaults?.string(forKey: testUserIdKey) else {
-            return nil
-        }
-        return (secret, userId)
-    }
-
     /// Read the current app environment
     static func readEnvironment() -> String {
         sharedDefaults?.string(forKey: appEnvironmentKey) ?? "staging"

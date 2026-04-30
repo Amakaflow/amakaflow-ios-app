@@ -15,10 +15,10 @@ enum FixtureLoader {
 
     /// Load workouts based on UITEST_FIXTURES and UITEST_FIXTURE_STATE env vars
     static func loadWorkouts() throws -> [Workout] {
-        let testStore = TestAuthStore.shared
+        let uiTestEnvironment = UITestEnvironment.shared
 
         // Handle special states
-        if let state = testStore.fixtureState {
+        if let state = uiTestEnvironment.fixtureState {
             switch state {
             case "empty":
                 print("[FixtureLoader] UITEST_FIXTURE_STATE=empty, returning empty workouts")
@@ -32,7 +32,7 @@ enum FixtureLoader {
         }
 
         // Load specific fixtures or all
-        if let names = testStore.fixtureNames {
+        if let names = uiTestEnvironment.fixtureNames {
             print("[FixtureLoader] Loading specific fixtures: \(names.joined(separator: ", "))")
             return try names.compactMap { name in
                 try loadFixture(named: name)

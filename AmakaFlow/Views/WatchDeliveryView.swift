@@ -25,7 +25,7 @@ struct WatchDeliveryView: View {
 
             ScrollView {
                 VStack(spacing: Theme.Spacing.sm) {
-                    ForEach(states, id: \.label) { state in
+                    ForEach(states) { state in
                         deliveryRow(state)
                     }
                 }
@@ -70,8 +70,9 @@ struct WatchDeliveryView: View {
     }
 }
 
-private struct WatchDeliveryState {
+private struct WatchDeliveryState: Identifiable {
     let label: String
+    var id: String { label }
     let icon: String
     let body: String
     let tone: Color

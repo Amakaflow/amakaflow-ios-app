@@ -386,12 +386,8 @@ class WorkoutCompletionService: ObservableObject {
             print("[WorkoutCompletion] Network unavailable, skipping retry")
             return
         }
-        // Don't retry if auth is invalid - wait for user to re-pair (unless in E2E test mode)
-        #if DEBUG
-        let canRetry = !PairingService.shared.needsReauth || TestAuthStore.shared.isTestModeEnabled
-        #else
+        // Don't retry if auth is invalid - wait for the user to sign in again
         let canRetry = !PairingService.shared.needsReauth
-        #endif
 
         guard canRetry else {
             print("[WorkoutCompletion] Auth invalid, skipping retry until re-paired")
@@ -433,18 +429,14 @@ class WorkoutCompletionService: ObservableObject {
         // Sentry performance transaction for workout save (AMA-1083)
         let tx = SentryService.shared.startTransaction(name: "workout.save", operation: "api.post")
 
-        // Check for valid auth - either pairing or E2E test mode
-        #if DEBUG
-        let hasAuth = PairingService.shared.isPaired || TestAuthStore.shared.isTestModeEnabled
-        #else
+        // Check for valid auth
         let hasAuth = PairingService.shared.isPaired
-        #endif
 
         guard hasAuth else {
-            print("[WorkoutCompletion] Not paired and not in E2E test mode, skipping POST")
+            print("[WorkoutCompletion] Not authenticated, skipping POST")
             logCompletionError(
                 workoutId: request.workoutId ?? request.followAlongWorkoutId,
-                error: NSError(domain: "WorkoutCompletion", code: -2, userInfo: [NSLocalizedDescriptionKey: "Not authenticated (no pairing and no E2E test mode)"]),
+                error: NSError(domain: "WorkoutCompletion", code: -2, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"]),
                 context: "postCompletion - no auth"
             )
             tx.finish(status: .unauthenticated)

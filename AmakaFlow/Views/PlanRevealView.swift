@@ -125,11 +125,11 @@ private struct PlanBlock {
 }
 
 #Preview("Loading") {
-    PlanRevealView(isReady: false, onConfirm: {})
+    PlanRevealView(isReady: false) {}
         .preferredColorScheme(.dark)
 }
 
 #Preview("Ready") {
-    PlanRevealView(isReady: true, onConfirm: {})
+    PlanRevealView(isReady: true) {}
         .preferredColorScheme(.dark)
 }
