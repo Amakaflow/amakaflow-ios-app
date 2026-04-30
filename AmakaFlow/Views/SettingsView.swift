@@ -60,8 +60,7 @@ struct SettingsView: View {
     @EnvironmentObject private var workoutsViewModel: WorkoutsViewModel
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
+        ScrollView {
                 VStack(spacing: Theme.Spacing.xl) {
                     AFTopBar(title: "You") {
                         EmptyView()
@@ -204,7 +203,6 @@ struct SettingsView: View {
             .navigationDestination(isPresented: $navigateToSyncDashboard) {
                 SyncDashboardView()
             }
-        }
     }
 
     // MARK: - Workout Debug Sheet
