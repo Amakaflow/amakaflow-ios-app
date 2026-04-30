@@ -71,8 +71,11 @@ class UITestEnvironment {
 
     /// Clerk-backed UI tests should sign in as a real Clerk test user instead of using header bypasses.
     var hasClerkTestUser: Bool {
-        guard ProcessInfo.processInfo.environment["UITEST_CLERK_EMAIL"]?.isEmpty == false else { return false }
-        return ProcessInfo.processInfo.environment["UITEST_CLERK_PASSWORD"]?.isEmpty == false
+        guard ProcessInfo.processInfo.environment["UITEST_CLERK_EMAIL"]?.isEmpty == false,
+              ProcessInfo.processInfo.environment["UITEST_CLERK_PASSWORD"]?.isEmpty == false,
+              ProcessInfo.processInfo.environment["UITEST_CLERK_PUBLISHABLE_KEY"]?.isEmpty == false
+        else { return false }
+        return true
     }
 
     // MARK: - Utility Methods

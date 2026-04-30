@@ -32,7 +32,7 @@ struct AgentInboxView: View {
             .padding(.bottom, Theme.Spacing.md)
 
             if visibleEvents.isEmpty {
-                emptyState
+                emptyState(isFiltered: selectedFilter != .all && !events.isEmpty)
             } else {
                 ScrollView {
                     VStack(spacing: Theme.Spacing.sm) {
@@ -47,15 +47,15 @@ struct AgentInboxView: View {
         .background(Theme.Colors.background.ignoresSafeArea())
     }
 
-    private var emptyState: some View {
+    private func emptyState(isFiltered: Bool) -> some View {
         VStack(spacing: Theme.Spacing.sm) {
-            Image(systemName: "tray")
+            Image(systemName: isFiltered ? "line.3.horizontal.decrease.circle" : "tray")
                 .font(Theme.Typography.largeTitle)
                 .foregroundColor(Theme.Colors.textTertiary)
-            Text("No coach activity yet")
+            Text(isFiltered ? "No matching activity" : "No coach activity yet")
                 .font(Theme.Typography.title3)
                 .foregroundColor(Theme.Colors.textPrimary)
-            Text("Agent decisions will appear here when the backend sends activity events.")
+            Text(isFiltered ? "Try a different filter to see more events." : "Agent decisions will appear here when the backend sends activity events.")
                 .font(Theme.Typography.caption)
                 .foregroundColor(Theme.Colors.textSecondary)
                 .multilineTextAlignment(.center)

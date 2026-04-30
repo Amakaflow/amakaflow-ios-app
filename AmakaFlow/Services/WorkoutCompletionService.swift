@@ -430,7 +430,7 @@ class WorkoutCompletionService: ObservableObject {
         let tx = SentryService.shared.startTransaction(name: "workout.save", operation: "api.post")
 
         // Check for valid auth
-        let hasAuth = PairingService.shared.isPaired
+        let hasAuth = PairingService.shared.isPaired && !PairingService.shared.needsReauth
 
         guard hasAuth else {
             let authError = NSError(domain: "WorkoutCompletion", code: -2, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])

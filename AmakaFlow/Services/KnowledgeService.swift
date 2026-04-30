@@ -50,6 +50,7 @@ struct KnowledgeCardListResponse: Codable {
 enum KnowledgeServiceError: Error, LocalizedError {
     case invalidURL
     case invalidResponse
+    case unauthorized
     case httpError(Int, String?)
     case decodingError(Error)
 
@@ -59,6 +60,8 @@ enum KnowledgeServiceError: Error, LocalizedError {
             return "Invalid URL"
         case .invalidResponse:
             return "Invalid server response"
+        case .unauthorized:
+            return "Authentication required"
         case .httpError(let code, let message):
             return "HTTP \(code): \(message ?? "Unknown error")"
         case .decodingError(let error):
@@ -80,15 +83,12 @@ class KnowledgeService: ObservableObject {
 
     // MARK: - Auth Headers
 
-    private func authHeaders() async -> [String: String] {
+    private func authHeaders() async throws -> [String: String] {
         var headers = ["Content-Type": "application/json"]
-        do {
-            if let token = try await AuthViewModel.shared.token() {
-                headers["Authorization"] = "Bearer \(token)"
-            }
-        } catch {
-            print("[KnowledgeService] Failed to get Clerk token: \(error.localizedDescription)")
+        guard let token = try await AuthViewModel.shared.token() else {
+            throw KnowledgeServiceError.unauthorized
         }
+        headers["Authorization"] = "Bearer \(token)"
         return headers
     }
 
@@ -102,7 +102,7 @@ class KnowledgeService: ObservableObject {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await authHeaders()
+        request.allHTTPHeaderFields = try await authHeaders()
 
         print("[KnowledgeService] listCards - URL: \(url.absoluteString)")
 
@@ -137,7 +137,7 @@ class KnowledgeService: ObservableObject {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await authHeaders()
+        request.allHTTPHeaderFields = try await authHeaders()
 
         print("[KnowledgeService] searchCards - URL: \(url.absoluteString)")
 
@@ -172,7 +172,7 @@ class KnowledgeService: ObservableObject {
 
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await authHeaders()
+        request.allHTTPHeaderFields = try await authHeaders()
 
         var body: [String: String] = [:]
         if let url {
@@ -213,7 +213,7 @@ class KnowledgeService: ObservableObject {
 
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        request.allHTTPHeaderFields = await authHeaders()
+        request.allHTTPHeaderFields = try await authHeaders()
 
         print("[KnowledgeService] deleteCard - id: \(id), URL: \(url.absoluteString)")
 

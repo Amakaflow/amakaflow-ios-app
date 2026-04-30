@@ -122,9 +122,11 @@ final class URLImportService: NSObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         // Auth headers: main app stores the latest Clerk bearer token in the shared container.
-        guard let token = SharedContainerManager.readAuthToken(), !token.trimmingCharacters(in: .whitespaces).isEmpty else {
+        guard let rawToken = SharedContainerManager.readAuthToken() else {
             throw ImportError.unauthorized
         }
+        let token = rawToken.trimmingCharacters(in: .whitespaces)
+        guard !token.isEmpty else { throw ImportError.unauthorized }
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         let body: [String: Any] = ["url": urlString]

@@ -26,21 +26,16 @@ struct AIImportView: View {
         AppEnvironment.current.mcpAPIURL
     }
 
-    /// Auth headers matching APIService.authHeaders.
-    private func authHeaders() async -> [String: String] {
-        var headers = [String: String]()
-        do {
-            if let token = try await AuthViewModel.shared.token() {
-                headers["Authorization"] = "Bearer \(token)"
-            }
-        } catch {
-            print("[AIImportView] Failed to get Clerk token: \(error.localizedDescription)")
+    /// Auth headers — throws if token or profile is unavailable.
+    private func authHeaders() async throws -> [String: String] {
+        guard let token = try await AuthViewModel.shared.token() else {
+            throw APIError.unauthorized
         }
-        return headers
+        return ["Authorization": "Bearer \(token)"]
     }
 
-    private var profileId: String {
-        return AuthViewModel.shared.userProfile?.id ?? "unknown"
+    private var profileId: String? {
+        return AuthViewModel.shared.userProfile?.id
     }
 
     var body: some View {
@@ -140,12 +135,15 @@ struct AIImportView: View {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
-        for (key, value) in await authHeaders() {
+        for (key, value) in try await authHeaders() {
             request.setValue(value, forHTTPHeaderField: key)
         }
 
+        guard let pid = profileId else {
+            throw APIError.unauthorized
+        }
         var body: [String: String] = [
-            "profile_id": profileId,
+            "profile_id": pid,
             "message": message,
         ]
         if !sourceURL.trimmingCharacters(in: .whitespaces).isEmpty {

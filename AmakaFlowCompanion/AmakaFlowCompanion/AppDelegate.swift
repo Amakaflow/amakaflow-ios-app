@@ -22,7 +22,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
         // Skip push registration in E2E test mode
         #if DEBUG
-        if UITestEnvironment.shared.hasClerkTestUser {
+        if UITestEnvironment.shared.hasClerkTestUser || UITestEnvironment.shared.useFixtures {
             print("[AppDelegate] Test mode — skipping push notification registration")
             return true
         }

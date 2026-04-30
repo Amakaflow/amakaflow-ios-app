@@ -104,7 +104,9 @@ class APIService {
     }
 
     func resendWatchDelivery() async throws {
-        let url = URL(string: "\(baseURL)/api/watch-delivery/resend")!
+        guard let url = URL(string: "\(baseURL)/api/watch-delivery/resend") else {
+            throw APIError.invalidURL
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = await makeAuthHeaders()
@@ -112,6 +114,9 @@ class APIService {
         let (_, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
+        }
+        if httpResponse.statusCode == 401 {
+            throw APIError.unauthorized
         }
         guard (200..<300).contains(httpResponse.statusCode) else {
             throw APIError.serverError(httpResponse.statusCode)

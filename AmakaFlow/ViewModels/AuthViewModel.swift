@@ -24,13 +24,18 @@ final class AuthViewModel: ObservableObject {
             for await event in Clerk.shared.auth.events {
                 guard let self else { return }
                 switch event {
-                case .signedOut, .accountDeleted, .sessionChanged:
+                case .signedOut, .accountDeleted:
+                    self.cachedToken = nil
+                    self.refreshFromClerk()
+                case .sessionChanged:
+                    self.cachedToken = nil
                     self.refreshFromClerk()
                 case .tokenRefreshed(let token):
                     self.cachedToken = token
                     self.lastTokenRefresh = Date()
                     self.refreshFromClerk()
                 case .signInCompleted, .signUpCompleted:
+                    self.cachedToken = nil
                     self.needsReauth = false
                     self.refreshFromClerk()
                 }
@@ -90,7 +95,9 @@ final class AuthViewModel: ObservableObject {
     @discardableResult
     func refreshToken() async -> Bool {
         do {
-            return try await token(skipCache: true) != nil
+            let result = try await token(skipCache: true) != nil
+            if result { needsReauth = false }
+            return result
         } catch {
             needsReauth = true
             return false
