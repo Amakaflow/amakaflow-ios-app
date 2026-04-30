@@ -33,13 +33,19 @@ enum TestAuthHelper {
             return
         }
 
-        app.launchEnvironment = [
+        var launchEnv: [String: String] = [
             "UITEST_CLERK_EMAIL": clerkEmail,
             "UITEST_CLERK_PASSWORD": clerkPassword,
             "UITEST_CLERK_PUBLISHABLE_KEY": clerkKey,
-            "TEST_API_BASE_URL": processEnvironment["TEST_API_BASE_URL"] ?? "http://localhost:8001",
             "TEST_ENVIRONMENT": environment
         ]
+        // Only set TEST_API_BASE_URL when explicitly provided or running against localhost
+        if let apiBaseURL = processEnvironment["TEST_API_BASE_URL"] {
+            launchEnv["TEST_API_BASE_URL"] = apiBaseURL
+        } else if environment == "development" {
+            launchEnv["TEST_API_BASE_URL"] = "http://localhost:8001"
+        }
+        app.launchEnvironment = launchEnv
     }
 
     /// Wait for the app to finish loading and show main content
