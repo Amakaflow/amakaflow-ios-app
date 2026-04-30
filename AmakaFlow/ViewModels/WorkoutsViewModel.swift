@@ -64,8 +64,9 @@ class WorkoutsViewModel: ObservableObject {
         }
 
         if !dependencies.pairingService.isPaired {
-            print("[WorkoutsViewModel] Not paired, loading mock data")
-            loadMockData()
+            print("[WorkoutsViewModel] Not authenticated, clearing workout data")
+            incomingWorkouts = []
+            upcomingWorkouts = []
             isLoading = false
             return
         }

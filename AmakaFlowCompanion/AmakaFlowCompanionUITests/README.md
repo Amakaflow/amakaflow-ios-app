@@ -5,7 +5,7 @@ End-to-end UI tests for the AmakaFlow iOS Companion app (AMA-232).
 ## Overview
 
 This test suite provides comprehensive E2E testing for:
-- App launch and authentication bypass
+- App launch and Clerk authentication
 - Workout selection and navigation
 - Workout execution flow
 - Watch connectivity verification
@@ -165,7 +165,7 @@ Uses [XCTHealthKit](https://github.com/StanfordBDHG/XCTHealthKit) from Stanford 
 
 ## Troubleshooting
 
-### Tests fail with "App not paired"
+### Tests fail at sign-in
 
 Ensure `UITEST_CLERK_EMAIL`, `UITEST_CLERK_PASSWORD`, and `UITEST_CLERK_PUBLISHABLE_KEY` are set for a valid Clerk test user.
 

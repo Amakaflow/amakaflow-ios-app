@@ -433,14 +433,15 @@ class WorkoutCompletionService: ObservableObject {
         let hasAuth = PairingService.shared.isPaired
 
         guard hasAuth else {
-            print("[WorkoutCompletion] Not authenticated, skipping POST")
+            let authError = NSError(domain: "WorkoutCompletion", code: -2, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+            print("[WorkoutCompletion] Not authenticated, cannot POST completion")
             logCompletionError(
                 workoutId: request.workoutId ?? request.followAlongWorkoutId,
-                error: NSError(domain: "WorkoutCompletion", code: -2, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"]),
+                error: authError,
                 context: "postCompletion - no auth"
             )
             tx.finish(status: .unauthenticated)
-            return nil
+            throw authError
         }
 
         // Try to post immediately
