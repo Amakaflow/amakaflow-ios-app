@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CLERK_PUBLISHABLE_KEY_STAGING</key>
+	<string>$(CLERK_PUBLISHABLE_KEY_STAGING)</string>
+	<key>CLERK_PUBLISHABLE_KEY_PRODUCTION</key>
+	<string>$(CLERK_PUBLISHABLE_KEY_PRODUCTION)</string>
 	<key>CFBundleDisplayName</key>
 	<string>${PRODUCT_NAME}</string>
 	<key>CFBundleIconName</key>

@@ -57,26 +57,20 @@ class DeepLinkImportViewModel: ObservableObject {
         request.httpMethod = "POST"
         request.timeoutInterval = 30
 
-        // Auth headers — same pattern as APIService
+        // Auth headers — Clerk session token
         var headers = ["Content-Type": "application/json"]
-        #if DEBUG
-        if let testAuthSecret = TestAuthStore.shared.authSecret,
-           let testUserId = TestAuthStore.shared.userId,
-           !testAuthSecret.isEmpty {
-            headers["X-Test-Auth"] = testAuthSecret
-            headers["X-Test-User-Id"] = testUserId
-        } else if let token = PairingService.shared.getToken() {
-            headers["Authorization"] = "Bearer \(token)"
-        } else {
-            throw DeepLinkImportError.unauthorized
+        do {
+            if let token = try await AuthViewModel.shared.token() {
+                headers["Authorization"] = "Bearer \(token)"
+            } else {
+                throw DeepLinkImportError.unauthorized
+            }
+        } catch let tokenError as DeepLinkImportError {
+            throw tokenError
+        } catch {
+            print("[DeepLinkImport] Failed to get Clerk token: \(error.localizedDescription)")
+            throw DeepLinkImportError.tokenFetchFailed(error)
         }
-        #else
-        if let token = PairingService.shared.getToken() {
-            headers["Authorization"] = "Bearer \(token)"
-        } else {
-            throw DeepLinkImportError.unauthorized
-        }
-        #endif
 
         request.allHTTPHeaderFields = headers
 
@@ -215,6 +209,7 @@ enum DeepLinkImportError: LocalizedError {
     case invalidURL
     case invalidResponse
     case unauthorized
+    case tokenFetchFailed(Error)
     case serverError(Int, String)
 
     var errorDescription: String? {
@@ -222,6 +217,7 @@ enum DeepLinkImportError: LocalizedError {
         case .invalidURL: return "Invalid URL"
         case .invalidResponse: return "Invalid server response"
         case .unauthorized: return "Not signed in. Open AmakaFlow and sign in first."
+        case .tokenFetchFailed(let underlying): return "Failed to get auth token: \(underlying.localizedDescription)"
         case .serverError(let code, let body):
             return "Server error (\(code)): \(String(body.prefix(200)))"
         }

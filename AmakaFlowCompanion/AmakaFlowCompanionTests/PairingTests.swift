@@ -63,7 +63,7 @@ final class PairingTests: XCTestCase {
             shortCode: "ABC123",
             deviceInfo: DeviceInfo(
                 device: "iPhone 14 Pro",
-                os: "iOS 18.0",
+                osVersion: "iOS 18.0",
                 appVersion: "1.0",
                 deviceId: "test-device-id"
             )
@@ -88,7 +88,7 @@ final class PairingTests: XCTestCase {
             shortCode: nil,
             deviceInfo: DeviceInfo(
                 device: "iPhone 14 Pro",
-                os: "iOS 18.0",
+                osVersion: "iOS 18.0",
                 appVersion: "1.0",
                 deviceId: "test-device-id"
             )
@@ -111,7 +111,7 @@ final class PairingTests: XCTestCase {
             shortCode: "TEST12",
             deviceInfo: DeviceInfo(
                 device: "iPhone 14 Pro",
-                os: "iOS 18.0",
+                osVersion: "iOS 18.0",
                 appVersion: "1.0",
                 deviceId: "test-device-id-123"
             )
@@ -142,39 +142,6 @@ final class PairingTests: XCTestCase {
         XCTAssertGreaterThan(longToken.count, 6)
         let isLongToken = longToken.count > 6
         XCTAssertTrue(isLongToken)
-    }
-
-    // MARK: - QR Code Parsing Tests
-
-    func testQRCodeDataParsesValidJSON() throws {
-        let qrJSON = """
-        {
-            "type": "mobile_pairing",
-            "version": 1,
-            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
-            "api_url": "https://mapper-api.staging.amakaflow.com"
-        }
-        """
-
-        let data = qrJSON.data(using: .utf8)!
-        let qrData = try JSONDecoder().decode(QRCodeData.self, from: data)
-
-        XCTAssertEqual(qrData.type, "mobile_pairing")
-        XCTAssertEqual(qrData.version, 1)
-        XCTAssertEqual(qrData.token, "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9")
-        XCTAssertEqual(qrData.apiUrl, "https://mapper-api.staging.amakaflow.com")
-    }
-
-    func testQRCodeDataUsesSnakeCaseForApiUrl() throws {
-        // Verify that api_url (snake_case) is correctly mapped to apiUrl (camelCase)
-        let qrJSON = """
-        {"type":"test","version":1,"token":"abc","api_url":"https://example.com"}
-        """
-
-        let data = qrJSON.data(using: .utf8)!
-        let qrData = try JSONDecoder().decode(QRCodeData.self, from: data)
-
-        XCTAssertEqual(qrData.apiUrl, "https://example.com")
     }
 
     // MARK: - PairingResponse Decoding Tests
@@ -252,7 +219,7 @@ final class PairingTests: XCTestCase {
         )
         XCTAssertEqual(
             PairingError.codeExpired.errorDescription,
-            "Code has expired. Please generate a new one."
+            "Code has expired. Please sign in again."
         )
         XCTAssertEqual(
             PairingError.invalidResponse.errorDescription,

@@ -5,7 +5,7 @@ End-to-end UI tests for the AmakaFlow iOS Companion app (AMA-232).
 ## Overview
 
 This test suite provides comprehensive E2E testing for:
-- App launch and authentication bypass
+- App launch and Clerk authentication
 - Workout selection and navigation
 - Workout execution flow
 - Watch connectivity verification
@@ -17,8 +17,7 @@ This test suite provides comprehensive E2E testing for:
 AmakaFlowCompanionUITests/
 ├── AmakaFlowCompanionUITests.swift    # Main E2E test classes
 ├── WatchConnectivityE2ETests.swift     # Watch-specific tests
-├── TestAuthHelper.swift                # Auth bypass helper
-├── TestCredentials.swift               # Test credentials (gitignored)
+├── TestAuthHelper.swift                # Clerk test-user launch configuration
 ├── HealthDataSimulator.swift           # HealthKit data simulation
 └── README.md                           # This file
 ```
@@ -27,7 +26,7 @@ AmakaFlowCompanionUITests/
 
 | Class | Purpose |
 |-------|---------|
-| `AppLaunchE2ETests` | App launch, auth bypass, tab bar verification |
+| `AppLaunchE2ETests` | App launch, Clerk test auth, tab bar verification |
 | `NavigationE2ETests` | Tab navigation, screen transitions |
 | `WorkoutFlowE2ETests` | Workout list, selection, detail view |
 | `StrengthWorkoutE2ETests` | Strength workout-specific tests |
@@ -40,35 +39,16 @@ AmakaFlowCompanionUITests/
 
 ### 1. Test Credentials
 
-Copy the example file and add your test JWT:
+Provide a real Clerk test user through environment variables before running UI tests:
 
 ```bash
-# In AmakaFlowCompanionUITests directory
-cp TestCredentials.example.swift TestCredentials.swift
+export UITEST_CLERK_EMAIL="ios-e2e@example.com"
+export UITEST_CLERK_PASSWORD="..."
+export UITEST_CLERK_PUBLISHABLE_KEY="pk_test_..."
+export TEST_API_BASE_URL="http://localhost:8001"
 ```
 
-Edit `TestCredentials.swift` with a valid test JWT. To generate a test JWT:
-
-```bash
-cd mapper-api
-python3 -c "
-import jwt
-from datetime import datetime, timedelta, timezone
-JWT_SECRET = 'your-jwt-secret'
-now = datetime.now(timezone.utc)
-expiry = now + timedelta(days=365)
-payload = {
-    'sub': 'e2e_test_user',
-    'iat': int(now.timestamp()),
-    'exp': int(expiry.timestamp()),
-    'iss': 'amakaflow',
-    'aud': 'ios_companion',
-    'email': 'test@example.com',
-    'name': 'E2E Test User'
-}
-print(jwt.encode(payload, JWT_SECRET, algorithm='HS256'))
-"
-```
+Tests sign in through Clerk instead of using backend auth-header bypasses.
 
 ### 2. Simulator Setup
 
@@ -123,9 +103,9 @@ xcodebuild test \
     -parallel-testing-enabled NO
 ```
 
-## Auth Bypass
+## Clerk Test Auth
 
-The tests use launch arguments to bypass the normal pairing flow:
+The tests use launch arguments and environment values to drive the Clerk sign-in flow:
 
 ```swift
 // In tests
@@ -135,17 +115,15 @@ app.launch()
 
 This sets:
 - `--uitesting` - Indicates UI test mode
-- `--skip-pairing` - Skip pairing screen
-- `TEST_JWT` environment variable - Pre-authenticated token
+- `UITEST_CLERK_EMAIL` / `UITEST_CLERK_PASSWORD` - real Clerk test user
+- `UITEST_CLERK_PUBLISHABLE_KEY` - Clerk publishable key for the test environment
 
 The app checks for these in `AmakaFlowCompanionApp.swift`:
 
 ```swift
 #if DEBUG
-if CommandLine.arguments.contains("--uitesting") && CommandLine.arguments.contains("--skip-pairing") {
-    if let testToken = ProcessInfo.processInfo.environment["TEST_JWT"] {
-        try? pairingService.storeToken(testToken)
-    }
+if CommandLine.arguments.contains("--uitesting") {
+    // Drive the Clerk AuthView using UITEST_CLERK_EMAIL and UITEST_CLERK_PASSWORD.
 }
 #endif
 ```
@@ -187,9 +165,9 @@ Uses [XCTHealthKit](https://github.com/StanfordBDHG/XCTHealthKit) from Stanford 
 
 ## Troubleshooting
 
-### Tests fail with "App not paired"
+### Tests fail at sign-in
 
-Ensure `TestCredentials.swift` exists with a valid JWT.
+Ensure `UITEST_CLERK_EMAIL`, `UITEST_CLERK_PASSWORD`, and `UITEST_CLERK_PUBLISHABLE_KEY` are set for a valid Clerk test user.
 
 ### Watch tests are skipped
 
@@ -213,7 +191,7 @@ xcrun simctl erase "iPhone 17 Pro"
 
 1. Create tests in the appropriate class or add a new class
 2. Extend `BaseE2ETestCase` for consistent setup/teardown
-3. Use `TestAuthHelper.configureApp(app)` for auth bypass
+3. Use `TestAuthHelper.configureApp(app)` for Clerk test auth
 4. Use `TestAuthHelper.waitForMainContent(app)` to wait for app load
 5. Use `XCTSkip` for conditional tests (e.g., Watch connectivity)
 

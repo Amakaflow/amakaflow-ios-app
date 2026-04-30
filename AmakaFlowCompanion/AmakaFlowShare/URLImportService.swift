@@ -121,15 +121,13 @@ final class URLImportService: NSObject {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        // Auth headers
-        if let testAuth = SharedContainerManager.readTestAuth() {
-            request.setValue(testAuth.secret, forHTTPHeaderField: "X-Test-Auth")
-            request.setValue(testAuth.userId, forHTTPHeaderField: "X-Test-User-Id")
-        } else if let token = SharedContainerManager.readAuthToken() {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        } else {
+        // Auth headers: main app stores the latest Clerk bearer token in the shared container.
+        guard let rawToken = SharedContainerManager.readAuthToken() else {
             throw ImportError.unauthorized
         }
+        let token = rawToken.trimmingCharacters(in: .whitespaces)
+        guard !token.isEmpty else { throw ImportError.unauthorized }
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         let body: [String: Any] = ["url": urlString]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)

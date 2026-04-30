@@ -45,6 +45,8 @@ struct SettingsView: View {
     @State private var showingPrivacyShareSheet = false
     @State private var showingWorkoutDebugSheet = false
     @State private var showingVoiceTranscriptionSettings = false
+    @State private var showingResendErrorAlert = false
+    @State private var resendErrorMessage: String?
     @StateObject private var nutritionViewModel = NutritionViewModel()
     @State private var showingNutritionSettings = false
     @State private var showingErrorLogSheet = false
@@ -1572,16 +1574,21 @@ struct SettingsView: View {
             WatchDeliveryView(
                 onResend: {
                     Task {
-                        let baseURL = AppEnvironment.current.mapperAPIURL
-                        guard let url = URL(string: "\(baseURL)/api/watch-delivery/resend") else { return }
-                        var request = URLRequest(url: url)
-                        request.httpMethod = "POST"
-                        request.allHTTPHeaderFields = APIService.shared.authHeaders
-                        _ = try? await URLSession.shared.data(for: request)
+                        do {
+                            try await APIService.shared.resendWatchDelivery()
+                        } catch {
+                            resendErrorMessage = error.localizedDescription
+                            showingResendErrorAlert = true
+                        }
                     }
                 },
                 onDismiss: { showingWatchDelivery = false }
             )
+        }
+        .alert("Failed to Resend", isPresented: $showingResendErrorAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(resendErrorMessage ?? "An unknown error occurred.")
         }
     }
 

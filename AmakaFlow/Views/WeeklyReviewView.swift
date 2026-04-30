@@ -13,6 +13,7 @@ struct WeeklyReviewView: View {
         VStack(spacing: 0) {
             AFTopBar(title: "Sunday review", subtitle: "Apr 20–26 · adherence and next-week coaching note") {
                 Button(action: onDismiss) { Image(systemName: "chevron.left") }
+                    .accessibilityLabel("Back")
             } right: {
                 Button("Done", action: onDismiss).font(Theme.Typography.captionBold)
             }
@@ -28,7 +29,7 @@ struct WeeklyReviewView: View {
                     AFLabel(text: "Session notes").padding(.top, Theme.Spacing.xs)
                     AFCard(padding: 0) {
                         VStack(spacing: 0) {
-                            ForEach(Array(sessions.enumerated()), id: \.element.title) { index, session in
+                            ForEach(Array(sessions.enumerated()), id: \.offset) { index, session in
                                 sessionRow(session)
                                 if index < sessions.count - 1 { Divider().overlay(Theme.Colors.borderLight) }
                             }
@@ -113,6 +114,6 @@ private struct ReviewSession {
 }
 
 #Preview {
-    WeeklyReviewView(onDismiss: {})
+    WeeklyReviewView {}
         .preferredColorScheme(.dark)
 }

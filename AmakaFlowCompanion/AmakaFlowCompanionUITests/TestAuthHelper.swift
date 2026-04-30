@@ -7,29 +7,45 @@
 
 import XCTest
 
-/// Configures XCUIApplication for E2E testing with auth bypass
+/// Configures XCUIApplication for E2E testing with Clerk test authentication
 enum TestAuthHelper {
 
-    /// Configure app with test credentials to bypass pairing flow
+    /// Configure app with test credentials to sign in with a real Clerk test user
     /// - Parameters:
     ///   - app: The XCUIApplication instance to configure
     ///   - environment: The environment to use (default: development for localhost)
     static func configureApp(_ app: XCUIApplication, environment: String = "development") {
-        // Launch arguments to trigger test mode in the app
-        app.launchArguments = [
-            "--uitesting",
-            "--skip-pairing"
-        ]
+        app.launchArguments = ["--uitesting"]
 
-        // Environment variables with test credentials
-        // Uses X-Test-Auth header bypass instead of JWT tokens
-        app.launchEnvironment = [
-            "TEST_AUTH_SECRET": TestCredentials.testAuthSecret,
-            "TEST_USER_ID": TestCredentials.userId,
-            "TEST_USER_EMAIL": TestCredentials.userEmail,
-            "TEST_API_BASE_URL": TestCredentials.apiBaseURL,
-            "TEST_ENVIRONMENT": environment  // "development", "staging", or "production"
+        // Real Clerk test-user pattern. Tests should drive the Clerk UI with these credentials
+        // instead of bypassing backend auth headers. Values are supplied by CI/local env.
+        let processEnvironment = ProcessInfo.processInfo.environment
+        let clerkEmail = processEnvironment["UITEST_CLERK_EMAIL"] ?? ""
+        let clerkPassword = processEnvironment["UITEST_CLERK_PASSWORD"] ?? ""
+        let clerkKey = processEnvironment["UITEST_CLERK_PUBLISHABLE_KEY"] ?? ""
+
+        guard !clerkEmail.isEmpty, !clerkPassword.isEmpty, !clerkKey.isEmpty else {
+            XCTFail(
+                "Missing required Clerk test credentials. Set UITEST_CLERK_EMAIL, " +
+                "UITEST_CLERK_PASSWORD, and UITEST_CLERK_PUBLISHABLE_KEY in the environment " +
+                "or CI secrets before running UI tests."
+            )
+            return
+        }
+
+        var launchEnv: [String: String] = [
+            "UITEST_CLERK_EMAIL": clerkEmail,
+            "UITEST_CLERK_PASSWORD": clerkPassword,
+            "UITEST_CLERK_PUBLISHABLE_KEY": clerkKey,
+            "TEST_ENVIRONMENT": environment
         ]
+        // Only set TEST_API_BASE_URL when explicitly provided or running against localhost
+        if let apiBaseURL = processEnvironment["TEST_API_BASE_URL"] {
+            launchEnv["TEST_API_BASE_URL"] = apiBaseURL
+        } else if environment == "development" {
+            launchEnv["TEST_API_BASE_URL"] = "http://localhost:8001"
+        }
+        app.launchEnvironment = launchEnv
     }
 
     /// Wait for the app to finish loading and show main content

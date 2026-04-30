@@ -7,10 +7,12 @@
 
 import SwiftUI
 import Sentry
+import ClerkKit
 
 @main
 struct AmakaFlowCompanionApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @StateObject private var authViewModel = AuthViewModel.shared
     @StateObject private var pairingService = PairingService.shared
     @StateObject private var workoutsViewModel: WorkoutsViewModel
     @StateObject private var watchConnectivity = WatchConnectivityManager.shared
@@ -20,21 +22,31 @@ struct AmakaFlowCompanionApp: App {
     @State private var mentalModelGateRefresh = false
 
     init() {
-        // Note: E2E test auth bypass (AMA-232) is handled in PairingService.init()
-        // to ensure isPaired is set before SwiftUI evaluates the body
+        #if DEBUG
+        // Unit tests: configure Clerk with a placeholder key so Clerk.shared doesn't
+        // fatal-error when SwiftUI evaluates the body. Skip all other SDK init.
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
+            Clerk.configure(publishableKey: "pk_test_ZXhhbXBsZS5jb20k")
+            _workoutsViewModel = StateObject(wrappedValue: WorkoutsViewModel())
+            return
+        }
+        #endif
+
+        Clerk.configure(publishableKey: AppEnvironment.current.clerkPublishableKey)
+        AuthViewModel.shared.start()
 
         // Wire up fixture dependencies when UITEST_USE_FIXTURES=true (AMA-544)
         #if DEBUG
-        if TestAuthStore.shared.useFixtures {
+        if UITestEnvironment.shared.useFixtures {
             _workoutsViewModel = StateObject(wrappedValue: WorkoutsViewModel(dependencies: .fixture))
             print("[AmakaFlowCompanionApp] Fixture mode: using FixtureAPIService")
         } else {
             _workoutsViewModel = StateObject(wrappedValue: WorkoutsViewModel())
         }
 
-        if TestAuthStore.shared.isTestModeEnabled {
-            print("[AmakaFlowCompanionApp] UITEST/Test mode active - auth bypass via TestAuthStore")
-            print("[AmakaFlowCompanionApp] useFixtures=\(TestAuthStore.shared.useFixtures), skipOnboarding=\(TestAuthStore.shared.skipOnboarding)")
+        if UITestEnvironment.shared.hasClerkTestUser {
+            print("[AmakaFlowCompanionApp] UITEST Clerk test user configured")
+            print("[AmakaFlowCompanionApp] useFixtures=\(UITestEnvironment.shared.useFixtures), skipOnboarding=\(UITestEnvironment.shared.skipOnboarding)")
         }
         #else
         _workoutsViewModel = StateObject(wrappedValue: WorkoutsViewModel())
@@ -86,12 +98,16 @@ struct AmakaFlowCompanionApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if pairingService.isPaired {
+                if !authViewModel.hasResolvedInitialSession {
+                    // Wait for Clerk session hydration to avoid auth flash on startup
+                    Color.black.ignoresSafeArea()
+                } else if authViewModel.isAuthenticated {
                     ContentView()
                         .environmentObject(workoutsViewModel)
                         .environmentObject(watchConnectivity)
                         .environmentObject(garminConnectivity)
                         .environmentObject(pairingService)
+                        .environmentObject(authViewModel)
                         .environmentObject(deepLinkManager)
                         .task {
                             // Wire up ViewModel for AppDelegate silent push handler (AMA-567)
@@ -103,7 +119,7 @@ struct AmakaFlowCompanionApp: App {
                             // Initialize WatchConnectivity asynchronously (non-blocking)
                             // Skip when UITEST_SKIP_APPLE_WATCH=true to avoid system permission modal (AMA-549)
                             #if DEBUG
-                            if !TestAuthStore.shared.skipAppleWatch {
+                            if !UITestEnvironment.shared.skipAppleWatch {
                                 watchConnectivity.activate()
                             }
                             #else
@@ -149,9 +165,11 @@ struct AmakaFlowCompanionApp: App {
                     unpairedRoot
                 }
             }
+            .environment(Clerk.shared)
+            .environmentObject(authViewModel)
             .preferredColorScheme(.dark) // Force dark mode
             .onChange(of: scenePhase) { _, newPhase in
-                if newPhase == .active && pairingService.isPaired {
+                if newPhase == .active && authViewModel.isAuthenticated {
                     Task {
                         await workoutsViewModel.checkPendingWorkouts()
                     }

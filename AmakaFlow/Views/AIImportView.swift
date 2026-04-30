@@ -26,31 +26,16 @@ struct AIImportView: View {
         AppEnvironment.current.mcpAPIURL
     }
 
-    /// Auth headers matching APIService.authHeaders, covering E2E and production.
-    private var authHeaders: [String: String] {
-        var headers = [String: String]()
-        #if DEBUG
-        if let testAuthSecret = TestAuthStore.shared.authSecret,
-           let testUserId = TestAuthStore.shared.userId,
-           !testAuthSecret.isEmpty {
-            headers["X-Test-Auth"] = testAuthSecret
-            headers["X-Test-User-Id"] = testUserId
-            return headers
+    /// Auth headers — throws if token or profile is unavailable.
+    private func authHeaders() async throws -> [String: String] {
+        guard let token = try await AuthViewModel.shared.token() else {
+            throw APIError.unauthorized
         }
-        #endif
-        if let token = PairingService.shared.getToken() {
-            headers["Authorization"] = "Bearer \(token)"
-        }
-        return headers
+        return ["Authorization": "Bearer \(token)"]
     }
 
-    private var profileId: String {
-        #if DEBUG
-        if let testUserId = TestAuthStore.shared.userId, !testUserId.isEmpty {
-            return testUserId
-        }
-        #endif
-        return PairingService.shared.userProfile?.id ?? "unknown"
+    private var profileId: String? {
+        return AuthViewModel.shared.userProfile?.id
     }
 
     var body: some View {
@@ -150,12 +135,15 @@ struct AIImportView: View {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
-        for (key, value) in authHeaders {
+        for (key, value) in try await authHeaders() {
             request.setValue(value, forHTTPHeaderField: key)
         }
 
+        guard let pid = profileId else {
+            throw APIError.unauthorized
+        }
         var body: [String: String] = [
-            "profile_id": profileId,
+            "profile_id": pid,
             "message": message,
         ]
         if !sourceURL.trimmingCharacters(in: .whitespaces).isEmpty {

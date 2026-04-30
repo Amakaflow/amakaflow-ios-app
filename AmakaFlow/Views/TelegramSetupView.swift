@@ -131,7 +131,7 @@ struct TelegramSetupView: View {
                 }
                 var request = URLRequest(url: url)
                 request.httpMethod = "POST"
-                request.allHTTPHeaderFields = APIService.shared.authHeaders
+                request.allHTTPHeaderFields = await APIService.shared.makeAuthHeaders()
 
                 guard !Task.isCancelled else { return }
                 let (data, response) = try await URLSession.shared.data(for: request)
@@ -189,7 +189,7 @@ struct TelegramSetupView: View {
                     components?.queryItems = [URLQueryItem(name: "token", value: token)]
                     guard let url = components?.url else { continue }
                     var request = URLRequest(url: url)
-                    request.allHTTPHeaderFields = APIService.shared.authHeaders
+                    request.allHTTPHeaderFields = await APIService.shared.makeAuthHeaders()
                     let (data, response) = try await URLSession.shared.data(for: request)
                     guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { continue }
                     let status = try JSONDecoder().decode(LinkStatusResponse.self, from: data)

@@ -64,8 +64,9 @@ class WorkoutsViewModel: ObservableObject {
         }
 
         if !dependencies.pairingService.isPaired {
-            print("[WorkoutsViewModel] Not paired, loading mock data")
-            loadMockData()
+            print("[WorkoutsViewModel] Not authenticated, clearing workout data")
+            incomingWorkouts = []
+            upcomingWorkouts = []
             isLoading = false
             return
         }
@@ -174,12 +175,8 @@ class WorkoutsViewModel: ObservableObject {
     func checkPendingWorkouts() async {
         pendingWorkoutsStatus = "Checking..."
 
-        // Check for valid auth - either pairing or E2E test mode
-        #if DEBUG
-        let hasAuth = dependencies.pairingService.isPaired || TestAuthStore.shared.isTestModeEnabled
-        #else
+        // Check for valid auth
         let hasAuth = dependencies.pairingService.isPaired
-        #endif
 
         guard hasAuth else {
             pendingWorkoutsStatus = "Not authenticated - skipping"
@@ -229,7 +226,7 @@ class WorkoutsViewModel: ObservableObject {
                 // Save to WorkoutKit (iOS 18+)
                 // Skip in test mode to avoid WorkoutKit authorization system dialog
                 #if DEBUG
-                let skipWorkoutKit = TestAuthStore.shared.isTestModeEnabled
+                let skipWorkoutKit = UITestEnvironment.shared.hasClerkTestUser
                 #else
                 let skipWorkoutKit = false
                 #endif

@@ -77,25 +77,50 @@ class APIService {
 
     var authHeaders: [String: String] {
         var headers = ["Content-Type": "application/json"]
-
-        // E2E Test mode: Use X-Test-Auth header bypass instead of JWT
-        // This checks both environment variables AND stored credentials from UI
-        #if DEBUG
-        if let testAuthSecret = TestAuthStore.shared.authSecret,
-           let testUserId = TestAuthStore.shared.userId,
-           !testAuthSecret.isEmpty {
-            headers["X-Test-Auth"] = testAuthSecret
-            headers["X-Test-User-Id"] = testUserId
-            print("[APIService] Using X-Test-Auth header bypass for E2E tests")
-            return headers
-        }
-        #endif
-
-        // Normal auth: Use JWT token
         if let token = PairingService.shared.getToken() {
             headers["Authorization"] = "Bearer \(token)"
         }
         return headers
+    }
+
+    func makeAuthHeaders() async -> [String: String] {
+        var headers = ["Content-Type": "application/json"]
+        guard AuthViewModel.shared.hasActiveSession else {
+            return headers
+        }
+
+        do {
+            if let token = try await AuthViewModel.shared.token() {
+                headers["Authorization"] = "Bearer \(token)"
+            } else {
+                PairingService.shared.markAuthInvalid()
+                print("[APIService] Clerk session did not return a token")
+            }
+        } catch {
+            PairingService.shared.markAuthInvalid()
+            print("[APIService] Failed to get Clerk token: \(error.localizedDescription)")
+        }
+        return headers
+    }
+
+    func resendWatchDelivery() async throws {
+        guard let url = URL(string: "\(baseURL)/api/watch-delivery/resend") else {
+            throw APIError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = await makeAuthHeaders()
+
+        let (_, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        if httpResponse.statusCode == 401 {
+            throw APIError.unauthorized
+        }
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            throw APIError.serverError(httpResponse.statusCode)
+        }
     }
 
     // MARK: - Workouts
@@ -114,7 +139,7 @@ class APIService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let (data, response) = try await session.data(for: request)
 
@@ -167,7 +192,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/workouts/scheduled")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let (data, response) = try await session.data(for: request)
 
@@ -205,7 +230,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/workouts/pushed?device=ios-companion")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let (data, response) = try await session.data(for: request)
 
@@ -248,7 +273,7 @@ class APIService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let (data, response) = try await session.data(for: request)
 
@@ -318,7 +343,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/workouts")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
@@ -369,7 +394,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/export/apple/\(workoutId)")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let (data, response) = try await session.data(for: request)
 
@@ -408,7 +433,7 @@ class APIService {
         let url = URL(string: "\(ingestorURL)/workouts/parse-voice")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         var body: [String: Any] = ["transcription": transcription]
         if let hint = sportHint {
@@ -477,7 +502,7 @@ class APIService {
         let requestURL = URL(string: "\(ingestorURL)/ingest/instagram_reel")!
         var request = URLRequest(url: requestURL)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let body: [String: Any] = ["url": url]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -546,7 +571,7 @@ class APIService {
         request.httpMethod = "POST"
 
         // Use auth headers but override Content-Type for multipart
-        var headers = authHeaders
+        var headers = await makeAuthHeaders()
         headers["Content-Type"] = "multipart/form-data; boundary=\(boundary)"
         request.allHTTPHeaderFields = headers
 
@@ -635,7 +660,7 @@ class APIService {
         let url = URL(string: "\(ingestorURL)/voice/transcribe")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let body: [String: Any] = [
             "audio": audioData,
@@ -690,7 +715,7 @@ class APIService {
         let url = URL(string: "\(ingestorURL)/voice/dictionary")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let body: [String: Any] = [
             "corrections": corrections,
@@ -727,7 +752,7 @@ class APIService {
         let url = URL(string: "\(ingestorURL)/voice/dictionary")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let (data, response) = try await session.data(for: request)
 
@@ -765,7 +790,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/workouts/completions")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         // Build request body with full workout details
         let formatter = ISO8601DateFormatter()
@@ -847,7 +872,7 @@ class APIService {
 
         // Check for valid auth - either pairing or E2E test mode
         #if DEBUG
-        let hasAuth = PairingService.shared.isPaired || TestAuthStore.shared.isTestModeEnabled
+        let hasAuth = PairingService.shared.isPaired
         #else
         let hasAuth = PairingService.shared.isPaired
         #endif
@@ -863,7 +888,7 @@ class APIService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let encoder = JSONEncoder()
         request.httpBody = try encoder.encode(completion)
@@ -970,7 +995,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/sync/confirm")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         var body: [String: Any] = [
             "workout_id": workoutId,
@@ -1024,7 +1049,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/sync/failed")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         var body: [String: Any] = [
             "workout_id": workoutId,
@@ -1079,7 +1104,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/mobile/devices/register-push-token")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let body: [String: Any] = [
             "apns_token": apnsToken,
@@ -1120,7 +1145,7 @@ class APIService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let (data, response) = try await session.data(for: request)
 
@@ -1163,7 +1188,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/workouts/completions?limit=\(limit)&offset=\(offset)")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let (data, response) = try await session.data(for: request)
 
@@ -1199,7 +1224,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/workouts/completions/\(id)")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let (data, response) = try await session.data(for: request)
 
@@ -1231,7 +1256,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/api/v1/planning/day-state")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let (data, response) = try await session.data(for: request)
 
@@ -1257,7 +1282,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/api/v1/coach/quick")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         request.httpBody = try JSONEncoder().encode(["question": question])
 
         let (data, response) = try await session.data(for: request)
@@ -1285,7 +1310,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/api/v1/planning/resolve-conflict")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         request.httpBody = try JSONEncoder().encode(["action": action, "message": message])
 
         let (data, response) = try await session.data(for: request)
@@ -1308,7 +1333,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/api/v1/planning/day-states?from=\(from)&to=\(to)")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
@@ -1325,7 +1350,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/api/v1/planning/generate-week")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if let genRequest = genRequest {
             request.httpBody = try JSONEncoder().encode(genRequest)
@@ -1347,7 +1372,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/api/v1/planning/conflicts?start_date=\(startDate)&end_date=\(endDate)")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
@@ -1363,7 +1388,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/api/v1/planning/parse-workout")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(ParseWorkoutRequest(text: text, context: context))
 
@@ -1383,7 +1408,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/api/v1/actions/pending")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
@@ -1399,7 +1424,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/api/v1/actions/\(id)/respond")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(["response": actionResponse])
 
@@ -1420,7 +1445,7 @@ class APIService {
         let url = URL(string: "\(chatURL)/api/v1/coach/message")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(CoachMessageRequest(message: message, context: context))
 
@@ -1442,7 +1467,7 @@ class APIService {
         let url = URL(string: "\(chatURL)/api/v1/coach/fatigue-advice")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(FatigueAdviceRequest(currentFatigueScore: fatigueScore, recentLoadHistory: loadHistory))
 
@@ -1461,7 +1486,7 @@ class APIService {
         let url = URL(string: "\(chatURL)/api/v1/coach/memories")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
@@ -1479,7 +1504,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/api/v1/analytics/shoes")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
@@ -1497,7 +1522,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/api/v1/billing/subscription")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
@@ -1515,7 +1540,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/api/v1/preferences/notifications")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
 
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
@@ -1531,7 +1556,7 @@ class APIService {
         let url = URL(string: "\(baseURL)/api/v1/preferences/notifications")!
         var request = URLRequest(url: url)
         request.httpMethod = "PUT"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(prefs)
 
@@ -1551,7 +1576,7 @@ class APIService {
         let url = URL(string: "\(AppEnvironment.current.chatAPIURL)/gamification/xp")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        for (key, value) in authHeaders {
+        for (key, value) in await makeAuthHeaders() {
             request.setValue(value, forHTTPHeaderField: key)
         }
 
@@ -1685,7 +1710,7 @@ extension APIService {
         guard let url = URL(string: urlString) else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -1697,7 +1722,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/posts/\(postId)/react") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         request.httpBody = try JSONEncoder().encode(["emoji": emoji])
         let (_, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
@@ -1709,7 +1734,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/posts/\(postId)/react/\(emoji)") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         let (_, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -1720,7 +1745,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/posts/\(postId)/comments") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -1732,7 +1757,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/posts/\(postId)/comment") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         request.httpBody = try JSONEncoder().encode(["text": text])
         let (_, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
@@ -1744,7 +1769,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/settings") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -1756,7 +1781,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/settings") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "PUT"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         request.httpBody = try encoder.encode(settings)
@@ -1770,7 +1795,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/users/\(userId)/profile") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -1782,7 +1807,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/users/\(userId)/follow") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         let (_, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         switch httpResponse.statusCode {
@@ -1796,7 +1821,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/users/\(userId)/unfollow") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         let (_, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         switch httpResponse.statusCode {
@@ -1812,7 +1837,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/challenges") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -1824,7 +1849,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/challenges/\(id)") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -1836,7 +1861,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/challenges") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONEncoder().encode(request)
         let (_, response) = try await session.data(for: req)
@@ -1849,7 +1874,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/challenges/\(id)/join") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let (_, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -1862,7 +1887,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/crews") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -1874,7 +1899,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/crews/\(id)") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -1886,7 +1911,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/crews/\(crewId)/feed") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -1898,7 +1923,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/crews") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         req.httpBody = try encoder.encode(request)
@@ -1912,7 +1937,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/crews/\(crewId)/join") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         req.httpBody = try encoder.encode(request)
@@ -1926,7 +1951,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/crews/\(crewId)/leave") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "DELETE"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let (_, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -1940,7 +1965,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/workouts/save") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         req.httpBody = try encoder.encode(request)
@@ -1960,7 +1985,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/api/privacy/export") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard (200...299).contains(httpResponse.statusCode) else {
@@ -1975,7 +2000,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/account") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard (200...299).contains(httpResponse.statusCode) else {
@@ -1993,7 +2018,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/workouts/\(workoutId)/export/fit") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -2006,7 +2031,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/workouts/\(workoutId)/export/csv") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -2020,7 +2045,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/programs?status=\(status)") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard httpResponse.statusCode == 200 else {
@@ -2034,7 +2059,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/programs/\(id)") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard httpResponse.statusCode == 200 else {
@@ -2050,7 +2075,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/programs/generate") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         req.httpBody = try encoder.encode(request)
@@ -2070,7 +2095,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/programs/generate/\(jobId)/status") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard httpResponse.statusCode == 200 else {
@@ -2087,7 +2112,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/training-programs/\(id)/status") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "PATCH"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         req.httpBody = try JSONSerialization.data(withJSONObject: ["status": status])
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
@@ -2104,7 +2129,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/training-programs/\(id)/progress") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "PATCH"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         req.httpBody = try JSONSerialization.data(withJSONObject: ["current_week": currentWeek])
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
@@ -2121,7 +2146,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/training-programs/\(id)") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "DELETE"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard (200...299).contains(httpResponse.statusCode) else {
@@ -2137,7 +2162,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/training-programs/workouts/\(workoutId)/complete") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "PATCH"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard (200...299).contains(httpResponse.statusCode) else {
@@ -2156,7 +2181,7 @@ extension APIService {
         guard let url = URL(string: "\(calURL)/calendars/connected") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -2169,7 +2194,7 @@ extension APIService {
         guard let url = URL(string: "\(calURL)/calendars/connect") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         let body = ["provider": provider]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (data, response) = try await session.data(for: request)
@@ -2186,7 +2211,7 @@ extension APIService {
         guard let url = URL(string: "\(calURL)/calendars/\(calendarId)/sync") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -2201,7 +2226,7 @@ extension APIService {
         guard let url = URL(string: "\(calURL)/calendars/\(calendarId)/disconnect") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        request.allHTTPHeaderFields = authHeaders
+        request.allHTTPHeaderFields = await makeAuthHeaders()
         let (_, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -2214,7 +2239,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/leaderboards/friends?dimension=\(dimension)&period=\(period)") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -2226,7 +2251,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/leaderboards/crew/\(crewId)?dimension=\(dimension)&period=\(period)") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -2241,7 +2266,7 @@ extension APIService {
         guard let url = URL(string: "\(chatURL)/nutrition/analyze-photo") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         req.httpBody = try JSONEncoder().encode(["image_base64": imageBase64])
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
@@ -2265,7 +2290,7 @@ extension APIService {
         guard let url = URL(string: "\(chatURL)/nutrition/barcode/\(encoded)") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         switch httpResponse.statusCode {
@@ -2287,7 +2312,7 @@ extension APIService {
         guard let url = URL(string: "\(chatURL)/nutrition/parse-text") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         req.httpBody = try JSONEncoder().encode(["text": text])
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
@@ -2310,7 +2335,7 @@ extension APIService {
         guard let url = URL(string: "\(chatURL)/nutrition/fueling-status") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         switch httpResponse.statusCode {
@@ -2332,7 +2357,7 @@ extension APIService {
         guard let url = URL(string: "\(chatURL)/nutrition/protein-nudge/check") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         switch httpResponse.statusCode {
@@ -2356,7 +2381,7 @@ extension APIService {
         guard let url = URL(string: "\(chatURL)/api/v1/coach/suggest-workout") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         req.httpBody = try encoder.encode(request)
@@ -2380,7 +2405,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/progression/volume?start_date=\(startDate)&end_date=\(endDate)&granularity=\(granularity)") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         switch httpResponse.statusCode {
@@ -2403,7 +2428,7 @@ extension APIService {
         encoder.keyEncodingStrategy = .convertToSnakeCase
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         req.httpBody = try encoder.encode(feedback)
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
@@ -2426,7 +2451,7 @@ extension APIService {
         guard let url = URL(string: "\(ingestorURL)/import/detect") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         req.httpBody = try encoder.encode(request)
@@ -2451,7 +2476,7 @@ extension APIService {
         guard let url = URL(string: "\(ingestorURL)/import/match") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         req.httpBody = try encoder.encode(request)
@@ -2476,7 +2501,7 @@ extension APIService {
         guard let url = URL(string: "\(ingestorURL)/import/preview") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         req.httpBody = try encoder.encode(request)
@@ -2501,7 +2526,7 @@ extension APIService {
         guard let url = URL(string: "\(ingestorURL)/import/execute") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         req.httpBody = try encoder.encode(request)
@@ -2529,7 +2554,7 @@ extension APIService {
         }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         print("[APIService] fetchImportStatus - URL: \(url.absoluteString)")
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
@@ -2555,7 +2580,7 @@ extension APIService {
         }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = authHeaders
+        req.allHTTPHeaderFields = await makeAuthHeaders()
         print("[APIService] cancelImport - URL: \(url.absoluteString)")
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }

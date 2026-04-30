@@ -743,13 +743,8 @@ class WorkoutEngine: ObservableObject {
     ) {
         // Check auth status for logging
         let isPaired = pairingService.isPaired
-        #if DEBUG
-        let isE2EMode = TestAuthStore.shared.isTestModeEnabled
-        let hasAuth = isPaired || isE2EMode
-        #else
         let isE2EMode = false
         let hasAuth = isPaired
-        #endif
 
         logger.info("postWorkoutCompletion called")
         logger.info("- workoutId: \(workoutId ?? "nil")")
@@ -784,7 +779,7 @@ class WorkoutEngine: ObservableObject {
             : Date()
 
         // Get health metrics from connected watch if available
-        // In E2E test mode (TEST_AUTH_SECRET set), generate mock data
+        // In UI test mode, generate mock data
         let (avgHeartRate, activeCalories, hrSamples) = getHealthMetricsWithSamples(durationSeconds: durationSeconds)
 
         Task {
@@ -848,8 +843,8 @@ class WorkoutEngine: ObservableObject {
         }
 
         #if DEBUG
-        // Check if running in E2E test mode (via TestAuthStore - supports both env vars and UI bypass)
-        if TestAuthStore.shared.isTestModeEnabled {
+        // Check if running with a Clerk test user during UI tests
+        if UITestEnvironment.shared.hasClerkTestUser {
             // Generate realistic mock health data for E2E tests
             // Average HR varies by workout intensity - use 130-150 bpm range for strength training
             let baseHR = 140

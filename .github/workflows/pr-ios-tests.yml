@@ -125,6 +125,9 @@ jobs:
       - name: Build for testing
         if: steps.affected.outputs.result != 'NONE'
         working-directory: AmakaFlowCompanion
+        env:
+          CLERK_PUBLISHABLE_KEY_STAGING: ${{ secrets.CLERK_PUBLISHABLE_KEY_STAGING }}
+          CLERK_PUBLISHABLE_KEY_PRODUCTION: ${{ secrets.CLERK_PUBLISHABLE_KEY_PRODUCTION }}
         run: |
           xcodebuild build-for-testing \
             -project AmakaFlowCompanion.xcodeproj \
@@ -133,7 +136,9 @@ jobs:
             -derivedDataPath DerivedData \
             -clonedSourcePackagesDirPath .spm \
             -parallelizeTargets \
-            -jobs $(sysctl -n hw.ncpu)
+            -jobs $(sysctl -n hw.ncpu) \
+            CLERK_PUBLISHABLE_KEY_STAGING="${CLERK_PUBLISHABLE_KEY_STAGING}" \
+            CLERK_PUBLISHABLE_KEY_PRODUCTION="${CLERK_PUBLISHABLE_KEY_PRODUCTION}"
 
       - name: Run impacted tests
         if: steps.affected.outputs.result != 'NONE' && steps.affected.outputs.result != 'FULL'

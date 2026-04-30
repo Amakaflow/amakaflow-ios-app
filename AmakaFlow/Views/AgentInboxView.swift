@@ -2,15 +2,13 @@ import SwiftUI
 
 struct AgentInboxView: View {
     let onDismiss: () -> Void
+    let events: [AgentEvent]
     @State private var selectedFilter: AgentInboxFilter = .all
 
-    private let events = [
-        AgentEvent(emoji: "📅", title: "Plan generated", kind: .plan, timestamp: "Mon 06:14", body: "4-week block built from 8 weeks of Garmin history and HRV trend."),
-        AgentEvent(emoji: "🔄", title: "Session swapped", kind: .plan, timestamp: "Tue 14:22", body: "Moved threshold run to Friday — recovery dip overnight."),
-        AgentEvent(emoji: "⌚", title: "Sent to watch", kind: .watch, timestamp: "Wed 06:05", body: "Today's intervals pushed to Garmin Training Calendar."),
-        AgentEvent(emoji: "🚩", title: "Red-flag rest", kind: .safety, timestamp: "Thu 06:10", body: "Stacked fatigue + calf symptoms. Replaced with mobility + walk."),
-        AgentEvent(emoji: "📊", title: "Weekly review", kind: .plan, timestamp: "Sun 07:01", body: "83% adherence. Build week confirmed for next 7 days.")
-    ]
+    init(events: [AgentEvent] = [], onDismiss: @escaping () -> Void) {
+        self.events = events
+        self.onDismiss = onDismiss
+    }
 
     private var visibleEvents: [AgentEvent] {
         selectedFilter == .all ? events : events.filter { $0.kind.rawValue == selectedFilter.rawValue }
@@ -33,16 +31,37 @@ struct AgentInboxView: View {
             .padding(.horizontal, Theme.Spacing.lg)
             .padding(.bottom, Theme.Spacing.md)
 
-            ScrollView {
-                VStack(spacing: Theme.Spacing.sm) {
-                    ForEach(visibleEvents, id: \.id) { event in
-                        eventRow(event)
+            if visibleEvents.isEmpty {
+                emptyState(isFiltered: selectedFilter != .all && !events.isEmpty)
+            } else {
+                ScrollView {
+                    VStack(spacing: Theme.Spacing.sm) {
+                        ForEach(visibleEvents, id: \.id) { event in
+                            eventRow(event)
+                        }
                     }
+                    .padding(.horizontal, Theme.Spacing.lg)
                 }
-                .padding(.horizontal, Theme.Spacing.lg)
             }
         }
         .background(Theme.Colors.background.ignoresSafeArea())
+    }
+
+    private func emptyState(isFiltered: Bool) -> some View {
+        VStack(spacing: Theme.Spacing.sm) {
+            Image(systemName: isFiltered ? "line.3.horizontal.decrease.circle" : "tray")
+                .font(Theme.Typography.largeTitle)
+                .foregroundColor(Theme.Colors.textTertiary)
+            Text(isFiltered ? "No matching activity" : "No coach activity yet")
+                .font(Theme.Typography.title3)
+                .foregroundColor(Theme.Colors.textPrimary)
+            Text(isFiltered ? "Try a different filter to see more events." : "Agent decisions will appear here when the backend sends activity events.")
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(Theme.Spacing.lg)
     }
 
     private func eventRow(_ event: AgentEvent) -> some View {
@@ -78,13 +97,13 @@ private enum AgentInboxFilter: String, CaseIterable {
     case safety = "Safety"
 }
 
-private enum AgentEventKind: String {
+enum AgentEventKind: String {
     case plan = "Plan"
     case watch = "Watch"
     case safety = "Safety"
 }
 
-private struct AgentEvent {
+struct AgentEvent {
     let id = UUID()
     let emoji: String
     let title: String
@@ -94,6 +113,15 @@ private struct AgentEvent {
 }
 
 #Preview {
-    AgentInboxView(onDismiss: {})
+    AgentInboxView(
+        events: [
+            AgentEvent(emoji: "📅", title: "Plan generated", kind: .plan, timestamp: "Mon 06:14", body: "4-week block built from 8 weeks of Garmin history and HRV trend."),
+            AgentEvent(emoji: "🔄", title: "Session swapped", kind: .plan, timestamp: "Tue 14:22", body: "Moved threshold run to Friday — recovery dip overnight."),
+            AgentEvent(emoji: "⌚", title: "Sent to watch", kind: .watch, timestamp: "Wed 06:05", body: "Today's intervals pushed to Garmin Training Calendar."),
+            AgentEvent(emoji: "🚩", title: "Red-flag rest", kind: .safety, timestamp: "Thu 06:10", body: "Stacked fatigue + calf symptoms. Replaced with mobility + walk."),
+            AgentEvent(emoji: "📊", title: "Weekly review", kind: .plan, timestamp: "Sun 07:01", body: "83% adherence. Build week confirmed for next 7 days.")
+        ],
+        onDismiss: {}
+    )
         .preferredColorScheme(.dark)
 }

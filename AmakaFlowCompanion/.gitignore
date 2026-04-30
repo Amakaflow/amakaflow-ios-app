@@ -1,4 +1,4 @@
 .sentryclirc
 
-# E2E Test credentials (contains JWT secrets)
+# Optional local E2E test credentials (Clerk test-user secrets)
 AmakaFlowCompanionUITests/TestCredentials.swift
