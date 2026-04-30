@@ -7,6 +7,7 @@ final class AuthViewModel: ObservableObject {
     static let shared = AuthViewModel()
 
     @Published private(set) var isAuthenticated: Bool = false
+    @Published private(set) var hasResolvedInitialSession: Bool = false
     @Published private(set) var userProfile: UserProfile?
     @Published private(set) var needsReauth: Bool = false
     @Published private(set) var lastTokenRefresh: Date?
@@ -40,6 +41,7 @@ final class AuthViewModel: ObservableObject {
     func refreshFromClerk() {
         let clerkUser = Clerk.shared.user
         isAuthenticated = Clerk.shared.session != nil && clerkUser != nil
+        hasResolvedInitialSession = true
         userProfile = clerkUser.map { user in
             let name = [user.firstName, user.lastName]
                 .compactMap { $0 }

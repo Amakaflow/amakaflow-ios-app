@@ -386,11 +386,11 @@ class WorkoutCompletionService: ObservableObject {
             print("[WorkoutCompletion] Network unavailable, skipping retry")
             return
         }
-        // Don't retry if auth is invalid - wait for the user to sign in again
-        let canRetry = !PairingService.shared.needsReauth
+        // Don't retry if not signed in or auth needs refresh — wait for the user to sign in again
+        let canRetry = PairingService.shared.isPaired && !PairingService.shared.needsReauth
 
         guard canRetry else {
-            print("[WorkoutCompletion] Auth invalid, skipping retry until re-paired")
+            print("[WorkoutCompletion] Auth invalid or signed out, skipping retry until re-authenticated")
             return
         }
 

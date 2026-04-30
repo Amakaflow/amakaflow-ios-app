@@ -88,7 +88,10 @@ struct AmakaFlowCompanionApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if authViewModel.isAuthenticated {
+                if !authViewModel.hasResolvedInitialSession {
+                    // Wait for Clerk session hydration to avoid auth flash on startup
+                    Color.black.ignoresSafeArea()
+                } else if authViewModel.isAuthenticated {
                     ContentView()
                         .environmentObject(workoutsViewModel)
                         .environmentObject(watchConnectivity)
