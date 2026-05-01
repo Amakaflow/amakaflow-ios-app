@@ -107,8 +107,14 @@ final class NutritionViewModel: ObservableObject {
     /// HomeView's in-memory copy stays stale until reloaded. Call this from
     /// surfaces that re-appear after the user could have changed settings (e.g.
     /// HomeView.onAppear, after returning from More → Settings).
+    ///
+    /// Toggles `settingsLoaded` around the load to suppress the `didSet`
+    /// observer's save — without the guard, every reload would round-trip
+    /// the just-loaded value back to UserDefaults.
     func reloadSettings() {
+        settingsLoaded = false
         loadSettings()
+        settingsLoaded = true
     }
 
     func saveSettings() {
