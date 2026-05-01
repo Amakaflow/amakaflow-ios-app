@@ -12,13 +12,20 @@ struct MentalModelView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            AFTopBar {
+            // AMA-1647: use the centralized AFTopBarSkipButton slot so the
+            // Skip styling + accessibility identifier come from one place.
+            // The left chevron also calls onSkip on this screen (it's a
+            // dismiss-via-chevron, not a NavigationStack back), so it stays
+            // as a custom Button.
+            AFTopBar(
+                skipIdentifier: "mental_model_skip",
+                skipAction: onSkip
+            ) {
                 Button(action: onSkip) {
                     Image(systemName: "chevron.left")
                 }
-            } right: {
-                Button("Skip", action: onSkip)
-                    .font(Theme.Typography.captionBold)
+                .accessibilityLabel("Back")
+                .accessibilityIdentifier("af_topbar_back")
             }
 
             ScrollView {
