@@ -14,6 +14,22 @@ extension Notification.Name {
     static let workoutCompleted = Notification.Name("workoutCompleted")
 }
 
+// MARK: - Training Block (AMA-1641)
+
+/// Represents the user's current training block (a multi-week mesocycle
+/// segment, e.g. "Block 2 of 4"). Populated by the planner API when block
+/// metadata is returned alongside scheduled workouts.
+struct TrainingBlock: Equatable {
+    /// Display name for the block, e.g. "Build" or "Deload".
+    let name: String
+    /// 1-based block index within the mesocycle (e.g. 2 of 4).
+    let index: Int
+    /// Total blocks in the mesocycle.
+    let total: Int
+    /// Workouts scoped to this block.
+    let scheduledWorkouts: [ScheduledWorkout]
+}
+
 @MainActor
 class WorkoutsViewModel: ObservableObject {
     @Published var upcomingWorkouts: [ScheduledWorkout] = []
@@ -23,6 +39,16 @@ class WorkoutsViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var useDemoMode: Bool = false
     @Published var pendingWorkoutsStatus: String = ""  // Debug status for pending workouts
+
+    // AMA-1640: deep-link payload state. Views observe these and clear
+    // them after consuming so the next deep-link fires a fresh trigger.
+    @Published var pendingCalendarDate: Date?
+    @Published var pendingDeepLinkWorkoutId: String?
+
+    // AMA-1641: current training block scoping for the Workouts pivot.
+    // Populated when the planner API returns block info; nil otherwise so
+    // the Block view falls back to "all upcoming" without faking a count.
+    @Published var activeBlock: TrainingBlock?
 
     private let dependencies: AppDependencies
     private let calendarManager = CalendarManager()
@@ -312,6 +338,41 @@ class WorkoutsViewModel: ObservableObject {
         )
     }
     
+    // MARK: - Deep-link helpers (AMA-1640)
+
+    private static let deepLinkISODayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = TimeZone(secondsFromGMT: 0)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
+
+    /// Persist a calendar date selection from a deep link so CalendarView /
+    /// WorkoutsView can read it on appear. ISO 8601 yyyy-MM-dd or full ISO
+    /// timestamps are accepted; parsing failures are silent no-ops.
+    func preselectCalendarDate(_ isoDateString: String) {
+        print("[deeplink] preselectCalendarDate(\(isoDateString))")
+        if let parsed = Self.deepLinkISODayFormatter.date(from: isoDateString) {
+            pendingCalendarDate = parsed
+            return
+        }
+        let isoFull = ISO8601DateFormatter()
+        if let parsed = isoFull.date(from: isoDateString) {
+            pendingCalendarDate = parsed
+        }
+    }
+
+    /// Mark a workout as the deep-link target. WorkoutsView observes this and
+    /// presents the detail sheet on next render. No-op if the id is unknown.
+    func selectWorkout(byId id: String) {
+        print("[deeplink] selectWorkout(byId: \(id))")
+        let inUpcoming = upcomingWorkouts.contains { $0.workout.id == id }
+        let inIncoming = incomingWorkouts.contains { $0.id == id }
+        guard inUpcoming || inIncoming else { return }
+        pendingDeepLinkWorkoutId = id
+    }
+
     func addSampleWorkout() {
         let sampleWorkout = Workout(
             name: "Sample Full Body Strength",

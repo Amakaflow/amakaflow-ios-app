@@ -94,20 +94,28 @@ struct ContentView: View {
         .fullScreenCover(isPresented: $showingWorkoutPlayer) {
             WorkoutPlayerView()
         }
-        // Deep link notification handlers (AMA-1133)
-        .onReceive(NotificationCenter.default.publisher(for: .deepLinkToCalendar)) { _ in
+        // Deep link notification handlers (AMA-1133, AMA-1640)
+        .onReceive(NotificationCenter.default.publisher(for: .deepLinkToCalendar)) { note in
             // AMA-1588: Calendar tab is hidden in MVP. If a deep-link fires
             // while the tab is gated off, fall back to Workouts (closest
             // adjacent surface) so the user doesn't land on a non-existent
             // tab state.
             selectedTab = FeatureFlags.nonMvp ? .calendar : .workouts
+            if let date = note.userInfo?["date"] as? String {
+                viewModel.preselectCalendarDate(date)
+            }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .deepLinkToCoach)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .deepLinkToCoach)) { note in
             selectedTab = .more
+            if let threadId = note.userInfo?["threadId"] as? String {
+                NotificationCenter.default.post(name: .openCoachThread, object: nil, userInfo: ["threadId": threadId])
+            }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .deepLinkToWorkout)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .deepLinkToWorkout)) { note in
             selectedTab = .workouts
-            // Show player if workout is running
+            if let workoutId = note.userInfo?["workoutId"] as? String {
+                viewModel.selectWorkout(byId: workoutId)
+            }
             if WorkoutEngine.shared.phase == .running || WorkoutEngine.shared.phase == .paused {
                 showingWorkoutPlayer = true
             }
