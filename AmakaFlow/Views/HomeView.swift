@@ -231,9 +231,18 @@ struct HomeView: View {
                         // @MainActor) — the explicit @MainActor on Task makes that
                         // explicit and removes the need for a redundant
                         // MainActor.run hop after the await.
+                        // AMA-1645: stagger the sheet dismiss and the alert
+                        // present by 0.35s. SwiftUI presentation transitions
+                        // aren't atomic; flipping both flags in the same
+                        // MainActor tick can drop the alert on iOS 16 when
+                        // it shares a NavigationStack with the dismissing
+                        // sheet. The delay is invisible on iOS 17+ (which
+                        // handles the chained presentation cleanly) but
+                        // prevents the race on the lowest supported target.
                         Task { @MainActor in
                             await viewModel.refreshWorkouts()
                             showingPlanReveal = false
+                            try? await Task.sleep(for: .milliseconds(350))
                             showingPlanAdoptedAlert = true
                         }
                     },
