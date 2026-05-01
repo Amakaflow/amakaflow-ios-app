@@ -242,7 +242,14 @@ struct HomeView: View {
                         Task { @MainActor in
                             await viewModel.refreshWorkouts()
                             showingPlanReveal = false
-                            try? await Task.sleep(for: .milliseconds(350))
+                            do {
+                                try await Task.sleep(for: .milliseconds(350))
+                            } catch {
+                                // Task cancelled (e.g. user manually dismissed
+                                // the sheet mid-sleep) — bail without showing
+                                // the alert.
+                                return
+                            }
                             showingPlanAdoptedAlert = true
                         }
                     },
