@@ -16,6 +16,11 @@ class ShareViewController: UIViewController {
 
     private var hostingController: UIHostingController<ShareExtensionView>?
     private var extractedURLs: [String] = []
+    /// AMA-1642: backing view model so state mutations from this UIKit
+    /// controller actually re-render the SwiftUI view. Previously we tried
+    /// `hostingController?.rootView.state = .importing`, which is a no-op
+    /// because `rootView` is a value-type accessor.
+    private let viewModel = ShareImportViewModel()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -82,7 +87,8 @@ class ShareViewController: UIViewController {
         let shareView = ShareExtensionView(
             urls: urls,
             onImport: { [weak self] in self?.performImport() },
-            onCancel: { [weak self] in self?.finish(success: false) }
+            onCancel: { [weak self] in self?.finish(success: false) },
+            viewModel: viewModel
         )
 
         let hosting = UIHostingController(rootView: shareView)
@@ -108,8 +114,8 @@ class ShareViewController: UIViewController {
     private func performImport() {
         guard !extractedURLs.isEmpty else { return }
 
-        // Update UI state
-        hostingController?.rootView.state = .importing
+        // Update UI state via the view model so the SwiftUI view actually re-renders.
+        viewModel.state = .importing
 
         // Import all URLs concurrently
         Task {
@@ -158,7 +164,7 @@ class ShareViewController: UIViewController {
                     let displayTitle = extractedURLs.count > 1
                         ? "\(successCount) workouts imported"
                         : title
-                    hostingController?.rootView.state = .success(displayTitle)
+                    viewModel.state = .success(displayTitle)
 
                     URLImportService.sendLocalNotification(
                         title: "Workout Imported",
@@ -173,14 +179,14 @@ class ShareViewController: UIViewController {
                 } else if successCount > 0 {
                     // Partial success
                     let msg = "\(successCount)/\(extractedURLs.count) imported"
-                    hostingController?.rootView.state = .success(msg)
+                    viewModel.state = .success(msg)
 
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
                         self?.finish(success: true)
                     }
                 } else {
-                    // All failed
-                    hostingController?.rootView.state = .error(lastError ?? "Unknown error")
+                    // All failed — show error UI with Try Again affordance.
+                    viewModel.state = .error(lastError ?? "Unknown error")
                 }
             }
         }

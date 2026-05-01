@@ -31,13 +31,26 @@ enum ShareImportState: Equatable {
     }
 }
 
+/// View model that drives ShareExtensionView's render state.
+///
+/// AMA-1642: previously `state` was an `@State` property on `ShareExtensionView`.
+/// `ShareViewController` tried to drive it via
+/// `hostingController?.rootView.state = .importing`, but `UIHostingController.rootView`
+/// returns the SwiftUI view as a value, so assigning to `@State` on that returned
+/// value silently drops the mutation — the view never re-rendered into `.importing`,
+/// `.success`, or `.error`. Lifting the state into an `ObservableObject` driven by
+/// `@Published` lets the UIKit controller mutate state and have SwiftUI react.
+@MainActor
+final class ShareImportViewModel: ObservableObject {
+    @Published var state: ShareImportState = .ready
+}
+
 /// The mini preview UI shown in the share sheet
 struct ShareExtensionView: View {
     let urls: [String]
     let onImport: () -> Void
     let onCancel: () -> Void
-
-    @State var state: ShareImportState = .ready
+    @ObservedObject var viewModel: ShareImportViewModel
 
     /// The primary URL to display
     private var primaryURL: String {
@@ -111,7 +124,7 @@ struct ShareExtensionView: View {
                 }
 
                 // State-dependent content
-                switch state {
+                switch viewModel.state {
                 case .loading:
                     ProgressView("Extracting URL...")
                         .frame(maxWidth: .infinity)
