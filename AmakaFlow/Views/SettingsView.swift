@@ -25,6 +25,10 @@ struct SettingsView: View {
     @Binding var navigateToSyncDashboard: Bool
     @AppStorage("devicePreference") private var deviceMode: DevicePreference = .appleWatchPhone
     @AppStorage("instagramImportMode") private var instagramImportMode: InstagramImportMode = .manual
+    // AMA-1649: prefer the local user.displayName override (set in
+    // EditProfileView) over the Clerk profile name when rendering the
+    // account summary card.
+    @AppStorage("user.displayName") private var displayNameOverride: String = ""
     @State private var voiceCuesEnabled = true
     @State private var audioBehavior: AudioBehavior = .duck
     @State private var countdownBeepsEnabled = true
@@ -1805,7 +1809,14 @@ struct SettingsView: View {
 
                     VStack(alignment: .leading, spacing: 4) {
                         if let profile = pairingService.userProfile {
-                            Text(profile.name ?? profile.email ?? "AmakaFlow User")
+                            // AMA-1649: prefer the user-edited displayName
+                            // override; fall through to the Clerk profile
+                            // name → email → generic placeholder.
+                            Text(
+                                displayNameOverride.isEmpty
+                                ? (profile.name ?? profile.email ?? "AmakaFlow User")
+                                : displayNameOverride
+                            )
                                 .font(Theme.Typography.bodyBold)
                                 .foregroundColor(Theme.Colors.textPrimary)
 

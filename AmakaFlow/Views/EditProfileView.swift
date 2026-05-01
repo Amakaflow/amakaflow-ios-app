@@ -75,19 +75,16 @@ struct EditProfileView: View {
             Section {
                 Button("Save") {
                     // Only persist the name when the user explicitly edited
-                    // it. Fallback is read-only — typing nothing and tapping
-                    // Save shouldn't convert the Clerk name into a stored
-                    // local override.
+                    // it. AMA-1648: write the trimmed value even if it's
+                    // empty — that effectively clears the local override
+                    // (since "" is the @AppStorage default state) and lets
+                    // the placeholder/Clerk fallback show again.
                     if hasEditedName {
-                        let trimmed = draftName.trimmingCharacters(in: .whitespacesAndNewlines)
-                        if !trimmed.isEmpty {
-                            displayName = trimmed
-                        }
+                        displayName = draftName.trimmingCharacters(in: .whitespacesAndNewlines)
                     }
                     dismiss()
                 }
                 .accessibilityIdentifier("edit_profile_save")
-                .disabled(saveDisabled)
             }
         }
         .navigationTitle("Edit Profile")
@@ -100,13 +97,6 @@ struct EditProfileView: View {
             draftName = displayName
             hasEditedName = false
         }
-    }
-
-    /// Save is only blocked when the user is mid-edit on the name field
-    /// AND the trimmed result is empty. Unit-only edits (no name change)
-    /// can always be saved, even when displayName is still empty.
-    private var saveDisabled: Bool {
-        hasEditedName && draftName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }
 
