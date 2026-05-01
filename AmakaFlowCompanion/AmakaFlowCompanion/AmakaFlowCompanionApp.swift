@@ -95,6 +95,69 @@ struct AmakaFlowCompanionApp: App {
         }
     }
 
+    /// In-app routes the deep-link router will surface. Other paths under
+    /// amakaflow.com (e.g. /pricing, /about) are NOT in this set and will be
+    /// ignored by the router so marketing pages can't hijack into the app.
+    static let routableSurfaces: Set<String> = [
+        "calendar", "workout", "workouts", "sync", "coach", "nutrition"
+    ]
+
+    /// Pure URL → (Notification.Name, optional userInfo) resolution.
+    /// Internal so tests can exercise it without instantiating the @main App.
+    /// Returns nil for non-routable URLs so callers can fall through to other
+    /// handlers without firing spurious deep-link events.
+    static func resolveAppSurfaceDeepLink(_ url: URL) -> (name: Notification.Name, userInfo: [AnyHashable: Any]?)? {
+        let surface: String?
+        let pathTail: [String]
+
+        if url.scheme == "amakaflow" {
+            surface = url.host?.lowercased()
+            pathTail = Array(url.pathComponents.filter { $0 != "/" })
+        } else if ["http", "https"].contains(url.scheme?.lowercased()),
+                  ["amakaflow.com", "app.amakaflow.com"].contains(url.host?.lowercased()) {
+            let parts = url.pathComponents.filter { $0 != "/" }
+            surface = parts.first?.lowercased()
+            pathTail = Array(parts.dropFirst())
+        } else {
+            return nil
+        }
+
+        guard let surface, routableSurfaces.contains(surface) else { return nil }
+
+        var userInfo: [AnyHashable: Any] = [:]
+        if let firstTail = pathTail.first {
+            switch surface {
+            case "workout", "workouts": userInfo["workoutId"] = firstTail
+            case "calendar":            userInfo["date"] = firstTail
+            case "coach":               userInfo["threadId"] = firstTail
+            default:                    break
+            }
+        }
+        for item in URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? [] {
+            if let v = item.value { userInfo[item.name] = v }
+        }
+
+        let name: Notification.Name
+        switch surface {
+        case "calendar":               name = .deepLinkToCalendar
+        case "workout", "workouts":    name = .deepLinkToWorkout
+        case "sync":                   name = .deepLinkToSync
+        case "coach":                  name = .deepLinkToCoach
+        case "nutrition":              name = .deepLinkToNutrition
+        default:                       return nil
+        }
+        return (name, userInfo.isEmpty ? nil : userInfo)
+    }
+
+    /// Returns true if the URL was routed to an in-app surface. Thin wrapper
+    /// around `resolveAppSurfaceDeepLink` that performs the side-effect.
+    @discardableResult
+    private func routeAppSurfaceDeepLink(_ url: URL) -> Bool {
+        guard let resolved = Self.resolveAppSurfaceDeepLink(url) else { return false }
+        NotificationCenter.default.post(name: resolved.name, object: nil, userInfo: resolved.userInfo)
+        return true
+    }
+
     var body: some Scene {
         WindowGroup {
             Group {
@@ -142,15 +205,14 @@ struct AmakaFlowCompanionApp: App {
 
                             // Handle Garmin Connect IQ callbacks (existing behavior)
                             print("[APP] onOpenURL received: \(url.absoluteString)")
-                            let handled = garminConnectivity.handleURL(url)
-                            print("[APP] URL handled by Garmin: \(handled)")
-
-                            // Handle existing amakaflow://workout deep link (Dynamic Island)
-                            if url.scheme == "amakaflow" && url.host == "workout" {
-                                if WorkoutEngine.shared.phase == .running || WorkoutEngine.shared.phase == .paused {
-                                    NotificationCenter.default.post(name: .deepLinkToWorkout, object: nil)
-                                }
+                            if garminConnectivity.handleURL(url) {
+                                print("[APP] URL handled by Garmin")
+                                return
                             }
+
+                            // AMA-1640: route in-app surface deep links + universal links.
+                            // Returns false for non-routable paths (e.g. https://amakaflow.com/pricing).
+                            _ = routeAppSurfaceDeepLink(url)
                         }
                         .sheet(isPresented: $deepLinkManager.showImportSheet) {
                             if let importURL = deepLinkManager.pendingImportURL {

@@ -156,4 +156,6 @@ extension Notification.Name {
     static let deepLinkToCalendar = Notification.Name("deepLinkToCalendar")
     static let deepLinkToCoach = Notification.Name("deepLinkToCoach")
     static let deepLinkToNutrition = Notification.Name("deepLinkToNutrition")
+    // AMA-1640: payload-bearing deep-link follow-on for Coach thread routing.
+    static let openCoachThread = Notification.Name("amakaflow.openCoachThread")
 }

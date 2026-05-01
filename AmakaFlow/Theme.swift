@@ -204,6 +204,39 @@ struct AFTopBar<Left: View, Right: View>: View {
     }
 }
 
+extension AFTopBar where Left == AFBackChevron {
+    /// Convenience init for screens with a standard back chevron on the left.
+    /// Centralizes the "Back" accessibility label/identifier so every consumer
+    /// gets it for free (AMA-1621). Pass a screen-scoped identifier when two
+    /// AFTopBar screens may stack (e.g. "af_topbar_back_settings").
+    init(
+        title: String? = nil,
+        subtitle: String? = nil,
+        backIdentifier: String = "af_topbar_back",
+        backAction: @escaping () -> Void,
+        @ViewBuilder right: () -> Right
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.left = AFBackChevron(identifier: backIdentifier, action: backAction)
+        self.right = right()
+    }
+}
+
+struct AFBackChevron: View {
+    let identifier: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "chevron.left")
+                .font(.system(size: 18, weight: .semibold))
+        }
+        .accessibilityLabel("Back")
+        .accessibilityIdentifier(identifier)
+    }
+}
+
 struct AFReadinessRing: View {
     let value: Int
     var size: CGFloat = 76
