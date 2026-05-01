@@ -291,26 +291,15 @@ struct WorkoutsView: View {
     }
 
     fileprivate var monthWeekdaySymbols: [String] {
-        // Shorter locale-aware weekday symbols, rotated so they start on the
-        // calendar's firstWeekday (default Sunday for US).
-        let cal = Calendar.current
-        let symbols = cal.veryShortStandaloneWeekdaySymbols
-        let offset = cal.firstWeekday - 1
-        guard offset >= 0, offset < symbols.count else { return symbols }
-        return Array(symbols[offset...] + symbols[..<offset])
+        MonthGridLayout.weekdaySymbols(calendar: .current)
     }
 
     fileprivate var currentMonthAnchor: Date {
-        let cal = Calendar.current
-        return cal.date(byAdding: .month, value: monthOffset, to: cal.startOfMonth(for: Date())) ?? Date()
+        MonthGridLayout.monthAnchor(offset: monthOffset)
     }
 
     fileprivate func monthLeadingEmptyCells(for monthStart: Date, calendar: Calendar) -> Int {
-        let weekdayOfFirst = calendar.component(.weekday, from: calendar.startOfMonth(for: monthStart))
-        // weekday is 1...7 with 1 = Sunday by default. firstWeekday is 1...7.
-        // Number of leading empty cells is (weekdayOfFirst - firstWeekday) mod 7.
-        let raw = weekdayOfFirst - calendar.firstWeekday
-        return (raw + 7) % 7
+        MonthGridLayout.leadingEmptyCells(for: monthStart, calendar: calendar)
     }
 
     fileprivate func shiftMonth(by delta: Int) {
@@ -395,11 +384,7 @@ struct WorkoutsView: View {
     }
 
     private var currentMonthDates: [Date] {
-        let calendar = Calendar.current
-        let anchor = currentMonthAnchor
-        guard let interval = calendar.dateInterval(of: .month, for: anchor) else { return [] }
-        let days = calendar.dateComponents([.day], from: interval.start, to: interval.end).day ?? 0
-        return (0..<days).compactMap { calendar.date(byAdding: .day, value: $0, to: interval.start) }
+        MonthGridLayout.dates(inMonthContaining: currentMonthAnchor, calendar: .current)
     }
 
     private func isoDayString(_ date: Date) -> String {
@@ -602,13 +587,4 @@ struct EmptyStateView: View {
         .preferredColorScheme(.dark)
 }
 
-// MARK: - Calendar helper (AMA-1641)
 
-private extension Calendar {
-    /// Returns the first instant of the month containing `date`, in the
-    /// receiver's time zone.
-    func startOfMonth(for date: Date) -> Date {
-        let comps = dateComponents([.year, .month], from: date)
-        return self.date(from: comps) ?? date
-    }
-}
