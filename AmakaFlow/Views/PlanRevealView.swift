@@ -3,6 +3,7 @@ import SwiftUI
 struct PlanRevealView: View {
     let isReady: Bool
     let onConfirm: () -> Void
+    var onSkip: (() -> Void)? = nil
 
     private let blocks = [
         PlanBlock(week: "W1", title: "Foundation", focus: "Technique + easy volume", load: "6h 20m", color: Theme.Colors.accentGreen),
@@ -27,7 +28,12 @@ struct PlanRevealView: View {
             AFTopBar(title: "Building your plan", subtitle: "Coach is periodising your next block.") {
                 EmptyView()
             } right: {
-                EmptyView()
+                if let onSkip {
+                    Button("Skip", action: onSkip)
+                        .font(Theme.Typography.bodyBold)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                        .accessibilityIdentifier("plan_reveal_skip")
+                }
             }
 
             Spacer()
@@ -55,7 +61,12 @@ struct PlanRevealView: View {
             AFTopBar(title: "Your 4-week block", subtitle: "Periodised around your race goal and recovery data.") {
                 EmptyView()
             } right: {
-                EmptyView()
+                if let onSkip {
+                    Button("Skip", action: onSkip)
+                        .font(Theme.Typography.bodyBold)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                        .accessibilityIdentifier("plan_reveal_skip")
+                }
             }
 
             ScrollView {
@@ -87,6 +98,7 @@ struct PlanRevealView: View {
                 .buttonStyle(AFPrimaryButtonStyle())
                 .padding(.horizontal, Theme.Spacing.lg)
                 .padding(.vertical, Theme.Spacing.md)
+                .accessibilityIdentifier("plan_reveal_confirm")
         }
     }
 

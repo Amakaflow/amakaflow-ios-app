@@ -12,6 +12,10 @@ struct ContentView: View {
     @State private var selectedTab: Tab = .home
     @State private var showingWorkoutPlayer = false
     @State private var showSyncDashboard = false
+    // AMA-1625: NavigationPath for the More tab — held here so re-tapping
+    // the active More tab can reset it to root, matching native iOS TabView
+    // pop-to-root behaviour.
+    @State private var morePath = NavigationPath()
 
     enum Tab: String, CaseIterable {
         case home = "Home"
@@ -32,7 +36,18 @@ struct ContentView: View {
     }
 
     var body: some View {
-        TabView(selection: $selectedTab) {
+        // AMA-1625: custom selection setter detects re-tap on the active
+        // More tab and pops the More NavigationStack to root.
+        let tabSelection = Binding<Tab>(
+            get: { selectedTab },
+            set: { newValue in
+                if newValue == .more && selectedTab == .more {
+                    morePath = NavigationPath()
+                }
+                selectedTab = newValue
+            }
+        )
+        return TabView(selection: tabSelection) {
             HomeView()
                 .tabItem {
                     Image(systemName: Tab.home.icon)
@@ -73,7 +88,7 @@ struct ContentView: View {
                     .accessibilityIdentifier("social_tab")
             }
 
-            MoreView(navigateToSyncDashboard: $showSyncDashboard)
+            MoreView(navigateToSyncDashboard: $showSyncDashboard, path: $morePath)
                 .tabItem {
                     Image(systemName: Tab.more.icon)
                     Text(Tab.more.rawValue)
