@@ -10,118 +10,33 @@
 //  introduced ShareImportViewModel: ObservableObject so a UIKit container can
 //  drive @Published state and have SwiftUI actually re-render.
 //
-//  NOTE: Types are mirrored inline because the test target links against
-//  AmakaFlowCompanion, not the AmakaFlowShare extension target. This is the
-//  same pattern used by URLImportServiceTests / PlatformDetectorTests.
+//  These tests reference the production `ShareImportViewModel` and
+//  `ShareImportState` directly. The types live in
+//  `AmakaFlowShare/ShareImportViewModel.swift` and are dual-membered into
+//  this test target's Compile Sources phase, so a type-shape regression
+//  (e.g. dropping @Published) will break the build, not just sail past
+//  inline copies.
 //
 
 import Combine
-import SwiftUI
 import XCTest
-
-// MARK: - Inline mirrors of the share extension types under test
-//
-// These mirror `ShareImportState` and `ShareImportViewModel` in
-// `AmakaFlowCompanion/AmakaFlowShare/ShareExtensionView.swift` exactly. Keep
-// them in sync if production types change — the regression contract these
-// tests guard is "ShareImportViewModel.@Published state actually publishes
-// changes that a SwiftUI view consuming it via @ObservedObject will see."
-
-private enum TestShareImportState: Equatable {
-    case loading
-    case ready
-    case importing
-    case success(String)
-    case error(String)
-
-    static func == (lhs: TestShareImportState, rhs: TestShareImportState) -> Bool {
-        switch (lhs, rhs) {
-        case (.loading, .loading), (.ready, .ready), (.importing, .importing):
-            return true
-        case (.success(let a), .success(let b)):
-            return a == b
-        case (.error(let a), .error(let b)):
-            return a == b
-        default:
-            return false
-        }
-    }
-}
-
-@MainActor
-private final class TestShareImportViewModel: ObservableObject {
-    @Published var state: TestShareImportState = .ready
-}
-
-/// Mirrors the closure-storage shape of `ShareExtensionView` — onImport /
-/// onCancel passed at init, used to verify the wiring contract.
-private struct TestShareView {
-    let urls: [String]
-    let onImport: () -> Void
-    let onCancel: () -> Void
-    let viewModel: TestShareImportViewModel
-}
-
-// MARK: - Tests
 
 @MainActor
 final class ShareExtensionTests: XCTestCase {
 
-    // MARK: - Button action wiring (AMA-1642)
-
-    /// Verifies the Import button's action closure is the one we passed in
-    /// at construction time. Without ViewInspector we can't tap the actual
-    /// SwiftUI Button in a unit test, but the meaningful contract is "the
-    /// closure stored on the view is the same closure that gets called when
-    /// the button fires" — and that's what this asserts. Pairs with
-    /// `test_shareImportViewModel_publishesStateTransitions` below to cover
-    /// both halves of the bug: the button fires AND state changes propagate.
-    func test_importWorkoutButton_firesImportAction() {
-        let exp = expectation(description: "onImport closure fires")
-        let viewModel = TestShareImportViewModel()
-
-        let view = TestShareView(
-            urls: ["https://example.com/workout"],
-            onImport: { exp.fulfill() },
-            onCancel: {},
-            viewModel: viewModel
-        )
-
-        view.onImport()
-
-        waitForExpectations(timeout: 0.1)
-    }
-
-    /// Cancel closure is wired the same way — round-trip verification.
-    func test_cancelButton_firesCancelAction() {
-        let exp = expectation(description: "onCancel closure fires")
-        let viewModel = TestShareImportViewModel()
-
-        let view = TestShareView(
-            urls: ["https://example.com/workout"],
-            onImport: {},
-            onCancel: { exp.fulfill() },
-            viewModel: viewModel
-        )
-
-        view.onCancel()
-
-        waitForExpectations(timeout: 0.1)
-    }
-
     // MARK: - State binding (AMA-1642 root-cause regression guard)
 
-    /// Mutating the view model's `state` must publish the change so the
-    /// SwiftUI view re-renders. This is the regression guard for the
-    /// AMA-1642 root cause: the previous `@State` storage on
-    /// `ShareExtensionView` couldn't be driven from outside via
-    /// `hostingController?.rootView.state = ...`, so `.importing` /
-    /// `.success` / `.error` transitions were invisible. With
-    /// `@Published` on an `ObservableObject`, mutations propagate.
+    /// Mutating the view model's `state` must publish the change so a
+    /// SwiftUI consumer (`ShareExtensionView`) re-renders. This is the
+    /// regression guard for the AMA-1642 root cause: the previous
+    /// `@State` storage on `ShareExtensionView` couldn't be driven from
+    /// outside via `hostingController?.rootView.state = ...`, so
+    /// `.importing` / `.success` / `.error` transitions were invisible.
+    /// With `@Published` on an `ObservableObject`, mutations propagate.
     func test_shareImportViewModel_publishesStateTransitions() {
-        let viewModel = TestShareImportViewModel()
+        let viewModel = ShareImportViewModel()
 
-        var receivedStates: [TestShareImportState] = []
+        var receivedStates: [ShareImportState] = []
         var cancellables = Set<AnyCancellable>()
         let exp = expectation(description: "publisher emits 4 values (initial + 3 mutations)")
         exp.expectedFulfillmentCount = 4
@@ -146,18 +61,44 @@ final class ShareExtensionTests: XCTestCase {
     }
 
     func test_shareImportViewModel_initialStateIsReady() {
-        let viewModel = TestShareImportViewModel()
+        let viewModel = ShareImportViewModel()
         XCTAssertEqual(viewModel.state, .ready)
+    }
+
+    /// Verifies that mutating `state` triggers the `objectWillChange`
+    /// publisher SwiftUI uses to re-render. If someone accidentally
+    /// removes `@Published` (the AMA-1642 regression vector), this test
+    /// will start failing because objectWillChange wouldn't fire.
+    func test_shareImportViewModel_objectWillChangeFiresOnMutation() {
+        let viewModel = ShareImportViewModel()
+        var willChangeCount = 0
+        var cancellables = Set<AnyCancellable>()
+
+        viewModel.objectWillChange.sink { _ in
+            willChangeCount += 1
+        }
+        .store(in: &cancellables)
+
+        viewModel.state = .importing
+        viewModel.state = .error("x")
+
+        XCTAssertEqual(willChangeCount, 2, "objectWillChange should fire once per @Published mutation")
     }
 
     // MARK: - State equality (round-trip on the enum used by callers)
 
+    /// Production tests the custom Equatable impl that
+    /// `ShareViewController` and `ShareExtensionView` rely on for state
+    /// transitions and view re-render gating.
     func test_shareImportState_equalityCovers_associatedValues() {
-        XCTAssertEqual(TestShareImportState.success("a"), .success("a"))
-        XCTAssertNotEqual(TestShareImportState.success("a"), .success("b"))
-        XCTAssertEqual(TestShareImportState.error("x"), .error("x"))
-        XCTAssertNotEqual(TestShareImportState.error("x"), .error("y"))
-        XCTAssertNotEqual(TestShareImportState.ready, .importing)
-        XCTAssertNotEqual(TestShareImportState.success("a"), .error("a"))
+        XCTAssertEqual(ShareImportState.success("a"), .success("a"))
+        XCTAssertNotEqual(ShareImportState.success("a"), .success("b"))
+        XCTAssertEqual(ShareImportState.error("x"), .error("x"))
+        XCTAssertNotEqual(ShareImportState.error("x"), .error("y"))
+        XCTAssertNotEqual(ShareImportState.ready, .importing)
+        XCTAssertNotEqual(ShareImportState.success("a"), .error("a"))
+        XCTAssertEqual(ShareImportState.loading, .loading)
+        XCTAssertEqual(ShareImportState.ready, .ready)
+        XCTAssertEqual(ShareImportState.importing, .importing)
     }
 }

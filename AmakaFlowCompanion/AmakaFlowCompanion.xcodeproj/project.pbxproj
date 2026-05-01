@@ -21,6 +21,7 @@
 		3X3RC1S35W1FT000004 /* Exercise.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3X3RC1S35W1FT000001 /* Exercise.swift */; };
 		40E350E9B26F4574902587EF /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29B50DC380A44F2D96E6E414 /* PairingView.swift */; };
 		43F9F2E9369F4546B3AF005A /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D9B67C13E34BAE804A9359 /* HistoryView.swift */; };
+		44201694D9E295D587684DBB /* ShareImportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44D7C6673CB9BE868FC1006 /* ShareImportViewModel.swift */; };
 		444EFC17D69346B3B93C9ECA /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11B5892FB68A40CB890E3630 /* KeychainHelper.swift */; };
 		5016188D64111FBBE44B4A8D /* FollowAlongPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E90D82F541D1AF7AE58A29B /* FollowAlongPlayerView.swift */; };
 		521047C38D23474889C39F35 /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AB8DFBA16CE406C95456EAD /* CalendarView.swift */; };
@@ -51,6 +52,7 @@
 		A1B2C3D4E5F647889ABCDEF0 /* RPEFeedbackViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18D523D7E78245EBB81A469A /* RPEFeedbackViewModelTests.swift */; };
 		A1IMP0RTV13W00000001 /* AIImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1IMP0RTV13W00000000 /* AIImportView.swift */; };
 		A1IMP0RTV13W0002 /* AIImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1IMP0RTV13W0001 /* AIImportView.swift */; };
+		A469F200B85B870CA8481098 /* ShareImportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44D7C6673CB9BE868FC1006 /* ShareImportViewModel.swift */; };
 		A472B5FFC8CB61D805621A61 /* EditProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DB39A8A5380FCFCD3BBA5EB /* EditProfileView.swift */; };
 		AA8C7E7D040E462BB1347220 /* RestPeriodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94AE3547CCCD41159C85554B /* RestPeriodView.swift */; };
 		AAA43473A50C02F82E139FED /* TrainingPreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1660F7A199C30F1FF9B8DFD /* TrainingPreferencesView.swift */; };
@@ -609,6 +611,7 @@
 		AMA1620AUTHINT01A /* ClerkAuthorizationInterceptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ClerkAuthorizationInterceptor.swift; path = ../AmakaFlow/Services/ClerkAuthorizationInterceptor.swift; sourceTree = SOURCE_ROOT; };
 		AMA1620AUTHVM001A /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AuthViewModel.swift; path = ../AmakaFlow/ViewModels/AuthViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA1620UITEST01A /* UITestEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UITestEnvironment.swift; path = ../AmakaFlow/Services/UITestEnvironment.swift; sourceTree = SOURCE_ROOT; };
+		B44D7C6673CB9BE868FC1006 /* ShareImportViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShareImportViewModel.swift; sourceTree = "<group>"; };
 		BAC6A807F5A4820B05339B99 /* PlanRevealView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlanRevealView.swift; path = ../AmakaFlow/Views/PlanRevealView.swift; sourceTree = SOURCE_ROOT; };
 		BL0CK2INT3RVAL00001 /* BlockToIntervalConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BlockToIntervalConverter.swift; path = ../AmakaFlow/Services/BlockToIntervalConverter.swift; sourceTree = SOURCE_ROOT; };
 		BL0CK5W1FT00000001 /* Block.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Block.swift; path = ../AmakaFlow/Models/Block.swift; sourceTree = SOURCE_ROOT; };
@@ -885,6 +888,7 @@
 				AK00SHARE004A /* SharedContainerManager.swift */,
 				AK00SHARE005A /* URLImportService.swift */,
 				AK00SHARE006A /* ShareExtensionView.swift */,
+				B44D7C6673CB9BE868FC1006 /* ShareImportViewModel.swift */,
 			);
 			path = AmakaFlowShare;
 			sourceTree = "<group>";
@@ -1519,6 +1523,7 @@
 				AK00SHARE004B /* SharedContainerManager.swift in Sources */,
 				AK00SHARE005B /* URLImportService.swift in Sources */,
 				AK00SHARE006B /* ShareExtensionView.swift in Sources */,
+				44201694D9E295D587684DBB /* ShareImportViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1810,6 +1815,7 @@
 				AMA14140007B /* VolumeAnalyticsViewModelTests.swift in Sources */,
 				AMA14150009B /* BulkImportViewModelTests.swift in Sources */,
 				688E97FB5938812BF52882A0 /* ShareExtensionTests.swift in Sources */,
+				A469F200B85B870CA8481098 /* ShareImportViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

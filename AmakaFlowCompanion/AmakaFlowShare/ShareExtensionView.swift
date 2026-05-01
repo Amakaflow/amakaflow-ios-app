@@ -9,41 +9,11 @@
 
 import SwiftUI
 
-/// State for the share extension import flow
-enum ShareImportState: Equatable {
-    case loading          // Extracting URL from shared content
-    case ready            // URL extracted, waiting for user action
-    case importing        // POST in flight
-    case success(String)  // Import succeeded — shows workout title
-    case error(String)    // Import failed — shows error message
-
-    static func == (lhs: ShareImportState, rhs: ShareImportState) -> Bool {
-        switch (lhs, rhs) {
-        case (.loading, .loading), (.ready, .ready), (.importing, .importing):
-            return true
-        case (.success(let a), .success(let b)):
-            return a == b
-        case (.error(let a), .error(let b)):
-            return a == b
-        default:
-            return false
-        }
-    }
-}
-
-/// View model that drives ShareExtensionView's render state.
-///
-/// AMA-1642: previously `state` was an `@State` property on `ShareExtensionView`.
-/// `ShareViewController` tried to drive it via
-/// `hostingController?.rootView.state = .importing`, but `UIHostingController.rootView`
-/// returns the SwiftUI view as a value, so assigning to `@State` on that returned
-/// value silently drops the mutation — the view never re-rendered into `.importing`,
-/// `.success`, or `.error`. Lifting the state into an `ObservableObject` driven by
-/// `@Published` lets the UIKit controller mutate state and have SwiftUI react.
-@MainActor
-final class ShareImportViewModel: ObservableObject {
-    @Published var state: ShareImportState = .ready
-}
+// `ShareImportState` and `ShareImportViewModel` live in
+// `ShareImportViewModel.swift` so the test target can compile against the
+// production types directly without dragging the whole SwiftUI view tree
+// (and DetectedPlatform / ShareExtensionView's other dependencies) into
+// the test bundle.
 
 /// The mini preview UI shown in the share sheet
 struct ShareExtensionView: View {
