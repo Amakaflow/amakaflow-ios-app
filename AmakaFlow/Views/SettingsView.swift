@@ -62,7 +62,7 @@ struct SettingsView: View {
     var body: some View {
         ScrollView {
                 VStack(spacing: Theme.Spacing.xl) {
-                    AFTopBar(title: "You") {
+                    AFTopBar(title: "Settings") {
                         EmptyView()
                     } right: {
                         EmptyView()
@@ -1851,6 +1851,37 @@ struct SettingsView: View {
                     }
                 }
 
+                // AMA-1639: Edit Profile entry point — display name + units.
+                // Persists locally via @AppStorage; backend sync is a future
+                // ticket once the account API ships.
+                NavigationLink {
+                    EditProfileView(initialNameFallback: pairingService.userProfile?.name)
+                } label: {
+                    HStack(spacing: Theme.Spacing.md) {
+                        Image(systemName: "person.crop.circle")
+                            .font(.system(size: 18))
+                            .foregroundColor(Theme.Colors.textPrimary)
+                            .frame(width: 24)
+                        Text("Edit Profile")
+                            .font(Theme.Typography.body)
+                            .foregroundColor(Theme.Colors.textPrimary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(Theme.Colors.textTertiary)
+                    }
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, Theme.Spacing.md)
+                    .background(Theme.Colors.surface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                            .stroke(Theme.Colors.borderLight, lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("settings_edit_profile")
+
                 // Environment info
                 #if DEBUG
                 // Environment selector (DEBUG only)
@@ -2331,4 +2362,96 @@ private struct SettingsToggleRow: View {
         .environmentObject(PairingService.shared)
         .environmentObject(WorkoutsViewModel())
         .preferredColorScheme(.dark)
+}
+
+// MARK: - Edit Profile (AMA-1639)
+
+enum DistanceUnit: String, Codable, CaseIterable {
+    case mi
+    case km
+
+    var display: String {
+        switch self {
+        case .mi: return "mi"
+        case .km: return "km"
+        }
+    }
+}
+
+/// User-facing edit-profile surface (AMA-1639). Display name + unit
+/// preferences, persisted via @AppStorage. Pushed from SettingsView's
+/// Account card. Inlined here to keep the new struct in a file the
+/// Xcode project already tracks (project uses explicit groups, not
+/// folder references).
+struct EditProfileView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    @AppStorage("user.displayName") private var displayName: String = ""
+    @AppStorage("user.weightUnit") private var weightUnit: WeightUnit = .lbs
+    @AppStorage("user.distanceUnit") private var distanceUnit: DistanceUnit = .mi
+
+    /// Pre-fill from the paired Clerk profile if the user hasn't customised
+    /// their local display name yet. Read-only fallback so we don't overwrite
+    /// the local value.
+    let initialNameFallback: String?
+
+    @State private var draftName: String = ""
+
+    init(initialNameFallback: String? = nil) {
+        self.initialNameFallback = initialNameFallback
+    }
+
+    var body: some View {
+        Form {
+            Section("Profile") {
+                TextField(
+                    "Display name",
+                    text: $draftName,
+                    prompt: Text(initialNameFallback ?? "Your name")
+                )
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+                .accessibilityIdentifier("edit_profile_name_field")
+            }
+
+            Section("Units") {
+                Picker("Weight", selection: $weightUnit) {
+                    Text("lbs").tag(WeightUnit.lbs)
+                    Text("kg").tag(WeightUnit.kg)
+                }
+                .accessibilityIdentifier("edit_profile_weight_unit")
+
+                Picker("Distance", selection: $distanceUnit) {
+                    Text("mi").tag(DistanceUnit.mi)
+                    Text("km").tag(DistanceUnit.km)
+                }
+                .accessibilityIdentifier("edit_profile_distance_unit")
+            }
+
+            Section {
+                Button("Save") {
+                    displayName = draftName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    dismiss()
+                }
+                .accessibilityIdentifier("edit_profile_save")
+                .disabled(draftName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .navigationTitle("Edit Profile")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if !displayName.isEmpty {
+                draftName = displayName
+            } else if let fallback = initialNameFallback {
+                draftName = fallback
+            }
+        }
+    }
+}
+
+#Preview("Edit Profile") {
+    NavigationStack {
+        EditProfileView(initialNameFallback: "Sample User")
+    }
+    .preferredColorScheme(.dark)
 }

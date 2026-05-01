@@ -223,6 +223,40 @@ extension AFTopBar where Left == AFBackChevron {
     }
 }
 
+extension AFTopBar where Right == AFTopBarSkipButton {
+    /// Convenience init for screens with a Skip button on the right.
+    /// Centralizes the styling and accessibility identifier so consumers
+    /// don't repeat the per-screen Button/font/color/identifier boilerplate
+    /// (AMA-1647). When `skipAction` is nil, no button renders — useful
+    /// for screens that conditionally allow skipping.
+    init(
+        title: String? = nil,
+        subtitle: String? = nil,
+        skipIdentifier: String = "af_topbar_skip",
+        skipAction: (() -> Void)?,
+        @ViewBuilder left: () -> Left
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.left = left()
+        self.right = AFTopBarSkipButton(identifier: skipIdentifier, action: skipAction)
+    }
+}
+
+struct AFTopBarSkipButton: View {
+    let identifier: String
+    let action: (() -> Void)?
+
+    var body: some View {
+        if let action {
+            Button("Skip", action: action)
+                .font(Theme.Typography.bodyBold)
+                .foregroundColor(Theme.Colors.textSecondary)
+                .accessibilityIdentifier(identifier)
+        }
+    }
+}
+
 struct AFBackChevron: View {
     let identifier: String
     let action: () -> Void
