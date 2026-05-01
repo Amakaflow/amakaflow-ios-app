@@ -38,6 +38,7 @@ struct HomeView: View {
     @State private var homeBannerKind: HomeBannerKind?
     @State private var showingPlanReveal = false
     @State private var planRevealReady = false
+    @State private var showingPlanAdoptedAlert = false
     @State private var showingWeeklyReview = false
     @State private var showingAgentInbox = false
 
@@ -217,15 +218,39 @@ struct HomeView: View {
                 VoiceWorkoutView()
             }
             .sheet(isPresented: $showingPlanReveal) {
-                PlanRevealView(isReady: planRevealReady) {
-                    showingPlanReveal = false
-                }
+                PlanRevealView(
+                    isReady: planRevealReady,
+                    onConfirm: {
+                        // AMA-1631: Adopt the plan + give user visible feedback.
+                        // Refresh workouts so the next view of Workouts/Home reflects
+                        // the new schedule, then show a confirmation alert before
+                        // dismissing the sheet.
+                        Task {
+                            await viewModel.refreshWorkouts()
+                            await MainActor.run {
+                                showingPlanReveal = false
+                                showingPlanAdoptedAlert = true
+                            }
+                        }
+                    },
+                    onSkip: {
+                        // AMA-1623: explicit Skip path so the user is never trapped
+                        // (especially during the loading state if it stalls).
+                        showingPlanReveal = false
+                    }
+                )
+                .presentationDragIndicator(.visible)
                 .onAppear {
                     planRevealReady = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                         planRevealReady = true
                     }
                 }
+            }
+            .alert("Plan adopted", isPresented: $showingPlanAdoptedAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Your 4-week block is now on your calendar. Open the Workouts tab to see the schedule.")
             }
             .sheet(isPresented: $showingWeeklyReview) {
                 WeeklyReviewView { showingWeeklyReview = false }
@@ -706,12 +731,19 @@ struct HomeView: View {
                     .padding(16)
 
                     HStack(spacing: Theme.Spacing.sm) {
-                        Button {
-                            if let workout = primaryWorkout { selectedWorkout = workout }
-                        } label: {
-                            Text("Details")
+                        // AMA-1630: Only show Details when there's an actual workout
+                        // to drill into. On rest days (primaryWorkout == nil) the
+                        // button had no destination, so tapping it was a silent
+                        // no-op.
+                        if let workout = primaryWorkout {
+                            Button {
+                                selectedWorkout = workout
+                            } label: {
+                                Text("Details")
+                            }
+                            .buttonStyle(AFGhostButtonStyle())
+                            .accessibilityIdentifier("home_workout_details")
                         }
-                        .buttonStyle(AFGhostButtonStyle())
 
                         Button {
                             if let workout = primaryWorkout {
@@ -727,6 +759,7 @@ struct HomeView: View {
                             }
                         }
                         .buttonStyle(AFPrimaryButtonStyle())
+                        .accessibilityIdentifier("home_start_workout")
                     }
                     .padding(12)
                     .background(Theme.Colors.backgroundSubtle)
@@ -1050,6 +1083,7 @@ struct HomeView: View {
                     Button("Cancel") {
                         showingQuickStart = false
                     }
+                    .accessibilityIdentifier("quick_start_cancel")
                 }
             }
         }
