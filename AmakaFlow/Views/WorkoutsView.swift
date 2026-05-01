@@ -11,6 +11,10 @@ struct WorkoutsView: View {
     @EnvironmentObject var viewModel: WorkoutsViewModel
     @State private var selectedWorkout: Workout?
     @State private var showingDetail = false
+    @AppStorage("workouts.selectedRange") private var selectedRange: WorkoutRange = .week
+    @State private var showingCalendar = false
+    @State private var monthOffset: Int = 0           // 0 = current month, -1 = prev, +1 = next
+    @State private var selectedMonthDay: Date? = nil  // user-tapped day in Month view (filters Week list)
     
     var body: some View {
         NavigationStack {
@@ -19,11 +23,17 @@ struct WorkoutsView: View {
                 
                 ScrollView {
                     VStack(spacing: Theme.Spacing.md) {
-                        AFTopBar(title: "This week", subtitle: currentWeekSubtitle) {
+                        AFTopBar(title: selectedRange.title, subtitle: currentRangeSubtitle) {
                             EmptyView()
                         } right: {
-                            Image(systemName: "calendar")
-                                .font(.system(size: 18))
+                            Button {
+                                showingCalendar = true
+                            } label: {
+                                Image(systemName: "calendar")
+                                    .font(.system(size: 18))
+                            }
+                            .accessibilityLabel("Calendar")
+                            .accessibilityIdentifier("workouts_calendar_button")
                         }
 
                         SearchBar(text: $viewModel.searchQuery)
@@ -32,18 +42,8 @@ struct WorkoutsView: View {
                         segmentedRange
                             .padding(.horizontal, Theme.Spacing.lg)
 
-                        VStack(spacing: Theme.Spacing.sm) {
-                            ForEach(Array(planRows.enumerated()), id: \.element.id) { index, row in
-                                PlanRowView(row: row) {
-                                    if let workout = row.workout {
-                                        selectedWorkout = workout
-                                        showingDetail = true
-                                    }
-                                }
-                                .accessibilityIdentifier("workout_card_\(index)")
-                            }
-                        }
-                        .padding(.horizontal, Theme.Spacing.lg)
+                        rangeContent
+                            .padding(.horizontal, Theme.Spacing.lg)
 
                         #if DEBUG
                         // Add Sample Workout Button (for testing)
@@ -72,6 +72,15 @@ struct WorkoutsView: View {
                 }
             }
             .navigationBarHidden(true)
+            .sheet(isPresented: $showingCalendar) {
+                CalendarView(onAddWorkout: {
+                    showingCalendar = false
+                    // Route to the suggest-workout flow on Home — the closest
+                    // existing surface for adding a session in MVP.
+                    NotificationCenter.default.post(name: .deepLinkToWorkout, object: nil)
+                })
+                .environmentObject(viewModel)
+            }
             .sheet(isPresented: $showingDetail) {
                 if let workout = selectedWorkout {
                     WorkoutDetailView(workout: workout)
@@ -107,22 +116,221 @@ struct WorkoutsView: View {
         }
     }
 
-    private var currentWeekSubtitle: String {
-        "Block 2 of 4 · \(viewModel.upcomingWorkouts.count + viewModel.incomingWorkouts.count) planned"
+    private var currentRangeSubtitle: String {
+        switch selectedRange {
+        case .week:
+            let blockTag = viewModel.activeBlock.map { "Block \($0.index) of \($0.total)" } ?? "Current block"
+            return "\(blockTag) · \(viewModel.upcomingWorkouts.count + viewModel.incomingWorkouts.count) planned"
+        case .block:
+            let count = blockRows.filter { $0.workout != nil }.count
+            if let block = viewModel.activeBlock {
+                return "\(count) session\(count == 1 ? "" : "s") in \(block.name)"
+            } else {
+                // No block info from API yet — fall back honestly. blockRows
+                // returns all upcoming in this case; subtitle is renamed so
+                // we don't fake a block count.
+                return "Upcoming sessions · \(count) planned"
+            }
+        case .month:
+            return currentMonthAnchor.formatted(.dateTime.month(.wide).year())
+        }
     }
 
     private var segmentedRange: some View {
         HStack(spacing: 3) {
-            Text("Week")
-                .segmentPill(isSelected: true)
-            Text("Block")
-                .segmentPill(isSelected: false)
-            Text("Month")
-                .segmentPill(isSelected: false)
+            ForEach(WorkoutRange.allCases) { range in
+                Button {
+                    selectedRange = range
+                } label: {
+                    Text(range.label)
+                        .segmentPill(isSelected: selectedRange == range)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("workouts_range_\(range.rawValue)")
+            }
         }
         .padding(3)
         .background(Theme.Colors.inputBackground)
         .clipShape(Capsule())
+    }
+
+    @ViewBuilder
+    private var rangeContent: some View {
+        switch selectedRange {
+        case .week:
+            rowsList(planRows)
+        case .block:
+            rowsList(blockRows)
+        case .month:
+            monthGrid
+        }
+    }
+
+    private func rowsList(_ rows: [PlanRow]) -> some View {
+        VStack(spacing: Theme.Spacing.sm) {
+            ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                PlanRowView(row: row) {
+                    if let workout = row.workout {
+                        selectedWorkout = workout
+                        showingDetail = true
+                    }
+                }
+                .accessibilityIdentifier("workout_card_\(index)")
+            }
+        }
+    }
+
+    private var blockRows: [PlanRow] {
+        let calendar = Calendar.current
+        // AMA-1641: scope to the active block when the planner returns one.
+        // Otherwise fall back to all filtered upcoming so the Block tab
+        // still shows something, with the subtitle downgraded honestly in
+        // currentRangeSubtitle so we don't fake a block count.
+        let scheduled: [ScheduledWorkout] = viewModel.activeBlock?.scheduledWorkouts
+            ?? viewModel.filteredUpcoming
+        return scheduled
+            .sorted { ($0.scheduledDate ?? .distantFuture) < ($1.scheduledDate ?? .distantFuture) }
+            .enumerated()
+            .map { index, scheduledWorkout in
+                let workout = scheduledWorkout.workout
+                let date = scheduledWorkout.scheduledDate ?? Date()
+                return PlanRow(
+                    id: "block-\(workout.id)-\(index)",
+                    day: date.formatted(.dateTime.weekday(.abbreviated)),
+                    date: date.formatted(.dateTime.day()),
+                    type: workout.sport.rawValue.capitalized,
+                    title: workout.name,
+                    duration: workout.formattedDuration,
+                    zone: zoneLabel(for: workout),
+                    icon: icon(for: workout.sport),
+                    done: false,
+                    today: calendar.isDateInToday(date),
+                    rest: false,
+                    workout: workout
+                )
+            }
+    }
+
+    private var monthGrid: some View {
+        let calendar = Calendar.current
+        let monthStart = currentMonthAnchor
+        let leadingEmpty = monthLeadingEmptyCells(for: monthStart, calendar: calendar)
+        let days = currentMonthDates
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 7)
+
+        return VStack(spacing: 8) {
+            // Month nav (prev / current / next)
+            HStack {
+                Button { shiftMonth(by: -1) } label: {
+                    Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold))
+                }
+                .accessibilityLabel("Previous month")
+                .accessibilityIdentifier("workouts_month_prev")
+
+                Spacer()
+
+                Text(monthStart.formatted(.dateTime.month(.wide).year()))
+                    .font(Theme.Typography.title3)
+                    .foregroundColor(Theme.Colors.textPrimary)
+
+                Spacer()
+
+                Button { shiftMonth(by: 1) } label: {
+                    Image(systemName: "chevron.right").font(.system(size: 16, weight: .semibold))
+                }
+                .accessibilityLabel("Next month")
+                .accessibilityIdentifier("workouts_month_next")
+            }
+            .foregroundColor(Theme.Colors.textSecondary)
+
+            // Weekday header (Sun..Sat for default US locale; locale-aware)
+            LazyVGrid(columns: columns, spacing: 6) {
+                ForEach(monthWeekdaySymbols, id: \.self) { sym in
+                    Text(sym)
+                        .font(Theme.Typography.captionBold)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+
+            // Day grid with leading empty cells so day-1 lands under correct weekday
+            LazyVGrid(columns: columns, spacing: 6) {
+                ForEach(0..<leadingEmpty, id: \.self) { _ in
+                    Color.clear.frame(minHeight: 44)
+                }
+                ForEach(days, id: \.self) { date in
+                    let hasWorkout = viewModel.filteredUpcoming.contains { workout in
+                        guard let scheduledDate = workout.scheduledDate else { return false }
+                        return calendar.isDate(scheduledDate, inSameDayAs: date)
+                    }
+                    Button {
+                        // Filter Week list to this day, then jump to Week.
+                        // selectedMonthDay is exposed for downstream filtering;
+                        // tapping again on a different day re-applies.
+                        selectedMonthDay = date
+                        selectedRange = .week
+                    } label: {
+                        VStack(spacing: 4) {
+                            Text(date.formatted(.dateTime.day()))
+                                .font(Theme.Typography.captionBold)
+                            Circle()
+                                .fill(hasWorkout ? Theme.Colors.accentBlue : Color.clear)
+                                .frame(width: 5, height: 5)
+                        }
+                        .foregroundColor(calendar.isDateInToday(date) ? Theme.Colors.textPrimary : Theme.Colors.textSecondary)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .background(calendar.isDateInToday(date) ? Theme.Colors.surface : Theme.Colors.accentBackground.opacity(0.25))
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.sm))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("workouts_month_day_\(calendar.component(.day, from: date))")
+                }
+            }
+        }
+        .accessibilityIdentifier("workouts_month_grid")
+    }
+
+    fileprivate var monthWeekdaySymbols: [String] {
+        // Shorter locale-aware weekday symbols, rotated so they start on the
+        // calendar's firstWeekday (default Sunday for US).
+        let cal = Calendar.current
+        let symbols = cal.veryShortStandaloneWeekdaySymbols
+        let offset = cal.firstWeekday - 1
+        guard offset >= 0, offset < symbols.count else { return symbols }
+        return Array(symbols[offset...] + symbols[..<offset])
+    }
+
+    fileprivate var currentMonthAnchor: Date {
+        let cal = Calendar.current
+        return cal.date(byAdding: .month, value: monthOffset, to: cal.startOfMonth(for: Date())) ?? Date()
+    }
+
+    fileprivate func monthLeadingEmptyCells(for monthStart: Date, calendar: Calendar) -> Int {
+        let weekdayOfFirst = calendar.component(.weekday, from: calendar.startOfMonth(for: monthStart))
+        // weekday is 1...7 with 1 = Sunday by default. firstWeekday is 1...7.
+        // Number of leading empty cells is (weekdayOfFirst - firstWeekday) mod 7.
+        let raw = weekdayOfFirst - calendar.firstWeekday
+        return (raw + 7) % 7
+    }
+
+    fileprivate func shiftMonth(by delta: Int) {
+        monthOffset += delta
+    }
+
+    fileprivate func zoneLabel(for workout: Workout) -> String {
+        // Prefer real intensity from the plan; fall back to "—" rather than
+        // a fabricated zone. AMA-1641: previously hard-coded "Z3–4"/"Ready".
+        // Workout currently has no top-level intensity field — derive from
+        // the first non-nil interval target as a best-effort label.
+        for interval in workout.intervals {
+            switch interval {
+            case .time(_, let target?), .warmup(_, let target?), .cooldown(_, let target?), .distance(_, let target?):
+                if !target.isEmpty { return target }
+            default:
+                continue
+            }
+        }
+        return "—"
     }
 
     private var planRows: [PlanRow] {
@@ -150,7 +358,7 @@ struct WorkoutsView: View {
                     type: workout.sport.rawValue.capitalized,
                     title: workout.name,
                     duration: workout.formattedDuration,
-                    zone: workout.sport == .running ? "Z3–4" : "Ready",
+                    zone: zoneLabel(for: workout),
                     icon: icon(for: workout.sport),
                     done: false, today: isToday, rest: false, workout: workout
                 )
@@ -186,8 +394,41 @@ struct WorkoutsView: View {
         return (0..<7).map { calendar.date(byAdding: .day, value: $0, to: start) ?? today }
     }
 
+    private var currentMonthDates: [Date] {
+        let calendar = Calendar.current
+        let anchor = currentMonthAnchor
+        guard let interval = calendar.dateInterval(of: .month, for: anchor) else { return [] }
+        let days = calendar.dateComponents([.day], from: interval.start, to: interval.end).day ?? 0
+        return (0..<days).compactMap { calendar.date(byAdding: .day, value: $0, to: interval.start) }
+    }
+
     private func isoDayString(_ date: Date) -> String {
         date.formatted(.iso8601.year().month().day())
+    }
+}
+
+
+enum WorkoutRange: String, CaseIterable, Identifiable {
+    case week
+    case block
+    case month
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .week: return "Week"
+        case .block: return "Block"
+        case .month: return "Month"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .week: return "This week"
+        case .block: return "Current block"
+        case .month: return "This month"
+        }
     }
 }
 
@@ -359,4 +600,15 @@ struct EmptyStateView: View {
     WorkoutsView()
         .environmentObject(WorkoutsViewModel())
         .preferredColorScheme(.dark)
+}
+
+// MARK: - Calendar helper (AMA-1641)
+
+private extension Calendar {
+    /// Returns the first instant of the month containing `date`, in the
+    /// receiver's time zone.
+    func startOfMonth(for date: Date) -> Date {
+        let comps = dateComponents([.year, .month], from: date)
+        return self.date(from: comps) ?? date
+    }
 }
