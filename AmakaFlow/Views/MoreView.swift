@@ -25,7 +25,7 @@ struct MoreView: View {
                     .accessibilityHidden(true)
 
                     AFLabel(text: "Features")
-                        .accessibilityHidden(true)
+                        .accessibilityAddTraits(.isHeader)
 
                     VStack(spacing: 0) {
                     // AMA-1632: Coach is the core agent surface for MVP — always visible.
@@ -73,7 +73,7 @@ struct MoreView: View {
                 // Tools — all non-MVP for the first cut.
                 if FeatureFlags.nonMvp {
                     AFLabel(text: "Tools")
-                        .accessibilityHidden(true)
+                        .accessibilityAddTraits(.isHeader)
                     VStack(spacing: 0) {
                         NavigationLink {
                             FatigueHistoryView()
@@ -101,7 +101,7 @@ struct MoreView: View {
 
                 // Settings — always visible.
                     AFLabel(text: "Settings")
-                        .accessibilityHidden(true)
+                        .accessibilityAddTraits(.isHeader)
                     VStack(spacing: 0) {
                     NavigationLink {
                         SettingsView(navigateToSyncDashboard: $navigateToSyncDashboard)
