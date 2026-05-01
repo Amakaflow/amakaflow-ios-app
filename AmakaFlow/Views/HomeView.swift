@@ -38,6 +38,7 @@ struct HomeView: View {
     @State private var homeBannerKind: HomeBannerKind?
     @State private var showingPlanReveal = false
     @State private var planRevealReady = false
+    @State private var planRevealReadyTask: Task<Void, Never>?
     @State private var showingPlanAdoptedAlert = false
     @State private var showingWeeklyReview = false
     @State private var showingAgentInbox = false
@@ -225,12 +226,15 @@ struct HomeView: View {
                         // Refresh workouts so the next view of Workouts/Home reflects
                         // the new schedule, then show a confirmation alert before
                         // dismissing the sheet.
-                        Task {
+                        // AMA-1644: Task body runs on MainActor (HomeView body is
+                        // already MainActor-isolated and WorkoutsViewModel is
+                        // @MainActor) — the explicit @MainActor on Task makes that
+                        // explicit and removes the need for a redundant
+                        // MainActor.run hop after the await.
+                        Task { @MainActor in
                             await viewModel.refreshWorkouts()
-                            await MainActor.run {
-                                showingPlanReveal = false
-                                showingPlanAdoptedAlert = true
-                            }
+                            showingPlanReveal = false
+                            showingPlanAdoptedAlert = true
                         }
                     },
                     onSkip: {
@@ -241,10 +245,20 @@ struct HomeView: View {
                 )
                 .presentationDragIndicator(.visible)
                 .onAppear {
+                    // AMA-1644: cancellable Task instead of fire-and-forget
+                    // asyncAfter, so tapping Skip during the 2s loading window
+                    // doesn't fire planRevealReady = true on a hidden view.
                     planRevealReady = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    planRevealReadyTask?.cancel()
+                    planRevealReadyTask = Task { @MainActor in
+                        try? await Task.sleep(for: .seconds(2))
+                        guard !Task.isCancelled else { return }
                         planRevealReady = true
                     }
+                }
+                .onDisappear {
+                    planRevealReadyTask?.cancel()
+                    planRevealReadyTask = nil
                 }
             }
             .alert("Plan adopted", isPresented: $showingPlanAdoptedAlert) {
@@ -268,7 +282,10 @@ struct HomeView: View {
                         savedProgress = progress
                     }
                 }
-                // Nutrition refresh (AMA-1290)
+                // Nutrition refresh (AMA-1290) + AMA-1636: re-read settings from
+                // UserDefaults so a toggle in NutritionSettingsView reflects on
+                // Home without requiring an app relaunch.
+                nutritionViewModel.reloadSettings()
                 nutritionViewModel.checkOnboardingNeeded()
                 if nutritionViewModel.settings.isEnabled {
                     Task {
@@ -1058,21 +1075,60 @@ struct HomeView: View {
                     .padding(.top, Theme.Spacing.lg)
 
                 ScrollView {
-                    VStack(spacing: Theme.Spacing.sm) {
-                        ForEach(viewModel.incomingWorkouts) { workout in
+                    if viewModel.incomingWorkouts.isEmpty {
+                        // AMA-1629: actionable empty state when the user has no
+                        // upcoming sessions. Without this the sheet rendered as
+                        // an unhelpful blank — user dead-ended.
+                        VStack(spacing: Theme.Spacing.md) {
+                            Image(systemName: "tray")
+                                .font(.system(size: 36))
+                                .foregroundColor(Theme.Colors.textSecondary)
+                                .padding(.top, Theme.Spacing.xl)
+
+                            Text("No upcoming workouts")
+                                .font(Theme.Typography.bodyBold)
+                                .foregroundColor(Theme.Colors.textPrimary)
+
+                            Text("Generate one with the Coach or import from a source.")
+                                .font(Theme.Typography.caption)
+                                .foregroundColor(Theme.Colors.textSecondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, Theme.Spacing.xl)
+
                             Button {
                                 showingQuickStart = false
-                                // Delay to allow sheet to fully dismiss before presenting next screen
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                    startWorkoutWithDeviceCheck(workout)
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                                    suggestWorkoutViewModel.requestSuggestion()
+                                    showingSuggestWorkout = true
                                 }
                             } label: {
-                                WorkoutCard(workout: workout, isPrimary: false)
+                                Text("Suggest a Workout")
+                                    .font(Theme.Typography.bodyBold)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(AFPrimaryButtonStyle())
+                            .padding(.horizontal, Theme.Spacing.lg)
+                            .padding(.top, Theme.Spacing.md)
+                            .accessibilityIdentifier("quick_start_empty_suggest")
                         }
+                        .frame(maxWidth: .infinity)
+                        .padding(.bottom, Theme.Spacing.xl)
+                    } else {
+                        VStack(spacing: Theme.Spacing.sm) {
+                            ForEach(viewModel.incomingWorkouts) { workout in
+                                Button {
+                                    showingQuickStart = false
+                                    // Delay to allow sheet to fully dismiss before presenting next screen
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                        startWorkoutWithDeviceCheck(workout)
+                                    }
+                                } label: {
+                                    WorkoutCard(workout: workout, isPrimary: false)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal, Theme.Spacing.lg)
                     }
-                    .padding(.horizontal, Theme.Spacing.lg)
                 }
             }
             .background(Theme.Colors.background.ignoresSafeArea())

@@ -102,6 +102,21 @@ final class NutritionViewModel: ObservableObject {
         settings = decoded
     }
 
+    /// AMA-1636: each consumer creates its own `@StateObject NutritionViewModel()`
+    /// instance, so a toggle in NutritionSettingsView persists to UserDefaults but
+    /// HomeView's in-memory copy stays stale until reloaded. Call this from
+    /// surfaces that re-appear after the user could have changed settings (e.g.
+    /// HomeView.onAppear, after returning from More → Settings).
+    ///
+    /// Toggles `settingsLoaded` around the load to suppress the `didSet`
+    /// observer's save — without the guard, every reload would round-trip
+    /// the just-loaded value back to UserDefaults.
+    func reloadSettings() {
+        settingsLoaded = false
+        loadSettings()
+        settingsLoaded = true
+    }
+
     func saveSettings() {
         guard let data = try? JSONEncoder().encode(settings) else { return }
         UserDefaults.standard.set(data, forKey: settingsKey)
