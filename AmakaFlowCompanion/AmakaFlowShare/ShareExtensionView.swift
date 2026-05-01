@@ -9,35 +9,18 @@
 
 import SwiftUI
 
-/// State for the share extension import flow
-enum ShareImportState: Equatable {
-    case loading          // Extracting URL from shared content
-    case ready            // URL extracted, waiting for user action
-    case importing        // POST in flight
-    case success(String)  // Import succeeded — shows workout title
-    case error(String)    // Import failed — shows error message
-
-    static func == (lhs: ShareImportState, rhs: ShareImportState) -> Bool {
-        switch (lhs, rhs) {
-        case (.loading, .loading), (.ready, .ready), (.importing, .importing):
-            return true
-        case (.success(let a), .success(let b)):
-            return a == b
-        case (.error(let a), .error(let b)):
-            return a == b
-        default:
-            return false
-        }
-    }
-}
+// `ShareImportState` and `ShareImportViewModel` live in
+// `ShareImportViewModel.swift` so the test target can compile against the
+// production types directly without dragging the whole SwiftUI view tree
+// (and DetectedPlatform / ShareExtensionView's other dependencies) into
+// the test bundle.
 
 /// The mini preview UI shown in the share sheet
 struct ShareExtensionView: View {
     let urls: [String]
     let onImport: () -> Void
     let onCancel: () -> Void
-
-    @State var state: ShareImportState = .ready
+    @ObservedObject var viewModel: ShareImportViewModel
 
     /// The primary URL to display
     private var primaryURL: String {
@@ -111,7 +94,7 @@ struct ShareExtensionView: View {
                 }
 
                 // State-dependent content
-                switch state {
+                switch viewModel.state {
                 case .loading:
                     ProgressView("Extracting URL...")
                         .frame(maxWidth: .infinity)
