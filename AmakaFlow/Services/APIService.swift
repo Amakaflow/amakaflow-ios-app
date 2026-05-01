@@ -1279,7 +1279,7 @@ class APIService {
 
     /// Ask the AI coach a quick question
     func askCoach(question: String) async throws -> String {
-        let url = URL(string: "\(baseURL)/api/v1/coach/quick")!
+        let url = URL(string: "\(baseURL)/coach/quick")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = await makeAuthHeaders()
@@ -1299,7 +1299,7 @@ class APIService {
             throw APIError.unauthorized
         default:
             let body = String(data: data, encoding: .utf8) ?? "empty"
-            logError(endpoint: "/api/v1/coach/quick", method: "POST",
+            logError(endpoint: "/coach/quick", method: "POST",
                      statusCode: httpResponse.statusCode, response: body, error: nil)
             throw APIError.serverError(httpResponse.statusCode)
         }
@@ -1442,7 +1442,7 @@ class APIService {
 
     func sendCoachMessage(message: String, context: CoachContext? = nil) async throws -> CoachResponse {
         let chatURL = AppEnvironment.current.chatAPIURL
-        let url = URL(string: "\(chatURL)/api/v1/coach/message")!
+        let url = URL(string: "\(chatURL)/coach/message")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = await makeAuthHeaders()
@@ -1464,7 +1464,7 @@ class APIService {
 
     func getFatigueAdvice(fatigueScore: Double? = nil, loadHistory: [DailyLoad]? = nil) async throws -> FatigueAdvice {
         let chatURL = AppEnvironment.current.chatAPIURL
-        let url = URL(string: "\(chatURL)/api/v1/coach/fatigue-advice")!
+        let url = URL(string: "\(chatURL)/coach/fatigue-advice")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = await makeAuthHeaders()
@@ -1483,7 +1483,7 @@ class APIService {
 
     func fetchCoachMemories() async throws -> [CoachMemory] {
         let chatURL = AppEnvironment.current.chatAPIURL
-        let url = URL(string: "\(chatURL)/api/v1/coach/memories")!
+        let url = URL(string: "\(chatURL)/coach/memories")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.allHTTPHeaderFields = await makeAuthHeaders()
@@ -2378,7 +2378,7 @@ extension APIService {
 
     func suggestWorkout(request: SuggestWorkoutRequest) async throws -> SuggestWorkoutResponse {
         let chatURL = AppEnvironment.current.chatAPIURL
-        guard let url = URL(string: "\(chatURL)/api/v1/coach/suggest-workout") else { throw APIError.invalidURL }
+        guard let url = URL(string: "\(chatURL)/coach/suggest-workout") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.allHTTPHeaderFields = await makeAuthHeaders()
@@ -2393,7 +2393,7 @@ extension APIService {
         case 401: throw APIError.unauthorized
         default:
             let body = String(data: data, encoding: .utf8) ?? "empty"
-            logError(endpoint: "/api/v1/coach/suggest-workout", method: "POST",
+            logError(endpoint: "/coach/suggest-workout", method: "POST",
                      statusCode: httpResponse.statusCode, response: body, error: nil)
             throw APIError.serverError(httpResponse.statusCode)
         }
