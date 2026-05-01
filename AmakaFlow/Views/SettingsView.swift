@@ -62,7 +62,7 @@ struct SettingsView: View {
     var body: some View {
         ScrollView {
                 VStack(spacing: Theme.Spacing.xl) {
-                    AFTopBar(title: "You") {
+                    AFTopBar(title: "Settings") {
                         EmptyView()
                     } right: {
                         EmptyView()
@@ -1851,6 +1851,37 @@ struct SettingsView: View {
                     }
                 }
 
+                // AMA-1639: Edit Profile entry point — display name + units.
+                // Persists locally via @AppStorage; backend sync is a future
+                // ticket once the account API ships.
+                NavigationLink {
+                    EditProfileView(initialNameFallback: pairingService.userProfile?.name)
+                } label: {
+                    HStack(spacing: Theme.Spacing.md) {
+                        Image(systemName: "person.crop.circle")
+                            .font(.system(size: 18))
+                            .foregroundColor(Theme.Colors.textPrimary)
+                            .frame(width: 24)
+                        Text("Edit Profile")
+                            .font(Theme.Typography.body)
+                            .foregroundColor(Theme.Colors.textPrimary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(Theme.Colors.textTertiary)
+                    }
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, Theme.Spacing.md)
+                    .background(Theme.Colors.surface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                            .stroke(Theme.Colors.borderLight, lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("settings_edit_profile")
+
                 // Environment info
                 #if DEBUG
                 // Environment selector (DEBUG only)
@@ -2332,3 +2363,7 @@ private struct SettingsToggleRow: View {
         .environmentObject(WorkoutsViewModel())
         .preferredColorScheme(.dark)
 }
+
+// AMA-1639: EditProfileView and DistanceUnit live in their own file
+// (`AmakaFlow/Views/EditProfileView.swift`) — extracted to keep this
+// file under SwiftLint's file_length cap.

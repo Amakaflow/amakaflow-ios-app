@@ -25,15 +25,14 @@ struct PlanRevealView: View {
 
     private var loadingContent: some View {
         VStack(spacing: 0) {
-            AFTopBar(title: "Building your plan", subtitle: "Coach is periodising your next block.") {
+            // AMA-1647: AFTopBar Skip slot — centralized styling + a11y id.
+            AFTopBar(
+                title: "Building your plan",
+                subtitle: "Coach is periodising your next block.",
+                skipIdentifier: "plan_reveal_skip",
+                skipAction: onSkip
+            ) {
                 EmptyView()
-            } right: {
-                if let onSkip {
-                    Button("Skip", action: onSkip)
-                        .font(Theme.Typography.bodyBold)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                        .accessibilityIdentifier("plan_reveal_skip")
-                }
             }
 
             Spacer()
@@ -58,15 +57,15 @@ struct PlanRevealView: View {
 
     private var readyContent: some View {
         VStack(spacing: 0) {
-            AFTopBar(title: "Your 4-week block", subtitle: "Periodised around your race goal and recovery data.") {
+            // AMA-1647: same centralized Skip slot as loadingContent — single
+            // source of truth for the styling and identifier.
+            AFTopBar(
+                title: "Your 4-week block",
+                subtitle: "Periodised around your race goal and recovery data.",
+                skipIdentifier: "plan_reveal_skip",
+                skipAction: onSkip
+            ) {
                 EmptyView()
-            } right: {
-                if let onSkip {
-                    Button("Skip", action: onSkip)
-                        .font(Theme.Typography.bodyBold)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                        .accessibilityIdentifier("plan_reveal_skip")
-                }
             }
 
             ScrollView {

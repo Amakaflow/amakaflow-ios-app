@@ -7,11 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		AMA1620AUTHVM001B /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620AUTHVM001A /* AuthViewModel.swift */; };
-		AMA1620AUTHINT01B /* ClerkAuthorizationInterceptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620AUTHINT01A /* ClerkAuthorizationInterceptor.swift */; };
-		AMA1620UITEST01B /* UITestEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620UITEST01A /* UITestEnvironment.swift */; };
-		AMA1620CLKKIT01B /* ClerkKit in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1620CLKKIT01P /* ClerkKit */; };
-		AMA1620CLKUI001B /* ClerkKitUI in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1620CLKUI001P /* ClerkKitUI */; };
 		00CBD8759EE7C769D1D7F82B /* AgentInboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EB7457100F5C1B6E4488558 /* AgentInboxView.swift */; };
 		0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
 		11C72B7C6EA17FC8DEA354FB /* CoachModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */; };
@@ -55,6 +50,7 @@
 		A1B2C3D4E5F647889ABCDEF0 /* RPEFeedbackViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18D523D7E78245EBB81A469A /* RPEFeedbackViewModelTests.swift */; };
 		A1IMP0RTV13W00000001 /* AIImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1IMP0RTV13W00000000 /* AIImportView.swift */; };
 		A1IMP0RTV13W0002 /* AIImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1IMP0RTV13W0001 /* AIImportView.swift */; };
+		A472B5FFC8CB61D805621A61 /* EditProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DB39A8A5380FCFCD3BBA5EB /* EditProfileView.swift */; };
 		AA8C7E7D040E462BB1347220 /* RestPeriodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94AE3547CCCD41159C85554B /* RestPeriodView.swift */; };
 		AAA43473A50C02F82E139FED /* TrainingPreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1660F7A199C30F1FF9B8DFD /* TrainingPreferencesView.swift */; };
 		AF50AD9DC3B0E509ED0ED715 /* AnalyticsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68B54D3FBC9E8561760B53F0 /* AnalyticsModels.swift */; };
@@ -207,6 +203,11 @@
 		AMA14150009B /* BulkImportViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14150009A /* BulkImportViewModelTests.swift */; };
 		AMA16080002 /* BiometricConsentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA16080001 /* BiometricConsentView.swift */; };
 		AMA1617TG001B /* TelegramSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1617TG001A /* TelegramSetupView.swift */; };
+		AMA1620AUTHINT01B /* ClerkAuthorizationInterceptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620AUTHINT01A /* ClerkAuthorizationInterceptor.swift */; };
+		AMA1620AUTHVM001B /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620AUTHVM001A /* AuthViewModel.swift */; };
+		AMA1620CLKKIT01B /* ClerkKit in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1620CLKKIT01P /* ClerkKit */; };
+		AMA1620CLKUI001B /* ClerkKitUI in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1620CLKUI001P /* ClerkKitUI */; };
+		AMA1620UITEST01B /* UITestEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620UITEST01A /* UITestEnvironment.swift */; };
 		B1910EAEA57AF40FBA6FEDD3 /* FollowAlongPlayerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */; };
 		B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E57529578481B8991A91F /* SourcesView.swift */; };
 		B69E1808FE344A15848A3B67 /* WorkoutCompletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */; };
@@ -405,9 +406,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		AMA1620AUTHVM001A /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AuthViewModel.swift; path = ../AmakaFlow/ViewModels/AuthViewModel.swift; sourceTree = SOURCE_ROOT; };
-		AMA1620AUTHINT01A /* ClerkAuthorizationInterceptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ClerkAuthorizationInterceptor.swift; path = ../AmakaFlow/Services/ClerkAuthorizationInterceptor.swift; sourceTree = SOURCE_ROOT; };
-		AMA1620UITEST01A /* UITestEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UITestEnvironment.swift; path = ../AmakaFlow/Services/UITestEnvironment.swift; sourceTree = SOURCE_ROOT; };
 		0590FA2DB2E16FC868D6F303 /* SyncDashboardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SyncDashboardView.swift; path = ../AmakaFlow/Views/Settings/SyncDashboardView.swift; sourceTree = "<group>"; };
 		08D9B67C13E34BAE804A9359 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HistoryView.swift; path = ../AmakaFlow/Views/HistoryView.swift; sourceTree = SOURCE_ROOT; };
 		0949526387D9FA932B940DF3 /* TrainingPreferencesViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TrainingPreferencesViewModel.swift; path = ../AmakaFlow/ViewModels/TrainingPreferencesViewModel.swift; sourceTree = "<group>"; };
@@ -430,6 +428,7 @@
 		3X3RC1S35W1FT000001 /* Exercise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Exercise.swift; path = ../AmakaFlow/Models/Exercise.swift; sourceTree = SOURCE_ROOT; };
 		4CC7221F93FB2C2C9982C2ED /* NotificationPreferencesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationPreferencesView.swift; path = ../AmakaFlow/Views/Settings/NotificationPreferencesView.swift; sourceTree = "<group>"; };
 		4F945C56EB30A4BA6E5CAC50 /* ActivityFeedView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ActivityFeedView.swift; path = ../AmakaFlow/Views/ActivityFeedView.swift; sourceTree = "<group>"; };
+		5DB39A8A5380FCFCD3BBA5EB /* EditProfileView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EditProfileView.swift; path = ../AmakaFlow/Views/EditProfileView.swift; sourceTree = "<group>"; };
 		5F86F482904144B39B954F6A /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Environment.swift; path = ../AmakaFlow/Models/Environment.swift; sourceTree = SOURCE_ROOT; };
 		600ABA3EF2B2447396D7B39F /* RPEFeedbackViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RPEFeedbackViewModel.swift; path = ../AmakaFlow/ViewModels/RPEFeedbackViewModel.swift; sourceTree = SOURCE_ROOT; };
 		68B54D3FBC9E8561760B53F0 /* AnalyticsModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AnalyticsModels.swift; path = ../AmakaFlow/Models/AnalyticsModels.swift; sourceTree = "<group>"; };
@@ -605,6 +604,9 @@
 		AMA14150009A /* BulkImportViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BulkImportViewModelTests.swift; path = AmakaFlowCompanionTests/BulkImportViewModelTests.swift; sourceTree = "<group>"; };
 		AMA16080001 /* BiometricConsentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BiometricConsentView.swift; path = ../AmakaFlow/Views/BiometricConsentView.swift; sourceTree = SOURCE_ROOT; };
 		AMA1617TG001A /* TelegramSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TelegramSetupView.swift; path = ../AmakaFlow/Views/TelegramSetupView.swift; sourceTree = SOURCE_ROOT; };
+		AMA1620AUTHINT01A /* ClerkAuthorizationInterceptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ClerkAuthorizationInterceptor.swift; path = ../AmakaFlow/Services/ClerkAuthorizationInterceptor.swift; sourceTree = SOURCE_ROOT; };
+		AMA1620AUTHVM001A /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AuthViewModel.swift; path = ../AmakaFlow/ViewModels/AuthViewModel.swift; sourceTree = SOURCE_ROOT; };
+		AMA1620UITEST01A /* UITestEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UITestEnvironment.swift; path = ../AmakaFlow/Services/UITestEnvironment.swift; sourceTree = SOURCE_ROOT; };
 		BAC6A807F5A4820B05339B99 /* PlanRevealView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlanRevealView.swift; path = ../AmakaFlow/Views/PlanRevealView.swift; sourceTree = SOURCE_ROOT; };
 		BL0CK2INT3RVAL00001 /* BlockToIntervalConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BlockToIntervalConverter.swift; path = ../AmakaFlow/Services/BlockToIntervalConverter.swift; sourceTree = SOURCE_ROOT; };
 		BL0CK5W1FT00000001 /* Block.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Block.swift; path = ../AmakaFlow/Models/Block.swift; sourceTree = SOURCE_ROOT; };
@@ -1078,6 +1080,7 @@
 				F3CF9663A6818FA77C6C02B0 /* WeeklyReviewView.swift */,
 				AC3C221C070C10388F89DF2A /* WatchDeliveryView.swift */,
 				3EB7457100F5C1B6E4488558 /* AgentInboxView.swift */,
+				5DB39A8A5380FCFCD3BBA5EB /* EditProfileView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -1757,6 +1760,7 @@
 				D37C6098D3FACBE84D8D261D /* WeeklyReviewView.swift in Sources */,
 				72A766051AE36A2294C87B12 /* WatchDeliveryView.swift in Sources */,
 				00CBD8759EE7C769D1D7F82B /* AgentInboxView.swift in Sources */,
+				A472B5FFC8CB61D805621A61 /* EditProfileView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2553,6 +2557,14 @@
 				minimumVersion = 8.0.0;
 			};
 		};
+		AMA1620CLERKPKG /* XCRemoteSwiftPackageReference "clerk-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/clerk/clerk-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
 		F84E225F2ED0B84300459747 /* XCRemoteSwiftPackageReference "workoutkit-sync" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Amakaflow/workoutkit-sync";
@@ -2569,14 +2581,6 @@
 				minimumVersion = 1.0.0;
 			};
 		};
-		AMA1620CLERKPKG /* XCRemoteSwiftPackageReference "clerk-ios" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/clerk/clerk-ios";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -2584,6 +2588,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 6EFD6A06E1264416B1103D42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = Sentry;
+		};
+		AMA1620CLKKIT01P /* ClerkKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AMA1620CLERKPKG /* XCRemoteSwiftPackageReference "clerk-ios" */;
+			productName = ClerkKit;
+		};
+		AMA1620CLKUI001P /* ClerkKitUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AMA1620CLERKPKG /* XCRemoteSwiftPackageReference "clerk-ios" */;
+			productName = ClerkKitUI;
 		};
 		F84E22982ED0DA1F00459747 /* WorkoutKitSync */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -2604,16 +2618,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = XCT4H34LTH00000003 /* XCRemoteSwiftPackageReference "XCTHealthKit" */;
 			productName = XCTHealthKit;
-		};
-		AMA1620CLKKIT01P /* ClerkKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = AMA1620CLERKPKG /* XCRemoteSwiftPackageReference "clerk-ios" */;
-			productName = ClerkKit;
-		};
-		AMA1620CLKUI001P /* ClerkKitUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = AMA1620CLERKPKG /* XCRemoteSwiftPackageReference "clerk-ios" */;
-			productName = ClerkKitUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
