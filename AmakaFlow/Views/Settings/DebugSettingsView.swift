@@ -8,10 +8,16 @@
 //
 
 import SwiftUI
+import ClerkKit
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct DebugSettingsView: View {
     @StateObject private var settings = SimulationSettings.shared
     @Environment(\.dismiss) private var dismiss
+    @State private var lastJWT: String?
+    @State private var jwtError: String?
 
     var body: some View {
         NavigationView {
@@ -119,6 +125,35 @@ struct DebugSettingsView: View {
                     }
                 }
 
+                #if DEBUG
+                // MARK: - Clerk JWT (AMA-1650 diagnostic — DEBUG builds only)
+                Section {
+                    Button {
+                        Task { await captureJWT() }
+                    } label: {
+                        Label("Print & copy Clerk JWT", systemImage: "key.fill")
+                    }
+
+                    if let token = lastJWT {
+                        Text(redactedJWT(token))
+                            .font(.system(size: 10, design: .monospaced))
+                            .lineLimit(2)
+                            .foregroundColor(Theme.Colors.textSecondary)
+                            .textSelection(.disabled)
+                    }
+
+                    if let err = jwtError {
+                        Text(err)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                } header: {
+                    Text("Clerk JWT (AMA-1650)")
+                } footer: {
+                    Text("Prints the active Clerk session JWT to the Xcode console and copies it to the clipboard. Used to inspect Clerk Billing claim shape via /debug/jwt-claims on staging. DEBUG builds only.")
+                }
+                #endif
+
                 // MARK: - Access Info
                 Section {
                     HStack {
@@ -153,6 +188,50 @@ struct DebugSettingsView: View {
     private func formatReactionTime(_ range: ClosedRange<TimeInterval>) -> String {
         return String(format: "%.1f - %.1f sec", range.lowerBound, range.upperBound)
     }
+
+    #if DEBUG
+    private func redactedJWT(_ token: String) -> String {
+        // Show enough to confirm we got *something* without exposing the full
+        // bearer credential in the on-screen UI (CodeRabbit / defense in depth).
+        guard token.count > 40 else { return "•••" }
+        let prefix = token.prefix(24)
+        let suffix = token.suffix(16)
+        return "\(prefix)…\(suffix)"
+    }
+
+    @MainActor
+    private func captureJWT() async {
+        jwtError = nil
+        guard let session = Clerk.shared.session else {
+            jwtError = "No active Clerk session — sign in first."
+            lastJWT = nil
+            return
+        }
+        do {
+            guard let jwt = try await session.getToken(.init(skipCache: true)) else {
+                jwtError = "Clerk returned nil token."
+                lastJWT = nil
+                return
+            }
+            lastJWT = jwt
+            print("CLERK_JWT: \(jwt)")
+            #if canImport(UIKit)
+            // Local-only (no Handoff/Universal Clipboard) and auto-clear in 5
+            // minutes so a forgotten clipboard can't leak the bearer token.
+            UIPasteboard.general.setItems(
+                [["public.utf8-plain-text": jwt]],
+                options: [
+                    .localOnly: true,
+                    .expirationDate: Date().addingTimeInterval(300),
+                ]
+            )
+            #endif
+        } catch {
+            jwtError = "Failed to fetch token: \(error.localizedDescription)"
+            lastJWT = nil
+        }
+    }
+    #endif
 }
 
 // MARK: - Behavior Detail Row
