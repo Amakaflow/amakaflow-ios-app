@@ -135,12 +135,11 @@ struct DebugSettingsView: View {
                     }
 
                     if let token = lastJWT {
-                        Text(token)
+                        Text(redactedJWT(token))
                             .font(.system(size: 10, design: .monospaced))
-                            .lineLimit(4)
-                            .truncationMode(.middle)
+                            .lineLimit(2)
                             .foregroundColor(Theme.Colors.textSecondary)
-                            .textSelection(.enabled)
+                            .textSelection(.disabled)
                     }
 
                     if let err = jwtError {
@@ -191,6 +190,15 @@ struct DebugSettingsView: View {
     }
 
     #if DEBUG
+    private func redactedJWT(_ token: String) -> String {
+        // Show enough to confirm we got *something* without exposing the full
+        // bearer credential in the on-screen UI (CodeRabbit / defense in depth).
+        guard token.count > 40 else { return "•••" }
+        let prefix = token.prefix(24)
+        let suffix = token.suffix(16)
+        return "\(prefix)…\(suffix)"
+    }
+
     @MainActor
     private func captureJWT() async {
         jwtError = nil
@@ -208,7 +216,15 @@ struct DebugSettingsView: View {
             lastJWT = jwt
             print("CLERK_JWT: \(jwt)")
             #if canImport(UIKit)
-            UIPasteboard.general.string = jwt
+            // Local-only (no Handoff/Universal Clipboard) and auto-clear in 5
+            // minutes so a forgotten clipboard can't leak the bearer token.
+            UIPasteboard.general.setItems(
+                [["public.utf8-plain-text": jwt]],
+                options: [
+                    .localOnly: true,
+                    .expirationDate: Date().addingTimeInterval(300),
+                ]
+            )
             #endif
         } catch {
             jwtError = "Failed to fetch token: \(error.localizedDescription)"
