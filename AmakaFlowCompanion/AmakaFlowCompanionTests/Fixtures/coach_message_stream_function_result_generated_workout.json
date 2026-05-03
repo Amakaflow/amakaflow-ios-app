@@ -1,0 +1,5 @@
+{
+  "tool_use_id": "toolu_create_workout_1",
+  "name": "create_workout_plan",
+  "result": "{\"name\":\"Upper Body Push\",\"duration\":\"55 min\",\"difficulty\":\"intermediate\",\"exercises\":[{\"name\":\"bench press\",\"sets\":4,\"reps\":\"8-10\",\"muscle_group\":\"chest\",\"notes\":\"82.5 kg\"},{\"name\":\"incline bench press\",\"sets\":3,\"reps\":\"10-12\",\"muscle_group\":\"chest\",\"notes\":\"60.0 kg\"}]}"
+}

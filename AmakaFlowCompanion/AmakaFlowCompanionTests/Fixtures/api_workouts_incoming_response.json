@@ -1,0 +1,37 @@
+[
+  {
+    "id": "workout-incoming-1",
+    "name": "Incoming Strength Blocks",
+    "sport": "strength",
+    "duration": 2700,
+    "description": "Block-shaped workout from /workouts/incoming.",
+    "source": "coach",
+    "source_url": "https://amakaflow.test/workouts/incoming-1",
+    "blocks": [
+      {
+        "label": "Main",
+        "structure": "straight",
+        "rounds": 1,
+        "rest_between_sec": 120,
+        "exercises": [
+          {
+            "name": "bench press",
+            "canonical_name": "barbell bench press",
+            "sets": 4,
+            "reps": "8",
+            "load": { "value": 82.5, "unit": "kg" },
+            "rest_seconds": 120,
+            "notes": "Controlled eccentric"
+          },
+          {
+            "name": "dumbbell fly",
+            "sets": 3,
+            "reps": "12",
+            "load": { "value": 14.0, "unit": "kg" },
+            "rest_seconds": 60
+          }
+        ]
+      }
+    ]
+  }
+]

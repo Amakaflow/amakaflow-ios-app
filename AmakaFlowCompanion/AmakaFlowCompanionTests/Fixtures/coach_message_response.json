@@ -1,0 +1,19 @@
+{
+  "id": "coach-msg-1",
+  "message": "I built a push workout for today.",
+  "suggestions": [
+    {
+      "id": "suggestion-1",
+      "text": "Start the generated workout",
+      "type": "workout"
+    }
+  ],
+  "action_items": [
+    {
+      "id": "action-1",
+      "title": "Review workout",
+      "description": "Check the loads before starting.",
+      "action_type": "open_workout"
+    }
+  ]
+}

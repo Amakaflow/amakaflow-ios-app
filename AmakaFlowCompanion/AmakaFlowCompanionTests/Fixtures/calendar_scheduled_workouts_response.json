@@ -1,0 +1,23 @@
+[
+  {
+    "workout": {
+      "id": "scheduled-workout-1",
+      "name": "Scheduled Tempo Run",
+      "sport": "running",
+      "duration": 2100,
+      "description": "Calendar workout with legacy intervals.",
+      "source": "coach",
+      "intervals": [
+        { "kind": "warmup", "seconds": 600, "target": "easy jog" },
+        { "kind": "time", "seconds": 1200, "target": "tempo pace" },
+        { "kind": "cooldown", "seconds": 300, "target": "easy jog" }
+      ]
+    },
+    "scheduled_date": "2026-05-04T14:30:00.000+00:00",
+    "scheduled_time": "09:30",
+    "is_recurring": true,
+    "recurrence_days": [1, 3, 5],
+    "recurrence_weeks": 4,
+    "synced_to_apple": false
+  }
+]

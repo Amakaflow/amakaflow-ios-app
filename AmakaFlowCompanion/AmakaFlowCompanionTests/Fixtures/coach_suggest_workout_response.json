@@ -1,0 +1,58 @@
+{
+  "name": "Upper Body Push - Hypertrophy Focus",
+  "sport": "strength",
+  "duration_seconds": 3300,
+  "description": "Canonical AMA-1720 suggested workout response.",
+  "warm_up": {
+    "kind": "warmup",
+    "seconds": 600,
+    "target": "bench press warm-up sets at 40 kg"
+  },
+  "blocks": [
+    {
+      "kind": "reps",
+      "sets": 4,
+      "reps": 8,
+      "name": "bench press",
+      "load": "82.5 kg",
+      "rest_sec": 120
+    },
+    {
+      "kind": "reps",
+      "sets": 3,
+      "reps": 10,
+      "name": "incline bench press",
+      "load": "60.0 kg",
+      "rest_sec": 90
+    },
+    {
+      "kind": "reps",
+      "sets": 3,
+      "reps": 12,
+      "name": "dumbbell fly",
+      "load": "14.0 kg",
+      "rest_sec": 60
+    },
+    {
+      "kind": "reps",
+      "sets": 3,
+      "reps": 12,
+      "name": "tricep pushdown",
+      "load": "25.0 kg",
+      "rest_sec": 60
+    },
+    {
+      "kind": "reps",
+      "sets": 3,
+      "reps": 10,
+      "name": "skull crusher",
+      "load": "20.0 kg",
+      "rest_sec": 60
+    }
+  ],
+  "cooldown": {
+    "kind": "cooldown",
+    "seconds": 300,
+    "target": "easy upper body mobility"
+  }
+}
