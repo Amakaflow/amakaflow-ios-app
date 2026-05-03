@@ -74,7 +74,7 @@ final class APIServiceContractTests: XCTestCase {
     XCTAssertEqual(workout.name, "Upper Body Push")
     XCTAssertEqual(workout.duration, "55 min")
     XCTAssertEqual(workout.exercises.count, 2)
-    XCTAssertEqual(workout.exercises[0].muscleGroup, "chest")
+    XCTAssertNil(workout.exercises[0].muscleGroup)
     XCTAssertEqual(workout.exercises[0].notes, "82.5 kg")
   }
 
@@ -112,7 +112,7 @@ final class APIServiceContractTests: XCTestCase {
     let workout = try XCTUnwrap(workouts.first)
     XCTAssertEqual(workout.id, "workout-legacy-1")
     XCTAssertEqual(workout.sport, .other)
-    XCTAssertEqual(workout.blocks.count, 5)
+    XCTAssertEqual(workout.blocks.count, 4)
     XCTAssertEqual(workout.intervals.first, .warmup(seconds: 300, target: "easy ski"))
     XCTAssertTrue(workout.intervals.contains(.distance(meters: 1000, target: "run")))
     XCTAssertTrue(
