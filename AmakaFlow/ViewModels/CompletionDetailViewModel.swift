@@ -150,7 +150,7 @@ class CompletionDetailViewModel: ObservableObject {
         let workout = Workout(
             id: detail.workoutId ?? UUID().uuidString,
             name: detail.workoutName,
-            sport: inferSportFromIntervals(intervals),
+            sport: Self.inferSportFromIntervals(intervals),
             duration: detail.durationSeconds,
             intervals: intervals,
             description: nil,
@@ -227,7 +227,7 @@ class CompletionDetailViewModel: ObservableObject {
         let workout = Workout(
             id: UUID().uuidString,
             name: detail.workoutName,
-            sport: inferSportFromIntervals(intervals),
+            sport: Self.inferSportFromIntervals(intervals),
             duration: detail.durationSeconds,
             intervals: intervals,
             description: nil,
@@ -276,7 +276,7 @@ class CompletionDetailViewModel: ObservableObject {
     }
 
     /// Infer sport type from workout intervals
-    private func inferSportFromIntervals(_ intervals: [WorkoutInterval]) -> WorkoutSport {
+    nonisolated static func inferSportFromIntervals(_ intervals: [WorkoutInterval]) -> WorkoutSport {
         // Check for strength indicators (reps-based exercises)
         let hasReps = intervals.contains { interval in
             if case .reps = interval { return true }

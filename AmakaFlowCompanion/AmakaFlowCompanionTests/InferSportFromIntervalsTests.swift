@@ -96,7 +96,8 @@ struct InferSportFromIntervalsTests {
   )
   private func specificCasesInferExpectedSport(_ testCase: IntervalCase) {
     #expect(
-      inferSportFromIntervals(testCase.intervals) == testCase.expectedSport,
+      CompletionDetailViewModel.inferSportFromIntervals(testCase.intervals)
+        == testCase.expectedSport,
       "Failed case: \(testCase.name)")
   }
 
@@ -105,7 +106,7 @@ struct InferSportFromIntervalsTests {
     arguments: propertyCases
   )
   private func propertyCasesNeverCrashAndRespectBroadInvariants(_ testCase: InvariantCase) {
-    let sport = inferSportFromIntervals(testCase.intervals)
+    let sport = CompletionDetailViewModel.inferSportFromIntervals(testCase.intervals)
 
     #expect(
       !testCase.disallowedSports.contains(sport),
@@ -119,7 +120,7 @@ struct InferSportFromIntervalsTests {
       .reps(sets: 3, reps: 12, name: "Push-ups", load: nil, restSec: 60, followAlongUrl: nil),
     ]
 
-    #expect(inferSportFromIntervals(intervals) == .strength)
+    #expect(CompletionDetailViewModel.inferSportFromIntervals(intervals) == .strength)
   }
 
   private static let propertyCases: [InvariantCase] = {
@@ -169,24 +170,4 @@ struct InferSportFromIntervalsTests {
 
     return cases
   }()
-
-  private func inferSportFromIntervals(_ intervals: [WorkoutInterval]) -> WorkoutSport {
-    let hasReps = intervals.contains { interval in
-      if case .reps = interval { return true }
-      return false
-    }
-
-    let hasDistance = intervals.contains { interval in
-      if case .distance = interval { return true }
-      return false
-    }
-
-    if hasReps {
-      return .strength
-    } else if hasDistance {
-      return .running
-    } else {
-      return .cardio
-    }
-  }
 }
