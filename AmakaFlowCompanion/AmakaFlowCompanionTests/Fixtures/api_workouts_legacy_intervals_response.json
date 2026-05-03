@@ -1,0 +1,25 @@
+[
+  {
+    "id": "workout-legacy-1",
+    "name": "Legacy Interval Workout",
+    "sport": "hyrox",
+    "duration": 1500,
+    "description": "Legacy interval-shaped workout from a /api/workouts endpoint.",
+    "source": "manual",
+    "intervals": [
+      { "kind": "warmup", "seconds": 300, "target": "easy ski" },
+      { "kind": "time", "seconds": 240, "target": "ski erg" },
+      { "kind": "rest", "seconds": 60 },
+      { "kind": "distance", "meters": 1000, "target": "run" },
+      {
+        "kind": "repeat",
+        "reps": 2,
+        "intervals": [
+          { "kind": "time", "seconds": 45, "target": "wall balls" },
+          { "kind": "rest", "seconds": 30 }
+        ]
+      },
+      { "kind": "cooldown", "seconds": 180, "target": "walk" }
+    ]
+  }
+]

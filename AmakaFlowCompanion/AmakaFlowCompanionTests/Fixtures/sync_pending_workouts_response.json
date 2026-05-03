@@ -1,0 +1,41 @@
+{
+  "success": true,
+  "count": 1,
+  "workouts": [
+    {
+      "id": "pending-workout-1",
+      "name": "Pending Device Workout",
+      "sport": "triathlon",
+      "duration": 3600,
+      "description": "Pending sync workout with block shape.",
+      "source": "coach",
+      "blocks": [
+        {
+          "label": "Bike",
+          "structure": "straight",
+          "rounds": 1,
+          "exercises": [
+            {
+              "name": "threshold bike",
+              "duration_seconds": 1800,
+              "rest_seconds": 120,
+              "notes": "steady power"
+            }
+          ]
+        },
+        {
+          "label": "Run",
+          "structure": "straight",
+          "rounds": 1,
+          "exercises": [
+            {
+              "name": "brick run",
+              "distance": 5000.0,
+              "notes": "controlled effort"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
