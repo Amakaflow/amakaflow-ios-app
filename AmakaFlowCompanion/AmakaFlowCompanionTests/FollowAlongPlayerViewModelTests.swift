@@ -195,6 +195,147 @@ final class FollowAlongPlayerViewModelTests: XCTestCase {
         XCTAssertEqual(sut.formattedElapsed, "0:00")
     }
 
+    // MARK: - AMA-1733 Interval Consumption
+
+    func testRepeatWithRepsAndRestExpandsToThreeRepSteps() {
+        let workout = TestFixtures.workout(
+            intervals: [
+                .repeat(reps: 3, intervals: [
+                    .reps(sets: nil, reps: 8, name: "Burpees", load: nil, restSec: nil, followAlongUrl: nil),
+                    .rest(seconds: 20),
+                ]),
+            ]
+        )
+
+        sut.loadWorkout(workout)
+
+        XCTAssertEqual(sut.steps.count, 3)
+        XCTAssertEqual(sut.steps.map(\.name), [
+            "Round 1/3 - Burpees",
+            "Round 2/3 - Burpees",
+            "Round 3/3 - Burpees",
+        ])
+        XCTAssertEqual(sut.steps.map(\.reps), [8, 8, 8])
+        XCTAssertEqual(sut.steps.map(\.durationSeconds), [nil, nil, nil])
+    }
+
+    func testRepeatExpansionKeepsNestedTimeAndDistanceNames() {
+        let workout = TestFixtures.workout(
+            intervals: [
+                .repeat(reps: 2, intervals: [
+                    .time(seconds: 45, target: "Hard"),
+                    .distance(meters: 400, target: "Run"),
+                ]),
+            ]
+        )
+
+        sut.loadWorkout(workout)
+
+        XCTAssertEqual(sut.steps.map(\.name), ["Hard", "Run", "Hard", "Run"])
+        XCTAssertEqual(sut.steps.map(\.durationSeconds), [45, 144, 45, 144])
+        XCTAssertEqual(sut.steps.map(\.videoTimestamp), [0, 45, 189, 234])
+    }
+
+    func testRepsStepDropsLegacyFollowAlongURLAfterBlockConversion() {
+        let workout = TestFixtures.workout(
+            intervals: [
+                .reps(
+                    sets: nil,
+                    reps: 12,
+                    name: "Push-ups",
+                    load: nil,
+                    restSec: nil,
+                    followAlongUrl: "https://video.amakaflow.test/pushups.mp4"
+                ),
+            ]
+        )
+
+        sut.loadWorkout(workout)
+
+        XCTAssertEqual(sut.steps.first?.name, "Push-ups")
+        XCTAssertEqual(sut.steps.first?.reps, 12)
+        XCTAssertNil(sut.steps.first?.videoURL)
+    }
+
+    func testManualRestIntervalIsStructuralAfterBlockConversion() {
+        let workout = TestFixtures.workout(
+            intervals: [
+                .time(seconds: 30, target: "Work"),
+                .rest(seconds: nil),
+                .time(seconds: 15, target: "Finish"),
+            ]
+        )
+
+        sut.loadWorkout(workout)
+
+        XCTAssertEqual(sut.steps.map(\.name), ["Work", "Finish"])
+        XCTAssertEqual(sut.steps.map(\.durationSeconds), [30, 15])
+        XCTAssertEqual(sut.steps.map(\.videoTimestamp), [0, 30])
+    }
+
+    func testTimedRestAdvancesTimestamp() {
+        let workout = TestFixtures.workout(
+            intervals: [
+                .reps(sets: nil, reps: 10, name: "Squats", load: nil, restSec: 30, followAlongUrl: nil),
+                .time(seconds: 20, target: "Hold"),
+            ]
+        )
+
+        sut.loadWorkout(workout)
+
+        XCTAssertEqual(sut.steps.map(\.name), ["Squats", "Rest", "Rest", "Hold"])
+        XCTAssertEqual(sut.steps.map(\.videoTimestamp), [0, 30, 60, 90])
+        XCTAssertEqual(sut.steps[1].durationSeconds, 30)
+        XCTAssertEqual(sut.steps[2].durationSeconds, 30)
+    }
+
+    func testAllIntervalKindsCanBeConsumedIntoSteps() {
+        let workout = TestFixtures.workout(
+            intervals: [
+                .warmup(seconds: 60, target: "Warm"),
+                .cooldown(seconds: 45, target: "Cool"),
+                .time(seconds: 30, target: "Tempo"),
+                .reps(sets: nil, reps: 5, name: "Lunges", load: nil, restSec: nil, followAlongUrl: nil),
+                .distance(meters: 500, target: "Run"),
+                .repeat(reps: 1, intervals: [.rest(seconds: 10)]),
+                .rest(seconds: 15),
+            ]
+        )
+
+        sut.loadWorkout(workout)
+
+        XCTAssertEqual(sut.phase, .ready)
+        XCTAssertEqual(sut.steps.map(\.name), ["Warm", "Cool", "Tempo", "Lunges", "Run"])
+        XCTAssertEqual(sut.steps.map(\.durationSeconds), [60, 45, 30, nil, 180])
+    }
+
+    func testStateMachinePausesResumesAndCompletesWorkoutAcrossMixedIntervalKinds() {
+        let workout = TestFixtures.workout(
+            intervals: [
+                .warmup(seconds: 20, target: "Warm"),
+                .reps(sets: nil, reps: 6, name: "Step-ups", load: nil, restSec: 10, followAlongUrl: nil),
+                .distance(meters: 100, target: "Shuttle"),
+            ]
+        )
+        sut.loadWorkout(workout)
+
+        sut.play()
+        XCTAssertEqual(sut.phase, .playing)
+
+        sut.pause()
+        XCTAssertEqual(sut.phase, .paused)
+
+        sut.play()
+        XCTAssertEqual(sut.phase, .playing)
+
+        while !sut.isLastStep {
+            sut.skipToNextStep()
+        }
+        sut.skipToNextStep()
+
+        XCTAssertEqual(sut.phase, .ended)
+    }
+
     // MARK: - Step Properties
 
     func testTimedStepHasRemainingSeconds() {

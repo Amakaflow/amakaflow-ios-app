@@ -294,6 +294,13 @@ class VoiceWorkoutViewModel: ObservableObject {
         )
     }
 
+#if DEBUG
+    /// Seed parsed workout state for focused unit tests without invoking audio or API flows.
+    func seedWorkoutForTesting(_ workout: Workout) {
+        self.workout = workout
+    }
+#endif
+
     private func calculateDuration(_ intervals: [WorkoutInterval]) -> Int {
         var total = 0
         for interval in intervals {
