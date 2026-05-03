@@ -224,8 +224,6 @@ actor ClerkTokenRefreshCoordinator {
 final class UserDefaultsClerkTokenPersistence: ClerkTokenPersistence, @unchecked Sendable {
   private let userDefaults: UserDefaults
   private let key: String
-  private let encoder = JSONEncoder()
-  private let decoder = JSONDecoder()
 
   init(
     userDefaults: UserDefaults = .standard,
@@ -237,11 +235,11 @@ final class UserDefaultsClerkTokenPersistence: ClerkTokenPersistence, @unchecked
 
   func loadClerkToken() -> ClerkAuthToken? {
     guard let data = userDefaults.data(forKey: key) else { return nil }
-    return try? decoder.decode(ClerkAuthToken.self, from: data)
+    return try? JSONDecoder().decode(ClerkAuthToken.self, from: data)
   }
 
   func saveClerkToken(_ token: ClerkAuthToken) {
-    guard let data = try? encoder.encode(token) else { return }
+    guard let data = try? JSONEncoder().encode(token) else { return }
     userDefaults.set(data, forKey: key)
   }
 
