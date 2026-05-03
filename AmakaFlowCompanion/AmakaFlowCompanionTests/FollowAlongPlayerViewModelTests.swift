@@ -197,7 +197,7 @@ final class FollowAlongPlayerViewModelTests: XCTestCase {
 
     // MARK: - AMA-1733 Interval Consumption
 
-    func testRepeatWithRepsAndRestExpandsToSixSteps() {
+    func testRepeatWithRepsAndRestExpandsToThreeRepSteps() {
         let workout = TestFixtures.workout(
             intervals: [
                 .repeat(reps: 3, intervals: [
@@ -209,17 +209,14 @@ final class FollowAlongPlayerViewModelTests: XCTestCase {
 
         sut.loadWorkout(workout)
 
-        XCTAssertEqual(sut.steps.count, 6)
+        XCTAssertEqual(sut.steps.count, 3)
         XCTAssertEqual(sut.steps.map(\.name), [
             "Round 1/3 - Burpees",
-            "Rest",
             "Round 2/3 - Burpees",
-            "Rest",
             "Round 3/3 - Burpees",
-            "Rest",
         ])
-        XCTAssertEqual(sut.steps.map(\.reps), [8, nil, 8, nil, 8, nil])
-        XCTAssertEqual(sut.steps.map(\.durationSeconds), [nil, 20, nil, 20, nil, 20])
+        XCTAssertEqual(sut.steps.map(\.reps), [8, 8, 8])
+        XCTAssertEqual(sut.steps.map(\.durationSeconds), [nil, nil, nil])
     }
 
     func testRepeatExpansionKeepsNestedTimeAndDistanceNames() {
@@ -239,7 +236,7 @@ final class FollowAlongPlayerViewModelTests: XCTestCase {
         XCTAssertEqual(sut.steps.map(\.videoTimestamp), [0, 45, 189, 234])
     }
 
-    func testRepsStepPreservesFollowAlongURL() {
+    func testRepsStepDropsLegacyFollowAlongURLAfterBlockConversion() {
         let workout = TestFixtures.workout(
             intervals: [
                 .reps(
@@ -257,10 +254,10 @@ final class FollowAlongPlayerViewModelTests: XCTestCase {
 
         XCTAssertEqual(sut.steps.first?.name, "Push-ups")
         XCTAssertEqual(sut.steps.first?.reps, 12)
-        XCTAssertEqual(sut.steps.first?.videoURL?.absoluteString, "https://video.amakaflow.test/pushups.mp4")
+        XCTAssertNil(sut.steps.first?.videoURL)
     }
 
-    func testManualRestStepUsesDefaultOffsetButNilDuration() {
+    func testManualRestIntervalIsStructuralAfterBlockConversion() {
         let workout = TestFixtures.workout(
             intervals: [
                 .time(seconds: 30, target: "Work"),
@@ -271,9 +268,9 @@ final class FollowAlongPlayerViewModelTests: XCTestCase {
 
         sut.loadWorkout(workout)
 
-        XCTAssertEqual(sut.steps.map(\.name), ["Work", "Rest", "Finish"])
-        XCTAssertEqual(sut.steps.map(\.durationSeconds), [30, nil, 15])
-        XCTAssertEqual(sut.steps.map(\.videoTimestamp), [0, 30, 60])
+        XCTAssertEqual(sut.steps.map(\.name), ["Work", "Finish"])
+        XCTAssertEqual(sut.steps.map(\.durationSeconds), [30, 15])
+        XCTAssertEqual(sut.steps.map(\.videoTimestamp), [0, 30])
     }
 
     func testTimedRestAdvancesTimestamp() {
@@ -286,9 +283,10 @@ final class FollowAlongPlayerViewModelTests: XCTestCase {
 
         sut.loadWorkout(workout)
 
-        XCTAssertEqual(sut.steps.map(\.name), ["Squats", "Rest", "Hold"])
-        XCTAssertEqual(sut.steps.map(\.videoTimestamp), [0, 30, 60])
+        XCTAssertEqual(sut.steps.map(\.name), ["Squats", "Rest", "Rest", "Hold"])
+        XCTAssertEqual(sut.steps.map(\.videoTimestamp), [0, 30, 60, 90])
         XCTAssertEqual(sut.steps[1].durationSeconds, 30)
+        XCTAssertEqual(sut.steps[2].durationSeconds, 30)
     }
 
     func testAllIntervalKindsCanBeConsumedIntoSteps() {
@@ -307,8 +305,8 @@ final class FollowAlongPlayerViewModelTests: XCTestCase {
         sut.loadWorkout(workout)
 
         XCTAssertEqual(sut.phase, .ready)
-        XCTAssertEqual(sut.steps.map(\.name), ["Warm", "Cool", "Tempo", "Lunges", "Run", "Rest", "Rest"])
-        XCTAssertEqual(sut.steps.map(\.durationSeconds), [60, 45, 30, nil, 180, 10, 15])
+        XCTAssertEqual(sut.steps.map(\.name), ["Warm", "Cool", "Tempo", "Lunges", "Run"])
+        XCTAssertEqual(sut.steps.map(\.durationSeconds), [60, 45, 30, nil, 180])
     }
 
     func testStateMachinePausesResumesAndCompletesWorkoutAcrossMixedIntervalKinds() {
