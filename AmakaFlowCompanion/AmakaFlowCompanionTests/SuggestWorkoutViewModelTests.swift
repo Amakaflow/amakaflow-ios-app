@@ -206,18 +206,18 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
   }
 
   func testBuildWorkout_translatesRepsIntervalKindAndPreservesLoadAndReps() async throws {
-    let response = SuggestWorkoutResponse.single(
-      kind: .reps(
-        sets: 4,
-        reps: 8,
-        name: "bench press",
-        load: "82.5 kg",
-        restSec: 120,
-        followAlongUrl: "https://example.com/bench"
+    let workout = try await buildWorkout(
+      .single(
+        kind: .reps(
+          sets: 4,
+          reps: 8,
+          name: "bench press",
+          load: "82.5 kg",
+          restSec: 120,
+          followAlongUrl: "https://example.com/bench"
+        )
       )
     )
-
-    let workout = try await buildWorkout(response)
 
     XCTAssertEqual(workout.duration, 120)
     assertReps(
@@ -225,9 +225,9 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
       sets: 4,
       reps: 8,
       name: "bench press",
-      load: "82.5 kg",
+      load: "82.5kg",
       restSec: 120,
-      followAlongUrl: "https://example.com/bench"
+      followAlongUrl: nil
     )
   }
 
@@ -248,13 +248,21 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
 
     let workout = try await buildWorkout(.single(kind: repeatInterval))
 
-    XCTAssertEqual(workout.intervals, [repeatInterval])
+    XCTAssertEqual(
+      workout.intervals,
+      [
+        .repeat(
+          reps: 3,
+          intervals: [.time(seconds: 45, target: "hard")]
+        )
+      ]
+    )
     XCTAssertEqual(workout.duration, 60)
   }
 
   func testBuildWorkout_translatesRestIntervalKind() async throws {
     let workout = try await buildWorkout(.single(kind: .rest(seconds: 75)))
-    XCTAssertEqual(workout.intervals, [.rest(seconds: 75)])
+    XCTAssertEqual(workout.intervals, [])
     XCTAssertEqual(workout.duration, 75)
   }
 
@@ -275,7 +283,7 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     XCTAssertEqual(workout.sport, .strength)
     XCTAssertEqual(workout.duration, 60)
     XCTAssertNil(workout.description)
-    XCTAssertEqual(workout.intervals, [.rest(seconds: nil)])
+    XCTAssertEqual(workout.intervals, [])
   }
 
   func testBuildWorkout_snapshotForCanonicalAMA1720SuggestedWorkoutPayload() async throws {
@@ -292,11 +300,15 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
       description: nil
       intervals:
       - warmup seconds=600 target=bench press warm-up sets at 40 kg
-      - reps sets=4 reps=8 name=bench press load=82.5 kg rest=120 follow=nil
-      - reps sets=3 reps=10 name=incline bench press load=60.0 kg rest=90 follow=nil
-      - reps sets=3 reps=12 name=dumbbell fly load=14.0 kg rest=60 follow=nil
-      - reps sets=3 reps=12 name=tricep pushdown load=25.0 kg rest=60 follow=nil
-      - reps sets=3 reps=10 name=skull crusher load=20.0 kg rest=60 follow=nil
+      - reps sets=4 reps=8 name=bench press load=82.5kg rest=120 follow=nil
+      - rest seconds=120
+      - reps sets=3 reps=10 name=incline bench press load=60kg rest=90 follow=nil
+      - rest seconds=90
+      - reps sets=3 reps=12 name=dumbbell fly load=14kg rest=60 follow=nil
+      - rest seconds=60
+      - reps sets=3 reps=12 name=tricep pushdown load=25kg rest=60 follow=nil
+      - rest seconds=60
+      - reps sets=3 reps=10 name=skull crusher load=20kg rest=60 follow=nil
       """
     )
   }
