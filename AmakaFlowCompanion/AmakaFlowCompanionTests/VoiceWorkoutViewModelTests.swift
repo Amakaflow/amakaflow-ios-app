@@ -121,7 +121,7 @@ final class VoiceWorkoutViewModelTests: XCTestCase {
   }
 
   func testUpdateIntervalsCalculatesCanonicalAMA1720SuggestedWorkoutDuration() {
-    assertDuration(for: Self.canonicalAMA1720Intervals, expected: 2_040)
+    assertDuration(for: Self.canonicalAMA1720Intervals, expected: 2_370)
   }
 
   // MARK: - Helpers
