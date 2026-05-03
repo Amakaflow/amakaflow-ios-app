@@ -29,14 +29,24 @@ final class APIServiceContractTests: XCTestCase {
     XCTAssertEqual(response.cooldown?.seconds, 300)
     XCTAssertEqual(response.cooldown?.target, "easy upper body mobility")
 
-    assertReps(
-      response.blocks[0],
-      sets: 4,
-      reps: 8,
-      name: "bench press",
-      load: "82.5 kg",
-      restSec: 120
-    )
+    let expectedBlocks: [(sets: Int, reps: Int, name: String, load: String, restSec: Int)] = [
+      (4, 8, "bench press", "82.5 kg", 120),
+      (3, 10, "incline bench press", "60.0 kg", 90),
+      (3, 12, "dumbbell fly", "14.0 kg", 60),
+      (3, 12, "tricep pushdown", "25.0 kg", 60),
+      (3, 10, "skull crusher", "20.0 kg", 60),
+    ]
+
+    for (index, expected) in expectedBlocks.enumerated() {
+      assertReps(
+        response.blocks[index],
+        sets: expected.sets,
+        reps: expected.reps,
+        name: expected.name,
+        load: expected.load,
+        restSec: expected.restSec
+      )
+    }
   }
 
   func testCoachMessageResponseDecodesWorkoutSuggestionMetadata() throws {
@@ -72,7 +82,7 @@ final class APIServiceContractTests: XCTestCase {
     let workouts = try decodeFixture("api_workouts_incoming_response", as: [Workout].self)
 
     XCTAssertEqual(workouts.count, 1)
-    let workout = workouts[0]
+    let workout = try XCTUnwrap(workouts.first)
     XCTAssertEqual(workout.id, "workout-incoming-1")
     XCTAssertEqual(workout.name, "Incoming Strength Blocks")
     XCTAssertEqual(workout.sport, .strength)
@@ -99,7 +109,7 @@ final class APIServiceContractTests: XCTestCase {
     let workouts = try decodeFixture("api_workouts_legacy_intervals_response", as: [Workout].self)
 
     XCTAssertEqual(workouts.count, 1)
-    let workout = workouts[0]
+    let workout = try XCTUnwrap(workouts.first)
     XCTAssertEqual(workout.id, "workout-legacy-1")
     XCTAssertEqual(workout.sport, .other)
     XCTAssertEqual(workout.blocks.count, 5)
@@ -121,7 +131,7 @@ final class APIServiceContractTests: XCTestCase {
     )
 
     XCTAssertEqual(scheduled.count, 1)
-    let item = scheduled[0]
+    let item = try XCTUnwrap(scheduled.first)
     XCTAssertEqual(item.id, "scheduled-workout-1")
     XCTAssertEqual(item.scheduledTime, "09:30")
     XCTAssertTrue(item.isRecurring)
