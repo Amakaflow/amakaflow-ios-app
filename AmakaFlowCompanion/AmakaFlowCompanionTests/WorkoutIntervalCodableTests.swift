@@ -91,6 +91,14 @@ final class WorkoutIntervalCodableTests: XCTestCase {
     )
   }
 
+  func testManualRestIntervalRoundTrips() throws {
+    try assertRoundTrip(
+      .rest(seconds: nil),
+      expectedKind: "rest",
+      expectedFields: ["kind"]
+    )
+  }
+
   // MARK: - AMA-1720 fixture shape
 
   func testCanonicalSuggestedWorkoutIntervalsDecodeWithExpectedKindsAndFields() throws {
