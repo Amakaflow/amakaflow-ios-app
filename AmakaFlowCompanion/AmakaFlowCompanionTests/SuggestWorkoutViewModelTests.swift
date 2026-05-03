@@ -84,7 +84,7 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     viewModel = SuggestWorkoutViewModel(dependencies: makeDependencies(apiService: delayedAPI))
 
     let task = Task { await viewModel.suggestWorkout() }
-    try await Task.sleep(nanoseconds: 10_000_000)
+    try await waitUntil { self.viewModel.state == .loading }
 
     XCTAssertEqual(viewModel.state, .loading)
     delayedAPI.resume()
@@ -449,6 +449,8 @@ private final class DelayedSuggestWorkoutAPIService: MockAPIService {
   override func suggestWorkout(request: SuggestWorkoutRequest) async throws
     -> SuggestWorkoutResponse
   {
+    precondition(
+      continuation == nil, "Delayed suggestWorkout mock only supports one pending request")
     suggestWorkoutCalled = true
     await withCheckedContinuation { continuation in
       self.continuation = continuation
