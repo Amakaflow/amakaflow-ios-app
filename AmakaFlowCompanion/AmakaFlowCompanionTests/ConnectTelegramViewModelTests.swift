@@ -172,7 +172,7 @@ private final class MockURLOpener: URLOpener {
   }
 }
 
-private final class MockTelegramAPIService: APIServiceProviding {
+private final class MockTelegramAPIService: TelegramLinkAPIProviding {
   var tokenResponse: TelegramLinkTokenResponse?
   var tokenError: Error?
   var statusResponses: [TelegramLinkStatusResponse] = []
@@ -196,85 +196,4 @@ private final class MockTelegramAPIService: APIServiceProviding {
     }
     return statusResponses.first ?? TelegramLinkStatusResponse(linked: false, telegramId: nil, usedAt: nil)
   }
-
-  func fetchWorkouts(isRetry: Bool) async throws -> [Workout] { throw APIError.notImplemented }
-  func fetchScheduledWorkouts(isRetry: Bool) async throws -> [ScheduledWorkout] { throw APIError.notImplemented }
-  func fetchPushedWorkouts(isRetry: Bool) async throws -> [Workout] { throw APIError.notImplemented }
-  func fetchPendingWorkouts(isRetry: Bool) async throws -> [Workout] { throw APIError.notImplemented }
-  func syncWorkout(_ workout: Workout) async throws { throw APIError.notImplemented }
-  func getAppleExport(workoutId: String) async throws -> String { throw APIError.notImplemented }
-  func parseVoiceWorkout(transcription: String, sportHint: WorkoutSport?) async throws -> VoiceWorkoutParseResponse { throw APIError.notImplemented }
-  func ingestInstagramReel(url: String) async throws -> IngestInstagramReelResponse { throw APIError.notImplemented }
-  func ingestText(text: String, source: String?) async throws -> IngestTextResponse { throw APIError.notImplemented }
-  func transcribeAudio(audioData: String, provider: String, language: String, keywords: [String], includeWordTimings: Bool) async throws -> CloudTranscriptionResponse { throw APIError.notImplemented }
-  func syncPersonalDictionary(corrections: [String: String], customTerms: [String]) async throws -> PersonalDictionaryResponse { throw APIError.notImplemented }
-  func fetchPersonalDictionary() async throws -> PersonalDictionaryResponse { throw APIError.notImplemented }
-  func logManualWorkout(_ workout: Workout, startedAt: Date, endedAt: Date, durationSeconds: Int) async throws { throw APIError.notImplemented }
-  func postWorkoutCompletion(_ completion: WorkoutCompletionRequest, isRetry: Bool) async throws -> WorkoutCompletionResponse { throw APIError.notImplemented }
-  func confirmSync(workoutId: String, deviceType: String, deviceId: String?) async throws { throw APIError.notImplemented }
-  func reportSyncFailed(workoutId: String, deviceType: String, error: String, deviceId: String?) async throws { throw APIError.notImplemented }
-  func fetchProfile() async throws -> UserProfile { throw APIError.notImplemented }
-  func fetchCompletions(limit: Int, offset: Int) async throws -> [WorkoutCompletion] { throw APIError.notImplemented }
-  func fetchCompletionDetail(id: String) async throws -> WorkoutCompletionDetail { throw APIError.notImplemented }
-  func fetchDayStates(from: String, to: String) async throws -> [DayState] { throw APIError.notImplemented }
-  func generateWeek(request: GenerateWeekRequest?) async throws -> ProposedPlan { throw APIError.notImplemented }
-  func detectConflicts(startDate: String, endDate: String) async throws -> [Conflict] { throw APIError.notImplemented }
-  func parseWorkoutText(text: String, context: String?) async throws -> ParsedWorkout { throw APIError.notImplemented }
-  func fetchPendingActions() async throws -> [PendingAction] { throw APIError.notImplemented }
-  func respondToAction(id: String, response: String) async throws -> ActionResponse { throw APIError.notImplemented }
-  func sendCoachMessage(message: String, context: CoachContext?) async throws -> CoachResponse { throw APIError.notImplemented }
-  func getFatigueAdvice(fatigueScore: Double?, loadHistory: [DailyLoad]?) async throws -> FatigueAdvice { throw APIError.notImplemented }
-  func fetchCoachMemories() async throws -> [CoachMemory] { throw APIError.notImplemented }
-  func fetchSocialFeed(cursor: String?, limit: Int) async throws -> FeedResponse { throw APIError.notImplemented }
-  func addSocialReaction(postId: String, emoji: String) async throws { throw APIError.notImplemented }
-  func removeSocialReaction(postId: String, emoji: String) async throws { throw APIError.notImplemented }
-  func fetchSocialComments(postId: String) async throws -> CommentsResponse { throw APIError.notImplemented }
-  func postSocialComment(postId: String, text: String) async throws { throw APIError.notImplemented }
-  func fetchSocialSettings() async throws -> SocialSettings { throw APIError.notImplemented }
-  func updateSocialSettings(_ settings: SocialSettings) async throws { throw APIError.notImplemented }
-  func fetchUserPublicProfile(userId: String) async throws -> UserPublicProfile { throw APIError.notImplemented }
-  func followUser(userId: String) async throws { throw APIError.notImplemented }
-  func unfollowUser(userId: String) async throws { throw APIError.notImplemented }
-  func fetchChallenges() async throws -> ChallengesResponse { throw APIError.notImplemented }
-  func fetchChallengeDetail(id: String) async throws -> ChallengeDetailResponse { throw APIError.notImplemented }
-  func createChallenge(_ request: CreateChallengeRequest) async throws { throw APIError.notImplemented }
-  func joinChallenge(id: String) async throws { throw APIError.notImplemented }
-  func fetchMyCrews() async throws -> CrewListResponse { throw APIError.notImplemented }
-  func fetchCrewDetail(id: String) async throws -> CrewDetail { throw APIError.notImplemented }
-  func fetchCrewFeed(crewId: String) async throws -> CrewFeedResponse { throw APIError.notImplemented }
-  func createCrew(_ request: CreateCrewRequest) async throws { throw APIError.notImplemented }
-  func joinCrew(crewId: String, request: JoinCrewRequest) async throws { throw APIError.notImplemented }
-  func leaveCrew(crewId: String) async throws { throw APIError.notImplemented }
-  func fetchFriendsLeaderboard(dimension: String, period: String) async throws -> LeaderboardAPIResponse { throw APIError.notImplemented }
-  func fetchCrewLeaderboard(crewId: String, dimension: String, period: String) async throws -> LeaderboardAPIResponse { throw APIError.notImplemented }
-  func saveWorkout(_ request: WorkoutSaveRequest) async throws -> Workout { throw APIError.notImplemented }
-  func fetchConnectedCalendars() async throws -> [ConnectedCalendar] { throw APIError.notImplemented }
-  func connectCalendar(provider: String) async throws -> String { throw APIError.notImplemented }
-  func syncCalendar(calendarId: String) async throws -> CalendarSyncResponse { throw APIError.notImplemented }
-  func disconnectCalendar(calendarId: String) async throws { throw APIError.notImplemented }
-  func fetchShoeComparison() async throws -> [ShoeStats] { throw APIError.notImplemented }
-  func fetchSubscription() async throws -> Subscription { throw APIError.notImplemented }
-  func fetchNotificationPreferences() async throws -> NotificationPreferences { throw APIError.notImplemented }
-  func updateNotificationPreferences(_ prefs: NotificationPreferences) async throws -> NotificationPreferences { throw APIError.notImplemented }
-  func analyzePhoto(imageBase64: String) async throws -> AnalyzePhotoAPIResponse { throw APIError.notImplemented }
-  func lookupBarcode(code: String) async throws -> BarcodeNutritionAPIResponse { throw APIError.notImplemented }
-  func parseText(text: String) async throws -> ParseTextAPIResponse { throw APIError.notImplemented }
-  func getFuelingStatus() async throws -> FuelingStatusResponse { throw APIError.notImplemented }
-  func checkProteinNudge() async throws -> ProteinNudgeResponse { throw APIError.notImplemented }
-  func suggestWorkout(request: SuggestWorkoutRequest) async throws -> SuggestWorkoutResponse { throw APIError.notImplemented }
-  func postRPEFeedback(_ feedback: RPEFeedbackRequest) async throws -> RPEFeedbackResponse { throw APIError.notImplemented }
-  func generateProgram(request: ProgramGenerationRequest) async throws -> ProgramGenerationResponse { throw APIError.notImplemented }
-  func fetchGenerationStatus(jobId: String) async throws -> ProgramGenerationStatus { throw APIError.notImplemented }
-  func updateProgramStatus(id: String, status: String) async throws { throw APIError.notImplemented }
-  func updateProgramProgress(id: String, currentWeek: Int) async throws { throw APIError.notImplemented }
-  func deleteProgram(id: String) async throws { throw APIError.notImplemented }
-  func completeWorkout(workoutId: String) async throws { throw APIError.notImplemented }
-  func fetchVolumeAnalytics(startDate: String, endDate: String, granularity: String) async throws -> VolumeAnalyticsResponse { throw APIError.notImplemented }
-  func detectImport(request: BulkDetectRequest) async throws -> BulkDetectResponse { throw APIError.notImplemented }
-  func matchExercises(request: BulkMatchRequest) async throws -> BulkMatchResponse { throw APIError.notImplemented }
-  func previewImport(request: BulkPreviewRequest) async throws -> BulkPreviewResponse { throw APIError.notImplemented }
-  func executeImport(request: BulkExecuteRequest) async throws -> BulkExecuteResponse { throw APIError.notImplemented }
-  func fetchImportStatus(jobId: String, profileId: String) async throws -> BulkImportStatus { throw APIError.notImplemented }
-  func cancelImport(jobId: String, profileId: String) async throws { throw APIError.notImplemented }
-
 }

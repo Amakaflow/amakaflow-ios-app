@@ -38,7 +38,7 @@ final class ConnectTelegramViewModel: ObservableObject {
 
     @Published private(set) var state: State
 
-    private let apiService: APIServiceProviding
+    private let apiService: TelegramLinkAPIProviding
     private let urlOpener: URLOpener
     private let pollIntervalNanoseconds: UInt64
     private let timeoutSeconds: TimeInterval
@@ -47,7 +47,7 @@ final class ConnectTelegramViewModel: ObservableObject {
     private var pollingTask: Task<Void, Never>?
 
     init(
-        apiService: APIServiceProviding = APIService.shared,
+        apiService: TelegramLinkAPIProviding = APIService.shared,
         urlOpener: URLOpener? = nil,
         initialTelegramId: Int? = nil,
         pollIntervalNanoseconds: UInt64 = 3_000_000_000,
@@ -132,6 +132,7 @@ final class ConnectTelegramViewModel: ObservableObject {
         let startedAt = now()
         let timeoutAt = startedAt.addingTimeInterval(timeoutSeconds)
         let expiresAt = startedAt.addingTimeInterval(TimeInterval(expiresInSeconds))
+        var consecutiveFailures = 0
 
         while now() < timeoutAt {
             guard !Task.isCancelled else { return }
@@ -142,6 +143,7 @@ final class ConnectTelegramViewModel: ObservableObject {
 
             do {
                 let status = try await apiService.getTelegramLinkStatus(token: token)
+                consecutiveFailures = 0
                 guard !Task.isCancelled else { return }
                 if status.linked {
                     state = .connected(telegramId: status.telegramId)
@@ -151,6 +153,13 @@ final class ConnectTelegramViewModel: ObservableObject {
                 }
             } catch {
                 guard !Task.isCancelled else { return }
+                consecutiveFailures += 1
+                print("[TelegramSetup] Link status poll failed (\(consecutiveFailures)): \(error.localizedDescription)")
+                if consecutiveFailures >= 5 {
+                    state = .failed("Could not confirm Telegram connection. Check your network and try again.")
+                    pollingTask = nil
+                    return
+                }
             }
 
             try? await Task.sleep(nanoseconds: pollIntervalNanoseconds)

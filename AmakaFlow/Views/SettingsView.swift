@@ -1661,7 +1661,7 @@ struct SettingsView: View {
                 }
             }
         }
-        .task {
+        .task(id: pairingService.userProfile?.id) {
             await refreshTelegramConnectionState()
         }
     }
