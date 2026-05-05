@@ -58,6 +58,7 @@ struct SettingsView: View {
     @State private var debugTapCount = 0
     @State private var debugTapResetTask: DispatchWorkItem?
     @State private var showingTelegramSetup = false
+    @State private var connectedTelegramId: Int?
     @State private var showingWatchDelivery = false
     @EnvironmentObject private var garminConnectivity: GarminConnectManager
     @EnvironmentObject private var pairingService: PairingService
@@ -1612,7 +1613,7 @@ struct SettingsView: View {
                     Text("Telegram")
                         .font(Theme.Typography.bodyBold)
                         .foregroundColor(Theme.Colors.textPrimary)
-                    Text(isTelegramLinked ? "Morning briefings & coach messages" : "Connect for morning briefings")
+                    Text(telegramStatusSubtitle)
                         .font(Theme.Typography.caption)
                         .foregroundColor(Theme.Colors.textSecondary)
                 }
@@ -1623,7 +1624,7 @@ struct SettingsView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "checkmark")
                             .font(.system(size: 10, weight: .bold))
-                        Text("Connected")
+                        Text(connectedTelegramId.map { "Connected to \($0)" } ?? "Connected")
                             .font(Theme.Typography.footnote)
                     }
                     .foregroundColor(Theme.Colors.accentGreen)
@@ -1647,13 +1648,21 @@ struct SettingsView: View {
         )
         .cornerRadius(Theme.CornerRadius.md)
         .sheet(isPresented: $showingTelegramSetup) {
-            TelegramSetupView(
-                onConnected: {
+            NavigationStack {
+                TelegramSetupView(initialTelegramId: connectedTelegramId) { telegramId in
+                    connectedTelegramId = telegramId
+                    if let telegramId {
+                        UserDefaults.standard.set(telegramId, forKey: telegramIdKey)
+                    } else {
+                        UserDefaults.standard.removeObject(forKey: telegramIdKey)
+                    }
                     isTelegramLinked = true
                     showingTelegramSetup = false
-                },
-                onSkip: { showingTelegramSetup = false }
-            )
+                }
+            }
+        }
+        .task(id: pairingService.userProfile?.id) {
+            await refreshTelegramConnectionState()
         }
     }
 
@@ -2176,13 +2185,35 @@ struct SettingsView: View {
         "telegram_linked_\(pairingService.userProfile?.id ?? "anon")"
     }
 
+    private var telegramIdKey: String {
+        "telegram_id_\(pairingService.userProfile?.id ?? "anon")"
+    }
+
+    private var telegramStatusSubtitle: String {
+        if let connectedTelegramId {
+            return "Connected to \(connectedTelegramId)"
+        }
+        return isTelegramLinked ? "Morning briefings & coach messages" : "Connect for morning briefings"
+    }
+
     private var isTelegramLinked: Bool {
         get { UserDefaults.standard.bool(forKey: telegramLinkedKey) }
         nonmutating set { UserDefaults.standard.set(newValue, forKey: telegramLinkedKey) }
     }
 
+    private func refreshTelegramConnectionState() async {
+        if let storedId = UserDefaults.standard.object(forKey: telegramIdKey) as? Int {
+            connectedTelegramId = storedId
+            isTelegramLinked = true
+        } else if isTelegramLinked {
+            connectedTelegramId = nil
+        }
+    }
+
     private func clearTelegramLinked() {
         UserDefaults.standard.removeObject(forKey: telegramLinkedKey)
+        UserDefaults.standard.removeObject(forKey: telegramIdKey)
+        connectedTelegramId = nil
     }
 
     private func deleteAccount() async {

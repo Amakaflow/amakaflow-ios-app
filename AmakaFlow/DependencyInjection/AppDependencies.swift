@@ -84,6 +84,17 @@ class MockAPIService: APIServiceProviding {
     var fetchPendingWorkoutsResult: Result<[Workout], Error> = .success([])
     var syncWorkoutResult: Result<Void, Error> = .success(())
     var getAppleExportResult: Result<String, Error> = .success("{}")
+    var mintTelegramLinkTokenResult: Result<TelegramLinkTokenResponse, Error> = .success(
+        TelegramLinkTokenResponse(
+            token: "mock-telegram-token",
+            deepLink: "https://t.me/amakaflow_userbot?start=mock-telegram-token",
+            nativeLink: "tg://resolve?domain=amakaflow_userbot&start=mock-telegram-token",
+            expiresInSeconds: 900
+        )
+    )
+    var getTelegramLinkStatusResult: Result<TelegramLinkStatusResponse, Error> = .success(
+        TelegramLinkStatusResponse(linked: false, telegramId: nil, usedAt: nil)
+    )
     var parseVoiceWorkoutResult: Result<VoiceWorkoutParseResponse, Error>?
     var ingestInstagramReelResult: Result<IngestInstagramReelResponse, Error>?
     var ingestTextResult: Result<IngestTextResponse, Error>?
@@ -105,6 +116,9 @@ class MockAPIService: APIServiceProviding {
     var syncWorkoutCalled = false
     var syncedWorkout: Workout?
     var getAppleExportCalled = false
+    var mintTelegramLinkTokenCalled = false
+    var getTelegramLinkStatusCalled = false
+    var telegramLinkStatusToken: String?
     var parseVoiceWorkoutCalled = false
     var ingestInstagramReelCalled = false
     var ingestTextCalled = false
@@ -154,6 +168,17 @@ class MockAPIService: APIServiceProviding {
     func getAppleExport(workoutId: String) async throws -> String {
         getAppleExportCalled = true
         return try getAppleExportResult.get()
+    }
+
+    func mintTelegramLinkToken() async throws -> TelegramLinkTokenResponse {
+        mintTelegramLinkTokenCalled = true
+        return try mintTelegramLinkTokenResult.get()
+    }
+
+    func getTelegramLinkStatus(token: String) async throws -> TelegramLinkStatusResponse {
+        getTelegramLinkStatusCalled = true
+        telegramLinkStatusToken = token
+        return try getTelegramLinkStatusResult.get()
     }
 
     func parseVoiceWorkout(transcription: String, sportHint: WorkoutSport?) async throws -> VoiceWorkoutParseResponse {

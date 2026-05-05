@@ -7,8 +7,17 @@
 
 import Foundation
 
+/// Narrow API surface needed by the Telegram Settings linking flow.
+protocol TelegramLinkAPIProviding {
+    /// Mint a one-time Telegram account-linking token and deep links.
+    func mintTelegramLinkToken() async throws -> TelegramLinkTokenResponse
+
+    /// Poll Telegram account-linking status for a minted token.
+    func getTelegramLinkStatus(token: String) async throws -> TelegramLinkStatusResponse
+}
+
 /// Protocol defining the API service interface for dependency injection
-protocol APIServiceProviding {
+protocol APIServiceProviding: TelegramLinkAPIProviding {
     // MARK: - Workouts
 
     /// Fetch workouts from backend
