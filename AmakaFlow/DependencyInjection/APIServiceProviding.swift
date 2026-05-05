@@ -29,6 +29,14 @@ protocol APIServiceProviding {
     /// Get workout export in Apple WorkoutKit format
     func getAppleExport(workoutId: String) async throws -> String
 
+    // MARK: - Telegram Linking
+
+    /// Mint a one-time Telegram account-linking token and deep links.
+    func mintTelegramLinkToken() async throws -> TelegramLinkTokenResponse
+
+    /// Poll Telegram account-linking status for a minted token.
+    func getTelegramLinkStatus(token: String) async throws -> TelegramLinkStatusResponse
+
     // MARK: - Voice Workout Parsing
 
     /// Parse a voice transcription into a structured workout

@@ -54,6 +54,19 @@ class FixtureAPIService: APIServiceProviding {
         return "{}"
     }
 
+    func mintTelegramLinkToken() async throws -> TelegramLinkTokenResponse {
+        TelegramLinkTokenResponse(
+            token: "fixture-telegram-token",
+            deepLink: "https://t.me/amakaflow_userbot?start=fixture-telegram-token",
+            nativeLink: "tg://resolve?domain=amakaflow_userbot&start=fixture-telegram-token",
+            expiresInSeconds: 900
+        )
+    }
+
+    func getTelegramLinkStatus(token: String) async throws -> TelegramLinkStatusResponse {
+        TelegramLinkStatusResponse(linked: true, telegramId: 123_456_789, usedAt: Date())
+    }
+
     func parseVoiceWorkout(transcription: String, sportHint: WorkoutSport?) async throws -> VoiceWorkoutParseResponse {
         throw APIError.notImplemented
     }

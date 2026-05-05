@@ -2,28 +2,199 @@
 //  TelegramSetupView.swift
 //  AmakaFlow
 //
-//  Zero-friction Telegram account linking via t.me?start= deep link (AMA-1617).
+//  Zero-friction Telegram account linking via backend-minted deep link (AMA-1763).
 //
 
+import Combine
 import SwiftUI
 
 private let telegramBlue = Color(hex: "29B6F6")
 
-struct TelegramSetupView: View {
-    let onConnected: () -> Void
-    let onSkip: () -> Void
+@MainActor
+protocol URLOpener: Sendable {
+    func open(_ url: URL) async -> Bool
+}
 
-    @State private var phase: Phase = .idle
-    @State private var linkTask: Task<Void, Never>?
-    @State private var pollTask: Task<Void, Never>?
-
-    private enum Phase {
-        case idle
-        case loading
-        case polling
-        case connected
-        case error(String)
+struct SystemURLOpener: URLOpener {
+    @MainActor
+    func open(_ url: URL) async -> Bool {
+        await withCheckedContinuation { continuation in
+            UIApplication.shared.open(url) { opened in
+                continuation.resume(returning: opened)
+            }
+        }
     }
+}
+
+@MainActor
+final class ConnectTelegramViewModel: ObservableObject {
+    enum State: Equatable {
+        case idle
+        case minting
+        case connecting
+        case connected(telegramId: Int?)
+        case failed(String)
+    }
+
+    @Published private(set) var state: State
+
+    private let apiService: APIServiceProviding
+    private let urlOpener: URLOpener
+    private let pollIntervalNanoseconds: UInt64
+    private let timeoutSeconds: TimeInterval
+    private let now: @Sendable () -> Date
+    private let onConnected: (Int?) -> Void
+    private var pollingTask: Task<Void, Never>?
+
+    init(
+        apiService: APIServiceProviding = APIService.shared,
+        urlOpener: URLOpener? = nil,
+        initialTelegramId: Int? = nil,
+        pollIntervalNanoseconds: UInt64 = 3_000_000_000,
+        timeoutSeconds: TimeInterval = 90,
+        now: @escaping @Sendable () -> Date = Date.init,
+        onConnected: @escaping (Int?) -> Void = { _ in }
+    ) {
+        self.apiService = apiService
+        self.urlOpener = urlOpener ?? SystemURLOpener()
+        self.pollIntervalNanoseconds = pollIntervalNanoseconds
+        self.timeoutSeconds = timeoutSeconds
+        self.now = now
+        self.onConnected = onConnected
+        if let initialTelegramId {
+            self.state = .connected(telegramId: initialTelegramId)
+        } else {
+            self.state = .idle
+        }
+    }
+
+    deinit {
+        pollingTask?.cancel()
+    }
+
+    var isConnected: Bool {
+        if case .connected = state { return true }
+        return false
+    }
+
+    var isBusy: Bool {
+        switch state {
+        case .minting, .connecting: return true
+        default: return false
+        }
+    }
+
+    func connectTapped() {
+        guard !isBusy else { return }
+        if isConnected {
+            state = .failed("Telegram is already connected. Disconnect in Telegram if you want to switch accounts.")
+            return
+        }
+
+        pollingTask?.cancel()
+        state = .minting
+
+        pollingTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let token = try await apiService.mintTelegramLinkToken()
+                guard !Task.isCancelled else { return }
+
+                await MainActor.run { self.state = .connecting }
+                await self.openTelegram(nativeLink: token.nativeLink, deepLink: token.deepLink)
+                await self.pollStatus(token: token.token, expiresInSeconds: token.expiresInSeconds)
+            } catch {
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    self.state = .failed(Self.message(for: error))
+                }
+            }
+        }
+    }
+
+    func cancel() {
+        pollingTask?.cancel()
+        pollingTask = nil
+        state = .idle
+    }
+
+    private func openTelegram(nativeLink: String, deepLink: String) async {
+        if let nativeURL = URL(string: nativeLink), await urlOpener.open(nativeURL) {
+            return
+        }
+        if let fallbackURL = URL(string: deepLink), await urlOpener.open(fallbackURL) {
+            return
+        }
+        state = .failed("Could not open Telegram. Install Telegram or try again from a browser.")
+    }
+
+    private func pollStatus(token: String, expiresInSeconds: Int) async {
+        let startedAt = now()
+        let timeoutAt = startedAt.addingTimeInterval(timeoutSeconds)
+        let expiresAt = startedAt.addingTimeInterval(TimeInterval(expiresInSeconds))
+
+        while now() < timeoutAt {
+            guard !Task.isCancelled else { return }
+            if now() >= expiresAt {
+                state = .failed("Link expired, try again.")
+                return
+            }
+
+            do {
+                let status = try await apiService.getTelegramLinkStatus(token: token)
+                guard !Task.isCancelled else { return }
+                if status.linked {
+                    state = .connected(telegramId: status.telegramId)
+                    onConnected(status.telegramId)
+                    pollingTask = nil
+                    return
+                }
+            } catch {
+                guard !Task.isCancelled else { return }
+            }
+
+            try? await Task.sleep(nanoseconds: pollIntervalNanoseconds)
+        }
+
+        guard !Task.isCancelled else { return }
+        state = .failed("Timed out waiting for Telegram. Try again.")
+        pollingTask = nil
+    }
+
+    private static func message(for error: Error) -> String {
+        if let apiError = error as? APIError {
+            switch apiError {
+            case .serverErrorWithBody(503, _):
+                return "Telegram linking is temporarily unavailable. Please try again in a few minutes."
+            case .unauthorized:
+                return "Your session expired. Sign in again and retry."
+            default:
+                return apiError.localizedDescription
+            }
+        }
+        return "Could not start Telegram linking. Please try again."
+    }
+}
+
+struct TelegramSetupView: View {
+    @StateObject private var viewModel: ConnectTelegramViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    init(
+        initialTelegramId: Int? = nil,
+        onConnected: @escaping (Int?) -> Void = { _ in },
+        onSkip: @escaping () -> Void = {}
+    ) {
+        _viewModel = StateObject(
+            wrappedValue: ConnectTelegramViewModel(
+                initialTelegramId: initialTelegramId,
+                onConnected: onConnected
+            )
+        )
+        self.onSkip = onSkip
+    }
+
+    private let onSkip: () -> Void
 
     var body: some View {
         VStack(spacing: Theme.Spacing.xl) {
@@ -43,201 +214,93 @@ struct TelegramSetupView: View {
                     .font(Theme.Typography.title1)
                     .foregroundColor(Theme.Colors.textPrimary)
 
-                Text("Your morning briefings, evening check-ins, and workout swaps all happen in Telegram. Two taps to connect your account.")
+                Text("Open Telegram, tap Start, and AmakaFlow will confirm the connection automatically.")
                     .font(Theme.Typography.body)
                     .foregroundColor(Theme.Colors.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, Theme.Spacing.lg)
             }
 
-            switch phase {
-            case .idle, .error:
-                VStack(spacing: Theme.Spacing.sm) {
-                    Button(action: openTelegram) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "arrow.up.right")
-                            Text("Open Telegram →")
-                        }
-                        .font(Theme.Typography.bodyBold)
-                        .foregroundColor(.black)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(telegramBlue)
-                        .cornerRadius(Theme.CornerRadius.md)
-                    }
-                    .padding(.horizontal, Theme.Spacing.lg)
-
-                    if case .error(let msg) = phase {
-                        Text(msg)
-                            .font(Theme.Typography.caption)
-                            .foregroundColor(Theme.Colors.accentRed)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, Theme.Spacing.lg)
-                    }
-
-                    Button("Skip for now", action: onSkip)
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.textTertiary)
-                }
-
-            case .loading:
-                VStack(spacing: Theme.Spacing.sm) {
-                    ProgressView()
-                    Text("Generating link…")
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                }
-
-            case .polling:
-                VStack(spacing: Theme.Spacing.md) {
-                    ProgressView()
-                    Text("Waiting for Telegram confirmation…")
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                    Button("Cancel", action: cancelAll)
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.textTertiary)
-                }
-
-            case .connected:
-                VStack(spacing: Theme.Spacing.sm) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 40))
-                        .foregroundColor(Theme.Colors.accentGreen)
-                    Text("Telegram connected!")
-                        .font(Theme.Typography.bodyBold)
-                        .foregroundColor(Theme.Colors.accentGreen)
-                }
-            }
+            statusContent
 
             Spacer()
         }
+        .padding(Theme.Spacing.lg)
         .background(Theme.Colors.background.ignoresSafeArea())
-        .onDisappear {
-            linkTask?.cancel()
-            pollTask?.cancel()
+        .navigationTitle("Telegram")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Done") {
+                    viewModel.cancel()
+                    dismiss()
+                }
+            }
         }
+        .onDisappear { viewModel.cancel() }
     }
 
-    private func openTelegram() {
-        phase = .loading
-        linkTask?.cancel()
-        linkTask = Task {
-            do {
-                let baseURL = AppEnvironment.current.mapperAPIURL
-                guard let url = URL(string: "\(baseURL)/api/telegram/link-token") else {
-                    await MainActor.run { phase = .error("Invalid server URL.") }
-                    return
-                }
-                var request = URLRequest(url: url)
-                request.httpMethod = "POST"
-                request.allHTTPHeaderFields = await APIService.shared.makeAuthHeaders()
-
-                guard !Task.isCancelled else { return }
-                let (data, response) = try await URLSession.shared.data(for: request)
-                guard !Task.isCancelled else { return }
-
-                guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-                    await MainActor.run { phase = .error("Failed to generate link. Try again.") }
-                    return
-                }
-
-                let json = try JSONDecoder().decode(LinkTokenResponse.self, from: data)
-
-                var components = URLComponents(string: json.nativeLink)
-                    ?? URLComponents(string: json.deepLink)
-                guard let deepLink = components?.url ?? URL(string: json.deepLink) else {
-                    await MainActor.run { phase = .error("Invalid deep link from server.") }
-                    return
-                }
-
-                await MainActor.run {
-                    phase = .polling
-                    UIApplication.shared.open(deepLink) { opened in
-                        if !opened {
-                            // tg:// unavailable — try https://t.me fallback
-                            if let fallback = URL(string: json.deepLink) {
-                                UIApplication.shared.open(fallback) { fallbackOpened in
-                                    if !fallbackOpened {
-                                        phase = .error("Could not open Telegram. Please install it and try again.")
-                                    }
-                                }
-                            } else {
-                                phase = .error("Could not open Telegram. Please install it and try again.")
-                            }
-                        }
-                    }
-                    startPolling(token: json.token)
-                }
-            } catch {
-                guard !Task.isCancelled else { return }
-                await MainActor.run { phase = .error("Network error. Please try again.") }
+    @ViewBuilder
+    private var statusContent: some View {
+        switch viewModel.state {
+        case .idle:
+            connectButton
+            Button("Skip for now", action: onSkip)
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.textTertiary)
+        case .minting:
+            ProgressView("Generating link…")
+                .foregroundColor(Theme.Colors.textSecondary)
+        case .connecting:
+            VStack(spacing: Theme.Spacing.md) {
+                ProgressView()
+                Text("Waiting for Telegram confirmation…")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textSecondary)
+                Button("Cancel", action: viewModel.cancel)
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textTertiary)
+            }
+        case .connected(let telegramId):
+            VStack(spacing: Theme.Spacing.sm) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 40))
+                    .foregroundColor(Theme.Colors.accentGreen)
+                Text(telegramId.map { "Connected to \($0)" } ?? "Telegram connected")
+                    .font(Theme.Typography.bodyBold)
+                    .foregroundColor(Theme.Colors.accentGreen)
+            }
+        case .failed(let message):
+            VStack(spacing: Theme.Spacing.md) {
+                Text(message)
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.accentRed)
+                    .multilineTextAlignment(.center)
+                connectButton
             }
         }
     }
 
-    private func startPolling(token: String) {
-        pollTask?.cancel()
-        pollTask = Task {
-            let deadline = Date().addingTimeInterval(300)
-            while Date() < deadline {
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
-                guard !Task.isCancelled else { return }
-                do {
-                    let baseURL = AppEnvironment.current.mapperAPIURL
-                    var components = URLComponents(string: "\(baseURL)/api/telegram/link-status")
-                    components?.queryItems = [URLQueryItem(name: "token", value: token)]
-                    guard let url = components?.url else { continue }
-                    var request = URLRequest(url: url)
-                    request.allHTTPHeaderFields = await APIService.shared.makeAuthHeaders()
-                    let (data, response) = try await URLSession.shared.data(for: request)
-                    guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { continue }
-                    let status = try JSONDecoder().decode(LinkStatusResponse.self, from: data)
-                    if status.linked {
-                        await MainActor.run {
-                            phase = .connected
-                            pollTask = nil
-                        }
-                        try? await Task.sleep(nanoseconds: 1_200_000_000)
-                        await MainActor.run { onConnected() }
-                        return
-                    }
-                } catch { }
+    private var connectButton: some View {
+        Button(action: viewModel.connectTapped) {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.up.right")
+                Text("Open Telegram")
             }
-            await MainActor.run {
-                if case .polling = phase {
-                    phase = .error("Timed out. Tap Open Telegram to try again.")
-                }
-            }
+            .font(Theme.Typography.bodyBold)
+            .foregroundColor(.black)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(telegramBlue)
+            .cornerRadius(Theme.CornerRadius.md)
         }
+        .accessibilityIdentifier("connect_telegram_button")
     }
-
-    private func cancelAll() {
-        linkTask?.cancel()
-        linkTask = nil
-        pollTask?.cancel()
-        pollTask = nil
-        phase = .idle
-    }
-}
-
-private struct LinkTokenResponse: Decodable {
-    let token: String
-    let deepLink: String
-    let nativeLink: String
-
-    enum CodingKeys: String, CodingKey {
-        case token
-        case deepLink = "deep_link"
-        case nativeLink = "native_link"
-    }
-}
-
-private struct LinkStatusResponse: Decodable {
-    let linked: Bool
 }
 
 #Preview {
-    TelegramSetupView(onConnected: {}, onSkip: {})
-        .preferredColorScheme(.dark)
+    NavigationStack {
+        TelegramSetupView()
+            .preferredColorScheme(.dark)
+    }
 }
