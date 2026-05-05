@@ -85,7 +85,12 @@ final class ConnectTelegramViewModelTests: XCTestCase {
       repeating: TelegramLinkStatusResponse(linked: false, telegramId: nil, usedAt: nil),
       count: 10
     )
-    let viewModel = makeViewModel(pollIntervalNanoseconds: 1, timeoutSeconds: 0.01)
+    let clock = AdvancingClock(start: now, step: 0.02)
+    let viewModel = makeViewModel(
+      pollIntervalNanoseconds: 1,
+      timeoutSeconds: 0.01,
+      nowProvider: { clock.now() }
+    )
 
     viewModel.connectTapped()
 
@@ -123,7 +128,8 @@ final class ConnectTelegramViewModelTests: XCTestCase {
   private func makeViewModel(
     initialTelegramId: Int? = nil,
     pollIntervalNanoseconds: UInt64 = 1,
-    timeoutSeconds: TimeInterval = 90
+    timeoutSeconds: TimeInterval = 90,
+    nowProvider: (@Sendable () -> Date)? = nil
   ) -> ConnectTelegramViewModel {
     ConnectTelegramViewModel(
       apiService: api,
@@ -131,7 +137,7 @@ final class ConnectTelegramViewModelTests: XCTestCase {
       initialTelegramId: initialTelegramId,
       pollIntervalNanoseconds: pollIntervalNanoseconds,
       timeoutSeconds: timeoutSeconds,
-      now: { [now] in now! },
+      now: nowProvider ?? { [now] in now! },
       onConnected: { self.connectedIds.append($0) }
     )
   }
@@ -155,6 +161,21 @@ final class ConnectTelegramViewModelTests: XCTestCase {
       try await Task.sleep(nanoseconds: 10_000_000)
     }
     XCTFail("Timed out waiting for condition")
+  }
+}
+
+private final class AdvancingClock {
+  private var current: Date
+  private let step: TimeInterval
+
+  init(start: Date, step: TimeInterval) {
+    self.current = start
+    self.step = step
+  }
+
+  func now() -> Date {
+    defer { current = current.addingTimeInterval(step) }
+    return current
   }
 }
 
