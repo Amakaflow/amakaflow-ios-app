@@ -98,6 +98,12 @@ class WorkoutsViewModel: ObservableObject {
             print("[WorkoutsViewModel] Not authenticated, clearing workout data")
             incomingWorkouts = []
             upcomingWorkouts = []
+            // AMA-1751 (CR follow-up): wipe the accepted-suggestions cache
+            // when the user is unpaired/logged out so a different user on
+            // the same device doesn't inherit the previous account's
+            // accepted workouts. Backend POST endpoint will eventually
+            // make this redundant.
+            acceptedStore.removeAll()
             isLoading = false
             return
         }
@@ -183,6 +189,10 @@ class WorkoutsViewModel: ObservableObject {
                 if let index = incomingWorkouts.firstIndex(where: { $0.id == workout.id }) {
                     incomingWorkouts.remove(at: index)
                 }
+                // AMA-1751 (CR follow-up): also evict from the accepted-
+                // suggestions cache so a scheduled workout doesn't keep
+                // resurfacing in incomingWorkouts on the next refetch.
+                acceptedStore.remove(id: workout.id)
                 
                 let scheduled = ScheduledWorkout(
                     workout: workout,
