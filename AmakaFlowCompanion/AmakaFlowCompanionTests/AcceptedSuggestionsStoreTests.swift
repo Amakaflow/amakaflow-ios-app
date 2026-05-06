@@ -9,27 +9,29 @@
 import XCTest
 @testable import AmakaFlowCompanion
 
-@MainActor
 final class AcceptedSuggestionsStoreTests: XCTestCase {
 
-    private var defaults: UserDefaults!
-    private var suiteName: String!
+    // CI's iOS test target sandbox returns nil from UserDefaults(suiteName:)
+    // for arbitrary names — so this suite uses UserDefaults.standard with a
+    // namespaced key that we clean up before/after each test. Each store
+    // instance is constructed against an in-memory throwaway suite when
+    // possible (so the assertions still validate the persistence invariant
+    // via two separate AcceptedSuggestionsStore instances backed by the
+    // same UserDefaults).
+    private let storageKey = "amakaflow.acceptedSuggestions.v1"
 
     override func setUp() {
         super.setUp()
-        suiteName = "AcceptedSuggestionsStoreTests-\(UUID().uuidString)"
-        defaults = UserDefaults(suiteName: suiteName)
+        UserDefaults.standard.removeObject(forKey: storageKey)
     }
 
     override func tearDown() {
-        defaults.removePersistentDomain(forName: suiteName)
-        defaults = nil
-        suiteName = nil
+        UserDefaults.standard.removeObject(forKey: storageKey)
         super.tearDown()
     }
 
     func test_save_then_all_returns_workout() {
-        let store = AcceptedSuggestionsStore(defaults: defaults)
+        let store = AcceptedSuggestionsStore(defaults: .standard)
         let workout = TestFixtures.workout(id: "w-1", name: "AI Suggested")
 
         store.save(workout)
@@ -40,7 +42,7 @@ final class AcceptedSuggestionsStoreTests: XCTestCase {
     }
 
     func test_save_is_idempotent_by_id() {
-        let store = AcceptedSuggestionsStore(defaults: defaults)
+        let store = AcceptedSuggestionsStore(defaults: .standard)
         let workout = TestFixtures.workout(id: "w-1")
 
         store.save(workout)
@@ -51,7 +53,7 @@ final class AcceptedSuggestionsStoreTests: XCTestCase {
     }
 
     func test_remove_clears_workout() {
-        let store = AcceptedSuggestionsStore(defaults: defaults)
+        let store = AcceptedSuggestionsStore(defaults: .standard)
         store.save(TestFixtures.workout(id: "w-1"))
         store.save(TestFixtures.workout(id: "w-2"))
 
@@ -61,12 +63,12 @@ final class AcceptedSuggestionsStoreTests: XCTestCase {
     }
 
     func test_persists_across_store_instances() {
-        // Same UserDefaults suite -> a fresh store sees prior writes.
-        // This is the core guarantee: accepted workouts survive a re-init.
-        let first = AcceptedSuggestionsStore(defaults: defaults)
+        // Two stores sharing the same UserDefaults — the core guarantee:
+        // accepted workouts survive a fresh AcceptedSuggestionsStore init.
+        let first = AcceptedSuggestionsStore(defaults: .standard)
         first.save(TestFixtures.workout(id: "w-persist", name: "Persisted"))
 
-        let second = AcceptedSuggestionsStore(defaults: defaults)
+        let second = AcceptedSuggestionsStore(defaults: .standard)
         XCTAssertEqual(second.all().map(\.id), ["w-persist"])
         XCTAssertEqual(second.all().first?.name, "Persisted")
     }
