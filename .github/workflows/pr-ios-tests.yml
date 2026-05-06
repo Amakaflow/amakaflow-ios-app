@@ -210,8 +210,14 @@ jobs:
     name: watchOS Tests (PR - Impacted)
     runs-on: macos-15
     needs: detect-changes
-    # Only run if detect-changes job found watch file changes
-    if: needs.detect-changes.outputs.watch_changed == 'true'
+    # AMA-1751 (2026-05-06): watchOS Tests job is gated off until the
+    # WatchTests target is rebuilt as a proper standalone unit-test
+    # bundle. The current target has a mixed-mode config (bundle ID
+    # says "uitests" but productType is unit-test, with TEST_TARGET_NAME
+    # forcing the watch host app to launch — which crashes in the CI
+    # sim with a malloc error during HealthKit/WCSession init).
+    # See `docs/superpowers/runbooks/2026-05-06-watchos-tests-ci-broken.md`.
+    if: false
     timeout-minutes: 30
 
     steps:
