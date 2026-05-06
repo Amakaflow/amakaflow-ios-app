@@ -387,6 +387,25 @@ extension WatchConnectivityManager: WCSessionDelegate {
         }
     }
 
+    // AMA-1751 Bug 2: handler for transferUserInfo deliveries. The watch
+    // now queues completion summaries via transferUserInfo so they
+    // survive the phone being locked / app backgrounded — those arrive
+    // here, not in didReceiveMessage. Mirrors the message switch but
+    // only for actions that are safe to receive late.
+    func session(_ session: WCSession, didReceiveUserInfo userInfo: [String : Any] = [:]) {
+        print("⌚️ Received userInfo from watch: \(userInfo.keys)")
+        guard let action = userInfo["action"] as? String else { return }
+
+        switch action {
+        case "workoutSummary":
+            handleWorkoutSummary(userInfo)
+        case "logSet":
+            handleSetLog(userInfo)
+        default:
+            print("⌚️ Unhandled userInfo action: \(action)")
+        }
+    }
+
     // MARK: - Set Log Handler (AMA-286)
 
     private func handleSetLog(_ message: [String: Any]) {
