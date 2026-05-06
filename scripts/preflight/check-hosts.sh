@@ -40,11 +40,34 @@ while [[ $# -gt 0 ]]; do
 done
 
 env_file="${env_file:-AmakaFlow/Models/Environment.swift}"
+allowlist_file="$(dirname "${BASH_SOURCE[0]}")/.host-allowlist"
 
 if [[ ! -f "$env_file" ]]; then
     echo "ERROR: $env_file not found (run from repo root, or pass the file path)" >&2
     exit 2
 fi
+
+# Load known-broken hosts that are tracked elsewhere. Anything in this file
+# is silently skipped. New entries must reference a Linear ticket.
+allowlist=()
+if [[ -f "$allowlist_file" ]]; then
+    while IFS= read -r raw_line; do
+        # Strip comments and surrounding whitespace
+        line="${raw_line%%#*}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        [[ -z "$line" ]] && continue
+        allowlist+=("$line")
+    done < "$allowlist_file"
+fi
+
+is_allowlisted() {
+    local h="$1"
+    for entry in "${allowlist[@]+"${allowlist[@]}"}"; do
+        [[ "$h" == "$entry" ]] && return 0
+    done
+    return 1
+}
 
 # Pull every `case .staging: ... "https://..."` and `case .production: ... "https://..."`
 # line. The file's actual format puts the case keyword and the URL on the same
@@ -83,6 +106,12 @@ for entry in "${entries[@]}"; do
     arm="${entry%%$'\t'*}"
     url="${entry#*$'\t'}"
     host=$(echo "$url" | sed -E 's|^https?://([^/]+).*|\1|')
+
+    if is_allowlisted "$host"; then
+        printf '  ⊘ [%-10s] %-60s → allowlisted (see .host-allowlist)\n' "$arm" "$host"
+        continue
+    fi
+
     answer=$(dig +short +time=3 +tries=1 "$host" 2>/dev/null | head -1)
 
     if [[ "$arm" == "staging" ]]; then
