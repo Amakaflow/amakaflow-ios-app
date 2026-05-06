@@ -53,11 +53,16 @@ class WorkoutsViewModel: ObservableObject {
     private let dependencies: AppDependencies
     private let calendarManager = CalendarManager()
     private var cancellables = Set<AnyCancellable>()
+    private let acceptedStore: AcceptedSuggestionsStoring
 
     /// Initialize with dependencies for dependency injection
     /// - Parameter dependencies: App dependencies container (defaults to .live for production)
-    init(dependencies: AppDependencies = .live) {
+    init(
+        dependencies: AppDependencies = .live,
+        acceptedStore: AcceptedSuggestionsStoring = AcceptedSuggestionsStore.shared
+    ) {
         self.dependencies = dependencies
+        self.acceptedStore = acceptedStore
 
         // Observe workout completion notifications (AMA-237)
         NotificationCenter.default.publisher(for: .workoutCompleted)
@@ -106,7 +111,7 @@ class WorkoutsViewModel: ObservableObject {
             let (workouts, scheduled) = try await (fetchedWorkouts, fetchedScheduled)
 
             print("[WorkoutsViewModel] Fetched \(workouts.count) workouts, \(scheduled.count) scheduled")
-            incomingWorkouts = workouts
+            incomingWorkouts = mergeAccepted(into: workouts)
             upcomingWorkouts = scheduled
         } catch let error as APIError {
             print("[WorkoutsViewModel] API error: \(error.localizedDescription)")
@@ -324,6 +329,10 @@ class WorkoutsViewModel: ObservableObject {
         // Remove from upcoming (scheduled workouts)
         upcomingWorkouts.removeAll { $0.workout.id == workoutId }
 
+        // AMA-1751: also clear from local accepted-suggestions store so a
+        // completed workout doesn't resurrect on the next loadWorkouts.
+        acceptedStore.remove(id: workoutId)
+
         let incomingRemoved = incomingBefore - incomingWorkouts.count
         let upcomingRemoved = upcomingBefore - upcomingWorkouts.count
 
@@ -338,6 +347,31 @@ class WorkoutsViewModel: ObservableObject {
         )
     }
     
+    // MARK: - Accepted suggestions (AMA-1751)
+
+    /// Persist an accepted Suggest-Workout result locally and surface it
+    /// in `incomingWorkouts` immediately. Backend currently has no
+    /// accept-suggestion endpoint, so this is the only durable home for
+    /// the workout until the user starts/completes or deletes it.
+    /// (Backend follow-up: AMA-1751-bug-1.)
+    func acceptSuggestedWorkout(_ workout: Workout) {
+        acceptedStore.save(workout)
+        if !incomingWorkouts.contains(where: { $0.id == workout.id }) {
+            incomingWorkouts.append(workout)
+        }
+    }
+
+    /// Merge stored accepted suggestions into a freshly-fetched workouts
+    /// list, deduping by workout id (server wins on conflict — once the
+    /// backend endpoint exists, the store will go quiet on its own).
+    private func mergeAccepted(into fetched: [Workout]) -> [Workout] {
+        let stored = acceptedStore.all()
+        guard !stored.isEmpty else { return fetched }
+        let fetchedIDs = Set(fetched.map { $0.id })
+        let extras = stored.filter { !fetchedIDs.contains($0.id) }
+        return fetched + extras
+    }
+
     // MARK: - Deep-link helpers (AMA-1640)
 
     private static let deepLinkISODayFormatter: DateFormatter = {

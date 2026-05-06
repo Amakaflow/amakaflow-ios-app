@@ -224,8 +224,10 @@ struct SuggestWorkoutView: View {
     // MARK: - Actions
 
     private func acceptWorkout(_ workout: Workout) {
-        // Add to incoming workouts so it shows in the list
-        workoutsViewModel.incomingWorkouts.append(workout)
+        // AMA-1751: persist + surface. Backend has no accept-suggestion
+        // endpoint yet, so the view model's local store is the only thing
+        // keeping this workout alive across the next API refresh.
+        workoutsViewModel.acceptSuggestedWorkout(workout)
         viewModel.reset()
         dismiss()
     }
