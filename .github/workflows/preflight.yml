@@ -1,0 +1,100 @@
+name: iOS Preflight
+
+# AMA-1777: pre-deploy validation gate.
+#
+# Catches the class of bugs that ship to TestFlight unnoticed because they
+# only surface on Release builds against real production hosts:
+#   - Bug A (2026-05-06 build 25): preconditionFailure on launch from missing
+#     CLERK_PUBLISHABLE_KEY_STAGING (Info.plist substitution silently produced "")
+#   - Bug B (2026-05-06 build 27): "hostname could not be found" because Release
+#     defaulted to .production and *.amakaflow.com hosts don't exist in DNS
+#
+# Strategy: validate the things Debug+mocked unit tests don't cover.
+#   1. check-hosts.sh — every URL in Environment.swift's case .staging / .production
+#      arms must DNS-resolve. Staging gaps fail; production gaps warn.
+#   2. check-info-plist.sh — built Info.plist has no `$(VAR)` placeholders left
+#      and no empty values for keys ending in _KEY/_SECRET/_TOKEN/_DSN.
+#
+# Future (separate ticket follow-up to AMA-1777): a Release simulator smoke launch
+# that boots the .app, asserts the process survives 5s, and asserts at least
+# one API call returned 2xx. That catches Bug A end-to-end.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      # Run preflight whenever something that affects the shipped binary changes.
+      - "AmakaFlow/**"
+      - "AmakaFlowCompanion/**"
+      - "Project.swift"
+      - "scripts/preflight/**"
+      - ".github/workflows/preflight.yml"
+  workflow_dispatch:
+    inputs:
+      strict_production:
+        description: "Treat production DNS gaps as failures (not just warnings)"
+        type: boolean
+        default: false
+
+jobs:
+  check-hosts:
+    name: Resolve every host in Environment.swift
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dig
+        run: |
+          # Ubuntu runners ship with bind9-host; install dnsutils for `dig` proper.
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq dnsutils
+      - name: Run check-hosts.sh
+        run: |
+          chmod +x scripts/preflight/check-hosts.sh
+          if [ "${{ inputs.strict_production }}" = "true" ]; then
+            ./scripts/preflight/check-hosts.sh --strict-production
+          else
+            ./scripts/preflight/check-hosts.sh
+          fi
+
+  check-info-plist:
+    # Linting the *source* Info.plist for known patterns is cheap and worth doing
+    # without a full Xcode build. The built-Info.plist check ideally runs after
+    # xcodebuild archive, but until that's wired we still catch the most common
+    # gap: empty values in build settings. Source-file false positives (where
+    # `$(VAR)` is intentional and gets substituted at build time) we accept by
+    # excluding the source-side run; this job only runs on a built archive.
+    name: Lint Info.plist for unresolved placeholders
+    runs-on: macos-14
+    if: github.event_name == 'workflow_dispatch'  # only run when a build is intended; PRs run check-hosts only
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Release archive (no signing)
+        run: |
+          # Build for the simulator so we can inspect the .app/Info.plist without
+          # needing a Distribution signing identity in CI. The Info.plist
+          # substitution still runs during this build.
+          xcodebuild \
+            -project AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj \
+            -scheme AmakaFlowCompanion \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/ \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+      - name: Locate built Info.plist
+        id: locate
+        run: |
+          plist=$(find build/Build/Products -name "Info.plist" -path "*AmakaFlowCompanion.app/*" | head -1)
+          if [ -z "$plist" ]; then
+            echo "ERROR: built Info.plist not found"
+            exit 1
+          fi
+          echo "plist=$plist" >> "$GITHUB_OUTPUT"
+      - name: Run check-info-plist.sh
+        run: |
+          chmod +x scripts/preflight/check-info-plist.sh
+          ./scripts/preflight/check-info-plist.sh "${{ steps.locate.outputs.plist }}"
