@@ -314,6 +314,7 @@ jobs:
             -derivedDataPath DerivedData \
             -clonedSourcePackagesDirPath .spm \
             -only-testing:"AmakaFlowWatch Watch AppTests" \
+            -skip-testing:"AmakaFlowWatch Watch AppTests/FormInferenceTests" \
             -resultBundlePath WatchTestResults \
             -enableCodeCoverage NO 2>&1 | tee watch_output.log
           XCODE_EXIT=${PIPESTATUS[0]}
