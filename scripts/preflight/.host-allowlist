@@ -1,0 +1,10 @@
+# AMA-1777 host-resolve allowlist.
+#
+# One host per line. Lines starting with # are comments. A host listed here
+# is skipped by check-hosts.sh — neither failure nor warning is emitted.
+# Use this for hosts that ARE known-broken AND tracked in a Linear ticket;
+# anything else should fix the URL or stand up the CNAME.
+#
+# Format: <hostname>  # AMA-XXXX brief reason (DON'T omit the ticket reference)
+
+strava-sync-api.staging.amakaflow.com  # AMA-1778 — strava staging CNAME not stood up; AMA-1751 Phase D6 blocked
