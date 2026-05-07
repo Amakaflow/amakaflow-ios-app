@@ -79,7 +79,7 @@ final class AcceptedSuggestionsStore: AcceptedSuggestionsStoring {
         do {
             let data = try encoder.encode(workouts)
             defaults.set(data, forKey: key)
-            return true
+            return defaults.synchronize()
         } catch {
             print("[AcceptedSuggestionsStore] Failed to encode accepted suggestions: \(error)")
             Task { @MainActor in
