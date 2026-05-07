@@ -21,7 +21,7 @@ final class WorkoutEventsRepository {
     func upsert(_ event: LocalWorkoutEvent, enqueueSync: Bool = true) throws -> LocalWorkoutEvent {
         var record = event
         try dbQueue.write { db in
-            try record.save(db)
+            try record.upsert(db)
             if enqueueSync {
                 try syncQueue.enqueue(in: db, resourceType: LocalWorkoutEvent.databaseTableName, resourceId: record.id, op: "upsert", payload: try encode(record))
             }

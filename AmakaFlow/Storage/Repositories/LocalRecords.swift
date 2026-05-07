@@ -16,8 +16,7 @@ enum SyncQueueStatus: String, Codable, CaseIterable {
 
 struct LocalAcceptedSuggestion: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
     static let databaseTableName = "accepted_suggestions"
-    static let databaseColumnEncodingStrategy = DatabaseColumnEncodingStrategy.convertToSnakeCase
-    static let databaseColumnDecodingStrategy = DatabaseColumnDecodingStrategy.convertFromSnakeCase
+    static let persistenceConflictPolicy = PersistenceConflictPolicy(insert: .replace, update: .replace)
 
     var id: String
     var userId: String
@@ -35,12 +34,23 @@ struct LocalAcceptedSuggestion: Codable, FetchableRecord, MutablePersistableReco
         case status, clientGeneratedId = "client_generated_id", serverVersion = "server_version"
         case createdAt = "created_at", updatedAt = "updated_at", deletedAt = "deleted_at"
     }
+
+    enum CodingKeys: String, CodingKey {
+        case id, status
+        case userId = "user_id"
+        case suggestionId = "suggestion_id"
+        case workoutEventId = "workout_event_id"
+        case clientGeneratedId = "client_generated_id"
+        case serverVersion = "server_version"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case deletedAt = "deleted_at"
+    }
 }
 
 struct LocalWorkoutEvent: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
     static let databaseTableName = "workout_events"
-    static let databaseColumnEncodingStrategy = DatabaseColumnEncodingStrategy.convertToSnakeCase
-    static let databaseColumnDecodingStrategy = DatabaseColumnDecodingStrategy.convertFromSnakeCase
+    static let persistenceConflictPolicy = PersistenceConflictPolicy(insert: .replace, update: .replace)
 
     var id: String
     var userId: String
@@ -61,12 +71,23 @@ struct LocalWorkoutEvent: Codable, FetchableRecord, MutablePersistableRecord, Id
         case status, source, jsonPayload = "json_payload", clientGeneratedId = "client_generated_id"
         case serverVersion = "server_version", createdAt = "created_at", updatedAt = "updated_at", deletedAt = "deleted_at"
     }
+
+    enum CodingKeys: String, CodingKey {
+        case id, date, status, source
+        case userId = "user_id"
+        case startTime = "start_time"
+        case endTime = "end_time"
+        case jsonPayload = "json_payload"
+        case clientGeneratedId = "client_generated_id"
+        case serverVersion = "server_version"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case deletedAt = "deleted_at"
+    }
 }
 
 struct LocalAIRun: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
     static let databaseTableName = "ai_runs"
-    static let databaseColumnEncodingStrategy = DatabaseColumnEncodingStrategy.convertToSnakeCase
-    static let databaseColumnDecodingStrategy = DatabaseColumnDecodingStrategy.convertFromSnakeCase
 
     var id: String
     var userId: String
@@ -86,12 +107,21 @@ struct LocalAIRun: Codable, FetchableRecord, MutablePersistableRecord, Identifia
         case latencyMs = "latency_ms", inputTokens = "input_tokens", outputTokens = "output_tokens"
         case costUsd = "cost_usd", createdAt = "created_at"
     }
+
+    enum CodingKeys: String, CodingKey {
+        case id, kind, model, input, output
+        case userId = "user_id"
+        case promptVersion = "prompt_version"
+        case latencyMs = "latency_ms"
+        case inputTokens = "input_tokens"
+        case outputTokens = "output_tokens"
+        case costUsd = "cost_usd"
+        case createdAt = "created_at"
+    }
 }
 
 struct SyncQueueItem: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
     static let databaseTableName = "sync_queue"
-    static let databaseColumnEncodingStrategy = DatabaseColumnEncodingStrategy.convertToSnakeCase
-    static let databaseColumnDecodingStrategy = DatabaseColumnDecodingStrategy.convertFromSnakeCase
 
     var id: String
     var resourceType: String
@@ -110,6 +140,18 @@ struct SyncQueueItem: Codable, FetchableRecord, MutablePersistableRecord, Identi
         case id, resourceType = "resource_type", resourceId = "resource_id", op, payload
         case attemptCount = "attempt_count", lastAttemptedAt = "last_attempted_at", nextAttemptAt = "next_attempt_at"
         case errorReason = "error_reason", status, createdAt = "created_at", updatedAt = "updated_at"
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, op, payload, status
+        case resourceType = "resource_type"
+        case resourceId = "resource_id"
+        case attemptCount = "attempt_count"
+        case lastAttemptedAt = "last_attempted_at"
+        case nextAttemptAt = "next_attempt_at"
+        case errorReason = "error_reason"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
     }
 }
 

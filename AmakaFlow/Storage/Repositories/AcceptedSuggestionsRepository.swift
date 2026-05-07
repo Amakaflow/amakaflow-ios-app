@@ -21,7 +21,7 @@ final class AcceptedSuggestionsRepository {
     func insert(_ suggestion: LocalAcceptedSuggestion, enqueueSync: Bool = true) throws -> LocalAcceptedSuggestion {
         var record = suggestion
         try dbQueue.write { db in
-            try record.save(db)
+            try record.upsert(db)
             if enqueueSync {
                 try syncQueue.enqueue(in: db, resourceType: LocalAcceptedSuggestion.databaseTableName, resourceId: record.id, op: "upsert", payload: try encode(record))
             }
