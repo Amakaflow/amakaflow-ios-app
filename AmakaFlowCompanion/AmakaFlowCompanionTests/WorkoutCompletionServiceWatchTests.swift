@@ -11,17 +11,12 @@ import XCTest
 @MainActor
 final class WorkoutCompletionServiceWatchTests: XCTestCase {
 
-    func testWatchCompletionUsesSummaryWorkoutNameWhenOverrideMissing() async throws {
-        let summary = StandaloneWorkoutSummary(
+    func testWatchCompletionUsesSummaryWorkoutNameWhenOverrideMissing() {
+        let summary = makeSummary(
             workoutId: "watch-workout-1",
             workoutName: "Watch Strength Session",
-            startDate: Date(timeIntervalSince1970: 1_000),
-            endDate: Date(timeIntervalSince1970: 1_600),
-            durationSeconds: 600,
             totalCalories: 42,
-            averageHeartRate: 120,
-            completedSteps: 4,
-            totalSteps: 4
+            averageHeartRate: 120
         )
 
         let request = WorkoutCompletionService.makeWatchCompletionRequestForTesting(summary: summary)
@@ -32,15 +27,17 @@ final class WorkoutCompletionServiceWatchTests: XCTestCase {
         XCTAssertEqual(request.deviceInfo.platform, "watchos")
         XCTAssertEqual(request.healthMetrics.avgHeartRate, 120)
         XCTAssertEqual(request.healthMetrics.activeCalories, 42)
+        XCTAssertNil(request.isSimulated)
+        XCTAssertNil(request.heartRateSamples)
+        XCTAssertNil(request.setLogs)
+        XCTAssertNil(request.executionLog)
     }
 
-    func testWatchCompletionUsesOverrideWorkoutNameWhenProvided() async throws {
-        let summary = StandaloneWorkoutSummary(
+    func testWatchCompletionUsesOverrideWorkoutNameWhenProvided() {
+        let summary = makeSummary(
             workoutId: "watch-workout-2",
             workoutName: "Original Watch Name",
-            startDate: Date(timeIntervalSince1970: 2_000),
-            endDate: Date(timeIntervalSince1970: 2_600),
-            durationSeconds: 600,
+            start: 2_000,
             totalCalories: 55,
             averageHeartRate: 125,
             completedSteps: 5,
@@ -55,4 +52,46 @@ final class WorkoutCompletionServiceWatchTests: XCTestCase {
         XCTAssertEqual(request.workoutName, "Override Name")
     }
 
+    func testWatchCompletionPassesWorkoutStructureThrough() {
+        let summary = makeSummary(
+            workoutId: "watch-workout-3",
+            workoutName: "Structured Run",
+            start: 3_000,
+            totalCalories: 60,
+            averageHeartRate: 130,
+            completedSteps: 3,
+            totalSteps: 3
+        )
+        let structure: [WorkoutInterval] = [.warmup(seconds: 60, target: "Easy")]
+
+        let request = WorkoutCompletionService.makeWatchCompletionRequestForTesting(
+            summary: summary,
+            workoutStructure: structure
+        )
+
+        XCTAssertEqual(request.workoutStructure, structure)
+    }
+
+    private func makeSummary(
+        workoutId: String,
+        workoutName: String,
+        start: TimeInterval = 1_000,
+        durationSeconds: Int = 600,
+        totalCalories: Double,
+        averageHeartRate: Double?,
+        completedSteps: Int = 4,
+        totalSteps: Int = 4
+    ) -> StandaloneWorkoutSummary {
+        StandaloneWorkoutSummary(
+            workoutId: workoutId,
+            workoutName: workoutName,
+            startDate: Date(timeIntervalSince1970: start),
+            endDate: Date(timeIntervalSince1970: start + TimeInterval(durationSeconds)),
+            durationSeconds: durationSeconds,
+            totalCalories: totalCalories,
+            averageHeartRate: averageHeartRate,
+            completedSteps: completedSteps,
+            totalSteps: totalSteps
+        )
+    }
 }

@@ -297,7 +297,7 @@ class WorkoutCompletionService: ObservableObject {
         workoutStructure: [WorkoutInterval]? = nil,  // (AMA-240) Workout structure for "Run Again"
         workoutName: String? = nil
     ) async throws -> WorkoutCompletionResponse? {
-        let request = makeWatchCompletionRequest(
+        let request = Self.makeWatchCompletionRequest(
             summary: summary,
             workoutStructure: workoutStructure,
             workoutName: workoutName
@@ -306,7 +306,7 @@ class WorkoutCompletionService: ObservableObject {
         return try await postCompletion(request)
     }
 
-    private func makeWatchCompletionRequest(
+    private static func makeWatchCompletionRequest(
         summary: StandaloneWorkoutSummary,
         workoutStructure: [WorkoutInterval]? = nil,
         workoutName: String? = nil
@@ -351,7 +351,7 @@ class WorkoutCompletionService: ObservableObject {
         workoutStructure: [WorkoutInterval]? = nil,
         workoutName: String? = nil
     ) -> WorkoutCompletionRequest {
-        shared.makeWatchCompletionRequest(
+        makeWatchCompletionRequest(
             summary: summary,
             workoutStructure: workoutStructure,
             workoutName: workoutName
@@ -573,10 +573,14 @@ class WorkoutCompletionService: ObservableObject {
 
     // MARK: - Helpers
 
-    private func formatISO8601(_ date: Date) -> String {
+    private static func formatISO8601(_ date: Date) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter.string(from: date)
+    }
+
+    private func formatISO8601(_ date: Date) -> String {
+        Self.formatISO8601(date)
     }
 
     private func getDeviceModel() -> String {
