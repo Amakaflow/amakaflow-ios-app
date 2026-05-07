@@ -16,6 +16,8 @@ enum SyncQueueStatus: String, Codable, CaseIterable {
 
 struct LocalAcceptedSuggestion: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
     static let databaseTableName = "accepted_suggestions"
+    static let databaseColumnEncodingStrategy = DatabaseColumnEncodingStrategy.convertToSnakeCase
+    static let databaseColumnDecodingStrategy = DatabaseColumnDecodingStrategy.convertFromSnakeCase
 
     var id: String
     var userId: String
@@ -37,6 +39,8 @@ struct LocalAcceptedSuggestion: Codable, FetchableRecord, MutablePersistableReco
 
 struct LocalWorkoutEvent: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
     static let databaseTableName = "workout_events"
+    static let databaseColumnEncodingStrategy = DatabaseColumnEncodingStrategy.convertToSnakeCase
+    static let databaseColumnDecodingStrategy = DatabaseColumnDecodingStrategy.convertFromSnakeCase
 
     var id: String
     var userId: String
@@ -61,6 +65,8 @@ struct LocalWorkoutEvent: Codable, FetchableRecord, MutablePersistableRecord, Id
 
 struct LocalAIRun: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
     static let databaseTableName = "ai_runs"
+    static let databaseColumnEncodingStrategy = DatabaseColumnEncodingStrategy.convertToSnakeCase
+    static let databaseColumnDecodingStrategy = DatabaseColumnDecodingStrategy.convertFromSnakeCase
 
     var id: String
     var userId: String
@@ -84,6 +90,8 @@ struct LocalAIRun: Codable, FetchableRecord, MutablePersistableRecord, Identifia
 
 struct SyncQueueItem: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
     static let databaseTableName = "sync_queue"
+    static let databaseColumnEncodingStrategy = DatabaseColumnEncodingStrategy.convertToSnakeCase
+    static let databaseColumnDecodingStrategy = DatabaseColumnDecodingStrategy.convertFromSnakeCase
 
     var id: String
     var resourceType: String
