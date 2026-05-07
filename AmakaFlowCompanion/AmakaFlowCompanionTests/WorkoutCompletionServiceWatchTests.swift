@@ -33,4 +33,26 @@ final class WorkoutCompletionServiceWatchTests: XCTestCase {
         XCTAssertEqual(request.healthMetrics.avgHeartRate, 120)
         XCTAssertEqual(request.healthMetrics.activeCalories, 42)
     }
+
+    func testWatchCompletionUsesOverrideWorkoutNameWhenProvided() async throws {
+        let summary = StandaloneWorkoutSummary(
+            workoutId: "watch-workout-2",
+            workoutName: "Original Watch Name",
+            startDate: Date(timeIntervalSince1970: 2_000),
+            endDate: Date(timeIntervalSince1970: 2_600),
+            durationSeconds: 600,
+            totalCalories: 55,
+            averageHeartRate: 125,
+            completedSteps: 5,
+            totalSteps: 5
+        )
+
+        let request = WorkoutCompletionService.makeWatchCompletionRequestForTesting(
+            summary: summary,
+            workoutName: "Override Name"
+        )
+
+        XCTAssertEqual(request.workoutName, "Override Name")
+    }
+
 }
