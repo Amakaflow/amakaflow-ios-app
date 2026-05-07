@@ -111,16 +111,19 @@ class WorkoutsViewModel: ObservableObject {
 
             let (workouts, scheduled) = try await (fetchedWorkouts, fetchedScheduled)
 
-            let completedWorkoutIDs = await completedWorkoutIDs()
-            pruneCompletedAcceptedSuggestions(completedWorkoutIDs)
+            // AMA-1785 prune was deleting workouts from the store on every load
+            // when fetchCompletions returned a transient/false-positive match,
+            // making accepted workouts vanish on relaunch. Disabled until
+            // AMA-1792 rewires onto the GRDB-backed AcceptedSuggestionsRepository.
+            let completedWorkoutIDs: Set<String> = []
             let merged = mergeAccepted(into: workouts, excluding: completedWorkoutIDs)
             print("[WorkoutsViewModel] Fetched \(workouts.count) workouts, \(scheduled.count) scheduled; merged \(merged.count) incoming")
             DebugLogService.shared.log(
                 "Workouts loaded",
-                details: "Fetched \(workouts.count), accepted cache \(acceptedStore.all().count), completed \(completedWorkoutIDs.count), merged \(merged.count)",
+                details: "Fetched \(workouts.count), accepted cache \(acceptedStore.all().count), prune-disabled, merged \(merged.count)",
                 metadata: ["source": "WorkoutsViewModel.loadWorkouts"]
             )
-            incomingWorkouts = merged.filter { !completedWorkoutIDs.contains($0.id) }
+            incomingWorkouts = merged
             upcomingWorkouts = scheduled
         } catch let error as APIError {
             print("[WorkoutsViewModel] API error: \(error.localizedDescription)")
@@ -129,16 +132,32 @@ class WorkoutsViewModel: ObservableObject {
                 errorMessage = "Session expired. Please reconnect."
             } else {
                 errorMessage = error.localizedDescription
-                // Don't fall back to mock data - show empty state instead
-                incomingWorkouts = []
-                upcomingWorkouts = []
+                // AMA-1785 + CR feedback: do NOT clobber the currently-rendered
+                // lists on a load/refresh failure. The constructor seeded
+                // `incomingWorkouts` with `acceptedStore.all()` on first launch,
+                // and any successful prior fetch left a populated merged list.
+                // Replacing either with `[]` (or even with just `acceptedStore.all()`
+                // mid-session) would visibly drop already-loaded data on a
+                // pull-to-refresh failure. Merge the local cache in as a safety
+                // net for fresh launches and otherwise leave existing entries
+                // untouched.
+                incomingWorkouts = mergeAccepted(into: incomingWorkouts)
+                DebugLogService.shared.log(
+                    "Workouts API failed; preserving displayed lists + local cache",
+                    details: "error=\(error.localizedDescription), localCount=\(incomingWorkouts.count)",
+                    metadata: ["source": "WorkoutsViewModel.loadWorkouts.catch.APIError"]
+                )
             }
         } catch {
             print("[WorkoutsViewModel] Error: \(error.localizedDescription)")
             errorMessage = "Failed to load workouts: \(error.localizedDescription)"
-            // Don't fall back to mock data - show empty state instead
-            incomingWorkouts = []
-            upcomingWorkouts = []
+            // AMA-1785 + CR feedback: same preservation behavior as above.
+            incomingWorkouts = mergeAccepted(into: incomingWorkouts)
+            DebugLogService.shared.log(
+                "Workouts load threw; preserving displayed lists + local cache",
+                details: "error=\(error.localizedDescription), localCount=\(incomingWorkouts.count)",
+                metadata: ["source": "WorkoutsViewModel.loadWorkouts.catch.generic"]
+            )
         }
 
         isLoading = false
