@@ -391,9 +391,13 @@ final class StandaloneWorkoutEngine: ObservableObject {
             totalSteps: flattenedSteps.count
         )
 
-        // Send via WatchConnectivity
-        guard let session = WatchConnectivityBridge.shared.session, session.isReachable else {
-            print("⌚️ Phone not reachable, can't send summary")
+        // AMA-1751 Bug 2: completion summaries must NEVER be lost. Use
+        // transferUserInfo (queues on the watch, delivered when the
+        // phone wakes the companion app) instead of sendMessage, which
+        // requires session.isReachable == true (phone unlocked +
+        // companion app foregrounded). Pocket case dropped silently.
+        guard let session = WatchConnectivityBridge.shared.session else {
+            print("⌚️ No WCSession, can't queue summary")
             return
         }
 
@@ -405,15 +409,8 @@ final class StandaloneWorkoutEngine: ObservableObject {
                 return
             }
 
-            session.sendMessage(
-                ["action": "workoutSummary", "summary": dict],
-                replyHandler: { reply in
-                    print("⌚️ Workout summary sent: \(reply)")
-                },
-                errorHandler: { error in
-                    print("⌚️ Failed to send workout summary: \(error)")
-                }
-            )
+            session.transferUserInfo(["action": "workoutSummary", "summary": dict])
+            print("⌚️ Workout summary queued via transferUserInfo (workoutId=\(workout.id))")
         } catch {
             print("⌚️ Failed to encode workout summary: \(error)")
         }
