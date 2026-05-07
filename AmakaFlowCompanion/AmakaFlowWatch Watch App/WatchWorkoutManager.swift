@@ -28,8 +28,14 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             session?.delegate = self
             session?.activate()
         }
-        
+
+        // AMA-1797: skip auto-request on simulator so the system HealthKit
+        // sheet doesn't block automated end-to-end test runs. Real-device
+        // builds still request on launch as before. Auth is also re-checked
+        // inside startWorkout() on real devices.
+        #if !targetEnvironment(simulator)
         requestHealthKitPermissions()
+        #endif
     }
     
     // MARK: - HealthKit Permissions
