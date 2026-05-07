@@ -132,13 +132,18 @@ class WorkoutsViewModel: ObservableObject {
                 errorMessage = "Session expired. Please reconnect."
             } else {
                 errorMessage = error.localizedDescription
-                // AMA-1785: keep locally-accepted workouts visible when the API
-                // call fails. Setting to [] here was causing accepted workouts
-                // to vanish on relaunch whenever the staging API was unreachable.
-                incomingWorkouts = acceptedStore.all()
-                upcomingWorkouts = []
+                // AMA-1785 + CR feedback: do NOT clobber the currently-rendered
+                // lists on a load/refresh failure. The constructor seeded
+                // `incomingWorkouts` with `acceptedStore.all()` on first launch,
+                // and any successful prior fetch left a populated merged list.
+                // Replacing either with `[]` (or even with just `acceptedStore.all()`
+                // mid-session) would visibly drop already-loaded data on a
+                // pull-to-refresh failure. Merge the local cache in as a safety
+                // net for fresh launches and otherwise leave existing entries
+                // untouched.
+                incomingWorkouts = mergeAccepted(into: incomingWorkouts)
                 DebugLogService.shared.log(
-                    "Workouts API failed; falling back to local accepted cache",
+                    "Workouts API failed; preserving displayed lists + local cache",
                     details: "error=\(error.localizedDescription), localCount=\(incomingWorkouts.count)",
                     metadata: ["source": "WorkoutsViewModel.loadWorkouts.catch.APIError"]
                 )
@@ -146,11 +151,10 @@ class WorkoutsViewModel: ObservableObject {
         } catch {
             print("[WorkoutsViewModel] Error: \(error.localizedDescription)")
             errorMessage = "Failed to load workouts: \(error.localizedDescription)"
-            // AMA-1785: same fallback as above — preserve local-cache visibility.
-            incomingWorkouts = acceptedStore.all()
-            upcomingWorkouts = []
+            // AMA-1785 + CR feedback: same preservation behavior as above.
+            incomingWorkouts = mergeAccepted(into: incomingWorkouts)
             DebugLogService.shared.log(
-                "Workouts load threw; falling back to local accepted cache",
+                "Workouts load threw; preserving displayed lists + local cache",
                 details: "error=\(error.localizedDescription), localCount=\(incomingWorkouts.count)",
                 metadata: ["source": "WorkoutsViewModel.loadWorkouts.catch.generic"]
             )
