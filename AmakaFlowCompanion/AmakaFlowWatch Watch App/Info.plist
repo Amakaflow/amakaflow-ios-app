@@ -6,5 +6,7 @@
     <string>AmakaFlow Companion needs access to read your workout data from Health</string>
     <key>NSHealthUpdateUsageDescription</key>
     <string>AmakaFlow Companion needs permission to save workout data (HKWorkoutTypeIdentifier) to Health</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>
