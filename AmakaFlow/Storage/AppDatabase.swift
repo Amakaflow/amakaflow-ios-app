@@ -51,22 +51,44 @@ struct AppDatabase {
             appDatabaseLog.error("AppDatabase: Documents directory unavailable; using in-memory fallback")
             SentrySDK.capture(message: "AppDatabase: Documents directory unavailable; in-memory fallback")
         }
+        // Per CR feedback on PR #175: separate queue creation from migration.
+        // Only an in-memory DatabaseQueue allocation failure is catastrophic
+        // (SQLite itself is broken). Migration failures are recoverable —
+        // we keep the queue, log the error, and return an unmigrated AppDatabase
+        // so the app launches. Repository operations against an unmigrated DB
+        // throw at the call site rather than crashing on init.
+        let queue: DatabaseQueue
         do {
             var config = Configuration()
             config.prepareDatabase { db in
                 try db.execute(sql: "PRAGMA foreign_keys = ON")
             }
-            let queue = try DatabaseQueue(configuration: config)
+            queue = try DatabaseQueue(configuration: config)
+        } catch {
+            // SQLite catastrophically broken. Crashing is the honest outcome.
+            appDatabaseLog.fault("AppDatabase in-memory queue creation failed: \(String(describing: error), privacy: .public)")
+            SentrySDK.capture(error: error) { scope in
+                scope.setTag(value: "appdatabase_inmemory_queue_failed", key: "subsystem")
+            }
+            fatalError("AppDatabase: in-memory DatabaseQueue init failed (sqlite catastrophic): \(error)")
+        }
+        do {
             return try AppDatabase(dbQueue: queue)
         } catch {
-            // In-memory init should never fail in practice. If it does, SQLite is
-            // catastrophically broken and crashing is the honest outcome.
-            appDatabaseLog.fault("AppDatabase in-memory fallback failed: \(String(describing: error), privacy: .public)")
+            appDatabaseLog.error("AppDatabase migration on in-memory queue failed: \(String(describing: error), privacy: .public)")
             SentrySDK.capture(error: error) { scope in
-                scope.setTag(value: "appdatabase_inmemory_fallback_failed", key: "subsystem")
+                scope.setTag(value: "appdatabase_inmemory_migration_failed", key: "subsystem")
             }
-            fatalError("AppDatabase: in-memory fallback failed (sqlite catastrophic): \(error)")
+            return AppDatabase(unmigratedQueue: queue)
         }
+    }
+
+    /// Internal initializer used only when a migration has already failed and
+    /// we want to surface the queue without a successful schema. Repository
+    /// operations against this DB will throw on first read/write and be caught
+    /// downstream rather than crashing the app at launch.
+    private init(unmigratedQueue: DatabaseQueue) {
+        self.dbQueue = unmigratedQueue
     }
 
     /// Returns nil instead of crashing when Documents is unavailable.
