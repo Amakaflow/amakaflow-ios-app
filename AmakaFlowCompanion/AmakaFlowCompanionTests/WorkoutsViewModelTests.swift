@@ -431,4 +431,73 @@ final class WorkoutsViewModelTests: XCTestCase {
         // Then counts remain unchanged (no crash)
         XCTAssertEqual(viewModel.incomingWorkouts.count, initialCount)
     }
+
+    // MARK: - Accepted Suggestion Persistence Tests (AMA-1751)
+
+    func testAcceptedSuggestionRestoresSynchronouslyOnNewViewModelInit() async throws {
+        let store = InMemoryAcceptedSuggestionsStore()
+        let accepted = TestFixtures.workout(id: "accepted-1", name: "Accepted Strength", sport: .strength)
+        let dependencies = AppDependencies(
+            apiService: mockAPIService,
+            pairingService: mockPairingService,
+            audioService: MockAudioService(),
+            progressStore: MockProgressStore(),
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
+        )
+
+        let firstViewModel = WorkoutsViewModel(dependencies: dependencies, acceptedStore: store)
+        firstViewModel.acceptSuggestedWorkout(accepted)
+
+        let relaunchedViewModel = WorkoutsViewModel(dependencies: dependencies, acceptedStore: store)
+
+        XCTAssertTrue(relaunchedViewModel.incomingWorkouts.contains { $0.id == accepted.id })
+    }
+
+    func testUnpairedLoadDoesNotClearAcceptedSuggestionsDuringColdAuthRestore() async throws {
+        let accepted = TestFixtures.workout(id: "accepted-cold-auth", name: "Accepted During Restore", sport: .strength)
+        let store = InMemoryAcceptedSuggestionsStore(workouts: [accepted])
+        let dependencies = AppDependencies(
+            apiService: mockAPIService,
+            pairingService: mockPairingService,
+            audioService: MockAudioService(),
+            progressStore: MockProgressStore(),
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
+        )
+        mockPairingService.configureUnpaired()
+
+        let relaunchedViewModel = WorkoutsViewModel(dependencies: dependencies, acceptedStore: store)
+        await relaunchedViewModel.loadWorkouts()
+
+        XCTAssertTrue(store.all().contains { $0.id == accepted.id })
+        XCTAssertTrue(relaunchedViewModel.incomingWorkouts.contains { $0.id == accepted.id })
+    }
+}
+
+private final class InMemoryAcceptedSuggestionsStore: AcceptedSuggestionsStoring {
+    private var workouts: [Workout]
+
+    init(workouts: [Workout] = []) {
+        self.workouts = workouts
+    }
+
+    func all() -> [Workout] {
+        workouts
+    }
+
+    @discardableResult
+    func save(_ workout: Workout) -> Bool {
+        workouts.removeAll { $0.id == workout.id }
+        workouts.append(workout)
+        return true
+    }
+
+    func remove(id: String) {
+        workouts.removeAll { $0.id == id }
+    }
+
+    func removeAll() {
+        workouts = []
+    }
 }

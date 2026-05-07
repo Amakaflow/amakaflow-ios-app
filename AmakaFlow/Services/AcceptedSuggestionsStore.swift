@@ -16,7 +16,8 @@ import Foundation
 
 protocol AcceptedSuggestionsStoring {
     func all() -> [Workout]
-    func save(_ workout: Workout)
+    @discardableResult
+    func save(_ workout: Workout) -> Bool
     func remove(id: String)
     func removeAll()
 }
@@ -35,14 +36,27 @@ final class AcceptedSuggestionsStore: AcceptedSuggestionsStoring {
     func all() -> [Workout] {
         guard let data = defaults.data(forKey: key) else { return [] }
         let decoder = JSONDecoder()
-        return (try? decoder.decode([Workout].self, from: data)) ?? []
+
+        do {
+            return try decoder.decode([Workout].self, from: data)
+        } catch {
+            print("[AcceptedSuggestionsStore] Failed to decode accepted suggestions: \(error)")
+            Task { @MainActor in
+                DebugLogService.shared.log(
+                    "Accepted suggestions decode failed",
+                    details: error.localizedDescription
+                )
+            }
+            return []
+        }
     }
 
-    func save(_ workout: Workout) {
+    @discardableResult
+    func save(_ workout: Workout) -> Bool {
         var current = all()
         current.removeAll { $0.id == workout.id }
         current.append(workout)
-        write(current)
+        return write(current)
     }
 
     func remove(id: String) {
@@ -58,9 +72,23 @@ final class AcceptedSuggestionsStore: AcceptedSuggestionsStoring {
         defaults.removeObject(forKey: key)
     }
 
-    private func write(_ workouts: [Workout]) {
+    @discardableResult
+    private func write(_ workouts: [Workout]) -> Bool {
         let encoder = JSONEncoder()
-        guard let data = try? encoder.encode(workouts) else { return }
-        defaults.set(data, forKey: key)
+
+        do {
+            let data = try encoder.encode(workouts)
+            defaults.set(data, forKey: key)
+            return true
+        } catch {
+            print("[AcceptedSuggestionsStore] Failed to encode accepted suggestions: \(error)")
+            Task { @MainActor in
+                DebugLogService.shared.log(
+                    "Accepted suggestions encode failed",
+                    details: error.localizedDescription
+                )
+            }
+            return false
+        }
     }
 }
