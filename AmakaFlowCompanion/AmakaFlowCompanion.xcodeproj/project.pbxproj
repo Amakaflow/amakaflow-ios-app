@@ -209,6 +209,8 @@
 		AMA1620AUTHINT01B /* ClerkAuthorizationInterceptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620AUTHINT01A /* ClerkAuthorizationInterceptor.swift */; };
 		AMA1620AUTHVM001B /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620AUTHVM001A /* AuthViewModel.swift */; };
 		AMA1620CLKKIT01B /* ClerkKit in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1620CLKKIT01P /* ClerkKit */; };
+		AMA1791GRDBFRAME /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1791GRDBPROD /* GRDB */; };
+		AMA1791GRDBTESTFRAME /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1791GRDBPROD /* GRDB */; };
 		AMA1620CLKUI001B /* ClerkKitUI in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1620CLKUI001P /* ClerkKitUI */; };
 		AMA1620UITEST01B /* UITestEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620UITEST01A /* UITestEnvironment.swift */; };
 		B1910EAEA57AF40FBA6FEDD3 /* FollowAlongPlayerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */; };
@@ -226,6 +228,13 @@
 		D33PL1NKT35T50002 /* DeepLinkManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */; };
 		D37C6098D3FACBE84D8D261D /* WeeklyReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3CF9663A6818FA77C6C02B0 /* WeeklyReviewView.swift */; };
 		D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000001B0000001 /* DebugLogService.swift */; };
+		AMA1791APPDBBLD /* AppDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791APPDBREF /* AppDatabase.swift */; };
+		AMA1791V1BLD /* V1_initial_schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791V1REF /* V1_initial_schema.swift */; };
+		AMA1791LOCALRECBLD /* LocalRecords.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791LOCALRECREF /* LocalRecords.swift */; };
+		AMA1791ACCEPTREPOBLD /* AcceptedSuggestionsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791ACCEPTREPOREF /* AcceptedSuggestionsRepository.swift */; };
+		AMA1791EVENTREPOBLD /* WorkoutEventsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791EVENTREPOREF /* WorkoutEventsRepository.swift */; };
+		AMA1791QUEUEREPOBLD /* SyncQueueRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791QUEUEREPOREF /* SyncQueueRepository.swift */; };
+		AMA1791ENGINEBLD /* SyncEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791ENGINEREF /* SyncEngine.swift */; };
 		D3BUG10G00000002C0000002 /* DebugLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000002B0000002 /* DebugLogView.swift */; };
 		D3P3ND1NJ3CT10N1001 /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0001 /* AppDependencies.swift */; };
 		D3P3ND1NJ3CT10N1002 /* AudioProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0002 /* AudioProviding.swift */; };
@@ -624,6 +633,13 @@
 		D33PL1NKMAN4G3R0001 /* DeepLinkManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkManager.swift; path = ../AmakaFlow/Services/DeepLinkManager.swift; sourceTree = "<group>"; };
 		D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkManagerTests.swift; path = AmakaFlowCompanionTests/DeepLinkManagerTests.swift; sourceTree = "<group>"; };
 		D3BUG10G00000001B0000001 /* DebugLogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogService.swift; path = ../AmakaFlow/Services/DebugLogService.swift; sourceTree = SOURCE_ROOT; };
+		AMA1791APPDBREF /* AppDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDatabase.swift; path = ../AmakaFlow/Storage/AppDatabase.swift; sourceTree = SOURCE_ROOT; };
+		AMA1791V1REF /* V1_initial_schema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V1_initial_schema.swift; path = ../AmakaFlow/Storage/Migrations/V1_initial_schema.swift; sourceTree = SOURCE_ROOT; };
+		AMA1791LOCALRECREF /* LocalRecords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LocalRecords.swift; path = ../AmakaFlow/Storage/Repositories/LocalRecords.swift; sourceTree = SOURCE_ROOT; };
+		AMA1791ACCEPTREPOREF /* AcceptedSuggestionsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AcceptedSuggestionsRepository.swift; path = ../AmakaFlow/Storage/Repositories/AcceptedSuggestionsRepository.swift; sourceTree = SOURCE_ROOT; };
+		AMA1791EVENTREPOREF /* WorkoutEventsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEventsRepository.swift; path = ../AmakaFlow/Storage/Repositories/WorkoutEventsRepository.swift; sourceTree = SOURCE_ROOT; };
+		AMA1791QUEUEREPOREF /* SyncQueueRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SyncQueueRepository.swift; path = ../AmakaFlow/Storage/Repositories/SyncQueueRepository.swift; sourceTree = SOURCE_ROOT; };
+		AMA1791ENGINEREF /* SyncEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SyncEngine.swift; path = ../AmakaFlow/Services/SyncEngine.swift; sourceTree = SOURCE_ROOT; };
 		D3BUG10G00000002B0000002 /* DebugLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogView.swift; path = ../AmakaFlow/Views/DebugLogView.swift; sourceTree = SOURCE_ROOT; };
 		D3P3ND1NJ3CT10N0001 /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDependencies.swift; path = ../AmakaFlow/DependencyInjection/AppDependencies.swift; sourceTree = SOURCE_ROOT; };
 		D3P3ND1NJ3CT10N0002 /* AudioProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioProviding.swift; path = ../AmakaFlow/DependencyInjection/AudioProviding.swift; sourceTree = SOURCE_ROOT; };
@@ -817,6 +833,7 @@
 				F84E22932ED0D9FA00459747 /* EventKit.framework in Frameworks */,
 				F84E22952ED0DA0200459747 /* HealthKit.framework in Frameworks */,
 				F84E22992ED0DA1F00459747 /* WorkoutKitSync in Frameworks */,
+				AMA1791GRDBFRAME /* GRDB in Frameworks */,
 				F8C125B22EFAC00000459747 /* ConnectIQ in Frameworks */,
 				F84E22972ED0DA0F00459747 /* WatchConnectivity.framework in Frameworks */,
 				F880AD612F09559A00E8D7D3 /* BuildFile in Frameworks */,
@@ -827,6 +844,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AMA1791GRDBTESTFRAME /* GRDB in Frameworks */,
 				F880AD642F09559A00E8D7D3 /* BuildFile in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -907,6 +925,13 @@
 				AAAA000200000002AAAA0002 /* AcceptedSuggestionsStore.swift */,
 				F8C125A02EFAB01000459747 /* GarminConnectManager.swift */,
 				D3BUG10G00000001B0000001 /* DebugLogService.swift */,
+				AMA1791APPDBREF /* AppDatabase.swift */,
+				AMA1791V1REF /* V1_initial_schema.swift */,
+				AMA1791LOCALRECREF /* LocalRecords.swift */,
+				AMA1791ACCEPTREPOREF /* AcceptedSuggestionsRepository.swift */,
+				AMA1791EVENTREPOREF /* WorkoutEventsRepository.swift */,
+				AMA1791QUEUEREPOREF /* SyncQueueRepository.swift */,
+				AMA1791ENGINEREF /* SyncEngine.swift */,
 				D3BUG10G00000002B0000002 /* DebugLogView.swift */,
 				S3NTR1S3RV1C300000001 /* SentryService.swift */,
 				F883912261E9D246979DD881 /* WorkoutState.swift */,
@@ -1228,6 +1253,7 @@
 				2F0C8DCE03694CF3A60D12F9 /* Sentry */,
 				AMA1620CLKKIT01P /* ClerkKit */,
 				AMA1620CLKUI001P /* ClerkKitUI */,
+				AMA1791GRDBPROD /* GRDB */,
 			);
 			productName = AmakaFlowCompanion;
 			productReference = F84E21742ED0B0C800459747 /* AmakaFlowCompanion.app */;
@@ -1250,6 +1276,9 @@
 				F84E21862ED0B0CA00459747 /* AmakaFlowCompanionTests */,
 			);
 			name = AmakaFlowCompanionTests;
+			packageProductDependencies = (
+				AMA1791GRDBPROD /* GRDB */,
+			);
 			productName = AmakaFlowCompanionTests;
 			productReference = F84E21832ED0B0CA00459747 /* AmakaFlowCompanionTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -1415,6 +1444,7 @@
 				6EFD6A06E1264416B1103D42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 				XCT4H34LTH00000003 /* XCRemoteSwiftPackageReference "XCTHealthKit" */,
 				AMA1620CLERKPKG /* XCRemoteSwiftPackageReference "clerk-ios" */,
+				AMA1791GRDBPKG /* XCRemoteSwiftPackageReference "GRDB.swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F84E21752ED0B0C800459747 /* Products */;
@@ -1624,6 +1654,13 @@
 				F84E22702ED0D55600459747 /* Theme.swift in Sources */,
 				F84E22722ED0D56C00459747 /* Workout.swift in Sources */,
 				D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */,
+				AMA1791APPDBBLD /* AppDatabase.swift in Sources */,
+				AMA1791V1BLD /* V1_initial_schema.swift in Sources */,
+				AMA1791LOCALRECBLD /* LocalRecords.swift in Sources */,
+				AMA1791ACCEPTREPOBLD /* AcceptedSuggestionsRepository.swift in Sources */,
+				AMA1791EVENTREPOBLD /* WorkoutEventsRepository.swift in Sources */,
+				AMA1791QUEUEREPOBLD /* SyncQueueRepository.swift in Sources */,
+				AMA1791ENGINEBLD /* SyncEngine.swift in Sources */,
 				D3BUG10G00000002C0000002 /* DebugLogView.swift in Sources */,
 				S3NTR1S3RV1C300000002 /* SentryService.swift in Sources */,
 				V01C301100000000000000 /* PermissionManager.swift in Sources */,
@@ -2578,6 +2615,14 @@
 				minimumVersion = 1.0.0;
 			};
 		};
+		AMA1791GRDBPKG /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/groue/GRDB.swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.0.0;
+			};
+		};
 		F84E225F2ED0B84300459747 /* XCRemoteSwiftPackageReference "workoutkit-sync" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Amakaflow/workoutkit-sync";
@@ -2611,6 +2656,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AMA1620CLERKPKG /* XCRemoteSwiftPackageReference "clerk-ios" */;
 			productName = ClerkKitUI;
+		};
+		AMA1791GRDBPROD /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AMA1791GRDBPKG /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
 		};
 		F84E22982ED0DA1F00459747 /* WorkoutKitSync */ = {
 			isa = XCSwiftPackageProductDependency;

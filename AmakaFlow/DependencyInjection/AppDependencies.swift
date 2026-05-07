@@ -19,6 +19,34 @@ struct AppDependencies {
     let progressStore: ProgressStoreProviding
     let watchSession: WatchSessionProviding
     let chatStreamService: ChatStreamProviding
+    let acceptedSuggestionsRepository: AcceptedSuggestionsRepository
+    let workoutEventsRepository: WorkoutEventsRepository
+    let syncQueueRepository: SyncQueueRepository
+    let syncEngine: SyncEngine
+
+    init(
+        apiService: APIServiceProviding,
+        pairingService: PairingServiceProviding,
+        audioService: AudioProviding,
+        progressStore: ProgressStoreProviding,
+        watchSession: WatchSessionProviding,
+        chatStreamService: ChatStreamProviding,
+        acceptedSuggestionsRepository: AcceptedSuggestionsRepository = AcceptedSuggestionsRepository(),
+        workoutEventsRepository: WorkoutEventsRepository = WorkoutEventsRepository(),
+        syncQueueRepository: SyncQueueRepository = SyncQueueRepository(),
+        syncEngine: SyncEngine = SyncEngine.shared
+    ) {
+        self.apiService = apiService
+        self.pairingService = pairingService
+        self.audioService = audioService
+        self.progressStore = progressStore
+        self.watchSession = watchSession
+        self.chatStreamService = chatStreamService
+        self.acceptedSuggestionsRepository = acceptedSuggestionsRepository
+        self.workoutEventsRepository = workoutEventsRepository
+        self.syncQueueRepository = syncQueueRepository
+        self.syncEngine = syncEngine
+    }
 
     /// Live dependencies using real service implementations
     @MainActor
@@ -28,7 +56,11 @@ struct AppDependencies {
         audioService: AudioCueManager(),
         progressStore: LiveProgressStore.shared,
         watchSession: LiveWatchSession.shared,
-        chatStreamService: ChatStreamService()
+        chatStreamService: ChatStreamService(),
+        acceptedSuggestionsRepository: AcceptedSuggestionsRepository(),
+        workoutEventsRepository: WorkoutEventsRepository(),
+        syncQueueRepository: SyncQueueRepository(),
+        syncEngine: SyncEngine.shared
     )
 
     /// Mock dependencies for unit testing
@@ -39,7 +71,11 @@ struct AppDependencies {
         audioService: MockAudioService(),
         progressStore: MockProgressStore(),
         watchSession: MockWatchSession(),
-        chatStreamService: MockChatStreamService()
+        chatStreamService: MockChatStreamService(),
+        acceptedSuggestionsRepository: AcceptedSuggestionsRepository(),
+        workoutEventsRepository: WorkoutEventsRepository(),
+        syncQueueRepository: SyncQueueRepository(),
+        syncEngine: SyncEngine.shared
     )
 
     #if DEBUG
@@ -53,7 +89,11 @@ struct AppDependencies {
         audioService: AudioCueManager(),
         progressStore: LiveProgressStore.shared,
         watchSession: MockWatchSession(),
-        chatStreamService: MockChatStreamService()
+        chatStreamService: MockChatStreamService(),
+        acceptedSuggestionsRepository: AcceptedSuggestionsRepository(),
+        workoutEventsRepository: WorkoutEventsRepository(),
+        syncQueueRepository: SyncQueueRepository(),
+        syncEngine: SyncEngine.shared
     )
 
     /// Returns the appropriate dependencies based on environment:
