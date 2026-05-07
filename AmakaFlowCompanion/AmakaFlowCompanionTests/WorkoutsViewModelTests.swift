@@ -473,6 +473,65 @@ final class WorkoutsViewModelTests: XCTestCase {
         XCTAssertTrue(store.all().contains { $0.id == accepted.id })
         XCTAssertTrue(relaunchedViewModel.incomingWorkouts.contains { $0.id == accepted.id })
     }
+
+    func testLoadWorkoutsRestoresAcceptedSuggestionWhenServerDoesNotReturnIt() async throws {
+        let accepted = TestFixtures.workout(id: "accepted-reopen", name: "Accepted After Reopen", sport: .strength)
+        let store = InMemoryAcceptedSuggestionsStore(workouts: [accepted])
+        let dependencies = AppDependencies(
+            apiService: mockAPIService,
+            pairingService: mockPairingService,
+            audioService: MockAudioService(),
+            progressStore: MockProgressStore(),
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
+        )
+        mockAPIService.fetchWorkoutsResult = .success([])
+        mockAPIService.fetchScheduledWorkoutsResult = .success([])
+        mockAPIService.fetchCompletionsResult = .success([])
+
+        let relaunchedViewModel = WorkoutsViewModel(dependencies: dependencies, acceptedStore: store)
+        await relaunchedViewModel.loadWorkouts()
+
+        XCTAssertTrue(relaunchedViewModel.incomingWorkouts.contains { $0.id == accepted.id })
+    }
+
+    func testLoadWorkoutsPrunesCompletedAcceptedSuggestion() async throws {
+        let accepted = TestFixtures.workout(id: "accepted-completed", name: "Completed Accepted", sport: .strength)
+        let store = InMemoryAcceptedSuggestionsStore(workouts: [accepted])
+        let dependencies = AppDependencies(
+            apiService: mockAPIService,
+            pairingService: mockPairingService,
+            audioService: MockAudioService(),
+            progressStore: MockProgressStore(),
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
+        )
+        mockAPIService.fetchWorkoutsResult = .success([accepted])
+        mockAPIService.fetchScheduledWorkoutsResult = .success([])
+        mockAPIService.fetchCompletionsResult = .success([
+            WorkoutCompletion(
+                id: "completion-accepted",
+                workoutName: accepted.name,
+                startedAt: Date(timeIntervalSince1970: 5_000),
+                endedAt: Date(timeIntervalSince1970: 5_600),
+                durationSeconds: 600,
+                avgHeartRate: nil,
+                maxHeartRate: nil,
+                activeCalories: nil,
+                source: .phone,
+                syncedToStrava: false,
+                workoutId: accepted.id,
+                originalWorkout: nil,
+                isSimulated: false
+            )
+        ])
+
+        let relaunchedViewModel = WorkoutsViewModel(dependencies: dependencies, acceptedStore: store)
+        await relaunchedViewModel.loadWorkouts()
+
+        XCTAssertFalse(relaunchedViewModel.incomingWorkouts.contains { $0.id == accepted.id })
+        XCTAssertFalse(store.all().contains { $0.id == accepted.id })
+    }
 }
 
 private final class InMemoryAcceptedSuggestionsStore: AcceptedSuggestionsStoring {

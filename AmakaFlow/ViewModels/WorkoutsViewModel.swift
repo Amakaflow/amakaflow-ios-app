@@ -111,14 +111,16 @@ class WorkoutsViewModel: ObservableObject {
 
             let (workouts, scheduled) = try await (fetchedWorkouts, fetchedScheduled)
 
-            let merged = mergeAccepted(into: workouts)
+            let completedWorkoutIDs = await completedWorkoutIDs()
+            pruneCompletedAcceptedSuggestions(completedWorkoutIDs)
+            let merged = mergeAccepted(into: workouts, excluding: completedWorkoutIDs)
             print("[WorkoutsViewModel] Fetched \(workouts.count) workouts, \(scheduled.count) scheduled; merged \(merged.count) incoming")
             DebugLogService.shared.log(
                 "Workouts loaded",
-                details: "Fetched \(workouts.count), accepted cache \(acceptedStore.all().count), merged \(merged.count)",
+                details: "Fetched \(workouts.count), accepted cache \(acceptedStore.all().count), completed \(completedWorkoutIDs.count), merged \(merged.count)",
                 metadata: ["source": "WorkoutsViewModel.loadWorkouts"]
             )
-            incomingWorkouts = merged
+            incomingWorkouts = merged.filter { !completedWorkoutIDs.contains($0.id) }
             upcomingWorkouts = scheduled
         } catch let error as APIError {
             print("[WorkoutsViewModel] API error: \(error.localizedDescription)")
@@ -383,12 +385,37 @@ class WorkoutsViewModel: ObservableObject {
     /// Merge stored accepted suggestions into a freshly-fetched workouts
     /// list, deduping by workout id (server wins on conflict — once the
     /// backend endpoint exists, the store will go quiet on its own).
-    private func mergeAccepted(into fetched: [Workout]) -> [Workout] {
+    private func mergeAccepted(into fetched: [Workout], excluding completedWorkoutIDs: Set<String> = []) -> [Workout] {
         let stored = acceptedStore.all()
         guard !stored.isEmpty else { return fetched }
-        let fetchedIDs = Set(fetched.map { $0.id })
-        let extras = stored.filter { !fetchedIDs.contains($0.id) }
-        return fetched + extras
+        let fetchedIDs = Set(fetched.map(\.id))
+        let visibleFetched = fetched.filter { !completedWorkoutIDs.contains($0.id) }
+        let extras = stored.filter { workout in
+            !fetchedIDs.contains(workout.id) && !completedWorkoutIDs.contains(workout.id)
+        }
+        return visibleFetched + extras
+    }
+
+    private func completedWorkoutIDs() async -> Set<String> {
+        do {
+            let completions = try await dependencies.apiService.fetchCompletions(limit: 100, offset: 0)
+            return Set(completions.compactMap(\.workoutId))
+        } catch {
+            DebugLogService.shared.log(
+                "Workout completions unavailable during load",
+                details: error.localizedDescription,
+                metadata: ["source": "WorkoutsViewModel.completedWorkoutIDs"]
+            )
+            return []
+        }
+    }
+
+    private func pruneCompletedAcceptedSuggestions(_ completedWorkoutIDs: Set<String>) {
+        guard !completedWorkoutIDs.isEmpty else { return }
+
+        for workoutID in completedWorkoutIDs where acceptedStore.all().contains(where: { $0.id == workoutID }) {
+            acceptedStore.remove(id: workoutID)
+        }
     }
 
     // MARK: - Deep-link helpers (AMA-1640)
