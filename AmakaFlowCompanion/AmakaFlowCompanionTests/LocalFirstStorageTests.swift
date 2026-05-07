@@ -17,6 +17,47 @@ final class LocalFirstStorageTests: XCTestCase {
         XCTAssertTrue(tables.contains("sync_queue"))
     }
 
+    func testFileBackedReopenPersistenceAndIdempotentMigration() throws {
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("amakaflow-local-first-\(UUID().uuidString).sqlite")
+        defer {
+            try? FileManager.default.removeItem(at: tempURL)
+            try? FileManager.default.removeItem(at: tempURL.appendingPathExtension("wal"))
+            try? FileManager.default.removeItem(at: tempURL.appendingPathExtension("shm"))
+        }
+
+        let timestamp = Date(timeIntervalSince1970: 4_000)
+        let suggestion = LocalAcceptedSuggestion(
+            id: "file-backed-accepted-1",
+            userId: "user-1",
+            suggestionId: nil,
+            workoutEventId: nil,
+            status: "accepted",
+            clientGeneratedId: "file-backed-client-1",
+            serverVersion: 1,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+            deletedAt: nil
+        )
+
+        do {
+            let database = try AppDatabase(path: tempURL.path)
+            let repository = AcceptedSuggestionsRepository(database: database, now: { timestamp })
+            try repository.insert(suggestion, enqueueSync: false)
+            XCTAssertEqual(try database.acceptedSuggestionCount(), 1)
+        }
+
+        do {
+            let reopened = try AppDatabase(path: tempURL.path)
+            XCTAssertTrue(try reopened.tableNames().contains("accepted_suggestions"))
+            XCTAssertEqual(try reopened.acceptedSuggestionCount(), 1)
+        }
+
+        let reopenedAgain = try AppDatabase(path: tempURL.path)
+        XCTAssertTrue(try reopenedAgain.tableNames().contains("accepted_suggestions"))
+        XCTAssertEqual(try reopenedAgain.acceptedSuggestionCount(), 1)
+    }
+
     func testAcceptedSuggestionInsertEnqueuesSyncItemAtomically() throws {
         let database = try AppDatabase.makeTestDatabase()
         let syncQueue = SyncQueueRepository(database: database, now: { Date(timeIntervalSince1970: 1_000) })
@@ -83,9 +124,18 @@ final class LocalFirstStorageTests: XCTestCase {
         let syncQueue = SyncQueueRepository(database: database, now: { Date(timeIntervalSince1970: 3_000) })
         let item = try syncQueue.enqueue(resourceType: "workout_events", resourceId: "event-1", op: "upsert", payload: "{}")
 
-        try syncQueue.markFailed(item.id, error: "network", retryAfter: 1, poisonAfter: 1)
+        try syncQueue.markInFlight(item.id)
+        var summary = try syncQueue.summary()
+        XCTAssertEqual(summary.lastAttemptedAt, Date(timeIntervalSince1970: 3_000))
 
-        let summary = try syncQueue.summary()
+        try syncQueue.markSynced(item.id)
+        summary = try syncQueue.summary()
+        XCTAssertEqual(summary.lastAttemptedAt, Date(timeIntervalSince1970: 3_000))
+
+        let retryItem = try syncQueue.enqueue(resourceType: "workout_events", resourceId: "event-2", op: "upsert", payload: "{}")
+        try syncQueue.markFailed(retryItem.id, error: "network", retryAfter: 1, poisonAfter: 1)
+
+        summary = try syncQueue.summary()
         XCTAssertEqual(summary.pendingCount, 0)
         XCTAssertEqual(summary.poisonCount, 1)
         XCTAssertEqual(summary.latestError, "network")

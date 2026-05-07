@@ -55,6 +55,12 @@ struct AppDatabase {
             try String.fetchAll(db, sql: "SELECT name FROM sqlite_master WHERE type = 'table'")
         }
     }
+
+    func acceptedSuggestionCount() throws -> Int {
+        try dbQueue.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM accepted_suggestions") ?? 0
+        }
+    }
     #endif
 
     var migrator: DatabaseMigrator {

@@ -66,11 +66,11 @@ nonisolated final class SyncQueueRepository {
     }
 
     func markInFlight(_ id: String) throws {
-        try update(id: id, status: .inFlight, errorReason: nil, nextAttemptAt: nil, incrementAttempt: false)
+        try update(id: id, status: .inFlight, errorReason: nil, nextAttemptAt: nil, incrementAttempt: false, recordAttempt: true)
     }
 
     func markSynced(_ id: String) throws {
-        try update(id: id, status: .synced, errorReason: nil, nextAttemptAt: nil, incrementAttempt: false)
+        try update(id: id, status: .synced, errorReason: nil, nextAttemptAt: nil, incrementAttempt: false, recordAttempt: true)
     }
 
     func markFailed(_ id: String, error: String, retryAfter: TimeInterval, poisonAfter maxAttempts: Int) throws {
@@ -124,13 +124,15 @@ nonisolated final class SyncQueueRepository {
         }
     }
 
-    private func update(id: String, status: SyncQueueStatus, errorReason: String?, nextAttemptAt: Date?, incrementAttempt: Bool) throws {
+    private func update(id: String, status: SyncQueueStatus, errorReason: String?, nextAttemptAt: Date?, incrementAttempt: Bool, recordAttempt: Bool = false) throws {
         try dbQueue.write { db in
             guard var item = try SyncQueueItem.fetchOne(db, key: id) else { return }
+            let timestamp = now()
             item.status = status
             item.errorReason = errorReason
             item.nextAttemptAt = nextAttemptAt
-            item.updatedAt = now()
+            item.updatedAt = timestamp
+            if recordAttempt { item.lastAttemptedAt = timestamp }
             if incrementAttempt { item.attemptCount += 1 }
             try item.update(db)
         }
