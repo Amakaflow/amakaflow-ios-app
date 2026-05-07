@@ -111,16 +111,19 @@ class WorkoutsViewModel: ObservableObject {
 
             let (workouts, scheduled) = try await (fetchedWorkouts, fetchedScheduled)
 
-            let completedWorkoutIDs = await completedWorkoutIDs()
-            pruneCompletedAcceptedSuggestions(completedWorkoutIDs)
+            // AMA-1785 prune was deleting workouts from the store on every load
+            // when fetchCompletions returned a transient/false-positive match,
+            // making accepted workouts vanish on relaunch. Disabled until
+            // AMA-1792 rewires onto the GRDB-backed AcceptedSuggestionsRepository.
+            let completedWorkoutIDs: Set<String> = []
             let merged = mergeAccepted(into: workouts, excluding: completedWorkoutIDs)
             print("[WorkoutsViewModel] Fetched \(workouts.count) workouts, \(scheduled.count) scheduled; merged \(merged.count) incoming")
             DebugLogService.shared.log(
                 "Workouts loaded",
-                details: "Fetched \(workouts.count), accepted cache \(acceptedStore.all().count), completed \(completedWorkoutIDs.count), merged \(merged.count)",
+                details: "Fetched \(workouts.count), accepted cache \(acceptedStore.all().count), prune-disabled, merged \(merged.count)",
                 metadata: ["source": "WorkoutsViewModel.loadWorkouts"]
             )
-            incomingWorkouts = merged.filter { !completedWorkoutIDs.contains($0.id) }
+            incomingWorkouts = merged
             upcomingWorkouts = scheduled
         } catch let error as APIError {
             print("[WorkoutsViewModel] API error: \(error.localizedDescription)")
@@ -129,16 +132,28 @@ class WorkoutsViewModel: ObservableObject {
                 errorMessage = "Session expired. Please reconnect."
             } else {
                 errorMessage = error.localizedDescription
-                // Don't fall back to mock data - show empty state instead
-                incomingWorkouts = []
+                // AMA-1785: keep locally-accepted workouts visible when the API
+                // call fails. Setting to [] here was causing accepted workouts
+                // to vanish on relaunch whenever the staging API was unreachable.
+                incomingWorkouts = acceptedStore.all()
                 upcomingWorkouts = []
+                DebugLogService.shared.log(
+                    "Workouts API failed; falling back to local accepted cache",
+                    details: "error=\(error.localizedDescription), localCount=\(incomingWorkouts.count)",
+                    metadata: ["source": "WorkoutsViewModel.loadWorkouts.catch.APIError"]
+                )
             }
         } catch {
             print("[WorkoutsViewModel] Error: \(error.localizedDescription)")
             errorMessage = "Failed to load workouts: \(error.localizedDescription)"
-            // Don't fall back to mock data - show empty state instead
-            incomingWorkouts = []
+            // AMA-1785: same fallback as above — preserve local-cache visibility.
+            incomingWorkouts = acceptedStore.all()
             upcomingWorkouts = []
+            DebugLogService.shared.log(
+                "Workouts load threw; falling back to local accepted cache",
+                details: "error=\(error.localizedDescription), localCount=\(incomingWorkouts.count)",
+                metadata: ["source": "WorkoutsViewModel.loadWorkouts.catch.generic"]
+            )
         }
 
         isLoading = false
