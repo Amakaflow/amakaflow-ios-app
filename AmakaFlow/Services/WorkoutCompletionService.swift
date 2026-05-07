@@ -297,6 +297,20 @@ class WorkoutCompletionService: ObservableObject {
         workoutStructure: [WorkoutInterval]? = nil,  // (AMA-240) Workout structure for "Run Again"
         workoutName: String? = nil
     ) async throws -> WorkoutCompletionResponse? {
+        let request = makeWatchCompletionRequest(
+            summary: summary,
+            workoutStructure: workoutStructure,
+            workoutName: workoutName
+        )
+
+        return try await postCompletion(request)
+    }
+
+    private func makeWatchCompletionRequest(
+        summary: StandaloneWorkoutSummary,
+        workoutStructure: [WorkoutInterval]? = nil,
+        workoutName: String? = nil
+    ) -> WorkoutCompletionRequest {
         let healthMetrics = HealthMetrics(
             avgHeartRate: summary.averageHeartRate.map { Int($0) },
             maxHeartRate: nil,
@@ -313,7 +327,7 @@ class WorkoutCompletionService: ObservableObject {
             osVersion: nil
         )
 
-        let request = WorkoutCompletionRequest(
+        return WorkoutCompletionRequest(
             workoutEventId: nil,
             workoutId: summary.workoutId,
             followAlongWorkoutId: nil,
@@ -324,14 +338,26 @@ class WorkoutCompletionService: ObservableObject {
             deviceInfo: deviceInfo,
             heartRateSamples: nil,
             workoutStructure: workoutStructure,
-            workoutName: workoutName,
+            workoutName: workoutName ?? summary.workoutName,
             isSimulated: nil,  // Watch workouts are never simulated
             setLogs: nil,      // Watch weight tracking coming in AMA-286
             executionLog: nil  // (AMA-291) Watch execution tracking coming later
         )
-
-        return try await postCompletion(request)
     }
+
+    #if DEBUG
+    static func makeWatchCompletionRequestForTesting(
+        summary: StandaloneWorkoutSummary,
+        workoutStructure: [WorkoutInterval]? = nil,
+        workoutName: String? = nil
+    ) -> WorkoutCompletionRequest {
+        shared.makeWatchCompletionRequest(
+            summary: summary,
+            workoutStructure: workoutStructure,
+            workoutName: workoutName
+        )
+    }
+    #endif
 
     /// Post workout completion from Garmin watch
     func postGarminWorkoutCompletion(

@@ -518,6 +518,12 @@ extension WatchConnectivityManager: WCSessionDelegate {
     private func handleWorkoutSummary(_ message: [String: Any]) {
         guard let summaryDict = message["summary"] as? [String: Any] else {
             print("⌚️ Invalid workout summary message")
+            Task { @MainActor in
+                DebugLogService.shared.logWatchEvent(
+                    title: "Invalid watch summary",
+                    details: "Missing summary payload"
+                )
+            }
             return
         }
 
@@ -534,21 +540,46 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 if let avgHR = summary.averageHeartRate {
                     print("   Avg HR: \(Int(avgHR)) bpm")
                 }
+                DebugLogService.shared.logWatchEvent(
+                    title: "Watch workout summary received",
+                    details: "\(summary.workoutName) (\(summary.durationSeconds)s)"
+                )
             }
 
             // Post to backend API
             Task { @MainActor in
                 do {
                     _ = try await WorkoutCompletionService.shared.postWatchWorkoutCompletion(summary: summary)
+                    NotificationCenter.default.post(
+                        name: .workoutCompleted,
+                        object: nil,
+                        userInfo: ["workoutId": summary.workoutId]
+                    )
+                    DebugLogService.shared.logWatchEvent(
+                        title: "Watch workout completion posted",
+                        details: "\(summary.workoutName) → History"
+                    )
                     print("⌚️ Watch workout completion posted to API")
                 } catch {
                     print("⌚️ Failed to post watch workout completion: \(error)")
+                    DebugLogService.shared.logCompletionError(
+                        workoutId: summary.workoutId,
+                        error: error,
+                        context: "watch summary post"
+                    )
                     // WorkoutCompletionService will queue for retry if network unavailable
                 }
             }
 
         } catch {
             print("⌚️ Failed to decode workout summary: \(error)")
+            Task { @MainActor in
+                DebugLogService.shared.logCompletionError(
+                    workoutId: nil,
+                    error: error,
+                    context: "watch summary decode"
+                )
+            }
         }
     }
 }

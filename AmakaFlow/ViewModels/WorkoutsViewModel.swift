@@ -63,6 +63,7 @@ class WorkoutsViewModel: ObservableObject {
     ) {
         self.dependencies = dependencies
         self.acceptedStore = acceptedStore
+        self.incomingWorkouts = acceptedStore.all()
 
         // Observe workout completion notifications (AMA-237)
         NotificationCenter.default.publisher(for: .workoutCompleted)
@@ -95,15 +96,9 @@ class WorkoutsViewModel: ObservableObject {
         }
 
         if !dependencies.pairingService.isPaired {
-            print("[WorkoutsViewModel] Not authenticated, clearing workout data")
-            incomingWorkouts = []
+            print("[WorkoutsViewModel] Not authenticated yet; preserving local accepted suggestions")
+            incomingWorkouts = acceptedStore.all()
             upcomingWorkouts = []
-            // AMA-1751 (CR follow-up): wipe the accepted-suggestions cache
-            // when the user is unpaired/logged out so a different user on
-            // the same device doesn't inherit the previous account's
-            // accepted workouts. Backend POST endpoint will eventually
-            // make this redundant.
-            acceptedStore.removeAll()
             isLoading = false
             return
         }
@@ -116,8 +111,14 @@ class WorkoutsViewModel: ObservableObject {
 
             let (workouts, scheduled) = try await (fetchedWorkouts, fetchedScheduled)
 
-            print("[WorkoutsViewModel] Fetched \(workouts.count) workouts, \(scheduled.count) scheduled")
-            incomingWorkouts = mergeAccepted(into: workouts)
+            let merged = mergeAccepted(into: workouts)
+            print("[WorkoutsViewModel] Fetched \(workouts.count) workouts, \(scheduled.count) scheduled; merged \(merged.count) incoming")
+            DebugLogService.shared.log(
+                "Workouts loaded",
+                details: "Fetched \(workouts.count), accepted cache \(acceptedStore.all().count), merged \(merged.count)",
+                metadata: ["source": "WorkoutsViewModel.loadWorkouts"]
+            )
+            incomingWorkouts = merged
             upcomingWorkouts = scheduled
         } catch let error as APIError {
             print("[WorkoutsViewModel] API error: \(error.localizedDescription)")
@@ -365,7 +366,15 @@ class WorkoutsViewModel: ObservableObject {
     /// the workout until the user starts/completes or deletes it.
     /// (Backend follow-up: AMA-1751-bug-1.)
     func acceptSuggestedWorkout(_ workout: Workout) {
-        acceptedStore.save(workout)
+        let saved = acceptedStore.save(workout)
+        let roundTripContainsWorkout = acceptedStore.all().contains { $0.id == workout.id }
+
+        DebugLogService.shared.log(
+            "Accepted suggestion persisted",
+            details: "save=\(saved), roundTrip=\(roundTripContainsWorkout)",
+            metadata: ["workoutId": workout.id, "workoutName": workout.name]
+        )
+
         if !incomingWorkouts.contains(where: { $0.id == workout.id }) {
             incomingWorkouts.append(workout)
         }
