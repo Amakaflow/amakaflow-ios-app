@@ -17,6 +17,13 @@ final class SyncQueueRepository {
 
     @discardableResult
     func enqueue(resourceType: String, resourceId: String, op: String, payload: String, id: String = UUID().uuidString) throws -> SyncQueueItem {
+        try dbQueue.write { db in
+            try enqueue(in: db, resourceType: resourceType, resourceId: resourceId, op: op, payload: payload, id: id)
+        }
+    }
+
+    @discardableResult
+    func enqueue(in db: Database, resourceType: String, resourceId: String, op: String, payload: String, id: String = UUID().uuidString) throws -> SyncQueueItem {
         let timestamp = now()
         var item = SyncQueueItem(
             id: id,
@@ -32,7 +39,7 @@ final class SyncQueueRepository {
             createdAt: timestamp,
             updatedAt: timestamp
         )
-        try dbQueue.write { db in try item.insert(db) }
+        try item.insert(db)
         return item
     }
 

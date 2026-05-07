@@ -22,9 +22,9 @@ final class WorkoutEventsRepository {
         var record = event
         try dbQueue.write { db in
             try record.save(db)
-        }
-        if enqueueSync {
-            try syncQueue.enqueue(resourceType: LocalWorkoutEvent.databaseTableName, resourceId: record.id, op: "upsert", payload: try encode(record))
+            if enqueueSync {
+                try syncQueue.enqueue(in: db, resourceType: LocalWorkoutEvent.databaseTableName, resourceId: record.id, op: "upsert", payload: try encode(record))
+            }
         }
         return record
     }
@@ -44,26 +44,21 @@ final class WorkoutEventsRepository {
 
     func tombstone(id: String, enqueueSync: Bool = true) throws {
         let timestamp = now()
-        var updated: LocalWorkoutEvent?
         try dbQueue.write { db in
             guard var record = try LocalWorkoutEvent.fetchOne(db, key: id) else { return }
             record.deletedAt = timestamp
             record.updatedAt = timestamp
             try record.update(db)
-            updated = record
-        }
-        if enqueueSync, let updated {
-            try syncQueue.enqueue(resourceType: LocalWorkoutEvent.databaseTableName, resourceId: id, op: "delete", payload: try encode(updated))
+            if enqueueSync {
+                try syncQueue.enqueue(in: db, resourceType: LocalWorkoutEvent.databaseTableName, resourceId: id, op: "delete", payload: try encode(record))
+            }
         }
     }
 
     static func dayString(_ date: Date, calendar: Calendar = .current) -> String {
-        var formatter = DateFormatter()
-        formatter.calendar = calendar
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = calendar.timeZone
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: date)
+        let components = calendar.dateComponents(in: calendar.timeZone, from: date)
+        guard let year = components.year, let month = components.month, let day = components.day else { return "" }
+        return String(format: "%04d-%02d-%02d", year, month, day)
     }
 
     private func encode<T: Encodable>(_ value: T) throws -> String {

@@ -20,7 +20,7 @@ final class LocalFirstStorageTests: XCTestCase {
         XCTAssertTrue(tables.contains("sync_queue"))
     }
 
-    func testAcceptedSuggestionInsertEnqueuesSyncItem() throws {
+    func testAcceptedSuggestionInsertEnqueuesSyncItemAtomically() throws {
         let database = try AppDatabase.makeTestDatabase()
         let syncQueue = SyncQueueRepository(database: database, now: { Date(timeIntervalSince1970: 1_000) })
         let repository = AcceptedSuggestionsRepository(database: database, syncQueue: syncQueue, now: { Date(timeIntervalSince1970: 1_000) })
@@ -50,7 +50,7 @@ final class LocalFirstStorageTests: XCTestCase {
         XCTAssertEqual(queued.first?.op, "upsert")
     }
 
-    func testWorkoutEventsDateRangeAndSyncQueueSummary() throws {
+    func testWorkoutEventsDateRangeAndAtomicSyncQueueEnqueue() throws {
         let database = try AppDatabase.makeTestDatabase()
         let syncQueue = SyncQueueRepository(database: database, now: { Date(timeIntervalSince1970: 2_000) })
         let repository = WorkoutEventsRepository(database: database, syncQueue: syncQueue, now: { Date(timeIntervalSince1970: 2_000) })

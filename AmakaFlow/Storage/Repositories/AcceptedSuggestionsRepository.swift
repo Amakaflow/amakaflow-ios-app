@@ -22,9 +22,9 @@ final class AcceptedSuggestionsRepository {
         var record = suggestion
         try dbQueue.write { db in
             try record.save(db)
-        }
-        if enqueueSync {
-            try syncQueue.enqueue(resourceType: LocalAcceptedSuggestion.databaseTableName, resourceId: record.id, op: "upsert", payload: try encode(record))
+            if enqueueSync {
+                try syncQueue.enqueue(in: db, resourceType: LocalAcceptedSuggestion.databaseTableName, resourceId: record.id, op: "upsert", payload: try encode(record))
+            }
         }
         return record
     }
@@ -49,17 +49,15 @@ final class AcceptedSuggestionsRepository {
 
     func tombstone(id: String, enqueueSync: Bool = true) throws {
         let timestamp = now()
-        var updated: LocalAcceptedSuggestion?
         try dbQueue.write { db in
             guard var record = try LocalAcceptedSuggestion.fetchOne(db, key: id) else { return }
             record.status = "deleted"
             record.deletedAt = timestamp
             record.updatedAt = timestamp
             try record.update(db)
-            updated = record
-        }
-        if enqueueSync, let updated {
-            try syncQueue.enqueue(resourceType: LocalAcceptedSuggestion.databaseTableName, resourceId: id, op: "delete", payload: try encode(updated))
+            if enqueueSync {
+                try syncQueue.enqueue(in: db, resourceType: LocalAcceptedSuggestion.databaseTableName, resourceId: id, op: "delete", payload: try encode(record))
+            }
         }
     }
 

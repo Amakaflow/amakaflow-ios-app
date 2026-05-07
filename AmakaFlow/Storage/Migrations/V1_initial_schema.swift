@@ -44,14 +44,14 @@ enum V1InitialSchema {
             table.column("status", .text).notNull()
             table.column("source", .text)
             table.column("json_payload", .text).notNull()
-            table.column("client_generated_id", .text)
+            table.column("client_generated_id", .text).notNull()
             table.column("server_version", .integer).notNull().defaults(to: 1)
             table.column("created_at", .datetime).notNull()
             table.column("updated_at", .datetime).notNull()
             table.column("deleted_at", .datetime)
         }
         try db.create(index: "idx_workout_events_user_date", on: "workout_events", columns: ["user_id", "date"], ifNotExists: true)
-        try db.execute(sql: "CREATE UNIQUE INDEX IF NOT EXISTS idx_workout_events_user_client_id ON workout_events(user_id, client_generated_id) WHERE client_generated_id IS NOT NULL")
+        try db.create(index: "idx_workout_events_user_client_id", on: "workout_events", columns: ["user_id", "client_generated_id"], unique: true, ifNotExists: true)
     }
 
     private static func createAcceptedSuggestions(_ db: Database) throws {

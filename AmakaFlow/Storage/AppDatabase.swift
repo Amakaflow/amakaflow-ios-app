@@ -34,8 +34,9 @@ struct AppDatabase {
     }()
 
     static func defaultDatabaseURL(fileManager: FileManager = .default) -> URL {
-        let documents = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first
-            ?? fileManager.temporaryDirectory
+        guard let documents = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            preconditionFailure("Unable to resolve Documents directory for durable AppDatabase storage")
+        }
         return documents.appendingPathComponent("amakaflow.sqlite")
     }
 

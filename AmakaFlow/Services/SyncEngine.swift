@@ -6,6 +6,17 @@
 import Foundation
 import Sentry
 
+enum SyncEngineError: LocalizedError {
+    case missingHandler
+
+    var errorDescription: String? {
+        switch self {
+        case .missingHandler:
+            return "SyncEngine has no upstream sync handler configured."
+        }
+    }
+}
+
 actor SyncEngine {
     @MainActor static let shared = SyncEngine()
 
@@ -19,7 +30,7 @@ actor SyncEngine {
         queueRepository: SyncQueueRepository = SyncQueueRepository(),
         maxAttempts: Int = 5,
         baseBackoff: TimeInterval = 2,
-        syncHandler: @escaping (SyncQueueItem) async throws -> Void = { _ in }
+        syncHandler: @escaping (SyncQueueItem) async throws -> Void = { _ in throw SyncEngineError.missingHandler }
     ) {
         self.queueRepository = queueRepository
         self.maxAttempts = maxAttempts
@@ -48,15 +59,30 @@ actor SyncEngine {
             try await syncHandler(item)
             try await queueRepository.markSynced(item.id)
         } catch {
+            let syncError = error
             let nextAttempt = item.attemptCount + 1
             let retryAfter = backoffDelay(forAttempt: nextAttempt)
-            try? await queueRepository.markFailed(item.id, error: error.localizedDescription, retryAfter: retryAfter, poisonAfter: maxAttempts)
+            do {
+                try await queueRepository.markFailed(
+                    item.id,
+                    error: syncError.localizedDescription,
+                    retryAfter: retryAfter,
+                    poisonAfter: maxAttempts
+                )
+            } catch {
+                await DebugLogService.shared.log(
+                    "Sync queue failure persistence failed",
+                    details: error.localizedDescription,
+                    metadata: ["queueItemId": item.id]
+                )
+                return
+            }
 
             if nextAttempt >= maxAttempts {
-                SentrySDK.capture(message: "Sync queue item poisoned: \(item.resourceType)/\(item.resourceId) - \(error.localizedDescription)")
+                SentrySDK.capture(message: "Sync queue item poisoned: \(item.resourceType)/\(item.resourceId) - \(syncError.localizedDescription)")
                 await DebugLogService.shared.log(
                     "Sync queue item poisoned",
-                    details: "\(item.resourceType)/\(item.resourceId): \(error.localizedDescription)",
+                    details: "\(item.resourceType)/\(item.resourceId): \(syncError.localizedDescription)",
                     metadata: ["source": "SyncEngine"]
                 )
             }

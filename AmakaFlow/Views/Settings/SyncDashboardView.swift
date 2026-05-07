@@ -90,6 +90,9 @@ struct SyncDashboardView: View {
 
     private var hasPendingIssues: Bool {
         activityFeedVM.actions.contains { $0.status == .pending }
+            || syncQueueSummary.failedCount > 0
+            || syncQueueSummary.poisonCount > 0
+            || syncQueueSummary.latestError != nil
     }
 
     // MARK: - Platform Status

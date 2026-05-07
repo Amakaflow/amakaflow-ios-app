@@ -46,7 +46,7 @@ struct LocalWorkoutEvent: Codable, FetchableRecord, MutablePersistableRecord, Id
     var status: String
     var source: String?
     var jsonPayload: String
-    var clientGeneratedId: String?
+    var clientGeneratedId: String
     var serverVersion: Int
     var createdAt: Date
     var updatedAt: Date
