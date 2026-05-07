@@ -6,7 +6,7 @@
 import Foundation
 import GRDB
 
-final class SyncQueueRepository {
+nonisolated final class SyncQueueRepository {
     private let dbQueue: DatabaseQueue
     private let now: () -> Date
 

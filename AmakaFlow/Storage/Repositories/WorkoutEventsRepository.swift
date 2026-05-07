@@ -6,7 +6,7 @@
 import Foundation
 import GRDB
 
-final class WorkoutEventsRepository {
+nonisolated final class WorkoutEventsRepository {
     private let dbQueue: DatabaseQueue
     private let syncQueue: SyncQueueRepository
     private let now: () -> Date

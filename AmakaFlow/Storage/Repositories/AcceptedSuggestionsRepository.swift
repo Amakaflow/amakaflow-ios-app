@@ -6,7 +6,7 @@
 import Foundation
 import GRDB
 
-final class AcceptedSuggestionsRepository {
+nonisolated final class AcceptedSuggestionsRepository {
     private let dbQueue: DatabaseQueue
     private let syncQueue: SyncQueueRepository
     private let now: () -> Date

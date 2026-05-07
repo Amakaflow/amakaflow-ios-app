@@ -210,7 +210,6 @@
 		AMA1620AUTHVM001B /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620AUTHVM001A /* AuthViewModel.swift */; };
 		AMA1620CLKKIT01B /* ClerkKit in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1620CLKKIT01P /* ClerkKit */; };
 		AMA1791GRDBFRAME /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1791GRDBPROD /* GRDB */; };
-		AMA1791GRDBTESTFRAME /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1791GRDBPROD /* GRDB */; };
 		AMA1620CLKUI001B /* ClerkKitUI in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1620CLKUI001P /* ClerkKitUI */; };
 		AMA1620UITEST01B /* UITestEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620UITEST01A /* UITestEnvironment.swift */; };
 		B1910EAEA57AF40FBA6FEDD3 /* FollowAlongPlayerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */; };
@@ -844,7 +843,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AMA1791GRDBTESTFRAME /* GRDB in Frameworks */,
 				F880AD642F09559A00E8D7D3 /* BuildFile in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1277,7 +1275,6 @@
 			);
 			name = AmakaFlowCompanionTests;
 			packageProductDependencies = (
-				AMA1791GRDBPROD /* GRDB */,
 			);
 			productName = AmakaFlowCompanionTests;
 			productReference = F84E21832ED0B0CA00459747 /* AmakaFlowCompanionTests.xctest */;
@@ -2198,6 +2195,7 @@
 		F84E219B2ED0B0CA00459747 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 17;
@@ -2207,6 +2205,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.myamaka.AmakaFlowCompanionTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -2220,6 +2219,7 @@
 		F84E219C2ED0B0CA00459747 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 17;
@@ -2229,6 +2229,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.myamaka.AmakaFlowCompanionTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
