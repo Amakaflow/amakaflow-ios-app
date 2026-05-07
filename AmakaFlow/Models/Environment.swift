@@ -27,12 +27,15 @@ enum AppEnvironment: String, CaseIterable {
                let env = AppEnvironment(rawValue: savedEnv) {
                 return env
             }
-            // Default based on build configuration
-            #if DEBUG
+            // Default based on build configuration.
+            // TestFlight and App Store Release builds default to .staging until
+            // the production *.amakaflow.com hosts exist. The current
+            // production URLs (chat-api.amakaflow.com, mapper-api.amakaflow.com,
+            // etc.) are not in DNS yet, so a Release build defaulting to
+            // .production immediately surfaces "hostname could not be found"
+            // on every API call. Flip back to .production here once the
+            // production CNAME records are live.
             return .staging
-            #else
-            return .production
-            #endif
         }
         set {
             UserDefaults.standard.set(newValue.rawValue, forKey: environmentKey)
