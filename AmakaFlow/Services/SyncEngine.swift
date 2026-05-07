@@ -24,17 +24,20 @@ actor SyncEngine {
     private let maxAttempts: Int
     private let baseBackoff: TimeInterval
     private let syncHandler: (SyncQueueItem) async throws -> Void
+    private let completedRetention: TimeInterval
 
     @MainActor
     init(
         queueRepository: SyncQueueRepository = SyncQueueRepository(),
         maxAttempts: Int = 5,
         baseBackoff: TimeInterval = 2,
+        completedRetention: TimeInterval = 7 * 24 * 60 * 60,
         syncHandler: @escaping (SyncQueueItem) async throws -> Void = { _ in throw SyncEngineError.missingHandler }
     ) {
         self.queueRepository = queueRepository
         self.maxAttempts = maxAttempts
         self.baseBackoff = baseBackoff
+        self.completedRetention = completedRetention
         self.syncHandler = syncHandler
     }
 
@@ -56,8 +59,19 @@ actor SyncEngine {
     private func process(_ item: SyncQueueItem) async {
         do {
             try await queueRepository.markInFlight(item.id)
+        } catch {
+            await DebugLogService.shared.log(
+                "Sync queue mark-in-flight failed",
+                details: error.localizedDescription,
+                metadata: ["queueItemId": item.id]
+            )
+            return
+        }
+
+        do {
             try await syncHandler(item)
             try await queueRepository.markSynced(item.id)
+            await cleanupCompletedItems()
         } catch {
             let syncError = error
             let nextAttempt = item.attemptCount + 1
@@ -85,7 +99,16 @@ actor SyncEngine {
                     details: "\(item.resourceType)/\(item.resourceId): \(syncError.localizedDescription)",
                     metadata: ["source": "SyncEngine"]
                 )
+                await cleanupCompletedItems()
             }
+        }
+    }
+
+    private func cleanupCompletedItems() async {
+        do {
+            _ = try await queueRepository.deleteCompleted(olderThan: completedRetention)
+        } catch {
+            await DebugLogService.shared.log("Sync queue cleanup failed", details: error.localizedDescription)
         }
     }
 

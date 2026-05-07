@@ -14,6 +14,12 @@ enum SyncQueueStatus: String, Codable, CaseIterable {
     case poison
 }
 
+func encodeToJSONString<T: Encodable>(_ value: T) throws -> String {
+    let encoder = JSONEncoder()
+    encoder.dateEncodingStrategy = .iso8601
+    return String(data: try encoder.encode(value), encoding: .utf8) ?? "{}"
+}
+
 struct LocalAcceptedSuggestion: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
     static let databaseTableName = "accepted_suggestions"
     static let persistenceConflictPolicy = PersistenceConflictPolicy(insert: .replace, update: .replace)
@@ -132,7 +138,7 @@ struct SyncQueueItem: Codable, FetchableRecord, MutablePersistableRecord, Identi
     var lastAttemptedAt: Date?
     var nextAttemptAt: Date?
     var errorReason: String?
-    var status: String
+    var status: SyncQueueStatus
     var createdAt: Date
     var updatedAt: Date
 

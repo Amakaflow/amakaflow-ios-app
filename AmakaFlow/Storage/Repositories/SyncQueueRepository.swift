@@ -35,7 +35,7 @@ final class SyncQueueRepository {
             lastAttemptedAt: nil,
             nextAttemptAt: timestamp,
             errorReason: nil,
-            status: SyncQueueStatus.pending.rawValue,
+            status: .pending,
             createdAt: timestamp,
             updatedAt: timestamp
         )
@@ -81,9 +81,34 @@ final class SyncQueueRepository {
             item.lastAttemptedAt = timestamp
             item.nextAttemptAt = timestamp.addingTimeInterval(retryAfter)
             item.errorReason = error
-            item.status = item.attemptCount >= maxAttempts ? SyncQueueStatus.poison.rawValue : SyncQueueStatus.failed.rawValue
+            item.status = item.attemptCount >= maxAttempts ? .poison : .failed
             item.updatedAt = timestamp
             try item.update(db)
+        }
+    }
+
+    @discardableResult
+    func deleteSynced(olderThan retention: TimeInterval) throws -> Int {
+        try deleteOlderThan(statuses: [.synced], olderThan: now().addingTimeInterval(-retention))
+    }
+
+    @discardableResult
+    func deleteCompleted(olderThan retention: TimeInterval) throws -> Int {
+        try deleteOlderThan(statuses: [.synced, .poison], olderThan: now().addingTimeInterval(-retention))
+    }
+
+    @discardableResult
+    func deleteOlderThan(statuses: [SyncQueueStatus], olderThan cutoff: Date) throws -> Int {
+        guard !statuses.isEmpty else { return 0 }
+        let placeholders = statuses.map { _ in "?" }.joined(separator: ", ")
+        return try dbQueue.write { db in
+            var arguments = StatementArguments(statuses.map(\.rawValue))
+            arguments += [cutoff]
+            try db.execute(
+                sql: "DELETE FROM sync_queue WHERE status IN (\(placeholders)) AND updated_at <= ?",
+                arguments: arguments
+            )
+            return db.changesCount
         }
     }
 
@@ -102,7 +127,7 @@ final class SyncQueueRepository {
     private func update(id: String, status: SyncQueueStatus, errorReason: String?, nextAttemptAt: Date?, incrementAttempt: Bool) throws {
         try dbQueue.write { db in
             guard var item = try SyncQueueItem.fetchOne(db, key: id) else { return }
-            item.status = status.rawValue
+            item.status = status
             item.errorReason = errorReason
             item.nextAttemptAt = nextAttemptAt
             item.updatedAt = now()

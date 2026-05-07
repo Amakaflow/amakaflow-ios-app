@@ -52,7 +52,7 @@ struct AppDatabase {
     var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
         #if DEBUG
-        migrator.eraseDatabaseOnSchemaChange = false
+        migrator.eraseDatabaseOnSchemaChange = true
         #endif
         V1InitialSchema.register(into: &migrator)
         return migrator

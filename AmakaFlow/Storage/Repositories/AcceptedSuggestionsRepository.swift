@@ -62,8 +62,6 @@ final class AcceptedSuggestionsRepository {
     }
 
     private func encode<T: Encodable>(_ value: T) throws -> String {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        return String(data: try encoder.encode(value), encoding: .utf8) ?? "{}"
+        try encodeToJSONString(value)
     }
 }
