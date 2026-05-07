@@ -11,6 +11,7 @@ struct SyncDashboardView: View {
     @EnvironmentObject var workoutsViewModel: WorkoutsViewModel
     @StateObject private var activityFeedVM = ActivityFeedViewModel()
     @State private var lastSyncTime: Date?
+    @State private var syncQueueSummary = SyncQueueSummary(pendingCount: 0, inFlightCount: 0, failedCount: 0, poisonCount: 0, lastAttemptedAt: nil, latestError: nil)
 
     var body: some View {
         ScrollView {
@@ -20,6 +21,9 @@ struct SyncDashboardView: View {
 
                 // Platform status bars
                 platformStatusSection
+
+                // Local sync queue state
+                syncQueueSection
 
                 // Pending decisions
                 pendingDecisionsSection
@@ -43,6 +47,11 @@ struct SyncDashboardView: View {
 
     private func refresh() async {
         await activityFeedVM.loadActions()
+        do {
+            syncQueueSummary = try SyncQueueRepository().summary()
+        } catch {
+            DebugLogService.shared.log("Sync dashboard queue summary failed", details: error.localizedDescription)
+        }
         lastSyncTime = Date()
     }
 
@@ -117,6 +126,45 @@ struct SyncDashboardView: View {
                 status: workoutsViewModel.errorMessage == nil ? .connected : .error,
                 detail: workoutsViewModel.errorMessage ?? "Synced"
             )
+        }
+    }
+
+    // MARK: - Local Sync Queue
+
+    private var syncQueueSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            Text("Local Sync Queue")
+                .font(Theme.Typography.title2)
+                .foregroundColor(Theme.Colors.textPrimary)
+
+            VStack(spacing: Theme.Spacing.sm) {
+                SyncQueueMetricRow(label: "Pending", value: syncQueueSummary.pendingCount, color: Theme.Colors.accentBlue)
+                SyncQueueMetricRow(label: "In Flight", value: syncQueueSummary.inFlightCount, color: Theme.Colors.accentOrange)
+                SyncQueueMetricRow(label: "Failed", value: syncQueueSummary.failedCount, color: Theme.Colors.accentRed)
+                SyncQueueMetricRow(label: "Poison", value: syncQueueSummary.poisonCount, color: Theme.Colors.accentRed)
+
+                if let lastAttemptedAt = syncQueueSummary.lastAttemptedAt {
+                    HStack {
+                        Text("Last attempt")
+                            .font(Theme.Typography.footnote)
+                            .foregroundColor(Theme.Colors.textSecondary)
+                        Spacer()
+                        Text(lastAttemptedAt, style: .relative)
+                            .font(Theme.Typography.footnote)
+                            .foregroundColor(Theme.Colors.textSecondary)
+                    }
+                }
+
+                if let latestError = syncQueueSummary.latestError {
+                    Text(latestError)
+                        .font(Theme.Typography.footnote)
+                        .foregroundColor(Theme.Colors.accentRed)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(Theme.Spacing.md)
+            .background(Theme.Colors.surface)
+            .cornerRadius(Theme.CornerRadius.md)
         }
     }
 
@@ -240,6 +288,24 @@ struct SyncDashboardView: View {
         case .rejected: return Theme.Colors.accentRed
         case .undone: return Theme.Colors.textSecondary
         case .pending: return Theme.Colors.accentOrange
+        }
+    }
+}
+
+private struct SyncQueueMetricRow: View {
+    let label: String
+    let value: Int
+    let color: Color
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(Theme.Typography.body)
+                .foregroundColor(Theme.Colors.textSecondary)
+            Spacer()
+            Text("\(value)")
+                .font(Theme.Typography.captionBold)
+                .foregroundColor(value > 0 ? color : Theme.Colors.textTertiary)
         }
     }
 }
