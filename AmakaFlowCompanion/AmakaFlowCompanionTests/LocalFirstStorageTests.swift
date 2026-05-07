@@ -4,15 +4,12 @@
 //
 
 import XCTest
-import GRDB
 @testable import AmakaFlowCompanion
 
 final class LocalFirstStorageTests: XCTestCase {
     func testV1MigrationCreatesExpectedTables() throws {
         let database = try AppDatabase.makeTestDatabase()
-        let tables = try database.dbQueue.read { db in
-            try String.fetchAll(db, sql: "SELECT name FROM sqlite_master WHERE type = 'table'")
-        }
+        let tables = try database.tableNames()
 
         XCTAssertTrue(tables.contains("accepted_suggestions"))
         XCTAssertTrue(tables.contains("workout_events"))

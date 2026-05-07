@@ -49,6 +49,14 @@ struct AppDatabase {
         return try AppDatabase(dbQueue: queue)
     }
 
+    #if DEBUG
+    func tableNames() throws -> [String] {
+        try dbQueue.read { db in
+            try String.fetchAll(db, sql: "SELECT name FROM sqlite_master WHERE type = 'table'")
+        }
+    }
+    #endif
+
     var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
         #if DEBUG
