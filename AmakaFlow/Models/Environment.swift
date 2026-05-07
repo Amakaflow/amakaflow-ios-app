@@ -7,7 +7,10 @@ enum AppEnvironment: String, CaseIterable {
 
     private static let environmentKey = "app_environment"
 
-    /// Get or set the current environment. Defaults to staging for debug builds, production for release.
+    /// Get or set the current environment. Defaults to `.staging` for all build
+    /// configurations until production DNS records are live (see comment near
+    /// the `return .staging` fallback below). Flip back to `.production` for
+    /// non-DEBUG once the production CNAMEs ship.
     static var current: AppEnvironment {
         get {
             // E2E Test override (AMA-232) - check launch environment first
