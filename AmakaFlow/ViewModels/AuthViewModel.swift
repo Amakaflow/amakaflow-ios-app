@@ -1,6 +1,7 @@
 import ClerkKit
 import Combine
 import Foundation
+import Sentry
 
 @MainActor
 final class AuthViewModel: ObservableObject {
@@ -100,6 +101,17 @@ final class AuthViewModel: ObservableObject {
       if result { needsReauth = false }
       return result
     } catch {
+      // AMA-1810: Clerk silent token refresh failed. The user will be
+      // routed to the re-auth flow next time `needsReauth` is read,
+      // but ops needs a Sentry breadcrumb tagged the same way as
+      // AMA-1805's server-side capture so a flurry of these is
+      // visible in the alert stream alongside any matching backend
+      // 401s. Earlier path swallowed the error silently — only the
+      // user noticed when the sign-in screen reappeared.
+      AuthViewModel.captureSentryBreadcrumb(
+        message: "auth.refresh_token_failed",
+        error: error
+      )
       needsReauth = true
       return false
     }
@@ -109,10 +121,39 @@ final class AuthViewModel: ObservableObject {
     do {
       try await Clerk.shared.auth.signOut()
     } catch {
+      // AMA-1810: sign-out failures previously only printed to the
+      // console. They're rare but matter — a half-completed sign-out
+      // can leave a stale session token in Clerk and an empty UI
+      // state in the app. Drop a Sentry breadcrumb so support can
+      // correlate user reports of "I signed out but I'm still
+      // signed in."
       print("[AuthViewModel] Sign out failed: \(error.localizedDescription)")
+      AuthViewModel.captureSentryBreadcrumb(
+        message: "auth.sign_out_failed",
+        error: error
+      )
     }
     cachedToken = nil
     refreshFromClerk()
+  }
+
+  /// AMA-1810: shared helper so all three Clerk-side catch blocks
+  /// produce the same tag set. Keeps the Sentry call signature
+  /// consistent with AMA-1805's server-side schema (subsystem=auth,
+  /// level=warning) so alerts can join across both sides.
+  private static func captureSentryBreadcrumb(
+    message: String,
+    error: Error,
+    file: String = #file,
+    line: Int = #line
+  ) {
+    SentrySDK.capture(message: message) { scope in
+      scope.setTag(value: "auth", key: "subsystem")
+      scope.setTag(value: "AuthViewModel", key: "source")
+      scope.setLevel(SentryLevel.warning)
+      scope.setExtra(value: error.localizedDescription, key: "error")
+      scope.setExtra(value: "\(file):\(line)", key: "site")
+    }
   }
 }
 
@@ -214,6 +255,17 @@ actor ClerkTokenRefreshCoordinator {
       needsReauth = false
       return token
     } catch {
+      // AMA-1810: token-refresh-coordinator failure path. The error
+      // re-throws so the caller surfaces it via CTAError.unauthenticated,
+      // but we also drop a Sentry breadcrumb here so the *coordinator's*
+      // perspective on the failure is visible in alerts (separate from
+      // the per-call-site captures the actor's callers might add).
+      SentrySDK.capture(message: "auth.refresh_coordinator_failed") { scope in
+        scope.setTag(value: "auth", key: "subsystem")
+        scope.setTag(value: "ClerkTokenRefreshCoordinator", key: "source")
+        scope.setLevel(SentryLevel.warning)
+        scope.setExtra(value: error.localizedDescription, key: "error")
+      }
       needsReauth = true
       persistence.clearClerkToken()
       throw error
