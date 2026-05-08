@@ -217,6 +217,113 @@ final class ClerkTokenRefreshTests: XCTestCase {
     XCTAssertNil(persistence.savedToken)
   }
 
+  // MARK: - AMA-1809: KeychainClerkTokenPersistence
+
+  func testKeychainPersistenceRoundTripsToken() {
+    let service = "ClerkTokenRefreshTests.\(UUID().uuidString)"
+    let persistence = KeychainClerkTokenPersistence(
+      service: service,
+      account: "clerk_auth_token",
+      legacyDefaults: nil,
+      legacyKey: nil
+    )
+    defer { persistence.clearClerkToken() }
+
+    XCTAssertNil(persistence.loadClerkToken(), "starts empty")
+
+    let saved = ClerkAuthToken(value: "kc-token", expiresAt: now.addingTimeInterval(600))
+    persistence.saveClerkToken(saved)
+
+    XCTAssertEqual(persistence.loadClerkToken(), saved)
+  }
+
+  func testKeychainPersistenceOverwritesExistingToken() {
+    let service = "ClerkTokenRefreshTests.\(UUID().uuidString)"
+    let persistence = KeychainClerkTokenPersistence(
+      service: service,
+      account: "clerk_auth_token",
+      legacyDefaults: nil,
+      legacyKey: nil
+    )
+    defer { persistence.clearClerkToken() }
+
+    let first = ClerkAuthToken(value: "first", expiresAt: now.addingTimeInterval(60))
+    let second = ClerkAuthToken(value: "second", expiresAt: now.addingTimeInterval(600))
+    persistence.saveClerkToken(first)
+    persistence.saveClerkToken(second)
+
+    XCTAssertEqual(persistence.loadClerkToken(), second,
+                   "save must update in place, not append")
+  }
+
+  func testKeychainPersistenceClearRemovesToken() {
+    let service = "ClerkTokenRefreshTests.\(UUID().uuidString)"
+    let persistence = KeychainClerkTokenPersistence(
+      service: service,
+      account: "clerk_auth_token",
+      legacyDefaults: nil,
+      legacyKey: nil
+    )
+    persistence.saveClerkToken(
+      ClerkAuthToken(value: "x", expiresAt: now.addingTimeInterval(60)))
+    XCTAssertNotNil(persistence.loadClerkToken())
+
+    persistence.clearClerkToken()
+
+    XCTAssertNil(persistence.loadClerkToken())
+  }
+
+  func testKeychainPersistenceMigratesFromUserDefaultsOnFirstRead() {
+    // Simulate the legacy state: a prior install wrote the token into
+    // UserDefaults. New install should pick it up, copy to Keychain, and
+    // wipe the UserDefaults entry so subsequent reads bypass the migration.
+    let suiteName = "ClerkTokenRefreshTests.\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+    let legacyKey = "legacy_clerk_token"
+    let legacyToken = ClerkAuthToken(value: "legacy", expiresAt: now.addingTimeInterval(600))
+    defaults.set(try! JSONEncoder().encode(legacyToken), forKey: legacyKey)
+
+    let service = "ClerkTokenRefreshTests.\(UUID().uuidString)"
+    let persistence = KeychainClerkTokenPersistence(
+      service: service,
+      account: "clerk_auth_token",
+      legacyDefaults: defaults,
+      legacyKey: legacyKey
+    )
+    defer { persistence.clearClerkToken() }
+
+    let migrated = persistence.loadClerkToken()
+    XCTAssertEqual(migrated, legacyToken, "first read must migrate")
+    XCTAssertNil(defaults.data(forKey: legacyKey),
+                 "legacy entry must be wiped after migration")
+
+    // Subsequent reads come from Keychain directly.
+    let secondRead = persistence.loadClerkToken()
+    XCTAssertEqual(secondRead, legacyToken)
+  }
+
+  func testKeychainPersistenceClearAlsoWipesLegacyDefaults() {
+    let suiteName = "ClerkTokenRefreshTests.\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+    let legacyKey = "legacy_clerk_token"
+    defaults.set(Data([0x01]), forKey: legacyKey)
+
+    let service = "ClerkTokenRefreshTests.\(UUID().uuidString)"
+    let persistence = KeychainClerkTokenPersistence(
+      service: service,
+      account: "clerk_auth_token",
+      legacyDefaults: defaults,
+      legacyKey: legacyKey
+    )
+
+    persistence.clearClerkToken()
+
+    XCTAssertNil(defaults.data(forKey: legacyKey),
+                 "clear must defensively wipe legacy storage too")
+  }
+
   func testUserDefaultsPersistenceRoundTripsToken() {
     let suiteName = "ClerkTokenRefreshTests.\(UUID().uuidString)"
     let defaults = UserDefaults(suiteName: suiteName)!
