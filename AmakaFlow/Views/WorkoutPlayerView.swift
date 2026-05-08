@@ -82,7 +82,8 @@ struct WorkoutPlayerView: View {
                                 onDismiss: {
                                     showRPEFeedback = true
                                 }
-                            )
+                            ),
+                            engine: engine
                         )
                     }
                 } else if engine.phase == .resting {

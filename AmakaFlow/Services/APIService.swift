@@ -965,8 +965,14 @@ class APIService {
         guard let httpResponse = response as? HTTPURLResponse else {
             print("[APIService] Invalid response type")
             logError(endpoint: endpoint, method: "POST", statusCode: nil, response: responseString, error: APIError.invalidResponse)
-            throw APIError.invalidResponse
+            throw AnnotatedAPIError(.invalidResponse)
         }
+
+        // AMA-1808: capture once at the response site so every failure
+        // path below propagates the X-Request-ID via AnnotatedAPIError.
+        // The header is the join key for AMA-1805's server alerts.
+        let requestId = httpResponse.value(forHTTPHeaderField: "X-Request-ID")
+            ?? httpResponse.value(forHTTPHeaderField: "x-request-id")
 
         print("[APIService] Response status: \(httpResponse.statusCode)")
 
@@ -995,7 +1001,10 @@ class APIService {
                         metadata: nil
                     )
                 }
-                throw APIError.serverErrorWithBody(httpResponse.statusCode, responseBody)
+                throw AnnotatedAPIError(
+                    .serverErrorWithBody(httpResponse.statusCode, responseBody),
+                    requestId: requestId
+                )
             }
 
             do {
@@ -1007,7 +1016,7 @@ class APIService {
                 if let responseString = responseString {
                     print("[APIService] Response body: \(responseString.prefix(500))")
                 }
-                throw APIError.decodingError(error)
+                throw AnnotatedAPIError(.decodingError(error), requestId: requestId)
             }
         case 401:
             print("[APIService] Unauthorized (401)")
@@ -1019,7 +1028,7 @@ class APIService {
                 await MainActor.run {
                     PairingService.shared.markAuthInvalid()
                 }
-                throw APIError.unauthorized
+                throw AnnotatedAPIError(.unauthorized, requestId: requestId)
             }
 
             // Try to silently refresh the token
@@ -1034,14 +1043,27 @@ class APIService {
                 // Refresh failed - device not found or needs re-pair
                 print("[APIService] Token refresh failed, marking auth invalid")
                 logError(endpoint: endpoint, method: "POST", statusCode: 401, response: responseString, error: APIError.unauthorized)
-                throw APIError.unauthorized
+                throw AnnotatedAPIError(.unauthorized, requestId: requestId)
             }
         default:
             if let responseString = responseString {
                 print("[APIService] Error response: \(responseString.prefix(200))")
             }
             logError(endpoint: endpoint, method: "POST", statusCode: httpResponse.statusCode, response: responseString, error: nil)
-            throw APIError.serverError(httpResponse.statusCode)
+            // AMA-1808: keep the body when we have one so the user-facing
+            // toast can show the actual server message instead of just
+            // "Server error 500." For 4xx/5xx the body often carries
+            // the validation detail or error_code from the backend.
+            if let responseBody = responseString, !responseBody.isEmpty {
+                throw AnnotatedAPIError(
+                    .serverErrorWithBody(httpResponse.statusCode, responseBody),
+                    requestId: requestId
+                )
+            }
+            throw AnnotatedAPIError(
+                .serverError(httpResponse.statusCode),
+                requestId: requestId
+            )
         }
     }
 
@@ -2676,6 +2698,24 @@ struct TelegramLinkStatusResponse: Codable, Equatable, Sendable {
 }
 
 // MARK: - API Errors
+
+/// AMA-1803 + AMA-1808: wrap an APIError with the X-Request-ID extracted
+/// from the failing HTTPURLResponse so the user-facing Report button can
+/// drop a Sentry breadcrumb correlated to AMA-1805's server-side capture
+/// by request_id. Limited to the postWorkoutCompletion path for AMA-1803
+/// P0; broader rollout (every APIService throw site) tracked under
+/// AMA-1808 itself.
+struct AnnotatedAPIError: Error, LocalizedError {
+    let underlying: APIError
+    let requestId: String?
+
+    init(_ underlying: APIError, requestId: String? = nil) {
+        self.underlying = underlying
+        self.requestId = requestId
+    }
+
+    var errorDescription: String? { underlying.errorDescription }
+}
 
 enum APIError: LocalizedError {
     case notImplemented

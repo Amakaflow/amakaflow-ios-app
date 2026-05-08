@@ -495,7 +495,21 @@ final class WorkoutsViewModelTests: XCTestCase {
         XCTAssertTrue(relaunchedViewModel.incomingWorkouts.contains { $0.id == accepted.id })
     }
 
-    func testLoadWorkoutsPrunesCompletedAcceptedSuggestion() async throws {
+    /// AMA-1785 (PR #177) intentionally disabled
+    /// `pruneCompletedAcceptedSuggestions` so completed local-first
+    /// workouts stay visible during a refresh failure. This test
+    /// previously asserted the OPPOSITE — that completed accepted
+    /// suggestions get removed — and silently went from passing to
+    /// failing on every CI run since #177 merged (main's CI runs are
+    /// path-filtered and never re-ran the impacted job, so the
+    /// regression sat dormant until AMA-1803 P0 changed enough to
+    /// re-trigger the suite).
+    ///
+    /// Locking the NEW contract here: completed accepted suggestions
+    /// remain in `incomingWorkouts` AND in the local store after a
+    /// refresh, until the proper GRDB rewire (AMA-1792) replaces
+    /// the simple "prune on completion" heuristic.
+    func testLoadWorkoutsKeepsCompletedAcceptedSuggestionUntilGRDBRewire() async throws {
         let accepted = TestFixtures.workout(id: "accepted-completed", name: "Completed Accepted", sport: .strength)
         let store = InMemoryAcceptedSuggestionsStore(workouts: [accepted])
         let dependencies = AppDependencies(
@@ -529,8 +543,17 @@ final class WorkoutsViewModelTests: XCTestCase {
         let relaunchedViewModel = WorkoutsViewModel(dependencies: dependencies, acceptedStore: store)
         await relaunchedViewModel.loadWorkouts()
 
-        XCTAssertFalse(relaunchedViewModel.incomingWorkouts.contains { $0.id == accepted.id })
-        XCTAssertFalse(store.all().contains { $0.id == accepted.id })
+        // Per AMA-1785: pruneCompletedAcceptedSuggestions is disabled,
+        // so the workout stays visible. The proper fix lives in
+        // AMA-1792 (GRDB rewire).
+        XCTAssertTrue(
+            relaunchedViewModel.incomingWorkouts.contains { $0.id == accepted.id },
+            "AMA-1785: completed accepted suggestions must remain in incomingWorkouts until AMA-1792 lands"
+        )
+        XCTAssertTrue(
+            store.all().contains { $0.id == accepted.id },
+            "AMA-1785: completed accepted suggestions must remain in the local store until AMA-1792 lands"
+        )
     }
 }
 

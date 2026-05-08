@@ -337,6 +337,9 @@
 		V01C301900000000000000 /* VoiceWorkoutReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300900000000000000 /* VoiceWorkoutReviewView.swift */; };
 		W41T1NG000000002C0000002 /* WaitingForWatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = W41T1NG000000001B0000001 /* WaitingForWatchView.swift */; };
 		XCT4H34LTH00000001 /* XCTHealthKit in Frameworks */ = {isa = PBXBuildFile; productRef = XCT4H34LTH00000002 /* XCTHealthKit */; };
+		C0EE9007F3C8491C99D133C1 /* CTAError.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC16168084DD4307BA295F94 /* CTAError.swift */; };
+		A1780B8C38BE4F00BB0C26DE /* ErrorToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5EF3E8A935E42BBA7096B32 /* ErrorToast.swift */; };
+		50E262BC3ABF4F4BB8944710 /* ErrorReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E295BEB90381432BA61ECCFB /* ErrorReporter.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -733,6 +736,9 @@
 		V01C300800000000000000 /* TranscriptionReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/TranscriptionReviewView.swift; sourceTree = SOURCE_ROOT; };
 		V01C300900000000000000 /* VoiceWorkoutReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceWorkoutReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/VoiceWorkoutReviewView.swift; sourceTree = SOURCE_ROOT; };
 		W41T1NG000000001B0000001 /* WaitingForWatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WaitingForWatchView.swift; path = ../AmakaFlow/Views/Components/WaitingForWatchView.swift; sourceTree = SOURCE_ROOT; };
+		BC16168084DD4307BA295F94 /* CTAError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CTAError.swift; path = ../AmakaFlow/Models/CTAError.swift; sourceTree = SOURCE_ROOT; };
+		D5EF3E8A935E42BBA7096B32 /* ErrorToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ErrorToast.swift; path = ../AmakaFlow/Views/Components/ErrorToast.swift; sourceTree = SOURCE_ROOT; };
+		E295BEB90381432BA61ECCFB /* ErrorReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ErrorReporter.swift; path = ../AmakaFlow/Services/ErrorReporter.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -950,6 +956,9 @@
 				AMA14100005FILEREF /* StageIndicator.swift */,
 				F8AD6080DEE9A54A6D9E4BD8 /* WorkoutPlayerView.swift */,
 				0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */,
+				BC16168084DD4307BA295F94 /* CTAError.swift */,
+				D5EF3E8A935E42BBA7096B32 /* ErrorToast.swift */,
+				E295BEB90381432BA61ECCFB /* ErrorReporter.swift */,
 				6BD17097D21D4FB48D023E24 /* RPEFeedbackView.swift */,
 				AMA12820002A /* PRCelebrationView.swift */,
 				AMA12820003A /* PRHistoryView.swift */,
@@ -1806,7 +1815,10 @@
 				72A766051AE36A2294C87B12 /* WatchDeliveryView.swift in Sources */,
 				00CBD8759EE7C769D1D7F82B /* AgentInboxView.swift in Sources */,
 				A472B5FFC8CB61D805621A61 /* EditProfileView.swift in Sources */,
-			);
+							C0EE9007F3C8491C99D133C1 /* CTAError.swift in Sources */,
+				A1780B8C38BE4F00BB0C26DE /* ErrorToast.swift in Sources */,
+				50E262BC3ABF4F4BB8944710 /* ErrorReporter.swift in Sources */,
+);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F84E217F2ED0B0CA00459747 /* Sources */ = {
