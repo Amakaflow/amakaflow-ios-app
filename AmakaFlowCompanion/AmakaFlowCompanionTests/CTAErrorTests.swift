@@ -179,6 +179,38 @@ final class CTAErrorTests: XCTestCase {
 
     // MARK: - isRetryable narrowed for non-transient URLError codes (CR fix)
 
+    // MARK: - PR #181 CR fixes
+
+    func test_map_notFound_classifies_as_http_404_not_unknown() {
+        // CR-fix on PR #181: APIError.notFound previously collapsed
+        // into .unknown, which made the toast generic and the
+        // isRetryable flag incorrect (.unknown returns false but
+        // for the wrong reason — there's no status_code tag in
+        // Sentry either). Surface as a real .http(404).
+        let cta = CTAError.map(APIError.notFound, requestId: "req-nf")
+        guard case .http(let status, _, let reqId) = cta else {
+            return XCTFail(".notFound must classify as .http(404), got \(cta)")
+        }
+        XCTAssertEqual(status, 404)
+        XCTAssertEqual(reqId, "req-nf")
+        XCTAssertEqual(cta.sentryFailureCode, "http_404")
+        XCTAssertFalse(cta.isRetryable, "404 is deterministic")
+    }
+
+    func test_isRetryable_false_for_handshake_and_redirect_errors() {
+        // CR-fix on PR #181: earlier draft included
+        // .serverCertificateUntrusted, .clientCertificateRequired,
+        // .clientCertificateRejected, .httpTooManyRedirects and
+        // .secureConnectionFailed in the transient list. Those are
+        // deterministic configuration / handshake failures —
+        // retrying just re-fails. Lock them as non-retryable.
+        XCTAssertFalse(CTAError.network(code: .serverCertificateUntrusted).isRetryable)
+        XCTAssertFalse(CTAError.network(code: .clientCertificateRequired).isRetryable)
+        XCTAssertFalse(CTAError.network(code: .clientCertificateRejected).isRetryable)
+        XCTAssertFalse(CTAError.network(code: .httpTooManyRedirects).isRetryable)
+        XCTAssertFalse(CTAError.network(code: .secureConnectionFailed).isRetryable)
+    }
+
     func test_isRetryable_false_for_non_transient_url_errors() {
         // CR finding: previous draft treated EVERY URLError as
         // retryable, including programmer errors like .badURL. Lock

@@ -115,11 +115,13 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
 
     XCTAssertTrue(mockAPI.suggestWorkoutCalled)
     XCTAssertNil(viewModel.suggestedWorkout)
-    guard case .error(let message) = viewModel.state else {
+    guard case .error(let cta) = viewModel.state else {
       XCTFail("Expected error state, got \(viewModel.state)")
       return
     }
-    XCTAssertFalse(message.isEmpty)
+    // AMA-1803 P1: state.error now carries a typed CTAError. The
+    // userMessage must be non-empty so the View has something to show.
+    XCTAssertFalse(cta.userMessage.isEmpty)
   }
 
   func testCompleteOnboarding_savesProfileAndRequestsSuggestion() async throws {
@@ -143,7 +145,7 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
   }
 
   func testReset_clearsState() {
-    viewModel.state = .error("test error")
+    viewModel.state = .error(.unknown(description: "test error"))
     viewModel.suggestedWorkout = Workout(
       name: "Test",
       sport: .strength,
@@ -333,8 +335,16 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     XCTAssertEqual(SuggestWorkoutState.idle, SuggestWorkoutState.idle)
     XCTAssertEqual(SuggestWorkoutState.loading, SuggestWorkoutState.loading)
     XCTAssertEqual(SuggestWorkoutState.needsOnboarding, SuggestWorkoutState.needsOnboarding)
-    XCTAssertEqual(SuggestWorkoutState.error("a"), SuggestWorkoutState.error("a"))
-    XCTAssertNotEqual(SuggestWorkoutState.error("a"), SuggestWorkoutState.error("b"))
+    // AMA-1803 P1: state.error now carries CTAError. Two errors with
+    // the same shape compare equal; different shapes don't.
+    XCTAssertEqual(
+      SuggestWorkoutState.error(.unknown(description: "a")),
+      SuggestWorkoutState.error(.unknown(description: "a"))
+    )
+    XCTAssertNotEqual(
+      SuggestWorkoutState.error(.unknown(description: "a")),
+      SuggestWorkoutState.error(.unknown(description: "b"))
+    )
     XCTAssertNotEqual(SuggestWorkoutState.idle, SuggestWorkoutState.loading)
   }
 
@@ -442,6 +452,164 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     case .rest(let seconds):
       return "rest seconds=\(seconds.map(String.init) ?? "nil")"
     }
+  }
+
+  // MARK: - AMA-1803 P1: typed CTAError in state.error
+
+  func testSuggest_unauthorized_publishesUnauthenticatedCTAError() async {
+    mockAPI.suggestWorkoutResult = .failure(APIError.unauthorized)
+
+    await viewModel.suggestWorkout()
+
+    guard case .error(let cta) = viewModel.state else {
+      return XCTFail("expected .error, got \(viewModel.state)")
+    }
+    if case .unauthenticated = cta {
+      // ok
+    } else {
+      XCTFail("APIError.unauthorized must classify as .unauthenticated, got \(cta)")
+    }
+    XCTAssertFalse(cta.isRetryable, "unauthenticated must NOT show Retry — user has to sign in")
+  }
+
+  func testSuggest_5xx_publishesRetryableHTTPCTAError() async {
+    mockAPI.suggestWorkoutResult = .failure(APIError.serverError(503))
+
+    await viewModel.suggestWorkout()
+
+    guard case .error(let cta) = viewModel.state else {
+      return XCTFail("expected .error, got \(viewModel.state)")
+    }
+    guard case .http(let status, _, _) = cta else {
+      return XCTFail("expected .http, got \(cta)")
+    }
+    XCTAssertEqual(status, 503)
+    XCTAssertTrue(cta.isRetryable, "503 is transient — must offer Retry")
+  }
+
+  func testSuggest_4xx_publishesNonRetryableHTTPCTAError() async {
+    mockAPI.suggestWorkoutResult = .failure(APIError.serverError(404))
+
+    await viewModel.suggestWorkout()
+
+    guard case .error(let cta) = viewModel.state else {
+      return XCTFail("expected .error, got \(viewModel.state)")
+    }
+    guard case .http(let status, _, _) = cta else {
+      return XCTFail("expected .http, got \(cta)")
+    }
+    XCTAssertEqual(status, 404)
+    XCTAssertFalse(cta.isRetryable, "404 is deterministic — must NOT show Retry")
+  }
+
+  func testSuggest_lyingSuccess_publishesLyingSuccessCTAError() async {
+    // Backend returns 200 with `success:false` (the AMA-1798 path).
+    // CTAError.map detects the body shape and surfaces error_code so
+    // the View can show "Coach is unavailable (COACH_DOWN)".
+    let body = "{\"success\":false,\"message\":\"Coach is unavailable\",\"error_code\":\"COACH_DOWN\"}"
+    mockAPI.suggestWorkoutResult = .failure(APIError.serverErrorWithBody(200, body))
+
+    await viewModel.suggestWorkout()
+
+    guard case .error(let cta) = viewModel.state else {
+      return XCTFail("expected .error, got \(viewModel.state)")
+    }
+    guard case .lyingSuccess(let message, let errorCode, _) = cta else {
+      return XCTFail("expected .lyingSuccess, got \(cta)")
+    }
+    XCTAssertEqual(message, "Coach is unavailable")
+    XCTAssertEqual(errorCode, "COACH_DOWN")
+    XCTAssertFalse(cta.isRetryable, "lying-success is deterministic — Retry would re-fail")
+    XCTAssertEqual(cta.userMessage, "Coach is unavailable (COACH_DOWN)")
+  }
+
+  func testSuggest_offline_publishesRetryableNetworkCTAError() async {
+    mockAPI.suggestWorkoutResult = .failure(
+      APIError.networkError(URLError(.notConnectedToInternet))
+    )
+
+    await viewModel.suggestWorkout()
+
+    guard case .error(let cta) = viewModel.state else {
+      return XCTFail("expected .error, got \(viewModel.state)")
+    }
+    guard case .network(let code, _) = cta else {
+      return XCTFail("expected .network, got \(cta)")
+    }
+    XCTAssertEqual(code, .notConnectedToInternet)
+    XCTAssertTrue(cta.isRetryable, "offline is transient — must offer Retry")
+    XCTAssertEqual(cta.userMessage, "No internet connection.")
+  }
+
+  func testSuggest_decodingError_publishesNonRetryableDecodingCTAError() async {
+    struct Dummy: Codable { let x: Int }
+    let badJSON = Data("{}".utf8)
+    var underlying: Error!
+    do {
+      _ = try JSONDecoder().decode(Dummy.self, from: badJSON)
+    } catch {
+      underlying = error
+    }
+    mockAPI.suggestWorkoutResult = .failure(APIError.decodingError(underlying))
+
+    await viewModel.suggestWorkout()
+
+    guard case .error(let cta) = viewModel.state else {
+      return XCTFail("expected .error, got \(viewModel.state)")
+    }
+    if case .decoding = cta {
+      // ok
+    } else {
+      XCTFail("expected .decoding, got \(cta)")
+    }
+    XCTAssertFalse(cta.isRetryable, "decoding error is a bug — must NOT show Retry")
+  }
+
+  func testSuggest_AnnotatedAPIError_propagatesRequestId() async {
+    // AMA-1808 wrapper carries the X-Request-ID; CTAError.map must
+    // surface it so the user-facing Report breadcrumb correlates with
+    // AMA-1805's server-side capture.
+    let annotated = AnnotatedAPIError(
+      .serverError(500),
+      requestId: "req-from-suggest-endpoint"
+    )
+    mockAPI.suggestWorkoutResult = .failure(annotated)
+
+    await viewModel.suggestWorkout()
+
+    guard case .error(let cta) = viewModel.state else {
+      return XCTFail("expected .error, got \(viewModel.state)")
+    }
+    XCTAssertEqual(cta.requestId, "req-from-suggest-endpoint")
+  }
+
+  func testRetry_afterFailure_cyclesBackToSuccess() async throws {
+    // The View calls viewModel.suggestWorkout() again on Retry tap.
+    // Verify the state machine cycles correctly so the user sees the
+    // new outcome instead of the stale error.
+    mockAPI.suggestWorkoutResult = .failure(APIError.serverError(503))
+    await viewModel.suggestWorkout()
+    guard case .error = viewModel.state else {
+      return XCTFail("expected initial failure, got \(viewModel.state)")
+    }
+
+    mockAPI.suggestWorkoutResult = .success(
+      SuggestWorkoutResponse(
+        blocks: [.reps(sets: 3, reps: 10, name: "Squat", load: nil, restSec: 60, followAlongUrl: nil)],
+        warmUp: nil,
+        cooldown: nil,
+        name: "Retry Win",
+        sport: .strength,
+        durationSeconds: 600,
+        description: nil
+      )
+    )
+    await viewModel.suggestWorkout()
+
+    guard case .success(let workout) = viewModel.state else {
+      return XCTFail("expected .success after retry, got \(viewModel.state)")
+    }
+    XCTAssertEqual(workout.name, "Retry Win")
   }
 
   private enum TestError: Error {

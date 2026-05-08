@@ -79,7 +79,11 @@ enum SuggestWorkoutState: Equatable {
     case needsOnboarding
     case loading
     case success(Workout)
-    case error(String)
+    /// AMA-1803 P1: carries the typed CTAError so the error UI can
+    /// surface error_code, render Retry only when the failure is
+    /// transient, and produce a Sentry breadcrumb correlated to
+    /// AMA-1805's server-side capture by request_id.
+    case error(CTAError)
 
     static func == (lhs: SuggestWorkoutState, rhs: SuggestWorkoutState) -> Bool {
         switch (lhs, rhs) {
@@ -162,7 +166,12 @@ class SuggestWorkoutViewModel: ObservableObject {
             suggestedWorkout = workout
             state = .success(workout)
         } catch {
-            state = .error(error.localizedDescription)
+            // AMA-1803 P1: route through CTAError.map so the user UI
+            // sees a typed failure (error_code, retryability, request_id)
+            // instead of a stringly-typed `localizedDescription`. When
+            // the upstream throws an AnnotatedAPIError (AMA-1808), its
+            // requestId propagates here for Report-button correlation.
+            state = .error(CTAError.map(error))
         }
     }
 

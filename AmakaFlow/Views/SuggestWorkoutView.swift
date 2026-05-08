@@ -30,8 +30,8 @@ struct SuggestWorkoutView: View {
                 case .success(let workout):
                     workoutPreview(workout)
 
-                case .error(let message):
-                    errorView(message)
+                case .error(let ctaError):
+                    errorView(ctaError)
                 }
             }
             .navigationTitle("Suggested Workout")
@@ -185,37 +185,77 @@ struct SuggestWorkoutView: View {
 
     // MARK: - Error View
 
-    private func errorView(_ message: String) -> some View {
-        VStack(spacing: Theme.Spacing.lg) {
+    /// AMA-1803 P1: render the typed CTAError. Title varies with the
+    /// failure shape (sign-in for unauthenticated, otherwise generic),
+    /// body text comes from `userMessage` (which already includes the
+    /// server's error_code when present), Try Again only renders when
+    /// the failure is transient (per CTAError.isRetryable), and Report
+    /// drops a Sentry breadcrumb correlated to AMA-1805 server tags
+    /// via request_id.
+    private func errorView(_ error: CTAError) -> some View {
+        let title: String = {
+            if case .unauthenticated = error {
+                return "Please sign in again"
+            }
+            return "Couldn't generate a workout"
+        }()
+
+        return VStack(spacing: Theme.Spacing.lg) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 40))
                 .foregroundColor(Theme.Colors.accentOrange)
 
-            Text("Something went wrong")
+            Text(title)
                 .font(Theme.Typography.title3)
                 .foregroundColor(Theme.Colors.textPrimary)
 
-            Text(message)
+            Text(error.userMessage)
                 .font(Theme.Typography.body)
                 .foregroundColor(Theme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Theme.Spacing.xl)
 
-            Button {
-                Task {
-                    await viewModel.suggestWorkout()
+            HStack(spacing: Theme.Spacing.md) {
+                if error.isRetryable {
+                    Button {
+                        Task {
+                            await viewModel.suggestWorkout()
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.clockwise")
+                            Text("Try Again")
+                        }
+                        .font(Theme.Typography.bodyBold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, Theme.Spacing.xl)
+                        .padding(.vertical, Theme.Spacing.md)
+                        .background(Theme.Colors.accentOrange)
+                        .cornerRadius(Theme.CornerRadius.md)
+                    }
+                    .accessibilityIdentifier("suggest_workout_retry")
                 }
-            } label: {
-                HStack {
-                    Image(systemName: "arrow.clockwise")
-                    Text("Try Again")
+
+                Button {
+                    ErrorReporter.shared.report(
+                        action: "suggest_workout",
+                        error: error,
+                        endpoint: "/coach/suggest-workout",
+                        userId: PairingService.shared.userProfile?.id
+                    )
+                } label: {
+                    HStack {
+                        Image(systemName: "exclamationmark.bubble")
+                        Text("Report")
+                    }
+                    .font(Theme.Typography.bodyBold)
+                    .foregroundColor(Theme.Colors.accentOrange)
+                    .padding(.horizontal, Theme.Spacing.xl)
+                    .padding(.vertical, Theme.Spacing.md)
+                    .background(Theme.Colors.accentOrange.opacity(0.15))
+                    .cornerRadius(Theme.CornerRadius.md)
                 }
-                .font(Theme.Typography.bodyBold)
-                .foregroundColor(.white)
-                .padding(.horizontal, Theme.Spacing.xl)
-                .padding(.vertical, Theme.Spacing.md)
-                .background(Theme.Colors.accentOrange)
-                .cornerRadius(Theme.CornerRadius.md)
+                .accessibilityIdentifier("suggest_workout_report")
             }
         }
         .accessibilityIdentifier("suggest_workout_error")

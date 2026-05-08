@@ -62,7 +62,48 @@ class WorkoutEngine: ObservableObject {
     /// Set in `postWorkoutCompletion`. `nil` = success or save not yet
     /// attempted; non-nil = the user saw a green checkmark but the row
     /// was NOT persisted server-side.
+    ///
+    /// AMA-1803 P1 fix: kept private for backwards-compat with internal
+    /// references; the UI now reads `saveStatus` instead so it can
+    /// distinguish "in-flight" from "succeeded". A nil `lastSaveError`
+    /// no longer implies "saved" — it means "no error reported", which
+    /// is true both BEFORE the network round-trip lands AND after a
+    /// successful save.
     @Published private(set) var lastSaveError: CTAError?
+
+    /// AMA-1803 P1 fix (CR major on PR #181): tri-state save status so
+    /// the completion screen does NOT show "Workout Complete!" while
+    /// the network round-trip is still in flight. The earlier P0
+    /// implementation showed success whenever `lastSaveError == nil`,
+    /// but during the in-flight window that flag is also nil — so the
+    /// user saw the green checkmark BEFORE knowing whether the save
+    /// actually persisted. Exactly the failure mode P0 was supposed
+    /// to close.
+    enum SaveStatus: Equatable {
+        /// No save attempted, or the engine has been reset.
+        case idle
+        /// Save fired; awaiting the network round-trip.
+        case inFlight
+        /// Save round-tripped and the backend confirmed success.
+        case succeeded
+        /// Save round-tripped (or threw locally) and failed. The
+        /// CTAError is also mirrored on `lastSaveError` for legacy
+        /// readers, but new code should switch on `saveStatus`.
+        case failed(CTAError)
+
+        static func == (lhs: SaveStatus, rhs: SaveStatus) -> Bool {
+            switch (lhs, rhs) {
+            case (.idle, .idle), (.inFlight, .inFlight), (.succeeded, .succeeded):
+                return true
+            case (.failed(let a), .failed(let b)):
+                return a == b
+            default:
+                return false
+            }
+        }
+    }
+
+    @Published private(set) var saveStatus: SaveStatus = .idle
 
     // Rest state
     @Published private(set) var restRemainingSeconds: Int = 0
@@ -797,6 +838,11 @@ class WorkoutEngine: ObservableObject {
         // is invoked from a MainActor context — direct assignment is
         // safe and avoids an unnecessary actor hop.
         self.lastSaveError = nil
+        // AMA-1803 P1 fix: declare in-flight BEFORE awaiting the
+        // network. The completion screen renders an in-flight UI so
+        // the user never sees "Workout Complete!" until the backend
+        // round-trip terminally resolves.
+        self.saveStatus = .inFlight
 
         Task {
             do {
@@ -820,6 +866,13 @@ class WorkoutEngine: ObservableObject {
                     details: "Posted for workout \(workoutId)",
                     metadata: ["completionId": response?.resolvedCompletionId ?? "nil"]
                 )
+                // AMA-1803 P1 fix: hop to MainActor and flip
+                // saveStatus to .succeeded ONLY once the backend
+                // round-trip confirmed the row landed. The completion
+                // screen's "Workout Complete!" header keys on this.
+                await MainActor.run {
+                    self.saveStatus = .succeeded
+                }
 
                 // Notify WorkoutsViewModel to remove from incoming/upcoming lists (AMA-237)
                 NotificationCenter.default.post(
@@ -856,6 +909,8 @@ class WorkoutEngine: ObservableObject {
                 let ctaError = CTAError.map(error)
                 await MainActor.run {
                     self.lastSaveError = ctaError
+                    // AMA-1803 P1 fix: tri-state — failed terminal.
+                    self.saveStatus = .failed(ctaError)
                 }
                 // Error is already logged and queued for retry by WorkoutCompletionService
             }
@@ -869,6 +924,12 @@ class WorkoutEngine: ObservableObject {
     @MainActor
     func acknowledgeSaveError() {
         lastSaveError = nil
+        // AMA-1803 P1 fix: dismissing the toast also resets the
+        // tri-state so subsequent UI doesn't keep rendering the
+        // failure header forever.
+        if case .failed = saveStatus {
+            saveStatus = .idle
+        }
     }
 
     /// Get health metrics with HR samples - uses simulated data in simulation mode, mock data in E2E test mode, otherwise from Watch
