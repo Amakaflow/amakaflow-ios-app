@@ -101,7 +101,8 @@ final class ConnectTelegramViewModel: ObservableObject {
                 guard !Task.isCancelled else { return }
 
                 await MainActor.run { self.state = .connecting }
-                await self.openTelegram(nativeLink: token.nativeLink, deepLink: token.deepLink)
+                let opened = await self.openTelegram(nativeLink: token.nativeLink, deepLink: token.deepLink)
+                guard opened else { return }
                 await self.pollStatus(token: token.token, expiresInSeconds: token.expiresInSeconds)
             } catch {
                 guard !Task.isCancelled else { return }
@@ -118,14 +119,16 @@ final class ConnectTelegramViewModel: ObservableObject {
         state = .idle
     }
 
-    private func openTelegram(nativeLink: String, deepLink: String) async {
+    private func openTelegram(nativeLink: String, deepLink: String) async -> Bool {
         if let nativeURL = URL(string: nativeLink), await urlOpener.open(nativeURL) {
-            return
+            return true
         }
         if let fallbackURL = URL(string: deepLink), await urlOpener.open(fallbackURL) {
-            return
+            return true
         }
         state = .failed("Could not open Telegram. Install Telegram or try again from a browser.")
+        pollingTask = nil
+        return false
     }
 
     private func pollStatus(token: String, expiresInSeconds: Int) async {

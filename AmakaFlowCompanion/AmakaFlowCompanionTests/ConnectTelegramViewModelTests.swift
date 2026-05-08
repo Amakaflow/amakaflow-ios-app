@@ -113,6 +113,35 @@ final class ConnectTelegramViewModelTests: XCTestCase {
     XCTAssertEqual(api.statusCallCount, 0)
   }
 
+  func testConnectTapped_whenBothURLOpensFail_setsFailedAndDoesNotPoll() async throws {
+    api.tokenResponse = tokenResponse()
+    api.statusResponses = [TelegramLinkStatusResponse(linked: true, telegramId: 7, usedAt: now)]
+    opener.results = [false, false]
+    let viewModel = makeViewModel(pollIntervalNanoseconds: 1)
+
+    viewModel.connectTapped()
+
+    try await waitUntil {
+      if case .failed("Could not open Telegram. Install Telegram or try again from a browser.") = viewModel.state {
+        return true
+      }
+      return false
+    }
+
+    // Give any (incorrectly scheduled) poll a chance to fire so the assertion is meaningful.
+    try await Task.sleep(nanoseconds: 50_000_000)
+
+    XCTAssertEqual(api.statusCallCount, 0, "pollStatus must not run after openTelegram fails")
+    XCTAssertEqual(connectedIds, [])
+    XCTAssertEqual(
+      opener.openedURLs.map(\.absoluteString),
+      [
+        "tg://resolve?domain=amakaflow_userbot&start=token-1",
+        "https://t.me/amakaflow_userbot?start=token-1",
+      ]
+    )
+  }
+
   func testAlreadyConnectedRetapShowsNoOpMessage() {
     let viewModel = makeViewModel(initialTelegramId: 987)
 
