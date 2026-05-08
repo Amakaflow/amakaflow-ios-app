@@ -62,13 +62,35 @@ struct CoachChatView: View {
                     rateLimitBanner(info)
                 }
 
-                // Error message
-                if let error = viewModel.errorMessage, viewModel.rateLimitInfo == nil {
-                    Text(error)
-                        .font(Theme.Typography.footnote)
-                        .foregroundColor(Theme.Colors.accentRed)
-                        .padding(.horizontal, Theme.Spacing.lg)
-                        .padding(.vertical, Theme.Spacing.xs)
+                // AMA-1803 P2: typed error banner. The earlier
+                // implementation rendered a flat one-line red string
+                // with no Retry, no Report, and no error_code surface
+                // — same dishonest pattern P0 closed for Save & End.
+                // Now it's the shared ErrorToast component (used as an
+                // inline banner here since Coach is full-screen) with
+                // the same Retry / Report / Dismiss controls keyed on
+                // CTAError.isRetryable.
+                if let ctaError = viewModel.error, viewModel.rateLimitInfo == nil {
+                    ErrorToast(
+                        actionTitle: "Couldn't reach the coach",
+                        error: ctaError,
+                        onRetry: ctaError.isRetryable ? {
+                            Task { await viewModel.retryLastMessage() }
+                        } : nil,
+                        onReport: {
+                            ErrorReporter.shared.report(
+                                action: "coach_send_message",
+                                error: ctaError,
+                                endpoint: "/coach/chat/stream",
+                                userId: PairingService.shared.userProfile?.id
+                            )
+                        },
+                        onDismiss: {
+                            viewModel.acknowledgeError()
+                        }
+                    )
+                    .padding(.horizontal, Theme.Spacing.lg)
+                    .padding(.vertical, Theme.Spacing.xs)
                 }
 
                 // Input bar

@@ -16,8 +16,17 @@ class CoachViewModel: ObservableObject {
     @Published var isStreaming: Bool = false
     @Published var currentStage: ChatStage? = nil
     @Published var completedStages: [ChatStage] = []
-    @Published var errorMessage: String? = nil
+    /// AMA-1803 P2: typed CTAError replaces `errorMessage: String?` so
+    /// the View can render Retry only when the failure is transient,
+    /// surface server `error_code` (when the SSE `.error` event carried
+    /// a `type` field), and produce a Sentry breadcrumb correlated to
+    /// AMA-1805 by request_id.
+    @Published var error: CTAError? = nil
     @Published var rateLimitInfo: RateLimitInfo? = nil
+
+    /// AMA-1803 P2: cached so the Retry button on the failure banner
+    /// can re-send without the user having to type again.
+    private var lastSentMessageText: String? = nil
     @Published var scrollTrigger = UUID()
     @Published var sessionId: String? {
         didSet { persistSessionId() }
@@ -60,8 +69,9 @@ class CoachViewModel: ObservableObject {
         messages.append(assistantMessage)
 
         isStreaming = true
-        errorMessage = nil
+        error = nil
         rateLimitInfo = nil
+        lastSentMessageText = trimmed
         currentStage = nil
         completedStages = []
 
@@ -99,11 +109,11 @@ class CoachViewModel: ObservableObject {
                             self.messages.remove(at: idx)
                         }
                     }
-                    self.errorMessage = error.localizedDescription
+                    self.error = CTAError.map(error)
                 }
             }
-            // Clean up empty placeholder if an SSE .error event set errorMessage
-            if assistantMessage.content.isEmpty && self.errorMessage != nil {
+            // Clean up empty placeholder if an SSE .error event set the error
+            if assistantMessage.content.isEmpty && self.error != nil {
                 if let idx = self.messages.lastIndex(where: { $0.id == assistantMessage.id }) {
                     self.messages.remove(at: idx)
                 }
@@ -173,7 +183,20 @@ class CoachViewModel: ObservableObject {
             message.latencyMs = latency
 
         case .error(let type, let errorMsg, let usage, let limit):
-            errorMessage = errorMsg
+            // AMA-1803 P2: SSE `.error` events from the chat-api are
+            // semantically the same shape as the AMA-271 lying-success
+            // pattern — HTTP/SSE 200 OK at the transport layer, but
+            // the server is reporting a failure in the body. Map to
+            // .lyingSuccess so the View renders the typed banner with
+            // error_code (the `type` string from the server) and so
+            // the Sentry tag matches AMA-1805's `lying_success_200`
+            // failure_reason. Rate-limit gets the dedicated banner
+            // via rateLimitInfo, distinct from the generic error UI.
+            error = .lyingSuccess(
+                message: errorMsg,
+                errorCode: type,
+                requestId: nil
+            )
             if type == "rate_limit_exceeded", let usage, let limit {
                 rateLimitInfo = RateLimitInfo(usage: usage, limit: limit)
             }
@@ -211,10 +234,29 @@ class CoachViewModel: ObservableObject {
         isStreaming = false
         messages.removeAll()
         sessionId = nil
-        errorMessage = nil
+        error = nil
+        lastSentMessageText = nil
         currentStage = nil
         completedStages = []
         rateLimitInfo = nil
+    }
+
+    /// AMA-1803 P2: re-send the last user message after a transient
+    /// failure. Wired to the ErrorToast Retry button. No-op if there's
+    /// no cached message (defensive — Retry should be hidden by
+    /// CTAError.isRetryable in those cases anyway).
+    func retryLastMessage() async {
+        guard let text = lastSentMessageText else { return }
+        // Drop the typed error so the UI flips back to the normal
+        // streaming state immediately. If the retry fails we re-set it.
+        error = nil
+        await sendMessage(text)
+    }
+
+    /// AMA-1803 P2: clear the typed error from the View when the user
+    /// dismisses the banner. Mirrors `WorkoutEngine.acknowledgeSaveError`.
+    func acknowledgeError() {
+        error = nil
     }
 
     func cancelStream() {
