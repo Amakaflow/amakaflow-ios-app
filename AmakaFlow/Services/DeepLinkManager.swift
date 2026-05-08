@@ -38,14 +38,6 @@ final class DeepLinkManager: ObservableObject {
     /// or a stale deep-link target failed silently.
     @Published var unrecognizedLink: URL?
 
-    /// AMA-1811: convenience binding for `.alert(isPresented:)` modifiers.
-    /// Reads as true when `unrecognizedLink` is non-nil; setting false
-    /// clears the URL.
-    var showUnrecognizedLinkAlert: Bool {
-        get { unrecognizedLink != nil }
-        set { if !newValue { unrecognizedLink = nil } }
-    }
-
     private init() {}
 
     // MARK: - Public API
