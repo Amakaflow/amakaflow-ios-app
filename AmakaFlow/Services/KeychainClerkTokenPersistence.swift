@@ -109,6 +109,11 @@ final class KeychainClerkTokenPersistence: ClerkTokenPersistence, @unchecked Sen
               let token = try? JSONDecoder().decode(ClerkAuthToken.self, from: data)
         else { return nil }
         saveClerkToken(token)
+        // AMA-1809 (CR): only wipe the legacy entry once the Keychain write
+        // is confirmed. If the write failed silently (Keychain locked, ACL
+        // mismatch, etc.) destroying the UserDefaults copy would force the
+        // user to re-authenticate.
+        guard readKeychain() == token else { return nil }
         legacyDefaults.removeObject(forKey: legacyKey)
         return token
     }

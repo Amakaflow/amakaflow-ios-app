@@ -53,33 +53,49 @@ final class DeepLinkManager: ObservableObject {
             #if DEBUG
             print("[DeepLinkManager] Import URL received: \(workoutURL)")
             #endif
+            // A successful import supersedes any stale alert from a
+            // prior unknown URL the user may have tapped.
+            unrecognizedLink = nil
             pendingImportURL = workoutURL
             showImportSheet = true
             return true
 
         case .unknown:
-            // AMA-1811: surface the unrecognized link to the user
-            // instead of silently dropping it. Earlier behaviour was
-            // a debug-only print — invisible in TestFlight builds AND
-            // invisible to ops. The user just saw their tap do
-            // nothing.
+            // AMA-1809 (CR): do NOT alert/report here. Other handlers
+            // (Garmin Connect IQ, app-surface deep links) get a turn
+            // first; only after they all fail does the caller invoke
+            // `reportUnrecognizedLink(_:)`.
             #if DEBUG
-            print("[DeepLinkManager] Unrecognized deep link: \(url.absoluteString)")
+            print("[DeepLinkManager] Unrecognized by importer: \(url.absoluteString)")
             #endif
-            unrecognizedLink = url
-            SentrySDK.capture(message: "deep_link.unrecognized") { scope in
-                scope.setTag(value: "deep_link", key: "subsystem")
-                scope.setTag(value: url.path, key: "path")
-                if let host = url.host {
-                    scope.setTag(value: host, key: "host")
-                }
-                if let scheme = url.scheme {
-                    scope.setTag(value: scheme, key: "scheme")
-                }
-                scope.setLevel(SentryLevel.warning)
-                scope.setExtra(value: url.absoluteString, key: "url")
-            }
             return false
+        }
+    }
+
+    /// AMA-1811: surface an unrecognized deep link to the user once every
+    /// other handler has declined it. Drops a redacted Sentry breadcrumb
+    /// and flips `unrecognizedLink` so the root view can render an alert.
+    /// AMA-1809 (CR): redacts query values from telemetry — deep-link URLs
+    /// can carry tokens, emails, etc.
+    func reportUnrecognizedLink(_ url: URL) {
+        unrecognizedLink = url
+        SentrySDK.capture(message: "deep_link.unrecognized") { scope in
+            scope.setTag(value: "deep_link", key: "subsystem")
+            scope.setTag(value: url.path, key: "path")
+            if let host = url.host {
+                scope.setTag(value: host, key: "host")
+            }
+            if let scheme = url.scheme {
+                scope.setTag(value: scheme, key: "scheme")
+            }
+            scope.setLevel(SentryLevel.warning)
+            let safeURL = "\(url.scheme ?? "")://\(url.host ?? "")\(url.path)"
+            scope.setExtra(value: safeURL, key: "url")
+            let queryKeys = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.map(\.name) ?? []
+            if !queryKeys.isEmpty {
+                scope.setExtra(value: queryKeys, key: "query_keys")
+            }
         }
     }
 

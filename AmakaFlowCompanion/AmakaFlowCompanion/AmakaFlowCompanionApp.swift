@@ -212,7 +212,14 @@ struct AmakaFlowCompanionApp: App {
 
                             // AMA-1640: route in-app surface deep links + universal links.
                             // Returns false for non-routable paths (e.g. https://amakaflow.com/pricing).
-                            _ = routeAppSurfaceDeepLink(url)
+                            if routeAppSurfaceDeepLink(url) { return }
+
+                            // AMA-1809 (CR): only after every handler declines,
+                            // surface the alert + Sentry breadcrumb. Earlier
+                            // version fired this from inside the importer's
+                            // `.unknown` branch, which preempted Garmin and
+                            // app-surface routing.
+                            deepLinkManager.reportUnrecognizedLink(url)
                         }
                         .sheet(isPresented: $deepLinkManager.showImportSheet) {
                             if let importURL = deepLinkManager.pendingImportURL {
