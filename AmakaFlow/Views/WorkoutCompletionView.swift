@@ -102,17 +102,35 @@ struct WorkoutCompletionView: View {
             // the body provided one), and offers a Report button that
             // drops a Sentry breadcrumb correlated to AMA-1805's
             // server-side capture via `requestId`.
+            //
+            // CR-fix: wire onRetry for retryable failures (transient
+            // network + 5xx). The earlier P0 cut at `onRetry: nil`
+            // was over-aggressive — even though the network-resume
+            // queue retries automatically, a synchronous user-tapped
+            // Retry beats waiting for connectivity changes when the
+            // user knows they're back online. ErrorToast itself
+            // hides the button when isRetryable returns false.
             if let saveError = engine.lastSaveError {
                 VStack {
                     Spacer()
                     ErrorToast(
                         actionTitle: "Couldn't save workout",
                         error: saveError,
-                        onRetry: nil, // P0: no retry — queue handles it
+                        onRetry: {
+                            // Kick the persistent pending queue. Don't
+                            // clear lastSaveError here — let the queue's
+                            // success path naturally update state on the
+                            // next round-trip. Manual dismiss still works.
+                            Task {
+                                await WorkoutCompletionService.shared.retryPendingCompletions()
+                            }
+                        },
                         onReport: {
                             ErrorReporter.shared.report(
                                 action: "workout_save",
-                                error: saveError
+                                error: saveError,
+                                endpoint: "/workouts/complete",
+                                userId: PairingService.shared.userProfile?.id
                             )
                         },
                         onDismiss: {

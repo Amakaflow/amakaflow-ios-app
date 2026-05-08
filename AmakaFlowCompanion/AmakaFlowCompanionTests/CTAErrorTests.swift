@@ -106,6 +106,120 @@ final class CTAErrorTests: XCTestCase {
         }
     }
 
+    // MARK: - extractField edge cases (CR regression)
+
+    func test_extractField_handles_escaped_quotes_inside_message() {
+        // CR finding: the manual scan would happily return the wrong
+        // value for a body where a string field contains an escaped
+        // quote BEFORE the actual value. Verify JSONSerialization
+        // first-pass picks the right value.
+        let body = #"{"success":false,"message":"He said \"oops\" before everything failed","error_code":"BOOM"}"#
+        let cta = CTAError.map(APIError.serverErrorWithBody(200, body))
+        guard case .lyingSuccess(let message, let errorCode, _) = cta else {
+            return XCTFail("expected .lyingSuccess, got \(cta)")
+        }
+        XCTAssertEqual(message, "He said \"oops\" before everything failed")
+        XCTAssertEqual(errorCode, "BOOM")
+    }
+
+    func test_extractField_skips_key_substring_inside_value() {
+        // CR finding: a body where the SAME key name appears inside
+        // a different field's value would mis-extract under the manual
+        // scan. JSONSerialization must pick the structural occurrence.
+        let body = #"{"success":false,"message":"the error_code is invalid","error_code":"REAL_CODE"}"#
+        let cta = CTAError.map(APIError.serverErrorWithBody(200, body))
+        guard case .lyingSuccess(_, let errorCode, _) = cta else {
+            return XCTFail("expected .lyingSuccess, got \(cta)")
+        }
+        XCTAssertEqual(errorCode, "REAL_CODE", "extractor must return the structural value, not the substring inside the message")
+    }
+
+    func test_extractField_handles_multiline_pretty_printed_body() {
+        // CR finding: tab/newline JSON spacing should still classify
+        // as lying-success and correctly extract message + error_code.
+        let body = """
+        {
+        \t"success": false,
+        \t"message": "validation failed",
+        \t"error_code": "AMA_VAL"
+        }
+        """
+        let cta = CTAError.map(APIError.serverErrorWithBody(200, body))
+        guard case .lyingSuccess(let message, let errorCode, _) = cta else {
+            return XCTFail("expected .lyingSuccess for multiline JSON, got \(cta)")
+        }
+        XCTAssertEqual(message, "validation failed")
+        XCTAssertEqual(errorCode, "AMA_VAL")
+    }
+
+    func test_lying_success_classifies_for_201_too() {
+        // CR finding: AMA-271 detection currently lives in the
+        // 200/201 branch of APIService. Lock that 201 also triggers
+        // the lying-success path so a future "create resource"
+        // endpoint that returns 201 + success:false isn't silent.
+        let body = "{\"success\":false,\"error_code\":\"DUP\"}"
+        let cta = CTAError.map(APIError.serverErrorWithBody(201, body))
+        guard case .lyingSuccess(_, let errorCode, _) = cta else {
+            return XCTFail("expected .lyingSuccess for 201 + success:false, got \(cta)")
+        }
+        XCTAssertEqual(errorCode, "DUP")
+    }
+
+    func test_lying_success_does_NOT_classify_for_4xx_with_success_false() {
+        // Negative case: a body containing `success:false` on a 4xx
+        // should classify as plain HTTP, not lying-success — the
+        // status code itself already tells the truth.
+        let body = "{\"success\":false}"
+        let cta = CTAError.map(APIError.serverErrorWithBody(400, body))
+        guard case .http(let status, _, _) = cta else {
+            return XCTFail("4xx must classify as .http even with success:false body, got \(cta)")
+        }
+        XCTAssertEqual(status, 400)
+    }
+
+    // MARK: - isRetryable narrowed for non-transient URLError codes (CR fix)
+
+    func test_isRetryable_false_for_non_transient_url_errors() {
+        // CR finding: previous draft treated EVERY URLError as
+        // retryable, including programmer errors like .badURL. Lock
+        // that those don't show Retry.
+        let badURL = CTAError.network(code: .badURL)
+        XCTAssertFalse(badURL.isRetryable, ".badURL is a programmer error, not transient")
+
+        let unsupported = CTAError.network(code: .unsupportedURL)
+        XCTAssertFalse(unsupported.isRetryable, ".unsupportedURL is deterministic")
+
+        let badServer = CTAError.network(code: .badServerResponse)
+        XCTAssertFalse(badServer.isRetryable, ".badServerResponse should NOT show Retry")
+    }
+
+    func test_isRetryable_true_for_transient_url_errors() {
+        XCTAssertTrue(CTAError.network(code: .timedOut).isRetryable)
+        XCTAssertTrue(CTAError.network(code: .notConnectedToInternet).isRetryable)
+        XCTAssertTrue(CTAError.network(code: .networkConnectionLost).isRetryable)
+        XCTAssertTrue(CTAError.network(code: .cannotConnectToHost).isRetryable)
+        XCTAssertTrue(CTAError.network(code: .dnsLookupFailed).isRetryable)
+    }
+
+    // MARK: - userMessage edge cases (CR fix for lyingSuccess copy)
+
+    func test_userMessage_lying_success_with_only_errorCode_keeps_it() {
+        // CR finding: previous draft dropped errorCode when message was nil.
+        let cta = CTAError.lyingSuccess(message: nil, errorCode: "DB_TIMEOUT", requestId: nil)
+        XCTAssertTrue(cta.userMessage.contains("DB_TIMEOUT"),
+                      "userMessage must surface error_code even when message is absent; got: \(cta.userMessage)")
+    }
+
+    func test_userMessage_lying_success_with_only_message_uses_it() {
+        let cta = CTAError.lyingSuccess(message: "Failed", errorCode: nil, requestId: nil)
+        XCTAssertEqual(cta.userMessage, "Failed")
+    }
+
+    func test_userMessage_lying_success_with_neither_falls_back() {
+        let cta = CTAError.lyingSuccess(message: nil, errorCode: nil, requestId: nil)
+        XCTAssertEqual(cta.userMessage, "Server reported failure.")
+    }
+
     // MARK: - Network errors
 
     func test_map_networkError_offline_classifies_as_network() {

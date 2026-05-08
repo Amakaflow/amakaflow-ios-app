@@ -73,10 +73,20 @@ public extension CTAError {
             }
             return "Server error \(status)."
         case .lyingSuccess(let message, let errorCode, _):
-            if let errorCode = errorCode, let message = message {
-                return "\(message) (\(errorCode))"
+            // CR-fix: cover all four (message, errorCode) combinations
+            // explicitly. Earlier draft dropped errorCode when message
+            // was nil — losing server diagnostics that ops needs to
+            // correlate with AMA-1805's `error_code` Sentry tag.
+            switch (message, errorCode) {
+            case let (msg?, code?):
+                return "\(msg) (\(code))"
+            case let (msg?, nil):
+                return msg
+            case let (nil, code?):
+                return "Server reported failure (\(code))."
+            case (nil, nil):
+                return "Server reported failure."
             }
-            return message ?? "Server reported failure."
         case .decoding(let description, _):
             return "Couldn't read the server response. \(description.prefix(120))"
         case .unauthenticated:
@@ -86,13 +96,50 @@ public extension CTAError {
         }
     }
 
-    /// Whether the toast should offer a Retry button. Network +
-    /// transient 5xx are retryable; 4xx and decoding errors aren't.
+    /// Whether the toast should offer a Retry button. Transient
+    /// network failures + transient 5xx are retryable; 4xx, decoding,
+    /// and non-transient URLError codes (e.g. .badURL,
+    /// .unsupportedURL, .badServerResponse) aren't.
+    ///
+    /// CR-fix: earlier draft treated EVERY .network as retryable;
+    /// that hid programmer errors (a malformed URL would silently
+    /// invite users to retry the same broken request).
     var isRetryable: Bool {
         switch self {
-        case .network: return true
-        case .http(let status, _, _): return status >= 500
-        case .lyingSuccess, .decoding, .unauthenticated, .unknown: return false
+        case .network(let code, _):
+            return Self.isTransientURLError(code)
+        case .http(let status, _, _):
+            return status >= 500
+        case .lyingSuccess, .decoding, .unauthenticated, .unknown:
+            return false
+        }
+    }
+
+    /// Codes that genuinely benefit from another attempt. The list is
+    /// conservative: anything not on it is treated as deterministic
+    /// (no Retry shown).
+    static func isTransientURLError(_ code: URLError.Code) -> Bool {
+        switch code {
+        case .timedOut,
+             .notConnectedToInternet,
+             .networkConnectionLost,
+             .dataNotAllowed,
+             .internationalRoamingOff,
+             .callIsActive,
+             .cannotConnectToHost,
+             .cannotFindHost,
+             .dnsLookupFailed,
+             .resourceUnavailable,
+             .secureConnectionFailed,
+             .serverCertificateUntrusted, // user might be on captive wifi
+             .clientCertificateRequired,
+             .clientCertificateRejected,
+             .httpTooManyRedirects,
+             .requestBodyStreamExhausted,
+             .backgroundSessionWasDisconnected:
+            return true
+        default:
+            return false
         }
     }
 
@@ -177,21 +224,34 @@ public extension CTAError {
         return .unknown(description: error.localizedDescription, requestId: requestId)
     }
 
-    /// Tiny, dependency-free string extractor for `"<key>": "<value>"`
-    /// from a JSON body. Not a full parser — we only need the two
-    /// fields the AMA-1805 alert template emits. Falls back to nil
-    /// silently so a malformed body doesn't double-fault.
+    /// Pull a single string field out of a JSON body.
+    ///
+    /// CR-fix: the original implementation was a manual string scan
+    /// that broke on escaped quotes and on key-like substrings inside
+    /// other string values. This version tries `JSONSerialization`
+    /// first (the safe path), and falls back to the scan only when
+    /// the body isn't valid JSON — preserving graceful behaviour for
+    /// malformed payloads while being correct on the common case.
     static func extractField(_ key: String, from body: String) -> String? {
+        // Fast path: try a real JSON parse.
+        if let data = body.data(using: .utf8),
+           let obj = try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed]) {
+            if let dict = obj as? [String: Any], let value = dict[key] as? String {
+                return value
+            }
+        }
+
+        // Fallback: best-effort manual scan for malformed bodies.
+        // Narrow scope — we only need the two fields the AMA-1805
+        // alert template emits. Returns nil silently so a broken
+        // body doesn't double-fault into a crash.
         let needle = "\"\(key)\""
         guard let keyRange = body.range(of: needle) else { return nil }
         let after = body[keyRange.upperBound...]
-        // Skip optional whitespace + colon + optional whitespace + opening quote.
         guard let colon = after.firstIndex(of: ":") else { return nil }
         let afterColon = after[after.index(after: colon)...]
         guard let openQuote = afterColon.firstIndex(of: "\"") else { return nil }
         let valueStart = afterColon.index(after: openQuote)
-        // Find closing quote that isn't escaped. Cheap version: ignore
-        // backslash-escaped quotes since the alert payload doesn't include them.
         guard let closeQuote = afterColon[valueStart...].firstIndex(of: "\"") else { return nil }
         return String(afterColon[valueStart..<closeQuote])
     }

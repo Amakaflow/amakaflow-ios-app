@@ -793,9 +793,10 @@ class WorkoutEngine: ObservableObject {
         // AMA-1803 P0: clear any stale error from a prior save attempt
         // BEFORE the new attempt fires. The completion screen looks at
         // this to decide whether to render the success or failure path.
-        Task { @MainActor in
-            self.lastSaveError = nil
-        }
+        // CR-fix: WorkoutEngine is @MainActor, postWorkoutCompletion()
+        // is invoked from a MainActor context — direct assignment is
+        // safe and avoids an unnecessary actor hop.
+        self.lastSaveError = nil
 
         Task {
             do {
@@ -839,8 +840,21 @@ class WorkoutEngine: ObservableObject {
                 // CTAError preserves the AMA-1805 server tags
                 // (error_code, lying-success classification) so the
                 // user-facing toast and the Sentry breadcrumb agree.
+                //
+                // CR-fix: this catch lives inside a non-MainActor
+                // Task, so the published property write must hop
+                // through `MainActor.run` to guarantee ordering. A
+                // nested Task hop would have been fire-and-forget
+                // and lost the synchronization guarantee.
+                //
+                // Note: requestId plumbing through APIError is a
+                // separate refactor (Swift enum cases can't take
+                // defaulted associated values, so the APIError shape
+                // needs a new variant or wrapper). Tracked as a
+                // follow-up ticket and intentionally not in scope
+                // here.
                 let ctaError = CTAError.map(error)
-                Task { @MainActor in
+                await MainActor.run {
                     self.lastSaveError = ctaError
                 }
                 // Error is already logged and queued for retry by WorkoutCompletionService
