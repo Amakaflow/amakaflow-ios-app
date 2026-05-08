@@ -11,6 +11,13 @@ import Charts
 struct WorkoutCompletionView: View {
     @ObservedObject var viewModel: WorkoutCompletionViewModel
 
+    /// AMA-1803 P0: the engine drives the honest verdict. If
+    /// `engine.lastSaveError != nil` we replace the optimistic
+    /// "Workout Complete!" header with a failure state and surface
+    /// an `ErrorToast`. Optional so legacy call sites that don't pass
+    /// an engine still compile (the success-path UI still renders).
+    @ObservedObject var engine: WorkoutEngine
+
     @State private var showPulse = true
 
     var body: some View {
@@ -19,18 +26,33 @@ struct WorkoutCompletionView: View {
 
             ScrollView {
                 VStack(spacing: Theme.Spacing.xl) {
-                    // Success icon
-                    successIcon
-
-                    // Title and workout name
-                    VStack(spacing: Theme.Spacing.sm) {
-                        Text("Workout Complete!")
-                            .font(Theme.Typography.title1)
-                            .foregroundColor(Theme.Colors.textPrimary)
-
-                        Text(viewModel.workoutName)
-                            .font(Theme.Typography.body)
-                            .foregroundColor(Theme.Colors.textSecondary)
+                    // AMA-1803 P0: honest verdict header. Render the
+                    // success icon + label only when the post-end save
+                    // either succeeded OR is still in flight. If
+                    // `engine.lastSaveError` is set, the save terminally
+                    // failed and we show the failure header so the user
+                    // is never told they "saved" something that didn't
+                    // persist server-side.
+                    if engine.lastSaveError == nil {
+                        successIcon
+                        VStack(spacing: Theme.Spacing.sm) {
+                            Text("Workout Complete!")
+                                .font(Theme.Typography.title1)
+                                .foregroundColor(Theme.Colors.textPrimary)
+                            Text(viewModel.workoutName)
+                                .font(Theme.Typography.body)
+                                .foregroundColor(Theme.Colors.textSecondary)
+                        }
+                    } else {
+                        failureIcon
+                        VStack(spacing: Theme.Spacing.sm) {
+                            Text("Couldn't save workout")
+                                .font(Theme.Typography.title1)
+                                .foregroundColor(Theme.Colors.textPrimary)
+                            Text(viewModel.workoutName)
+                                .font(Theme.Typography.body)
+                                .foregroundColor(Theme.Colors.textSecondary)
+                        }
                     }
 
                     // Stats grid
@@ -73,6 +95,36 @@ struct WorkoutCompletionView: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .animation(.easeInOut(duration: 0.3), value: viewModel.showComingSoonToast)
             }
+
+            // AMA-1803 P0: save-failure toast. Shown whenever the
+            // post-end completion save terminally failed. The toast
+            // names the action, surfaces the server error_code (when
+            // the body provided one), and offers a Report button that
+            // drops a Sentry breadcrumb correlated to AMA-1805's
+            // server-side capture via `requestId`.
+            if let saveError = engine.lastSaveError {
+                VStack {
+                    Spacer()
+                    ErrorToast(
+                        actionTitle: "Couldn't save workout",
+                        error: saveError,
+                        onRetry: nil, // P0: no retry — queue handles it
+                        onReport: {
+                            ErrorReporter.shared.report(
+                                action: "workout_save",
+                                error: saveError
+                            )
+                        },
+                        onDismiss: {
+                            engine.acknowledgeSaveError()
+                        }
+                    )
+                    .padding(.horizontal, Theme.Spacing.lg)
+                    .padding(.bottom, 24)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .animation(.easeInOut(duration: 0.3), value: engine.lastSaveError == nil)
+            }
         }
         .onAppear {
             // Stop pulse animation after initial effect
@@ -96,6 +148,23 @@ struct WorkoutCompletionView: View {
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundColor(Theme.Colors.readyHigh)
         }
+    }
+
+    /// AMA-1803 P0: shown when the post-end save terminally failed.
+    /// Same shape as `successIcon` so the layout doesn't shift, but
+    /// red and unmistakable. Pairs with the "Couldn't save workout"
+    /// header above it.
+    private var failureIcon: some View {
+        ZStack {
+            Circle()
+                .fill(Color.red.opacity(0.18))
+                .frame(width: 48, height: 48)
+
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundColor(.red)
+        }
+        .accessibilityIdentifier("workout_save_failure_icon")
     }
 
     // MARK: - Stats Grid
@@ -356,7 +425,8 @@ private struct StatCard: View {
             maxHeartRate: 175,
             heartRateSamples: sampleHR,
             onDismiss: {}
-        )
+        ),
+        engine: WorkoutEngine.shared
     )
     .preferredColorScheme(.dark)
 }

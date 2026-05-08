@@ -56,6 +56,14 @@ class WorkoutEngine: ObservableObject {
     @Published private(set) var stateVersion: Int = 0
     @Published private(set) var elapsedSeconds: Int = 0
 
+    /// AMA-1803 P0: surfaces the result of the post-end completion save so
+    /// the completion screen renders an honest verdict instead of an
+    /// optimistic "Workout Complete!" while the backend silently rejected.
+    /// Set in `postWorkoutCompletion`. `nil` = success or save not yet
+    /// attempted; non-nil = the user saw a green checkmark but the row
+    /// was NOT persisted server-side.
+    @Published private(set) var lastSaveError: CTAError?
+
     // Rest state
     @Published private(set) var restRemainingSeconds: Int = 0
     @Published private(set) var isManualRest: Bool = false
@@ -782,6 +790,13 @@ class WorkoutEngine: ObservableObject {
         // In UI test mode, generate mock data
         let (avgHeartRate, activeCalories, hrSamples) = getHealthMetricsWithSamples(durationSeconds: durationSeconds)
 
+        // AMA-1803 P0: clear any stale error from a prior save attempt
+        // BEFORE the new attempt fires. The completion screen looks at
+        // this to decide whether to render the success or failure path.
+        Task { @MainActor in
+            self.lastSaveError = nil
+        }
+
         Task {
             do {
                 let response = try await WorkoutCompletionService.shared.postPhoneWorkoutCompletion(
@@ -818,9 +833,28 @@ class WorkoutEngine: ObservableObject {
                     error: error,
                     context: "WorkoutEngine.postWorkoutCompletion"
                 )
+                // AMA-1803 P0: surface the failure to the UI so the
+                // completion screen can render the honest verdict
+                // instead of an optimistic "Workout Complete!". The
+                // CTAError preserves the AMA-1805 server tags
+                // (error_code, lying-success classification) so the
+                // user-facing toast and the Sentry breadcrumb agree.
+                let ctaError = CTAError.map(error)
+                Task { @MainActor in
+                    self.lastSaveError = ctaError
+                }
                 // Error is already logged and queued for retry by WorkoutCompletionService
             }
         }
+    }
+
+    /// AMA-1803 P0: called by the completion screen when the user
+    /// dismisses the save-failure toast. Pure UI bookkeeping —
+    /// the underlying retry queue in WorkoutCompletionService is
+    /// untouched by this dismissal.
+    @MainActor
+    func acknowledgeSaveError() {
+        lastSaveError = nil
     }
 
     /// Get health metrics with HR samples - uses simulated data in simulation mode, mock data in E2E test mode, otherwise from Watch
