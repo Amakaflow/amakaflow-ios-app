@@ -18,12 +18,64 @@ final class DeepLinkManagerTests: XCTestCase {
         super.setUp()
         sut = DeepLinkManager.shared
         sut.clearPendingImport()
+        sut.clearUnrecognizedLink()
     }
 
     @MainActor
     override func tearDown() {
         sut.clearPendingImport()
+        sut.clearUnrecognizedLink()
         super.tearDown()
+    }
+
+    // MARK: - AMA-1811: unrecognized-link surface
+
+    @MainActor
+    func testHandleIncomingURL_unrecognizedScheme_setsUnrecognizedLink() {
+        // Earlier behaviour returned false silently — user saw their
+        // tap do nothing. Now the manager surfaces the URL so the
+        // root view can render an alert.
+        let url = URL(string: "mailto:hello@example.com")!
+        XCTAssertNil(sut.unrecognizedLink, "precondition: unrecognized starts nil")
+
+        let handled = sut.handleIncomingURL(url)
+
+        XCTAssertFalse(handled, "still returns false for unrecognized scheme")
+        XCTAssertEqual(sut.unrecognizedLink, url,
+                       "unrecognized link must be surfaced for the root view")
+    }
+
+    @MainActor
+    func testHandleIncomingURL_unknownPath_setsUnrecognizedLink() {
+        // Universal Link host matches BUT path is not /import — earlier
+        // behaviour silently fell through.
+        let url = URL(string: "https://amakaflow.com/some/random/page")!
+        let handled = sut.handleIncomingURL(url)
+
+        XCTAssertFalse(handled)
+        XCTAssertEqual(sut.unrecognizedLink, url)
+    }
+
+    @MainActor
+    func testHandleIncomingURL_recognizedURL_doesNotSetUnrecognizedLink() {
+        // Negative case: a valid import deep link must NOT pollute
+        // unrecognizedLink (the alert would fire over the import sheet).
+        let url = URL(string: "amakaflow://import?url=https%3A%2F%2Fyoutu.be%2Fabc123")!
+        let handled = sut.handleIncomingURL(url)
+
+        XCTAssertTrue(handled)
+        XCTAssertNil(sut.unrecognizedLink)
+    }
+
+    @MainActor
+    func testClearUnrecognizedLink_resetsState() {
+        let url = URL(string: "https://elsewhere.com/whatever")!
+        _ = sut.handleIncomingURL(url)
+        XCTAssertEqual(sut.unrecognizedLink, url)
+
+        sut.clearUnrecognizedLink()
+
+        XCTAssertNil(sut.unrecognizedLink)
     }
 
     // MARK: - Universal Link Parsing
