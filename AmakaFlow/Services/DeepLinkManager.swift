@@ -8,6 +8,7 @@
 
 import Foundation
 import Combine
+import Sentry
 
 /// Parsed deep link action
 enum DeepLinkAction: Equatable {
@@ -30,6 +31,21 @@ final class DeepLinkManager: ObservableObject {
     /// Whether the import sheet should be presented
     @Published var showImportSheet: Bool = false
 
+    /// AMA-1811: holds the URL the user tried to open when no route
+    /// matched, so the root view can render a "Couldn't open that
+    /// link" alert. Earlier behaviour was a silent debug-only print
+    /// that the user never saw — meaning a typo in a Universal Link
+    /// or a stale deep-link target failed silently.
+    @Published var unrecognizedLink: URL?
+
+    /// AMA-1811: convenience binding for `.alert(isPresented:)` modifiers.
+    /// Reads as true when `unrecognizedLink` is non-nil; setting false
+    /// clears the URL.
+    var showUnrecognizedLinkAlert: Bool {
+        get { unrecognizedLink != nil }
+        set { if !newValue { unrecognizedLink = nil } }
+    }
+
     private init() {}
 
     // MARK: - Public API
@@ -50,11 +66,35 @@ final class DeepLinkManager: ObservableObject {
             return true
 
         case .unknown:
+            // AMA-1811: surface the unrecognized link to the user
+            // instead of silently dropping it. Earlier behaviour was
+            // a debug-only print — invisible in TestFlight builds AND
+            // invisible to ops. The user just saw their tap do
+            // nothing.
             #if DEBUG
             print("[DeepLinkManager] Unrecognized deep link: \(url.absoluteString)")
             #endif
+            unrecognizedLink = url
+            SentrySDK.capture(message: "deep_link.unrecognized") { scope in
+                scope.setTag(value: "deep_link", key: "subsystem")
+                scope.setTag(value: url.path, key: "path")
+                if let host = url.host {
+                    scope.setTag(value: host, key: "host")
+                }
+                if let scheme = url.scheme {
+                    scope.setTag(value: scheme, key: "scheme")
+                }
+                scope.setLevel(SentryLevel.warning)
+                scope.setExtra(value: url.absoluteString, key: "url")
+            }
             return false
         }
+    }
+
+    /// AMA-1811: dismiss the unrecognized-link alert. Called from the
+    /// root view's `.alert(...).button(...)` action.
+    func clearUnrecognizedLink() {
+        unrecognizedLink = nil
     }
 
     /// Dismiss the import sheet and clear pending state

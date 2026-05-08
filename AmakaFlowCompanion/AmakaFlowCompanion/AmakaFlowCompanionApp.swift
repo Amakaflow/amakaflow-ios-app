@@ -223,6 +223,24 @@ struct AmakaFlowCompanionApp: App {
                                 }
                             }
                         }
+                        // AMA-1811: alert when a deep link doesn't match
+                        // any route. Earlier behaviour was a silent
+                        // debug-only print — TestFlight users saw
+                        // their tap do nothing. Sentry breadcrumb is
+                        // dropped from the manager itself; this
+                        // surface is purely the user-facing message.
+                        .alert(
+                            "Couldn't open that link",
+                            isPresented: Binding(
+                                get: { deepLinkManager.unrecognizedLink != nil },
+                                set: { if !$0 { deepLinkManager.clearUnrecognizedLink() } }
+                            ),
+                            presenting: deepLinkManager.unrecognizedLink
+                        ) { _ in
+                            Button("OK") { deepLinkManager.clearUnrecognizedLink() }
+                        } message: { url in
+                            Text("AmakaFlow doesn't know how to open \(url.absoluteString). The link may be outdated or for a different app.")
+                        }
                 } else {
                     unpairedRoot
                 }
