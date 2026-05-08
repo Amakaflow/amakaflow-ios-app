@@ -201,6 +201,59 @@ final class CTAErrorTests: XCTestCase {
         XCTAssertTrue(CTAError.network(code: .dnsLookupFailed).isRetryable)
     }
 
+    // MARK: - AnnotatedAPIError unwrapping (AMA-1808 regression)
+
+    func test_map_AnnotatedAPIError_propagates_requestId_into_CTAError() {
+        // CR-fix (AMA-1808): the AnnotatedAPIError wrapper carries the
+        // X-Request-ID extracted from the failing HTTPURLResponse.
+        // CTAError.map MUST surface that into the resulting variant
+        // so the user-facing Report breadcrumb joins back to AMA-1805
+        // server alerts by request_id.
+        let annotated = AnnotatedAPIError(
+            .serverErrorWithBody(
+                200,
+                "{\"success\":false,\"error_code\":\"WIRED\"}"
+            ),
+            requestId: "req-from-response-header"
+        )
+        let cta = CTAError.map(annotated)
+
+        XCTAssertEqual(cta.requestId, "req-from-response-header",
+                       "AnnotatedAPIError.requestId must propagate through CTAError.map")
+        if case .lyingSuccess(_, let errorCode, let reqId) = cta {
+            XCTAssertEqual(errorCode, "WIRED")
+            XCTAssertEqual(reqId, "req-from-response-header")
+        } else {
+            XCTFail("expected .lyingSuccess after unwrapping annotated wrapper, got \(cta)")
+        }
+    }
+
+    func test_map_AnnotatedAPIError_with_nil_requestId_falls_back_to_caller_hint() {
+        // If the wrapper happened to be missing the header (server
+        // didn't set X-Request-ID), the caller-supplied hint takes
+        // over so we never silently drop correlation when one side
+        // can supply a value.
+        let annotated = AnnotatedAPIError(.unauthorized, requestId: nil)
+        let cta = CTAError.map(annotated, requestId: "fallback-id")
+
+        XCTAssertEqual(cta.requestId, "fallback-id")
+        if case .unauthenticated = cta {
+            // ok
+        } else {
+            XCTFail("expected .unauthenticated, got \(cta)")
+        }
+    }
+
+    func test_map_AnnotatedAPIError_with_both_set_prefers_wrapper() {
+        // When both the wrapper AND the caller hint are populated,
+        // the wrapper wins (it's closer to the actual response).
+        let annotated = AnnotatedAPIError(.serverError(503), requestId: "from-header")
+        let cta = CTAError.map(annotated, requestId: "from-caller")
+
+        XCTAssertEqual(cta.requestId, "from-header",
+                       "wrapper requestId takes precedence over caller hint")
+    }
+
     // MARK: - userMessage edge cases (CR fix for lyingSuccess copy)
 
     func test_userMessage_lying_success_with_only_errorCode_keeps_it() {

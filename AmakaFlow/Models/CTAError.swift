@@ -177,6 +177,15 @@ public extension CTAError {
     /// Translate an underlying error from APIService into a CTAError.
     /// Centralised so view-models never see the raw error type.
     static func map(_ error: Error, requestId: String? = nil) -> CTAError {
+        // AMA-1808: AnnotatedAPIError carries the X-Request-ID extracted
+        // at the failing HTTPURLResponse so the user-facing Report
+        // breadcrumb can join AMA-1805's server alerts. Unwrap and use
+        // its embedded requestId, falling back to any caller-supplied
+        // hint if the wrapper happened to be missing the header.
+        if let annotated = error as? AnnotatedAPIError {
+            return map(annotated.underlying, requestId: annotated.requestId ?? requestId)
+        }
+
         // AMA-271 detects success:false in the response body and rethrows
         // as APIError.serverErrorWithBody(200, body). Pull that apart.
         if let apiError = error as? APIError {

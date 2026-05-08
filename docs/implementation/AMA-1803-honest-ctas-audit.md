@@ -19,6 +19,7 @@ For every primary CTA that triggers a network call:
 3. **Result-typed view-model methods.** Every CTA's view-model method returns `Result<Success, CTAError>` (or `async throws -> Success`) so the View knows whether to dismiss or stay-and-show-toast. No more `Bool` returns that conflate "request sent" with "request succeeded."
 
 4. **`CTAError` shape:**
+
    ```swift
    enum CTAError: Error {
        case network(URLError)              // .notConnectedToInternet, .timedOut, …
@@ -28,6 +29,7 @@ For every primary CTA that triggers a network call:
        case unauthenticated
    }
    ```
+
    Carries `requestId` on every variant for Sentry correlation.
 
 5. **Unit tests per CTA.** Mock URLProtocol or APIService injection. Test cases:
