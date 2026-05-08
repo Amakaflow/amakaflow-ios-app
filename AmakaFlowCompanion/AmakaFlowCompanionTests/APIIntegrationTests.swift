@@ -472,7 +472,8 @@ final class CoachViewModelTests: XCTestCase {
 
         await vm.sendMessage("Hello")
         XCTAssertEqual(vm.messages.count, 0) // User message removed on failure
-        XCTAssertNotNil(vm.errorMessage)
+        // AMA-1803 P2: errorMessage replaced by typed CTAError.
+        XCTAssertNotNil(vm.error)
     }
 
     @MainActor

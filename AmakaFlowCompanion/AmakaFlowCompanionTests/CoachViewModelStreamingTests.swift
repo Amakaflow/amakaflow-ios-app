@@ -106,15 +106,91 @@ final class CoachViewModelStreamingTests: XCTestCase {
         XCTAssertTrue(viewModel.completedStages.contains(.searching))
     }
 
-    func testErrorEventSetsErrorMessage() async {
+    func testErrorEventSetsErrorAndRateLimit() async {
+        // AMA-1803 P2: SSE `.error` events now route through CTAError
+        // (.lyingSuccess) so the View can render Retry/Report and
+        // surface the server's `type` as error_code. Rate-limit gets
+        // its dedicated banner via rateLimitInfo, separately.
         mockStreamService.eventsToYield = [
             .error(type: "rate_limit_exceeded", message: "Too many requests", usage: 50, limit: 50)
         ]
 
         await viewModel.sendMessage("Test")
 
-        XCTAssertNotNil(viewModel.errorMessage)
+        XCTAssertNotNil(viewModel.error)
         XCTAssertEqual(viewModel.rateLimitInfo?.usage, 50)
+        if case .lyingSuccess(let message, let errorCode, _) = viewModel.error {
+            XCTAssertEqual(message, "Too many requests")
+            XCTAssertEqual(errorCode, "rate_limit_exceeded")
+        } else {
+            XCTFail("expected .lyingSuccess on SSE .error event, got \(String(describing: viewModel.error))")
+        }
+    }
+
+    // MARK: - AMA-1803 P2: typed CTAError tests
+
+    func testSSEErrorWithoutRateLimitSurfacesAsLyingSuccessCTAError() async {
+        // Non-rate-limit error event still classifies as
+        // lyingSuccess with the server's type as error_code.
+        mockStreamService.eventsToYield = [
+            .error(type: "coach_unavailable", message: "Coach is offline", usage: nil, limit: nil)
+        ]
+
+        await viewModel.sendMessage("Hi")
+
+        guard case .lyingSuccess(let msg, let code, _) = viewModel.error else {
+            return XCTFail("expected .lyingSuccess, got \(String(describing: viewModel.error))")
+        }
+        XCTAssertEqual(msg, "Coach is offline")
+        XCTAssertEqual(code, "coach_unavailable")
+        XCTAssertNil(viewModel.rateLimitInfo, "non-rate-limit must not populate rateLimitInfo")
+        XCTAssertFalse(viewModel.error?.isRetryable ?? true,
+                       "lyingSuccess is deterministic — retry just re-fails")
+    }
+
+    func testRetryLastMessageReSendsAndClearsError() async {
+        // First call fails with a server-reported error.
+        mockStreamService.eventsToYield = [
+            .error(type: "transient", message: "Try again", usage: nil, limit: nil)
+        ]
+        await viewModel.sendMessage("Hello coach")
+        XCTAssertNotNil(viewModel.error)
+
+        // Retry: queue a clean response. retryLastMessage re-sends the
+        // last user message and clears the error if the new run succeeds.
+        mockStreamService.eventsToYield = [
+            .messageStart(sessionId: "s1", traceId: nil),
+            .contentDelta(text: "Hi back"),
+            .messageEnd(sessionId: "s1", tokensUsed: 5, latencyMs: 50)
+        ]
+        await viewModel.retryLastMessage()
+
+        XCTAssertNil(viewModel.error, "successful retry must clear the typed error")
+    }
+
+    func testAcknowledgeErrorClearsTypedError() async {
+        mockStreamService.eventsToYield = [
+            .error(type: "x", message: "y", usage: nil, limit: nil)
+        ]
+        await viewModel.sendMessage("Trigger")
+        XCTAssertNotNil(viewModel.error)
+
+        viewModel.acknowledgeError()
+
+        XCTAssertNil(viewModel.error, "acknowledgeError must drop the banner")
+    }
+
+    func testStartNewChatClearsTypedErrorToo() async {
+        mockStreamService.eventsToYield = [
+            .error(type: "x", message: "y", usage: nil, limit: nil)
+        ]
+        await viewModel.sendMessage("Trigger")
+        XCTAssertNotNil(viewModel.error)
+
+        viewModel.startNewChat()
+
+        XCTAssertNil(viewModel.error)
+        XCTAssertNil(viewModel.rateLimitInfo)
     }
 
     func testNewChatClearsState() async {

@@ -192,7 +192,8 @@ final class Phase2CoachViewModelTests: XCTestCase {
 
         // Both user and assistant messages removed when stream errors with no content
         XCTAssertEqual(viewModel.messages.count, 0)
-        XCTAssertNotNil(viewModel.errorMessage)
+        // AMA-1803 P2: errorMessage replaced by typed CTAError.
+        XCTAssertNotNil(viewModel.error)
         XCTAssertFalse(viewModel.isStreaming)
     }
 
