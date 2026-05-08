@@ -26,14 +26,18 @@ struct WorkoutCompletionView: View {
 
             ScrollView {
                 VStack(spacing: Theme.Spacing.xl) {
-                    // AMA-1803 P0: honest verdict header. Render the
-                    // success icon + label only when the post-end save
-                    // either succeeded OR is still in flight. If
-                    // `engine.lastSaveError` is set, the save terminally
-                    // failed and we show the failure header so the user
-                    // is never told they "saved" something that didn't
-                    // persist server-side.
-                    if engine.lastSaveError == nil {
+                    // AMA-1803 P1 fix (CR major on PR #181): honest
+                    // verdict header keys on the engine's tri-state
+                    // saveStatus, not the nil-vs-non-nil error flag.
+                    // The earlier P0 implementation showed
+                    // "Workout Complete!" whenever lastSaveError == nil
+                    // — which was ALSO true during the network round-
+                    // trip. The user saw the green checkmark BEFORE
+                    // the backend confirmed the save persisted. This
+                    // fix splits idle/inFlight/succeeded/failed so
+                    // each UI state is explicit.
+                    switch engine.saveStatus {
+                    case .idle, .succeeded:
                         successIcon
                         VStack(spacing: Theme.Spacing.sm) {
                             Text("Workout Complete!")
@@ -43,7 +47,17 @@ struct WorkoutCompletionView: View {
                                 .font(Theme.Typography.body)
                                 .foregroundColor(Theme.Colors.textSecondary)
                         }
-                    } else {
+                    case .inFlight:
+                        savingIcon
+                        VStack(spacing: Theme.Spacing.sm) {
+                            Text("Saving workout…")
+                                .font(Theme.Typography.title1)
+                                .foregroundColor(Theme.Colors.textPrimary)
+                            Text(viewModel.workoutName)
+                                .font(Theme.Typography.body)
+                                .foregroundColor(Theme.Colors.textSecondary)
+                        }
+                    case .failed:
                         failureIcon
                         VStack(spacing: Theme.Spacing.sm) {
                             Text("Couldn't save workout")
@@ -166,6 +180,23 @@ struct WorkoutCompletionView: View {
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundColor(Theme.Colors.readyHigh)
         }
+    }
+
+    /// AMA-1803 P1: shown while the post-end save is in flight.
+    /// Same circle dimensions as success/failure so the layout
+    /// doesn't shift between states. A spinner keeps the user
+    /// honest that the operation is still pending.
+    private var savingIcon: some View {
+        ZStack {
+            Circle()
+                .fill(Theme.Colors.accentBlue.opacity(0.18))
+                .frame(width: 48, height: 48)
+
+            ProgressView()
+                .progressViewStyle(.circular)
+                .tint(Theme.Colors.accentBlue)
+        }
+        .accessibilityIdentifier("workout_save_in_flight_icon")
     }
 
     /// AMA-1803 P0: shown when the post-end save terminally failed.

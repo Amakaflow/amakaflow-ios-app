@@ -49,11 +49,21 @@ final class ErrorReporter: ErrorReporting {
             if let requestId = error.requestId {
                 scope.setTag(value: requestId, key: "request_id")
             }
+            // CR-fix on PR #181: extract error_code from BOTH the
+            // lyingSuccess variant AND the http variant when the
+            // body carries one. Earlier draft only tagged for
+            // lyingSuccess, so a real 4xx/5xx with a JSON body like
+            // `{"error_code":"DUP"}` lost the tag and ops couldn't
+            // join the user report to AMA-1805's server alert.
             if case .lyingSuccess(_, let errorCode, _) = error, let code = errorCode {
                 scope.setTag(value: code, key: "error_code")
             }
-            if case .http(let status, _, _) = error {
+            if case .http(let status, let body, _) = error {
                 scope.setTag(value: "\(status)", key: "status_code")
+                if let body = body, !body.isEmpty,
+                   let code = CTAError.extractField("error_code", from: body) {
+                    scope.setTag(value: code, key: "error_code")
+                }
             }
             if let endpoint = endpoint {
                 scope.setTag(value: endpoint, key: "endpoint")

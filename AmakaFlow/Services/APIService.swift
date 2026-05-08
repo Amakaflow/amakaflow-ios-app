@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Sentry
 
 /// Service for API communication with backend
 class APIService {
@@ -1040,9 +1041,22 @@ class APIService {
                 // Retry the request with new token
                 return try await postWorkoutCompletion(completion, isRetry: true)
             } else {
-                // Refresh failed - device not found or needs re-pair
+                // Refresh failed - device not found or needs re-pair.
+                // CR-fix on PR #181: also drop a Sentry breadcrumb so
+                // ops sees the silent-refresh-failure pattern in the
+                // same alert stream as AMA-1805's server-side capture.
+                // Without this, the only signal was a console print
+                // that nobody tails.
                 print("[APIService] Token refresh failed, marking auth invalid")
                 logError(endpoint: endpoint, method: "POST", statusCode: 401, response: responseString, error: APIError.unauthorized)
+                SentrySDK.capture(message: "auth.silent_refresh_failed") { scope in
+                    scope.setTag(value: "auth", key: "subsystem")
+                    scope.setTag(value: endpoint, key: "endpoint")
+                    if let requestId = requestId {
+                        scope.setTag(value: requestId, key: "request_id")
+                    }
+                    scope.setLevel(SentryLevel.warning)
+                }
                 throw AnnotatedAPIError(.unauthorized, requestId: requestId)
             }
         default:

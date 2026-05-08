@@ -115,9 +115,13 @@ public extension CTAError {
         }
     }
 
-    /// Codes that genuinely benefit from another attempt. The list is
-    /// conservative: anything not on it is treated as deterministic
-    /// (no Retry shown).
+    /// Codes that genuinely benefit from another attempt — narrow,
+    /// connectivity-only list per CR-fix on PR #181. Earlier draft
+    /// included codes like `.serverCertificateUntrusted`,
+    /// `.clientCertificateRequired/Rejected`, and `.httpTooManyRedirects`
+    /// which are deterministic configuration / handshake failures —
+    /// retrying just re-fails. Anything not on this list is treated
+    /// as deterministic (no Retry shown).
     static func isTransientURLError(_ code: URLError.Code) -> Bool {
         switch code {
         case .timedOut,
@@ -130,11 +134,6 @@ public extension CTAError {
              .cannotFindHost,
              .dnsLookupFailed,
              .resourceUnavailable,
-             .secureConnectionFailed,
-             .serverCertificateUntrusted, // user might be on captive wifi
-             .clientCertificateRequired,
-             .clientCertificateRejected,
-             .httpTooManyRedirects,
              .requestBodyStreamExhausted,
              .backgroundSessionWasDisconnected:
             return true
@@ -192,7 +191,16 @@ public extension CTAError {
             switch apiError {
             case .unauthorized:
                 return .unauthenticated(requestId: requestId)
-            case .invalidURL, .invalidResponse, .notImplemented, .notFound:
+            case .notFound:
+                // CR-fix on PR #181: APIError.notFound is a real
+                // 404 — surface it as `.http(404)` so the View shows
+                // the same "couldn't find that on the server"
+                // verdict as any other 4xx, AND so isRetryable
+                // correctly returns false (404 is deterministic;
+                // collapsing into .unknown previously made the
+                // toast generic and Retry-eligible by accident).
+                return .http(status: 404, body: nil, requestId: requestId)
+            case .invalidURL, .invalidResponse, .notImplemented:
                 return .unknown(
                     description: apiError.errorDescription ?? "Unexpected error",
                     requestId: requestId
