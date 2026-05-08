@@ -23,6 +23,7 @@
 		43F9F2E9369F4546B3AF005A /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D9B67C13E34BAE804A9359 /* HistoryView.swift */; };
 		44201694D9E295D587684DBB /* ShareImportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44D7C6673CB9BE868FC1006 /* ShareImportViewModel.swift */; };
 		444EFC17D69346B3B93C9ECA /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11B5892FB68A40CB890E3630 /* KeychainHelper.swift */; };
+		B44263A997564169A4DE795A /* KeychainClerkTokenPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CA747C5C41B432C9BEE9C9F /* KeychainClerkTokenPersistence.swift */; };
 		5016188D64111FBBE44B4A8D /* FollowAlongPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E90D82F541D1AF7AE58A29B /* FollowAlongPlayerView.swift */; };
 		521047C38D23474889C39F35 /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AB8DFBA16CE406C95456EAD /* CalendarView.swift */; };
 		52BE28AB8A3D773F016F14E5 /* PlanRevealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAC6A807F5A4820B05339B99 /* PlanRevealView.swift */; };
@@ -427,6 +428,7 @@
 		0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionView.swift; path = ../AmakaFlow/Views/WorkoutCompletionView.swift; sourceTree = SOURCE_ROOT; };
 		0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionViewModel.swift; path = ../AmakaFlow/ViewModels/WorkoutCompletionViewModel.swift; sourceTree = SOURCE_ROOT; };
 		11B5892FB68A40CB890E3630 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainHelper.swift; path = ../AmakaFlow/Services/KeychainHelper.swift; sourceTree = SOURCE_ROOT; };
+		5CA747C5C41B432C9BEE9C9F /* KeychainClerkTokenPersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainClerkTokenPersistence.swift; path = ../AmakaFlow/Services/KeychainClerkTokenPersistence.swift; sourceTree = SOURCE_ROOT; };
 		154769090318840B518509BF /* FollowAlongPlayerViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FollowAlongPlayerViewModel.swift; path = ../AmakaFlow/ViewModels/FollowAlongPlayerViewModel.swift; sourceTree = SOURCE_ROOT; };
 		1555CD79DFEAA04822AEB965 /* ActivityFeedViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ActivityFeedViewModel.swift; path = ../AmakaFlow/ViewModels/ActivityFeedViewModel.swift; sourceTree = "<group>"; };
 		167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FollowAlongPlayerViewModelTests.swift; path = AmakaFlowCompanionTests/FollowAlongPlayerViewModelTests.swift; sourceTree = SOURCE_ROOT; };
@@ -1172,6 +1174,7 @@
 				08D9B67C13E34BAE804A9359 /* HistoryView.swift */,
 				5F86F482904144B39B954F6A /* Environment.swift */,
 				11B5892FB68A40CB890E3630 /* KeychainHelper.swift */,
+				5CA747C5C41B432C9BEE9C9F /* KeychainClerkTokenPersistence.swift */,
 				D33PL1NKMAN4G3R0001 /* DeepLinkManager.swift */,
 				85D3757E5B284286B341C75C /* PairingService.swift */,
 				AMA1620AUTHVM001A /* AuthViewModel.swift */,
@@ -1572,6 +1575,7 @@
 			files = (
 				27599809E31D40308DBFA93A /* Environment.swift in Sources */,
 				444EFC17D69346B3B93C9ECA /* KeychainHelper.swift in Sources */,
+				B44263A997564169A4DE795A /* KeychainClerkTokenPersistence.swift in Sources */,
 				D33PL1NKMAN4G3R0002 /* DeepLinkManager.swift in Sources */,
 				AK00XP001B /* XPBarView.swift in Sources */,
 				AK00XP002B /* LevelUpCelebrationView.swift in Sources */,

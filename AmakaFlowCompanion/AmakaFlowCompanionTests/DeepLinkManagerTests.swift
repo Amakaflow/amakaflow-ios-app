@@ -28,38 +28,44 @@ final class DeepLinkManagerTests: XCTestCase {
         super.tearDown()
     }
 
-    // MARK: - AMA-1811: unrecognized-link surface
+    // MARK: - AMA-1811 / AMA-1809: unrecognized-link surface
+    // AMA-1809 (CR): handleIncomingURL no longer reports for unknown URLs.
+    // The caller in AmakaFlowCompanionApp invokes reportUnrecognizedLink(_:)
+    // only after every handler (importer, Garmin, app-surface) has declined.
+    // These tests reflect the new contract.
 
     @MainActor
-    func testHandleIncomingURL_unrecognizedScheme_setsUnrecognizedLink() {
-        // Earlier behaviour returned false silently — user saw their
-        // tap do nothing. Now the manager surfaces the URL so the
-        // root view can render an alert.
+    func testHandleIncomingURL_unrecognizedScheme_returnsFalseWithoutSideEffects() {
         let url = URL(string: "mailto:hello@example.com")!
         XCTAssertNil(sut.unrecognizedLink, "precondition: unrecognized starts nil")
 
         let handled = sut.handleIncomingURL(url)
 
-        XCTAssertFalse(handled, "still returns false for unrecognized scheme")
-        XCTAssertEqual(sut.unrecognizedLink, url,
-                       "unrecognized link must be surfaced for the root view")
+        XCTAssertFalse(handled)
+        XCTAssertNil(sut.unrecognizedLink,
+                     "importer must NOT preempt Garmin/app-surface handlers")
     }
 
     @MainActor
-    func testHandleIncomingURL_unknownPath_setsUnrecognizedLink() {
-        // Universal Link host matches BUT path is not /import — earlier
-        // behaviour silently fell through.
+    func testHandleIncomingURL_unknownPath_returnsFalseWithoutSideEffects() {
         let url = URL(string: "https://amakaflow.com/some/random/page")!
         let handled = sut.handleIncomingURL(url)
 
         XCTAssertFalse(handled)
-        XCTAssertEqual(sut.unrecognizedLink, url)
+        XCTAssertNil(sut.unrecognizedLink)
+    }
+
+    @MainActor
+    func testReportUnrecognizedLink_setsUnrecognizedLink() {
+        let url = URL(string: "mailto:hello@example.com")!
+        sut.reportUnrecognizedLink(url)
+
+        XCTAssertEqual(sut.unrecognizedLink, url,
+                       "explicit report from the dispatch tail must surface the URL")
     }
 
     @MainActor
     func testHandleIncomingURL_recognizedURL_doesNotSetUnrecognizedLink() {
-        // Negative case: a valid import deep link must NOT pollute
-        // unrecognizedLink (the alert would fire over the import sheet).
         let url = URL(string: "amakaflow://import?url=https%3A%2F%2Fyoutu.be%2Fabc123")!
         let handled = sut.handleIncomingURL(url)
 
@@ -68,9 +74,24 @@ final class DeepLinkManagerTests: XCTestCase {
     }
 
     @MainActor
+    func testHandleIncomingURL_recognizedURL_clearsPreviousUnrecognizedLink() {
+        // Regression: a stale alert from a prior unknown URL must not
+        // linger over a subsequent successful import.
+        let stale = URL(string: "https://amakaflow.com/unknown")!
+        sut.reportUnrecognizedLink(stale)
+        XCTAssertEqual(sut.unrecognizedLink, stale)
+
+        let good = URL(string: "amakaflow://import?url=https%3A%2F%2Fyoutu.be%2Fabc123")!
+        let handled = sut.handleIncomingURL(good)
+
+        XCTAssertTrue(handled)
+        XCTAssertNil(sut.unrecognizedLink)
+    }
+
+    @MainActor
     func testClearUnrecognizedLink_resetsState() {
         let url = URL(string: "https://elsewhere.com/whatever")!
-        _ = sut.handleIncomingURL(url)
+        sut.reportUnrecognizedLink(url)
         XCTAssertEqual(sut.unrecognizedLink, url)
 
         sut.clearUnrecognizedLink()
