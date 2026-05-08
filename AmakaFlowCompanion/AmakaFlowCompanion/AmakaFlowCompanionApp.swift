@@ -246,7 +246,11 @@ struct AmakaFlowCompanionApp: App {
                         ) { _ in
                             Button("OK") { deepLinkManager.clearUnrecognizedLink() }
                         } message: { url in
-                            Text("AmakaFlow doesn't know how to open \(url.absoluteString). The link may be outdated or for a different app.")
+                            // AMA-1809 (CR): redact query/fragment so a deep
+                            // link that happens to carry tokens or emails
+                            // doesn't surface verbatim in the alert.
+                            let safeURL = "\(url.scheme ?? "")://\(url.host ?? "")\(url.path)"
+                            Text("AmakaFlow doesn't know how to open \(safeURL). The link may be outdated or for a different app.")
                         }
                 } else {
                     unpairedRoot
