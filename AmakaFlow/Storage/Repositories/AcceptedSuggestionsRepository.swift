@@ -60,6 +60,18 @@ nonisolated final class AcceptedSuggestionsRepository {
     /// Sync queue gets a `delete` enqueue per superseded row + an `upsert`
     /// for the new pair so the backend stays consistent.
     func replacePriorAcceptsAndInsert(userId: String, suggestion: LocalAcceptedSuggestion, event: LocalWorkoutEvent, enqueueSync: Bool = true) throws {
+        // CR: invariant guard. Without it a mismatched `userId` arg would
+        // tombstone one user's live rows in the same transaction that
+        // inserts another user's pair — silent cross-user data corruption.
+        guard suggestion.userId == userId,
+              event.userId == userId,
+              suggestion.workoutEventId == event.id else {
+            throw NSError(
+                domain: "AcceptedSuggestionsRepository",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "replacePriorAcceptsAndInsert invariant: suggestion/event must belong to userId and pair via workout_event_id"]
+            )
+        }
         let timestamp = now()
         var newSuggestion = suggestion
         var newEvent = event
@@ -81,7 +93,12 @@ nonisolated final class AcceptedSuggestionsRepository {
                 if enqueueSync {
                     try syncQueue.enqueue(in: db, resourceType: LocalAcceptedSuggestion.databaseTableName, resourceId: prior.id, op: "delete", payload: try encode(prior))
                 }
-                if var priorEvent = try LocalWorkoutEvent.fetchOne(db, key: prior.id), priorEvent.deletedAt == nil {
+                // CR: tombstone the workout_event via the FK
+                // (`workoutEventId`) not the suggestion's own id. Today
+                // they happen to match but the schema allows divergence.
+                if let priorEventId = prior.workoutEventId,
+                   var priorEvent = try LocalWorkoutEvent.fetchOne(db, key: priorEventId),
+                   priorEvent.deletedAt == nil {
                     priorEvent.deletedAt = timestamp
                     priorEvent.updatedAt = timestamp
                     try priorEvent.update(db)
