@@ -23,6 +23,8 @@
 		43F9F2E9369F4546B3AF005A /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D9B67C13E34BAE804A9359 /* HistoryView.swift */; };
 		44201694D9E295D587684DBB /* ShareImportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44D7C6673CB9BE868FC1006 /* ShareImportViewModel.swift */; };
 		444EFC17D69346B3B93C9ECA /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11B5892FB68A40CB890E3630 /* KeychainHelper.swift */; };
+		2AA14DE2516D46F0BFC23FC2 /* Client.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EDC25041B83402BB9EDF84D /* Client.swift */; };
+		C99C46C4FE4649B19138152F /* Types.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D9C8E90B1514410A5656A20 /* Types.swift */; };
 		B44263A997564169A4DE795A /* KeychainClerkTokenPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CA747C5C41B432C9BEE9C9F /* KeychainClerkTokenPersistence.swift */; };
 		5016188D64111FBBE44B4A8D /* FollowAlongPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E90D82F541D1AF7AE58A29B /* FollowAlongPlayerView.swift */; };
 		521047C38D23474889C39F35 /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AB8DFBA16CE406C95456EAD /* CalendarView.swift */; };
@@ -211,6 +213,8 @@
 		AMA1620AUTHVM001B /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620AUTHVM001A /* AuthViewModel.swift */; };
 		AMA1620CLKKIT01B /* ClerkKit in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1620CLKKIT01P /* ClerkKit */; };
 		AMA1791GRDBFRAME /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1791GRDBPROD /* GRDB */; };
+		056DCE6864994871816A3AF9 /* OpenAPIRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = 5428DFDDAABA4C78929FAD58 /* OpenAPIRuntime */; };
+		718A23C41FF542228DF9232B /* OpenAPIURLSession in Frameworks */ = {isa = PBXBuildFile; productRef = 3D2A2E0648804CD7A88CF287 /* OpenAPIURLSession */; };
 		AMA1620CLKUI001B /* ClerkKitUI in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1620CLKUI001P /* ClerkKitUI */; };
 		AMA1620UITEST01B /* UITestEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620UITEST01A /* UITestEnvironment.swift */; };
 		B1910EAEA57AF40FBA6FEDD3 /* FollowAlongPlayerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */; };
@@ -428,6 +432,8 @@
 		0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionView.swift; path = ../AmakaFlow/Views/WorkoutCompletionView.swift; sourceTree = SOURCE_ROOT; };
 		0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionViewModel.swift; path = ../AmakaFlow/ViewModels/WorkoutCompletionViewModel.swift; sourceTree = SOURCE_ROOT; };
 		11B5892FB68A40CB890E3630 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainHelper.swift; path = ../AmakaFlow/Services/KeychainHelper.swift; sourceTree = SOURCE_ROOT; };
+		0EDC25041B83402BB9EDF84D /* Client.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Client.swift; path = ../AmakaFlow/Generated/Client.swift; sourceTree = SOURCE_ROOT; };
+		7D9C8E90B1514410A5656A20 /* Types.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Types.swift; path = ../AmakaFlow/Generated/Types.swift; sourceTree = SOURCE_ROOT; };
 		5CA747C5C41B432C9BEE9C9F /* KeychainClerkTokenPersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainClerkTokenPersistence.swift; path = ../AmakaFlow/Services/KeychainClerkTokenPersistence.swift; sourceTree = SOURCE_ROOT; };
 		154769090318840B518509BF /* FollowAlongPlayerViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FollowAlongPlayerViewModel.swift; path = ../AmakaFlow/ViewModels/FollowAlongPlayerViewModel.swift; sourceTree = SOURCE_ROOT; };
 		1555CD79DFEAA04822AEB965 /* ActivityFeedViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ActivityFeedViewModel.swift; path = ../AmakaFlow/ViewModels/ActivityFeedViewModel.swift; sourceTree = "<group>"; };
@@ -841,6 +847,8 @@
 				F84E22952ED0DA0200459747 /* HealthKit.framework in Frameworks */,
 				F84E22992ED0DA1F00459747 /* WorkoutKitSync in Frameworks */,
 				AMA1791GRDBFRAME /* GRDB in Frameworks */,
+				056DCE6864994871816A3AF9 /* OpenAPIRuntime in Frameworks */,
+				718A23C41FF542228DF9232B /* OpenAPIURLSession in Frameworks */,
 				F8C125B22EFAC00000459747 /* ConnectIQ in Frameworks */,
 				F84E22972ED0DA0F00459747 /* WatchConnectivity.framework in Frameworks */,
 				F880AD612F09559A00E8D7D3 /* BuildFile in Frameworks */,
@@ -1174,6 +1182,8 @@
 				08D9B67C13E34BAE804A9359 /* HistoryView.swift */,
 				5F86F482904144B39B954F6A /* Environment.swift */,
 				11B5892FB68A40CB890E3630 /* KeychainHelper.swift */,
+				0EDC25041B83402BB9EDF84D /* Client.swift */,
+				7D9C8E90B1514410A5656A20 /* Types.swift */,
 				5CA747C5C41B432C9BEE9C9F /* KeychainClerkTokenPersistence.swift */,
 				D33PL1NKMAN4G3R0001 /* DeepLinkManager.swift */,
 				85D3757E5B284286B341C75C /* PairingService.swift */,
@@ -1264,6 +1274,8 @@
 				AMA1620CLKKIT01P /* ClerkKit */,
 				AMA1620CLKUI001P /* ClerkKitUI */,
 				AMA1791GRDBPROD /* GRDB */,
+				5428DFDDAABA4C78929FAD58 /* OpenAPIRuntime */,
+				3D2A2E0648804CD7A88CF287 /* OpenAPIURLSession */,
 			);
 			productName = AmakaFlowCompanion;
 			productReference = F84E21742ED0B0C800459747 /* AmakaFlowCompanion.app */;
@@ -1454,6 +1466,8 @@
 				XCT4H34LTH00000003 /* XCRemoteSwiftPackageReference "XCTHealthKit" */,
 				AMA1620CLERKPKG /* XCRemoteSwiftPackageReference "clerk-ios" */,
 				AMA1791GRDBPKG /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				09208E7C85544D5D93929812 /* XCRemoteSwiftPackageReference "swift-openapi-runtime" */,
+				02CC5FB9C29845DF83B3F0CB /* XCRemoteSwiftPackageReference "swift-openapi-urlsession" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F84E21752ED0B0C800459747 /* Products */;
@@ -1575,6 +1589,8 @@
 			files = (
 				27599809E31D40308DBFA93A /* Environment.swift in Sources */,
 				444EFC17D69346B3B93C9ECA /* KeychainHelper.swift in Sources */,
+				2AA14DE2516D46F0BFC23FC2 /* Client.swift in Sources */,
+				C99C46C4FE4649B19138152F /* Types.swift in Sources */,
 				B44263A997564169A4DE795A /* KeychainClerkTokenPersistence.swift in Sources */,
 				D33PL1NKMAN4G3R0002 /* DeepLinkManager.swift in Sources */,
 				AK00XP001B /* XPBarView.swift in Sources */,
@@ -2640,6 +2656,22 @@
 				minimumVersion = 7.0.0;
 			};
 		};
+		09208E7C85544D5D93929812 /* XCRemoteSwiftPackageReference "swift-openapi-runtime" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-openapi-runtime";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+		02CC5FB9C29845DF83B3F0CB /* XCRemoteSwiftPackageReference "swift-openapi-urlsession" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-openapi-urlsession";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
 		F84E225F2ED0B84300459747 /* XCRemoteSwiftPackageReference "workoutkit-sync" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Amakaflow/workoutkit-sync";
@@ -2678,6 +2710,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AMA1791GRDBPKG /* XCRemoteSwiftPackageReference "GRDB.swift" */;
 			productName = GRDB;
+		};
+		5428DFDDAABA4C78929FAD58 /* OpenAPIRuntime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 09208E7C85544D5D93929812 /* XCRemoteSwiftPackageReference "swift-openapi-runtime" */;
+			productName = OpenAPIRuntime;
+		};
+		3D2A2E0648804CD7A88CF287 /* OpenAPIURLSession */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 02CC5FB9C29845DF83B3F0CB /* XCRemoteSwiftPackageReference "swift-openapi-urlsession" */;
+			productName = OpenAPIURLSession;
 		};
 		F84E22982ED0DA1F00459747 /* WorkoutKitSync */ = {
 			isa = XCSwiftPackageProductDependency;
