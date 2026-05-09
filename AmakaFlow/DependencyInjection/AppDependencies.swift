@@ -171,6 +171,11 @@ class MockAPIService: APIServiceProviding {
     var confirmSyncCalled = false
     var confirmedWorkoutId: String?
     var reportSyncFailedCalled = false
+    /// AMA-1823: capture request_id forwarded by callers (e.g. SyncEngine)
+    /// so tests can assert correlation IDs propagate to the API layer.
+    var lastPostWorkoutCompletionRequestID: String?
+    var lastConfirmSyncRequestID: String?
+    var lastReportSyncFailedRequestID: String?
     var fetchProfileCalled = false
     var fetchCompletionsCalled = false
     var fetchCompletionsResult: Result<[WorkoutCompletion], Error> = .success([])
@@ -277,23 +282,26 @@ class MockAPIService: APIServiceProviding {
         try logManualWorkoutResult.get()
     }
 
-    func postWorkoutCompletion(_ completion: WorkoutCompletionRequest, isRetry: Bool) async throws -> WorkoutCompletionResponse {
+    func postWorkoutCompletion(_ completion: WorkoutCompletionRequest, isRetry: Bool, requestID: String?) async throws -> WorkoutCompletionResponse {
         postWorkoutCompletionCalled = true
         postedCompletion = completion
+        lastPostWorkoutCompletionRequestID = requestID
         guard let result = postWorkoutCompletionResult else {
             throw APIError.notImplemented
         }
         return try result.get()
     }
 
-    func confirmSync(workoutId: String, deviceType: String, deviceId: String?) async throws {
+    func confirmSync(workoutId: String, deviceType: String, deviceId: String?, requestID: String?) async throws {
         confirmSyncCalled = true
         confirmedWorkoutId = workoutId
+        lastConfirmSyncRequestID = requestID
         try confirmSyncResult.get()
     }
 
-    func reportSyncFailed(workoutId: String, deviceType: String, error: String, deviceId: String?) async throws {
+    func reportSyncFailed(workoutId: String, deviceType: String, error: String, deviceId: String?, requestID: String?) async throws {
         reportSyncFailedCalled = true
+        lastReportSyncFailedRequestID = requestID
         try reportSyncFailedResult.get()
     }
 

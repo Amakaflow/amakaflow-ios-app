@@ -106,8 +106,8 @@ class FixtureAPIService: APIServiceProviding {
         print("[FixtureAPIService] Stub: logManualWorkout(\(workout.name)) -> success")
     }
 
-    func postWorkoutCompletion(_ completion: WorkoutCompletionRequest, isRetry: Bool) async throws -> WorkoutCompletionResponse {
-        print("[FixtureAPIService] Stub: postWorkoutCompletion -> success")
+    func postWorkoutCompletion(_ completion: WorkoutCompletionRequest, isRetry: Bool, requestID: String?) async throws -> WorkoutCompletionResponse {
+        print("[FixtureAPIService] Stub: postWorkoutCompletion -> success (requestID=\(requestID ?? "nil"))")
         return WorkoutCompletionResponse(
             completionId: "fixture-completion-001",
             id: "fixture-completion-001",
@@ -116,12 +116,12 @@ class FixtureAPIService: APIServiceProviding {
         )
     }
 
-    func confirmSync(workoutId: String, deviceType: String, deviceId: String?) async throws {
-        print("[FixtureAPIService] Stub: confirmSync(\(workoutId)) -> success")
+    func confirmSync(workoutId: String, deviceType: String, deviceId: String?, requestID: String?) async throws {
+        print("[FixtureAPIService] Stub: confirmSync(\(workoutId)) -> success (requestID=\(requestID ?? "nil"))")
     }
 
-    func reportSyncFailed(workoutId: String, deviceType: String, error: String, deviceId: String?) async throws {
-        print("[FixtureAPIService] Stub: reportSyncFailed(\(workoutId)) -> success")
+    func reportSyncFailed(workoutId: String, deviceType: String, error: String, deviceId: String?, requestID: String?) async throws {
+        print("[FixtureAPIService] Stub: reportSyncFailed(\(workoutId)) -> success (requestID=\(requestID ?? "nil"))")
     }
 
     func fetchProfile() async throws -> UserProfile {

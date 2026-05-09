@@ -141,11 +141,17 @@ struct SyncQueueItem: Codable, FetchableRecord, MutablePersistableRecord, Identi
     var status: SyncQueueStatus
     var createdAt: Date
     var updatedAt: Date
+    /// AMA-1823: per-attempt UUID stamped before each sync attempt and
+    /// echoed as the `X-Request-ID` header on the upstream call. Nullable
+    /// because rows enqueued before the V2 migration (or freshly enqueued
+    /// rows that have not yet been attempted) won't have one.
+    var requestId: String?
 
     enum Columns: String, ColumnExpression {
         case id, resourceType = "resource_type", resourceId = "resource_id", op, payload
         case attemptCount = "attempt_count", lastAttemptedAt = "last_attempted_at", nextAttemptAt = "next_attempt_at"
         case errorReason = "error_reason", status, createdAt = "created_at", updatedAt = "updated_at"
+        case requestId = "request_id"
     }
 
     enum CodingKeys: String, CodingKey {
@@ -158,6 +164,7 @@ struct SyncQueueItem: Codable, FetchableRecord, MutablePersistableRecord, Identi
         case errorReason = "error_reason"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+        case requestId = "request_id"
     }
 }
 

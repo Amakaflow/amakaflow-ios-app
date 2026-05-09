@@ -82,16 +82,18 @@ protocol APIServiceProviding: TelegramLinkAPIProviding {
 
     // MARK: - Workout Completion
 
-    /// Post workout completion to backend
-    func postWorkoutCompletion(_ completion: WorkoutCompletionRequest, isRetry: Bool) async throws -> WorkoutCompletionResponse
+    /// Post workout completion to backend.
+    /// AMA-1823: optional `requestID` is stamped as `X-Request-ID` so the
+    /// SyncEngine can correlate iOS attempts with BFF/mapper-api logs.
+    func postWorkoutCompletion(_ completion: WorkoutCompletionRequest, isRetry: Bool, requestID: String?) async throws -> WorkoutCompletionResponse
 
     // MARK: - Sync Confirmation
 
     /// Confirm that a workout was successfully synced/downloaded to this device
-    func confirmSync(workoutId: String, deviceType: String, deviceId: String?) async throws
+    func confirmSync(workoutId: String, deviceType: String, deviceId: String?, requestID: String?) async throws
 
     /// Report that a workout sync/download failed
-    func reportSyncFailed(workoutId: String, deviceType: String, error: String, deviceId: String?) async throws
+    func reportSyncFailed(workoutId: String, deviceType: String, error: String, deviceId: String?, requestID: String?) async throws
 
     // MARK: - User Profile
 
@@ -358,17 +360,32 @@ extension APIServiceProviding {
 
     /// Convenience method with default isRetry
     func postWorkoutCompletion(_ completion: WorkoutCompletionRequest) async throws -> WorkoutCompletionResponse {
-        try await postWorkoutCompletion(completion, isRetry: false)
+        try await postWorkoutCompletion(completion, isRetry: false, requestID: nil)
+    }
+
+    /// Convenience method preserved for the existing 2-arg call sites
+    func postWorkoutCompletion(_ completion: WorkoutCompletionRequest, isRetry: Bool) async throws -> WorkoutCompletionResponse {
+        try await postWorkoutCompletion(completion, isRetry: isRetry, requestID: nil)
     }
 
     /// Convenience method with default deviceType and deviceId
     func confirmSync(workoutId: String) async throws {
-        try await confirmSync(workoutId: workoutId, deviceType: "ios", deviceId: nil)
+        try await confirmSync(workoutId: workoutId, deviceType: "ios", deviceId: nil, requestID: nil)
+    }
+
+    /// Convenience method preserved for existing 3-arg call sites
+    func confirmSync(workoutId: String, deviceType: String, deviceId: String?) async throws {
+        try await confirmSync(workoutId: workoutId, deviceType: deviceType, deviceId: deviceId, requestID: nil)
     }
 
     /// Convenience method with default deviceType and deviceId
     func reportSyncFailed(workoutId: String, error: String) async throws {
-        try await reportSyncFailed(workoutId: workoutId, deviceType: "ios", error: error, deviceId: nil)
+        try await reportSyncFailed(workoutId: workoutId, deviceType: "ios", error: error, deviceId: nil, requestID: nil)
+    }
+
+    /// Convenience method preserved for existing 4-arg call sites
+    func reportSyncFailed(workoutId: String, deviceType: String, error: String, deviceId: String?) async throws {
+        try await reportSyncFailed(workoutId: workoutId, deviceType: deviceType, error: error, deviceId: deviceId, requestID: nil)
     }
 
     /// Convenience method with default pagination

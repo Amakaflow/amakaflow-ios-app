@@ -395,7 +395,11 @@ extension APIService {
     // MARK: - Workout Completion (AMA-1820 — bff route)
 
     /// Post workout completion to backend
-    func postWorkoutCompletion(_ completion: WorkoutCompletionRequest, isRetry: Bool = false) async throws -> WorkoutCompletionResponse {
+    func postWorkoutCompletion(
+        _ completion: WorkoutCompletionRequest,
+        isRetry: Bool = false,
+        requestID: String? = nil
+    ) async throws -> WorkoutCompletionResponse {
         let endpoint = "/workouts/complete"
 
         #if DEBUG
@@ -416,6 +420,13 @@ extension APIService {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = await makeAuthHeaders()
+
+        // AMA-1823: stamp client-generated X-Request-ID so the BFF echoes
+        // it through to mapper-api logs and Sentry breadcrumbs share the
+        // same correlation key.
+        if let requestID = requestID {
+            request.setValue(requestID, forHTTPHeaderField: "X-Request-ID")
+        }
 
         let encoder = JSONEncoder()
         request.httpBody = try encoder.encode(completion)
@@ -492,7 +503,7 @@ extension APIService {
 
             if refreshed {
                 print("[APIService] Token refreshed, retrying request...")
-                return try await postWorkoutCompletion(completion, isRetry: true)
+                return try await postWorkoutCompletion(completion, isRetry: true, requestID: requestID)
             } else {
                 print("[APIService] Token refresh failed, marking auth invalid")
                 logError(endpoint: endpoint, method: "POST", statusCode: 401, response: responseString, error: APIError.unauthorized)
@@ -527,7 +538,12 @@ extension APIService {
     // MARK: - Sync Confirmation (AMA-307 / AMA-1820)
 
     /// Confirm that a workout was successfully synced/downloaded to this device
-    func confirmSync(workoutId: String, deviceType: String = "ios", deviceId: String? = nil) async throws {
+    func confirmSync(
+        workoutId: String,
+        deviceType: String = "ios",
+        deviceId: String? = nil,
+        requestID: String? = nil
+    ) async throws {
         guard PairingService.shared.isPaired else {
             throw APIError.unauthorized
         }
@@ -536,6 +552,9 @@ extension APIService {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = await makeAuthHeaders()
+        if let requestID = requestID {
+            request.setValue(requestID, forHTTPHeaderField: "X-Request-ID")
+        }
 
         var body: [String: Any] = [
             "workout_id": workoutId,
@@ -574,7 +593,13 @@ extension APIService {
     }
 
     /// Report that a workout sync/download failed
-    func reportSyncFailed(workoutId: String, deviceType: String = "ios", error: String, deviceId: String? = nil) async throws {
+    func reportSyncFailed(
+        workoutId: String,
+        deviceType: String = "ios",
+        error: String,
+        deviceId: String? = nil,
+        requestID: String? = nil
+    ) async throws {
         guard PairingService.shared.isPaired else {
             throw APIError.unauthorized
         }
@@ -583,6 +608,9 @@ extension APIService {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = await makeAuthHeaders()
+        if let requestID = requestID {
+            request.setValue(requestID, forHTTPHeaderField: "X-Request-ID")
+        }
 
         var body: [String: Any] = [
             "workout_id": workoutId,

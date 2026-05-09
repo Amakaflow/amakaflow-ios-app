@@ -57,25 +57,78 @@ actor SyncEngine {
     }
 
     private func process(_ item: SyncQueueItem) async {
+        // AMA-1823: stamp a fresh request_id on this attempt so the upstream
+        // call (eventually `X-Request-ID`) and our local diagnostics
+        // (Sentry breadcrumbs, DebugLogService) all share the same ID.
+        // A retry generates a new UUID, so the column on the row reflects
+        // the most recent attempt — earlier attempt IDs live in Sentry and
+        // the BFF logs.
+        let requestId = makeRequestId()
+        var stampedItem = item
+        stampedItem.requestId = requestId
+
+        do {
+            try await queueRepository.updateRequestId(item.id, requestId: requestId)
+        } catch {
+            await DebugLogService.shared.log(
+                "Sync queue request_id persistence failed",
+                details: error.localizedDescription,
+                metadata: ["queueItemId": item.id, "requestId": requestId]
+            )
+            // Non-fatal: fall through with the in-memory stamped copy so the
+            // attempt still propagates a request_id to the backend.
+        }
+
         do {
             try await queueRepository.markInFlight(item.id)
         } catch {
             await DebugLogService.shared.log(
                 "Sync queue mark-in-flight failed",
                 details: error.localizedDescription,
-                metadata: ["queueItemId": item.id]
+                metadata: ["queueItemId": item.id, "requestId": requestId]
             )
             return
         }
 
+        addSyncBreadcrumb(
+            message: "sync attempt started",
+            level: .info,
+            item: stampedItem,
+            requestId: requestId
+        )
+
         do {
-            try await syncHandler(item)
+            try await syncHandler(stampedItem)
             try await queueRepository.markSynced(item.id)
+            addSyncBreadcrumb(
+                message: "sync attempt succeeded",
+                level: .info,
+                item: stampedItem,
+                requestId: requestId
+            )
             await cleanupCompletedItems()
         } catch {
             let syncError = error
             let nextAttempt = item.attemptCount + 1
             let retryAfter = backoffDelay(forAttempt: nextAttempt)
+            addSyncBreadcrumb(
+                message: "sync attempt failed",
+                level: .warning,
+                item: stampedItem,
+                requestId: requestId,
+                extra: ["error": syncError.localizedDescription]
+            )
+            await DebugLogService.shared.log(
+                "Sync queue attempt failed",
+                details: syncError.localizedDescription,
+                metadata: [
+                    "queueItemId": item.id,
+                    "resourceType": item.resourceType,
+                    "resourceId": item.resourceId,
+                    "requestId": requestId,
+                    "attempt": String(nextAttempt)
+                ]
+            )
             do {
                 try await queueRepository.markFailed(
                     item.id,
@@ -87,21 +140,56 @@ actor SyncEngine {
                 await DebugLogService.shared.log(
                     "Sync queue failure persistence failed",
                     details: error.localizedDescription,
-                    metadata: ["queueItemId": item.id]
+                    metadata: ["queueItemId": item.id, "requestId": requestId]
                 )
                 return
             }
 
             if nextAttempt >= maxAttempts {
-                SentrySDK.capture(message: "Sync queue item poisoned: \(item.resourceType)/\(item.resourceId) - \(syncError.localizedDescription)")
+                SentrySDK.capture(message: "Sync queue item poisoned: \(item.resourceType)/\(item.resourceId) - \(syncError.localizedDescription)") { scope in
+                    scope.setTag(value: requestId, key: "request_id")
+                    scope.setTag(value: item.resourceType, key: "resource_type")
+                    scope.setExtra(value: item.resourceId, key: "resource_id")
+                }
                 await DebugLogService.shared.log(
                     "Sync queue item poisoned",
                     details: "\(item.resourceType)/\(item.resourceId): \(syncError.localizedDescription)",
-                    metadata: ["source": "SyncEngine"]
+                    metadata: ["source": "SyncEngine", "requestId": requestId]
                 )
                 await cleanupCompletedItems()
             }
         }
+    }
+
+    // MARK: - Request ID + Breadcrumb helpers (AMA-1823)
+
+    /// Overridable in tests; defaults to a fresh UUID string.
+    nonisolated func makeRequestId() -> String {
+        UUID().uuidString
+    }
+
+    nonisolated private func addSyncBreadcrumb(
+        message: String,
+        level: SentryLevel,
+        item: SyncQueueItem,
+        requestId: String,
+        extra: [String: String] = [:]
+    ) {
+        let crumb = Breadcrumb(level: level, category: "sync_queue")
+        crumb.message = message
+        var data: [String: Any] = [
+            "request_id": requestId,
+            "queue_item_id": item.id,
+            "resource_type": item.resourceType,
+            "resource_id": item.resourceId,
+            "op": item.op,
+            "attempt": item.attemptCount + 1
+        ]
+        for (key, value) in extra {
+            data[key] = value
+        }
+        crumb.data = data
+        SentrySDK.addBreadcrumb(crumb)
     }
 
     private func cleanupCompletedItems() async {

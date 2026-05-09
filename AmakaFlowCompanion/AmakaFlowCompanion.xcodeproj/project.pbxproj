@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		00CBD8759EE7C769D1D7F82B /* AgentInboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EB7457100F5C1B6E4488558 /* AgentInboxView.swift */; };
+		056DCE6864994871816A3AF9 /* OpenAPIRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = 5428DFDDAABA4C78929FAD58 /* OpenAPIRuntime */; };
 		0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
 		11C72B7C6EA17FC8DEA354FB /* CoachModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */; };
 		141CFD120F8C663BD0F2C3BC /* MentalModelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C1640626E3952B7DBBBF33 /* MentalModelView.swift */; };
@@ -15,6 +16,7 @@
 		1N5T4GR4MR33L0002 /* InstagramReelIngestionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */; };
 		224589E0DBE4430DA0043265 /* RPEFeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BD17097D21D4FB48D023E24 /* RPEFeedbackView.swift */; };
 		27599809E31D40308DBFA93A /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F86F482904144B39B954F6A /* Environment.swift */; };
+		2AA14DE2516D46F0BFC23FC2 /* Client.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EDC25041B83402BB9EDF84D /* Client.swift */; };
 		326A41D76E81D77EC7D4F76A /* NotificationPreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CC7221F93FB2C2C9982C2ED /* NotificationPreferencesView.swift */; };
 		33B4902461BE49098D5AA4B2 /* RPEFeedbackViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600ABA3EF2B2447396D7B39F /* RPEFeedbackViewModel.swift */; };
 		3X3RC1S35W1FT000002 /* Exercise.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3X3RC1S35W1FT000001 /* Exercise.swift */; };
@@ -23,10 +25,8 @@
 		43F9F2E9369F4546B3AF005A /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D9B67C13E34BAE804A9359 /* HistoryView.swift */; };
 		44201694D9E295D587684DBB /* ShareImportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44D7C6673CB9BE868FC1006 /* ShareImportViewModel.swift */; };
 		444EFC17D69346B3B93C9ECA /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11B5892FB68A40CB890E3630 /* KeychainHelper.swift */; };
-		2AA14DE2516D46F0BFC23FC2 /* Client.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EDC25041B83402BB9EDF84D /* Client.swift */; };
-		C99C46C4FE4649B19138152F /* Types.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D9C8E90B1514410A5656A20 /* Types.swift */; };
-		B44263A997564169A4DE795A /* KeychainClerkTokenPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CA747C5C41B432C9BEE9C9F /* KeychainClerkTokenPersistence.swift */; };
 		5016188D64111FBBE44B4A8D /* FollowAlongPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E90D82F541D1AF7AE58A29B /* FollowAlongPlayerView.swift */; };
+		50E262BC3ABF4F4BB8944710 /* ErrorReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E295BEB90381432BA61ECCFB /* ErrorReporter.swift */; };
 		521047C38D23474889C39F35 /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AB8DFBA16CE406C95456EAD /* CalendarView.swift */; };
 		52BE28AB8A3D773F016F14E5 /* PlanRevealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAC6A807F5A4820B05339B99 /* PlanRevealView.swift */; };
 		5489774E90118791AFF14D8C /* FollowAlongPlayerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 154769090318840B518509BF /* FollowAlongPlayerViewModel.swift */; };
@@ -34,6 +34,7 @@
 		67283958B3E2475BA2DA974A /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2192F9A69B4A51B54A138F /* HomeView.swift */; };
 		688E97FB5938812BF52882A0 /* ShareExtensionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96BF60E98CCB044FBF23EB80 /* ShareExtensionTests.swift */; };
 		6E4643C6639A84A033AF4DA1 /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2C967F7EB5505FDB36864F9 /* FeatureFlags.swift */; };
+		718A23C41FF542228DF9232B /* OpenAPIURLSession in Frameworks */ = {isa = PBXBuildFile; productRef = 3D2A2E0648804CD7A88CF287 /* OpenAPIURLSession */; };
 		72A766051AE36A2294C87B12 /* WatchDeliveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC3C221C070C10388F89DF2A /* WatchDeliveryView.swift */; };
 		76A4BDCCD65A2C7EB4B82ACB /* TrainingPreferencesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0949526387D9FA932B940DF3 /* TrainingPreferencesViewModel.swift */; };
 		83FA8BE2A6AAF21B52B5B16A /* ShoeComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 887645B05D4D7BABC29CAB9A /* ShoeComparisonView.swift */; };
@@ -41,6 +42,7 @@
 		97DAAC6C9C4F8BAC320D575E /* SyncDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0590FA2DB2E16FC868D6F303 /* SyncDashboardView.swift */; };
 		997164A8636AF31DED75ACE1 /* CoachViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F87085CB2DDF9255246439F /* CoachViewModel.swift */; };
 		9D0C3D8A603340BC8364F188 /* PreWorkoutDeviceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3910753486A542ECAA1E5971 /* PreWorkoutDeviceSheet.swift */; };
+		A1780B8C38BE4F00BB0C26DE /* ErrorToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5EF3E8A935E42BBA7096B32 /* ErrorToast.swift */; };
 		A19401BB00000001C0000001 /* ActivityHistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA00000001B0000001 /* ActivityHistoryViewModel.swift */; };
 		A19401BB00000002C0000002 /* CompletionDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA00000002B0000002 /* CompletionDetailViewModel.swift */; };
 		A19401BB00000003C0000003 /* ActivityHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19401AA00000003B0000003 /* ActivityHistoryView.swift */; };
@@ -212,12 +214,28 @@
 		AMA1620AUTHINT01B /* ClerkAuthorizationInterceptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620AUTHINT01A /* ClerkAuthorizationInterceptor.swift */; };
 		AMA1620AUTHVM001B /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620AUTHVM001A /* AuthViewModel.swift */; };
 		AMA1620CLKKIT01B /* ClerkKit in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1620CLKKIT01P /* ClerkKit */; };
-		AMA1791GRDBFRAME /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1791GRDBPROD /* GRDB */; };
-		056DCE6864994871816A3AF9 /* OpenAPIRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = 5428DFDDAABA4C78929FAD58 /* OpenAPIRuntime */; };
-		718A23C41FF542228DF9232B /* OpenAPIURLSession in Frameworks */ = {isa = PBXBuildFile; productRef = 3D2A2E0648804CD7A88CF287 /* OpenAPIURLSession */; };
 		AMA1620CLKUI001B /* ClerkKitUI in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1620CLKUI001P /* ClerkKitUI */; };
 		AMA1620UITEST01B /* UITestEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620UITEST01A /* UITestEnvironment.swift */; };
+		AMA1791ACCEPTREPOBLD /* AcceptedSuggestionsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791ACCEPTREPOREF /* AcceptedSuggestionsRepository.swift */; };
+		AMA1791APPDBBLD /* AppDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791APPDBREF /* AppDatabase.swift */; };
+		AMA1791ENGINEBLD /* SyncEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791ENGINEREF /* SyncEngine.swift */; };
+		AMA1791EVENTREPOBLD /* WorkoutEventsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791EVENTREPOREF /* WorkoutEventsRepository.swift */; };
+		AMA1791GRDBFRAME /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1791GRDBPROD /* GRDB */; };
+		AMA1791LOCALRECBLD /* LocalRecords.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791LOCALRECREF /* LocalRecords.swift */; };
+		AMA1791QUEUEREPOBLD /* SyncQueueRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791QUEUEREPOREF /* SyncQueueRepository.swift */; };
+		AMA1791V1BLD /* V1_initial_schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791V1REF /* V1_initial_schema.swift */; };
+		AMA1823V2BLD /* V2_add_request_id_to_sync_queue.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1823V2REF /* V2_add_request_id_to_sync_queue.swift */; };
+		AMA1828CHAT000B /* ChatAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828CHAT000A /* ChatAPIRepository.swift */; };
+		AMA1828COACH00B /* CoachAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828COACH00A /* CoachAPIRepository.swift */; };
+		AMA1828DEVIC00B /* DeviceAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828DEVIC00A /* DeviceAPIRepository.swift */; };
+		AMA1828INGES00B /* IngestionAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828INGES00A /* IngestionAPIRepository.swift */; };
+		AMA1828PROGR00B /* ProgramsAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828PROGR00A /* ProgramsAPIRepository.swift */; };
+		AMA1828SOCIA00B /* SocialAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828SOCIA00A /* SocialAPIRepository.swift */; };
+		AMA1828TELEG00B /* TelegramAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828TELEG00A /* TelegramAPIRepository.swift */; };
+		AMA1828TRANS00B /* APITransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828TRANS00A /* APITransport.swift */; };
+		AMA1828WORKO00B /* WorkoutAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828WORKO00A /* WorkoutAPIRepository.swift */; };
 		B1910EAEA57AF40FBA6FEDD3 /* FollowAlongPlayerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */; };
+		B44263A997564169A4DE795A /* KeychainClerkTokenPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CA747C5C41B432C9BEE9C9F /* KeychainClerkTokenPersistence.swift */; };
 		B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E57529578481B8991A91F /* SourcesView.swift */; };
 		B69E1808FE344A15848A3B67 /* WorkoutCompletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */; };
 		BAB97A941DC233141997CA05 /* CalendarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AF716C8C0EE3CC5A4BA56C5 /* CalendarViewModel.swift */; };
@@ -225,21 +243,15 @@
 		BL0CK2INT3RVAL00004 /* BlockToIntervalConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = BL0CK2INT3RVAL00001 /* BlockToIntervalConverter.swift */; };
 		BL0CK5W1FT00000002 /* Block.swift in Sources */ = {isa = PBXBuildFile; fileRef = BL0CK5W1FT00000001 /* Block.swift */; };
 		BL0CK5W1FT00000004 /* Block.swift in Sources */ = {isa = PBXBuildFile; fileRef = BL0CK5W1FT00000001 /* Block.swift */; };
+		C0EE9007F3C8491C99D133C1 /* CTAError.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC16168084DD4307BA295F94 /* CTAError.swift */; };
 		C0F31AF6A1A65368EB4D5E48 /* ActivityFeedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1555CD79DFEAA04822AEB965 /* ActivityFeedViewModel.swift */; };
+		C99C46C4FE4649B19138152F /* Types.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D9C8E90B1514410A5656A20 /* Types.swift */; };
 		CA268753E918494FAD7CCD56 /* PairingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85D3757E5B284286B341C75C /* PairingService.swift */; };
 		D33PL1NK1MP0RTV0002 /* DeepLinkImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33PL1NK1MP0RTV0001 /* DeepLinkImportView.swift */; };
 		D33PL1NKMAN4G3R0002 /* DeepLinkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33PL1NKMAN4G3R0001 /* DeepLinkManager.swift */; };
 		D33PL1NKT35T50002 /* DeepLinkManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */; };
 		D37C6098D3FACBE84D8D261D /* WeeklyReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3CF9663A6818FA77C6C02B0 /* WeeklyReviewView.swift */; };
 		D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000001B0000001 /* DebugLogService.swift */; };
-		AMA1791APPDBBLD /* AppDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791APPDBREF /* AppDatabase.swift */; };
-		AMA1791V1BLD /* V1_initial_schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791V1REF /* V1_initial_schema.swift */; };
-		E2E9218685E5476B991B3979 /* UserDefaultsAcceptedMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A87B639F1BA04DF8A5301F4C /* UserDefaultsAcceptedMigration.swift */; };
-		AMA1791LOCALRECBLD /* LocalRecords.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791LOCALRECREF /* LocalRecords.swift */; };
-		AMA1791ACCEPTREPOBLD /* AcceptedSuggestionsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791ACCEPTREPOREF /* AcceptedSuggestionsRepository.swift */; };
-		AMA1791EVENTREPOBLD /* WorkoutEventsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791EVENTREPOREF /* WorkoutEventsRepository.swift */; };
-		AMA1791QUEUEREPOBLD /* SyncQueueRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791QUEUEREPOREF /* SyncQueueRepository.swift */; };
-		AMA1791ENGINEBLD /* SyncEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791ENGINEREF /* SyncEngine.swift */; };
 		D3BUG10G00000002C0000002 /* DebugLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000002B0000002 /* DebugLogView.swift */; };
 		D3P3ND1NJ3CT10N1001 /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0001 /* AppDependencies.swift */; };
 		D3P3ND1NJ3CT10N1002 /* AudioProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0002 /* AudioProviding.swift */; };
@@ -248,6 +260,7 @@
 		D3P3ND1NJ3CT10N1005 /* APIServiceProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0005 /* APIServiceProviding.swift */; };
 		D3P3ND1NJ3CT10N1006 /* WatchSessionProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0006 /* WatchSessionProviding.swift */; };
 		DF8B91B894B9DEA16C43ABFB /* ActivityFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F945C56EB30A4BA6E5CAC50 /* ActivityFeedView.swift */; };
+		E2E9218685E5476B991B3979 /* UserDefaultsAcceptedMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A87B639F1BA04DF8A5301F4C /* UserDefaultsAcceptedMigration.swift */; };
 		E33FF845EAAD4110B7D87FB0 /* DevicePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89321AF9D21D441198437105 /* DevicePreference.swift */; };
 		EB63D5EF54FF452580C70684 /* WorkoutCompletionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */; };
 		EB63D5EF54FF452580C70685 /* WorkoutCompletionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */; };
@@ -277,15 +290,6 @@
 		F84E22872ED0D5D100459747 /* CalendarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22832ED0D5D100459747 /* CalendarManager.swift */; };
 		F84E22882ED0D5D100459747 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22842ED0D5D100459747 /* WatchConnectivityManager.swift */; };
 		F84E22892ED0D5D100459747 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22812ED0D5D100459747 /* APIService.swift */; };
-		AMA1828TRANS00B /* APITransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828TRANS00A /* APITransport.swift */; };
-		AMA1828WORKO00B /* WorkoutAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828WORKO00A /* WorkoutAPIRepository.swift */; };
-		AMA1828COACH00B /* CoachAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828COACH00A /* CoachAPIRepository.swift */; };
-		AMA1828CHAT000B /* ChatAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828CHAT000A /* ChatAPIRepository.swift */; };
-		AMA1828DEVIC00B /* DeviceAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828DEVIC00A /* DeviceAPIRepository.swift */; };
-		AMA1828TELEG00B /* TelegramAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828TELEG00A /* TelegramAPIRepository.swift */; };
-		AMA1828INGES00B /* IngestionAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828INGES00A /* IngestionAPIRepository.swift */; };
-		AMA1828SOCIA00B /* SocialAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828SOCIA00A /* SocialAPIRepository.swift */; };
-		AMA1828PROGR00B /* ProgramsAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828PROGR00A /* ProgramsAPIRepository.swift */; };
 		F84E228A2ED0D5D100459747 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22822ED0D5D100459747 /* AuthService.swift */; };
 		F84E22932ED0D9FA00459747 /* EventKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E22922ED0D9FA00459747 /* EventKit.framework */; };
 		F84E22952ED0DA0200459747 /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E22942ED0DA0200459747 /* HealthKit.framework */; };
@@ -302,13 +306,13 @@
 		F85C4F6DCDE4544563BA4983 /* WorkoutState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F883912261E9D246979DD881 /* WorkoutState.swift */; };
 		F8654CAC3BB541420480C602 /* FlattenedInterval.swift in Sources */ = {isa = PBXBuildFile; fileRef = F82258553831E24BC9B8C650 /* FlattenedInterval.swift */; };
 		F87ADA7721B76045D5938EA4 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */; };
-		F880AD612F09559A00E8D7D3 /* BuildFile in Frameworks */ = {isa = PBXBuildFile; };
+		F880AD612F09559A00E8D7D3 /* (null) in Frameworks */ = {isa = PBXBuildFile; };
 		F880AD622F09559A00E8D7D3 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
-		F880AD632F09559A00E8D7D3 /* BuildFile in Frameworks */ = {isa = PBXBuildFile; };
-		F880AD642F09559A00E8D7D3 /* BuildFile in Frameworks */ = {isa = PBXBuildFile; };
-		F880AD652F09559A00E8D7D3 /* BuildFile in Frameworks */ = {isa = PBXBuildFile; };
-		F880AD662F09559A00E8D7D3 /* BuildFile in Frameworks */ = {isa = PBXBuildFile; };
-		F880AD672F09559A00E8D7D3 /* BuildFile in Frameworks */ = {isa = PBXBuildFile; };
+		F880AD632F09559A00E8D7D3 /* (null) in Frameworks */ = {isa = PBXBuildFile; };
+		F880AD642F09559A00E8D7D3 /* (null) in Frameworks */ = {isa = PBXBuildFile; };
+		F880AD652F09559A00E8D7D3 /* (null) in Frameworks */ = {isa = PBXBuildFile; };
+		F880AD662F09559A00E8D7D3 /* (null) in Frameworks */ = {isa = PBXBuildFile; };
+		F880AD672F09559A00E8D7D3 /* (null) in Frameworks */ = {isa = PBXBuildFile; };
 		F8B356C52EF8BA7B00E88B51 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F8B356C42EF8BA7B00E88B51 /* WidgetKit.framework */; };
 		F8B356C72EF8BA7B00E88B51 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F8B356C62EF8BA7B00E88B51 /* SwiftUI.framework */; };
 		F8B356D82EF8BA7C00E88B51 /* WorkoutLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F8B356C32EF8BA7B00E88B51 /* WorkoutLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -351,9 +355,6 @@
 		V01C301900000000000000 /* VoiceWorkoutReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300900000000000000 /* VoiceWorkoutReviewView.swift */; };
 		W41T1NG000000002C0000002 /* WaitingForWatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = W41T1NG000000001B0000001 /* WaitingForWatchView.swift */; };
 		XCT4H34LTH00000001 /* XCTHealthKit in Frameworks */ = {isa = PBXBuildFile; productRef = XCT4H34LTH00000002 /* XCTHealthKit */; };
-		C0EE9007F3C8491C99D133C1 /* CTAError.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC16168084DD4307BA295F94 /* CTAError.swift */; };
-		A1780B8C38BE4F00BB0C26DE /* ErrorToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5EF3E8A935E42BBA7096B32 /* ErrorToast.swift */; };
-		50E262BC3ABF4F4BB8944710 /* ErrorReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E295BEB90381432BA61ECCFB /* ErrorReporter.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -440,10 +441,8 @@
 		0949526387D9FA932B940DF3 /* TrainingPreferencesViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TrainingPreferencesViewModel.swift; path = ../AmakaFlow/ViewModels/TrainingPreferencesViewModel.swift; sourceTree = "<group>"; };
 		0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionView.swift; path = ../AmakaFlow/Views/WorkoutCompletionView.swift; sourceTree = SOURCE_ROOT; };
 		0DDF14FDAE6346A5831A6B38 /* WorkoutCompletionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionViewModel.swift; path = ../AmakaFlow/ViewModels/WorkoutCompletionViewModel.swift; sourceTree = SOURCE_ROOT; };
-		11B5892FB68A40CB890E3630 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainHelper.swift; path = ../AmakaFlow/Services/KeychainHelper.swift; sourceTree = SOURCE_ROOT; };
 		0EDC25041B83402BB9EDF84D /* Client.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Client.swift; path = ../AmakaFlow/Generated/Client.swift; sourceTree = SOURCE_ROOT; };
-		7D9C8E90B1514410A5656A20 /* Types.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Types.swift; path = ../AmakaFlow/Generated/Types.swift; sourceTree = SOURCE_ROOT; };
-		5CA747C5C41B432C9BEE9C9F /* KeychainClerkTokenPersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainClerkTokenPersistence.swift; path = ../AmakaFlow/Services/KeychainClerkTokenPersistence.swift; sourceTree = SOURCE_ROOT; };
+		11B5892FB68A40CB890E3630 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainHelper.swift; path = ../AmakaFlow/Services/KeychainHelper.swift; sourceTree = SOURCE_ROOT; };
 		154769090318840B518509BF /* FollowAlongPlayerViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FollowAlongPlayerViewModel.swift; path = ../AmakaFlow/ViewModels/FollowAlongPlayerViewModel.swift; sourceTree = SOURCE_ROOT; };
 		1555CD79DFEAA04822AEB965 /* ActivityFeedViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ActivityFeedViewModel.swift; path = ../AmakaFlow/ViewModels/ActivityFeedViewModel.swift; sourceTree = "<group>"; };
 		167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FollowAlongPlayerViewModelTests.swift; path = AmakaFlowCompanionTests/FollowAlongPlayerViewModelTests.swift; sourceTree = SOURCE_ROOT; };
@@ -460,11 +459,13 @@
 		3X3RC1S35W1FT000001 /* Exercise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Exercise.swift; path = ../AmakaFlow/Models/Exercise.swift; sourceTree = SOURCE_ROOT; };
 		4CC7221F93FB2C2C9982C2ED /* NotificationPreferencesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationPreferencesView.swift; path = ../AmakaFlow/Views/Settings/NotificationPreferencesView.swift; sourceTree = "<group>"; };
 		4F945C56EB30A4BA6E5CAC50 /* ActivityFeedView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ActivityFeedView.swift; path = ../AmakaFlow/Views/ActivityFeedView.swift; sourceTree = "<group>"; };
+		5CA747C5C41B432C9BEE9C9F /* KeychainClerkTokenPersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainClerkTokenPersistence.swift; path = ../AmakaFlow/Services/KeychainClerkTokenPersistence.swift; sourceTree = SOURCE_ROOT; };
 		5DB39A8A5380FCFCD3BBA5EB /* EditProfileView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EditProfileView.swift; path = ../AmakaFlow/Views/EditProfileView.swift; sourceTree = "<group>"; };
 		5F86F482904144B39B954F6A /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Environment.swift; path = ../AmakaFlow/Models/Environment.swift; sourceTree = SOURCE_ROOT; };
 		600ABA3EF2B2447396D7B39F /* RPEFeedbackViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RPEFeedbackViewModel.swift; path = ../AmakaFlow/ViewModels/RPEFeedbackViewModel.swift; sourceTree = SOURCE_ROOT; };
 		68B54D3FBC9E8561760B53F0 /* AnalyticsModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AnalyticsModels.swift; path = ../AmakaFlow/Models/AnalyticsModels.swift; sourceTree = "<group>"; };
 		6BD17097D21D4FB48D023E24 /* RPEFeedbackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RPEFeedbackView.swift; path = ../AmakaFlow/Views/RPEFeedbackView.swift; sourceTree = SOURCE_ROOT; };
+		7D9C8E90B1514410A5656A20 /* Types.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Types.swift; path = ../AmakaFlow/Generated/Types.swift; sourceTree = SOURCE_ROOT; };
 		83178781B2C087203EB17951 /* ShoeComparisonViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShoeComparisonViewModel.swift; path = ../AmakaFlow/ViewModels/ShoeComparisonViewModel.swift; sourceTree = "<group>"; };
 		85D3757E5B284286B341C75C /* PairingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PairingService.swift; path = ../AmakaFlow/Services/PairingService.swift; sourceTree = SOURCE_ROOT; };
 		887645B05D4D7BABC29CAB9A /* ShoeComparisonView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShoeComparisonView.swift; path = ../AmakaFlow/Views/ShoeComparisonView.swift; sourceTree = "<group>"; };
@@ -486,6 +487,7 @@
 		A1IMP0RTV13W00000000 /* AIImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AIImportView.swift; path = ../AmakaFlow/Views/AIImportView.swift; sourceTree = SOURCE_ROOT; };
 		A1IMP0RTV13W0001 /* AIImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AIImportView.swift; path = ../AmakaFlow/Views/AIImportView.swift; sourceTree = SOURCE_ROOT; };
 		A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CoachModels.swift; path = ../AmakaFlow/Models/CoachModels.swift; sourceTree = "<group>"; };
+		A87B639F1BA04DF8A5301F4C /* UserDefaultsAcceptedMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserDefaultsAcceptedMigration.swift; path = ../AmakaFlow/Storage/Migrations/UserDefaultsAcceptedMigration.swift; sourceTree = SOURCE_ROOT; };
 		AC3C221C070C10388F89DF2A /* WatchDeliveryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchDeliveryView.swift; path = ../AmakaFlow/Views/WatchDeliveryView.swift; sourceTree = SOURCE_ROOT; };
 		AK00AFL001A /* FoodLoggingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FoodLoggingView.swift; path = ../AmakaFlow/Views/Nutrition/FoodLoggingView.swift; sourceTree = "<group>"; };
 		AK00AFL002A /* MealPhotoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MealPhotoView.swift; path = ../AmakaFlow/Views/Nutrition/MealPhotoView.swift; sourceTree = "<group>"; };
@@ -640,8 +642,26 @@
 		AMA1620AUTHINT01A /* ClerkAuthorizationInterceptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ClerkAuthorizationInterceptor.swift; path = ../AmakaFlow/Services/ClerkAuthorizationInterceptor.swift; sourceTree = SOURCE_ROOT; };
 		AMA1620AUTHVM001A /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AuthViewModel.swift; path = ../AmakaFlow/ViewModels/AuthViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA1620UITEST01A /* UITestEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UITestEnvironment.swift; path = ../AmakaFlow/Services/UITestEnvironment.swift; sourceTree = SOURCE_ROOT; };
+		AMA1791ACCEPTREPOREF /* AcceptedSuggestionsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AcceptedSuggestionsRepository.swift; path = ../AmakaFlow/Storage/Repositories/AcceptedSuggestionsRepository.swift; sourceTree = SOURCE_ROOT; };
+		AMA1791APPDBREF /* AppDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDatabase.swift; path = ../AmakaFlow/Storage/AppDatabase.swift; sourceTree = SOURCE_ROOT; };
+		AMA1791ENGINEREF /* SyncEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SyncEngine.swift; path = ../AmakaFlow/Services/SyncEngine.swift; sourceTree = SOURCE_ROOT; };
+		AMA1791EVENTREPOREF /* WorkoutEventsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEventsRepository.swift; path = ../AmakaFlow/Storage/Repositories/WorkoutEventsRepository.swift; sourceTree = SOURCE_ROOT; };
+		AMA1791LOCALRECREF /* LocalRecords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LocalRecords.swift; path = ../AmakaFlow/Storage/Repositories/LocalRecords.swift; sourceTree = SOURCE_ROOT; };
+		AMA1791QUEUEREPOREF /* SyncQueueRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SyncQueueRepository.swift; path = ../AmakaFlow/Storage/Repositories/SyncQueueRepository.swift; sourceTree = SOURCE_ROOT; };
+		AMA1791V1REF /* V1_initial_schema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V1_initial_schema.swift; path = ../AmakaFlow/Storage/Migrations/V1_initial_schema.swift; sourceTree = SOURCE_ROOT; };
+		AMA1823V2REF /* V2_add_request_id_to_sync_queue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V2_add_request_id_to_sync_queue.swift; path = ../AmakaFlow/Storage/Migrations/V2_add_request_id_to_sync_queue.swift; sourceTree = SOURCE_ROOT; };
+		AMA1828CHAT000A /* ChatAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ChatAPIRepository.swift; path = ../AmakaFlow/Services/ChatAPIRepository.swift; sourceTree = SOURCE_ROOT; };
+		AMA1828COACH00A /* CoachAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CoachAPIRepository.swift; path = ../AmakaFlow/Services/CoachAPIRepository.swift; sourceTree = SOURCE_ROOT; };
+		AMA1828DEVIC00A /* DeviceAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DeviceAPIRepository.swift; path = ../AmakaFlow/Services/DeviceAPIRepository.swift; sourceTree = SOURCE_ROOT; };
+		AMA1828INGES00A /* IngestionAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = IngestionAPIRepository.swift; path = ../AmakaFlow/Services/IngestionAPIRepository.swift; sourceTree = SOURCE_ROOT; };
+		AMA1828PROGR00A /* ProgramsAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProgramsAPIRepository.swift; path = ../AmakaFlow/Services/ProgramsAPIRepository.swift; sourceTree = SOURCE_ROOT; };
+		AMA1828SOCIA00A /* SocialAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialAPIRepository.swift; path = ../AmakaFlow/Services/SocialAPIRepository.swift; sourceTree = SOURCE_ROOT; };
+		AMA1828TELEG00A /* TelegramAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TelegramAPIRepository.swift; path = ../AmakaFlow/Services/TelegramAPIRepository.swift; sourceTree = SOURCE_ROOT; };
+		AMA1828TRANS00A /* APITransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APITransport.swift; path = ../AmakaFlow/Services/APITransport.swift; sourceTree = SOURCE_ROOT; };
+		AMA1828WORKO00A /* WorkoutAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutAPIRepository.swift; path = ../AmakaFlow/Services/WorkoutAPIRepository.swift; sourceTree = SOURCE_ROOT; };
 		B44D7C6673CB9BE868FC1006 /* ShareImportViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShareImportViewModel.swift; sourceTree = "<group>"; };
 		BAC6A807F5A4820B05339B99 /* PlanRevealView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlanRevealView.swift; path = ../AmakaFlow/Views/PlanRevealView.swift; sourceTree = SOURCE_ROOT; };
+		BC16168084DD4307BA295F94 /* CTAError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CTAError.swift; path = ../AmakaFlow/Models/CTAError.swift; sourceTree = SOURCE_ROOT; };
 		BL0CK2INT3RVAL00001 /* BlockToIntervalConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BlockToIntervalConverter.swift; path = ../AmakaFlow/Services/BlockToIntervalConverter.swift; sourceTree = SOURCE_ROOT; };
 		BL0CK5W1FT00000001 /* Block.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Block.swift; path = ../AmakaFlow/Models/Block.swift; sourceTree = SOURCE_ROOT; };
 		C1660F7A199C30F1FF9B8DFD /* TrainingPreferencesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TrainingPreferencesView.swift; path = ../AmakaFlow/Views/Settings/TrainingPreferencesView.swift; sourceTree = "<group>"; };
@@ -652,14 +672,6 @@
 		D33PL1NKMAN4G3R0001 /* DeepLinkManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkManager.swift; path = ../AmakaFlow/Services/DeepLinkManager.swift; sourceTree = "<group>"; };
 		D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkManagerTests.swift; path = AmakaFlowCompanionTests/DeepLinkManagerTests.swift; sourceTree = "<group>"; };
 		D3BUG10G00000001B0000001 /* DebugLogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogService.swift; path = ../AmakaFlow/Services/DebugLogService.swift; sourceTree = SOURCE_ROOT; };
-		AMA1791APPDBREF /* AppDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDatabase.swift; path = ../AmakaFlow/Storage/AppDatabase.swift; sourceTree = SOURCE_ROOT; };
-		AMA1791V1REF /* V1_initial_schema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V1_initial_schema.swift; path = ../AmakaFlow/Storage/Migrations/V1_initial_schema.swift; sourceTree = SOURCE_ROOT; };
-		A87B639F1BA04DF8A5301F4C /* UserDefaultsAcceptedMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserDefaultsAcceptedMigration.swift; path = ../AmakaFlow/Storage/Migrations/UserDefaultsAcceptedMigration.swift; sourceTree = SOURCE_ROOT; };
-		AMA1791LOCALRECREF /* LocalRecords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LocalRecords.swift; path = ../AmakaFlow/Storage/Repositories/LocalRecords.swift; sourceTree = SOURCE_ROOT; };
-		AMA1791ACCEPTREPOREF /* AcceptedSuggestionsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AcceptedSuggestionsRepository.swift; path = ../AmakaFlow/Storage/Repositories/AcceptedSuggestionsRepository.swift; sourceTree = SOURCE_ROOT; };
-		AMA1791EVENTREPOREF /* WorkoutEventsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEventsRepository.swift; path = ../AmakaFlow/Storage/Repositories/WorkoutEventsRepository.swift; sourceTree = SOURCE_ROOT; };
-		AMA1791QUEUEREPOREF /* SyncQueueRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SyncQueueRepository.swift; path = ../AmakaFlow/Storage/Repositories/SyncQueueRepository.swift; sourceTree = SOURCE_ROOT; };
-		AMA1791ENGINEREF /* SyncEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SyncEngine.swift; path = ../AmakaFlow/Services/SyncEngine.swift; sourceTree = SOURCE_ROOT; };
 		D3BUG10G00000002B0000002 /* DebugLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogView.swift; path = ../AmakaFlow/Views/DebugLogView.swift; sourceTree = SOURCE_ROOT; };
 		D3P3ND1NJ3CT10N0001 /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDependencies.swift; path = ../AmakaFlow/DependencyInjection/AppDependencies.swift; sourceTree = SOURCE_ROOT; };
 		D3P3ND1NJ3CT10N0002 /* AudioProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioProviding.swift; path = ../AmakaFlow/DependencyInjection/AudioProviding.swift; sourceTree = SOURCE_ROOT; };
@@ -667,7 +679,9 @@
 		D3P3ND1NJ3CT10N0004 /* ProgressStoreProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProgressStoreProviding.swift; path = ../AmakaFlow/DependencyInjection/ProgressStoreProviding.swift; sourceTree = SOURCE_ROOT; };
 		D3P3ND1NJ3CT10N0005 /* APIServiceProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIServiceProviding.swift; path = ../AmakaFlow/DependencyInjection/APIServiceProviding.swift; sourceTree = SOURCE_ROOT; };
 		D3P3ND1NJ3CT10N0006 /* WatchSessionProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchSessionProviding.swift; path = ../AmakaFlow/DependencyInjection/WatchSessionProviding.swift; sourceTree = SOURCE_ROOT; };
+		D5EF3E8A935E42BBA7096B32 /* ErrorToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ErrorToast.swift; path = ../AmakaFlow/Views/Components/ErrorToast.swift; sourceTree = SOURCE_ROOT; };
 		DA5BD907B0A6F491AC66198E /* CoachChatView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CoachChatView.swift; path = ../AmakaFlow/Views/CoachChatView.swift; sourceTree = "<group>"; };
+		E295BEB90381432BA61ECCFB /* ErrorReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ErrorReporter.swift; path = ../AmakaFlow/Services/ErrorReporter.swift; sourceTree = SOURCE_ROOT; };
 		E79E57529578481B8991A91F /* SourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SourcesView.swift; path = ../AmakaFlow/Views/SourcesView.swift; sourceTree = SOURCE_ROOT; };
 		EBCE80D8EA7940E025E8D41D /* PlanningModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlanningModels.swift; path = ../AmakaFlow/Models/PlanningModels.swift; sourceTree = "<group>"; };
 		EXEC10NL0G8U1LD3R0001 /* ExecutionLogBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ExecutionLogBuilder.swift; path = ../AmakaFlow/Engine/ExecutionLogBuilder.swift; sourceTree = SOURCE_ROOT; };
@@ -699,15 +713,6 @@
 		F84E227C2ED0D5BF00459747 /* ScheduleCalendarSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ScheduleCalendarSheet.swift; path = ../AmakaFlow/Views/Components/ScheduleCalendarSheet.swift; sourceTree = SOURCE_ROOT; };
 		F84E227D2ED0D5BF00459747 /* WorkoutCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCard.swift; path = ../AmakaFlow/Views/Components/WorkoutCard.swift; sourceTree = SOURCE_ROOT; };
 		F84E22812ED0D5D100459747 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIService.swift; path = ../AmakaFlow/Services/APIService.swift; sourceTree = SOURCE_ROOT; };
-		AMA1828TRANS00A /* APITransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APITransport.swift; path = ../AmakaFlow/Services/APITransport.swift; sourceTree = SOURCE_ROOT; };
-		AMA1828WORKO00A /* WorkoutAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutAPIRepository.swift; path = ../AmakaFlow/Services/WorkoutAPIRepository.swift; sourceTree = SOURCE_ROOT; };
-		AMA1828COACH00A /* CoachAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CoachAPIRepository.swift; path = ../AmakaFlow/Services/CoachAPIRepository.swift; sourceTree = SOURCE_ROOT; };
-		AMA1828CHAT000A /* ChatAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ChatAPIRepository.swift; path = ../AmakaFlow/Services/ChatAPIRepository.swift; sourceTree = SOURCE_ROOT; };
-		AMA1828DEVIC00A /* DeviceAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DeviceAPIRepository.swift; path = ../AmakaFlow/Services/DeviceAPIRepository.swift; sourceTree = SOURCE_ROOT; };
-		AMA1828TELEG00A /* TelegramAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TelegramAPIRepository.swift; path = ../AmakaFlow/Services/TelegramAPIRepository.swift; sourceTree = SOURCE_ROOT; };
-		AMA1828INGES00A /* IngestionAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = IngestionAPIRepository.swift; path = ../AmakaFlow/Services/IngestionAPIRepository.swift; sourceTree = SOURCE_ROOT; };
-		AMA1828SOCIA00A /* SocialAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialAPIRepository.swift; path = ../AmakaFlow/Services/SocialAPIRepository.swift; sourceTree = SOURCE_ROOT; };
-		AMA1828PROGR00A /* ProgramsAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProgramsAPIRepository.swift; path = ../AmakaFlow/Services/ProgramsAPIRepository.swift; sourceTree = SOURCE_ROOT; };
 		F84E22822ED0D5D100459747 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AuthService.swift; path = ../AmakaFlow/Services/AuthService.swift; sourceTree = SOURCE_ROOT; };
 		F84E22832ED0D5D100459747 /* CalendarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarManager.swift; path = ../AmakaFlow/Services/CalendarManager.swift; sourceTree = SOURCE_ROOT; };
 		F84E22842ED0D5D100459747 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchConnectivityManager.swift; path = ../AmakaFlow/Services/WatchConnectivityManager.swift; sourceTree = SOURCE_ROOT; };
@@ -762,9 +767,6 @@
 		V01C300800000000000000 /* TranscriptionReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/TranscriptionReviewView.swift; sourceTree = SOURCE_ROOT; };
 		V01C300900000000000000 /* VoiceWorkoutReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceWorkoutReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/VoiceWorkoutReviewView.swift; sourceTree = SOURCE_ROOT; };
 		W41T1NG000000001B0000001 /* WaitingForWatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WaitingForWatchView.swift; path = ../AmakaFlow/Views/Components/WaitingForWatchView.swift; sourceTree = SOURCE_ROOT; };
-		BC16168084DD4307BA295F94 /* CTAError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CTAError.swift; path = ../AmakaFlow/Models/CTAError.swift; sourceTree = SOURCE_ROOT; };
-		D5EF3E8A935E42BBA7096B32 /* ErrorToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ErrorToast.swift; path = ../AmakaFlow/Views/Components/ErrorToast.swift; sourceTree = SOURCE_ROOT; };
-		E295BEB90381432BA61ECCFB /* ErrorReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ErrorReporter.swift; path = ../AmakaFlow/Services/ErrorReporter.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -802,15 +804,11 @@
 		};
 		F84E21862ED0B0CA00459747 /* AmakaFlowCompanionTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = AmakaFlowCompanionTests;
 			sourceTree = "<group>";
 		};
 		F84E21902ED0B0CA00459747 /* AmakaFlowCompanionUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = AmakaFlowCompanionUITests;
 			sourceTree = "<group>";
 		};
@@ -824,15 +822,11 @@
 		};
 		F84E22292ED0B62100459747 /* AmakaFlowWatch Watch AppTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "AmakaFlowWatch Watch AppTests";
 			sourceTree = "<group>";
 		};
 		F84E22332ED0B62100459747 /* AmakaFlowWatch Watch AppUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "AmakaFlowWatch Watch AppUITests";
 			sourceTree = "<group>";
 		};
@@ -869,7 +863,7 @@
 				718A23C41FF542228DF9232B /* OpenAPIURLSession in Frameworks */,
 				F8C125B22EFAC00000459747 /* ConnectIQ in Frameworks */,
 				F84E22972ED0DA0F00459747 /* WatchConnectivity.framework in Frameworks */,
-				F880AD612F09559A00E8D7D3 /* BuildFile in Frameworks */,
+				F880AD612F09559A00E8D7D3 /* (null) in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -877,7 +871,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F880AD642F09559A00E8D7D3 /* BuildFile in Frameworks */,
+				F880AD642F09559A00E8D7D3 /* (null) in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -885,7 +879,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F880AD652F09559A00E8D7D3 /* BuildFile in Frameworks */,
+				F880AD652F09559A00E8D7D3 /* (null) in Frameworks */,
 				XCT4H34LTH00000001 /* XCTHealthKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -898,7 +892,7 @@
 				F84E229B2ED0DC0900459747 /* HealthKit.framework in Frameworks */,
 				F84E22A12ED0DC2700459747 /* WorkoutKitSync in Frameworks */,
 				F84E229D2ED0DC1100459747 /* WatchConnectivity.framework in Frameworks */,
-				F880AD632F09559A00E8D7D3 /* BuildFile in Frameworks */,
+				F880AD632F09559A00E8D7D3 /* (null) in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -906,7 +900,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F880AD662F09559A00E8D7D3 /* BuildFile in Frameworks */,
+				F880AD662F09559A00E8D7D3 /* (null) in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -914,7 +908,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F880AD672F09559A00E8D7D3 /* BuildFile in Frameworks */,
+				F880AD672F09559A00E8D7D3 /* (null) in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -967,6 +961,7 @@
 				D3BUG10G00000001B0000001 /* DebugLogService.swift */,
 				AMA1791APPDBREF /* AppDatabase.swift */,
 				AMA1791V1REF /* V1_initial_schema.swift */,
+				AMA1823V2REF /* V2_add_request_id_to_sync_queue.swift */,
 				A87B639F1BA04DF8A5301F4C /* UserDefaultsAcceptedMigration.swift */,
 				AMA1791LOCALRECREF /* LocalRecords.swift */,
 				AMA1791ACCEPTREPOREF /* AcceptedSuggestionsRepository.swift */,
@@ -1248,6 +1243,60 @@
 				TR4N5CR1PT10N3NG1N30005 /* FitnessVocabulary.swift */,
 				TR4N5CR1PT10N3NG1N30006 /* PersonalDictionary.swift */,
 				TR4N5CR1PT10N53TT1NG5001 /* VoiceTranscriptionSettingsView.swift */,
+				AK00XP001A /* XPBarView.swift */,
+				AK00XP002A /* LevelUpCelebrationView.swift */,
+				AK00RD001A /* WeeklyProgressRing.swift */,
+				AK00RD002A /* RestDayButton.swift */,
+				AK00FIX001A /* SocialModels.swift */,
+				AK00FIX002A /* TrainingProgram.swift */,
+				AK00FIX003A /* WorkoutSaveRequest.swift */,
+				AK00FIX004A /* StravaService.swift */,
+				AK00FIX005A /* AnalyticsViewModel.swift */,
+				AK00FIX006A /* CalendarSyncViewModel.swift */,
+				AK00FIX007A /* FeedViewModel.swift */,
+				AK00FIX008A /* ProgramsViewModel.swift */,
+				AK00FIX009A /* StravaViewModel.swift */,
+				AK00FIX010A /* WorkoutEditorViewModel.swift */,
+				AK00FIX011A /* AnalyticsView.swift */,
+				AK00FIX012A /* ExportView.swift */,
+				AK00FIX013A /* ImportURLView.swift */,
+				AK00FIX014A /* ProgramDetailView.swift */,
+				AK00FIX015A /* ProgramsListView.swift */,
+				AK00FIX016A /* CalendarSyncView.swift */,
+				AK00FIX017A /* CommentSheet.swift */,
+				AK00FIX018A /* FeedPostCard.swift */,
+				AK00FIX019A /* FeedView.swift */,
+				AK00FIX020A /* ReactionBar.swift */,
+				AK00FIX021A /* SocialSettingsView.swift */,
+				AK00FIX022A /* UserProfileMiniView.swift */,
+				AK00FIX023A /* StravaView.swift */,
+				AK00FIX024A /* TeamView.swift */,
+				AK00FIX025A /* WorkoutEditorView.swift */,
+				AK00TST001A /* ActivityHistoryTests.swift */,
+				AK00TST002A /* ActivityHistoryViewModelTests.swift */,
+				AK00TST003A /* AmakaFlowCompanionTests.swift */,
+				AK00TST004A /* APIIntegrationTests.swift */,
+				AK00TST005A /* CompletionDetailTests.swift */,
+				AK00TST006A /* CompletionDetailViewModelTests.swift */,
+				AK00TST007A /* FeedViewModelTests.swift */,
+				AK00TST008A /* InstagramImportModeTests.swift */,
+				AK00TST009A /* ManualInstagramIngestionTests.swift */,
+				AK00TST010A /* MockURLProtocol.swift */,
+				AK00TST011A /* PairingTests.swift */,
+				AK00TST012A /* Phase2ViewModelTests.swift */,
+				AK00TST013A /* PlatformDetectorTests.swift */,
+				AK00TST015A /* TestClock.swift */,
+				AK00TST016A /* TestDoubles.swift */,
+				AK00TST017A /* TranscriptionTests.swift */,
+				AK00TST018A /* URLImportServiceTests.swift */,
+				AK00TST019A /* WatchConnectivityTests.swift */,
+				AK00TST020A /* WorkoutCompletionViewModelTests.swift */,
+				AK00TST021A /* WorkoutEngineEdgeCaseTests.swift */,
+				AK00TST022A /* WorkoutEngineTests.swift */,
+				AK00TST023A /* WorkoutModelTests.swift */,
+				AK00TST024A /* WorkoutsViewModelTests.swift */,
+				AK00TST025A /* XPBarViewTests.swift */,
+				96BF60E98CCB044FBF23EB80 /* ShareExtensionTests.swift */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -1488,7 +1537,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				F84E225F2ED0B84300459747 /* XCRemoteSwiftPackageReference "workoutkit-sync" */,
-				F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "ConnectIQ" */,
+				F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "../Vendor/ConnectIQ" */,
 				6EFD6A06E1264416B1103D42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 				XCT4H34LTH00000003 /* XCRemoteSwiftPackageReference "XCTHealthKit" */,
 				AMA1620CLERKPKG /* XCRemoteSwiftPackageReference "clerk-ios" */,
@@ -1717,6 +1766,7 @@
 				D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */,
 				AMA1791APPDBBLD /* AppDatabase.swift in Sources */,
 				AMA1791V1BLD /* V1_initial_schema.swift in Sources */,
+				AMA1823V2BLD /* V2_add_request_id_to_sync_queue.swift in Sources */,
 				E2E9218685E5476B991B3979 /* UserDefaultsAcceptedMigration.swift in Sources */,
 				AMA1791LOCALRECBLD /* LocalRecords.swift in Sources */,
 				AMA1791ACCEPTREPOBLD /* AcceptedSuggestionsRepository.swift in Sources */,
@@ -1871,10 +1921,10 @@
 				72A766051AE36A2294C87B12 /* WatchDeliveryView.swift in Sources */,
 				00CBD8759EE7C769D1D7F82B /* AgentInboxView.swift in Sources */,
 				A472B5FFC8CB61D805621A61 /* EditProfileView.swift in Sources */,
-							C0EE9007F3C8491C99D133C1 /* CTAError.swift in Sources */,
+				C0EE9007F3C8491C99D133C1 /* CTAError.swift in Sources */,
 				A1780B8C38BE4F00BB0C26DE /* ErrorToast.swift in Sources */,
 				50E262BC3ABF4F4BB8944710 /* ErrorReporter.swift in Sources */,
-);
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F84E217F2ED0B0CA00459747 /* Sources */ = {
@@ -2661,13 +2711,29 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "ConnectIQ" */ = {
+		F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "../Vendor/ConnectIQ" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Vendor/ConnectIQ;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		02CC5FB9C29845DF83B3F0CB /* XCRemoteSwiftPackageReference "swift-openapi-urlsession" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-openapi-urlsession";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+		09208E7C85544D5D93929812 /* XCRemoteSwiftPackageReference "swift-openapi-runtime" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-openapi-runtime";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
 		6EFD6A06E1264416B1103D42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/getsentry/sentry-cocoa/";
@@ -2690,22 +2756,6 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 7.0.0;
-			};
-		};
-		09208E7C85544D5D93929812 /* XCRemoteSwiftPackageReference "swift-openapi-runtime" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/apple/swift-openapi-runtime";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
-			};
-		};
-		02CC5FB9C29845DF83B3F0CB /* XCRemoteSwiftPackageReference "swift-openapi-urlsession" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/apple/swift-openapi-urlsession";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
 			};
 		};
 		F84E225F2ED0B84300459747 /* XCRemoteSwiftPackageReference "workoutkit-sync" */ = {
@@ -2732,6 +2782,16 @@
 			package = 6EFD6A06E1264416B1103D42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = Sentry;
 		};
+		3D2A2E0648804CD7A88CF287 /* OpenAPIURLSession */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 02CC5FB9C29845DF83B3F0CB /* XCRemoteSwiftPackageReference "swift-openapi-urlsession" */;
+			productName = OpenAPIURLSession;
+		};
+		5428DFDDAABA4C78929FAD58 /* OpenAPIRuntime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 09208E7C85544D5D93929812 /* XCRemoteSwiftPackageReference "swift-openapi-runtime" */;
+			productName = OpenAPIRuntime;
+		};
 		AMA1620CLKKIT01P /* ClerkKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = AMA1620CLERKPKG /* XCRemoteSwiftPackageReference "clerk-ios" */;
@@ -2747,16 +2807,6 @@
 			package = AMA1791GRDBPKG /* XCRemoteSwiftPackageReference "GRDB.swift" */;
 			productName = GRDB;
 		};
-		5428DFDDAABA4C78929FAD58 /* OpenAPIRuntime */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 09208E7C85544D5D93929812 /* XCRemoteSwiftPackageReference "swift-openapi-runtime" */;
-			productName = OpenAPIRuntime;
-		};
-		3D2A2E0648804CD7A88CF287 /* OpenAPIURLSession */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 02CC5FB9C29845DF83B3F0CB /* XCRemoteSwiftPackageReference "swift-openapi-urlsession" */;
-			productName = OpenAPIURLSession;
-		};
 		F84E22982ED0DA1F00459747 /* WorkoutKitSync */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = F84E225F2ED0B84300459747 /* XCRemoteSwiftPackageReference "workoutkit-sync" */;
@@ -2769,7 +2819,7 @@
 		};
 		F8C125B12EFAC00000459747 /* ConnectIQ */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "ConnectIQ" */;
+			package = F8C125B02EFAC00000459747 /* XCLocalSwiftPackageReference "../Vendor/ConnectIQ" */;
 			productName = ConnectIQ;
 		};
 		XCT4H34LTH00000002 /* XCTHealthKit */ = {

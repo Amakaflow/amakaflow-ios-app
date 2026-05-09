@@ -37,10 +37,24 @@ nonisolated final class SyncQueueRepository {
             errorReason: nil,
             status: .pending,
             createdAt: timestamp,
-            updatedAt: timestamp
+            updatedAt: timestamp,
+            requestId: nil
         )
         try item.insert(db)
         return item
+    }
+
+    /// AMA-1823: stamp a fresh request_id on the queue row at the start of
+    /// each sync attempt. A retry generates a new ID, so this is the only
+    /// path that updates the column after enqueue. Touches `updated_at` to
+    /// keep the audit trail consistent with the other state mutators.
+    func updateRequestId(_ id: String, requestId: String) throws {
+        try dbQueue.write { db in
+            guard var item = try SyncQueueItem.fetchOne(db, key: id) else { return }
+            item.requestId = requestId
+            item.updatedAt = now()
+            try item.update(db)
+        }
     }
 
     func pending(limit: Int = 25) throws -> [SyncQueueItem] {
