@@ -56,8 +56,14 @@ extension APIProtocol {
     ///
     /// - Remark: HTTP `POST /v1/sync/confirm`.
     /// - Remark: Generated from `#/paths//v1/sync/confirm/post(v1_sync_confirm_v1_sync_confirm_post)`.
-    public func v1SyncConfirmV1SyncConfirmPost(headers: Operations.V1SyncConfirmV1SyncConfirmPost.Input.Headers = .init()) async throws -> Operations.V1SyncConfirmV1SyncConfirmPost.Output {
-        try await v1SyncConfirmV1SyncConfirmPost(Operations.V1SyncConfirmV1SyncConfirmPost.Input(headers: headers))
+    public func v1SyncConfirmV1SyncConfirmPost(
+        headers: Operations.V1SyncConfirmV1SyncConfirmPost.Input.Headers = .init(),
+        body: Operations.V1SyncConfirmV1SyncConfirmPost.Input.Body
+    ) async throws -> Operations.V1SyncConfirmV1SyncConfirmPost.Output {
+        try await v1SyncConfirmV1SyncConfirmPost(Operations.V1SyncConfirmV1SyncConfirmPost.Input(
+            headers: headers,
+            body: body
+        ))
     }
     /// V1 Sync Failed
     ///
@@ -65,8 +71,14 @@ extension APIProtocol {
     ///
     /// - Remark: HTTP `POST /v1/sync/failed`.
     /// - Remark: Generated from `#/paths//v1/sync/failed/post(v1_sync_failed_v1_sync_failed_post)`.
-    public func v1SyncFailedV1SyncFailedPost(headers: Operations.V1SyncFailedV1SyncFailedPost.Input.Headers = .init()) async throws -> Operations.V1SyncFailedV1SyncFailedPost.Output {
-        try await v1SyncFailedV1SyncFailedPost(Operations.V1SyncFailedV1SyncFailedPost.Input(headers: headers))
+    public func v1SyncFailedV1SyncFailedPost(
+        headers: Operations.V1SyncFailedV1SyncFailedPost.Input.Headers = .init(),
+        body: Operations.V1SyncFailedV1SyncFailedPost.Input.Body
+    ) async throws -> Operations.V1SyncFailedV1SyncFailedPost.Output {
+        try await v1SyncFailedV1SyncFailedPost(Operations.V1SyncFailedV1SyncFailedPost.Input(
+            headers: headers,
+            body: body
+        ))
     }
     /// V1 Sync Pending
     ///
@@ -74,8 +86,14 @@ extension APIProtocol {
     ///
     /// - Remark: HTTP `GET /v1/sync/pending`.
     /// - Remark: Generated from `#/paths//v1/sync/pending/get(v1_sync_pending_v1_sync_pending_get)`.
-    public func v1SyncPendingV1SyncPendingGet(headers: Operations.V1SyncPendingV1SyncPendingGet.Input.Headers = .init()) async throws -> Operations.V1SyncPendingV1SyncPendingGet.Output {
-        try await v1SyncPendingV1SyncPendingGet(Operations.V1SyncPendingV1SyncPendingGet.Input(headers: headers))
+    public func v1SyncPendingV1SyncPendingGet(
+        query: Operations.V1SyncPendingV1SyncPendingGet.Input.Query,
+        headers: Operations.V1SyncPendingV1SyncPendingGet.Input.Headers = .init()
+    ) async throws -> Operations.V1SyncPendingV1SyncPendingGet.Output {
+        try await v1SyncPendingV1SyncPendingGet(Operations.V1SyncPendingV1SyncPendingGet.Input(
+            query: query,
+            headers: headers
+        ))
     }
     /// V1 Workouts Complete
     ///
@@ -83,8 +101,14 @@ extension APIProtocol {
     ///
     /// - Remark: HTTP `POST /v1/workouts/complete`.
     /// - Remark: Generated from `#/paths//v1/workouts/complete/post(v1_workouts_complete_v1_workouts_complete_post)`.
-    public func v1WorkoutsCompleteV1WorkoutsCompletePost(headers: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Input.Headers = .init()) async throws -> Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Output {
-        try await v1WorkoutsCompleteV1WorkoutsCompletePost(Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Input(headers: headers))
+    public func v1WorkoutsCompleteV1WorkoutsCompletePost(
+        headers: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Input.Headers = .init(),
+        body: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Input.Body
+    ) async throws -> Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Output {
+        try await v1WorkoutsCompleteV1WorkoutsCompletePost(Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Input(
+            headers: headers,
+            body: body
+        ))
     }
     /// V1 Workouts Planned
     ///
@@ -92,8 +116,14 @@ extension APIProtocol {
     ///
     /// - Remark: HTTP `GET /v1/workouts/planned`.
     /// - Remark: Generated from `#/paths//v1/workouts/planned/get(v1_workouts_planned_v1_workouts_planned_get)`.
-    public func v1WorkoutsPlannedV1WorkoutsPlannedGet(headers: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Input.Headers = .init()) async throws -> Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Output {
-        try await v1WorkoutsPlannedV1WorkoutsPlannedGet(Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Input(headers: headers))
+    public func v1WorkoutsPlannedV1WorkoutsPlannedGet(
+        query: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Input.Query,
+        headers: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Input.Headers = .init()
+    ) async throws -> Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Output {
+        try await v1WorkoutsPlannedV1WorkoutsPlannedGet(Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Input(
+            query: query,
+            headers: headers
+        ))
     }
 }
 
@@ -103,7 +133,497 @@ public enum Servers {}
 /// Types generated from the components section of the OpenAPI document.
 public enum Components {
     /// Types generated from the `#/components/schemas` section of the OpenAPI document.
-    public enum Schemas {}
+    public enum Schemas {
+        /// Request body for POST /v1/sync/confirm.
+        ///
+        /// - Remark: Generated from `#/components/schemas/ConfirmSyncRequest`.
+        public struct ConfirmSyncRequest: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ConfirmSyncRequest/device_type`.
+            public var deviceType: Components.Schemas.DeviceType
+            /// - Remark: Generated from `#/components/schemas/ConfirmSyncRequest/workout_id`.
+            public var workoutId: Swift.String
+            /// Creates a new `ConfirmSyncRequest`.
+            ///
+            /// - Parameters:
+            ///   - deviceType:
+            ///   - workoutId:
+            public init(
+                deviceType: Components.Schemas.DeviceType,
+                workoutId: Swift.String
+            ) {
+                self.deviceType = deviceType
+                self.workoutId = workoutId
+            }
+            public enum CodingKeys: String, CodingKey {
+                case deviceType = "device_type"
+                case workoutId = "workout_id"
+            }
+        }
+        /// Response for POST /v1/sync/confirm.
+        ///
+        /// - Remark: Generated from `#/components/schemas/ConfirmSyncResponse`.
+        public struct ConfirmSyncResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ConfirmSyncResponse/success`.
+            public var success: Swift.Bool
+            /// Creates a new `ConfirmSyncResponse`.
+            ///
+            /// - Parameters:
+            ///   - success:
+            public init(success: Swift.Bool) {
+                self.success = success
+            }
+            public enum CodingKeys: String, CodingKey {
+                case success
+            }
+        }
+        /// Mirrors mapper-api's DeviceType (services/mapper-api/api/routers/sync.py).
+        ///
+        /// - Remark: Generated from `#/components/schemas/DeviceType`.
+        @frozen public enum DeviceType: String, Codable, Hashable, Sendable, CaseIterable {
+            case ios = "ios"
+            case android = "android"
+            case garmin = "garmin"
+        }
+        /// - Remark: Generated from `#/components/schemas/HTTPValidationError`.
+        public struct HTTPValidationError: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/HTTPValidationError/detail`.
+            public var detail: [Components.Schemas.ValidationError]?
+            /// Creates a new `HTTPValidationError`.
+            ///
+            /// - Parameters:
+            ///   - detail:
+            public init(detail: [Components.Schemas.ValidationError]? = nil) {
+                self.detail = detail
+            }
+            public enum CodingKeys: String, CodingKey {
+                case detail
+            }
+        }
+        /// Health metrics captured during the workout (Apple Watch / Garmin).
+        ///
+        /// - Remark: Generated from `#/components/schemas/HealthMetrics`.
+        public struct HealthMetrics: Codable, Hashable, Sendable {
+            /// Creates a new `HealthMetrics`.
+            public init() {}
+        }
+        /// Response for GET /v1/sync/pending.
+        ///
+        /// - Remark: Generated from `#/components/schemas/PendingSyncResponse`.
+        public struct PendingSyncResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/PendingSyncResponse/count`.
+            public var count: Swift.Int
+            /// - Remark: Generated from `#/components/schemas/PendingSyncResponse/success`.
+            public var success: Swift.Bool
+            /// - Remark: Generated from `#/components/schemas/PendingSyncResponse/workouts`.
+            public var workouts: [Components.Schemas.PendingSyncWorkout]
+            /// Creates a new `PendingSyncResponse`.
+            ///
+            /// - Parameters:
+            ///   - count:
+            ///   - success:
+            ///   - workouts:
+            public init(
+                count: Swift.Int,
+                success: Swift.Bool,
+                workouts: [Components.Schemas.PendingSyncWorkout]
+            ) {
+                self.count = count
+                self.success = success
+                self.workouts = workouts
+            }
+            public enum CodingKeys: String, CodingKey {
+                case count
+                case success
+                case workouts
+            }
+        }
+        /// One pending workout entry returned by /sync/pending.
+        ///
+        /// Intervals stay as a free-form list of dicts — the upstream router
+        /// runs `to_workoutkit(...).intervals` and the resulting WorkoutKit
+        /// interval shapes are large and themselves polymorphic (warmup,
+        /// cooldown, repeat, single). Modeling them strictly in v1 would either
+        /// drift from upstream or pull a large dependency tree into the BFF;
+        /// deferring per the AMA-1817 1:1-mirror principle.
+        ///
+        /// - Remark: Generated from `#/components/schemas/PendingSyncWorkout`.
+        public struct PendingSyncWorkout: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/PendingSyncWorkout/IntervalsPayload`.
+            public struct IntervalsPayloadPayload: Codable, Hashable, Sendable {
+                /// A container of undocumented properties.
+                public var additionalProperties: OpenAPIRuntime.OpenAPIObjectContainer
+                /// Creates a new `IntervalsPayloadPayload`.
+                ///
+                /// - Parameters:
+                ///   - additionalProperties: A container of undocumented properties.
+                public init(additionalProperties: OpenAPIRuntime.OpenAPIObjectContainer = .init()) {
+                    self.additionalProperties = additionalProperties
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [])
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try encoder.encodeAdditionalProperties(additionalProperties)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/PendingSyncWorkout/intervals`.
+            public typealias IntervalsPayload = [Components.Schemas.PendingSyncWorkout.IntervalsPayloadPayload]
+            /// - Remark: Generated from `#/components/schemas/PendingSyncWorkout/intervals`.
+            public var intervals: Components.Schemas.PendingSyncWorkout.IntervalsPayload?
+            /// Creates a new `PendingSyncWorkout`.
+            ///
+            /// - Parameters:
+            ///   - intervals:
+            public init(intervals: Components.Schemas.PendingSyncWorkout.IntervalsPayload? = nil) {
+                self.intervals = intervals
+            }
+            public enum CodingKeys: String, CodingKey {
+                case intervals
+            }
+        }
+        /// Response for GET /v1/workouts/planned.
+        ///
+        /// - Remark: Generated from `#/components/schemas/PlannedListResponse`.
+        public struct PlannedListResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/PlannedListResponse/workouts`.
+            public var workouts: [Components.Schemas.PlannedWorkout]
+            /// Creates a new `PlannedListResponse`.
+            ///
+            /// - Parameters:
+            ///   - workouts:
+            public init(workouts: [Components.Schemas.PlannedWorkout]) {
+                self.workouts = workouts
+            }
+            public enum CodingKeys: String, CodingKey {
+                case workouts
+            }
+        }
+        /// Subset of `workout_events` returned to iOS.
+        ///
+        /// Aliases (camelCase) preserved from mapper-api so the wire shape stays
+        /// identical across BFF and upstream — iOS already decodes this format.
+        ///
+        /// - Remark: Generated from `#/components/schemas/PlannedWorkout`.
+        public struct PlannedWorkout: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/PlannedWorkout/id`.
+            public var id: Swift.String
+            /// - Remark: Generated from `#/components/schemas/PlannedWorkout/userId`.
+            public var userId: Swift.String
+            /// Creates a new `PlannedWorkout`.
+            ///
+            /// - Parameters:
+            ///   - id:
+            ///   - userId:
+            public init(
+                id: Swift.String,
+                userId: Swift.String
+            ) {
+                self.id = id
+                self.userId = userId
+            }
+            public enum CodingKeys: String, CodingKey {
+                case id
+                case userId
+            }
+        }
+        /// Request body for POST /v1/sync/failed.
+        ///
+        /// - Remark: Generated from `#/components/schemas/ReportSyncFailedRequest`.
+        public struct ReportSyncFailedRequest: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ReportSyncFailedRequest/device_type`.
+            public var deviceType: Components.Schemas.DeviceType
+            /// - Remark: Generated from `#/components/schemas/ReportSyncFailedRequest/error`.
+            public var error: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ReportSyncFailedRequest/workout_id`.
+            public var workoutId: Swift.String
+            /// Creates a new `ReportSyncFailedRequest`.
+            ///
+            /// - Parameters:
+            ///   - deviceType:
+            ///   - error:
+            ///   - workoutId:
+            public init(
+                deviceType: Components.Schemas.DeviceType,
+                error: Swift.String,
+                workoutId: Swift.String
+            ) {
+                self.deviceType = deviceType
+                self.error = error
+                self.workoutId = workoutId
+            }
+            public enum CodingKeys: String, CodingKey {
+                case deviceType = "device_type"
+                case error
+                case workoutId = "workout_id"
+            }
+        }
+        /// Response for POST /v1/sync/failed.
+        ///
+        /// - Remark: Generated from `#/components/schemas/ReportSyncFailedResponse`.
+        public struct ReportSyncFailedResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ReportSyncFailedResponse/success`.
+            public var success: Swift.Bool
+            /// Creates a new `ReportSyncFailedResponse`.
+            ///
+            /// - Parameters:
+            ///   - success:
+            public init(success: Swift.Bool) {
+                self.success = success
+            }
+            public enum CodingKeys: String, CodingKey {
+                case success
+            }
+        }
+        /// Individual set within an exercise log (AMA-281).
+        ///
+        /// - Remark: Generated from `#/components/schemas/SetEntry`.
+        public struct SetEntry: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/SetEntry/completed`.
+            public var completed: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/SetEntry/set_number`.
+            public var setNumber: Swift.Int
+            /// Creates a new `SetEntry`.
+            ///
+            /// - Parameters:
+            ///   - completed:
+            ///   - setNumber:
+            public init(
+                completed: Swift.Bool? = nil,
+                setNumber: Swift.Int
+            ) {
+                self.completed = completed
+                self.setNumber = setNumber
+            }
+            public enum CodingKeys: String, CodingKey {
+                case completed
+                case setNumber = "set_number"
+            }
+        }
+        /// Log of sets for a single exercise (AMA-281).
+        ///
+        /// - Remark: Generated from `#/components/schemas/SetLog`.
+        public struct SetLog: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/SetLog/exercise_index`.
+            public var exerciseIndex: Swift.Int
+            /// - Remark: Generated from `#/components/schemas/SetLog/exercise_name`.
+            public var exerciseName: Swift.String
+            /// - Remark: Generated from `#/components/schemas/SetLog/sets`.
+            public var sets: [Components.Schemas.SetEntry]
+            /// Creates a new `SetLog`.
+            ///
+            /// - Parameters:
+            ///   - exerciseIndex:
+            ///   - exerciseName:
+            ///   - sets:
+            public init(
+                exerciseIndex: Swift.Int,
+                exerciseName: Swift.String,
+                sets: [Components.Schemas.SetEntry]
+            ) {
+                self.exerciseIndex = exerciseIndex
+                self.exerciseName = exerciseName
+                self.sets = sets
+            }
+            public enum CodingKeys: String, CodingKey {
+                case exerciseIndex = "exercise_index"
+                case exerciseName = "exercise_name"
+                case sets
+            }
+        }
+        /// Simulation parameters when workout runs in simulation mode (AMA-273).
+        ///
+        /// - Remark: Generated from `#/components/schemas/SimulationConfig`.
+        public struct SimulationConfig: Codable, Hashable, Sendable {
+            /// Creates a new `SimulationConfig`.
+            public init() {}
+        }
+        /// - Remark: Generated from `#/components/schemas/ValidationError`.
+        public struct ValidationError: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ValidationError/ctx`.
+            public var ctx: OpenAPIRuntime.OpenAPIObjectContainer?
+            /// - Remark: Generated from `#/components/schemas/ValidationError/input`.
+            public var input: OpenAPIRuntime.OpenAPIValueContainer?
+            /// - Remark: Generated from `#/components/schemas/ValidationError/LocPayload`.
+            public struct LocPayloadPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/ValidationError/LocPayload/value1`.
+                public var value1: Swift.String?
+                /// - Remark: Generated from `#/components/schemas/ValidationError/LocPayload/value2`.
+                public var value2: Swift.Int?
+                /// Creates a new `LocPayloadPayload`.
+                ///
+                /// - Parameters:
+                ///   - value1:
+                ///   - value2:
+                public init(
+                    value1: Swift.String? = nil,
+                    value2: Swift.Int? = nil
+                ) {
+                    self.value1 = value1
+                    self.value2 = value2
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    var errors: [any Swift.Error] = []
+                    do {
+                        self.value1 = try decoder.decodeFromSingleValueContainer()
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value2 = try decoder.decodeFromSingleValueContainer()
+                    } catch {
+                        errors.append(error)
+                    }
+                    try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                        [
+                            self.value1,
+                            self.value2
+                        ],
+                        type: Self.self,
+                        codingPath: decoder.codingPath,
+                        errors: errors
+                    )
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try encoder.encodeFirstNonNilValueToSingleValueContainer([
+                        self.value1,
+                        self.value2
+                    ])
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/ValidationError/loc`.
+            public typealias LocPayload = [Components.Schemas.ValidationError.LocPayloadPayload]
+            /// - Remark: Generated from `#/components/schemas/ValidationError/loc`.
+            public var loc: Components.Schemas.ValidationError.LocPayload
+            /// - Remark: Generated from `#/components/schemas/ValidationError/msg`.
+            public var msg: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ValidationError/type`.
+            public var _type: Swift.String
+            /// Creates a new `ValidationError`.
+            ///
+            /// - Parameters:
+            ///   - ctx:
+            ///   - input:
+            ///   - loc:
+            ///   - msg:
+            ///   - _type:
+            public init(
+                ctx: OpenAPIRuntime.OpenAPIObjectContainer? = nil,
+                input: OpenAPIRuntime.OpenAPIValueContainer? = nil,
+                loc: Components.Schemas.ValidationError.LocPayload,
+                msg: Swift.String,
+                _type: Swift.String
+            ) {
+                self.ctx = ctx
+                self.input = input
+                self.loc = loc
+                self.msg = msg
+                self._type = _type
+            }
+            public enum CodingKeys: String, CodingKey {
+                case ctx
+                case input
+                case loc
+                case msg
+                case _type = "type"
+            }
+        }
+        /// Request body for POST /v1/workouts/complete.
+        ///
+        /// Mirrors `WorkoutCompletionRequest` in mapper-api
+        /// (services/mapper-api/backend/workout_completions.py) 1:1.
+        ///
+        /// Note: `execution_log`, `heart_rate_samples`, `workout_structure`,
+        /// `intervals`, and `device_info` stay as free-form dicts here — the
+        /// upstream model deliberately uses `Dict[str, Any]` after the AMA-1813
+        /// saga (the strict ExecutionLog tree rejected the iOS payload). We do
+        /// NOT narrow these in v1; that's reserved for a future contract ticket.
+        ///
+        /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest`.
+        public struct WorkoutCompletionRequest: Codable, Hashable, Sendable {
+            /// ISO 8601 timestamp.
+            ///
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/ended_at`.
+            public var endedAt: Swift.String
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/health_metrics`.
+            public var healthMetrics: Components.Schemas.HealthMetrics
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/is_simulated`.
+            public var isSimulated: Swift.Bool?
+            /// apple_watch | garmin | manual.
+            ///
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/source`.
+            public var source: Swift.String?
+            /// ISO 8601 timestamp.
+            ///
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/started_at`.
+            public var startedAt: Swift.String
+            /// Creates a new `WorkoutCompletionRequest`.
+            ///
+            /// - Parameters:
+            ///   - endedAt: ISO 8601 timestamp.
+            ///   - healthMetrics:
+            ///   - isSimulated:
+            ///   - source: apple_watch | garmin | manual.
+            ///   - startedAt: ISO 8601 timestamp.
+            public init(
+                endedAt: Swift.String,
+                healthMetrics: Components.Schemas.HealthMetrics,
+                isSimulated: Swift.Bool? = nil,
+                source: Swift.String? = nil,
+                startedAt: Swift.String
+            ) {
+                self.endedAt = endedAt
+                self.healthMetrics = healthMetrics
+                self.isSimulated = isSimulated
+                self.source = source
+                self.startedAt = startedAt
+            }
+            public enum CodingKeys: String, CodingKey {
+                case endedAt = "ended_at"
+                case healthMetrics = "health_metrics"
+                case isSimulated = "is_simulated"
+                case source
+                case startedAt = "started_at"
+            }
+        }
+        /// Response for POST /v1/workouts/complete.
+        ///
+        /// Mirrors mapper-api's `WorkoutCompletionResponse` plus the optional
+        /// `fidelity`, `idempotent`, and `error_code` fields that the router
+        /// actually emits in practice (see record_workout_completion_endpoint).
+        ///
+        /// - Remark: Generated from `#/components/schemas/WorkoutCompletionResponse`.
+        public struct WorkoutCompletionResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionResponse/success`.
+            public var success: Swift.Bool
+            /// Creates a new `WorkoutCompletionResponse`.
+            ///
+            /// - Parameters:
+            ///   - success:
+            public init(success: Swift.Bool) {
+                self.success = success
+            }
+            public enum CodingKeys: String, CodingKey {
+                case success
+            }
+        }
+        /// Summary echoed back after a successful completion.
+        ///
+        /// - Remark: Generated from `#/components/schemas/WorkoutCompletionSummary`.
+        public struct WorkoutCompletionSummary: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionSummary/duration_formatted`.
+            public var durationFormatted: Swift.String
+            /// Creates a new `WorkoutCompletionSummary`.
+            ///
+            /// - Parameters:
+            ///   - durationFormatted:
+            public init(durationFormatted: Swift.String) {
+                self.durationFormatted = durationFormatted
+            }
+            public enum CodingKeys: String, CodingKey {
+                case durationFormatted = "duration_formatted"
+            }
+        }
+    }
     /// Types generated from the `#/components/parameters` section of the OpenAPI document.
     public enum Parameters {}
     /// Types generated from the `#/components/requestBodies` section of the OpenAPI document.
@@ -137,12 +657,23 @@ public enum Operations {
                 }
             }
             public var headers: Operations.V1SyncConfirmV1SyncConfirmPost.Input.Headers
+            /// - Remark: Generated from `#/paths/v1/sync/confirm/POST/requestBody`.
+            @frozen public enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/sync/confirm/POST/requestBody/content/application\/json`.
+                case json(Components.Schemas.ConfirmSyncRequest)
+            }
+            public var body: Operations.V1SyncConfirmV1SyncConfirmPost.Input.Body
             /// Creates a new `Input`.
             ///
             /// - Parameters:
             ///   - headers:
-            public init(headers: Operations.V1SyncConfirmV1SyncConfirmPost.Input.Headers = .init()) {
+            ///   - body:
+            public init(
+                headers: Operations.V1SyncConfirmV1SyncConfirmPost.Input.Headers = .init(),
+                body: Operations.V1SyncConfirmV1SyncConfirmPost.Input.Body
+            ) {
                 self.headers = headers
+                self.body = body
             }
         }
         @frozen public enum Output: Sendable, Hashable {
@@ -150,12 +681,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/v1/sync/confirm/POST/responses/200/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/v1/sync/confirm/POST/responses/200/content/application\/json`.
-                    case json(OpenAPIRuntime.OpenAPIValueContainer)
+                    case json(Components.Schemas.ConfirmSyncResponse)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: OpenAPIRuntime.OpenAPIValueContainer {
+                    public var json: Components.Schemas.ConfirmSyncResponse {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -192,6 +723,57 @@ public enum Operations {
                     default:
                         try throwUnexpectedResponseStatus(
                             expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/sync/confirm/POST/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/sync/confirm/POST/responses/422/content/application\/json`.
+                    case json(Components.Schemas.HTTPValidationError)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.HTTPValidationError {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.V1SyncConfirmV1SyncConfirmPost.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.V1SyncConfirmV1SyncConfirmPost.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// Validation Error
+            ///
+            /// - Remark: Generated from `#/paths//v1/sync/confirm/post(v1_sync_confirm_v1_sync_confirm_post)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.V1SyncConfirmV1SyncConfirmPost.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.V1SyncConfirmV1SyncConfirmPost.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
                             response: self
                         )
                     }
@@ -249,12 +831,23 @@ public enum Operations {
                 }
             }
             public var headers: Operations.V1SyncFailedV1SyncFailedPost.Input.Headers
+            /// - Remark: Generated from `#/paths/v1/sync/failed/POST/requestBody`.
+            @frozen public enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/sync/failed/POST/requestBody/content/application\/json`.
+                case json(Components.Schemas.ReportSyncFailedRequest)
+            }
+            public var body: Operations.V1SyncFailedV1SyncFailedPost.Input.Body
             /// Creates a new `Input`.
             ///
             /// - Parameters:
             ///   - headers:
-            public init(headers: Operations.V1SyncFailedV1SyncFailedPost.Input.Headers = .init()) {
+            ///   - body:
+            public init(
+                headers: Operations.V1SyncFailedV1SyncFailedPost.Input.Headers = .init(),
+                body: Operations.V1SyncFailedV1SyncFailedPost.Input.Body
+            ) {
                 self.headers = headers
+                self.body = body
             }
         }
         @frozen public enum Output: Sendable, Hashable {
@@ -262,12 +855,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/v1/sync/failed/POST/responses/200/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/v1/sync/failed/POST/responses/200/content/application\/json`.
-                    case json(OpenAPIRuntime.OpenAPIValueContainer)
+                    case json(Components.Schemas.ReportSyncFailedResponse)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: OpenAPIRuntime.OpenAPIValueContainer {
+                    public var json: Components.Schemas.ReportSyncFailedResponse {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -304,6 +897,57 @@ public enum Operations {
                     default:
                         try throwUnexpectedResponseStatus(
                             expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/sync/failed/POST/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/sync/failed/POST/responses/422/content/application\/json`.
+                    case json(Components.Schemas.HTTPValidationError)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.HTTPValidationError {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.V1SyncFailedV1SyncFailedPost.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.V1SyncFailedV1SyncFailedPost.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// Validation Error
+            ///
+            /// - Remark: Generated from `#/paths//v1/sync/failed/post(v1_sync_failed_v1_sync_failed_post)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.V1SyncFailedV1SyncFailedPost.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.V1SyncFailedV1SyncFailedPost.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
                             response: self
                         )
                     }
@@ -349,6 +993,21 @@ public enum Operations {
     public enum V1SyncPendingV1SyncPendingGet {
         public static let id: Swift.String = "v1_sync_pending_v1_sync_pending_get"
         public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/sync/pending/GET/query`.
+            public struct Query: Sendable, Hashable {
+                /// Device type: ios | android | garmin.
+                ///
+                /// - Remark: Generated from `#/paths/v1/sync/pending/GET/query/device_type`.
+                public var deviceType: Components.Schemas.DeviceType
+                /// Creates a new `Query`.
+                ///
+                /// - Parameters:
+                ///   - deviceType: Device type: ios | android | garmin.
+                public init(deviceType: Components.Schemas.DeviceType) {
+                    self.deviceType = deviceType
+                }
+            }
+            public var query: Operations.V1SyncPendingV1SyncPendingGet.Input.Query
             /// - Remark: Generated from `#/paths/v1/sync/pending/GET/header`.
             public struct Headers: Sendable, Hashable {
                 public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.V1SyncPendingV1SyncPendingGet.AcceptableContentType>]
@@ -364,8 +1023,13 @@ public enum Operations {
             /// Creates a new `Input`.
             ///
             /// - Parameters:
+            ///   - query:
             ///   - headers:
-            public init(headers: Operations.V1SyncPendingV1SyncPendingGet.Input.Headers = .init()) {
+            public init(
+                query: Operations.V1SyncPendingV1SyncPendingGet.Input.Query,
+                headers: Operations.V1SyncPendingV1SyncPendingGet.Input.Headers = .init()
+            ) {
+                self.query = query
                 self.headers = headers
             }
         }
@@ -374,12 +1038,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/v1/sync/pending/GET/responses/200/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/v1/sync/pending/GET/responses/200/content/application\/json`.
-                    case json(OpenAPIRuntime.OpenAPIValueContainer)
+                    case json(Components.Schemas.PendingSyncResponse)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: OpenAPIRuntime.OpenAPIValueContainer {
+                    public var json: Components.Schemas.PendingSyncResponse {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -416,6 +1080,57 @@ public enum Operations {
                     default:
                         try throwUnexpectedResponseStatus(
                             expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/sync/pending/GET/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/sync/pending/GET/responses/422/content/application\/json`.
+                    case json(Components.Schemas.HTTPValidationError)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.HTTPValidationError {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.V1SyncPendingV1SyncPendingGet.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.V1SyncPendingV1SyncPendingGet.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// Validation Error
+            ///
+            /// - Remark: Generated from `#/paths//v1/sync/pending/get(v1_sync_pending_v1_sync_pending_get)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.V1SyncPendingV1SyncPendingGet.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.V1SyncPendingV1SyncPendingGet.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
                             response: self
                         )
                     }
@@ -473,12 +1188,23 @@ public enum Operations {
                 }
             }
             public var headers: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Input.Headers
+            /// - Remark: Generated from `#/paths/v1/workouts/complete/POST/requestBody`.
+            @frozen public enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/workouts/complete/POST/requestBody/content/application\/json`.
+                case json(Components.Schemas.WorkoutCompletionRequest)
+            }
+            public var body: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Input.Body
             /// Creates a new `Input`.
             ///
             /// - Parameters:
             ///   - headers:
-            public init(headers: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Input.Headers = .init()) {
+            ///   - body:
+            public init(
+                headers: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Input.Headers = .init(),
+                body: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Input.Body
+            ) {
                 self.headers = headers
+                self.body = body
             }
         }
         @frozen public enum Output: Sendable, Hashable {
@@ -486,12 +1212,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/v1/workouts/complete/POST/responses/200/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/v1/workouts/complete/POST/responses/200/content/application\/json`.
-                    case json(OpenAPIRuntime.OpenAPIValueContainer)
+                    case json(Components.Schemas.WorkoutCompletionResponse)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: OpenAPIRuntime.OpenAPIValueContainer {
+                    public var json: Components.Schemas.WorkoutCompletionResponse {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -528,6 +1254,57 @@ public enum Operations {
                     default:
                         try throwUnexpectedResponseStatus(
                             expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/workouts/complete/POST/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/workouts/complete/POST/responses/422/content/application\/json`.
+                    case json(Components.Schemas.HTTPValidationError)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.HTTPValidationError {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// Validation Error
+            ///
+            /// - Remark: Generated from `#/paths//v1/workouts/complete/post(v1_workouts_complete_v1_workouts_complete_post)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
                             response: self
                         )
                     }
@@ -573,6 +1350,30 @@ public enum Operations {
     public enum V1WorkoutsPlannedV1WorkoutsPlannedGet {
         public static let id: Swift.String = "v1_workouts_planned_v1_workouts_planned_get"
         public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/workouts/planned/GET/query`.
+            public struct Query: Sendable, Hashable {
+                /// Inclusive start date (ISO 8601).
+                ///
+                /// - Remark: Generated from `#/paths/v1/workouts/planned/GET/query/from`.
+                public var from: Swift.String
+                /// Inclusive end date (ISO 8601).
+                ///
+                /// - Remark: Generated from `#/paths/v1/workouts/planned/GET/query/to`.
+                public var to: Swift.String
+                /// Creates a new `Query`.
+                ///
+                /// - Parameters:
+                ///   - from: Inclusive start date (ISO 8601).
+                ///   - to: Inclusive end date (ISO 8601).
+                public init(
+                    from: Swift.String,
+                    to: Swift.String
+                ) {
+                    self.from = from
+                    self.to = to
+                }
+            }
+            public var query: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Input.Query
             /// - Remark: Generated from `#/paths/v1/workouts/planned/GET/header`.
             public struct Headers: Sendable, Hashable {
                 public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.AcceptableContentType>]
@@ -588,8 +1389,13 @@ public enum Operations {
             /// Creates a new `Input`.
             ///
             /// - Parameters:
+            ///   - query:
             ///   - headers:
-            public init(headers: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Input.Headers = .init()) {
+            public init(
+                query: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Input.Query,
+                headers: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Input.Headers = .init()
+            ) {
+                self.query = query
                 self.headers = headers
             }
         }
@@ -598,12 +1404,12 @@ public enum Operations {
                 /// - Remark: Generated from `#/paths/v1/workouts/planned/GET/responses/200/content`.
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/v1/workouts/planned/GET/responses/200/content/application\/json`.
-                    case json(OpenAPIRuntime.OpenAPIValueContainer)
+                    case json(Components.Schemas.PlannedListResponse)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: OpenAPIRuntime.OpenAPIValueContainer {
+                    public var json: Components.Schemas.PlannedListResponse {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -640,6 +1446,57 @@ public enum Operations {
                     default:
                         try throwUnexpectedResponseStatus(
                             expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/workouts/planned/GET/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/workouts/planned/GET/responses/422/content/application\/json`.
+                    case json(Components.Schemas.HTTPValidationError)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.HTTPValidationError {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// Validation Error
+            ///
+            /// - Remark: Generated from `#/paths//v1/workouts/planned/get(v1_workouts_planned_v1_workouts_planned_get)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
                             response: self
                         )
                     }
