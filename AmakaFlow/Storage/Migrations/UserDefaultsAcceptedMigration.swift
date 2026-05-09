@@ -78,12 +78,21 @@ enum UserDefaultsAcceptedMigration {
             return
         }
 
+        // AMA-1815: take only the most-recently-accepted legacy entry.
+        // The old UserDefaults store appended on every Accept and never
+        // pruned beyond completion, so a long-running TF user could have
+        // 5+ entries. Migrating all of them lit up Quick Start with
+        // duplicates on Build 39. Honour the new "one current accepted
+        // suggestion" semantic by taking the last entry only.
+        let toMigrate = Array(workouts.suffix(1))
+        let dropped = workouts.count - toMigrate.count
+
         let timestamp = now()
         let dateString = WorkoutEventsRepository.dayString(timestamp)
         var migrated = 0
         var failed = 0
 
-        for workout in workouts {
+        for workout in toMigrate {
             let clientId = legacyClientGeneratedId(for: workout.id)
 
             let suggestion = LocalAcceptedSuggestion(
@@ -139,7 +148,7 @@ enum UserDefaultsAcceptedMigration {
 
         logger(
             "Accepted-suggestion legacy migration complete",
-            "userId=\(userId) migrated=\(migrated) failed=\(failed) total=\(workouts.count)"
+            "userId=\(userId) migrated=\(migrated) failed=\(failed) dropped=\(dropped) total=\(workouts.count)"
         )
     }
 

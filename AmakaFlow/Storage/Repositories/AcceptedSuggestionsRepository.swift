@@ -50,6 +50,57 @@ nonisolated final class AcceptedSuggestionsRepository {
         }
     }
 
+    /// AMA-1815: "replace on accept" — in a single transaction, tombstone
+    /// every live accepted-suggestion + workout_event for `userId`, then
+    /// insert the new pair. Restores the old user-perceived contract that
+    /// each Suggest → Accept supersedes the previous one (Quick Start +
+    /// Today now show ONE accepted suggestion at a time, not the
+    /// accumulated history surfaced by the AMA-1792 GRDB rewire).
+    ///
+    /// Sync queue gets a `delete` enqueue per superseded row + an `upsert`
+    /// for the new pair so the backend stays consistent.
+    func replacePriorAcceptsAndInsert(userId: String, suggestion: LocalAcceptedSuggestion, event: LocalWorkoutEvent, enqueueSync: Bool = true) throws {
+        let timestamp = now()
+        var newSuggestion = suggestion
+        var newEvent = event
+        try dbQueue.write { db in
+            // 1. Tombstone every live accepted_suggestion for this user
+            //    (and its matching workout_event) so the new accept is the
+            //    only suggestion-accepted row hydrateIncoming returns.
+            let live = try LocalAcceptedSuggestion
+                .filter(LocalAcceptedSuggestion.Columns.userId == userId
+                    && LocalAcceptedSuggestion.Columns.deletedAt == nil
+                    && LocalAcceptedSuggestion.Columns.status == "accepted"
+                    && LocalAcceptedSuggestion.Columns.id != newSuggestion.id)
+                .fetchAll(db)
+            for var prior in live {
+                prior.status = "deleted"
+                prior.deletedAt = timestamp
+                prior.updatedAt = timestamp
+                try prior.update(db)
+                if enqueueSync {
+                    try syncQueue.enqueue(in: db, resourceType: LocalAcceptedSuggestion.databaseTableName, resourceId: prior.id, op: "delete", payload: try encode(prior))
+                }
+                if var priorEvent = try LocalWorkoutEvent.fetchOne(db, key: prior.id), priorEvent.deletedAt == nil {
+                    priorEvent.deletedAt = timestamp
+                    priorEvent.updatedAt = timestamp
+                    try priorEvent.update(db)
+                    if enqueueSync {
+                        try syncQueue.enqueue(in: db, resourceType: LocalWorkoutEvent.databaseTableName, resourceId: priorEvent.id, op: "delete", payload: try encode(priorEvent))
+                    }
+                }
+            }
+
+            // 2. FK: workout_events.id must exist before accepted_suggestions.workout_event_id.
+            try newEvent.upsert(db)
+            try newSuggestion.upsert(db)
+            if enqueueSync {
+                try syncQueue.enqueue(in: db, resourceType: LocalWorkoutEvent.databaseTableName, resourceId: newEvent.id, op: "upsert", payload: try encode(newEvent))
+                try syncQueue.enqueue(in: db, resourceType: LocalAcceptedSuggestion.databaseTableName, resourceId: newSuggestion.id, op: "upsert", payload: try encode(newSuggestion))
+            }
+        }
+    }
+
     /// AMA-1792 (CR pass 3): atomic tombstone for the accept pair. Mirrors
     /// `acceptedWithEvent` so a complete-or-schedule never leaves one row
     /// soft-deleted while the other stays live (which would let

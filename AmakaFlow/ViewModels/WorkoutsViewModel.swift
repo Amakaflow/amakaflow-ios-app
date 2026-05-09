@@ -516,21 +516,22 @@ class WorkoutsViewModel: ObservableObject {
         )
 
         do {
-            // CR pass 2: atomic — both rows + their sync_queue entries
-            // commit together or roll back together. Avoids leaving an
-            // orphan workout_event row if the suggestion insert failed.
-            try acceptedRepo.acceptedWithEvent(suggestion: suggestion, event: event, enqueueSync: true)
+            // AMA-1815: replace-on-accept. Tombstone every prior live
+            // accepted-suggestion for this user inside the same
+            // transaction, then insert the new pair. Restores the user-
+            // perceived contract of "Suggest replaces my current
+            // suggestion" — without this, repeated Accepts pile up in
+            // Quick Start (which renders all of `incomingWorkouts`).
+            try acceptedRepo.replacePriorAcceptsAndInsert(userId: userId, suggestion: suggestion, event: event, enqueueSync: true)
             DebugLogService.shared.log(
-                "Accepted suggestion persisted (local-first)",
+                "Accepted suggestion persisted (local-first, replace-on-accept)",
                 details: "userId=\(userId) clientId=\(clientId)",
                 metadata: ["workoutId": workout.id, "workoutName": workout.name]
             )
-            // CR: only surface in the UI after the local write succeeds.
-            // Otherwise a persistence failure presents as success, then
-            // the workout vanishes on next launch.
-            if !incomingWorkouts.contains(where: { $0.id == workout.id }) {
-                incomingWorkouts.append(workout)
-            }
+            // Refresh in-memory list from the repo so any tombstoned
+            // priors drop out of `incomingWorkouts` immediately, in
+            // addition to the newly-accepted workout being present.
+            incomingWorkouts = Self.hydrateIncoming(userId: userId, eventsRepo: eventsRepo)
         } catch {
             DebugLogService.shared.log(
                 "Accepted suggestion local write failed",
