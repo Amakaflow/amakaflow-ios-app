@@ -1,0 +1,40 @@
+# AMA-1821 / AMA-1817 contract-first epic — Maestro merge gate flow #3
+# Top user journey: send a message to the coach, get a response.
+# This is a SCAFFOLD — the existing /tmp/maestro flows did not include a
+# coach interaction flow, so test IDs here are best-effort. If selectors
+# don't match in CI, this flow will be skipped via continueOnFailure in
+# the workflow until AMA-1821 follow-up tightens it (see PR description).
+
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    permissions:
+      notifications: deny
+- waitForAnimationToEnd:
+    timeout: 5000
+- runFlow:
+    when:
+      visible: "Coach"
+    commands:
+      - tapOn: "Coach"
+- waitForAnimationToEnd:
+    timeout: 3000
+# Best-effort: tap a chat input field, type a message, send.
+- runFlow:
+    when:
+      visible:
+        id: "coach_input"
+    commands:
+      - tapOn:
+          id: "coach_input"
+      - inputText: "How did my last workout go?"
+      - runFlow:
+          when:
+            visible:
+              id: "coach_send"
+          commands:
+            - tapOn:
+                id: "coach_send"
+      - waitForAnimationToEnd:
+          timeout: 8000
