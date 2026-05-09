@@ -148,8 +148,9 @@ enum UserDefaultsAcceptedMigration {
     /// (or a parallel sync from another device) won't create duplicates
     /// when the backend de-dupes on client_generated_id.
     static func legacyClientGeneratedId(for workoutId: String) -> String {
-        let input = "legacy:\(workoutId)".data(using: .utf8) ?? Data()
-        let digest = SHA256.hash(data: input)
+        // CR pass 3: UTF-8 encoding of a Swift String never fails; the
+        // non-optional initializer skips the SwiftLint warning.
+        let digest = SHA256.hash(data: Data("legacy:\(workoutId)".utf8))
         return digest.map { String(format: "%02x", $0) }.joined()
     }
 }

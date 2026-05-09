@@ -540,23 +540,17 @@ class WorkoutsViewModel: ObservableObject {
         }
     }
 
-    /// Tombstone both the accepted_suggestion and workout_event rows for a
-    /// given workout id. Each repo enqueues its own delete to sync_queue.
+    /// Atomic tombstone of both the accepted_suggestion and workout_event
+    /// rows for a given workout id. CR pass 3: routed through
+    /// `acceptedRepo.tombstoneWithEvent` so a partial failure can't leave
+    /// one row live while its partner is soft-deleted (which would let
+    /// `hydrateIncoming` resurrect the workout on next launch).
     private func tombstoneLocalSuggestion(workoutId: String, reason: String) {
         do {
-            try acceptedRepo.tombstone(id: workoutId, enqueueSync: true)
+            try acceptedRepo.tombstoneWithEvent(id: workoutId, enqueueSync: true)
         } catch {
             DebugLogService.shared.log(
-                "Tombstone accepted_suggestion failed",
-                details: error.localizedDescription,
-                metadata: ["workoutId": workoutId, "reason": reason]
-            )
-        }
-        do {
-            try eventsRepo.tombstone(id: workoutId, enqueueSync: true)
-        } catch {
-            DebugLogService.shared.log(
-                "Tombstone workout_event failed",
+                "Tombstone (atomic) failed",
                 details: error.localizedDescription,
                 metadata: ["workoutId": workoutId, "reason": reason]
             )

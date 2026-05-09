@@ -37,15 +37,43 @@ nonisolated final class AcceptedSuggestionsRepository {
     /// existing. Both upserts and both sync_queue enqueues happen inside
     /// one `dbQueue.write` transaction.
     func acceptedWithEvent(suggestion: LocalAcceptedSuggestion, event: LocalWorkoutEvent, enqueueSync: Bool = true) throws {
-        var sg = suggestion
-        var ev = event
+        var mutableSuggestion = suggestion
+        var mutableEvent = event
         try dbQueue.write { db in
             // FK: accepted_suggestions.workout_event_id → workout_events.id.
-            try ev.upsert(db)
-            try sg.upsert(db)
+            try mutableEvent.upsert(db)
+            try mutableSuggestion.upsert(db)
             if enqueueSync {
-                try syncQueue.enqueue(in: db, resourceType: LocalWorkoutEvent.databaseTableName, resourceId: ev.id, op: "upsert", payload: try encode(ev))
-                try syncQueue.enqueue(in: db, resourceType: LocalAcceptedSuggestion.databaseTableName, resourceId: sg.id, op: "upsert", payload: try encode(sg))
+                try syncQueue.enqueue(in: db, resourceType: LocalWorkoutEvent.databaseTableName, resourceId: mutableEvent.id, op: "upsert", payload: try encode(mutableEvent))
+                try syncQueue.enqueue(in: db, resourceType: LocalAcceptedSuggestion.databaseTableName, resourceId: mutableSuggestion.id, op: "upsert", payload: try encode(mutableSuggestion))
+            }
+        }
+    }
+
+    /// AMA-1792 (CR pass 3): atomic tombstone for the accept pair. Mirrors
+    /// `acceptedWithEvent` so a complete-or-schedule never leaves one row
+    /// soft-deleted while the other stays live (which would let
+    /// `hydrateIncoming` resurrect the workout). Both writes and both
+    /// sync_queue deletes commit together or roll back together.
+    func tombstoneWithEvent(id: String, enqueueSync: Bool = true) throws {
+        let timestamp = now()
+        try dbQueue.write { db in
+            if var suggestion = try LocalAcceptedSuggestion.fetchOne(db, key: id) {
+                suggestion.status = "deleted"
+                suggestion.deletedAt = timestamp
+                suggestion.updatedAt = timestamp
+                try suggestion.update(db)
+                if enqueueSync {
+                    try syncQueue.enqueue(in: db, resourceType: LocalAcceptedSuggestion.databaseTableName, resourceId: id, op: "delete", payload: try encode(suggestion))
+                }
+            }
+            if var event = try LocalWorkoutEvent.fetchOne(db, key: id) {
+                event.deletedAt = timestamp
+                event.updatedAt = timestamp
+                try event.update(db)
+                if enqueueSync {
+                    try syncQueue.enqueue(in: db, resourceType: LocalWorkoutEvent.databaseTableName, resourceId: id, op: "delete", payload: try encode(event))
+                }
             }
         }
     }
