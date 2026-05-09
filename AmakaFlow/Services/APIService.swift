@@ -13,6 +13,15 @@ class APIService {
     static let shared = APIService()
 
     private var baseURL: String { AppEnvironment.current.mapperAPIURL }
+
+    /// AMA-1820: BFF base for the 5 first-wave mobile-facing endpoints
+    /// (workouts/complete, workouts/planned, sync/{pending,confirm,failed}).
+    /// Always includes the `/v1` prefix the BFF mounts under, so callers
+    /// just append `/workouts/complete` etc. — keeps call sites symmetric
+    /// with the existing `baseURL` pattern. Per AMA-1826, request/response
+    /// bodies remain hand-coded until the BFF declares typed schemas.
+    private var bffURL: String { "\(AppEnvironment.current.mobileBFFURL)/v1" }
+
     private let session = URLSession.shared
 
     private init() {}
@@ -270,7 +279,8 @@ class APIService {
         dayFormatter.timeZone = Calendar.current.timeZone
         dayFormatter.dateFormat = "yyyy-MM-dd"
 
-        var components = URLComponents(string: "\(baseURL)/workouts/planned")!
+        // AMA-1820: route through mobile-bff (`/v1/workouts/planned`).
+        var components = URLComponents(string: "\(bffURL)/workouts/planned")!
         components.queryItems = [
             URLQueryItem(name: "from", value: dayFormatter.string(from: startDate)),
             URLQueryItem(name: "to", value: dayFormatter.string(from: endDate))
@@ -356,7 +366,8 @@ class APIService {
             throw APIError.unauthorized
         }
 
-        let url = URL(string: "\(baseURL)/sync/pending?device_type=ios")!
+        // AMA-1820: route through mobile-bff (`/v1/sync/pending`).
+        let url = URL(string: "\(bffURL)/sync/pending?device_type=ios")!
         print("[APIService] Fetching pending workouts from: \(url)")
 
         var request = URLRequest(url: url)
@@ -971,7 +982,8 @@ class APIService {
             throw APIError.unauthorized
         }
 
-        let url = URL(string: "\(baseURL)\(endpoint)")!
+        // AMA-1820: route through mobile-bff (`/v1/workouts/complete`).
+        let url = URL(string: "\(bffURL)\(endpoint)")!
         print("[APIService] Posting workout completion to: \(url)")
 
         var request = URLRequest(url: url)
@@ -1115,7 +1127,8 @@ class APIService {
             throw APIError.unauthorized
         }
 
-        let url = URL(string: "\(baseURL)/sync/confirm")!
+        // AMA-1820: route through mobile-bff (`/v1/sync/confirm`).
+        let url = URL(string: "\(bffURL)/sync/confirm")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = await makeAuthHeaders()
@@ -1169,7 +1182,8 @@ class APIService {
             throw APIError.unauthorized
         }
 
-        let url = URL(string: "\(baseURL)/sync/failed")!
+        // AMA-1820: route through mobile-bff (`/v1/sync/failed`).
+        let url = URL(string: "\(bffURL)/sync/failed")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = await makeAuthHeaders()

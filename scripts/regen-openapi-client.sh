@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# AMA-1818: regenerate the Swift OpenAPI client for the mapper-api
+# AMA-1818: regenerate the Swift OpenAPI client for the mobile-bff
 # first-wave endpoints (workouts/complete, workouts/planned,
-# sync/{pending,confirm,failed}). Source of truth: Specs/mapper-api.json
-# (vendored from Amakaflow/amakaflow-backend's openapi/mapper-api.json
+# sync/{pending,confirm,failed}). Source of truth: Specs/mobile-bff.json
+# (vendored from Amakaflow/amakaflow-backend's openapi/mobile-bff.json
 # artifact — refresh first if backend changed).
 #
 # Run from repo root.
@@ -11,14 +11,14 @@
 #
 # Or pass a path to a freshly-extracted spec:
 #
-#   ./scripts/regen-openapi-client.sh ~/amakaflow-backend/openapi/mapper-api.json
+#   ./scripts/regen-openapi-client.sh ~/amakaflow-backend/openapi/mobile-bff.json
 #
 # Output: AmakaFlow/Generated/Client.swift, Types.swift (overwritten).
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SPEC="${1:-$REPO_ROOT/Specs/mapper-api.json}"
+SPEC="${1:-$REPO_ROOT/Specs/mobile-bff.json}"
 CONFIG="$REPO_ROOT/Specs/openapi-generator-config.yaml"
 OUT_DIR="$REPO_ROOT/AmakaFlow/Generated"
 
@@ -28,10 +28,10 @@ if [ ! -f "$SPEC" ]; then
 fi
 
 # Refresh the vendored copy if a different source was passed.
-if [ "$SPEC" != "$REPO_ROOT/Specs/mapper-api.json" ]; then
-  cp "$SPEC" "$REPO_ROOT/Specs/mapper-api.json"
-  SPEC="$REPO_ROOT/Specs/mapper-api.json"
-  echo "Refreshed Specs/mapper-api.json from $1"
+if [ "$SPEC" != "$REPO_ROOT/Specs/mobile-bff.json" ]; then
+  cp "$SPEC" "$REPO_ROOT/Specs/mobile-bff.json"
+  SPEC="$REPO_ROOT/Specs/mobile-bff.json"
+  echo "Refreshed Specs/mobile-bff.json from $1"
 fi
 
 # Find the generator binary. Falls back to building from source under /tmp.
