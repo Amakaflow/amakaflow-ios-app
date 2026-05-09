@@ -93,7 +93,8 @@ class DebugLogService: ObservableObject {
         method: String = "GET",
         statusCode: Int? = nil,
         response: String? = nil,
-        error: Error? = nil
+        error: Error? = nil,
+        requestID: String? = nil
     ) {
         var metadata: [String: String] = [
             "Endpoint": endpoint,
@@ -104,6 +105,11 @@ class DebugLogService: ObservableObject {
         }
         if let response = response {
             metadata["Response"] = String(response.prefix(500))
+        }
+        // AMA-1823: surface the request_id so debug log entries can be
+        // correlated with Sentry breadcrumbs and BFF/mapper-api logs.
+        if let requestID = requestID {
+            metadata["request_id"] = requestID
         }
 
         let details = error?.localizedDescription ?? response ?? "Unknown error"

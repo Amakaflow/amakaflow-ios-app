@@ -128,6 +128,7 @@ struct AppDatabase {
         migrator.eraseDatabaseOnSchemaChange = true
         #endif
         V1InitialSchema.register(into: &migrator)
+        V2AddRequestIdToSyncQueue.register(into: &migrator)
         return migrator
     }
 }
