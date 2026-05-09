@@ -1,0 +1,193 @@
+name: Maestro Flow Tests
+
+# AMA-1821 (contract-first epic AMA-1817):
+# Run the canonical Maestro user-journey flows against a fresh simulator on
+# every PR targeting main. Designed to be wired as a required check on main
+# (admin-only branch protection step — see PR description).
+#
+# Reality / scope:
+# - The Maestro flows under e2e/maestro/ were lifted from /tmp/maestro-*
+#   files that previously ran against a hand-prepared sim with seeded data.
+#   The save-and-end + history-check flows are wired as best-effort smoke
+#   tests; the coach-message flow is a scaffold and is `continue-on-error`
+#   until selectors are confirmed.
+# - This workflow shares the same Xcode/sim setup as ios-tests.yml. We do
+#   not duplicate the unit-test invocation here — the unit-test workflow
+#   stays the gating signal for code correctness; this workflow gates on
+#   user-journey regressions.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "AmakaFlow/**"
+      - "AmakaFlowCompanion/**"
+      - "e2e/maestro/**"
+      - ".github/workflows/maestro-flows.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: maestro-flows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  maestro-flow-tests:
+    name: Maestro Flow Tests
+    runs-on: macos-15
+    timeout-minutes: 75
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Clone workoutkit-sync dependency
+        run: git clone https://github.com/supergeri/workoutkit-sync.git ../../workoutkit-sync
+
+      - name: Select Xcode (latest available)
+        id: xcode
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          echo "Using Xcode: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
+          echo "version=$(xcodebuild -version | head -1 | tr ' ' '-')" >> $GITHUB_OUTPUT
+
+      - name: Determine simulator
+        id: simulator
+        run: |
+          NAME=$(xcrun simctl list devices available | grep -o 'iPhone [^(]*' | head -1 | sed 's/ *$//')
+          if [ -z "$NAME" ]; then
+            echo "No iPhone simulator available" >&2
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Using simulator: $NAME"
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+
+      - name: Reset & boot simulator
+        run: |
+          xcrun simctl shutdown all || true
+          xcrun simctl erase all || true
+          xcrun simctl boot "${{ steps.simulator.outputs.name }}" || true
+
+      - name: Install Maestro
+        run: |
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+
+      - name: Verify Maestro install
+        run: |
+          maestro --version
+
+      - name: Create stub TestCredentials for compilation
+        working-directory: AmakaFlowCompanion
+        run: |
+          cat > AmakaFlowCompanionUITests/TestCredentials.swift << 'EOF'
+          import Foundation
+          enum TestCredentials {
+              static let testAuthSecret = "ci-stub-not-for-testing"
+              static let userId = "ci_stub_user"
+              static let userEmail = "ci@stub.local"
+              static let userName = "CI Stub"
+              static let apiBaseURL = "http://localhost:8001"
+          }
+          EOF
+
+      # Reuse SwiftPM cache from ios-tests.yml so cold-start cost is amortized.
+      - name: Restore SwiftPM cache
+        uses: actions/cache@v4
+        with:
+          path: AmakaFlowCompanion/.spm
+          key: spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('**/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
+          restore-keys: |
+            spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
+
+      - name: Restore DerivedData cache
+        uses: actions/cache@v4
+        with:
+          path: AmakaFlowCompanion/DerivedData
+          key: deriveddata-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj', 'AmakaFlow/**/*.swift', 'AmakaFlowCompanion/**/*.swift') }}
+          restore-keys: |
+            deriveddata-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
+
+      - name: Resolve SwiftPM
+        working-directory: AmakaFlowCompanion
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project AmakaFlowCompanion.xcodeproj \
+            -scheme AmakaFlowCompanion \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm
+
+      - name: Build app for sim
+        working-directory: AmakaFlowCompanion
+        run: |
+          xcodebuild build \
+            -project AmakaFlowCompanion.xcodeproj \
+            -scheme AmakaFlowCompanion \
+            -destination "platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}" \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm \
+            -parallelizeTargets \
+            -jobs $(sysctl -n hw.ncpu)
+
+      - name: Install built app on simulator
+        working-directory: AmakaFlowCompanion
+        run: |
+          APP_PATH=$(find DerivedData/Build/Products -maxdepth 4 -name "AmakaFlowCompanion.app" -type d | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Could not locate built .app bundle" >&2
+            find DerivedData/Build/Products -maxdepth 4 -name "*.app" -type d
+            exit 1
+          fi
+          echo "Installing $APP_PATH"
+          xcrun simctl install booted "$APP_PATH"
+
+      - name: Run Maestro flows
+        id: maestro
+        run: |
+          set +e
+          mkdir -p maestro-output
+          OVERALL=0
+
+          # Gating flows (failures fail the job)
+          for flow in save-and-end history-check; do
+            echo "::group::maestro test e2e/maestro/${flow}.yaml"
+            maestro test "e2e/maestro/${flow}.yaml" \
+              --format junit \
+              --output "maestro-output/${flow}.xml" 2>&1 | tee "maestro-output/${flow}.log"
+            STATUS=${PIPESTATUS[0]}
+            echo "::endgroup::"
+            if [ "$STATUS" != "0" ]; then
+              echo "::error::Maestro flow ${flow} FAILED (exit $STATUS)"
+              OVERALL=1
+            fi
+          done
+
+          # Scaffold flow (warn-only)
+          for flow in coach-message; do
+            echo "::group::maestro test e2e/maestro/${flow}.yaml (warn-only)"
+            maestro test "e2e/maestro/${flow}.yaml" \
+              --format junit \
+              --output "maestro-output/${flow}.xml" 2>&1 | tee "maestro-output/${flow}.log" || true
+            STATUS=${PIPESTATUS[0]}
+            echo "::endgroup::"
+            if [ "$STATUS" != "0" ]; then
+              echo "::warning::Maestro scaffold flow ${flow} failed (warn-only)."
+            fi
+          done
+
+          exit $OVERALL
+
+      - name: Upload Maestro output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-output
+          path: |
+            maestro-output/
+            ~/.maestro/tests/**/screenshots/**
+          retention-days: 7
+          if-no-files-found: ignore

@@ -1,0 +1,62 @@
+# AMA-1821 / AMA-1817 contract-first epic — Maestro merge gate flow #1
+# Top user journey: Start workout -> log sets -> Save & End.
+# Adapted from /tmp/maestro-full-workout.yaml (session memory).
+# Assumes the app is launched into a state where a workout is queued and
+# the home screen shows "Start workout". The app must be already signed in
+# (CI seeds this via the same TestCredentials hook used by the existing
+# UITests; see ios-tests.yml).
+
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    permissions:
+      notifications: deny
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    text: "Start workout"
+- waitForAnimationToEnd:
+    timeout: 4000
+- runFlow:
+    when:
+      visible: "Start on Phone Only"
+    commands:
+      - tapOn: "Start on Phone Only"
+- waitForAnimationToEnd:
+    timeout: 4000
+- repeat:
+    times: 30
+    commands:
+      - runFlow:
+          when:
+            visible: "Skip Rest"
+          commands:
+            - tapOn: "Skip Rest"
+            - waitForAnimationToEnd:
+                timeout: 1500
+      - runFlow:
+          when:
+            visible: "LOG SET"
+          commands:
+            - tapOn: "LOG SET"
+            - waitForAnimationToEnd:
+                timeout: 1500
+      - runFlow:
+          when:
+            visible: "End Workout"
+          commands:
+            - tapOn: "End Workout"
+- waitForAnimationToEnd:
+    timeout: 3000
+- runFlow:
+    when:
+      visible: "End Workout"
+    commands:
+      - tapOn: "End Workout"
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible: "Save & End"
+- tapOn: "Save & End"
+- waitForAnimationToEnd:
+    timeout: 5000
