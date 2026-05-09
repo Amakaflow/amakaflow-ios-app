@@ -432,154 +432,119 @@ final class WorkoutsViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.incomingWorkouts.count, initialCount)
     }
 
-    // MARK: - Accepted Suggestion Persistence Tests (AMA-1751)
+    // MARK: - Accepted Suggestion Persistence Tests (AMA-1792 local-first)
 
-    func testAcceptedSuggestionRestoresSynchronouslyOnNewViewModelInit() async throws {
-        let store = InMemoryAcceptedSuggestionsStore()
-        let accepted = TestFixtures.workout(id: "accepted-1", name: "Accepted Strength", sport: .strength)
-        let dependencies = AppDependencies(
+    /// Build an AppDependencies wired to an in-memory GRDB so each test
+    /// runs against a clean local database. Pairs the configured user with
+    /// `mockPairingService` so the VM's `currentUserId` is non-nil.
+    private func makeLocalFirstDeps(userId: String = "user-test") throws -> (AppDependencies, AcceptedSuggestionsRepository, WorkoutEventsRepository) {
+        let database = try AppDatabase.makeTestDatabase()
+        let acceptedRepo = AcceptedSuggestionsRepository(database: database)
+        let eventsRepo = WorkoutEventsRepository(database: database)
+        mockPairingService.configurePaired(userId: userId)
+        let deps = AppDependencies(
             apiService: mockAPIService,
             pairingService: mockPairingService,
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
             watchSession: MockWatchSession(),
-            chatStreamService: MockChatStreamService()
+            chatStreamService: MockChatStreamService(),
+            acceptedSuggestionsRepository: acceptedRepo,
+            workoutEventsRepository: eventsRepo
         )
-
-        let firstViewModel = WorkoutsViewModel(dependencies: dependencies, acceptedStore: store)
-        firstViewModel.acceptSuggestedWorkout(accepted)
-
-        let relaunchedViewModel = WorkoutsViewModel(dependencies: dependencies, acceptedStore: store)
-
-        XCTAssertTrue(relaunchedViewModel.incomingWorkouts.contains { $0.id == accepted.id })
+        return (deps, acceptedRepo, eventsRepo)
     }
 
-    func testUnpairedLoadDoesNotClearAcceptedSuggestionsDuringColdAuthRestore() async throws {
-        let accepted = TestFixtures.workout(id: "accepted-cold-auth", name: "Accepted During Restore", sport: .strength)
-        let store = InMemoryAcceptedSuggestionsStore(workouts: [accepted])
-        let dependencies = AppDependencies(
-            apiService: mockAPIService,
-            pairingService: mockPairingService,
-            audioService: MockAudioService(),
-            progressStore: MockProgressStore(),
-            watchSession: MockWatchSession(),
-            chatStreamService: MockChatStreamService()
+    func testAcceptedSuggestionRestoresFromGRDBOnNewViewModelInit() async throws {
+        let (deps, _, _) = try makeLocalFirstDeps()
+        let accepted = TestFixtures.workout(id: "accepted-1", name: "Accepted Strength", sport: .strength)
+
+        let firstViewModel = WorkoutsViewModel(dependencies: deps)
+        firstViewModel.acceptSuggestedWorkout(accepted)
+
+        let relaunched = WorkoutsViewModel(dependencies: deps)
+
+        XCTAssertTrue(
+            relaunched.incomingWorkouts.contains { $0.id == accepted.id },
+            "Force-quit + reopen must surface the accepted suggestion from the local DB"
         )
+    }
+
+    func testUnpairedLoadDoesNotClearAcceptedSuggestionsFromGRDB() async throws {
+        let userId = "user-cold"
+        let (deps, _, eventsRepo) = try makeLocalFirstDeps(userId: userId)
+        let accepted = TestFixtures.workout(id: "accepted-cold-auth", name: "Accepted During Restore", sport: .strength)
+        // Seed the local DB as if a prior session had accepted the workout.
+        WorkoutsViewModel(dependencies: deps).acceptSuggestedWorkout(accepted)
+
+        // Now flip to unpaired and confirm the row stays put on a fresh launch.
+        // (We seed a paired userId because the VM scopes hydration to userId,
+        // but exercise loadWorkouts under unpaired state.)
         mockPairingService.configureUnpaired()
+        mockPairingService.userProfile = UserProfile(id: userId, email: nil, name: nil, avatarUrl: nil)
+        let relaunched = WorkoutsViewModel(dependencies: deps)
+        await relaunched.loadWorkouts()
 
-        let relaunchedViewModel = WorkoutsViewModel(dependencies: dependencies, acceptedStore: store)
-        await relaunchedViewModel.loadWorkouts()
-
-        XCTAssertTrue(store.all().contains { $0.id == accepted.id })
-        XCTAssertTrue(relaunchedViewModel.incomingWorkouts.contains { $0.id == accepted.id })
+        let stillInDB = try eventsRepo.todayPlan(userId: userId)
+        XCTAssertTrue(
+            stillInDB.contains { $0.id == accepted.id && $0.deletedAt == nil },
+            "An unpaired refresh must not tombstone local accepted_suggestion rows"
+        )
+        XCTAssertTrue(
+            relaunched.incomingWorkouts.contains { $0.id == accepted.id },
+            "An unpaired refresh must still surface locally-cached suggestions"
+        )
     }
 
     func testLoadWorkoutsRestoresAcceptedSuggestionWhenServerDoesNotReturnIt() async throws {
+        let (deps, _, _) = try makeLocalFirstDeps()
         let accepted = TestFixtures.workout(id: "accepted-reopen", name: "Accepted After Reopen", sport: .strength)
-        let store = InMemoryAcceptedSuggestionsStore(workouts: [accepted])
-        let dependencies = AppDependencies(
-            apiService: mockAPIService,
-            pairingService: mockPairingService,
-            audioService: MockAudioService(),
-            progressStore: MockProgressStore(),
-            watchSession: MockWatchSession(),
-            chatStreamService: MockChatStreamService()
-        )
+        WorkoutsViewModel(dependencies: deps).acceptSuggestedWorkout(accepted)
+
         mockAPIService.fetchWorkoutsResult = .success([])
         mockAPIService.fetchScheduledWorkoutsResult = .success([])
-        mockAPIService.fetchCompletionsResult = .success([])
 
-        let relaunchedViewModel = WorkoutsViewModel(dependencies: dependencies, acceptedStore: store)
-        await relaunchedViewModel.loadWorkouts()
+        let relaunched = WorkoutsViewModel(dependencies: deps)
+        await relaunched.loadWorkouts()
 
-        XCTAssertTrue(relaunchedViewModel.incomingWorkouts.contains { $0.id == accepted.id })
+        XCTAssertTrue(
+            relaunched.incomingWorkouts.contains { $0.id == accepted.id },
+            "Server returning no rows must not clear locally-accepted suggestions"
+        )
     }
 
-    /// AMA-1785 (PR #177) intentionally disabled
-    /// `pruneCompletedAcceptedSuggestions` so completed local-first
-    /// workouts stay visible during a refresh failure. This test
-    /// previously asserted the OPPOSITE — that completed accepted
-    /// suggestions get removed — and silently went from passing to
-    /// failing on every CI run since #177 merged (main's CI runs are
-    /// path-filtered and never re-ran the impacted job, so the
-    /// regression sat dormant until AMA-1803 P0 changed enough to
-    /// re-trigger the suite).
-    ///
-    /// Locking the NEW contract here: completed accepted suggestions
-    /// remain in `incomingWorkouts` AND in the local store after a
-    /// refresh, until the proper GRDB rewire (AMA-1792) replaces
-    /// the simple "prune on completion" heuristic.
-    func testLoadWorkoutsKeepsCompletedAcceptedSuggestionUntilGRDBRewire() async throws {
+    /// New contract under AMA-1792: completing a workout tombstones both
+    /// the accepted_suggestion and workout_event rows so it does not
+    /// rehydrate on the next launch. (Replaces the old AMA-1785-era
+    /// `pruneCompletedAcceptedSuggestions` heuristic that ran on every
+    /// load and could false-positive prune transient API responses.)
+    func testMarkWorkoutCompletedTombstonesLocalRowsSoTheyDoNotRehydrate() async throws {
+        let userId = "user-completed"
+        let (deps, acceptedRepo, eventsRepo) = try makeLocalFirstDeps(userId: userId)
         let accepted = TestFixtures.workout(id: "accepted-completed", name: "Completed Accepted", sport: .strength)
-        let store = InMemoryAcceptedSuggestionsStore(workouts: [accepted])
-        let dependencies = AppDependencies(
-            apiService: mockAPIService,
-            pairingService: mockPairingService,
-            audioService: MockAudioService(),
-            progressStore: MockProgressStore(),
-            watchSession: MockWatchSession(),
-            chatStreamService: MockChatStreamService()
+
+        let viewModel = WorkoutsViewModel(dependencies: deps)
+        viewModel.acceptSuggestedWorkout(accepted)
+        viewModel.markWorkoutCompleted(accepted.id)
+
+        // Tombstoned rows MUST not survive into a fresh VM init.
+        let relaunched = WorkoutsViewModel(dependencies: deps)
+        XCTAssertFalse(
+            relaunched.incomingWorkouts.contains { $0.id == accepted.id },
+            "A completed workout must not rehydrate after force-quit + reopen"
         )
-        mockAPIService.fetchWorkoutsResult = .success([accepted])
-        mockAPIService.fetchScheduledWorkoutsResult = .success([])
-        mockAPIService.fetchCompletionsResult = .success([
-            WorkoutCompletion(
-                id: "completion-accepted",
-                workoutName: accepted.name,
-                startedAt: Date(timeIntervalSince1970: 5_000),
-                endedAt: Date(timeIntervalSince1970: 5_600),
-                durationSeconds: 600,
-                avgHeartRate: nil,
-                maxHeartRate: nil,
-                activeCalories: nil,
-                source: .phone,
-                syncedToStrava: false,
-                workoutId: accepted.id,
-                originalWorkout: nil,
-                isSimulated: false
-            )
-        ])
 
-        let relaunchedViewModel = WorkoutsViewModel(dependencies: dependencies, acceptedStore: store)
-        await relaunchedViewModel.loadWorkouts()
-
-        // Per AMA-1785: pruneCompletedAcceptedSuggestions is disabled,
-        // so the workout stays visible. The proper fix lives in
-        // AMA-1792 (GRDB rewire).
+        // Repo-level: the rows still exist (soft-deleted) but `todayPlan`
+        // filters them out.
+        let live = try eventsRepo.todayPlan(userId: userId)
+        XCTAssertFalse(
+            live.contains { $0.id == accepted.id },
+            "todayPlan must skip tombstoned events"
+        )
+        let allRows = try acceptedRepo.allForUser(userId)
         XCTAssertTrue(
-            relaunchedViewModel.incomingWorkouts.contains { $0.id == accepted.id },
-            "AMA-1785: completed accepted suggestions must remain in incomingWorkouts until AMA-1792 lands"
+            allRows.contains { $0.id == accepted.id && $0.deletedAt != nil && $0.status == "deleted" },
+            "Tombstone is a soft delete — the row stays for the SyncEngine to flush"
         )
-        XCTAssertTrue(
-            store.all().contains { $0.id == accepted.id },
-            "AMA-1785: completed accepted suggestions must remain in the local store until AMA-1792 lands"
-        )
-    }
-}
-
-private final class InMemoryAcceptedSuggestionsStore: AcceptedSuggestionsStoring {
-    private var workouts: [Workout]
-
-    init(workouts: [Workout] = []) {
-        self.workouts = workouts
-    }
-
-    func all() -> [Workout] {
-        workouts
-    }
-
-    @discardableResult
-    func save(_ workout: Workout) -> Bool {
-        workouts.removeAll { $0.id == workout.id }
-        workouts.append(workout)
-        return true
-    }
-
-    func remove(id: String) {
-        workouts.removeAll { $0.id == id }
-    }
-
-    func removeAll() {
-        workouts = []
     }
 }

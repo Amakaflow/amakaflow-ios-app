@@ -53,17 +53,63 @@ class WorkoutsViewModel: ObservableObject {
     private let dependencies: AppDependencies
     private let calendarManager = CalendarManager()
     private var cancellables = Set<AnyCancellable>()
-    private let acceptedStore: AcceptedSuggestionsStoring
+
+    /// Repository handles for the local-first read path (AMA-1792). Reads
+    /// hydrate `incomingWorkouts` from `workout_events` (status='planned',
+    /// source='suggestion_accepted'); writes go through the repos which
+    /// auto-enqueue to `sync_queue` for the SyncEngine to flush.
+    private var acceptedRepo: AcceptedSuggestionsRepository {
+        dependencies.acceptedSuggestionsRepository
+    }
+    private var eventsRepo: WorkoutEventsRepository {
+        dependencies.workoutEventsRepository
+    }
+    private var currentUserId: String? {
+        dependencies.pairingService.userProfile?.id
+    }
 
     /// Initialize with dependencies for dependency injection
     /// - Parameter dependencies: App dependencies container (defaults to .live for production)
     init(
-        dependencies: AppDependencies = .live,
-        acceptedStore: AcceptedSuggestionsStoring = AcceptedSuggestionsStore.shared
+        dependencies: AppDependencies = .live
     ) {
         self.dependencies = dependencies
-        self.acceptedStore = acceptedStore
-        self.incomingWorkouts = acceptedStore.all()
+
+        // AMA-1792: hydrate Home from the local DB before the network
+        // round-trip. The SyncEngine reconciles in the background.
+        UserDefaultsAcceptedMigration.runIfNeeded(
+            userId: dependencies.pairingService.userProfile?.id,
+            acceptedRepo: dependencies.acceptedSuggestionsRepository,
+            eventsRepo: dependencies.workoutEventsRepository
+        )
+        self.incomingWorkouts = Self.hydrateIncoming(
+            userId: dependencies.pairingService.userProfile?.id,
+            eventsRepo: dependencies.workoutEventsRepository
+        )
+
+        // CR pass 2: re-run the legacy migration the moment a Clerk user
+        // id becomes available. Without this, a cold-launch race where
+        // pairingService.userProfile resolves AFTER VM init silently
+        // defers the migration until the next app launch.
+        dependencies.pairingService.userProfilePublisher
+            .compactMap { $0?.id }
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] userId in
+                guard let self else { return }
+                UserDefaultsAcceptedMigration.runIfNeeded(
+                    userId: userId,
+                    acceptedRepo: self.acceptedRepo,
+                    eventsRepo: self.eventsRepo
+                )
+                // Refresh `incomingWorkouts` so the freshly-migrated rows
+                // appear without waiting for the next loadWorkouts.
+                self.incomingWorkouts = Self.hydrateIncoming(
+                    userId: userId,
+                    eventsRepo: self.eventsRepo
+                )
+            }
+            .store(in: &cancellables)
 
         // Observe workout completion notifications (AMA-237)
         NotificationCenter.default.publisher(for: .workoutCompleted)
@@ -82,12 +128,13 @@ class WorkoutsViewModel: ObservableObject {
 
     // MARK: - Data Loading
 
-    /// Load workouts from API or demo mode
+    /// AMA-1792: Home reads from the local DB. The network refresh runs
+    /// alongside but no longer gates UI — a failed fetch leaves the
+    /// already-rendered list untouched.
     func loadWorkouts() async {
         isLoading = true
         errorMessage = nil
 
-        // Only show mock data if explicitly in demo mode OR not paired
         if useDemoMode {
             print("[WorkoutsViewModel] Demo mode enabled, loading mock data")
             loadMockData()
@@ -95,15 +142,20 @@ class WorkoutsViewModel: ObservableObject {
             return
         }
 
+        // Local-first hydrate. Always reflect what the repo has, even if
+        // the user isn't yet authenticated — the migration step seeded
+        // these rows from UserDefaults if any existed.
+        let localIncoming = Self.hydrateIncoming(userId: currentUserId, eventsRepo: eventsRepo)
+        incomingWorkouts = localIncoming
+
         if !dependencies.pairingService.isPaired {
-            print("[WorkoutsViewModel] Not authenticated yet; preserving local accepted suggestions")
-            incomingWorkouts = acceptedStore.all()
+            print("[WorkoutsViewModel] Not authenticated yet; serving \(localIncoming.count) row(s) from local repo")
             upcomingWorkouts = []
             isLoading = false
             return
         }
 
-        print("[WorkoutsViewModel] Fetching workouts from API...")
+        print("[WorkoutsViewModel] Refreshing from API on top of \(localIncoming.count) local row(s)...")
 
         do {
             async let fetchedWorkouts = dependencies.apiService.fetchWorkouts()
@@ -111,39 +163,39 @@ class WorkoutsViewModel: ObservableObject {
 
             let (workouts, scheduled) = try await (fetchedWorkouts, fetchedScheduled)
 
-            // AMA-1785 prune was deleting workouts from the store on every load
-            // when fetchCompletions returned a transient/false-positive match,
-            // making accepted workouts vanish on relaunch. Disabled until
-            // AMA-1792 rewires onto the GRDB-backed AcceptedSuggestionsRepository.
-            let completedWorkoutIDs: Set<String> = []
-            let merged = mergeAccepted(into: workouts, excluding: completedWorkoutIDs)
-            print("[WorkoutsViewModel] Fetched \(workouts.count) workouts, \(scheduled.count) scheduled; merged \(merged.count) incoming")
+            print("[WorkoutsViewModel] Fetched \(workouts.count) workouts, \(scheduled.count) scheduled")
             DebugLogService.shared.log(
-                "Workouts loaded",
-                details: "Fetched \(workouts.count), accepted cache \(acceptedStore.all().count), prune-disabled, merged \(merged.count)",
+                "Workouts refreshed",
+                details: "fetched=\(workouts.count) scheduled=\(scheduled.count) localCount=\(localIncoming.count)",
                 metadata: ["source": "WorkoutsViewModel.loadWorkouts"]
             )
-            incomingWorkouts = merged
+            // Server merge: surface any server-side workouts the local repo
+            // doesn't know about yet (e.g. a workout pushed to this device
+            // from another client). Local rows always win on id collision —
+            // the SyncEngine reconciles authoritative state separately.
+            // CR: also exclude ids the local repo has TOMBSTONED so a
+            // stale API payload for a just-completed/scheduled workout
+            // doesn't sneak back into Home.
+            let localIDs = Set(localIncoming.map(\.id))
+            let tombstonedIDs = Self.tombstonedSuggestionIDs(
+                userId: currentUserId,
+                acceptedRepo: acceptedRepo
+            )
+            let serverExtras = workouts.filter {
+                !localIDs.contains($0.id) && !tombstonedIDs.contains($0.id)
+            }
+            incomingWorkouts = localIncoming + serverExtras
             upcomingWorkouts = scheduled
         } catch let error as APIError {
             print("[WorkoutsViewModel] API error: \(error.localizedDescription)")
             if case .unauthorized = error {
-                // Token expired, user needs to re-pair
                 errorMessage = "Session expired. Please reconnect."
             } else {
                 errorMessage = error.localizedDescription
-                // AMA-1785 + CR feedback: do NOT clobber the currently-rendered
-                // lists on a load/refresh failure. The constructor seeded
-                // `incomingWorkouts` with `acceptedStore.all()` on first launch,
-                // and any successful prior fetch left a populated merged list.
-                // Replacing either with `[]` (or even with just `acceptedStore.all()`
-                // mid-session) would visibly drop already-loaded data on a
-                // pull-to-refresh failure. Merge the local cache in as a safety
-                // net for fresh launches and otherwise leave existing entries
-                // untouched.
-                incomingWorkouts = mergeAccepted(into: incomingWorkouts)
+                // Local repo already populated incomingWorkouts above; leave
+                // it untouched on refresh failure.
                 DebugLogService.shared.log(
-                    "Workouts API failed; preserving displayed lists + local cache",
+                    "Workouts refresh failed; serving local repo only",
                     details: "error=\(error.localizedDescription), localCount=\(incomingWorkouts.count)",
                     metadata: ["source": "WorkoutsViewModel.loadWorkouts.catch.APIError"]
                 )
@@ -151,16 +203,50 @@ class WorkoutsViewModel: ObservableObject {
         } catch {
             print("[WorkoutsViewModel] Error: \(error.localizedDescription)")
             errorMessage = "Failed to load workouts: \(error.localizedDescription)"
-            // AMA-1785 + CR feedback: same preservation behavior as above.
-            incomingWorkouts = mergeAccepted(into: incomingWorkouts)
             DebugLogService.shared.log(
-                "Workouts load threw; preserving displayed lists + local cache",
+                "Workouts refresh threw; serving local repo only",
                 details: "error=\(error.localizedDescription), localCount=\(incomingWorkouts.count)",
                 metadata: ["source": "WorkoutsViewModel.loadWorkouts.catch.generic"]
             )
         }
 
         isLoading = false
+    }
+
+    /// Decode planned `workout_events` rows for `userId` into the UI's
+    /// `Workout` shape. Returns the empty list when there is no signed-in
+    /// user — pre-auth launches show nothing rather than leaking another
+    /// user's data.
+    fileprivate static func hydrateIncoming(userId: String?, eventsRepo: WorkoutEventsRepository) -> [Workout] {
+        guard let userId, !userId.isEmpty else { return [] }
+        let events: [LocalWorkoutEvent]
+        do {
+            events = try eventsRepo.todayPlan(userId: userId)
+        } catch {
+            print("[WorkoutsViewModel] hydrate failed: \(error.localizedDescription)")
+            return []
+        }
+        let decoder = JSONDecoder()
+        return events.compactMap { event -> Workout? in
+            // CR: scope to suggestion-accepted events; other planned
+            // workout_events sources have their own surfaces and shouldn't
+            // bleed into the Home accepted-suggestion list.
+            guard event.deletedAt == nil,
+                  event.status == "planned",
+                  event.source == "suggestion_accepted",
+                  let data = event.jsonPayload.data(using: .utf8) else { return nil }
+            return try? decoder.decode(Workout.self, from: data)
+        }
+    }
+
+    /// Set of accepted-suggestion ids that have been soft-deleted on this
+    /// device (completion / schedule). Used by `loadWorkouts` to keep a
+    /// stale server response from re-introducing a tombstoned row before
+    /// the SyncEngine has flushed the delete.
+    fileprivate static func tombstonedSuggestionIDs(userId: String?, acceptedRepo: AcceptedSuggestionsRepository) -> Set<String> {
+        guard let userId, !userId.isEmpty else { return [] }
+        let rows = (try? acceptedRepo.allForUser(userId)) ?? []
+        return Set(rows.compactMap { $0.deletedAt != nil ? $0.id : nil })
     }
 
     /// Refresh workouts from API
@@ -211,10 +297,10 @@ class WorkoutsViewModel: ObservableObject {
                 if let index = incomingWorkouts.firstIndex(where: { $0.id == workout.id }) {
                     incomingWorkouts.remove(at: index)
                 }
-                // AMA-1751 (CR follow-up): also evict from the accepted-
-                // suggestions cache so a scheduled workout doesn't keep
-                // resurfacing in incomingWorkouts on the next refetch.
-                acceptedStore.remove(id: workout.id)
+                // AMA-1792: tombstone the local rows so the workout doesn't
+                // resurface in `hydrateIncoming` on the next launch. Repo
+                // tombstones auto-enqueue a delete to sync_queue.
+                tombstoneLocalSuggestion(workoutId: workout.id, reason: "scheduled")
                 
                 let scheduled = ScheduledWorkout(
                     workout: workout,
@@ -361,9 +447,9 @@ class WorkoutsViewModel: ObservableObject {
         // Remove from upcoming (scheduled workouts)
         upcomingWorkouts.removeAll { $0.workout.id == workoutId }
 
-        // AMA-1751: also clear from local accepted-suggestions store so a
-        // completed workout doesn't resurrect on the next loadWorkouts.
-        acceptedStore.remove(id: workoutId)
+        // AMA-1792: tombstone the local rows so a completed workout doesn't
+        // re-hydrate from `workout_events` on next launch.
+        tombstoneLocalSuggestion(workoutId: workoutId, reason: "completed")
 
         let incomingRemoved = incomingBefore - incomingWorkouts.count
         let upcomingRemoved = upcomingBefore - upcomingWorkouts.count
@@ -379,61 +465,95 @@ class WorkoutsViewModel: ObservableObject {
         )
     }
     
-    // MARK: - Accepted suggestions (AMA-1751)
+    // MARK: - Accepted suggestions (AMA-1792 local-first)
 
-    /// Persist an accepted Suggest-Workout result locally and surface it
-    /// in `incomingWorkouts` immediately. Backend currently has no
-    /// accept-suggestion endpoint, so this is the only durable home for
-    /// the workout until the user starts/completes or deletes it.
-    /// (Backend follow-up: AMA-1751-bug-1.)
+    /// Persist an accepted Suggest-Workout result through the GRDB-backed
+    /// repos. The accepted_suggestions row carries the canonical record
+    /// for the SyncEngine's POST /workouts/accept-suggestion call; the
+    /// workout_events row drives the Home read path (status='planned',
+    /// source='suggestion_accepted').
     func acceptSuggestedWorkout(_ workout: Workout) {
-        let saved = acceptedStore.save(workout)
-        let roundTripContainsWorkout = acceptedStore.all().contains { $0.id == workout.id }
+        guard let userId = currentUserId, !userId.isEmpty else {
+            DebugLogService.shared.log(
+                "Accepted suggestion skipped — no signed-in user",
+                details: "workoutId=\(workout.id)",
+                metadata: ["source": "WorkoutsViewModel.acceptSuggestedWorkout"]
+            )
+            return
+        }
 
-        DebugLogService.shared.log(
-            "Accepted suggestion persisted",
-            details: "save=\(saved), roundTrip=\(roundTripContainsWorkout)",
-            metadata: ["workoutId": workout.id, "workoutName": workout.name]
+        let timestamp = Date()
+        let dateString = WorkoutEventsRepository.dayString(timestamp)
+        let clientId = UUID().uuidString
+        let payload = (try? encodeToJSONString(workout)) ?? "{}"
+
+        let suggestion = LocalAcceptedSuggestion(
+            id: workout.id,
+            userId: userId,
+            suggestionId: nil,
+            workoutEventId: workout.id,
+            status: "accepted",
+            clientGeneratedId: clientId,
+            serverVersion: 0,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+            deletedAt: nil
+        )
+        let event = LocalWorkoutEvent(
+            id: workout.id,
+            userId: userId,
+            date: dateString,
+            startTime: nil,
+            endTime: nil,
+            status: "planned",
+            source: "suggestion_accepted",
+            jsonPayload: payload,
+            clientGeneratedId: clientId,
+            serverVersion: 0,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+            deletedAt: nil
         )
 
-        if !incomingWorkouts.contains(where: { $0.id == workout.id }) {
-            incomingWorkouts.append(workout)
-        }
-    }
-
-    /// Merge stored accepted suggestions into a freshly-fetched workouts
-    /// list, deduping by workout id (server wins on conflict — once the
-    /// backend endpoint exists, the store will go quiet on its own).
-    private func mergeAccepted(into fetched: [Workout], excluding completedWorkoutIDs: Set<String> = []) -> [Workout] {
-        let stored = acceptedStore.all()
-        guard !stored.isEmpty else { return fetched }
-        let fetchedIDs = Set(fetched.map(\.id))
-        let visibleFetched = fetched.filter { !completedWorkoutIDs.contains($0.id) }
-        let extras = stored.filter { workout in
-            !fetchedIDs.contains(workout.id) && !completedWorkoutIDs.contains(workout.id)
-        }
-        return visibleFetched + extras
-    }
-
-    private func completedWorkoutIDs() async -> Set<String> {
         do {
-            let completions = try await dependencies.apiService.fetchCompletions(limit: 100, offset: 0)
-            return Set(completions.compactMap(\.workoutId))
+            // CR pass 2: atomic — both rows + their sync_queue entries
+            // commit together or roll back together. Avoids leaving an
+            // orphan workout_event row if the suggestion insert failed.
+            try acceptedRepo.acceptedWithEvent(suggestion: suggestion, event: event, enqueueSync: true)
+            DebugLogService.shared.log(
+                "Accepted suggestion persisted (local-first)",
+                details: "userId=\(userId) clientId=\(clientId)",
+                metadata: ["workoutId": workout.id, "workoutName": workout.name]
+            )
+            // CR: only surface in the UI after the local write succeeds.
+            // Otherwise a persistence failure presents as success, then
+            // the workout vanishes on next launch.
+            if !incomingWorkouts.contains(where: { $0.id == workout.id }) {
+                incomingWorkouts.append(workout)
+            }
         } catch {
             DebugLogService.shared.log(
-                "Workout completions unavailable during load",
+                "Accepted suggestion local write failed",
                 details: error.localizedDescription,
-                metadata: ["source": "WorkoutsViewModel.completedWorkoutIDs"]
+                metadata: ["workoutId": workout.id]
             )
-            return []
         }
     }
 
-    private func pruneCompletedAcceptedSuggestions(_ completedWorkoutIDs: Set<String>) {
-        guard !completedWorkoutIDs.isEmpty else { return }
-
-        for workoutID in completedWorkoutIDs where acceptedStore.all().contains(where: { $0.id == workoutID }) {
-            acceptedStore.remove(id: workoutID)
+    /// Atomic tombstone of both the accepted_suggestion and workout_event
+    /// rows for a given workout id. CR pass 3: routed through
+    /// `acceptedRepo.tombstoneWithEvent` so a partial failure can't leave
+    /// one row live while its partner is soft-deleted (which would let
+    /// `hydrateIncoming` resurrect the workout on next launch).
+    private func tombstoneLocalSuggestion(workoutId: String, reason: String) {
+        do {
+            try acceptedRepo.tombstoneWithEvent(id: workoutId, enqueueSync: true)
+        } catch {
+            DebugLogService.shared.log(
+                "Tombstone (atomic) failed",
+                details: error.localizedDescription,
+                metadata: ["workoutId": workoutId, "reason": reason]
+            )
         }
     }
 
