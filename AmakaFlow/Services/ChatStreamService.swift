@@ -127,8 +127,10 @@ class ChatStreamService: ChatStreamProviding {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    let chatURL = AppEnvironment.current.chatAPIURL
-                    guard let url = URL(string: "\(chatURL)/chat/stream") else {
+                    // AMA-1827: route through mobile-bff `/v1/chat/stream`
+                    // (uses BFF's `_proxy_stream` SSE pass-through helper).
+                    let bffURL = "\(AppEnvironment.current.mobileBFFURL)/v1"
+                    guard let url = URL(string: "\(bffURL)/chat/stream") else {
                         continuation.finish(throwing: URLError(.badURL))
                         return
                     }
