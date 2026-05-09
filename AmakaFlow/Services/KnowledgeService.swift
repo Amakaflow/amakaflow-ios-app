@@ -76,7 +76,10 @@ enum KnowledgeServiceError: Error, LocalizedError {
 class KnowledgeService: ObservableObject {
     static let shared = KnowledgeService()
 
-    private var baseURL: String { AppEnvironment.current.chatAPIURL }
+    /// AMA-1827: route through mobile-bff (`/v1/knowledge/*`) instead of
+    /// chat-api directly. Backend chat-api can be renamed without an iOS
+    /// release. See AMA-1817 epic.
+    private var baseURL: String { "\(AppEnvironment.current.mobileBFFURL)/v1" }
     private let session = URLSession.shared
 
     private init() {}

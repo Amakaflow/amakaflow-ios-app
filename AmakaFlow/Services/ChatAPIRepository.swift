@@ -6,11 +6,12 @@
 //  Implemented as `extension APIService` so call sites and the
 //  APIServiceProviding conformance keep working unchanged.
 //
-//  Per AMA-1828 spec: all endpoints in this file currently route through
-//  `AppEnvironment.current.chatAPIURL`. AMA-1827 will swap them to
-//  `bffURL` in a follow-up — do NOT change chatAPIURL behaviour here.
+//  AMA-1827 (this swap): all endpoints below now route through
+//  `bffURL` (mobile-bff `/v1/*` paths) instead of chat-api directly.
+//  Backend chat-api can be renamed without an iOS release. The BFF
+//  proxies requests to chat-api with auth + X-Request-ID forwarding.
 //
-//  Endpoints in this file:
+//  Endpoints in this file (all under bffURL = `…/v1`):
 //    POST /coach/message              (sendCoachMessage)
 //    POST /coach/fatigue-advice       (getFatigueAdvice)
 //    GET  /coach/memories             (fetchCoachMemories)
@@ -31,7 +32,7 @@ extension APIService {
     // MARK: - Coach API (AMA-1147 / AMA-1133)
 
     func sendCoachMessage(message: String, context: CoachContext? = nil) async throws -> CoachResponse {
-        let chatURL = AppEnvironment.current.chatAPIURL
+        let chatURL = bffURL
         let url = URL(string: "\(chatURL)/coach/message")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -53,7 +54,7 @@ extension APIService {
     }
 
     func getFatigueAdvice(fatigueScore: Double? = nil, loadHistory: [DailyLoad]? = nil) async throws -> FatigueAdvice {
-        let chatURL = AppEnvironment.current.chatAPIURL
+        let chatURL = bffURL
         let url = URL(string: "\(chatURL)/coach/fatigue-advice")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -72,7 +73,7 @@ extension APIService {
     }
 
     func fetchCoachMemories() async throws -> [CoachMemory] {
-        let chatURL = AppEnvironment.current.chatAPIURL
+        let chatURL = bffURL
         let url = URL(string: "\(chatURL)/coach/memories")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
@@ -91,7 +92,7 @@ extension APIService {
     // MARK: - XP + Level (AMA-1285)
 
     func fetchXP() async throws -> XPData {
-        let url = URL(string: "\(AppEnvironment.current.chatAPIURL)/gamification/xp")!
+        let url = URL(string: "\(bffURL)/gamification/xp")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         for (key, value) in await makeAuthHeaders() {
@@ -116,7 +117,7 @@ extension APIService {
     // MARK: - Nutrition (AMA-1412)
 
     func analyzePhoto(imageBase64: String) async throws -> AnalyzePhotoAPIResponse {
-        let chatURL = AppEnvironment.current.chatAPIURL
+        let chatURL = bffURL
         guard let url = URL(string: "\(chatURL)/nutrition/analyze-photo") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -139,7 +140,7 @@ extension APIService {
     }
 
     func lookupBarcode(code: String) async throws -> BarcodeNutritionAPIResponse {
-        let chatURL = AppEnvironment.current.chatAPIURL
+        let chatURL = bffURL
         let encoded = code.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? code
         guard let url = URL(string: "\(chatURL)/nutrition/barcode/\(encoded)") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
@@ -162,7 +163,7 @@ extension APIService {
     }
 
     func parseText(text: String) async throws -> ParseTextAPIResponse {
-        let chatURL = AppEnvironment.current.chatAPIURL
+        let chatURL = bffURL
         guard let url = URL(string: "\(chatURL)/nutrition/parse-text") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -185,7 +186,7 @@ extension APIService {
     }
 
     func getFuelingStatus() async throws -> FuelingStatusResponse {
-        let chatURL = AppEnvironment.current.chatAPIURL
+        let chatURL = bffURL
         guard let url = URL(string: "\(chatURL)/nutrition/fueling-status") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
@@ -207,7 +208,7 @@ extension APIService {
     }
 
     func checkProteinNudge() async throws -> ProteinNudgeResponse {
-        let chatURL = AppEnvironment.current.chatAPIURL
+        let chatURL = bffURL
         guard let url = URL(string: "\(chatURL)/nutrition/protein-nudge/check") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -231,7 +232,7 @@ extension APIService {
     // MARK: - Coach Suggestions (AMA-1412)
 
     func suggestWorkout(request: SuggestWorkoutRequest) async throws -> SuggestWorkoutResponse {
-        let chatURL = AppEnvironment.current.chatAPIURL
+        let chatURL = bffURL
         guard let url = URL(string: "\(chatURL)/coach/suggest-workout") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -254,7 +255,7 @@ extension APIService {
     }
 
     func postRPEFeedback(_ feedback: RPEFeedbackRequest) async throws -> RPEFeedbackResponse {
-        let chatURL = AppEnvironment.current.chatAPIURL
+        let chatURL = bffURL
         guard let url = URL(string: "\(chatURL)/coach/rpe-feedback") else { throw APIError.invalidURL }
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
