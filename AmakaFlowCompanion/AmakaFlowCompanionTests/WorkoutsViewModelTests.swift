@@ -518,6 +518,59 @@ final class WorkoutsViewModelTests: XCTestCase {
     /// rehydrate on the next launch. (Replaces the old AMA-1785-era
     /// `pruneCompletedAcceptedSuggestions` heuristic that ran on every
     /// load and could false-positive prune transient API responses.)
+    /// AMA-1815: a second Suggest → Accept must supersede the first. Quick
+    /// Start (which renders all of `incomingWorkouts`) was showing every
+    /// historical accept after AMA-1792 because hydrateIncoming returned
+    /// all live suggestion-accepted events. Replace-on-accept tombstones
+    /// the prior pair atomically so only the latest accept survives.
+    func testAcceptSuggestedWorkoutReplacesPriorAccept() async throws {
+        let userId = "user-replace"
+        let (deps, acceptedRepo, _) = try makeLocalFirstDeps(userId: userId)
+        let first = TestFixtures.workout(id: "accept-first", name: "First Accepted", sport: .strength)
+        let second = TestFixtures.workout(id: "accept-second", name: "Second Accepted", sport: .strength)
+
+        let viewModel = WorkoutsViewModel(dependencies: deps)
+        viewModel.acceptSuggestedWorkout(first)
+        viewModel.acceptSuggestedWorkout(second)
+
+        XCTAssertEqual(
+            viewModel.incomingWorkouts.map(\.id),
+            [second.id],
+            "Quick Start must show only the most-recent accepted suggestion"
+        )
+
+        let allRows = try acceptedRepo.allForUser(userId)
+        let live = allRows.filter { $0.deletedAt == nil }
+        let tombstoned = allRows.filter { $0.deletedAt != nil }
+        XCTAssertEqual(live.map(\.id), [second.id], "Only the latest accept stays live")
+        XCTAssertEqual(tombstoned.map(\.id), [first.id], "The prior accept is soft-deleted")
+        XCTAssertTrue(
+            tombstoned.allSatisfy { $0.status == "deleted" },
+            "Replaced rows must carry status='deleted' so the SyncEngine flushes the right op"
+        )
+    }
+
+    /// Force-quit + reopen after a second accept must NOT resurrect the
+    /// first. Pairs with the in-process test above to lock the contract
+    /// across a fresh VM init.
+    func testReplaceOnAcceptSurvivesViewModelRelaunch() async throws {
+        let userId = "user-replace-relaunch"
+        let (deps, _, _) = try makeLocalFirstDeps(userId: userId)
+        let first = TestFixtures.workout(id: "relaunch-first", name: "First", sport: .strength)
+        let second = TestFixtures.workout(id: "relaunch-second", name: "Second", sport: .strength)
+
+        let firstVM = WorkoutsViewModel(dependencies: deps)
+        firstVM.acceptSuggestedWorkout(first)
+        firstVM.acceptSuggestedWorkout(second)
+
+        let relaunched = WorkoutsViewModel(dependencies: deps)
+        XCTAssertEqual(
+            relaunched.incomingWorkouts.map(\.id),
+            [second.id],
+            "Cold launch must hydrate only the most-recent accept"
+        )
+    }
+
     func testMarkWorkoutCompletedTombstonesLocalRowsSoTheyDoNotRehydrate() async throws {
         let userId = "user-completed"
         let (deps, acceptedRepo, eventsRepo) = try makeLocalFirstDeps(userId: userId)
