@@ -149,8 +149,17 @@ class WorkoutsViewModel: ObservableObject {
             // doesn't know about yet (e.g. a workout pushed to this device
             // from another client). Local rows always win on id collision —
             // the SyncEngine reconciles authoritative state separately.
+            // CR: also exclude ids the local repo has TOMBSTONED so a
+            // stale API payload for a just-completed/scheduled workout
+            // doesn't sneak back into Home.
             let localIDs = Set(localIncoming.map(\.id))
-            let serverExtras = workouts.filter { !localIDs.contains($0.id) }
+            let tombstonedIDs = Self.tombstonedSuggestionIDs(
+                userId: currentUserId,
+                acceptedRepo: acceptedRepo
+            )
+            let serverExtras = workouts.filter {
+                !localIDs.contains($0.id) && !tombstonedIDs.contains($0.id)
+            }
             incomingWorkouts = localIncoming + serverExtras
             upcomingWorkouts = scheduled
         } catch let error as APIError {
@@ -195,11 +204,25 @@ class WorkoutsViewModel: ObservableObject {
         }
         let decoder = JSONDecoder()
         return events.compactMap { event -> Workout? in
+            // CR: scope to suggestion-accepted events; other planned
+            // workout_events sources have their own surfaces and shouldn't
+            // bleed into the Home accepted-suggestion list.
             guard event.deletedAt == nil,
                   event.status == "planned",
+                  event.source == "suggestion_accepted",
                   let data = event.jsonPayload.data(using: .utf8) else { return nil }
             return try? decoder.decode(Workout.self, from: data)
         }
+    }
+
+    /// Set of accepted-suggestion ids that have been soft-deleted on this
+    /// device (completion / schedule). Used by `loadWorkouts` to keep a
+    /// stale server response from re-introducing a tombstoned row before
+    /// the SyncEngine has flushed the delete.
+    fileprivate static func tombstonedSuggestionIDs(userId: String?, acceptedRepo: AcceptedSuggestionsRepository) -> Set<String> {
+        guard let userId, !userId.isEmpty else { return [] }
+        let rows = (try? acceptedRepo.allForUser(userId)) ?? []
+        return Set(rows.compactMap { $0.deletedAt != nil ? $0.id : nil })
     }
 
     /// Refresh workouts from API
@@ -478,16 +501,18 @@ class WorkoutsViewModel: ObservableObject {
                 details: "userId=\(userId) clientId=\(clientId)",
                 metadata: ["workoutId": workout.id, "workoutName": workout.name]
             )
+            // CR: only surface in the UI after the local write succeeds.
+            // Otherwise a persistence failure presents as success, then
+            // the workout vanishes on next launch.
+            if !incomingWorkouts.contains(where: { $0.id == workout.id }) {
+                incomingWorkouts.append(workout)
+            }
         } catch {
             DebugLogService.shared.log(
                 "Accepted suggestion local write failed",
                 details: error.localizedDescription,
                 metadata: ["workoutId": workout.id]
             )
-        }
-
-        if !incomingWorkouts.contains(where: { $0.id == workout.id }) {
-            incomingWorkouts.append(workout)
         }
     }
 

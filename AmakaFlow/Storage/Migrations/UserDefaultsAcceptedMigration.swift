@@ -59,12 +59,16 @@ enum UserDefaultsAcceptedMigration {
         do {
             workouts = try decoder.decode([Workout].self, from: data)
         } catch {
+            // CR: don't permanently discard the legacy payload on a decode
+            // miss — schema drift on one row would otherwise lose every
+            // accepted workout for the user. Stash the raw blob under a
+            // backup key for offline forensics, leave the legacy key + flag
+            // untouched so a future build (or a fixed schema) can retry.
+            defaults.set(data, forKey: "\(legacyKey).failed")
             logger(
                 "Legacy accepted-suggestions decode failed",
-                "error=\(error.localizedDescription) — wiping legacy key, no rows migrated"
+                "error=\(error.localizedDescription) — preserved at \(legacyKey).failed for retry"
             )
-            defaults.removeObject(forKey: legacyKey)
-            defaults.set(true, forKey: migrationFlagKey)
             return
         }
 
