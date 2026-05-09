@@ -70,6 +70,26 @@ enum AppEnvironment: String, CaseIterable {
         }
     }
 
+    /// AMA-1820: mobile-bff host. The 5 first-wave mobile-facing endpoints
+    /// (workouts/complete, workouts/planned, sync/{pending,confirm,failed})
+    /// are routed here instead of mapper-api. BFF mounts them under `/v1/*`
+    /// and proxies to mapper-api. Internal route renames at mapper-api no
+    /// longer require an iOS release. See AMA-1817 epic.
+    var mobileBFFURL: String {
+        #if DEBUG
+        if let testBaseURL = ProcessInfo.processInfo.environment["UITEST_BFF_BASE_URL"],
+           !testBaseURL.isEmpty {
+            return testBaseURL
+        }
+        #endif
+
+        switch self {
+        case .development: return "http://localhost:8006"
+        case .staging: return "https://mobile-bff.staging.amakaflow.com"
+        case .production: return "https://mobile-bff.amakaflow.com"
+        }
+    }
+
     var ingestorAPIURL: String {
         switch self {
         case .development: return "http://localhost:8004"

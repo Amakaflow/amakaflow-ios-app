@@ -1,0 +1,133 @@
+{
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "bearerFormat": "JWT",
+        "description": "Clerk-issued JWT, forwarded verbatim to mapper-api.",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "description": "Mobile Backend-for-Frontend (AMA-1819). Thin proxy for the 5 first-wave mobile-facing endpoints under /v1/. iOS calls this service exclusively for workout/sync flows so internal mapper-api renames don't require an iOS release.",
+    "title": "AmakaFlow Mobile BFF",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "description": "Health probe \u2014 used by Render and any load balancer in front.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Health Health Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/v1/sync/confirm": {
+      "post": {
+        "description": "SyncEngine confirm-success \u2192 mapper-api POST /sync/confirm.",
+        "operationId": "v1_sync_confirm_v1_sync_confirm_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "V1 Sync Confirm"
+      }
+    },
+    "/v1/sync/failed": {
+      "post": {
+        "description": "SyncEngine confirm-failure \u2192 mapper-api POST /sync/failed.",
+        "operationId": "v1_sync_failed_v1_sync_failed_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "V1 Sync Failed"
+      }
+    },
+    "/v1/sync/pending": {
+      "get": {
+        "description": "SyncEngine pending-flush read \u2192 mapper-api GET /sync/pending.",
+        "operationId": "v1_sync_pending_v1_sync_pending_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "V1 Sync Pending"
+      }
+    },
+    "/v1/workouts/complete": {
+      "post": {
+        "description": "Save & End on iOS \u2192 mapper-api POST /workouts/complete.",
+        "operationId": "v1_workouts_complete_v1_workouts_complete_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "V1 Workouts Complete"
+      }
+    },
+    "/v1/workouts/planned": {
+      "get": {
+        "description": "iOS Home / Calendar planned-workouts read \u2192 mapper-api GET /workouts/planned.",
+        "operationId": "v1_workouts_planned_v1_workouts_planned_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "V1 Workouts Planned"
+      }
+    }
+  },
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ]
+}

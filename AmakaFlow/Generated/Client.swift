@@ -10,7 +10,7 @@ import struct Foundation.Data
 import struct Foundation.Date
 #endif
 import HTTPTypes
-/// Workout mapping and transformation API
+/// Mobile Backend-for-Frontend (AMA-1819). Thin proxy for the 5 first-wave mobile-facing endpoints under /v1/. iOS calls this service exclusively for workout/sync flows so internal mapper-api renames don't require an iOS release.
 public struct Client: APIProtocol {
     /// The underlying HTTP client.
     private let client: UniversalClient
@@ -38,29 +38,19 @@ public struct Client: APIProtocol {
     private var converter: Converter {
         client.converter
     }
-    /// Confirm Sync Endpoint
+    /// V1 Sync Confirm
     ///
-    /// Confirm that a workout was successfully downloaded (AMA-307).
+    /// SyncEngine confirm-success → mapper-api POST /sync/confirm.
     ///
-    /// Called by mobile apps after successfully downloading a workout.
-    /// Updates the sync status from 'pending' to 'synced'.
-    ///
-    /// Args:
-    ///     request: Confirm sync request with workout and device info
-    ///     user_id: Authenticated user ID from JWT
-    ///
-    /// Returns:
-    ///     Success response with sync status and timestamp
-    ///
-    /// - Remark: HTTP `POST /sync/confirm`.
-    /// - Remark: Generated from `#/paths//sync/confirm/post(confirm_sync_endpoint_sync_confirm_post)`.
-    public func confirmSyncEndpointSyncConfirmPost(_ input: Operations.ConfirmSyncEndpointSyncConfirmPost.Input) async throws -> Operations.ConfirmSyncEndpointSyncConfirmPost.Output {
+    /// - Remark: HTTP `POST /v1/sync/confirm`.
+    /// - Remark: Generated from `#/paths//v1/sync/confirm/post(v1_sync_confirm_v1_sync_confirm_post)`.
+    public func v1SyncConfirmV1SyncConfirmPost(_ input: Operations.V1SyncConfirmV1SyncConfirmPost.Input) async throws -> Operations.V1SyncConfirmV1SyncConfirmPost.Output {
         try await client.send(
             input: input,
-            forOperation: Operations.ConfirmSyncEndpointSyncConfirmPost.id,
+            forOperation: Operations.V1SyncConfirmV1SyncConfirmPost.id,
             serializer: { input in
                 let path = try converter.renderedPath(
-                    template: "/sync/confirm",
+                    template: "/v1/sync/confirm",
                     parameters: []
                 )
                 var request: HTTPTypes.HTTPRequest = .init(
@@ -68,403 +58,6 @@ public struct Client: APIProtocol {
                     method: .post
                 )
                 suppressMutabilityWarning(&request)
-                converter.setAcceptHeader(
-                    in: &request.headerFields,
-                    contentTypes: input.headers.accept
-                )
-                let body: OpenAPIRuntime.HTTPBody?
-                switch input.body {
-                case let .json(value):
-                    body = try converter.setRequiredRequestBodyAsJSON(
-                        value,
-                        headerFields: &request.headerFields,
-                        contentType: "application/json; charset=utf-8"
-                    )
-                }
-                return (request, body)
-            },
-            deserializer: { response, responseBody in
-                switch response.status.code {
-                case 200:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.Ok.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            OpenAPIRuntime.OpenAPIValueContainer.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .ok(.init(body: body))
-                case 400:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.BadRequest.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Operations.ConfirmSyncEndpointSyncConfirmPost.Output.BadRequest.Body.JsonPayload.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .badRequest(.init(body: body))
-                case 422:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.UnprocessableContent.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.HTTPValidationError.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .unprocessableContent(.init(body: body))
-                case 429:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.TooManyRequests.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Operations.ConfirmSyncEndpointSyncConfirmPost.Output.TooManyRequests.Body.JsonPayload.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .tooManyRequests(.init(body: body))
-                case 500:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.InternalServerError.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Operations.ConfirmSyncEndpointSyncConfirmPost.Output.InternalServerError.Body.JsonPayload.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .internalServerError(.init(body: body))
-                case 503:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.ServiceUnavailable.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Operations.ConfirmSyncEndpointSyncConfirmPost.Output.ServiceUnavailable.Body.JsonPayload.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .serviceUnavailable(.init(body: body))
-                default:
-                    return .undocumented(
-                        statusCode: response.status.code,
-                        .init(
-                            headerFields: response.headerFields,
-                            body: responseBody
-                        )
-                    )
-                }
-            }
-        )
-    }
-    /// Report Sync Failed Endpoint
-    ///
-    /// Report that a workout sync failed (AMA-307).
-    ///
-    /// Called by mobile apps when download fails.
-    /// Updates the sync status from 'pending' to 'failed' with error message.
-    ///
-    /// Args:
-    ///     request: Failed sync report with workout, device, and error info
-    ///     user_id: Authenticated user ID from JWT
-    ///
-    /// Returns:
-    ///     Success response with failed sync status and timestamp
-    ///
-    /// - Remark: HTTP `POST /sync/failed`.
-    /// - Remark: Generated from `#/paths//sync/failed/post(report_sync_failed_endpoint_sync_failed_post)`.
-    public func reportSyncFailedEndpointSyncFailedPost(_ input: Operations.ReportSyncFailedEndpointSyncFailedPost.Input) async throws -> Operations.ReportSyncFailedEndpointSyncFailedPost.Output {
-        try await client.send(
-            input: input,
-            forOperation: Operations.ReportSyncFailedEndpointSyncFailedPost.id,
-            serializer: { input in
-                let path = try converter.renderedPath(
-                    template: "/sync/failed",
-                    parameters: []
-                )
-                var request: HTTPTypes.HTTPRequest = .init(
-                    soar_path: path,
-                    method: .post
-                )
-                suppressMutabilityWarning(&request)
-                converter.setAcceptHeader(
-                    in: &request.headerFields,
-                    contentTypes: input.headers.accept
-                )
-                let body: OpenAPIRuntime.HTTPBody?
-                switch input.body {
-                case let .json(value):
-                    body = try converter.setRequiredRequestBodyAsJSON(
-                        value,
-                        headerFields: &request.headerFields,
-                        contentType: "application/json; charset=utf-8"
-                    )
-                }
-                return (request, body)
-            },
-            deserializer: { response, responseBody in
-                switch response.status.code {
-                case 200:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.Ok.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            OpenAPIRuntime.OpenAPIValueContainer.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .ok(.init(body: body))
-                case 400:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.BadRequest.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Operations.ReportSyncFailedEndpointSyncFailedPost.Output.BadRequest.Body.JsonPayload.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .badRequest(.init(body: body))
-                case 422:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.UnprocessableContent.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.HTTPValidationError.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .unprocessableContent(.init(body: body))
-                case 429:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.TooManyRequests.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Operations.ReportSyncFailedEndpointSyncFailedPost.Output.TooManyRequests.Body.JsonPayload.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .tooManyRequests(.init(body: body))
-                case 500:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.InternalServerError.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Operations.ReportSyncFailedEndpointSyncFailedPost.Output.InternalServerError.Body.JsonPayload.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .internalServerError(.init(body: body))
-                case 503:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.ServiceUnavailable.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Operations.ReportSyncFailedEndpointSyncFailedPost.Output.ServiceUnavailable.Body.JsonPayload.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .serviceUnavailable(.init(body: body))
-                default:
-                    return .undocumented(
-                        statusCode: response.status.code,
-                        .init(
-                            headerFields: response.headerFields,
-                            body: responseBody
-                        )
-                    )
-                }
-            }
-        )
-    }
-    /// Get Pending Syncs Endpoint
-    ///
-    /// Get workouts pending sync for a device (AMA-307).
-    ///
-    /// Called by mobile apps to discover workouts queued for download.
-    /// Returns full workout data including intervals, in the order they were queued.
-    ///
-    /// Args:
-    ///     device_type: Type of device (ios, android, or garmin)
-    ///     device_id: Optional device identifier for multi-device support
-    ///     user_id: Authenticated user ID from JWT
-    ///
-    /// Returns:
-    ///     List of pending workouts with full interval data
-    ///
-    /// - Remark: HTTP `GET /sync/pending`.
-    /// - Remark: Generated from `#/paths//sync/pending/get(get_pending_syncs_endpoint_sync_pending_get)`.
-    public func getPendingSyncsEndpointSyncPendingGet(_ input: Operations.GetPendingSyncsEndpointSyncPendingGet.Input) async throws -> Operations.GetPendingSyncsEndpointSyncPendingGet.Output {
-        try await client.send(
-            input: input,
-            forOperation: Operations.GetPendingSyncsEndpointSyncPendingGet.id,
-            serializer: { input in
-                let path = try converter.renderedPath(
-                    template: "/sync/pending",
-                    parameters: []
-                )
-                var request: HTTPTypes.HTTPRequest = .init(
-                    soar_path: path,
-                    method: .get
-                )
-                suppressMutabilityWarning(&request)
-                try converter.setQueryItemAsURI(
-                    in: &request,
-                    style: .form,
-                    explode: true,
-                    name: "device_type",
-                    value: input.query.deviceType
-                )
-                try converter.setQueryItemAsURI(
-                    in: &request,
-                    style: .form,
-                    explode: true,
-                    name: "device_id",
-                    value: input.query.deviceId
-                )
                 converter.setAcceptHeader(
                     in: &request.headerFields,
                     contentTypes: input.headers.accept
@@ -475,7 +68,7 @@ public struct Client: APIProtocol {
                 switch response.status.code {
                 case 200:
                     let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.Ok.Body
+                    let body: Operations.V1SyncConfirmV1SyncConfirmPost.Output.Ok.Body
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
@@ -495,94 +88,6 @@ public struct Client: APIProtocol {
                         preconditionFailure("bestContentType chose an invalid content type.")
                     }
                     return .ok(.init(body: body))
-                case 422:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.UnprocessableContent.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.HTTPValidationError.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .unprocessableContent(.init(body: body))
-                case 429:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.TooManyRequests.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Operations.GetPendingSyncsEndpointSyncPendingGet.Output.TooManyRequests.Body.JsonPayload.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .tooManyRequests(.init(body: body))
-                case 500:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.InternalServerError.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Operations.GetPendingSyncsEndpointSyncPendingGet.Output.InternalServerError.Body.JsonPayload.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .internalServerError(.init(body: body))
-                case 503:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.ServiceUnavailable.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Operations.GetPendingSyncsEndpointSyncPendingGet.Output.ServiceUnavailable.Body.JsonPayload.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .serviceUnavailable(.init(body: body))
                 default:
                     return .undocumented(
                         statusCode: response.status.code,
@@ -595,29 +100,19 @@ public struct Client: APIProtocol {
             }
         )
     }
-    /// Record Workout Completion Endpoint
+    /// V1 Sync Failed
     ///
-    /// Record a workout completion with health metrics from Apple Watch.
+    /// SyncEngine confirm-failure → mapper-api POST /sync/failed.
     ///
-    /// Called by iOS app when user finishes a workout. Stores heart rate,
-    /// calories, duration, and other health data captured during the workout.
-    ///
-    /// Args:
-    ///     request: Workout completion data including health metrics
-    ///     user_id: Authenticated user ID (from Clerk JWT)
-    ///
-    /// Returns:
-    ///     Success status, completion ID, and summary
-    ///
-    /// - Remark: HTTP `POST /workouts/complete`.
-    /// - Remark: Generated from `#/paths//workouts/complete/post(record_workout_completion_endpoint_workouts_complete_post)`.
-    public func recordWorkoutCompletionEndpointWorkoutsCompletePost(_ input: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Input) async throws -> Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output {
+    /// - Remark: HTTP `POST /v1/sync/failed`.
+    /// - Remark: Generated from `#/paths//v1/sync/failed/post(v1_sync_failed_v1_sync_failed_post)`.
+    public func v1SyncFailedV1SyncFailedPost(_ input: Operations.V1SyncFailedV1SyncFailedPost.Input) async throws -> Operations.V1SyncFailedV1SyncFailedPost.Output {
         try await client.send(
             input: input,
-            forOperation: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.id,
+            forOperation: Operations.V1SyncFailedV1SyncFailedPost.id,
             serializer: { input in
                 let path = try converter.renderedPath(
-                    template: "/workouts/complete",
+                    template: "/v1/sync/failed",
                     parameters: []
                 )
                 var request: HTTPTypes.HTTPRequest = .init(
@@ -629,22 +124,13 @@ public struct Client: APIProtocol {
                     in: &request.headerFields,
                     contentTypes: input.headers.accept
                 )
-                let body: OpenAPIRuntime.HTTPBody?
-                switch input.body {
-                case let .json(value):
-                    body = try converter.setRequiredRequestBodyAsJSON(
-                        value,
-                        headerFields: &request.headerFields,
-                        contentType: "application/json; charset=utf-8"
-                    )
-                }
-                return (request, body)
+                return (request, nil)
             },
             deserializer: { response, responseBody in
                 switch response.status.code {
                 case 200:
                     let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.Ok.Body
+                    let body: Operations.V1SyncFailedV1SyncFailedPost.Output.Ok.Body
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
@@ -664,116 +150,6 @@ public struct Client: APIProtocol {
                         preconditionFailure("bestContentType chose an invalid content type.")
                     }
                     return .ok(.init(body: body))
-                case 400:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.BadRequest.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.BadRequest.Body.JsonPayload.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .badRequest(.init(body: body))
-                case 422:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.UnprocessableContent.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.HTTPValidationError.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .unprocessableContent(.init(body: body))
-                case 429:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.TooManyRequests.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.TooManyRequests.Body.JsonPayload.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .tooManyRequests(.init(body: body))
-                case 500:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.InternalServerError.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.InternalServerError.Body.JsonPayload.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .internalServerError(.init(body: body))
-                case 503:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.ServiceUnavailable.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.ServiceUnavailable.Body.JsonPayload.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .serviceUnavailable(.init(body: body))
                 default:
                     return .undocumented(
                         statusCode: response.status.code,
@@ -786,23 +162,19 @@ public struct Client: APIProtocol {
             }
         )
     }
-    /// List Planned Workouts Endpoint
+    /// V1 Sync Pending
     ///
-    /// Return the user's non-deleted planned workouts in a date range.
+    /// SyncEngine pending-flush read → mapper-api GET /sync/pending.
     ///
-    /// The new iOS Home + Workouts surfaces (AMA-1792) drive their reads
-    /// through this endpoint instead of the legacy fragmented set
-    /// (`fetchWorkouts`/`fetchScheduledWorkouts`/`fetchPushedWorkouts`).
-    ///
-    /// - Remark: HTTP `GET /workouts/planned`.
-    /// - Remark: Generated from `#/paths//workouts/planned/get(list_planned_workouts_endpoint_workouts_planned_get)`.
-    public func listPlannedWorkoutsEndpointWorkoutsPlannedGet(_ input: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Input) async throws -> Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output {
+    /// - Remark: HTTP `GET /v1/sync/pending`.
+    /// - Remark: Generated from `#/paths//v1/sync/pending/get(v1_sync_pending_v1_sync_pending_get)`.
+    public func v1SyncPendingV1SyncPendingGet(_ input: Operations.V1SyncPendingV1SyncPendingGet.Input) async throws -> Operations.V1SyncPendingV1SyncPendingGet.Output {
         try await client.send(
             input: input,
-            forOperation: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.id,
+            forOperation: Operations.V1SyncPendingV1SyncPendingGet.id,
             serializer: { input in
                 let path = try converter.renderedPath(
-                    template: "/workouts/planned",
+                    template: "/v1/sync/pending",
                     parameters: []
                 )
                 var request: HTTPTypes.HTTPRequest = .init(
@@ -810,20 +182,6 @@ public struct Client: APIProtocol {
                     method: .get
                 )
                 suppressMutabilityWarning(&request)
-                try converter.setQueryItemAsURI(
-                    in: &request,
-                    style: .form,
-                    explode: true,
-                    name: "from",
-                    value: input.query.from
-                )
-                try converter.setQueryItemAsURI(
-                    in: &request,
-                    style: .form,
-                    explode: true,
-                    name: "to",
-                    value: input.query.to
-                )
                 converter.setAcceptHeader(
                     in: &request.headerFields,
                     contentTypes: input.headers.accept
@@ -834,7 +192,7 @@ public struct Client: APIProtocol {
                 switch response.status.code {
                 case 200:
                     let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.Ok.Body
+                    let body: Operations.V1SyncPendingV1SyncPendingGet.Output.Ok.Body
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
@@ -844,7 +202,7 @@ public struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.PlannedListResponse.self,
+                            OpenAPIRuntime.OpenAPIValueContainer.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -854,9 +212,49 @@ public struct Client: APIProtocol {
                         preconditionFailure("bestContentType chose an invalid content type.")
                     }
                     return .ok(.init(body: body))
-                case 422:
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// V1 Workouts Complete
+    ///
+    /// Save & End on iOS → mapper-api POST /workouts/complete.
+    ///
+    /// - Remark: HTTP `POST /v1/workouts/complete`.
+    /// - Remark: Generated from `#/paths//v1/workouts/complete/post(v1_workouts_complete_v1_workouts_complete_post)`.
+    public func v1WorkoutsCompleteV1WorkoutsCompletePost(_ input: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Input) async throws -> Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/v1/workouts/complete",
+                    parameters: []
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .post
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
                     let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.UnprocessableContent.Body
+                    let body: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Output.Ok.Body
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
@@ -866,7 +264,7 @@ public struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.HTTPValidationError.self,
+                            OpenAPIRuntime.OpenAPIValueContainer.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -875,10 +273,50 @@ public struct Client: APIProtocol {
                     default:
                         preconditionFailure("bestContentType chose an invalid content type.")
                     }
-                    return .unprocessableContent(.init(body: body))
-                case 429:
+                    return .ok(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// V1 Workouts Planned
+    ///
+    /// iOS Home / Calendar planned-workouts read → mapper-api GET /workouts/planned.
+    ///
+    /// - Remark: HTTP `GET /v1/workouts/planned`.
+    /// - Remark: Generated from `#/paths//v1/workouts/planned/get(v1_workouts_planned_v1_workouts_planned_get)`.
+    public func v1WorkoutsPlannedV1WorkoutsPlannedGet(_ input: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Input) async throws -> Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/v1/workouts/planned",
+                    parameters: []
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
                     let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.TooManyRequests.Body
+                    let body: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Output.Ok.Body
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
@@ -888,7 +326,7 @@ public struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.TooManyRequests.Body.JsonPayload.self,
+                            OpenAPIRuntime.OpenAPIValueContainer.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)
@@ -897,51 +335,7 @@ public struct Client: APIProtocol {
                     default:
                         preconditionFailure("bestContentType chose an invalid content type.")
                     }
-                    return .tooManyRequests(.init(body: body))
-                case 500:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.InternalServerError.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.InternalServerError.Body.JsonPayload.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .internalServerError(.init(body: body))
-                case 503:
-                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.ServiceUnavailable.Body
-                    let chosenContentType = try converter.bestContentType(
-                        received: contentType,
-                        options: [
-                            "application/json"
-                        ]
-                    )
-                    switch chosenContentType {
-                    case "application/json":
-                        body = try await converter.getResponseBodyAsJSON(
-                            Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.ServiceUnavailable.Body.JsonPayload.self,
-                            from: responseBody,
-                            transforming: { value in
-                                .json(value)
-                            }
-                        )
-                    default:
-                        preconditionFailure("bestContentType chose an invalid content type.")
-                    }
-                    return .serviceUnavailable(.init(body: body))
+                    return .ok(.init(body: body))
                 default:
                     return .undocumented(
                         statusCode: response.status.code,

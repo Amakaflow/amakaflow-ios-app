@@ -11,209 +11,89 @@ import struct Foundation.Date
 #endif
 /// A type that performs HTTP operations defined by the OpenAPI document.
 public protocol APIProtocol: Sendable {
-    /// Confirm Sync Endpoint
+    /// V1 Sync Confirm
     ///
-    /// Confirm that a workout was successfully downloaded (AMA-307).
+    /// SyncEngine confirm-success → mapper-api POST /sync/confirm.
     ///
-    /// Called by mobile apps after successfully downloading a workout.
-    /// Updates the sync status from 'pending' to 'synced'.
+    /// - Remark: HTTP `POST /v1/sync/confirm`.
+    /// - Remark: Generated from `#/paths//v1/sync/confirm/post(v1_sync_confirm_v1_sync_confirm_post)`.
+    func v1SyncConfirmV1SyncConfirmPost(_ input: Operations.V1SyncConfirmV1SyncConfirmPost.Input) async throws -> Operations.V1SyncConfirmV1SyncConfirmPost.Output
+    /// V1 Sync Failed
     ///
-    /// Args:
-    ///     request: Confirm sync request with workout and device info
-    ///     user_id: Authenticated user ID from JWT
+    /// SyncEngine confirm-failure → mapper-api POST /sync/failed.
     ///
-    /// Returns:
-    ///     Success response with sync status and timestamp
+    /// - Remark: HTTP `POST /v1/sync/failed`.
+    /// - Remark: Generated from `#/paths//v1/sync/failed/post(v1_sync_failed_v1_sync_failed_post)`.
+    func v1SyncFailedV1SyncFailedPost(_ input: Operations.V1SyncFailedV1SyncFailedPost.Input) async throws -> Operations.V1SyncFailedV1SyncFailedPost.Output
+    /// V1 Sync Pending
     ///
-    /// - Remark: HTTP `POST /sync/confirm`.
-    /// - Remark: Generated from `#/paths//sync/confirm/post(confirm_sync_endpoint_sync_confirm_post)`.
-    func confirmSyncEndpointSyncConfirmPost(_ input: Operations.ConfirmSyncEndpointSyncConfirmPost.Input) async throws -> Operations.ConfirmSyncEndpointSyncConfirmPost.Output
-    /// Report Sync Failed Endpoint
+    /// SyncEngine pending-flush read → mapper-api GET /sync/pending.
     ///
-    /// Report that a workout sync failed (AMA-307).
+    /// - Remark: HTTP `GET /v1/sync/pending`.
+    /// - Remark: Generated from `#/paths//v1/sync/pending/get(v1_sync_pending_v1_sync_pending_get)`.
+    func v1SyncPendingV1SyncPendingGet(_ input: Operations.V1SyncPendingV1SyncPendingGet.Input) async throws -> Operations.V1SyncPendingV1SyncPendingGet.Output
+    /// V1 Workouts Complete
     ///
-    /// Called by mobile apps when download fails.
-    /// Updates the sync status from 'pending' to 'failed' with error message.
+    /// Save & End on iOS → mapper-api POST /workouts/complete.
     ///
-    /// Args:
-    ///     request: Failed sync report with workout, device, and error info
-    ///     user_id: Authenticated user ID from JWT
+    /// - Remark: HTTP `POST /v1/workouts/complete`.
+    /// - Remark: Generated from `#/paths//v1/workouts/complete/post(v1_workouts_complete_v1_workouts_complete_post)`.
+    func v1WorkoutsCompleteV1WorkoutsCompletePost(_ input: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Input) async throws -> Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Output
+    /// V1 Workouts Planned
     ///
-    /// Returns:
-    ///     Success response with failed sync status and timestamp
+    /// iOS Home / Calendar planned-workouts read → mapper-api GET /workouts/planned.
     ///
-    /// - Remark: HTTP `POST /sync/failed`.
-    /// - Remark: Generated from `#/paths//sync/failed/post(report_sync_failed_endpoint_sync_failed_post)`.
-    func reportSyncFailedEndpointSyncFailedPost(_ input: Operations.ReportSyncFailedEndpointSyncFailedPost.Input) async throws -> Operations.ReportSyncFailedEndpointSyncFailedPost.Output
-    /// Get Pending Syncs Endpoint
-    ///
-    /// Get workouts pending sync for a device (AMA-307).
-    ///
-    /// Called by mobile apps to discover workouts queued for download.
-    /// Returns full workout data including intervals, in the order they were queued.
-    ///
-    /// Args:
-    ///     device_type: Type of device (ios, android, or garmin)
-    ///     device_id: Optional device identifier for multi-device support
-    ///     user_id: Authenticated user ID from JWT
-    ///
-    /// Returns:
-    ///     List of pending workouts with full interval data
-    ///
-    /// - Remark: HTTP `GET /sync/pending`.
-    /// - Remark: Generated from `#/paths//sync/pending/get(get_pending_syncs_endpoint_sync_pending_get)`.
-    func getPendingSyncsEndpointSyncPendingGet(_ input: Operations.GetPendingSyncsEndpointSyncPendingGet.Input) async throws -> Operations.GetPendingSyncsEndpointSyncPendingGet.Output
-    /// Record Workout Completion Endpoint
-    ///
-    /// Record a workout completion with health metrics from Apple Watch.
-    ///
-    /// Called by iOS app when user finishes a workout. Stores heart rate,
-    /// calories, duration, and other health data captured during the workout.
-    ///
-    /// Args:
-    ///     request: Workout completion data including health metrics
-    ///     user_id: Authenticated user ID (from Clerk JWT)
-    ///
-    /// Returns:
-    ///     Success status, completion ID, and summary
-    ///
-    /// - Remark: HTTP `POST /workouts/complete`.
-    /// - Remark: Generated from `#/paths//workouts/complete/post(record_workout_completion_endpoint_workouts_complete_post)`.
-    func recordWorkoutCompletionEndpointWorkoutsCompletePost(_ input: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Input) async throws -> Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output
-    /// List Planned Workouts Endpoint
-    ///
-    /// Return the user's non-deleted planned workouts in a date range.
-    ///
-    /// The new iOS Home + Workouts surfaces (AMA-1792) drive their reads
-    /// through this endpoint instead of the legacy fragmented set
-    /// (`fetchWorkouts`/`fetchScheduledWorkouts`/`fetchPushedWorkouts`).
-    ///
-    /// - Remark: HTTP `GET /workouts/planned`.
-    /// - Remark: Generated from `#/paths//workouts/planned/get(list_planned_workouts_endpoint_workouts_planned_get)`.
-    func listPlannedWorkoutsEndpointWorkoutsPlannedGet(_ input: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Input) async throws -> Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output
+    /// - Remark: HTTP `GET /v1/workouts/planned`.
+    /// - Remark: Generated from `#/paths//v1/workouts/planned/get(v1_workouts_planned_v1_workouts_planned_get)`.
+    func v1WorkoutsPlannedV1WorkoutsPlannedGet(_ input: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Input) async throws -> Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Output
 }
 
 /// Convenience overloads for operation inputs.
 extension APIProtocol {
-    /// Confirm Sync Endpoint
+    /// V1 Sync Confirm
     ///
-    /// Confirm that a workout was successfully downloaded (AMA-307).
+    /// SyncEngine confirm-success → mapper-api POST /sync/confirm.
     ///
-    /// Called by mobile apps after successfully downloading a workout.
-    /// Updates the sync status from 'pending' to 'synced'.
-    ///
-    /// Args:
-    ///     request: Confirm sync request with workout and device info
-    ///     user_id: Authenticated user ID from JWT
-    ///
-    /// Returns:
-    ///     Success response with sync status and timestamp
-    ///
-    /// - Remark: HTTP `POST /sync/confirm`.
-    /// - Remark: Generated from `#/paths//sync/confirm/post(confirm_sync_endpoint_sync_confirm_post)`.
-    public func confirmSyncEndpointSyncConfirmPost(
-        headers: Operations.ConfirmSyncEndpointSyncConfirmPost.Input.Headers = .init(),
-        body: Operations.ConfirmSyncEndpointSyncConfirmPost.Input.Body
-    ) async throws -> Operations.ConfirmSyncEndpointSyncConfirmPost.Output {
-        try await confirmSyncEndpointSyncConfirmPost(Operations.ConfirmSyncEndpointSyncConfirmPost.Input(
-            headers: headers,
-            body: body
-        ))
+    /// - Remark: HTTP `POST /v1/sync/confirm`.
+    /// - Remark: Generated from `#/paths//v1/sync/confirm/post(v1_sync_confirm_v1_sync_confirm_post)`.
+    public func v1SyncConfirmV1SyncConfirmPost(headers: Operations.V1SyncConfirmV1SyncConfirmPost.Input.Headers = .init()) async throws -> Operations.V1SyncConfirmV1SyncConfirmPost.Output {
+        try await v1SyncConfirmV1SyncConfirmPost(Operations.V1SyncConfirmV1SyncConfirmPost.Input(headers: headers))
     }
-    /// Report Sync Failed Endpoint
+    /// V1 Sync Failed
     ///
-    /// Report that a workout sync failed (AMA-307).
+    /// SyncEngine confirm-failure → mapper-api POST /sync/failed.
     ///
-    /// Called by mobile apps when download fails.
-    /// Updates the sync status from 'pending' to 'failed' with error message.
-    ///
-    /// Args:
-    ///     request: Failed sync report with workout, device, and error info
-    ///     user_id: Authenticated user ID from JWT
-    ///
-    /// Returns:
-    ///     Success response with failed sync status and timestamp
-    ///
-    /// - Remark: HTTP `POST /sync/failed`.
-    /// - Remark: Generated from `#/paths//sync/failed/post(report_sync_failed_endpoint_sync_failed_post)`.
-    public func reportSyncFailedEndpointSyncFailedPost(
-        headers: Operations.ReportSyncFailedEndpointSyncFailedPost.Input.Headers = .init(),
-        body: Operations.ReportSyncFailedEndpointSyncFailedPost.Input.Body
-    ) async throws -> Operations.ReportSyncFailedEndpointSyncFailedPost.Output {
-        try await reportSyncFailedEndpointSyncFailedPost(Operations.ReportSyncFailedEndpointSyncFailedPost.Input(
-            headers: headers,
-            body: body
-        ))
+    /// - Remark: HTTP `POST /v1/sync/failed`.
+    /// - Remark: Generated from `#/paths//v1/sync/failed/post(v1_sync_failed_v1_sync_failed_post)`.
+    public func v1SyncFailedV1SyncFailedPost(headers: Operations.V1SyncFailedV1SyncFailedPost.Input.Headers = .init()) async throws -> Operations.V1SyncFailedV1SyncFailedPost.Output {
+        try await v1SyncFailedV1SyncFailedPost(Operations.V1SyncFailedV1SyncFailedPost.Input(headers: headers))
     }
-    /// Get Pending Syncs Endpoint
+    /// V1 Sync Pending
     ///
-    /// Get workouts pending sync for a device (AMA-307).
+    /// SyncEngine pending-flush read → mapper-api GET /sync/pending.
     ///
-    /// Called by mobile apps to discover workouts queued for download.
-    /// Returns full workout data including intervals, in the order they were queued.
-    ///
-    /// Args:
-    ///     device_type: Type of device (ios, android, or garmin)
-    ///     device_id: Optional device identifier for multi-device support
-    ///     user_id: Authenticated user ID from JWT
-    ///
-    /// Returns:
-    ///     List of pending workouts with full interval data
-    ///
-    /// - Remark: HTTP `GET /sync/pending`.
-    /// - Remark: Generated from `#/paths//sync/pending/get(get_pending_syncs_endpoint_sync_pending_get)`.
-    public func getPendingSyncsEndpointSyncPendingGet(
-        query: Operations.GetPendingSyncsEndpointSyncPendingGet.Input.Query,
-        headers: Operations.GetPendingSyncsEndpointSyncPendingGet.Input.Headers = .init()
-    ) async throws -> Operations.GetPendingSyncsEndpointSyncPendingGet.Output {
-        try await getPendingSyncsEndpointSyncPendingGet(Operations.GetPendingSyncsEndpointSyncPendingGet.Input(
-            query: query,
-            headers: headers
-        ))
+    /// - Remark: HTTP `GET /v1/sync/pending`.
+    /// - Remark: Generated from `#/paths//v1/sync/pending/get(v1_sync_pending_v1_sync_pending_get)`.
+    public func v1SyncPendingV1SyncPendingGet(headers: Operations.V1SyncPendingV1SyncPendingGet.Input.Headers = .init()) async throws -> Operations.V1SyncPendingV1SyncPendingGet.Output {
+        try await v1SyncPendingV1SyncPendingGet(Operations.V1SyncPendingV1SyncPendingGet.Input(headers: headers))
     }
-    /// Record Workout Completion Endpoint
+    /// V1 Workouts Complete
     ///
-    /// Record a workout completion with health metrics from Apple Watch.
+    /// Save & End on iOS → mapper-api POST /workouts/complete.
     ///
-    /// Called by iOS app when user finishes a workout. Stores heart rate,
-    /// calories, duration, and other health data captured during the workout.
-    ///
-    /// Args:
-    ///     request: Workout completion data including health metrics
-    ///     user_id: Authenticated user ID (from Clerk JWT)
-    ///
-    /// Returns:
-    ///     Success status, completion ID, and summary
-    ///
-    /// - Remark: HTTP `POST /workouts/complete`.
-    /// - Remark: Generated from `#/paths//workouts/complete/post(record_workout_completion_endpoint_workouts_complete_post)`.
-    public func recordWorkoutCompletionEndpointWorkoutsCompletePost(
-        headers: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Input.Headers = .init(),
-        body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Input.Body
-    ) async throws -> Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output {
-        try await recordWorkoutCompletionEndpointWorkoutsCompletePost(Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Input(
-            headers: headers,
-            body: body
-        ))
+    /// - Remark: HTTP `POST /v1/workouts/complete`.
+    /// - Remark: Generated from `#/paths//v1/workouts/complete/post(v1_workouts_complete_v1_workouts_complete_post)`.
+    public func v1WorkoutsCompleteV1WorkoutsCompletePost(headers: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Input.Headers = .init()) async throws -> Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Output {
+        try await v1WorkoutsCompleteV1WorkoutsCompletePost(Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Input(headers: headers))
     }
-    /// List Planned Workouts Endpoint
+    /// V1 Workouts Planned
     ///
-    /// Return the user's non-deleted planned workouts in a date range.
+    /// iOS Home / Calendar planned-workouts read → mapper-api GET /workouts/planned.
     ///
-    /// The new iOS Home + Workouts surfaces (AMA-1792) drive their reads
-    /// through this endpoint instead of the legacy fragmented set
-    /// (`fetchWorkouts`/`fetchScheduledWorkouts`/`fetchPushedWorkouts`).
-    ///
-    /// - Remark: HTTP `GET /workouts/planned`.
-    /// - Remark: Generated from `#/paths//workouts/planned/get(list_planned_workouts_endpoint_workouts_planned_get)`.
-    public func listPlannedWorkoutsEndpointWorkoutsPlannedGet(
-        query: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Input.Query,
-        headers: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Input.Headers = .init()
-    ) async throws -> Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output {
-        try await listPlannedWorkoutsEndpointWorkoutsPlannedGet(Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Input(
-            query: query,
-            headers: headers
-        ))
+    /// - Remark: HTTP `GET /v1/workouts/planned`.
+    /// - Remark: Generated from `#/paths//v1/workouts/planned/get(v1_workouts_planned_v1_workouts_planned_get)`.
+    public func v1WorkoutsPlannedV1WorkoutsPlannedGet(headers: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Input.Headers = .init()) async throws -> Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Output {
+        try await v1WorkoutsPlannedV1WorkoutsPlannedGet(Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Input(headers: headers))
     }
 }
 
@@ -223,336 +103,7 @@ public enum Servers {}
 /// Types generated from the components section of the OpenAPI document.
 public enum Components {
     /// Types generated from the `#/components/schemas` section of the OpenAPI document.
-    public enum Schemas {
-        /// Request to confirm workout sync receipt.
-        ///
-        /// - Remark: Generated from `#/components/schemas/ConfirmSyncRequest`.
-        public struct ConfirmSyncRequest: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/ConfirmSyncRequest/device_type`.
-            public var deviceType: Components.Schemas.DeviceType
-            /// - Remark: Generated from `#/components/schemas/ConfirmSyncRequest/workout_id`.
-            public var workoutId: Swift.String
-            /// Creates a new `ConfirmSyncRequest`.
-            ///
-            /// - Parameters:
-            ///   - deviceType:
-            ///   - workoutId:
-            public init(
-                deviceType: Components.Schemas.DeviceType,
-                workoutId: Swift.String
-            ) {
-                self.deviceType = deviceType
-                self.workoutId = workoutId
-            }
-            public enum CodingKeys: String, CodingKey {
-                case deviceType = "device_type"
-                case workoutId = "workout_id"
-            }
-        }
-        /// Supported device types for workout sync.
-        ///
-        /// - Remark: Generated from `#/components/schemas/DeviceType`.
-        @frozen public enum DeviceType: String, Codable, Hashable, Sendable, CaseIterable {
-            case ios = "ios"
-            case android = "android"
-            case garmin = "garmin"
-        }
-        /// - Remark: Generated from `#/components/schemas/HTTPValidationError`.
-        public struct HTTPValidationError: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/HTTPValidationError/detail`.
-            public var detail: [Components.Schemas.ValidationError]?
-            /// Creates a new `HTTPValidationError`.
-            ///
-            /// - Parameters:
-            ///   - detail:
-            public init(detail: [Components.Schemas.ValidationError]? = nil) {
-                self.detail = detail
-            }
-            public enum CodingKeys: String, CodingKey {
-                case detail
-            }
-        }
-        /// Health metrics captured during workout.
-        ///
-        /// AMA-1714 Phase 1: strict mode enforced — Apple Watch / Garmin
-        /// integration writes typed numeric values, not coerced strings.
-        ///
-        /// - Remark: Generated from `#/components/schemas/HealthMetrics`.
-        public struct HealthMetrics: Codable, Hashable, Sendable {
-            /// Creates a new `HealthMetrics`.
-            public init() {}
-        }
-        /// - Remark: Generated from `#/components/schemas/PlannedListResponse`.
-        public struct PlannedListResponse: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/PlannedListResponse/workouts`.
-            public var workouts: [Components.Schemas.PlannedWorkout]
-            /// Creates a new `PlannedListResponse`.
-            ///
-            /// - Parameters:
-            ///   - workouts:
-            public init(workouts: [Components.Schemas.PlannedWorkout]) {
-                self.workouts = workouts
-            }
-            public enum CodingKeys: String, CodingKey {
-                case workouts
-            }
-        }
-        /// Subset of workout_events fields returned to the client.
-        ///
-        /// - Remark: Generated from `#/components/schemas/PlannedWorkout`.
-        public struct PlannedWorkout: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/PlannedWorkout/id`.
-            public var id: Swift.String
-            /// - Remark: Generated from `#/components/schemas/PlannedWorkout/userId`.
-            public var userId: Swift.String
-            /// Creates a new `PlannedWorkout`.
-            ///
-            /// - Parameters:
-            ///   - id:
-            ///   - userId:
-            public init(
-                id: Swift.String,
-                userId: Swift.String
-            ) {
-                self.id = id
-                self.userId = userId
-            }
-            public enum CodingKeys: String, CodingKey {
-                case id
-                case userId
-            }
-        }
-        /// Request to report sync failure.
-        ///
-        /// - Remark: Generated from `#/components/schemas/ReportSyncFailedRequest`.
-        public struct ReportSyncFailedRequest: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/ReportSyncFailedRequest/device_type`.
-            public var deviceType: Components.Schemas.DeviceType
-            /// - Remark: Generated from `#/components/schemas/ReportSyncFailedRequest/error`.
-            public var error: Swift.String
-            /// - Remark: Generated from `#/components/schemas/ReportSyncFailedRequest/workout_id`.
-            public var workoutId: Swift.String
-            /// Creates a new `ReportSyncFailedRequest`.
-            ///
-            /// - Parameters:
-            ///   - deviceType:
-            ///   - error:
-            ///   - workoutId:
-            public init(
-                deviceType: Components.Schemas.DeviceType,
-                error: Swift.String,
-                workoutId: Swift.String
-            ) {
-                self.deviceType = deviceType
-                self.error = error
-                self.workoutId = workoutId
-            }
-            public enum CodingKeys: String, CodingKey {
-                case deviceType = "device_type"
-                case error
-                case workoutId = "workout_id"
-            }
-        }
-        /// Individual set within an exercise log (AMA-281).
-        ///
-        /// - Remark: Generated from `#/components/schemas/SetEntry`.
-        public struct SetEntry: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/SetEntry/completed`.
-            public var completed: Swift.Bool?
-            /// - Remark: Generated from `#/components/schemas/SetEntry/set_number`.
-            public var setNumber: Swift.Int
-            /// Creates a new `SetEntry`.
-            ///
-            /// - Parameters:
-            ///   - completed:
-            ///   - setNumber:
-            public init(
-                completed: Swift.Bool? = nil,
-                setNumber: Swift.Int
-            ) {
-                self.completed = completed
-                self.setNumber = setNumber
-            }
-            public enum CodingKeys: String, CodingKey {
-                case completed
-                case setNumber = "set_number"
-            }
-        }
-        /// Log of sets for a single exercise (AMA-281).
-        ///
-        /// - Remark: Generated from `#/components/schemas/SetLog`.
-        public struct SetLog: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/SetLog/exercise_index`.
-            public var exerciseIndex: Swift.Int
-            /// - Remark: Generated from `#/components/schemas/SetLog/exercise_name`.
-            public var exerciseName: Swift.String
-            /// - Remark: Generated from `#/components/schemas/SetLog/sets`.
-            public var sets: [Components.Schemas.SetEntry]
-            /// Creates a new `SetLog`.
-            ///
-            /// - Parameters:
-            ///   - exerciseIndex:
-            ///   - exerciseName:
-            ///   - sets:
-            public init(
-                exerciseIndex: Swift.Int,
-                exerciseName: Swift.String,
-                sets: [Components.Schemas.SetEntry]
-            ) {
-                self.exerciseIndex = exerciseIndex
-                self.exerciseName = exerciseName
-                self.sets = sets
-            }
-            public enum CodingKeys: String, CodingKey {
-                case exerciseIndex = "exercise_index"
-                case exerciseName = "exercise_name"
-                case sets
-            }
-        }
-        /// Simulation parameters when workout is run in simulation mode (AMA-273).
-        ///
-        /// - Remark: Generated from `#/components/schemas/SimulationConfig`.
-        public struct SimulationConfig: Codable, Hashable, Sendable {
-            /// Creates a new `SimulationConfig`.
-            public init() {}
-        }
-        /// - Remark: Generated from `#/components/schemas/ValidationError`.
-        public struct ValidationError: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/ValidationError/ctx`.
-            public var ctx: OpenAPIRuntime.OpenAPIObjectContainer?
-            /// - Remark: Generated from `#/components/schemas/ValidationError/input`.
-            public var input: OpenAPIRuntime.OpenAPIValueContainer?
-            /// - Remark: Generated from `#/components/schemas/ValidationError/LocPayload`.
-            public struct LocPayloadPayload: Codable, Hashable, Sendable {
-                /// - Remark: Generated from `#/components/schemas/ValidationError/LocPayload/value1`.
-                public var value1: Swift.String?
-                /// - Remark: Generated from `#/components/schemas/ValidationError/LocPayload/value2`.
-                public var value2: Swift.Int?
-                /// Creates a new `LocPayloadPayload`.
-                ///
-                /// - Parameters:
-                ///   - value1:
-                ///   - value2:
-                public init(
-                    value1: Swift.String? = nil,
-                    value2: Swift.Int? = nil
-                ) {
-                    self.value1 = value1
-                    self.value2 = value2
-                }
-                public init(from decoder: any Swift.Decoder) throws {
-                    var errors: [any Swift.Error] = []
-                    do {
-                        self.value1 = try decoder.decodeFromSingleValueContainer()
-                    } catch {
-                        errors.append(error)
-                    }
-                    do {
-                        self.value2 = try decoder.decodeFromSingleValueContainer()
-                    } catch {
-                        errors.append(error)
-                    }
-                    try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
-                        [
-                            self.value1,
-                            self.value2
-                        ],
-                        type: Self.self,
-                        codingPath: decoder.codingPath,
-                        errors: errors
-                    )
-                }
-                public func encode(to encoder: any Swift.Encoder) throws {
-                    try encoder.encodeFirstNonNilValueToSingleValueContainer([
-                        self.value1,
-                        self.value2
-                    ])
-                }
-            }
-            /// - Remark: Generated from `#/components/schemas/ValidationError/loc`.
-            public typealias LocPayload = [Components.Schemas.ValidationError.LocPayloadPayload]
-            /// - Remark: Generated from `#/components/schemas/ValidationError/loc`.
-            public var loc: Components.Schemas.ValidationError.LocPayload
-            /// - Remark: Generated from `#/components/schemas/ValidationError/msg`.
-            public var msg: Swift.String
-            /// - Remark: Generated from `#/components/schemas/ValidationError/type`.
-            public var _type: Swift.String
-            /// Creates a new `ValidationError`.
-            ///
-            /// - Parameters:
-            ///   - ctx:
-            ///   - input:
-            ///   - loc:
-            ///   - msg:
-            ///   - _type:
-            public init(
-                ctx: OpenAPIRuntime.OpenAPIObjectContainer? = nil,
-                input: OpenAPIRuntime.OpenAPIValueContainer? = nil,
-                loc: Components.Schemas.ValidationError.LocPayload,
-                msg: Swift.String,
-                _type: Swift.String
-            ) {
-                self.ctx = ctx
-                self.input = input
-                self.loc = loc
-                self.msg = msg
-                self._type = _type
-            }
-            public enum CodingKeys: String, CodingKey {
-                case ctx
-                case input
-                case loc
-                case msg
-                case _type = "type"
-            }
-        }
-        /// Request from iOS app when workout completes.
-        ///
-        /// AMA-1714 Phase 2: strict mode — iOS + Android both confirmed to
-        /// send typed Int / Bool values (audited 2026-05-02).
-        ///
-        /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest`.
-        public struct WorkoutCompletionRequest: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/ended_at`.
-            public var endedAt: Swift.String
-            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/health_metrics`.
-            public var healthMetrics: Components.Schemas.HealthMetrics
-            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/is_simulated`.
-            public var isSimulated: Swift.Bool?
-            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/source`.
-            public var source: Swift.String?
-            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/started_at`.
-            public var startedAt: Swift.String
-            /// Creates a new `WorkoutCompletionRequest`.
-            ///
-            /// - Parameters:
-            ///   - endedAt:
-            ///   - healthMetrics:
-            ///   - isSimulated:
-            ///   - source:
-            ///   - startedAt:
-            public init(
-                endedAt: Swift.String,
-                healthMetrics: Components.Schemas.HealthMetrics,
-                isSimulated: Swift.Bool? = nil,
-                source: Swift.String? = nil,
-                startedAt: Swift.String
-            ) {
-                self.endedAt = endedAt
-                self.healthMetrics = healthMetrics
-                self.isSimulated = isSimulated
-                self.source = source
-                self.startedAt = startedAt
-            }
-            public enum CodingKeys: String, CodingKey {
-                case endedAt = "ended_at"
-                case healthMetrics = "health_metrics"
-                case isSimulated = "is_simulated"
-                case source
-                case startedAt = "started_at"
-            }
-        }
-    }
+    public enum Schemas {}
     /// Types generated from the `#/components/parameters` section of the OpenAPI document.
     public enum Parameters {}
     /// Types generated from the `#/components/requestBodies` section of the OpenAPI document.
@@ -565,61 +116,40 @@ public enum Components {
 
 /// API operations, with input and output types, generated from `#/paths` in the OpenAPI document.
 public enum Operations {
-    /// Confirm Sync Endpoint
+    /// V1 Sync Confirm
     ///
-    /// Confirm that a workout was successfully downloaded (AMA-307).
+    /// SyncEngine confirm-success → mapper-api POST /sync/confirm.
     ///
-    /// Called by mobile apps after successfully downloading a workout.
-    /// Updates the sync status from 'pending' to 'synced'.
-    ///
-    /// Args:
-    ///     request: Confirm sync request with workout and device info
-    ///     user_id: Authenticated user ID from JWT
-    ///
-    /// Returns:
-    ///     Success response with sync status and timestamp
-    ///
-    /// - Remark: HTTP `POST /sync/confirm`.
-    /// - Remark: Generated from `#/paths//sync/confirm/post(confirm_sync_endpoint_sync_confirm_post)`.
-    public enum ConfirmSyncEndpointSyncConfirmPost {
-        public static let id: Swift.String = "confirm_sync_endpoint_sync_confirm_post"
+    /// - Remark: HTTP `POST /v1/sync/confirm`.
+    /// - Remark: Generated from `#/paths//v1/sync/confirm/post(v1_sync_confirm_v1_sync_confirm_post)`.
+    public enum V1SyncConfirmV1SyncConfirmPost {
+        public static let id: Swift.String = "v1_sync_confirm_v1_sync_confirm_post"
         public struct Input: Sendable, Hashable {
-            /// - Remark: Generated from `#/paths/sync/confirm/POST/header`.
+            /// - Remark: Generated from `#/paths/v1/sync/confirm/POST/header`.
             public struct Headers: Sendable, Hashable {
-                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.ConfirmSyncEndpointSyncConfirmPost.AcceptableContentType>]
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.V1SyncConfirmV1SyncConfirmPost.AcceptableContentType>]
                 /// Creates a new `Headers`.
                 ///
                 /// - Parameters:
                 ///   - accept:
-                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.ConfirmSyncEndpointSyncConfirmPost.AcceptableContentType>] = .defaultValues()) {
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.V1SyncConfirmV1SyncConfirmPost.AcceptableContentType>] = .defaultValues()) {
                     self.accept = accept
                 }
             }
-            public var headers: Operations.ConfirmSyncEndpointSyncConfirmPost.Input.Headers
-            /// - Remark: Generated from `#/paths/sync/confirm/POST/requestBody`.
-            @frozen public enum Body: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/sync/confirm/POST/requestBody/content/application\/json`.
-                case json(Components.Schemas.ConfirmSyncRequest)
-            }
-            public var body: Operations.ConfirmSyncEndpointSyncConfirmPost.Input.Body
+            public var headers: Operations.V1SyncConfirmV1SyncConfirmPost.Input.Headers
             /// Creates a new `Input`.
             ///
             /// - Parameters:
             ///   - headers:
-            ///   - body:
-            public init(
-                headers: Operations.ConfirmSyncEndpointSyncConfirmPost.Input.Headers = .init(),
-                body: Operations.ConfirmSyncEndpointSyncConfirmPost.Input.Body
-            ) {
+            public init(headers: Operations.V1SyncConfirmV1SyncConfirmPost.Input.Headers = .init()) {
                 self.headers = headers
-                self.body = body
             }
         }
         @frozen public enum Output: Sendable, Hashable {
             public struct Ok: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/200/content`.
+                /// - Remark: Generated from `#/paths/v1/sync/confirm/POST/responses/200/content`.
                 @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/200/content/application\/json`.
+                    /// - Remark: Generated from `#/paths/v1/sync/confirm/POST/responses/200/content/application\/json`.
                     case json(OpenAPIRuntime.OpenAPIValueContainer)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
@@ -635,26 +165,26 @@ public enum Operations {
                     }
                 }
                 /// Received HTTP response body
-                public var body: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.Ok.Body
+                public var body: Operations.V1SyncConfirmV1SyncConfirmPost.Output.Ok.Body
                 /// Creates a new `Ok`.
                 ///
                 /// - Parameters:
                 ///   - body: Received HTTP response body
-                public init(body: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.Ok.Body) {
+                public init(body: Operations.V1SyncConfirmV1SyncConfirmPost.Output.Ok.Body) {
                     self.body = body
                 }
             }
             /// Successful Response
             ///
-            /// - Remark: Generated from `#/paths//sync/confirm/post(confirm_sync_endpoint_sync_confirm_post)/responses/200`.
+            /// - Remark: Generated from `#/paths//v1/sync/confirm/post(v1_sync_confirm_v1_sync_confirm_post)/responses/200`.
             ///
             /// HTTP response code: `200 ok`.
-            case ok(Operations.ConfirmSyncEndpointSyncConfirmPost.Output.Ok)
+            case ok(Operations.V1SyncConfirmV1SyncConfirmPost.Output.Ok)
             /// The associated value of the enum case if `self` is `.ok`.
             ///
             /// - Throws: An error if `self` is not `.ok`.
             /// - SeeAlso: `.ok`.
-            public var ok: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.Ok {
+            public var ok: Operations.V1SyncConfirmV1SyncConfirmPost.Output.Ok {
                 get throws {
                     switch self {
                     case let .ok(response):
@@ -662,335 +192,6 @@ public enum Operations {
                     default:
                         try throwUnexpectedResponseStatus(
                             expectedStatus: "ok",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct BadRequest: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/400/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/400/content/json`.
-                    public struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/400/content/json/detail`.
-                        public var detail: Swift.String
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - detail:
-                        public init(detail: Swift.String) {
-                            self.detail = detail
-                        }
-                        public enum CodingKeys: String, CodingKey {
-                            case detail
-                        }
-                    }
-                    /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/400/content/application\/json`.
-                    case json(Operations.ConfirmSyncEndpointSyncConfirmPost.Output.BadRequest.Body.JsonPayload)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.BadRequest.Body.JsonPayload {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.BadRequest.Body
-                /// Creates a new `BadRequest`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.BadRequest.Body) {
-                    self.body = body
-                }
-            }
-            /// Bad request — business validation failed
-            ///
-            /// - Remark: Generated from `#/paths//sync/confirm/post(confirm_sync_endpoint_sync_confirm_post)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            case badRequest(Operations.ConfirmSyncEndpointSyncConfirmPost.Output.BadRequest)
-            /// The associated value of the enum case if `self` is `.badRequest`.
-            ///
-            /// - Throws: An error if `self` is not `.badRequest`.
-            /// - SeeAlso: `.badRequest`.
-            public var badRequest: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.BadRequest {
-                get throws {
-                    switch self {
-                    case let .badRequest(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "badRequest",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct UnprocessableContent: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/422/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/422/content/application\/json`.
-                    case json(Components.Schemas.HTTPValidationError)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.HTTPValidationError {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.UnprocessableContent.Body
-                /// Creates a new `UnprocessableContent`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.UnprocessableContent.Body) {
-                    self.body = body
-                }
-            }
-            /// Validation Error
-            ///
-            /// - Remark: Generated from `#/paths//sync/confirm/post(confirm_sync_endpoint_sync_confirm_post)/responses/422`.
-            ///
-            /// HTTP response code: `422 unprocessableContent`.
-            case unprocessableContent(Operations.ConfirmSyncEndpointSyncConfirmPost.Output.UnprocessableContent)
-            /// The associated value of the enum case if `self` is `.unprocessableContent`.
-            ///
-            /// - Throws: An error if `self` is not `.unprocessableContent`.
-            /// - SeeAlso: `.unprocessableContent`.
-            public var unprocessableContent: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.UnprocessableContent {
-                get throws {
-                    switch self {
-                    case let .unprocessableContent(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "unprocessableContent",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct TooManyRequests: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/429/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/429/content/json`.
-                    public struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/429/content/json/error`.
-                        public var error: Swift.String
-                        /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/429/content/json/message`.
-                        public var message: Swift.String?
-                        /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/429/content/json/retry_after`.
-                        public var retryAfter: Swift.Int?
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - error:
-                        ///   - message:
-                        ///   - retryAfter:
-                        public init(
-                            error: Swift.String,
-                            message: Swift.String? = nil,
-                            retryAfter: Swift.Int? = nil
-                        ) {
-                            self.error = error
-                            self.message = message
-                            self.retryAfter = retryAfter
-                        }
-                        public enum CodingKeys: String, CodingKey {
-                            case error
-                            case message
-                            case retryAfter = "retry_after"
-                        }
-                    }
-                    /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/429/content/application\/json`.
-                    case json(Operations.ConfirmSyncEndpointSyncConfirmPost.Output.TooManyRequests.Body.JsonPayload)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.TooManyRequests.Body.JsonPayload {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.TooManyRequests.Body
-                /// Creates a new `TooManyRequests`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.TooManyRequests.Body) {
-                    self.body = body
-                }
-            }
-            /// Rate limit exceeded
-            ///
-            /// - Remark: Generated from `#/paths//sync/confirm/post(confirm_sync_endpoint_sync_confirm_post)/responses/429`.
-            ///
-            /// HTTP response code: `429 tooManyRequests`.
-            case tooManyRequests(Operations.ConfirmSyncEndpointSyncConfirmPost.Output.TooManyRequests)
-            /// The associated value of the enum case if `self` is `.tooManyRequests`.
-            ///
-            /// - Throws: An error if `self` is not `.tooManyRequests`.
-            /// - SeeAlso: `.tooManyRequests`.
-            public var tooManyRequests: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.TooManyRequests {
-                get throws {
-                    switch self {
-                    case let .tooManyRequests(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "tooManyRequests",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct InternalServerError: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/500/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/500/content/json`.
-                    public struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/500/content/json/detail`.
-                        public var detail: Swift.String
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - detail:
-                        public init(detail: Swift.String) {
-                            self.detail = detail
-                        }
-                        public enum CodingKeys: String, CodingKey {
-                            case detail
-                        }
-                    }
-                    /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/500/content/application\/json`.
-                    case json(Operations.ConfirmSyncEndpointSyncConfirmPost.Output.InternalServerError.Body.JsonPayload)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.InternalServerError.Body.JsonPayload {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.InternalServerError.Body
-                /// Creates a new `InternalServerError`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.InternalServerError.Body) {
-                    self.body = body
-                }
-            }
-            /// Internal server error
-            ///
-            /// - Remark: Generated from `#/paths//sync/confirm/post(confirm_sync_endpoint_sync_confirm_post)/responses/500`.
-            ///
-            /// HTTP response code: `500 internalServerError`.
-            case internalServerError(Operations.ConfirmSyncEndpointSyncConfirmPost.Output.InternalServerError)
-            /// The associated value of the enum case if `self` is `.internalServerError`.
-            ///
-            /// - Throws: An error if `self` is not `.internalServerError`.
-            /// - SeeAlso: `.internalServerError`.
-            public var internalServerError: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.InternalServerError {
-                get throws {
-                    switch self {
-                    case let .internalServerError(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "internalServerError",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct ServiceUnavailable: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/503/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/503/content/json`.
-                    public struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/503/content/json/detail`.
-                        public var detail: Swift.String
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - detail:
-                        public init(detail: Swift.String) {
-                            self.detail = detail
-                        }
-                        public enum CodingKeys: String, CodingKey {
-                            case detail
-                        }
-                    }
-                    /// - Remark: Generated from `#/paths/sync/confirm/POST/responses/503/content/application\/json`.
-                    case json(Operations.ConfirmSyncEndpointSyncConfirmPost.Output.ServiceUnavailable.Body.JsonPayload)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.ServiceUnavailable.Body.JsonPayload {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.ServiceUnavailable.Body
-                /// Creates a new `ServiceUnavailable`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.ServiceUnavailable.Body) {
-                    self.body = body
-                }
-            }
-            /// Upstream service is temporarily unavailable
-            ///
-            /// - Remark: Generated from `#/paths//sync/confirm/post(confirm_sync_endpoint_sync_confirm_post)/responses/503`.
-            ///
-            /// HTTP response code: `503 serviceUnavailable`.
-            case serviceUnavailable(Operations.ConfirmSyncEndpointSyncConfirmPost.Output.ServiceUnavailable)
-            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
-            ///
-            /// - Throws: An error if `self` is not `.serviceUnavailable`.
-            /// - SeeAlso: `.serviceUnavailable`.
-            public var serviceUnavailable: Operations.ConfirmSyncEndpointSyncConfirmPost.Output.ServiceUnavailable {
-                get throws {
-                    switch self {
-                    case let .serviceUnavailable(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "serviceUnavailable",
                             response: self
                         )
                     }
@@ -1027,61 +228,40 @@ public enum Operations {
             }
         }
     }
-    /// Report Sync Failed Endpoint
+    /// V1 Sync Failed
     ///
-    /// Report that a workout sync failed (AMA-307).
+    /// SyncEngine confirm-failure → mapper-api POST /sync/failed.
     ///
-    /// Called by mobile apps when download fails.
-    /// Updates the sync status from 'pending' to 'failed' with error message.
-    ///
-    /// Args:
-    ///     request: Failed sync report with workout, device, and error info
-    ///     user_id: Authenticated user ID from JWT
-    ///
-    /// Returns:
-    ///     Success response with failed sync status and timestamp
-    ///
-    /// - Remark: HTTP `POST /sync/failed`.
-    /// - Remark: Generated from `#/paths//sync/failed/post(report_sync_failed_endpoint_sync_failed_post)`.
-    public enum ReportSyncFailedEndpointSyncFailedPost {
-        public static let id: Swift.String = "report_sync_failed_endpoint_sync_failed_post"
+    /// - Remark: HTTP `POST /v1/sync/failed`.
+    /// - Remark: Generated from `#/paths//v1/sync/failed/post(v1_sync_failed_v1_sync_failed_post)`.
+    public enum V1SyncFailedV1SyncFailedPost {
+        public static let id: Swift.String = "v1_sync_failed_v1_sync_failed_post"
         public struct Input: Sendable, Hashable {
-            /// - Remark: Generated from `#/paths/sync/failed/POST/header`.
+            /// - Remark: Generated from `#/paths/v1/sync/failed/POST/header`.
             public struct Headers: Sendable, Hashable {
-                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.ReportSyncFailedEndpointSyncFailedPost.AcceptableContentType>]
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.V1SyncFailedV1SyncFailedPost.AcceptableContentType>]
                 /// Creates a new `Headers`.
                 ///
                 /// - Parameters:
                 ///   - accept:
-                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.ReportSyncFailedEndpointSyncFailedPost.AcceptableContentType>] = .defaultValues()) {
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.V1SyncFailedV1SyncFailedPost.AcceptableContentType>] = .defaultValues()) {
                     self.accept = accept
                 }
             }
-            public var headers: Operations.ReportSyncFailedEndpointSyncFailedPost.Input.Headers
-            /// - Remark: Generated from `#/paths/sync/failed/POST/requestBody`.
-            @frozen public enum Body: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/sync/failed/POST/requestBody/content/application\/json`.
-                case json(Components.Schemas.ReportSyncFailedRequest)
-            }
-            public var body: Operations.ReportSyncFailedEndpointSyncFailedPost.Input.Body
+            public var headers: Operations.V1SyncFailedV1SyncFailedPost.Input.Headers
             /// Creates a new `Input`.
             ///
             /// - Parameters:
             ///   - headers:
-            ///   - body:
-            public init(
-                headers: Operations.ReportSyncFailedEndpointSyncFailedPost.Input.Headers = .init(),
-                body: Operations.ReportSyncFailedEndpointSyncFailedPost.Input.Body
-            ) {
+            public init(headers: Operations.V1SyncFailedV1SyncFailedPost.Input.Headers = .init()) {
                 self.headers = headers
-                self.body = body
             }
         }
         @frozen public enum Output: Sendable, Hashable {
             public struct Ok: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/sync/failed/POST/responses/200/content`.
+                /// - Remark: Generated from `#/paths/v1/sync/failed/POST/responses/200/content`.
                 @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/sync/failed/POST/responses/200/content/application\/json`.
+                    /// - Remark: Generated from `#/paths/v1/sync/failed/POST/responses/200/content/application\/json`.
                     case json(OpenAPIRuntime.OpenAPIValueContainer)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
@@ -1097,26 +277,26 @@ public enum Operations {
                     }
                 }
                 /// Received HTTP response body
-                public var body: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.Ok.Body
+                public var body: Operations.V1SyncFailedV1SyncFailedPost.Output.Ok.Body
                 /// Creates a new `Ok`.
                 ///
                 /// - Parameters:
                 ///   - body: Received HTTP response body
-                public init(body: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.Ok.Body) {
+                public init(body: Operations.V1SyncFailedV1SyncFailedPost.Output.Ok.Body) {
                     self.body = body
                 }
             }
             /// Successful Response
             ///
-            /// - Remark: Generated from `#/paths//sync/failed/post(report_sync_failed_endpoint_sync_failed_post)/responses/200`.
+            /// - Remark: Generated from `#/paths//v1/sync/failed/post(v1_sync_failed_v1_sync_failed_post)/responses/200`.
             ///
             /// HTTP response code: `200 ok`.
-            case ok(Operations.ReportSyncFailedEndpointSyncFailedPost.Output.Ok)
+            case ok(Operations.V1SyncFailedV1SyncFailedPost.Output.Ok)
             /// The associated value of the enum case if `self` is `.ok`.
             ///
             /// - Throws: An error if `self` is not `.ok`.
             /// - SeeAlso: `.ok`.
-            public var ok: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.Ok {
+            public var ok: Operations.V1SyncFailedV1SyncFailedPost.Output.Ok {
                 get throws {
                     switch self {
                     case let .ok(response):
@@ -1124,335 +304,6 @@ public enum Operations {
                     default:
                         try throwUnexpectedResponseStatus(
                             expectedStatus: "ok",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct BadRequest: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/sync/failed/POST/responses/400/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/sync/failed/POST/responses/400/content/json`.
-                    public struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/sync/failed/POST/responses/400/content/json/detail`.
-                        public var detail: Swift.String
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - detail:
-                        public init(detail: Swift.String) {
-                            self.detail = detail
-                        }
-                        public enum CodingKeys: String, CodingKey {
-                            case detail
-                        }
-                    }
-                    /// - Remark: Generated from `#/paths/sync/failed/POST/responses/400/content/application\/json`.
-                    case json(Operations.ReportSyncFailedEndpointSyncFailedPost.Output.BadRequest.Body.JsonPayload)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.BadRequest.Body.JsonPayload {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.BadRequest.Body
-                /// Creates a new `BadRequest`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.BadRequest.Body) {
-                    self.body = body
-                }
-            }
-            /// Bad request — business validation failed
-            ///
-            /// - Remark: Generated from `#/paths//sync/failed/post(report_sync_failed_endpoint_sync_failed_post)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            case badRequest(Operations.ReportSyncFailedEndpointSyncFailedPost.Output.BadRequest)
-            /// The associated value of the enum case if `self` is `.badRequest`.
-            ///
-            /// - Throws: An error if `self` is not `.badRequest`.
-            /// - SeeAlso: `.badRequest`.
-            public var badRequest: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.BadRequest {
-                get throws {
-                    switch self {
-                    case let .badRequest(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "badRequest",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct UnprocessableContent: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/sync/failed/POST/responses/422/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/sync/failed/POST/responses/422/content/application\/json`.
-                    case json(Components.Schemas.HTTPValidationError)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.HTTPValidationError {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.UnprocessableContent.Body
-                /// Creates a new `UnprocessableContent`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.UnprocessableContent.Body) {
-                    self.body = body
-                }
-            }
-            /// Validation Error
-            ///
-            /// - Remark: Generated from `#/paths//sync/failed/post(report_sync_failed_endpoint_sync_failed_post)/responses/422`.
-            ///
-            /// HTTP response code: `422 unprocessableContent`.
-            case unprocessableContent(Operations.ReportSyncFailedEndpointSyncFailedPost.Output.UnprocessableContent)
-            /// The associated value of the enum case if `self` is `.unprocessableContent`.
-            ///
-            /// - Throws: An error if `self` is not `.unprocessableContent`.
-            /// - SeeAlso: `.unprocessableContent`.
-            public var unprocessableContent: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.UnprocessableContent {
-                get throws {
-                    switch self {
-                    case let .unprocessableContent(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "unprocessableContent",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct TooManyRequests: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/sync/failed/POST/responses/429/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/sync/failed/POST/responses/429/content/json`.
-                    public struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/sync/failed/POST/responses/429/content/json/error`.
-                        public var error: Swift.String
-                        /// - Remark: Generated from `#/paths/sync/failed/POST/responses/429/content/json/message`.
-                        public var message: Swift.String?
-                        /// - Remark: Generated from `#/paths/sync/failed/POST/responses/429/content/json/retry_after`.
-                        public var retryAfter: Swift.Int?
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - error:
-                        ///   - message:
-                        ///   - retryAfter:
-                        public init(
-                            error: Swift.String,
-                            message: Swift.String? = nil,
-                            retryAfter: Swift.Int? = nil
-                        ) {
-                            self.error = error
-                            self.message = message
-                            self.retryAfter = retryAfter
-                        }
-                        public enum CodingKeys: String, CodingKey {
-                            case error
-                            case message
-                            case retryAfter = "retry_after"
-                        }
-                    }
-                    /// - Remark: Generated from `#/paths/sync/failed/POST/responses/429/content/application\/json`.
-                    case json(Operations.ReportSyncFailedEndpointSyncFailedPost.Output.TooManyRequests.Body.JsonPayload)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.TooManyRequests.Body.JsonPayload {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.TooManyRequests.Body
-                /// Creates a new `TooManyRequests`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.TooManyRequests.Body) {
-                    self.body = body
-                }
-            }
-            /// Rate limit exceeded
-            ///
-            /// - Remark: Generated from `#/paths//sync/failed/post(report_sync_failed_endpoint_sync_failed_post)/responses/429`.
-            ///
-            /// HTTP response code: `429 tooManyRequests`.
-            case tooManyRequests(Operations.ReportSyncFailedEndpointSyncFailedPost.Output.TooManyRequests)
-            /// The associated value of the enum case if `self` is `.tooManyRequests`.
-            ///
-            /// - Throws: An error if `self` is not `.tooManyRequests`.
-            /// - SeeAlso: `.tooManyRequests`.
-            public var tooManyRequests: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.TooManyRequests {
-                get throws {
-                    switch self {
-                    case let .tooManyRequests(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "tooManyRequests",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct InternalServerError: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/sync/failed/POST/responses/500/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/sync/failed/POST/responses/500/content/json`.
-                    public struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/sync/failed/POST/responses/500/content/json/detail`.
-                        public var detail: Swift.String
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - detail:
-                        public init(detail: Swift.String) {
-                            self.detail = detail
-                        }
-                        public enum CodingKeys: String, CodingKey {
-                            case detail
-                        }
-                    }
-                    /// - Remark: Generated from `#/paths/sync/failed/POST/responses/500/content/application\/json`.
-                    case json(Operations.ReportSyncFailedEndpointSyncFailedPost.Output.InternalServerError.Body.JsonPayload)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.InternalServerError.Body.JsonPayload {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.InternalServerError.Body
-                /// Creates a new `InternalServerError`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.InternalServerError.Body) {
-                    self.body = body
-                }
-            }
-            /// Internal server error
-            ///
-            /// - Remark: Generated from `#/paths//sync/failed/post(report_sync_failed_endpoint_sync_failed_post)/responses/500`.
-            ///
-            /// HTTP response code: `500 internalServerError`.
-            case internalServerError(Operations.ReportSyncFailedEndpointSyncFailedPost.Output.InternalServerError)
-            /// The associated value of the enum case if `self` is `.internalServerError`.
-            ///
-            /// - Throws: An error if `self` is not `.internalServerError`.
-            /// - SeeAlso: `.internalServerError`.
-            public var internalServerError: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.InternalServerError {
-                get throws {
-                    switch self {
-                    case let .internalServerError(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "internalServerError",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct ServiceUnavailable: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/sync/failed/POST/responses/503/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/sync/failed/POST/responses/503/content/json`.
-                    public struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/sync/failed/POST/responses/503/content/json/detail`.
-                        public var detail: Swift.String
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - detail:
-                        public init(detail: Swift.String) {
-                            self.detail = detail
-                        }
-                        public enum CodingKeys: String, CodingKey {
-                            case detail
-                        }
-                    }
-                    /// - Remark: Generated from `#/paths/sync/failed/POST/responses/503/content/application\/json`.
-                    case json(Operations.ReportSyncFailedEndpointSyncFailedPost.Output.ServiceUnavailable.Body.JsonPayload)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.ServiceUnavailable.Body.JsonPayload {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.ServiceUnavailable.Body
-                /// Creates a new `ServiceUnavailable`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.ServiceUnavailable.Body) {
-                    self.body = body
-                }
-            }
-            /// Upstream service is temporarily unavailable
-            ///
-            /// - Remark: Generated from `#/paths//sync/failed/post(report_sync_failed_endpoint_sync_failed_post)/responses/503`.
-            ///
-            /// HTTP response code: `503 serviceUnavailable`.
-            case serviceUnavailable(Operations.ReportSyncFailedEndpointSyncFailedPost.Output.ServiceUnavailable)
-            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
-            ///
-            /// - Throws: An error if `self` is not `.serviceUnavailable`.
-            /// - SeeAlso: `.serviceUnavailable`.
-            public var serviceUnavailable: Operations.ReportSyncFailedEndpointSyncFailedPost.Output.ServiceUnavailable {
-                get throws {
-                    switch self {
-                    case let .serviceUnavailable(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "serviceUnavailable",
                             response: self
                         )
                     }
@@ -1489,80 +340,40 @@ public enum Operations {
             }
         }
     }
-    /// Get Pending Syncs Endpoint
+    /// V1 Sync Pending
     ///
-    /// Get workouts pending sync for a device (AMA-307).
+    /// SyncEngine pending-flush read → mapper-api GET /sync/pending.
     ///
-    /// Called by mobile apps to discover workouts queued for download.
-    /// Returns full workout data including intervals, in the order they were queued.
-    ///
-    /// Args:
-    ///     device_type: Type of device (ios, android, or garmin)
-    ///     device_id: Optional device identifier for multi-device support
-    ///     user_id: Authenticated user ID from JWT
-    ///
-    /// Returns:
-    ///     List of pending workouts with full interval data
-    ///
-    /// - Remark: HTTP `GET /sync/pending`.
-    /// - Remark: Generated from `#/paths//sync/pending/get(get_pending_syncs_endpoint_sync_pending_get)`.
-    public enum GetPendingSyncsEndpointSyncPendingGet {
-        public static let id: Swift.String = "get_pending_syncs_endpoint_sync_pending_get"
+    /// - Remark: HTTP `GET /v1/sync/pending`.
+    /// - Remark: Generated from `#/paths//v1/sync/pending/get(v1_sync_pending_v1_sync_pending_get)`.
+    public enum V1SyncPendingV1SyncPendingGet {
+        public static let id: Swift.String = "v1_sync_pending_v1_sync_pending_get"
         public struct Input: Sendable, Hashable {
-            /// - Remark: Generated from `#/paths/sync/pending/GET/query`.
-            public struct Query: Sendable, Hashable {
-                /// Device type: ios, android, or garmin
-                ///
-                /// - Remark: Generated from `#/paths/sync/pending/GET/query/device_type`.
-                public var deviceType: Swift.String
-                /// Optional device identifier
-                ///
-                /// - Remark: Generated from `#/paths/sync/pending/GET/query/device_id`.
-                public var deviceId: Swift.String?
-                /// Creates a new `Query`.
-                ///
-                /// - Parameters:
-                ///   - deviceType: Device type: ios, android, or garmin
-                ///   - deviceId: Optional device identifier
-                public init(
-                    deviceType: Swift.String,
-                    deviceId: Swift.String? = nil
-                ) {
-                    self.deviceType = deviceType
-                    self.deviceId = deviceId
-                }
-            }
-            public var query: Operations.GetPendingSyncsEndpointSyncPendingGet.Input.Query
-            /// - Remark: Generated from `#/paths/sync/pending/GET/header`.
+            /// - Remark: Generated from `#/paths/v1/sync/pending/GET/header`.
             public struct Headers: Sendable, Hashable {
-                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.GetPendingSyncsEndpointSyncPendingGet.AcceptableContentType>]
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.V1SyncPendingV1SyncPendingGet.AcceptableContentType>]
                 /// Creates a new `Headers`.
                 ///
                 /// - Parameters:
                 ///   - accept:
-                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.GetPendingSyncsEndpointSyncPendingGet.AcceptableContentType>] = .defaultValues()) {
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.V1SyncPendingV1SyncPendingGet.AcceptableContentType>] = .defaultValues()) {
                     self.accept = accept
                 }
             }
-            public var headers: Operations.GetPendingSyncsEndpointSyncPendingGet.Input.Headers
+            public var headers: Operations.V1SyncPendingV1SyncPendingGet.Input.Headers
             /// Creates a new `Input`.
             ///
             /// - Parameters:
-            ///   - query:
             ///   - headers:
-            public init(
-                query: Operations.GetPendingSyncsEndpointSyncPendingGet.Input.Query,
-                headers: Operations.GetPendingSyncsEndpointSyncPendingGet.Input.Headers = .init()
-            ) {
-                self.query = query
+            public init(headers: Operations.V1SyncPendingV1SyncPendingGet.Input.Headers = .init()) {
                 self.headers = headers
             }
         }
         @frozen public enum Output: Sendable, Hashable {
             public struct Ok: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/sync/pending/GET/responses/200/content`.
+                /// - Remark: Generated from `#/paths/v1/sync/pending/GET/responses/200/content`.
                 @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/sync/pending/GET/responses/200/content/application\/json`.
+                    /// - Remark: Generated from `#/paths/v1/sync/pending/GET/responses/200/content/application\/json`.
                     case json(OpenAPIRuntime.OpenAPIValueContainer)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
@@ -1578,26 +389,26 @@ public enum Operations {
                     }
                 }
                 /// Received HTTP response body
-                public var body: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.Ok.Body
+                public var body: Operations.V1SyncPendingV1SyncPendingGet.Output.Ok.Body
                 /// Creates a new `Ok`.
                 ///
                 /// - Parameters:
                 ///   - body: Received HTTP response body
-                public init(body: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.Ok.Body) {
+                public init(body: Operations.V1SyncPendingV1SyncPendingGet.Output.Ok.Body) {
                     self.body = body
                 }
             }
             /// Successful Response
             ///
-            /// - Remark: Generated from `#/paths//sync/pending/get(get_pending_syncs_endpoint_sync_pending_get)/responses/200`.
+            /// - Remark: Generated from `#/paths//v1/sync/pending/get(v1_sync_pending_v1_sync_pending_get)/responses/200`.
             ///
             /// HTTP response code: `200 ok`.
-            case ok(Operations.GetPendingSyncsEndpointSyncPendingGet.Output.Ok)
+            case ok(Operations.V1SyncPendingV1SyncPendingGet.Output.Ok)
             /// The associated value of the enum case if `self` is `.ok`.
             ///
             /// - Throws: An error if `self` is not `.ok`.
             /// - SeeAlso: `.ok`.
-            public var ok: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.Ok {
+            public var ok: Operations.V1SyncPendingV1SyncPendingGet.Output.Ok {
                 get throws {
                     switch self {
                     case let .ok(response):
@@ -1605,269 +416,6 @@ public enum Operations {
                     default:
                         try throwUnexpectedResponseStatus(
                             expectedStatus: "ok",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct UnprocessableContent: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/sync/pending/GET/responses/422/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/sync/pending/GET/responses/422/content/application\/json`.
-                    case json(Components.Schemas.HTTPValidationError)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.HTTPValidationError {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.UnprocessableContent.Body
-                /// Creates a new `UnprocessableContent`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.UnprocessableContent.Body) {
-                    self.body = body
-                }
-            }
-            /// Validation Error
-            ///
-            /// - Remark: Generated from `#/paths//sync/pending/get(get_pending_syncs_endpoint_sync_pending_get)/responses/422`.
-            ///
-            /// HTTP response code: `422 unprocessableContent`.
-            case unprocessableContent(Operations.GetPendingSyncsEndpointSyncPendingGet.Output.UnprocessableContent)
-            /// The associated value of the enum case if `self` is `.unprocessableContent`.
-            ///
-            /// - Throws: An error if `self` is not `.unprocessableContent`.
-            /// - SeeAlso: `.unprocessableContent`.
-            public var unprocessableContent: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.UnprocessableContent {
-                get throws {
-                    switch self {
-                    case let .unprocessableContent(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "unprocessableContent",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct TooManyRequests: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/sync/pending/GET/responses/429/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/sync/pending/GET/responses/429/content/json`.
-                    public struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/sync/pending/GET/responses/429/content/json/error`.
-                        public var error: Swift.String
-                        /// - Remark: Generated from `#/paths/sync/pending/GET/responses/429/content/json/message`.
-                        public var message: Swift.String?
-                        /// - Remark: Generated from `#/paths/sync/pending/GET/responses/429/content/json/retry_after`.
-                        public var retryAfter: Swift.Int?
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - error:
-                        ///   - message:
-                        ///   - retryAfter:
-                        public init(
-                            error: Swift.String,
-                            message: Swift.String? = nil,
-                            retryAfter: Swift.Int? = nil
-                        ) {
-                            self.error = error
-                            self.message = message
-                            self.retryAfter = retryAfter
-                        }
-                        public enum CodingKeys: String, CodingKey {
-                            case error
-                            case message
-                            case retryAfter = "retry_after"
-                        }
-                    }
-                    /// - Remark: Generated from `#/paths/sync/pending/GET/responses/429/content/application\/json`.
-                    case json(Operations.GetPendingSyncsEndpointSyncPendingGet.Output.TooManyRequests.Body.JsonPayload)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.TooManyRequests.Body.JsonPayload {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.TooManyRequests.Body
-                /// Creates a new `TooManyRequests`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.TooManyRequests.Body) {
-                    self.body = body
-                }
-            }
-            /// Rate limit exceeded
-            ///
-            /// - Remark: Generated from `#/paths//sync/pending/get(get_pending_syncs_endpoint_sync_pending_get)/responses/429`.
-            ///
-            /// HTTP response code: `429 tooManyRequests`.
-            case tooManyRequests(Operations.GetPendingSyncsEndpointSyncPendingGet.Output.TooManyRequests)
-            /// The associated value of the enum case if `self` is `.tooManyRequests`.
-            ///
-            /// - Throws: An error if `self` is not `.tooManyRequests`.
-            /// - SeeAlso: `.tooManyRequests`.
-            public var tooManyRequests: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.TooManyRequests {
-                get throws {
-                    switch self {
-                    case let .tooManyRequests(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "tooManyRequests",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct InternalServerError: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/sync/pending/GET/responses/500/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/sync/pending/GET/responses/500/content/json`.
-                    public struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/sync/pending/GET/responses/500/content/json/detail`.
-                        public var detail: Swift.String
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - detail:
-                        public init(detail: Swift.String) {
-                            self.detail = detail
-                        }
-                        public enum CodingKeys: String, CodingKey {
-                            case detail
-                        }
-                    }
-                    /// - Remark: Generated from `#/paths/sync/pending/GET/responses/500/content/application\/json`.
-                    case json(Operations.GetPendingSyncsEndpointSyncPendingGet.Output.InternalServerError.Body.JsonPayload)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.InternalServerError.Body.JsonPayload {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.InternalServerError.Body
-                /// Creates a new `InternalServerError`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.InternalServerError.Body) {
-                    self.body = body
-                }
-            }
-            /// Internal server error
-            ///
-            /// - Remark: Generated from `#/paths//sync/pending/get(get_pending_syncs_endpoint_sync_pending_get)/responses/500`.
-            ///
-            /// HTTP response code: `500 internalServerError`.
-            case internalServerError(Operations.GetPendingSyncsEndpointSyncPendingGet.Output.InternalServerError)
-            /// The associated value of the enum case if `self` is `.internalServerError`.
-            ///
-            /// - Throws: An error if `self` is not `.internalServerError`.
-            /// - SeeAlso: `.internalServerError`.
-            public var internalServerError: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.InternalServerError {
-                get throws {
-                    switch self {
-                    case let .internalServerError(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "internalServerError",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct ServiceUnavailable: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/sync/pending/GET/responses/503/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/sync/pending/GET/responses/503/content/json`.
-                    public struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/sync/pending/GET/responses/503/content/json/detail`.
-                        public var detail: Swift.String
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - detail:
-                        public init(detail: Swift.String) {
-                            self.detail = detail
-                        }
-                        public enum CodingKeys: String, CodingKey {
-                            case detail
-                        }
-                    }
-                    /// - Remark: Generated from `#/paths/sync/pending/GET/responses/503/content/application\/json`.
-                    case json(Operations.GetPendingSyncsEndpointSyncPendingGet.Output.ServiceUnavailable.Body.JsonPayload)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.ServiceUnavailable.Body.JsonPayload {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.ServiceUnavailable.Body
-                /// Creates a new `ServiceUnavailable`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.ServiceUnavailable.Body) {
-                    self.body = body
-                }
-            }
-            /// Upstream service is temporarily unavailable
-            ///
-            /// - Remark: Generated from `#/paths//sync/pending/get(get_pending_syncs_endpoint_sync_pending_get)/responses/503`.
-            ///
-            /// HTTP response code: `503 serviceUnavailable`.
-            case serviceUnavailable(Operations.GetPendingSyncsEndpointSyncPendingGet.Output.ServiceUnavailable)
-            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
-            ///
-            /// - Throws: An error if `self` is not `.serviceUnavailable`.
-            /// - SeeAlso: `.serviceUnavailable`.
-            public var serviceUnavailable: Operations.GetPendingSyncsEndpointSyncPendingGet.Output.ServiceUnavailable {
-                get throws {
-                    switch self {
-                    case let .serviceUnavailable(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "serviceUnavailable",
                             response: self
                         )
                     }
@@ -1904,61 +452,40 @@ public enum Operations {
             }
         }
     }
-    /// Record Workout Completion Endpoint
+    /// V1 Workouts Complete
     ///
-    /// Record a workout completion with health metrics from Apple Watch.
+    /// Save & End on iOS → mapper-api POST /workouts/complete.
     ///
-    /// Called by iOS app when user finishes a workout. Stores heart rate,
-    /// calories, duration, and other health data captured during the workout.
-    ///
-    /// Args:
-    ///     request: Workout completion data including health metrics
-    ///     user_id: Authenticated user ID (from Clerk JWT)
-    ///
-    /// Returns:
-    ///     Success status, completion ID, and summary
-    ///
-    /// - Remark: HTTP `POST /workouts/complete`.
-    /// - Remark: Generated from `#/paths//workouts/complete/post(record_workout_completion_endpoint_workouts_complete_post)`.
-    public enum RecordWorkoutCompletionEndpointWorkoutsCompletePost {
-        public static let id: Swift.String = "record_workout_completion_endpoint_workouts_complete_post"
+    /// - Remark: HTTP `POST /v1/workouts/complete`.
+    /// - Remark: Generated from `#/paths//v1/workouts/complete/post(v1_workouts_complete_v1_workouts_complete_post)`.
+    public enum V1WorkoutsCompleteV1WorkoutsCompletePost {
+        public static let id: Swift.String = "v1_workouts_complete_v1_workouts_complete_post"
         public struct Input: Sendable, Hashable {
-            /// - Remark: Generated from `#/paths/workouts/complete/POST/header`.
+            /// - Remark: Generated from `#/paths/v1/workouts/complete/POST/header`.
             public struct Headers: Sendable, Hashable {
-                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.AcceptableContentType>]
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.AcceptableContentType>]
                 /// Creates a new `Headers`.
                 ///
                 /// - Parameters:
                 ///   - accept:
-                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.AcceptableContentType>] = .defaultValues()) {
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.AcceptableContentType>] = .defaultValues()) {
                     self.accept = accept
                 }
             }
-            public var headers: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Input.Headers
-            /// - Remark: Generated from `#/paths/workouts/complete/POST/requestBody`.
-            @frozen public enum Body: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/workouts/complete/POST/requestBody/content/application\/json`.
-                case json(Components.Schemas.WorkoutCompletionRequest)
-            }
-            public var body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Input.Body
+            public var headers: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Input.Headers
             /// Creates a new `Input`.
             ///
             /// - Parameters:
             ///   - headers:
-            ///   - body:
-            public init(
-                headers: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Input.Headers = .init(),
-                body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Input.Body
-            ) {
+            public init(headers: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Input.Headers = .init()) {
                 self.headers = headers
-                self.body = body
             }
         }
         @frozen public enum Output: Sendable, Hashable {
             public struct Ok: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/200/content`.
+                /// - Remark: Generated from `#/paths/v1/workouts/complete/POST/responses/200/content`.
                 @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/200/content/application\/json`.
+                    /// - Remark: Generated from `#/paths/v1/workouts/complete/POST/responses/200/content/application\/json`.
                     case json(OpenAPIRuntime.OpenAPIValueContainer)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
@@ -1974,26 +501,26 @@ public enum Operations {
                     }
                 }
                 /// Received HTTP response body
-                public var body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.Ok.Body
+                public var body: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Output.Ok.Body
                 /// Creates a new `Ok`.
                 ///
                 /// - Parameters:
                 ///   - body: Received HTTP response body
-                public init(body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.Ok.Body) {
+                public init(body: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Output.Ok.Body) {
                     self.body = body
                 }
             }
             /// Successful Response
             ///
-            /// - Remark: Generated from `#/paths//workouts/complete/post(record_workout_completion_endpoint_workouts_complete_post)/responses/200`.
+            /// - Remark: Generated from `#/paths//v1/workouts/complete/post(v1_workouts_complete_v1_workouts_complete_post)/responses/200`.
             ///
             /// HTTP response code: `200 ok`.
-            case ok(Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.Ok)
+            case ok(Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Output.Ok)
             /// The associated value of the enum case if `self` is `.ok`.
             ///
             /// - Throws: An error if `self` is not `.ok`.
             /// - SeeAlso: `.ok`.
-            public var ok: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.Ok {
+            public var ok: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Output.Ok {
                 get throws {
                     switch self {
                     case let .ok(response):
@@ -2001,335 +528,6 @@ public enum Operations {
                     default:
                         try throwUnexpectedResponseStatus(
                             expectedStatus: "ok",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct BadRequest: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/400/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/400/content/json`.
-                    public struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/400/content/json/detail`.
-                        public var detail: Swift.String
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - detail:
-                        public init(detail: Swift.String) {
-                            self.detail = detail
-                        }
-                        public enum CodingKeys: String, CodingKey {
-                            case detail
-                        }
-                    }
-                    /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/400/content/application\/json`.
-                    case json(Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.BadRequest.Body.JsonPayload)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.BadRequest.Body.JsonPayload {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.BadRequest.Body
-                /// Creates a new `BadRequest`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.BadRequest.Body) {
-                    self.body = body
-                }
-            }
-            /// Bad request — business validation failed
-            ///
-            /// - Remark: Generated from `#/paths//workouts/complete/post(record_workout_completion_endpoint_workouts_complete_post)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            case badRequest(Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.BadRequest)
-            /// The associated value of the enum case if `self` is `.badRequest`.
-            ///
-            /// - Throws: An error if `self` is not `.badRequest`.
-            /// - SeeAlso: `.badRequest`.
-            public var badRequest: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.BadRequest {
-                get throws {
-                    switch self {
-                    case let .badRequest(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "badRequest",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct UnprocessableContent: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/422/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/422/content/application\/json`.
-                    case json(Components.Schemas.HTTPValidationError)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.HTTPValidationError {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.UnprocessableContent.Body
-                /// Creates a new `UnprocessableContent`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.UnprocessableContent.Body) {
-                    self.body = body
-                }
-            }
-            /// Validation Error
-            ///
-            /// - Remark: Generated from `#/paths//workouts/complete/post(record_workout_completion_endpoint_workouts_complete_post)/responses/422`.
-            ///
-            /// HTTP response code: `422 unprocessableContent`.
-            case unprocessableContent(Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.UnprocessableContent)
-            /// The associated value of the enum case if `self` is `.unprocessableContent`.
-            ///
-            /// - Throws: An error if `self` is not `.unprocessableContent`.
-            /// - SeeAlso: `.unprocessableContent`.
-            public var unprocessableContent: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.UnprocessableContent {
-                get throws {
-                    switch self {
-                    case let .unprocessableContent(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "unprocessableContent",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct TooManyRequests: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/429/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/429/content/json`.
-                    public struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/429/content/json/error`.
-                        public var error: Swift.String
-                        /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/429/content/json/message`.
-                        public var message: Swift.String?
-                        /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/429/content/json/retry_after`.
-                        public var retryAfter: Swift.Int?
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - error:
-                        ///   - message:
-                        ///   - retryAfter:
-                        public init(
-                            error: Swift.String,
-                            message: Swift.String? = nil,
-                            retryAfter: Swift.Int? = nil
-                        ) {
-                            self.error = error
-                            self.message = message
-                            self.retryAfter = retryAfter
-                        }
-                        public enum CodingKeys: String, CodingKey {
-                            case error
-                            case message
-                            case retryAfter = "retry_after"
-                        }
-                    }
-                    /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/429/content/application\/json`.
-                    case json(Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.TooManyRequests.Body.JsonPayload)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.TooManyRequests.Body.JsonPayload {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.TooManyRequests.Body
-                /// Creates a new `TooManyRequests`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.TooManyRequests.Body) {
-                    self.body = body
-                }
-            }
-            /// Rate limit exceeded
-            ///
-            /// - Remark: Generated from `#/paths//workouts/complete/post(record_workout_completion_endpoint_workouts_complete_post)/responses/429`.
-            ///
-            /// HTTP response code: `429 tooManyRequests`.
-            case tooManyRequests(Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.TooManyRequests)
-            /// The associated value of the enum case if `self` is `.tooManyRequests`.
-            ///
-            /// - Throws: An error if `self` is not `.tooManyRequests`.
-            /// - SeeAlso: `.tooManyRequests`.
-            public var tooManyRequests: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.TooManyRequests {
-                get throws {
-                    switch self {
-                    case let .tooManyRequests(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "tooManyRequests",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct InternalServerError: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/500/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/500/content/json`.
-                    public struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/500/content/json/detail`.
-                        public var detail: Swift.String
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - detail:
-                        public init(detail: Swift.String) {
-                            self.detail = detail
-                        }
-                        public enum CodingKeys: String, CodingKey {
-                            case detail
-                        }
-                    }
-                    /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/500/content/application\/json`.
-                    case json(Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.InternalServerError.Body.JsonPayload)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.InternalServerError.Body.JsonPayload {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.InternalServerError.Body
-                /// Creates a new `InternalServerError`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.InternalServerError.Body) {
-                    self.body = body
-                }
-            }
-            /// Internal server error
-            ///
-            /// - Remark: Generated from `#/paths//workouts/complete/post(record_workout_completion_endpoint_workouts_complete_post)/responses/500`.
-            ///
-            /// HTTP response code: `500 internalServerError`.
-            case internalServerError(Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.InternalServerError)
-            /// The associated value of the enum case if `self` is `.internalServerError`.
-            ///
-            /// - Throws: An error if `self` is not `.internalServerError`.
-            /// - SeeAlso: `.internalServerError`.
-            public var internalServerError: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.InternalServerError {
-                get throws {
-                    switch self {
-                    case let .internalServerError(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "internalServerError",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct ServiceUnavailable: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/503/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/503/content/json`.
-                    public struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/503/content/json/detail`.
-                        public var detail: Swift.String
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - detail:
-                        public init(detail: Swift.String) {
-                            self.detail = detail
-                        }
-                        public enum CodingKeys: String, CodingKey {
-                            case detail
-                        }
-                    }
-                    /// - Remark: Generated from `#/paths/workouts/complete/POST/responses/503/content/application\/json`.
-                    case json(Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.ServiceUnavailable.Body.JsonPayload)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.ServiceUnavailable.Body.JsonPayload {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.ServiceUnavailable.Body
-                /// Creates a new `ServiceUnavailable`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.ServiceUnavailable.Body) {
-                    self.body = body
-                }
-            }
-            /// Upstream service is temporarily unavailable
-            ///
-            /// - Remark: Generated from `#/paths//workouts/complete/post(record_workout_completion_endpoint_workouts_complete_post)/responses/503`.
-            ///
-            /// HTTP response code: `503 serviceUnavailable`.
-            case serviceUnavailable(Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.ServiceUnavailable)
-            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
-            ///
-            /// - Throws: An error if `self` is not `.serviceUnavailable`.
-            /// - SeeAlso: `.serviceUnavailable`.
-            public var serviceUnavailable: Operations.RecordWorkoutCompletionEndpointWorkoutsCompletePost.Output.ServiceUnavailable {
-                get throws {
-                    switch self {
-                    case let .serviceUnavailable(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "serviceUnavailable",
                             response: self
                         )
                     }
@@ -2366,79 +564,46 @@ public enum Operations {
             }
         }
     }
-    /// List Planned Workouts Endpoint
+    /// V1 Workouts Planned
     ///
-    /// Return the user's non-deleted planned workouts in a date range.
+    /// iOS Home / Calendar planned-workouts read → mapper-api GET /workouts/planned.
     ///
-    /// The new iOS Home + Workouts surfaces (AMA-1792) drive their reads
-    /// through this endpoint instead of the legacy fragmented set
-    /// (`fetchWorkouts`/`fetchScheduledWorkouts`/`fetchPushedWorkouts`).
-    ///
-    /// - Remark: HTTP `GET /workouts/planned`.
-    /// - Remark: Generated from `#/paths//workouts/planned/get(list_planned_workouts_endpoint_workouts_planned_get)`.
-    public enum ListPlannedWorkoutsEndpointWorkoutsPlannedGet {
-        public static let id: Swift.String = "list_planned_workouts_endpoint_workouts_planned_get"
+    /// - Remark: HTTP `GET /v1/workouts/planned`.
+    /// - Remark: Generated from `#/paths//v1/workouts/planned/get(v1_workouts_planned_v1_workouts_planned_get)`.
+    public enum V1WorkoutsPlannedV1WorkoutsPlannedGet {
+        public static let id: Swift.String = "v1_workouts_planned_v1_workouts_planned_get"
         public struct Input: Sendable, Hashable {
-            /// - Remark: Generated from `#/paths/workouts/planned/GET/query`.
-            public struct Query: Sendable, Hashable {
-                /// Inclusive start date (ISO 8601).
-                ///
-                /// - Remark: Generated from `#/paths/workouts/planned/GET/query/from`.
-                public var from: Swift.String
-                /// Inclusive end date (ISO 8601).
-                ///
-                /// - Remark: Generated from `#/paths/workouts/planned/GET/query/to`.
-                public var to: Swift.String
-                /// Creates a new `Query`.
-                ///
-                /// - Parameters:
-                ///   - from: Inclusive start date (ISO 8601).
-                ///   - to: Inclusive end date (ISO 8601).
-                public init(
-                    from: Swift.String,
-                    to: Swift.String
-                ) {
-                    self.from = from
-                    self.to = to
-                }
-            }
-            public var query: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Input.Query
-            /// - Remark: Generated from `#/paths/workouts/planned/GET/header`.
+            /// - Remark: Generated from `#/paths/v1/workouts/planned/GET/header`.
             public struct Headers: Sendable, Hashable {
-                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.AcceptableContentType>]
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.AcceptableContentType>]
                 /// Creates a new `Headers`.
                 ///
                 /// - Parameters:
                 ///   - accept:
-                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.AcceptableContentType>] = .defaultValues()) {
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.AcceptableContentType>] = .defaultValues()) {
                     self.accept = accept
                 }
             }
-            public var headers: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Input.Headers
+            public var headers: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Input.Headers
             /// Creates a new `Input`.
             ///
             /// - Parameters:
-            ///   - query:
             ///   - headers:
-            public init(
-                query: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Input.Query,
-                headers: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Input.Headers = .init()
-            ) {
-                self.query = query
+            public init(headers: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Input.Headers = .init()) {
                 self.headers = headers
             }
         }
         @frozen public enum Output: Sendable, Hashable {
             public struct Ok: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/workouts/planned/GET/responses/200/content`.
+                /// - Remark: Generated from `#/paths/v1/workouts/planned/GET/responses/200/content`.
                 @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/workouts/planned/GET/responses/200/content/application\/json`.
-                    case json(Components.Schemas.PlannedListResponse)
+                    /// - Remark: Generated from `#/paths/v1/workouts/planned/GET/responses/200/content/application\/json`.
+                    case json(OpenAPIRuntime.OpenAPIValueContainer)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.PlannedListResponse {
+                    public var json: OpenAPIRuntime.OpenAPIValueContainer {
                         get throws {
                             switch self {
                             case let .json(body):
@@ -2448,26 +613,26 @@ public enum Operations {
                     }
                 }
                 /// Received HTTP response body
-                public var body: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.Ok.Body
+                public var body: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Output.Ok.Body
                 /// Creates a new `Ok`.
                 ///
                 /// - Parameters:
                 ///   - body: Received HTTP response body
-                public init(body: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.Ok.Body) {
+                public init(body: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Output.Ok.Body) {
                     self.body = body
                 }
             }
             /// Successful Response
             ///
-            /// - Remark: Generated from `#/paths//workouts/planned/get(list_planned_workouts_endpoint_workouts_planned_get)/responses/200`.
+            /// - Remark: Generated from `#/paths//v1/workouts/planned/get(v1_workouts_planned_v1_workouts_planned_get)/responses/200`.
             ///
             /// HTTP response code: `200 ok`.
-            case ok(Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.Ok)
+            case ok(Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Output.Ok)
             /// The associated value of the enum case if `self` is `.ok`.
             ///
             /// - Throws: An error if `self` is not `.ok`.
             /// - SeeAlso: `.ok`.
-            public var ok: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.Ok {
+            public var ok: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Output.Ok {
                 get throws {
                     switch self {
                     case let .ok(response):
@@ -2475,269 +640,6 @@ public enum Operations {
                     default:
                         try throwUnexpectedResponseStatus(
                             expectedStatus: "ok",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct UnprocessableContent: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/workouts/planned/GET/responses/422/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/workouts/planned/GET/responses/422/content/application\/json`.
-                    case json(Components.Schemas.HTTPValidationError)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.HTTPValidationError {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.UnprocessableContent.Body
-                /// Creates a new `UnprocessableContent`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.UnprocessableContent.Body) {
-                    self.body = body
-                }
-            }
-            /// Validation Error
-            ///
-            /// - Remark: Generated from `#/paths//workouts/planned/get(list_planned_workouts_endpoint_workouts_planned_get)/responses/422`.
-            ///
-            /// HTTP response code: `422 unprocessableContent`.
-            case unprocessableContent(Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.UnprocessableContent)
-            /// The associated value of the enum case if `self` is `.unprocessableContent`.
-            ///
-            /// - Throws: An error if `self` is not `.unprocessableContent`.
-            /// - SeeAlso: `.unprocessableContent`.
-            public var unprocessableContent: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.UnprocessableContent {
-                get throws {
-                    switch self {
-                    case let .unprocessableContent(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "unprocessableContent",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct TooManyRequests: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/workouts/planned/GET/responses/429/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/workouts/planned/GET/responses/429/content/json`.
-                    public struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/workouts/planned/GET/responses/429/content/json/error`.
-                        public var error: Swift.String
-                        /// - Remark: Generated from `#/paths/workouts/planned/GET/responses/429/content/json/message`.
-                        public var message: Swift.String?
-                        /// - Remark: Generated from `#/paths/workouts/planned/GET/responses/429/content/json/retry_after`.
-                        public var retryAfter: Swift.Int?
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - error:
-                        ///   - message:
-                        ///   - retryAfter:
-                        public init(
-                            error: Swift.String,
-                            message: Swift.String? = nil,
-                            retryAfter: Swift.Int? = nil
-                        ) {
-                            self.error = error
-                            self.message = message
-                            self.retryAfter = retryAfter
-                        }
-                        public enum CodingKeys: String, CodingKey {
-                            case error
-                            case message
-                            case retryAfter = "retry_after"
-                        }
-                    }
-                    /// - Remark: Generated from `#/paths/workouts/planned/GET/responses/429/content/application\/json`.
-                    case json(Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.TooManyRequests.Body.JsonPayload)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.TooManyRequests.Body.JsonPayload {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.TooManyRequests.Body
-                /// Creates a new `TooManyRequests`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.TooManyRequests.Body) {
-                    self.body = body
-                }
-            }
-            /// Rate limit exceeded
-            ///
-            /// - Remark: Generated from `#/paths//workouts/planned/get(list_planned_workouts_endpoint_workouts_planned_get)/responses/429`.
-            ///
-            /// HTTP response code: `429 tooManyRequests`.
-            case tooManyRequests(Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.TooManyRequests)
-            /// The associated value of the enum case if `self` is `.tooManyRequests`.
-            ///
-            /// - Throws: An error if `self` is not `.tooManyRequests`.
-            /// - SeeAlso: `.tooManyRequests`.
-            public var tooManyRequests: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.TooManyRequests {
-                get throws {
-                    switch self {
-                    case let .tooManyRequests(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "tooManyRequests",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct InternalServerError: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/workouts/planned/GET/responses/500/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/workouts/planned/GET/responses/500/content/json`.
-                    public struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/workouts/planned/GET/responses/500/content/json/detail`.
-                        public var detail: Swift.String
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - detail:
-                        public init(detail: Swift.String) {
-                            self.detail = detail
-                        }
-                        public enum CodingKeys: String, CodingKey {
-                            case detail
-                        }
-                    }
-                    /// - Remark: Generated from `#/paths/workouts/planned/GET/responses/500/content/application\/json`.
-                    case json(Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.InternalServerError.Body.JsonPayload)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.InternalServerError.Body.JsonPayload {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.InternalServerError.Body
-                /// Creates a new `InternalServerError`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.InternalServerError.Body) {
-                    self.body = body
-                }
-            }
-            /// Internal server error
-            ///
-            /// - Remark: Generated from `#/paths//workouts/planned/get(list_planned_workouts_endpoint_workouts_planned_get)/responses/500`.
-            ///
-            /// HTTP response code: `500 internalServerError`.
-            case internalServerError(Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.InternalServerError)
-            /// The associated value of the enum case if `self` is `.internalServerError`.
-            ///
-            /// - Throws: An error if `self` is not `.internalServerError`.
-            /// - SeeAlso: `.internalServerError`.
-            public var internalServerError: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.InternalServerError {
-                get throws {
-                    switch self {
-                    case let .internalServerError(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "internalServerError",
-                            response: self
-                        )
-                    }
-                }
-            }
-            public struct ServiceUnavailable: Sendable, Hashable {
-                /// - Remark: Generated from `#/paths/workouts/planned/GET/responses/503/content`.
-                @frozen public enum Body: Sendable, Hashable {
-                    /// - Remark: Generated from `#/paths/workouts/planned/GET/responses/503/content/json`.
-                    public struct JsonPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/workouts/planned/GET/responses/503/content/json/detail`.
-                        public var detail: Swift.String
-                        /// Creates a new `JsonPayload`.
-                        ///
-                        /// - Parameters:
-                        ///   - detail:
-                        public init(detail: Swift.String) {
-                            self.detail = detail
-                        }
-                        public enum CodingKeys: String, CodingKey {
-                            case detail
-                        }
-                    }
-                    /// - Remark: Generated from `#/paths/workouts/planned/GET/responses/503/content/application\/json`.
-                    case json(Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.ServiceUnavailable.Body.JsonPayload)
-                    /// The associated value of the enum case if `self` is `.json`.
-                    ///
-                    /// - Throws: An error if `self` is not `.json`.
-                    /// - SeeAlso: `.json`.
-                    public var json: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.ServiceUnavailable.Body.JsonPayload {
-                        get throws {
-                            switch self {
-                            case let .json(body):
-                                return body
-                            }
-                        }
-                    }
-                }
-                /// Received HTTP response body
-                public var body: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.ServiceUnavailable.Body
-                /// Creates a new `ServiceUnavailable`.
-                ///
-                /// - Parameters:
-                ///   - body: Received HTTP response body
-                public init(body: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.ServiceUnavailable.Body) {
-                    self.body = body
-                }
-            }
-            /// Upstream service is temporarily unavailable
-            ///
-            /// - Remark: Generated from `#/paths//workouts/planned/get(list_planned_workouts_endpoint_workouts_planned_get)/responses/503`.
-            ///
-            /// HTTP response code: `503 serviceUnavailable`.
-            case serviceUnavailable(Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.ServiceUnavailable)
-            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
-            ///
-            /// - Throws: An error if `self` is not `.serviceUnavailable`.
-            /// - SeeAlso: `.serviceUnavailable`.
-            public var serviceUnavailable: Operations.ListPlannedWorkoutsEndpointWorkoutsPlannedGet.Output.ServiceUnavailable {
-                get throws {
-                    switch self {
-                    case let .serviceUnavailable(response):
-                        return response
-                    default:
-                        try throwUnexpectedResponseStatus(
-                            expectedStatus: "serviceUnavailable",
                             response: self
                         )
                     }

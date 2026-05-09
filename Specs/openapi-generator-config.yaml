@@ -1,24 +1,25 @@
-# swift-openapi-generator config for the AMA-1818 first-wave codegen.
+# swift-openapi-generator config for the AMA-1820 codegen.
 #
-# Generates Swift Codable types + a URLSession-based client for ONLY the
-# 5 mobile-facing endpoints that the iOS app needs (per AMA-1824
-# `docs/architecture/mobile-domains.md`). Anything outside the filter is
-# stripped — keeps the generated module small and reduces compile time
-# vs codegenning all ~80 mapper-api endpoints.
+# Source spec: Specs/mobile-bff.json (vendored from amakaflow-backend's
+# openapi/mobile-bff.json artifact). Per AMA-1820 the iOS app generates
+# from the BFF spec, NOT mapper-api — the BFF is the contract, mapper-api
+# is an upstream implementation detail that the BFF is free to reshape.
+# See AMA-1817 epic + AMA-1824 mobile-domains.md.
+#
+# All 5 first-wave routes are kept (locked at the AMA-1824 boundary).
+# /health is excluded — operational, not iOS-facing.
 
 generate:
   - types
   - client
 
-# AMA-1818 first-wave scope. Adding endpoints here triggers a regen and
-# broadens the iOS surface area governed by the contract — flag in PR.
 filter:
   paths:
-    - /workouts/complete
-    - /workouts/planned
-    - /sync/pending
-    - /sync/confirm
-    - /sync/failed
+    - /v1/workouts/complete
+    - /v1/workouts/planned
+    - /v1/sync/pending
+    - /v1/sync/confirm
+    - /v1/sync/failed
 
 accessModifier: public
 
