@@ -1,18 +1,1024 @@
 {
   "components": {
+    "schemas": {
+      "ConfirmSyncRequest": {
+        "description": "Request body for POST /v1/sync/confirm.",
+        "properties": {
+          "device_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Id"
+          },
+          "device_type": {
+            "$ref": "#/components/schemas/DeviceType"
+          },
+          "workout_id": {
+            "title": "Workout Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workout_id",
+          "device_type"
+        ],
+        "title": "ConfirmSyncRequest",
+        "type": "object"
+      },
+      "ConfirmSyncResponse": {
+        "description": "Response for POST /v1/sync/confirm.",
+        "properties": {
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "title": "ConfirmSyncResponse",
+        "type": "object"
+      },
+      "DeviceType": {
+        "description": "Mirrors mapper-api's DeviceType (services/mapper-api/api/routers/sync.py).",
+        "enum": [
+          "ios",
+          "android",
+          "garmin"
+        ],
+        "title": "DeviceType",
+        "type": "string"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthMetrics": {
+        "description": "Health metrics captured during the workout (Apple Watch / Garmin).",
+        "properties": {
+          "active_calories": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Calories"
+          },
+          "avg_heart_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Heart Rate"
+          },
+          "distance_meters": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Meters"
+          },
+          "max_heart_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Heart Rate"
+          },
+          "min_heart_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Heart Rate"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps"
+          },
+          "total_calories": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Calories"
+          }
+        },
+        "title": "HealthMetrics",
+        "type": "object"
+      },
+      "PendingSyncResponse": {
+        "description": "Response for GET /v1/sync/pending.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          },
+          "workouts": {
+            "items": {
+              "$ref": "#/components/schemas/PendingSyncWorkout"
+            },
+            "title": "Workouts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "success",
+          "workouts",
+          "count"
+        ],
+        "title": "PendingSyncResponse",
+        "type": "object"
+      },
+      "PendingSyncWorkout": {
+        "description": "One pending workout entry returned by /sync/pending.\n\nIntervals stay as a free-form list of dicts \u2014 the upstream router\nruns `to_workoutkit(...).intervals` and the resulting WorkoutKit\ninterval shapes are large and themselves polymorphic (warmup,\ncooldown, repeat, single). Modeling them strictly in v1 would either\ndrift from upstream or pull a large dependency tree into the BFF;\ndeferring per the AMA-1817 1:1-mirror principle.",
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "intervals": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Intervals",
+            "type": "array"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "queued_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queued At"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "sourceUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceurl"
+          },
+          "sport": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sport"
+          }
+        },
+        "title": "PendingSyncWorkout",
+        "type": "object"
+      },
+      "PlannedListResponse": {
+        "description": "Response for GET /v1/workouts/planned.",
+        "properties": {
+          "workouts": {
+            "items": {
+              "$ref": "#/components/schemas/PlannedWorkout"
+            },
+            "title": "Workouts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "workouts"
+        ],
+        "title": "PlannedListResponse",
+        "type": "object"
+      },
+      "PlannedWorkout": {
+        "description": "Subset of `workout_events` returned to iOS.\n\nAliases (camelCase) preserved from mapper-api so the wire shape stays\nidentical across BFF and upstream \u2014 iOS already decodes this format.",
+        "properties": {
+          "clientGeneratedId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clientgeneratedid"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "endTime": {
+            "anyOf": [
+              {
+                "format": "time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endtime"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "jsonPayload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jsonpayload"
+          },
+          "serverVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serverversion"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "startTime": {
+            "anyOf": [
+              {
+                "format": "time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starttime"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "userId": {
+            "title": "Userid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "userId"
+        ],
+        "title": "PlannedWorkout",
+        "type": "object"
+      },
+      "ReportSyncFailedRequest": {
+        "description": "Request body for POST /v1/sync/failed.",
+        "properties": {
+          "device_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Id"
+          },
+          "device_type": {
+            "$ref": "#/components/schemas/DeviceType"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "workout_id": {
+            "title": "Workout Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workout_id",
+          "device_type",
+          "error"
+        ],
+        "title": "ReportSyncFailedRequest",
+        "type": "object"
+      },
+      "ReportSyncFailedResponse": {
+        "description": "Response for POST /v1/sync/failed.",
+        "properties": {
+          "failed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed At"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "title": "ReportSyncFailedResponse",
+        "type": "object"
+      },
+      "SetEntry": {
+        "description": "Individual set within an exercise log (AMA-281).",
+        "properties": {
+          "completed": {
+            "default": true,
+            "title": "Completed",
+            "type": "boolean"
+          },
+          "set_number": {
+            "title": "Set Number",
+            "type": "integer"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          }
+        },
+        "required": [
+          "set_number"
+        ],
+        "title": "SetEntry",
+        "type": "object"
+      },
+      "SetLog": {
+        "description": "Log of sets for a single exercise (AMA-281).",
+        "properties": {
+          "exercise_index": {
+            "title": "Exercise Index",
+            "type": "integer"
+          },
+          "exercise_name": {
+            "title": "Exercise Name",
+            "type": "string"
+          },
+          "sets": {
+            "items": {
+              "$ref": "#/components/schemas/SetEntry"
+            },
+            "title": "Sets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "exercise_name",
+          "exercise_index",
+          "sets"
+        ],
+        "title": "SetLog",
+        "type": "object"
+      },
+      "SimulationConfig": {
+        "description": "Simulation parameters when workout runs in simulation mode (AMA-273).",
+        "properties": {
+          "behavior_profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Behavior Profile"
+          },
+          "hr_profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hr Profile"
+          },
+          "speed": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speed"
+          }
+        },
+        "title": "SimulationConfig",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "WorkoutCompletionRequest": {
+        "description": "Request body for POST /v1/workouts/complete.\n\nMirrors `WorkoutCompletionRequest` in mapper-api\n(services/mapper-api/backend/workout_completions.py) 1:1.\n\nNote: `execution_log`, `heart_rate_samples`, `workout_structure`,\n`intervals`, and `device_info` stay as free-form dicts here \u2014 the\nupstream model deliberately uses `Dict[str, Any]` after the AMA-1813\nsaga (the strict ExecutionLog tree rejected the iOS payload). We do\nNOT narrow these in v1; that's reserved for a future contract ticket.",
+        "properties": {
+          "client_generated_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Idempotency key \u2014 same value on every retry of the same logical completion.",
+            "title": "Client Generated Id"
+          },
+          "device_info": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Info"
+          },
+          "ended_at": {
+            "description": "ISO 8601 timestamp.",
+            "title": "Ended At",
+            "type": "string"
+          },
+          "execution_log": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Log"
+          },
+          "follow_along_workout_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follow Along Workout Id"
+          },
+          "health_metrics": {
+            "$ref": "#/components/schemas/HealthMetrics"
+          },
+          "heart_rate_samples": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heart Rate Samples"
+          },
+          "intervals": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intervals"
+          },
+          "is_simulated": {
+            "default": false,
+            "title": "Is Simulated",
+            "type": "boolean"
+          },
+          "modality": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modality"
+          },
+          "planned_avg_hr": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planned Avg Hr"
+          },
+          "planned_duration_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planned Duration Seconds"
+          },
+          "planned_modality": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planned Modality"
+          },
+          "set_logs": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SetLog"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Set Logs"
+          },
+          "simulation_config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SimulationConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "default": "apple_watch",
+            "description": "apple_watch | garmin | manual.",
+            "title": "Source",
+            "type": "string"
+          },
+          "source_workout_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Workout Id"
+          },
+          "started_at": {
+            "description": "ISO 8601 timestamp.",
+            "title": "Started At",
+            "type": "string"
+          },
+          "workout_event_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workout Event Id"
+          },
+          "workout_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workout Id"
+          },
+          "workout_structure": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workout Structure"
+          }
+        },
+        "required": [
+          "started_at",
+          "ended_at",
+          "health_metrics"
+        ],
+        "title": "WorkoutCompletionRequest",
+        "type": "object"
+      },
+      "WorkoutCompletionResponse": {
+        "description": "Response for POST /v1/workouts/complete.\n\nMirrors mapper-api's `WorkoutCompletionResponse` plus the optional\n`fidelity`, `idempotent`, and `error_code` fields that the router\nactually emits in practice (see record_workout_completion_endpoint).",
+        "properties": {
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "fidelity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fidelity"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "idempotent": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotent"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkoutCompletionSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "title": "WorkoutCompletionResponse",
+        "type": "object"
+      },
+      "WorkoutCompletionSummary": {
+        "description": "Summary echoed back after a successful completion.",
+        "properties": {
+          "avg_heart_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Heart Rate"
+          },
+          "calories": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calories"
+          },
+          "duration_formatted": {
+            "title": "Duration Formatted",
+            "type": "string"
+          }
+        },
+        "required": [
+          "duration_formatted"
+        ],
+        "title": "WorkoutCompletionSummary",
+        "type": "object"
+      }
+    },
     "securitySchemes": {
       "BearerAuth": {
         "bearerFormat": "JWT",
-        "description": "Clerk-issued JWT, forwarded verbatim to mapper-api.",
+        "description": "Clerk-issued JWT, forwarded verbatim to upstream services.",
         "scheme": "bearer",
         "type": "http"
       }
     }
   },
   "info": {
-    "description": "Mobile Backend-for-Frontend (AMA-1819). Thin proxy for the 5 first-wave mobile-facing endpoints under /v1/. iOS calls this service exclusively for workout/sync flows so internal mapper-api renames don't require an iOS release.",
+    "description": "Mobile Backend-for-Frontend (AMA-1819 + AMA-1827). Thin proxy for the mobile-facing endpoints under /v1/. iOS calls this service exclusively for workout/sync/coach/chat/knowledge/nutrition flows so internal upstream renames don't require an iOS release.",
     "title": "AmakaFlow Mobile BFF",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -39,10 +1045,10 @@
         "summary": "Health"
       }
     },
-    "/v1/sync/confirm": {
+    "/v1/chat/stream": {
       "post": {
-        "description": "SyncEngine confirm-success \u2192 mapper-api POST /sync/confirm.",
-        "operationId": "v1_sync_confirm_v1_sync_confirm_post",
+        "description": "iOS ChatStreamService \u2192 chat-api POST /chat/stream (SSE).\n\nUses `_proxy_stream` so chunks reach iOS as the LLM produces them;\nthe standard buffered proxy would defeat SSE.",
+        "operationId": "v1_chat_stream_v1_chat_stream_post",
         "responses": {
           "200": {
             "content": {
@@ -51,6 +1057,340 @@
               }
             },
             "description": "Successful Response"
+          }
+        },
+        "summary": "V1 Chat Stream"
+      }
+    },
+    "/v1/coach/fatigue-advice": {
+      "post": {
+        "description": "iOS getFatigueAdvice \u2192 chat-api POST /coach/fatigue-advice.",
+        "operationId": "v1_coach_fatigue_advice_v1_coach_fatigue_advice_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "V1 Coach Fatigue Advice"
+      }
+    },
+    "/v1/coach/memories": {
+      "get": {
+        "description": "iOS fetchCoachMemories \u2192 chat-api GET /coach/memories.",
+        "operationId": "v1_coach_memories_v1_coach_memories_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "V1 Coach Memories"
+      }
+    },
+    "/v1/coach/message": {
+      "post": {
+        "description": "iOS sendCoachMessage \u2192 chat-api POST /coach/message.",
+        "operationId": "v1_coach_message_v1_coach_message_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "V1 Coach Message"
+      }
+    },
+    "/v1/coach/rpe-feedback": {
+      "post": {
+        "description": "iOS postRPEFeedback \u2192 chat-api POST /coach/rpe-feedback.",
+        "operationId": "v1_coach_rpe_feedback_v1_coach_rpe_feedback_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "V1 Coach Rpe Feedback"
+      }
+    },
+    "/v1/coach/suggest-workout": {
+      "post": {
+        "description": "iOS suggestWorkout \u2192 chat-api POST /coach/suggest-workout.",
+        "operationId": "v1_coach_suggest_workout_v1_coach_suggest_workout_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "V1 Coach Suggest Workout"
+      }
+    },
+    "/v1/gamification/xp": {
+      "get": {
+        "description": "iOS fetchXP \u2192 chat-api GET /gamification/xp.",
+        "operationId": "v1_gamification_xp_v1_gamification_xp_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "V1 Gamification Xp"
+      }
+    },
+    "/v1/knowledge/cards": {
+      "get": {
+        "description": "iOS KnowledgeService.listCards \u2192 chat-api GET /knowledge/cards.",
+        "operationId": "v1_knowledge_cards_list_v1_knowledge_cards_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "V1 Knowledge Cards List"
+      },
+      "post": {
+        "description": "iOS KnowledgeService.ingest \u2192 chat-api POST /knowledge/cards.",
+        "operationId": "v1_knowledge_cards_create_v1_knowledge_cards_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "V1 Knowledge Cards Create"
+      }
+    },
+    "/v1/knowledge/cards/search": {
+      "get": {
+        "description": "iOS KnowledgeService.searchCards \u2192 chat-api GET /knowledge/cards/search.",
+        "operationId": "v1_knowledge_cards_search_v1_knowledge_cards_search_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "V1 Knowledge Cards Search"
+      }
+    },
+    "/v1/knowledge/cards/{card_id}": {
+      "delete": {
+        "description": "iOS KnowledgeService.deleteCard \u2192 chat-api DELETE /knowledge/cards/{id}.",
+        "operationId": "v1_knowledge_cards_delete_v1_knowledge_cards__card_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "title": "Card Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "V1 Knowledge Cards Delete"
+      }
+    },
+    "/v1/nutrition/analyze-photo": {
+      "post": {
+        "description": "iOS analyzePhoto \u2192 chat-api POST /nutrition/analyze-photo.",
+        "operationId": "v1_nutrition_analyze_photo_v1_nutrition_analyze_photo_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "V1 Nutrition Analyze Photo"
+      }
+    },
+    "/v1/nutrition/barcode/{code}": {
+      "get": {
+        "description": "iOS lookupBarcode \u2192 chat-api GET /nutrition/barcode/{code}.",
+        "operationId": "v1_nutrition_barcode_v1_nutrition_barcode__code__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "V1 Nutrition Barcode"
+      }
+    },
+    "/v1/nutrition/fueling-status": {
+      "get": {
+        "description": "iOS getFuelingStatus \u2192 chat-api GET /nutrition/fueling-status.",
+        "operationId": "v1_nutrition_fueling_status_v1_nutrition_fueling_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "V1 Nutrition Fueling Status"
+      }
+    },
+    "/v1/nutrition/parse-text": {
+      "post": {
+        "description": "iOS parseText \u2192 chat-api POST /nutrition/parse-text.",
+        "operationId": "v1_nutrition_parse_text_v1_nutrition_parse_text_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "V1 Nutrition Parse Text"
+      }
+    },
+    "/v1/nutrition/protein-nudge/check": {
+      "post": {
+        "description": "iOS checkProteinNudge \u2192 chat-api POST /nutrition/protein-nudge/check.",
+        "operationId": "v1_nutrition_protein_nudge_check_v1_nutrition_protein_nudge_check_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "V1 Nutrition Protein Nudge Check"
+      }
+    },
+    "/v1/sync/confirm": {
+      "post": {
+        "description": "SyncEngine confirm-success \u2192 mapper-api POST /sync/confirm.",
+        "operationId": "v1_sync_confirm_v1_sync_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmSyncRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmSyncResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "V1 Sync Confirm"
@@ -60,14 +1400,36 @@
       "post": {
         "description": "SyncEngine confirm-failure \u2192 mapper-api POST /sync/failed.",
         "operationId": "v1_sync_failed_v1_sync_failed_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportSyncFailedRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ReportSyncFailedResponse"
+                }
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "V1 Sync Failed"
@@ -77,14 +1439,56 @@
       "get": {
         "description": "SyncEngine pending-flush read \u2192 mapper-api GET /sync/pending.",
         "operationId": "v1_sync_pending_v1_sync_pending_get",
+        "parameters": [
+          {
+            "description": "Device type: ios | android | garmin.",
+            "in": "query",
+            "name": "device_type",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DeviceType",
+              "description": "Device type: ios | android | garmin."
+            }
+          },
+          {
+            "description": "Optional device identifier.",
+            "in": "query",
+            "name": "device_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional device identifier.",
+              "title": "Device Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PendingSyncResponse"
+                }
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "V1 Sync Pending"
@@ -94,14 +1498,36 @@
       "post": {
         "description": "Save & End on iOS \u2192 mapper-api POST /workouts/complete.",
         "operationId": "v1_workouts_complete_v1_workouts_complete_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkoutCompletionRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/WorkoutCompletionResponse"
+                }
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "V1 Workouts Complete"
@@ -111,14 +1537,52 @@
       "get": {
         "description": "iOS Home / Calendar planned-workouts read \u2192 mapper-api GET /workouts/planned.",
         "operationId": "v1_workouts_planned_v1_workouts_planned_get",
+        "parameters": [
+          {
+            "description": "Inclusive start date (ISO 8601).",
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "description": "Inclusive start date (ISO 8601).",
+              "format": "date",
+              "title": "From",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Inclusive end date (ISO 8601).",
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "description": "Inclusive end date (ISO 8601).",
+              "format": "date",
+              "title": "To",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PlannedListResponse"
+                }
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "V1 Workouts Planned"
