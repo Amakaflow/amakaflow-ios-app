@@ -109,7 +109,7 @@ class DebugLogService: ObservableObject {
         // AMA-1823: surface the request_id so debug log entries can be
         // correlated with Sentry breadcrumbs and BFF/mapper-api logs.
         if let requestID = requestID {
-            metadata["RequestID"] = requestID
+            metadata["request_id"] = requestID
         }
 
         let details = error?.localizedDescription ?? response ?? "Unknown error"

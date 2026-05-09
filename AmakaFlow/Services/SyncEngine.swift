@@ -73,7 +73,7 @@ actor SyncEngine {
             await DebugLogService.shared.log(
                 "Sync queue request_id persistence failed",
                 details: error.localizedDescription,
-                metadata: ["queueItemId": item.id, "requestId": requestId]
+                metadata: ["queueItemId": item.id, "request_id": requestId]
             )
             // Non-fatal: fall through with the in-memory stamped copy so the
             // attempt still propagates a request_id to the backend.
@@ -85,7 +85,7 @@ actor SyncEngine {
             await DebugLogService.shared.log(
                 "Sync queue mark-in-flight failed",
                 details: error.localizedDescription,
-                metadata: ["queueItemId": item.id, "requestId": requestId]
+                metadata: ["queueItemId": item.id, "request_id": requestId]
             )
             return
         }
@@ -125,7 +125,7 @@ actor SyncEngine {
                     "queueItemId": item.id,
                     "resourceType": item.resourceType,
                     "resourceId": item.resourceId,
-                    "requestId": requestId,
+                    "request_id": requestId,
                     "attempt": String(nextAttempt)
                 ]
             )
@@ -140,7 +140,7 @@ actor SyncEngine {
                 await DebugLogService.shared.log(
                     "Sync queue failure persistence failed",
                     details: error.localizedDescription,
-                    metadata: ["queueItemId": item.id, "requestId": requestId]
+                    metadata: ["queueItemId": item.id, "request_id": requestId]
                 )
                 return
             }
@@ -154,7 +154,7 @@ actor SyncEngine {
                 await DebugLogService.shared.log(
                     "Sync queue item poisoned",
                     details: "\(item.resourceType)/\(item.resourceId): \(syncError.localizedDescription)",
-                    metadata: ["source": "SyncEngine", "requestId": requestId]
+                    metadata: ["source": "SyncEngine", "request_id": requestId]
                 )
                 await cleanupCompletedItems()
             }
