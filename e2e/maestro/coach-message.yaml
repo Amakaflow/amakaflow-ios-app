@@ -4,15 +4,15 @@
 # coach interaction flow, so test IDs here are best-effort. If selectors
 # don't match in CI, this flow will be skipped via continueOnFailure in
 # the workflow until AMA-1821 follow-up tightens it (see PR description).
+#
+# AMA-1837: uses the shared `_lib/clerk-signin.yaml` subflow for real
+# Clerk staging sign-in. The subflow performs `launchApp` itself.
 
 appId: com.myamaka.AmakaFlowCompanion
 ---
-- launchApp:
-    appId: com.myamaka.AmakaFlowCompanion
-    permissions:
-      notifications: deny
+- runFlow: _lib/clerk-signin.yaml
 - waitForAnimationToEnd:
-    timeout: 5000
+    timeout: 3000
 - runFlow:
     when:
       visible: "Coach"

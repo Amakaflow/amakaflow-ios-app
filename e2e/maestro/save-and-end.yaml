@@ -1,19 +1,17 @@
 # AMA-1821 / AMA-1817 contract-first epic — Maestro merge gate flow #1
 # Top user journey: Start workout -> log sets -> Save & End.
 # Adapted from /tmp/maestro-full-workout.yaml (session memory).
-# Assumes the app is launched into a state where a workout is queued and
-# the home screen shows "Start workout". The app must be already signed in
-# (CI seeds this via the same TestCredentials hook used by the existing
-# UITests; see ios-tests.yml).
+#
+# AMA-1837: now uses the shared `_lib/clerk-signin.yaml` subflow to perform
+# real Clerk staging sign-in before exercising the workout journey. The
+# subflow handles `launchApp` itself — do NOT add another launch step here.
+# Assumes a workout is queued for the test user once signed in.
 
 appId: com.myamaka.AmakaFlowCompanion
 ---
-- launchApp:
-    appId: com.myamaka.AmakaFlowCompanion
-    permissions:
-      notifications: deny
+- runFlow: _lib/clerk-signin.yaml
 - waitForAnimationToEnd:
-    timeout: 5000
+    timeout: 3000
 - tapOn:
     text: "Start workout"
 - waitForAnimationToEnd:

@@ -2,15 +2,15 @@
 # Top user journey: After a Save & End, the workout shows up in history.
 # Adapted from /tmp/maestro-history-check.yaml.
 # Run AFTER save-and-end.yaml (in CI we sequence them in the workflow).
+#
+# AMA-1837: uses the shared `_lib/clerk-signin.yaml` subflow for real
+# Clerk staging sign-in. The subflow performs `launchApp` itself.
 
 appId: com.myamaka.AmakaFlowCompanion
 ---
-- launchApp:
-    appId: com.myamaka.AmakaFlowCompanion
-    permissions:
-      notifications: deny
+- runFlow: _lib/clerk-signin.yaml
 - waitForAnimationToEnd:
-    timeout: 5000
+    timeout: 3000
 - tapOn:
     text: "More"
 - waitForAnimationToEnd:

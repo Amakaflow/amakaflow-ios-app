@@ -1,0 +1,91 @@
+# AMA-1837 — Reusable Clerk staging sign-in subflow
+#
+# Drives a real Clerk sign-in against the staging instance
+# (ruling-mite-84.clerk.accounts.dev) using the documented `+clerk_test`
+# subaddress, which makes Clerk accept the universal verification code
+# `424242` regardless of dashboard config (see Clerk docs on "Test mode").
+#
+# This subflow is intentionally idempotent:
+#   - If the app is ALREADY signed in (Home tab visible), it is a no-op.
+#   - Otherwise it walks the email -> code flow and asserts the Home tab
+#     becomes visible within ~30s. If sign-in fails to complete, the flow
+#     fails loudly via `assertVisible` rather than silently continuing.
+#
+# Preconditions for callers:
+#   - The app under test must be a build pointed at the STAGING backend
+#     (Release config, or Debug with CLERK_PUBLISHABLE_KEY_STAGING set to
+#     the ruling-mite-84 key — see memory clerk-instances-by-environment.md).
+#   - The simulator must have network access to *.clerk.accounts.dev and the
+#     staging mapper-api host.
+#   - Test account `claude+clerk_test@amakaflow.dev` must exist in the
+#     staging Clerk instance (provisioned via Clerk Backend API — see
+#     memory ios-sim-test-loop-recipe.md).
+#
+# Callers should `runFlow: _lib/clerk-signin.yaml` as their FIRST step and
+# then immediately proceed with their own steps. Do NOT add a separate
+# `launchApp` step in the caller — this subflow already launches the app
+# with the right notification permission.
+
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    permissions:
+      notifications: deny
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# Fast path: already signed in. The "Coach" tab bar item is the canonical
+# proof of an authenticated Home state.
+- runFlow:
+    when:
+      visible: "Coach"
+    commands:
+      - assertVisible: "Coach"
+      # Already signed in — nothing else to do.
+
+# Sign-in path: only runs if Coach tab is NOT yet visible.
+- runFlow:
+    when:
+      notVisible: "Coach"
+    commands:
+      # Some builds show a one-time "Skip" intro before the email field.
+      - runFlow:
+          when:
+            visible: "Skip"
+          commands:
+            - tapOn: "Skip"
+            - waitForAnimationToEnd:
+                timeout: 3000
+
+      - tapOn:
+          text: "Enter your email"
+      - inputText: "claude+clerk_test@amakaflow.dev"
+      - tapOn:
+          text: "Continue"
+      - waitForAnimationToEnd:
+          timeout: 10000
+
+      # Clerk flow may show a password field first OR jump straight to the
+      # 6-digit code screen depending on instance config. Handle both.
+      - runFlow:
+          when:
+            visible: "Check your email"
+          commands:
+            - inputText: "424242"
+            - waitForAnimationToEnd:
+                timeout: 12000
+      - runFlow:
+          when:
+            visible: "Verification code"
+          commands:
+            - inputText: "424242"
+            - waitForAnimationToEnd:
+                timeout: 12000
+
+      # Final assertion: Home/Coach tab must be visible within 30s. If not,
+      # this fails loudly and aborts the calling flow.
+      - extendedWaitUntil:
+          visible: "Coach"
+          timeout: 30000
+      - assertVisible: "Coach"
