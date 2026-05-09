@@ -29,6 +29,27 @@ nonisolated final class AcceptedSuggestionsRepository {
         return record
     }
 
+    /// AMA-1792 (CR pass 2): atomic accept-with-event. The pair
+    /// (`accepted_suggestions` + matching `workout_events`) must land or
+    /// roll back together — otherwise a half-applied write leaves an
+    /// orphan event row that `hydrateIncoming` can resurrect on the next
+    /// launch despite the canonical `accepted_suggestions` row never
+    /// existing. Both upserts and both sync_queue enqueues happen inside
+    /// one `dbQueue.write` transaction.
+    func acceptedWithEvent(suggestion: LocalAcceptedSuggestion, event: LocalWorkoutEvent, enqueueSync: Bool = true) throws {
+        var sg = suggestion
+        var ev = event
+        try dbQueue.write { db in
+            // FK: accepted_suggestions.workout_event_id → workout_events.id.
+            try ev.upsert(db)
+            try sg.upsert(db)
+            if enqueueSync {
+                try syncQueue.enqueue(in: db, resourceType: LocalWorkoutEvent.databaseTableName, resourceId: ev.id, op: "upsert", payload: try encode(ev))
+                try syncQueue.enqueue(in: db, resourceType: LocalAcceptedSuggestion.databaseTableName, resourceId: sg.id, op: "upsert", payload: try encode(sg))
+            }
+        }
+    }
+
     func pendingForUser(_ userId: String) throws -> [LocalAcceptedSuggestion] {
         try dbQueue.read { db in
             try LocalAcceptedSuggestion

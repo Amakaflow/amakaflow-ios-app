@@ -87,6 +87,30 @@ class WorkoutsViewModel: ObservableObject {
             eventsRepo: dependencies.workoutEventsRepository
         )
 
+        // CR pass 2: re-run the legacy migration the moment a Clerk user
+        // id becomes available. Without this, a cold-launch race where
+        // pairingService.userProfile resolves AFTER VM init silently
+        // defers the migration until the next app launch.
+        dependencies.pairingService.userProfilePublisher
+            .compactMap { $0?.id }
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] userId in
+                guard let self else { return }
+                UserDefaultsAcceptedMigration.runIfNeeded(
+                    userId: userId,
+                    acceptedRepo: self.acceptedRepo,
+                    eventsRepo: self.eventsRepo
+                )
+                // Refresh `incomingWorkouts` so the freshly-migrated rows
+                // appear without waiting for the next loadWorkouts.
+                self.incomingWorkouts = Self.hydrateIncoming(
+                    userId: userId,
+                    eventsRepo: self.eventsRepo
+                )
+            }
+            .store(in: &cancellables)
+
         // Observe workout completion notifications (AMA-237)
         NotificationCenter.default.publisher(for: .workoutCompleted)
             .receive(on: DispatchQueue.main)
@@ -492,10 +516,10 @@ class WorkoutsViewModel: ObservableObject {
         )
 
         do {
-            // FK: accepted_suggestions.workout_event_id → workout_events.id.
-            // Upsert the event first or the parent insert violates the FK.
-            _ = try eventsRepo.upsert(event, enqueueSync: true)
-            _ = try acceptedRepo.insert(suggestion, enqueueSync: true)
+            // CR pass 2: atomic — both rows + their sync_queue entries
+            // commit together or roll back together. Avoids leaving an
+            // orphan workout_event row if the suggestion insert failed.
+            try acceptedRepo.acceptedWithEvent(suggestion: suggestion, event: event, enqueueSync: true)
             DebugLogService.shared.log(
                 "Accepted suggestion persisted (local-first)",
                 details: "userId=\(userId) clientId=\(clientId)",

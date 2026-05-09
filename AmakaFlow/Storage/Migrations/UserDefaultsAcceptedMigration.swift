@@ -116,9 +116,10 @@ enum UserDefaultsAcceptedMigration {
             )
 
             do {
-                // FK: accepted_suggestions.workout_event_id → workout_events.id.
-                _ = try eventsRepo.upsert(event, enqueueSync: true)
-                _ = try acceptedRepo.insert(suggestion, enqueueSync: true)
+                // CR pass 2: atomic 2-table write so a failure can't
+                // leave a workout_events row without its accepted_suggestions
+                // partner (which `hydrateIncoming` would resurrect).
+                try acceptedRepo.acceptedWithEvent(suggestion: suggestion, event: event, enqueueSync: true)
                 migrated += 1
             } catch {
                 failed += 1
