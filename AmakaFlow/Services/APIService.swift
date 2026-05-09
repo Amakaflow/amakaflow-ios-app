@@ -248,7 +248,13 @@ class APIService {
         }
     }
 
-    /// Fetch scheduled workouts from backend
+    /// Fetch scheduled workouts from backend.
+    ///
+    /// AMA-1814: mapper-api no longer exposes `/workouts/scheduled` —
+    /// AMA-1793 replaced it with `/workouts/planned` keyed by an
+    /// explicit date window. We ask for the next 7 days, which matches
+    /// the Home + Calendar surfaces' read horizon.
+    ///
     /// - Returns: Array of scheduled workouts
     /// - Throws: APIError if request fails
     func fetchScheduledWorkouts(isRetry: Bool = false) async throws -> [ScheduledWorkout] {
@@ -256,7 +262,22 @@ class APIService {
             throw APIError.unauthorized
         }
 
-        let url = URL(string: "\(baseURL)/workouts/scheduled")!
+        let startDate = Calendar.current.startOfDay(for: Date())
+        let endDate = Calendar.current.date(byAdding: .day, value: 7, to: startDate) ?? startDate
+        let dayFormatter = DateFormatter()
+        dayFormatter.calendar = Calendar(identifier: .gregorian)
+        dayFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dayFormatter.timeZone = Calendar.current.timeZone
+        dayFormatter.dateFormat = "yyyy-MM-dd"
+
+        var components = URLComponents(string: "\(baseURL)/workouts/planned")!
+        components.queryItems = [
+            URLQueryItem(name: "from", value: dayFormatter.string(from: startDate)),
+            URLQueryItem(name: "to", value: dayFormatter.string(from: endDate))
+        ]
+        guard let url = components.url else {
+            throw APIError.invalidURL
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.allHTTPHeaderFields = await makeAuthHeaders()
