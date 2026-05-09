@@ -36,7 +36,7 @@ iOS APIService methods in scope (~25):
 
 Why first-wave: this is the reliability/error-recovery surface. The local-first GRDB SyncEngine (AMA-1791/1792) flushes every mutation through this domain. AMA-1812 (`/sync/pending` 500) and AMA-1813 (`/workouts/complete` 422) both lived here.
 
-Naming: **`sync` not `completion`**. The sync_queue rows include completion writes AND accept-suggestion writes AND tombstones — it's reconciliation for every queued mutation, not just completion submission.
+What `sync` actually means: **replaying and reconciling all queued writes from `sync_queue` (completions, accepted suggestions, tombstones)** — not just workout completion submission. This is why the name stays `sync` over `completion`.
 
 BFF route prefix: **`/v1/sync/...`**
 
@@ -50,6 +50,8 @@ iOS APIService methods in scope (~6):
 ### `coach` — AI / chat / suggestions / shape-shifting media ingestion
 
 Why first-wave: highest schema-drift risk. Coach payloads evolve as AI prompts and models change, and ingestion accepts heterogeneous media (text, audio, Instagram, photo). Generated client + server-side translation in the BFF lets iOS keep a stable shape while the underlying chat-api / workout-ingestor-api evolve.
+
+Coach depends on `mapper-api` + `chat-api` + `workout-ingestor-api` as needed; BFF front-loads orchestration so iOS calls one place (`/v1/coach/...`) instead of routing per-feature to the right backend service.
 
 BFF route prefix: **`/v1/coach/...`**
 
