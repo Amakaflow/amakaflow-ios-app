@@ -5,6 +5,17 @@
 # subaddress, which makes Clerk accept the universal verification code
 # `424242` regardless of dashboard config (see Clerk docs on "Test mode").
 #
+# Test credentials (intentionally hardcoded — see below):
+#   - Email:  claude+clerk_test@amakaflow.dev
+#   - Code:   424242
+# Both are PUBLIC Clerk test-mode values, safe to commit. The `+clerk_test`
+# subaddress is the documented Clerk pattern that pins the verification
+# code to `424242` regardless of dashboard config (see Clerk docs:
+# https://clerk.com/docs/testing/test-emails-and-phones). Hardcoding them
+# is required for deterministic CI — parameterizing via env vars would
+# add a runtime-config foot-gun without any security benefit, since these
+# values are explicitly designed by Clerk to be public test fixtures.
+#
 # This subflow is intentionally idempotent:
 #   - If the app is ALREADY signed in (Home tab visible), it is a no-op.
 #   - Otherwise it walks the email -> code flow and asserts the Home tab
