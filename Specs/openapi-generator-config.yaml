@@ -1,0 +1,27 @@
+# swift-openapi-generator config for the AMA-1818 first-wave codegen.
+#
+# Generates Swift Codable types + a URLSession-based client for ONLY the
+# 5 mobile-facing endpoints that the iOS app needs (per AMA-1824
+# `docs/architecture/mobile-domains.md`). Anything outside the filter is
+# stripped — keeps the generated module small and reduces compile time
+# vs codegenning all ~80 mapper-api endpoints.
+
+generate:
+  - types
+  - client
+
+# AMA-1818 first-wave scope. Adding endpoints here triggers a regen and
+# broadens the iOS surface area governed by the contract — flag in PR.
+filter:
+  paths:
+    - /workouts/complete
+    - /workouts/planned
+    - /sync/pending
+    - /sync/confirm
+    - /sync/failed
+
+accessModifier: public
+
+# Tags scope generated client methods into named groups; not strictly
+# needed, but keeps the generated client API discoverable.
+namingStrategy: idiomatic
