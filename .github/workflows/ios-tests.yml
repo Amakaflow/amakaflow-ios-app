@@ -169,6 +169,51 @@ jobs:
           path: AmakaFlowCompanion/TestResults
           retention-days: 7
 
+      # ---------------------------------------------------------
+      # CJ-01 / L2 JUnit artifact (AMA-1839)
+      # Re-runs the CJ-01 L2 suite (24 tests, ~0.6s execution) with
+      # output piped through xcpretty for JUnit XML, then uploads it
+      # under the `cj01-l2-junit` artifact name so the consolidated
+      # CJ-01 report (per blueprint Phase 2) can pick it up.
+      # ---------------------------------------------------------
+      - name: Install xcpretty for JUnit
+        if: always()
+        run: gem install --user-install xcpretty
+
+      - name: Re-run CJ-01 L2 suite for JUnit emission
+        if: always()
+        working-directory: AmakaFlowCompanion
+        run: |
+          set +e
+          export PATH="$(ruby -e 'puts Gem.user_dir')/bin:$PATH"
+          xcodebuild test-without-building \
+            -project AmakaFlowCompanion.xcodeproj \
+            -scheme AmakaFlowCompanion \
+            -destination "platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}" \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm \
+            -only-testing:AmakaFlowCompanionTests/AMA1839_CJ01_WorkoutCompletionRequest_EncodingTests \
+            -only-testing:AmakaFlowCompanionTests/AMA1839_CJ01_GeneratedSchemas_DecodingTests \
+            -only-testing:AmakaFlowCompanionTests/AMA1839_CJ01_SyncEngine_RequestIdTests \
+            -only-testing:AmakaFlowCompanionTests/AMA1839_CJ01_AcceptedSuggestions_ReplaceOnAcceptTests \
+            -only-testing:AmakaFlowCompanionTests/AMA1839_CJ01_HydrateIncoming_PersistenceReloadTests \
+            -parallel-testing-enabled NO \
+            -resultBundlePath CJ01TestResults 2>&1 \
+            | xcpretty -r junit --output cj01-l2-junit.xml || true
+          # The pipeline above always returns 0 so the artifact upload step runs;
+          # the authoritative CJ-01 L2 result is the green/red of the main
+          # test step above (which is already required).
+          ls -la cj01-l2-junit.xml || echo "JUnit not produced"
+
+      - name: Upload CJ-01 L2 JUnit artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cj01-l2-junit
+          path: AmakaFlowCompanion/cj01-l2-junit.xml
+          retention-days: 14
+          if-no-files-found: warn
+
   # ---------------------------------------------------------
   # watchOS Tests (runs in parallel with iOS tests)
   # Part of AMA-553: Watch app test automation coverage
