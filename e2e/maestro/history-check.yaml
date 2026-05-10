@@ -15,8 +15,9 @@ appId: com.myamaka.AmakaFlowCompanion
     text: "More"
 - waitForAnimationToEnd:
     timeout: 1500
+# AMA-1842 renamed this row to ticket-tagged ID "ama1842.history.row".
 - tapOn:
-    id: "more_row_history"
+    id: "ama1842.history.row"
 - waitForAnimationToEnd:
     timeout: 3000
 # Asserts the history screen actually rendered. We do not assert a specific

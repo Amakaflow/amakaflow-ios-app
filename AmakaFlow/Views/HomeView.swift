@@ -792,7 +792,9 @@ struct HomeView: View {
                             }
                         }
                         .buttonStyle(AFPrimaryButtonStyle())
-                        .accessibilityIdentifier("home_start_workout")
+                        // AMA-1842: stable a11y identifier for CJ-01 L3.
+                        // Legacy ID: "home_start_workout".
+                        .accessibilityIdentifier("ama1842.start.button")
                     }
                     .padding(12)
                     .background(Theme.Colors.backgroundSubtle)
