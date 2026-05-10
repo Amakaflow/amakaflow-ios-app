@@ -1,0 +1,108 @@
+# AMA-1839 — CJ-01 L4 Maestro evidence flow
+#
+# Pilot critical journey per docs/testing/blueprint.md (CJ-01):
+#   Sign-in -> Generate -> Save & End -> Verify -> Reopen
+#
+# Posture: EVIDENCE ONLY (L4). Per blueprint Section "Test layers":
+#   "L4 is required as evidence for major journeys, but not authoritative
+#    alone." A failure here does NOT block CI merge — it is captured as a
+#    warn-only signal with screenshot artifacts. The authoritative
+#    validators are L1 (FastAPI pytest), L2 (XCTest), and L3 (XCUITest).
+#
+# Filename suffix `-evidence` follows blueprint "Naming conventions":
+#   `<ticket>-<journey>-<purpose>.yaml` with `-evidence` indicating
+#   screenshot/observability runs.
+#
+# Selectors:
+#   - Most steps use `id:` matchers backed by accessibilityIdentifiers
+#     introduced in AMA-1842 (`ama1842.coach.row`, `ama1842.history.row`,
+#     `ama1842.suggest.button`, `ama1842.suggest.preview`,
+#     `ama1842.accept.button`, `ama1842.start.button`,
+#     `ama1842.endWorkout.button`, `ama1842.activityHistory.cell.<index>`).
+#   - "Save & End" is a SwiftUI alert button without a custom identifier,
+#     so it uses a text matcher.
+#
+# Sign-in is delegated to `_lib/clerk-signin.yaml` (real Clerk staging
+# auth via `+clerk_test` subaddress + universal code 424242).
+#
+# Screenshot checkpoints (9 total) align with blueprint Phase 2 step 4:
+#   "Screenshots after sign-in, after generate, after save and end, after
+#    verification, and after reopen."
+# Additional intermediate checkpoints capture per-tap state for richer
+# evidence when a step fails mid-journey.
+
+appId: com.myamaka.AmakaFlowCompanion
+---
+# --- Step 1: launch + sign in (delegated to reusable subflow) ---
+- runFlow: ../../_lib/clerk-signin.yaml
+- takeScreenshot: cj01-step1-signed-in
+
+# --- Step 2: navigate to Coach tab + tap Suggest a Workout ---
+- tapOn:
+    id: "ama1842.coach.row"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: cj01-step2-coach-tab
+
+- tapOn:
+    id: "ama1842.suggest.button"
+- takeScreenshot: cj01-step3-suggest-tapped
+
+# LLM Generate can take 10-30s; allow generous timeout.
+- extendedWaitUntil:
+    visible:
+      id: "ama1842.suggest.preview"
+    timeout: 30000
+- takeScreenshot: cj01-step4-suggestion-generated
+
+# --- Step 3: accept the generated suggestion ---
+- tapOn:
+    id: "ama1842.accept.button"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: cj01-step5-accepted
+
+# --- Step 4: start the accepted workout ---
+- tapOn:
+    id: "ama1842.start.button"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: cj01-step6-workout-started
+
+# --- Step 5: end + save the workout ---
+- tapOn:
+    id: "ama1842.endWorkout.button"
+- waitForAnimationToEnd:
+    timeout: 2000
+# "Save & End" is a SwiftUI alert button — no custom accessibilityIdentifier
+# per AMA-1842; text matcher is intentional.
+- tapOn:
+    text: "Save & End"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: cj01-step7-saved-and-ended
+
+# --- Step 6: verify in Activity History ---
+- tapOn:
+    id: "ama1842.history.row"
+- extendedWaitUntil:
+    visible:
+      id: "ama1842.activityHistory.cell.0"
+    timeout: 10000
+- takeScreenshot: cj01-step8-activity-history-shows-workout
+
+# --- Step 7: terminate + relaunch (Reopen step) ---
+- stopApp
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    permissions:
+      notifications: deny
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    id: "ama1842.history.row"
+- extendedWaitUntil:
+    visible:
+      id: "ama1842.activityHistory.cell.0"
+    timeout: 10000
+- takeScreenshot: cj01-step9-reopened-workout-still-visible

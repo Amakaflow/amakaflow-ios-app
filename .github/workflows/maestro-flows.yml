@@ -172,6 +172,31 @@ jobs:
 
           exit $OVERALL
 
+      # AMA-1839 — CJ-01 L4 evidence flow. Per docs/testing/blueprint.md,
+      # L4 is EVIDENCE not a validator: failure does NOT gate merge. We
+      # run it in its own step with continue-on-error and emit a dedicated
+      # JUnit + screenshot artifact pair so reviewers can inspect evidence
+      # independently of the legacy smoke flows above.
+      - name: Run CJ-01 L4 evidence flow (warn-only)
+        id: cj01-l4
+        continue-on-error: true
+        run: |
+          set +e
+          mkdir -p maestro-output/cj01-l4
+          FLOW="e2e/maestro/flows/workout-lifecycle/ama1839-cj01-signin-generate-saveend-evidence.yaml"
+          echo "::group::maestro test ${FLOW} (evidence-only)"
+          maestro test "${FLOW}" \
+            --format junit \
+            --output "maestro-output/cj01-l4/cj01-l4-junit.xml" 2>&1 \
+            | tee "maestro-output/cj01-l4/cj01-l4.log"
+          STATUS=${PIPESTATUS[0]}
+          echo "::endgroup::"
+          if [ "$STATUS" != "0" ]; then
+            echo "::warning::CJ-01 L4 evidence flow did not complete cleanly (evidence-only, not gating)."
+          fi
+          # Always exit 0 — evidence step never blocks the workflow.
+          exit 0
+
       - name: Upload Maestro output
         if: always()
         uses: actions/upload-artifact@v4
@@ -181,4 +206,24 @@ jobs:
             maestro-output/
             ~/.maestro/tests/**/screenshots/**
           retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload CJ-01 L4 evidence screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj01-l4-evidence
+          path: |
+            ~/.maestro/tests/**/screenshots/**
+            maestro-output/cj01-l4/cj01-l4.log
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Upload CJ-01 L4 JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj01-l4-junit
+          path: maestro-output/cj01-l4/cj01-l4-junit.xml
+          retention-days: 14
           if-no-files-found: ignore

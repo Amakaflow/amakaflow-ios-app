@@ -36,7 +36,7 @@ BFF forwards the typed request bodies and response payloads.
 | L1 | Green | `services/{mapper-api,chat-api,mobile-bff}/tests/integration/test_cj01_*.py` | JUnit artifacts published per service: `cj01-l1-junit-{service}` |
 | L2 | Green | `AmakaFlowCompanion/AmakaFlowCompanionTests/CJ01/AMA1839_CJ01_*.swift` | 24 tests, JUnit artifact `cj01-l2-junit` |
 | L3 | Selectors landed (AMA-1842); journey blocked on AMA-1843 | `AmakaFlowCompanion/AmakaFlowCompanionUITests/CJ01/AMA1839_CJ01_WorkoutLifecycle_CriticalJourneyTests.swift` | Tests use `ama1842.*` accessibilityIdentifiers end-to-end and currently `XCTSkip` until AMA-1843 (UITest Clerk signin bypass) lands — ClerkKitUI ships zero accessibilityIdentifier values across its vendor SwiftUI signin views, so XCUITest cannot drive the signin step today. Skip is intentional and surfaces AMA-1843 in the test log. |
-| L4 | Not yet implemented | `e2e/maestro/flows/workout-lifecycle/` (planned) | Phase 2 step 4 |
+| L4 | Green (evidence-only) | `e2e/maestro/flows/workout-lifecycle/ama1839-cj01-signin-generate-saveend-evidence.yaml` | AMA-1839: 9 screenshot checkpoints across the full journey (sign-in -> Generate -> Save & End -> Verify -> Reopen). Wired into `.github/workflows/maestro-flows.yml` as `continue-on-error: true` with dedicated artifacts `cj01-l4-evidence` (screenshots) and `cj01-l4-junit` (JUnit). Per blueprint, L4 is evidence — failure does NOT gate merge. The same Clerk WebView fragility documented for L3 (AMA-1843 / clerk-ios#413) can also affect this flow's first step; that is expected and acceptable for evidence posture. |
 
 ### What L1 currently asserts
 
