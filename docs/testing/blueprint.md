@@ -37,6 +37,22 @@ A feature is only considered validated when the required layers for that feature
 - **Major user journey work:** all four layers required, with L3 as validator and L4 as evidence.
 - **Infrastructure and test-platform work:** prove the platform fix directly and update affected test plans, but do not masquerade infra fixes as feature validation.
 
+### Known L3 limitations (vendor-imposed)
+
+Some L3 coverage is implemented with deliberate fragility because a vendor SDK does not expose stable test hooks. These are temporary tooling constraints, not permanent exemptions from L3 coverage. Each gets:
+
+- a documented fragile fallback path that still attempts the assertion,
+- an upstream issue with the vendor requesting test hooks or accessibility identifiers,
+- a Linear ticket tracking the workaround until the upstream gap is closed.
+
+Current entries:
+
+| Journey step | Vendor SDK | Limitation | Fallback in use | Upstream | Workaround ticket |
+|---|---|---|---|---|---|
+| CJ-01 sign-in | clerk-ios (`ClerkKitUI.AuthView`) | WebView-hosted form, zero `accessibilityIdentifier` annotations, `SignIn.create` is internal access (not callable from app code) | Multi-strategy text-fallback selectors (`email`, `Email address`, `TextField (First Match)`) — known to time out on fresh sims | [clerk-ios#413](https://github.com/clerk/clerk-ios/issues/413) | AMA-1843 |
+
+When the upstream lands one of: (a) `@_spi(Test) public` on `SignIn.create` + `verifyCode`, OR (b) `accessibilityIdentifier` on `AuthView` fields, the fragile fallback is removed and L3 sign-in becomes a hard gate again.
+
 ## Repository structure
 
 The repository should make test intent obvious by separating product code, fixtures, contracts, and evidence-producing automation. The exact folder names can adapt to the current repo layout, but the ownership boundaries below should remain stable.
