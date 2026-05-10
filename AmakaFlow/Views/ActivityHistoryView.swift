@@ -44,7 +44,9 @@ struct ActivityHistoryView: View {
                                                 CompletionRowView(completion: completion)
                                             }
                                             .buttonStyle(.plain)
-                                            .accessibilityIdentifier("completion_card_\(index)")
+                                            // AMA-1842: stable a11y identifier for CJ-01 L3.
+                                            // Legacy ID: "completion_card_<index>".
+                                            .accessibilityIdentifier("ama1842.activityHistory.cell.\(index)")
                                             .onAppear {
                                                 Task {
                                                     await viewModel.loadMoreIfNeeded(currentItem: completion)

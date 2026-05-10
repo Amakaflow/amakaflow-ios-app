@@ -192,7 +192,10 @@ struct WorkoutPlayerView: View {
                     .background(Theme.Colors.surfaceElevated)
                     .clipShape(Circle())
             }
-            .accessibilityIdentifier("CloseWorkoutButton")
+            // AMA-1842: stable a11y identifier for CJ-01 L3 — this button
+            // opens the "End Workout?" alert that contains "Save & End".
+            // Legacy ID: "CloseWorkoutButton".
+            .accessibilityIdentifier("ama1842.endWorkout.button")
 
             Spacer()
 

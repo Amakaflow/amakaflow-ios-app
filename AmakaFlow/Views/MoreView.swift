@@ -34,7 +34,9 @@ struct MoreView: View {
                     } label: {
                         moreRow(icon: "bubble.left.and.bubble.right.fill", title: "AI Coach")
                     }
-                    .accessibilityIdentifier("more_row_coach")
+                    // AMA-1842: stable a11y identifier for CJ-01 L3 ("Coach tab" entry — Coach lives under More in this app).
+                    // Legacy ID: "more_row_coach".
+                    .accessibilityIdentifier("ama1842.coach.row")
 
                     if FeatureFlags.nonMvp {
                         NavigationLink {
@@ -50,7 +52,9 @@ struct MoreView: View {
                     } label: {
                         moreRow(icon: "clock.fill", title: "History")
                     }
-                    .accessibilityIdentifier("more_row_history")
+                    // AMA-1842: stable a11y identifier for CJ-01 L3 ("Activity History" entry).
+                    // Legacy ID: "more_row_history".
+                    .accessibilityIdentifier("ama1842.history.row")
 
                     if FeatureFlags.nonMvp {
                         NavigationLink {

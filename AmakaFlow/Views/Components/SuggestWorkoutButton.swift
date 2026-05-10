@@ -31,7 +31,10 @@ struct SuggestWorkoutButton: View {
             )
             .cornerRadius(Theme.CornerRadius.lg)
         }
-        .accessibilityIdentifier("suggest_workout_button")
+        // AMA-1842: stable a11y identifier for CJ-01 L3 XCUITest critical-journey suite.
+        // Keep the legacy "suggest_workout_button" string in code search so that anyone
+        // grepping the old ID lands here and discovers the rename.
+        .accessibilityIdentifier("ama1842.suggest.button")
     }
 }
 

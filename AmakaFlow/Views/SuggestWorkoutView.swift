@@ -139,7 +139,9 @@ struct SuggestWorkoutView: View {
                         .background(Theme.Colors.accentGreen)
                         .cornerRadius(Theme.CornerRadius.md)
                     }
-                    .accessibilityIdentifier("accept_workout_button")
+                    // AMA-1842: stable a11y identifier for CJ-01 L3.
+                    // Legacy ID: "accept_workout_button" (renamed to ticket-tagged form).
+                    .accessibilityIdentifier("ama1842.accept.button")
 
                     // Try again button
                     Button {
@@ -180,7 +182,9 @@ struct SuggestWorkoutView: View {
             .padding(.horizontal, Theme.Spacing.lg)
             .padding(.bottom, 40)
         }
-        .accessibilityIdentifier("suggest_workout_preview")
+        // AMA-1842: marker for the L3 test to know the suggest sheet has loaded a result.
+        // Legacy ID retained as a comment for grep: "suggest_workout_preview".
+        .accessibilityIdentifier("ama1842.suggest.preview")
     }
 
     // MARK: - Error View
