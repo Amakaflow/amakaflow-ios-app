@@ -73,6 +73,7 @@ final class AMA1834_WorkoutCompletionRequest_AssemblyTests: XCTestCase {
     /// deinit off-main so the live builder can be wired back in here.
     private func buildExecutionLogForCompletedWorkout() -> [String: Any] {
         let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let baseTs = Date(timeIntervalSince1970: 1_700_000_000)
         let i0Start = formatter.string(from: baseTs)
         let i0End = formatter.string(from: baseTs.addingTimeInterval(30))
