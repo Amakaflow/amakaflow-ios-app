@@ -6,6 +6,36 @@
 
 ---
 
+## TL;DR — AMA-1817 (Contract-First iOS ↔ Backend)
+
+**What we changed**
+
+- Introduced a mobile BFF as the single front door for iOS, with first-wave coverage for the workout, sync, and coach domains.
+- Switched iOS to a generated Swift client built from the BFF's OpenAPI, so host/path/auth now come from the BFF contract instead of hand-coded URLs.
+- Added OpenAPI extract + diff in backend CI and flow tests in iOS CI so breaking schema changes and broken user journeys are visible before merge.
+- Improved sync observability (status, last_error, retry_count, request_id plumbing) and captured recurring operational "memories" so the same failures are easier to diagnose next time.
+
+**What went well**
+
+- We fixed the biggest source of iOS/backend drift by putting a BFF in front and generating the client from that contract, instead of trying to keep two repos in sync by hand.
+- We kept the first wave narrow and high-impact: workout completion and sync flows moved behind BFF first, then tests and observability followed.
+- CI now enforces *actual* safety rails: schema diffs on key services and a full CJ-01 workout flow as part of iOS tests, not just unit tests.
+
+**What surprised us / current gaps**
+
+- Pydantic v2 + Swift OpenAPI: Pydantic's OpenAPI 3.1 output (optionals as `anyOf` with `null`) exposed limits in `swift-openapi-generator`, which silently dropped some fields. For now, we kept the critical `WorkoutCompletionRequest` body hand-coded rather than ship a truncated generated model.
+- Clerk testability: The Clerk iOS SDK doesn't yet expose test hooks or accessibility identifiers for sign-in, so CJ-01 L3 sign-in uses fragile XCUITest selectors plus Maestro evidence, and we filed an upstream issue instead of faking a cleaner story.
+- `APIService.swift` is still big; critical paths are routed via the generated client, but the file needs a domain-level split in follow-ups.
+
+**Next steps**
+
+- Resolve the Pydantic v2 ↔ Swift OpenAPI gap (AMA-1831) so we can safely use generated request/response types without losing fields.
+- Finish BFF coverage for the coach/chat domain and split `APIService.swift` by domain (AMA-1820-bis, AMA-1829).
+- Complete request_id correlation through iOS → BFF → backend for sync_queue rows (AMA-1823).
+- Expand E2E coverage (offline replay, coach, residual workout flows) and track the Clerk testability issue until upstream adds better test hooks.
+
+---
+
 ## 1. Goals and context
 
 AMA-1817 set out to fix a recurring class of bugs where iOS and backend would silently drift apart until real users hit 500/422/404 failures in critical workout flows.
