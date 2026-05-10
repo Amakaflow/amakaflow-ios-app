@@ -164,6 +164,117 @@ Test files live under
 
 ---
 
+## AMA-1834 — User actually performs a full workout (intervals + HR + execution_log)
+
+**Linear umbrella: AMA-1834.** Sub-journey of CJ-01 — covers the
+"perform the workout" step that sits between Generate and Save & End.
+
+User outcome being validated:
+
+> A signed-in user runs through every interval of a generated workout
+> on the iPhone, the engine records each interval's start/end/duration
+> in execution_log, the heart-rate buffer accumulates samples
+> continuously across work AND rest periods, and at Save & End the
+> request body posted to /v1/workouts/completions includes:
+>
+> - heart_rate_samples (correct shape: `[{timestamp: ISO8601, value: int}, ...]`)
+> - execution_log (per-interval start/end/duration, v2 contract)
+> - workout_structure (the actually-performed intervals, for "Run Again")
+
+### iOS scope clarification (vs the spec's mention of HKWorkoutBuilder)
+
+`HKWorkoutBuilder` + `HKLiveWorkoutBuilder` live in the paired Apple
+Watch app at `AmakaFlowWatch Watch App/HealthKitWorkoutManager.swift`.
+The iPhone side does **not** own an `HKHealthStore` for workouts — it
+receives HR samples via WatchConnectivity into
+`WatchConnectivityManager.heartRateSamples: [HeartRateSample]` and
+maps that buffer to the on-the-wire `[HRSample]` shape inside
+`WorkoutEngine.getHealthMetricsWithSamples`. So at L2 the things
+asserted are: state machine transitions, HR buffer accumulation
+order + wire-shape mapping, and final request-body assembly. There
+is no production `HKHealthStore` coupling on the iOS side that would
+require a protocol-extraction follow-up.
+
+### Layer status (as of 2026-05-10)
+
+| Layer | Status | Authoritative location | Notes |
+|---|---|---|---|
+| L1 | Covered transitively by CJ-01 L1 | `services/{mapper-api,mobile-bff}/tests/integration/test_cj01_*.py` | The Save & End body shape (heart_rate_samples + execution_log + workout_structure) is already pinned by `test_workouts_complete__valid_full_payload__persists_and_returns_summary` and the BFF forward proxy. |
+| L2 | Green | `AmakaFlowCompanion/AmakaFlowCompanionTests/AMA1834/AMA1834_*.swift` | 8 tests, JUnit artifact `ama1834-l2-junit`. ~0.2s exec. |
+| L3 | Deferred | — | Will be added once CJ-01 L3 sign-in vendor blocker (AMA-1843) is unblocked. |
+| L4 | Deferred | — | Same as above. |
+
+### What L2 currently asserts
+
+Test files live under
+`AmakaFlowCompanion/AmakaFlowCompanionTests/AMA1834/`:
+
+- `AMA1834_WorkoutEngine_IntervalStateMachineTests.swift` — interval
+  state machine (`work → rest → next-work → done`), constructed with
+  the same DI surface as the existing `WorkoutEngineTests` fixture
+  (`TestClock` + mock audio/progress/pairing — no real timers, no
+  network, no HealthKit). Asserts:
+  - `test_workoutEngine__threeIntervalsCompleted__transitionsThroughExpectedStates`
+    — full `warmup → manual-rest → reps#1 → timed-rest → reps#2 →
+    cooldown → ended` transition with phase + index assertions at
+    every hop. Also pins `flattenedSteps[1].restAfterSeconds == 5`.
+  - `test_workoutEngine__pauseDuringWork__resumeContinuesSameInterval`
+    — `pause()` does not advance the index; `resume()` returns to
+    `.running` on the same step.
+- `AMA1834_HealthKitBuffer_HRSampleAccumulationTests.swift` — HR
+  sample buffering shape using synthetic samples that match what
+  `WatchConnectivityManager.handleHealthMetrics` produces in
+  production. Asserts:
+  - `test_hrBuffer__samplesArriveDuringWork__accumulateInOrder`
+  - `test_hrBuffer__samplesArriveDuringRest__continueAccumulating`
+    (per AMA-1834 spec, HR is collected continuously, NOT just during
+    work — production buffer is `.append`-only with no phase gate)
+  - `test_hrBuffer__emptyBuffer__mapsToNilForGracefulDegradation`
+    (empty buffer maps to `nil`, not `[]` — matches backend contract)
+- `AMA1834_WorkoutCompletionRequest_AssemblyTests.swift` — Save & End
+  body assembly. Encodes the request through `JSONEncoder` and
+  `JSONSerialization` so we are asserting the exact wire payload, not
+  Swift property values. Asserts:
+  - `test_workoutCompletionRequest__assembledFromCompletedWorkout__includesAllHRSamples`
+    — all 6 HR samples on the wire with correct ISO8601 timestamp +
+    integer bpm shape, in arrival order; `workout_structure` populated
+    with all 3 performed intervals; `source: phone` + `device_info
+    .platform: ios`.
+  - `test_workoutCompletionRequest__assembledFromCompletedWorkout__executionLogHasPerIntervalTimestamps`
+    — `execution_log.version: 2`; every interval has `started_at`,
+    `ended_at`, `actual_duration_seconds`, `status: completed`;
+    `summary.total_duration_seconds: 105`,
+    `summary.active_duration_seconds: 90` (excludes the rest interval).
+  - `test_workoutCompletionRequest__assembledFromEmptyHRBuffer__heartRateSamplesIsNil`
+    — `heart_rate_samples` key is OMITTED from the JSON body when no
+    samples were collected (Swift `nil` → JSON-absent).
+
+### Known L2 gap
+
+The assembly test file builds the v2 `execution_log` dictionary as a
+literal that mirrors what `ExecutionLogBuilder.build()` would have
+returned, instead of driving the live builder, because exercising
+`ExecutionLogBuilder` from a non-`@MainActor` `XCTestCase` instance
+trips a Swift 6 `swift_task_deinitOnExecutorImpl` libmalloc abort
+during the builder's deinit (confirmed in the xcresult crash log:
+`___BUG_IN_CLIENT_OF_LIBMALLOC_POINTER_BEING_FREED_WAS_NOT_ALLOCATED`
+→ `ExecutionLogBuilder.__deallocating_deinit`). Marking the test
+class `@MainActor` did not help because the XCTest harness still
+tears the instance down off the main actor. Production is unaffected
+because `WorkoutEngine` (which owns the only live `ExecutionLogBuilder`)
+is itself `@MainActor`. Follow-up: **AMA-1844** — make
+`ExecutionLogBuilder` safe to deinit off-main so the live builder can
+be wired back into the assembly test.
+
+### CI artifacts
+
+JUnit file is uploaded with `if: always()` so it appears even on a
+failing run:
+
+- `ama1834-l2-junit` -> `AmakaFlowCompanion/ama1834-l2-junit.xml`
+
+---
+
 ## CJ-02 / CJ-03 / CJ-04
 
 Not yet implemented at any layer. Per the blueprint:

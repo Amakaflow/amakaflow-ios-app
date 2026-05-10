@@ -214,6 +214,44 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
 
+      # ---------------------------------------------------------
+      # AMA-1834 / L2 JUnit artifact
+      # Re-runs the AMA-1834 L2 suite (8 tests, ~0.2s execution) with
+      # output piped through xcpretty for JUnit XML, then uploads it
+      # under the `ama1834-l2-junit` artifact name. Same shape as the
+      # CJ-01 step above. Authoritative pass/fail is the main test
+      # step; this is purely the JUnit emission for downstream
+      # consolidated reporting.
+      # ---------------------------------------------------------
+      - name: Re-run AMA-1834 L2 suite for JUnit emission
+        if: always()
+        working-directory: AmakaFlowCompanion
+        run: |
+          set +e
+          export PATH="$(ruby -e 'puts Gem.user_dir')/bin:$PATH"
+          xcodebuild test-without-building \
+            -project AmakaFlowCompanion.xcodeproj \
+            -scheme AmakaFlowCompanion \
+            -destination "platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}" \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm \
+            -only-testing:AmakaFlowCompanionTests/AMA1834_WorkoutEngine_IntervalStateMachineTests \
+            -only-testing:AmakaFlowCompanionTests/AMA1834_HealthKitBuffer_HRSampleAccumulationTests \
+            -only-testing:AmakaFlowCompanionTests/AMA1834_WorkoutCompletionRequest_AssemblyTests \
+            -parallel-testing-enabled NO \
+            -resultBundlePath AMA1834TestResults 2>&1 \
+            | xcpretty -r junit --output ama1834-l2-junit.xml || true
+          ls -la ama1834-l2-junit.xml || echo "JUnit not produced"
+
+      - name: Upload AMA-1834 L2 JUnit artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ama1834-l2-junit
+          path: AmakaFlowCompanion/ama1834-l2-junit.xml
+          retention-days: 14
+          if-no-files-found: warn
+
   # ---------------------------------------------------------
   # watchOS Tests (runs in parallel with iOS tests)
   # Part of AMA-553: Watch app test automation coverage
