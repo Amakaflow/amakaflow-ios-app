@@ -252,6 +252,63 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
 
+      # ---------------------------------------------------------
+      # CJ-01 / L3 JUnit artifact (AMA-1839)
+      # Runs the XCUITest critical journey suite and emits JUnit XML
+      # for the consolidated CJ-01 report. The L3 suite requires real
+      # Clerk staging credentials (UITEST_CLERK_EMAIL /
+      # UITEST_CLERK_PASSWORD / UITEST_CLERK_PUBLISHABLE_KEY) — when
+      # these are absent the suite is skipped, not failed, so the L2
+      # gate above remains the merge-blocker until L3 is two-runs
+      # green per blueprint Phase 2.
+      # ---------------------------------------------------------
+      - name: Run CJ-01 L3 XCUITest suite for JUnit emission
+        if: always()
+        working-directory: AmakaFlowCompanion
+        env:
+          UITEST_CLERK_EMAIL: ${{ secrets.UITEST_CLERK_EMAIL }}
+          UITEST_CLERK_PASSWORD: ${{ secrets.UITEST_CLERK_PASSWORD }}
+          UITEST_CLERK_PUBLISHABLE_KEY: ${{ secrets.UITEST_CLERK_PUBLISHABLE_KEY }}
+          TEST_ENVIRONMENT: staging
+        run: |
+          if [ -z "$UITEST_CLERK_EMAIL" ] || [ -z "$UITEST_CLERK_PASSWORD" ] || [ -z "$UITEST_CLERK_PUBLISHABLE_KEY" ]; then
+            echo "Skipping CJ-01 L3 — Clerk staging secrets not configured on this runner."
+            echo '<?xml version="1.0" encoding="UTF-8"?><testsuites name="cj01-l3" tests="0" failures="0" skipped="1"><testsuite name="AMA1839_CJ01_WorkoutLifecycle_CriticalJourneyTests" skipped="1"/></testsuites>' > cj01-l3-junit.xml
+            exit 0
+          fi
+
+          set +e
+          export PATH="$(ruby -e 'puts Gem.user_dir')/bin:$PATH"
+          xcodebuild test \
+            -project AmakaFlowCompanion.xcodeproj \
+            -scheme AmakaFlowCompanion \
+            -destination "platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}" \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm \
+            -only-testing:AmakaFlowCompanionUITests/AMA1839_CJ01_WorkoutLifecycle_CriticalJourneyTests \
+            -parallel-testing-enabled NO \
+            -resultBundlePath CJ01L3TestResults 2>&1 \
+            | xcpretty -r junit --output cj01-l3-junit.xml || true
+          ls -la cj01-l3-junit.xml || echo "JUnit not produced"
+
+      - name: Upload CJ-01 L3 JUnit artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cj01-l3-junit
+          path: AmakaFlowCompanion/cj01-l3-junit.xml
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Upload CJ-01 L3 xcresult bundle
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cj01-l3-xcresult
+          path: AmakaFlowCompanion/CJ01L3TestResults
+          retention-days: 7
+          if-no-files-found: ignore
+
   # ---------------------------------------------------------
   # watchOS Tests (runs in parallel with iOS tests)
   # Part of AMA-553: Watch app test automation coverage
