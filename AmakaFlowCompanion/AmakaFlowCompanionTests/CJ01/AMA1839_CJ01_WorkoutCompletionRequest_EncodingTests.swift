@@ -56,7 +56,8 @@ final class AMA1839_CJ01_WorkoutCompletionRequest_EncodingTests: XCTestCase {
             workoutName: "CJ-01 Pilot Workout",
             isSimulated: false,
             setLogs: nil,
-            executionLog: executionLog
+            executionLog: executionLog,
+            clientGeneratedId: "cj01-test-cgid"  // AMA-1848 Bug B
         )
     }
 

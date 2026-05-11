@@ -190,7 +190,8 @@ final class AMA1834_WorkoutCompletionRequest_AssemblyTests: XCTestCase {
             workoutName: "AMA-1834 Completed Workout",
             isSimulated: nil,
             setLogs: nil,
-            executionLog: executionLog.map { AnyCodable($0) }
+            executionLog: executionLog.map { AnyCodable($0) },
+            clientGeneratedId: "ama-1834-test-cgid"  // AMA-1848 Bug B
         )
     }
 
