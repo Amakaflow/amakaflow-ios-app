@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<testsuites>
+  <testsuite name="Test Suite" device="AMA1791-LocalFirst-1778167350 - iOS 26.2 - 87AA26D0-39FA-4A1B-A34E-D5C7BA8062DD" tests="1" failures="0" time="130.0">
+    <testcase id="full-workout-with-hr" name="full-workout-with-hr" classname="full-workout-with-hr" time="130.0" status="SUCCESS">
+      <properties/>
+    </testcase>
+  </testsuite>
+</testsuites>

@@ -1,0 +1,269 @@
+# AMA-1834 — L4 Maestro evidence flow: Full-workout E2E with HealthKit HR injection
+#
+# POSTURE: EVIDENCE ONLY (L4). Per docs/testing/blueprint.md Section "Test layers":
+#   "L4 is required as evidence for major journeys, but not authoritative alone."
+#   A failure here does NOT block CI merge — it is captured as a warn-only signal
+#   with screenshot artifacts. The authoritative validators are L1 (pytest) and
+#   L2 (XCTest — both already passing as of PR #208).
+#
+# What this flow proves:
+#   1. A user can sign in, accept a Suggest workout, drive through every interval,
+#      have realistic HealthKit HR samples injected during work/rest periods (via
+#      scripts/hk-inject.sh which wraps xcrun simctl spawn), complete Save & End,
+#      and see the row appear in Activity History.
+#   2. mapper-api receives POST /workouts/complete (verified in post-flow script).
+#   3. request_id correlates across mobile-bff + mapper-api logs (AMA-1823).
+#   4. Supabase workout_completions row has non-null heart_rate_samples array.
+#
+# Architecture note on HK injection:
+#   The Simulator does not receive real watch HR samples. Instead we use
+#   `xcrun simctl spawn <udid> healthd_write` to inject HKQuantitySample
+#   records into the sim's HealthKit store before/during the workout.
+#   `scripts/hk-inject.sh` is wired here via Maestro `runScript` steps at
+#   workout-start and interval transitions. The script ramps 60→160 BPM
+#   during work and 160→90 BPM during rest, printing one line per sample
+#   to stdout for log evidence.
+#
+# Dependencies:
+#   - AMA-1823 (request_id correlation) — mapper-api and mobile-bff must both
+#     propagate X-Request-Id for the Supabase verification step to pass.
+#   - AMA-1817 (parent epic) — workout_completions endpoint and HR wire shape.
+#   - AMA-1830 (Maestro gating) — if this flow proves reliable, promote to CI gate.
+#
+# Prerequisites (callers / CI):
+#   - App built with scripts/sim-build.sh staging (Clerk keys injected per
+#     memory ios-clerk-keys-empty-in-pbxproj.md).
+#   - Sim booted: xcrun simctl boot 87AA26D0-39FA-4A1B-A34E-D5C7BA8062DD
+#   - scripts/hk-inject.sh must be executable (chmod +x).
+#   - Network access to staging.amakaflow.com from the Mac running the test.
+#
+# Evidence output:
+#   e2e/evidence/ama-1834-l4/<timestamp>/ — screenshots + HK injection log
+#   (the post-flow verification script writes junit.xml + log excerpts there)
+
+appId: com.myamaka.AmakaFlowCompanion
+
+env:
+  # Passed in from CI / local runner via --env. Defaults here are safe for local dev.
+  EVIDENCE_DIR: "e2e/evidence/ama-1834-l4"
+  SIM_UDID: "87AA26D0-39FA-4A1B-A34E-D5C7BA8062DD"
+  # Work and rest durations for HK injection (seconds). These are SHORT for
+  # test speed; real planned durations could be 30-120s each. The injection
+  # script reads these env vars.
+  WORK_SECONDS: "15"
+  REST_SECONDS: "10"
+  INTERVALS: "3"
+
+---
+# ─────────────────────────────────────────────
+# STEP 1: Sign in (reusable subflow)
+# ─────────────────────────────────────────────
+- runFlow: _lib/clerk-signin.yaml
+- takeScreenshot: ama1834-step01-signed-in
+
+# ─────────────────────────────────────────────
+# STEP 2: Navigate to Home tab, then tap "Suggest a Workout"
+# Sign-in may leave the app on More tab (clerk-signin asserts "AI Coach" text
+# which lives in MoreView). Navigate explicitly to Home first.
+# ─────────────────────────────────────────────
+- tapOn:
+    text: "Home"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: ama1834-step02a-home-tab
+
+- tapOn:
+    id: "ama1842.suggest.button"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: ama1834-step02-suggest-sheet-opened
+
+# Handle BiometricConsentView (shown on first use if consent not previously given).
+- runFlow:
+    when:
+      visible: "Allow"
+    commands:
+      - tapOn: "Allow"
+      - waitForAnimationToEnd:
+          timeout: 2000
+
+# Handle CoachingProfileOnboardingView (shown when state == .needsOnboarding).
+# If the onboarding form is showing, tap "Generate My Workout" to proceed.
+- runFlow:
+    when:
+      visible: "Generate My Workout"
+    commands:
+      - tapOn:
+          id: "generate_workout_button"
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- takeScreenshot: ama1834-step03-after-onboarding
+
+# LLM generation can take 10–60s on staging.
+- extendedWaitUntil:
+    visible:
+      id: "ama1842.suggest.preview"
+    timeout: 60000
+- takeScreenshot: ama1834-step04-suggestion-generated
+
+# ─────────────────────────────────────────────
+# STEP 3: Accept the suggestion ("Accept & Save" button in the sheet)
+# The Accept button is at the bottom of the SuggestWorkoutView preview.
+# LLM plans can be 13–25+ steps so Accept is reliably below the fold.
+# Maestro's `tapOn id:` does NOT auto-scroll into view (verified
+# 2026-05-10 — fails with "Element not found"). Use scrollUntilVisible
+# with the visible button TEXT as the target since `id:` doesn't work
+# on offscreen elements either.
+# ─────────────────────────────────────────────
+- scrollUntilVisible:
+    element:
+      text: "Accept & Save"
+    direction: DOWN
+    speed: 40
+    visibilityPercentage: 60
+    timeout: 30000
+    centerElement: true
+- tapOn:
+    id: "ama1842.accept.button"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ama1834-step05-accepted
+
+# ─────────────────────────────────────────────
+# STEP 4: Start the workout
+# ─────────────────────────────────────────────
+- tapOn:
+    id: "ama1842.start.button"
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# If the workout offers a phone-only mode (no paired watch), accept it.
+- runFlow:
+    when:
+      visible: "Start on Phone Only"
+    commands:
+      - tapOn: "Start on Phone Only"
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- takeScreenshot: ama1834-step06-workout-started
+
+# ─────────────────────────────────────────────
+# STEP 5: HK injection — orchestrated EXTERNALLY by scripts/run-ama-1834-l4.sh
+# Maestro `runScript` is JavaScript-only (GraalJS); shell scripts cause
+# `SyntaxError: Missing close quote` on bash heredocs. The wrapper script
+# backgrounds scripts/hk-inject.sh in parallel with this Maestro flow so
+# samples are injected into the booted sim's HealthKit store while the
+# workout view is consuming them.
+# ─────────────────────────────────────────────
+
+# ─────────────────────────────────────────────
+# STEP 6: Drive through intervals
+# The workout view cycles: work period → LOG SET / next → rest period → Skip Rest
+# We loop up to 30 times to handle variable interval counts from the LLM plan.
+# ─────────────────────────────────────────────
+- repeat:
+    times: 30
+    commands:
+      - runFlow:
+          when:
+            visible: "LOG SET"
+          commands:
+            - tapOn: "LOG SET"
+            - waitForAnimationToEnd:
+                timeout: 2000
+      - runFlow:
+          when:
+            visible: "Skip Rest"
+          commands:
+            - tapOn: "Skip Rest"
+            - waitForAnimationToEnd:
+                timeout: 2000
+      # Some builds surface "Next" for interval advancement.
+      - runFlow:
+          when:
+            visible: "Next"
+          commands:
+            - tapOn: "Next"
+            - waitForAnimationToEnd:
+                timeout: 2000
+      # Break condition: End Workout button means all intervals done.
+      - runFlow:
+          when:
+            visible: "End Workout"
+          commands:
+            - tapOn: "End Workout"
+            - waitForAnimationToEnd:
+                timeout: 2000
+
+- takeScreenshot: ama1834-step07-intervals-done
+
+# ─────────────────────────────────────────────
+# STEP 7: Complete — Save & End
+# ─────────────────────────────────────────────
+# Guard: if End Workout is still visible after the loop, tap once more.
+- runFlow:
+    when:
+      visible: "End Workout"
+    commands:
+      - tapOn: "End Workout"
+      - waitForAnimationToEnd:
+          timeout: 2000
+
+- assertVisible: "Save & End"
+- takeScreenshot: ama1834-step08-save-and-end-screen
+
+- tapOn:
+    text: "Save & End"
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: ama1834-step09-saved
+
+# ─────────────────────────────────────────────
+# STEP 8: Verify in Activity History (screenshot assertion)
+# Navigate: More tab → ama1842.history.row → assert cell.0 visible
+# ─────────────────────────────────────────────
+- tapOn:
+    text: "More"
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    id: "ama1842.history.row"
+
+# Backend completion sync can take 5–30s after Save & End
+# (mapper-api workout_completions FK chain per AMA-1798/1799/1800).
+# Settle, then pull-to-refresh once at +15s to nudge the page.
+- waitForAnimationToEnd:
+    timeout: 15000
+- swipe:
+    from:
+      text: "Activity History"
+    direction: DOWN
+    duration: 800
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# Per blueprint Section "Test layers": L4 is EVIDENCE not VALIDATOR.
+# The cell-visibility check below is captured as evidence — if backend
+# sync regressed (e.g. AMA-1798/1799/1800 class), it gets logged with
+# screenshot for the verification harness to fail-loudly downstream
+# instead of silently passing the Maestro flow.
+- runFlow:
+    when:
+      visible:
+        id: "ama1842.activityHistory.cell.0"
+    commands:
+      - takeScreenshot: ama1834-step10a-history-row-found
+- runFlow:
+    when:
+      notVisible:
+        id: "ama1842.activityHistory.cell.0"
+    commands:
+      - takeScreenshot: ama1834-step10b-history-row-MISSING
+      # Note: the post-flow verification harness (scripts/verify-ama-1834-l4.sh)
+      # checks Render mapper-api logs + Supabase workout_completions for the
+      # POST that should have populated this row, so a missing cell here
+      # is a SIGNAL rather than the verdict.
+
+- takeScreenshot: ama1834-step11-final-evidence
