@@ -182,7 +182,8 @@ final class WorkoutCompletionViewModelTests: XCTestCase {
             workoutName: "Test Workout",
             isSimulated: false,
             setLogs: nil,
-            executionLog: nil
+            executionLog: nil,
+            clientGeneratedId: "test-cgid-\(UUID().uuidString.lowercased())"
         )
 
         // When encoding
@@ -221,7 +222,8 @@ final class WorkoutCompletionViewModelTests: XCTestCase {
             workoutName: nil,
             isSimulated: false,
             setLogs: nil,
-            executionLog: nil
+            executionLog: nil,
+            clientGeneratedId: "test-cgid-\(UUID().uuidString.lowercased())"
         )
 
         // When encoding
@@ -258,7 +260,8 @@ final class WorkoutCompletionViewModelTests: XCTestCase {
             workoutName: "My Workout",
             isSimulated: false,
             setLogs: nil,
-            executionLog: nil
+            executionLog: nil,
+            clientGeneratedId: "test-cgid-\(UUID().uuidString.lowercased())"
         )
 
         // When encoding

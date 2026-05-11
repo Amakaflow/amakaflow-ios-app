@@ -28,6 +28,14 @@ struct WorkoutCompletionRequest: Codable {
     let isSimulated: Bool?                    // True if workout was run in simulation mode (AMA-271)
     let setLogs: [SetLog]?                    // Weight logs per exercise/set (AMA-281)
     let executionLog: AnyCodable?             // Execution tracking (AMA-291) - uses AnyCodable for Codable conformance
+    // AMA-1848 Bug B: workout_completions.client_generated_id is NOT NULL
+    // on staging (added under AMA-1794 idempotency hardening). This field
+    // doubles as the dedupe key for retries (AMA-1794) AND the column
+    // value. Sourced as a fresh UUID at request-build time until the GRDB
+    // AcceptedSuggestion record's stable cgid is threaded through (tracked
+    // as a follow-up — true cross-retry idempotency requires the same UUID
+    // for the same logical completion attempt across network retries).
+    let clientGeneratedId: String
 
     enum CodingKeys: String, CodingKey {
         case workoutEventId = "workout_event_id"
@@ -44,6 +52,7 @@ struct WorkoutCompletionRequest: Codable {
         case isSimulated = "is_simulated"
         case setLogs = "set_logs"
         case executionLog = "execution_log"
+        case clientGeneratedId = "client_generated_id"
     }
 }
 
@@ -285,7 +294,8 @@ class WorkoutCompletionService: ObservableObject {
             workoutName: workoutName,
             isSimulated: isSimulated ? true : nil,  // Only send if true (AMA-271)
             setLogs: setLogs,                       // (AMA-281) Weight logs
-            executionLog: executionLog.map { AnyCodable($0) }  // (AMA-291) Execution tracking
+            executionLog: executionLog.map { AnyCodable($0) },  // (AMA-291) Execution tracking
+            clientGeneratedId: UUID().uuidString.lowercased()    // (AMA-1848 Bug B)
         )
 
         return try await postCompletion(request)
@@ -341,7 +351,8 @@ class WorkoutCompletionService: ObservableObject {
             workoutName: workoutName ?? summary.workoutName,
             isSimulated: nil,  // Watch workouts are never simulated
             setLogs: nil,      // Watch weight tracking coming in AMA-286
-            executionLog: nil  // (AMA-291) Watch execution tracking coming later
+            executionLog: nil, // (AMA-291) Watch execution tracking coming later
+            clientGeneratedId: UUID().uuidString.lowercased()  // (AMA-1848 Bug B)
         )
     }
 
@@ -399,7 +410,8 @@ class WorkoutCompletionService: ObservableObject {
             workoutName: workoutName,
             isSimulated: nil,  // Garmin workouts are never simulated
             setLogs: nil,      // Garmin weight tracking coming in AMA-288
-            executionLog: nil  // (AMA-291) Garmin execution tracking coming later
+            executionLog: nil, // (AMA-291) Garmin execution tracking coming later
+            clientGeneratedId: UUID().uuidString.lowercased()  // (AMA-1848 Bug B)
         )
 
         return try await postCompletion(request)
