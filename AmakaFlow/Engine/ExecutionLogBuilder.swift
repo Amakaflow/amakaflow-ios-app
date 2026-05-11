@@ -168,8 +168,23 @@ enum SkipReason: String, CaseIterable {
 
 // MARK: - ExecutionLogBuilder
 
-/// Builds execution_log structure tracking actual workout execution
-class ExecutionLogBuilder {
+/// Builds execution_log structure tracking actual workout execution.
+///
+/// AMA-1844: implemented as a `struct` (was previously a `class`).
+/// The class form crashed the test process with
+/// `___BUG_IN_CLIENT_OF_LIBMALLOC_POINTER_BEING_FREED_WAS_NOT_ALLOCATED`
+/// inside `swift_task_deinitOnExecutorImpl` →
+/// `swift::TaskLocal::StopLookupScope::~StopLookupScope()` — a Swift 6
+/// runtime bug in the TaskLocal cleanup path that fires whenever an
+/// `@MainActor` (or any actor-isolated) class deinits off its executor.
+/// Adding `@MainActor` to the class made it WORSE because it forced the
+/// runtime to schedule the deinit through that buggy path. Converting
+/// to a struct removes the deinit entirely (structs have no
+/// `__deallocating_deinit`) and is functionally equivalent for our
+/// usage — `WorkoutEngine` holds it as a `private var` stored property
+/// and only calls mutating methods on it; there are no `weak`
+/// references or other reference-semantic dependencies.
+struct ExecutionLogBuilder {
     private var intervals: [IntervalExecution] = []
     private var currentIntervalStartTime: Date?
     private var currentIntervalIndex: Int?
@@ -185,7 +200,7 @@ class ExecutionLogBuilder {
     ///   - name: Display name for the interval
     ///   - plannedDuration: Planned duration in seconds (nil for reps-based)
     ///   - elapsedSeconds: Current elapsed seconds in workout (for simulation mode timing)
-    func startInterval(index: Int, kind: String?, name: String?, plannedDuration: Int?, elapsedSeconds: Int? = nil) {
+    mutating func startInterval(index: Int, kind: String?, name: String?, plannedDuration: Int?, elapsedSeconds: Int? = nil) {
         print("📊 [AMA-291] startInterval: index=\(index), name=\(name ?? "nil"), elapsedSeconds=\(elapsedSeconds ?? -1)")
 
         // End any previous interval that wasn't properly closed
@@ -213,7 +228,7 @@ class ExecutionLogBuilder {
     /// - Parameters:
     ///   - actualDuration: Actual duration in seconds (nil to calculate from elapsed time or wall clock)
     ///   - elapsedSeconds: Current elapsed seconds in workout (for simulation mode timing)
-    func endCurrentInterval(actualDuration: Int?, elapsedSeconds: Int? = nil) {
+    mutating func endCurrentInterval(actualDuration: Int?, elapsedSeconds: Int? = nil) {
         print("📊 [AMA-291] endCurrentInterval: currentIndex=\(currentIntervalIndex ?? -1), elapsedSeconds=\(elapsedSeconds ?? -1), startElapsed=\(currentIntervalStartElapsed ?? -1)")
 
         guard let currentIndex = currentIntervalIndex,
@@ -253,7 +268,7 @@ class ExecutionLogBuilder {
     ///   - kind: Interval type
     ///   - name: Display name
     ///   - reason: Reason for skipping
-    func skipInterval(index: Int, kind: String?, name: String?, reason: SkipReason) {
+    mutating func skipInterval(index: Int, kind: String?, name: String?, reason: SkipReason) {
         // End any current interval first
         if currentIntervalIndex != nil {
             endCurrentInterval(actualDuration: nil)
@@ -284,7 +299,7 @@ class ExecutionLogBuilder {
     ///   - repsPlanned: Planned reps for this set
     ///   - skipped: Whether set was skipped
     ///   - weightSource: Source of weight (machine, barbell, etc.)
-    func logSet(
+    mutating func logSet(
         intervalIndex: Int,
         setNumber: Int,
         weight: Double?,
@@ -321,7 +336,7 @@ class ExecutionLogBuilder {
     // MARK: - Build Output
 
     /// Build the final execution_log dictionary for API submission (v2 format)
-    func build() -> [String: Any] {
+    mutating func build() -> [String: Any] {
         print("📊 [AMA-291] build() called with \(intervals.count) intervals")
 
         // End any unclosed interval
@@ -454,7 +469,7 @@ class ExecutionLogBuilder {
     }
 
     /// Reset the builder for a new workout
-    func reset() {
+    mutating func reset() {
         intervals = []
         currentIntervalStartTime = nil
         currentIntervalIndex = nil
