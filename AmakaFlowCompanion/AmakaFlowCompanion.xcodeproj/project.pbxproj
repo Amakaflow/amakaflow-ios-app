@@ -2363,6 +2363,7 @@
 		F84E219E2ED0B0CA00459747 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = AmakaFlowCompanionUITests/AmakaFlowCompanionUITests.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = A9K5QG6YW8;
@@ -2383,6 +2384,7 @@
 		F84E219F2ED0B0CA00459747 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = AmakaFlowCompanionUITests/AmakaFlowCompanionUITests.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = A9K5QG6YW8;

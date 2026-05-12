@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- AMA-1834: HealthKit write access required for the HK injection helper
+	     (AMA1834_HKInjectionHelper.swift) used in the L4 Maestro E2E flow.
+	     The test process must be able to call HKHealthStore.save() to seed
+	     the simulator's HK store with heart-rate samples during a full-workout run.
+	     This entitlement is safe on simulators — Apple does not require a
+	     provisioning profile for sim-only targets. -->
+	<key>com.apple.developer.healthkit</key>
+	<true/>
+	<key>com.apple.developer.healthkit.access</key>
+	<array/>
+</dict>
+</plist>
