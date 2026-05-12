@@ -20,6 +20,28 @@ final class AuthViewModel: ObservableObject {
 
   func start() {
     guard authEventsTask == nil else { return }
+
+    // AMA-1843: UITest bypass. When the `UITEST_CLERK_TEST_SESSION` env
+    // var is set on a DEBUG build, skip the real Clerk subscription
+    // entirely and pretend the user is signed in. This lets XCUITest
+    // drive screens past PairingView/AuthView without depending on
+    // ClerkKitUI's WKWebView (which ships zero accessibilityIdentifier
+    // values — see clerk-ios#413 / blueprint L3 limitations).
+    //
+    // Mock-only — there is no real Clerk JWT, so any backend API call
+    // from the running test will 401. That is the documented limit of
+    // Option B in AMA-1843; the proper bypass (real session via raw
+    // Clerk Frontend API + setActive) is filed as a follow-up.
+    //
+    // Gated by both `#if DEBUG` and the env var so Release builds do
+    // not compile the bypass code at all (DoD).
+    #if DEBUG
+    if AuthViewModel.uiTestBypassRequested() {
+      applyUITestBypass()
+      return
+    }
+    #endif
+
     refreshFromClerk()
     authEventsTask = Task { [weak self] in
       for await event in Clerk.shared.auth.events {
@@ -43,6 +65,43 @@ final class AuthViewModel: ObservableObject {
       }
     }
   }
+
+  #if DEBUG
+  /// AMA-1843: env-var probe + payload parser.
+  /// Format: `UITEST_CLERK_TEST_SESSION=user_id=<id>,email=<email>`
+  /// (commas in values are not supported; not needed for sign-in mock).
+  /// Anything non-empty enables the bypass — payload fields are
+  /// optional and fall back to a synthetic test identity.
+  static func uiTestBypassRequested() -> Bool {
+    !(ProcessInfo.processInfo.environment["UITEST_CLERK_TEST_SESSION"] ?? "").isEmpty
+  }
+
+  private func applyUITestBypass() {
+    let raw = ProcessInfo.processInfo.environment["UITEST_CLERK_TEST_SESSION"] ?? ""
+    var fields: [String: String] = [:]
+    for pair in raw.split(separator: ",") {
+      let kv = pair.split(separator: "=", maxSplits: 1).map(String.init)
+      if kv.count == 2 {
+        fields[kv[0].trimmingCharacters(in: .whitespaces)] = kv[1].trimmingCharacters(in: .whitespaces)
+      }
+    }
+    let mockId = fields["user_id"] ?? "user_uitest_ama1843"
+    let mockEmail = fields["email"] ?? "claude+clerk_test@amakaflow.dev"
+    let mockName = fields["name"] ?? "UITest User"
+
+    userProfile = UserProfile(
+      id: mockId,
+      email: mockEmail,
+      name: mockName,
+      avatarUrl: nil
+    )
+    isAuthenticated = true
+    hasResolvedInitialSession = true
+    needsReauth = false
+    // No cachedToken — `token()` will return nil so any backend call
+    // surfaces a real failure rather than masquerading as success.
+  }
+  #endif
 
   func refreshFromClerk() {
     let clerkUser = Clerk.shared.user

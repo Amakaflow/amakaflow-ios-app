@@ -49,9 +49,23 @@ Current entries:
 
 | Journey step | Vendor SDK | Limitation | Fallback in use | Upstream | Workaround ticket |
 |---|---|---|---|---|---|
-| CJ-01 sign-in | clerk-ios (`ClerkKitUI.AuthView`) | WebView-hosted form, zero `accessibilityIdentifier` annotations, `SignIn.create` is internal access (not callable from app code) | Multi-strategy text-fallback selectors (`email`, `Email address`, `TextField (First Match)`) — known to time out on fresh sims | [clerk-ios#413](https://github.com/clerk/clerk-ios/issues/413) | AMA-1843 |
+| CJ-01 sign-in | clerk-ios (`ClerkKitUI.AuthView`) | WebView-hosted form, zero `accessibilityIdentifier` annotations, `SignIn.create` is internal access (not callable from app code) | `UITEST_CLERK_TEST_SESSION` env-var bypass in `AuthViewModel` (AMA-1843, DEBUG-only) — skips Clerk subscription, mocks `isAuthenticated=true` + a synthetic `UserProfile`. Lets XCUITest drive past the auth gate but **no real Clerk JWT**, so backend API calls 401. UI-navigation evidence only. | [clerk-ios#413](https://github.com/clerk/clerk-ios/issues/413) | AMA-1843 (mock bypass — landed); follow-up for real-session bypass via raw Clerk Frontend API |
 
-When the upstream lands one of: (a) `@_spi(Test) public` on `SignIn.create` + `verifyCode`, OR (b) `accessibilityIdentifier` on `AuthView` fields, the fragile fallback is removed and L3 sign-in becomes a hard gate again.
+#### CJ-01 sign-in bypass usage
+
+XCUITest opts in by setting the env var on the launched app under test:
+
+```swift
+let app = XCUIApplication()
+app.launchEnvironment["UITEST_CLERK_TEST_SESSION"] = "user_id=user_3DPjPhIrk4X7JDQQsi7PH63Iurd,email=claude+clerk_test@amakaflow.dev"
+app.launch()
+```
+
+Payload format is `key=value` pairs joined by `,`. All fields optional; defaults to a synthetic `user_uitest_ama1843` identity. The bypass is gated by both `#if DEBUG` and a non-empty env var, so Release archives do not compile it (verified by inspecting the deployed IPA's symbol table — see memory `inspect-deployed-ipa-before-claiming-shippable.md`).
+
+**Expected backend behavior under bypass:** every authenticated request returns 401 because `AuthViewModel.cachedBearerToken()` and `token()` both return `nil` (no real session). This is intentional — the L3 test under bypass validates UI navigation only; backend persistence requires the real-session bypass (filed as the follow-up below).
+
+When upstream clerk-ios#413 lands one of (a) `@_spi(Test) public` on `SignIn.create` + `verifyCode`, or (b) `accessibilityIdentifier` on `AuthView` fields, the bypass is removed and L3 sign-in becomes a hard gate again.
 
 ## Repository structure
 
