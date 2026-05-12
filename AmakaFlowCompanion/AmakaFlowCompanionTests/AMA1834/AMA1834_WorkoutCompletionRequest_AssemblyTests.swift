@@ -28,6 +28,13 @@
 import XCTest
 @testable import AmakaFlowCompanion
 
+// AMA-1844: `@MainActor` because the assembly tests now exercise the
+// live `ExecutionLogBuilder` (which is `@MainActor` per its production
+// owner `WorkoutEngine`). The pre-AMA-1844 libmalloc deinit abort that
+// blocked this was caused by an off-MainActor builder deinit, not by
+// the test case itself — annotating the class no longer crashes now
+// that ExecutionLogBuilder is itself @MainActor-isolated.
+@MainActor
 final class AMA1834_WorkoutCompletionRequest_AssemblyTests: XCTestCase {
 
     // MARK: - Helpers
@@ -51,81 +58,27 @@ final class AMA1834_WorkoutCompletionRequest_AssemblyTests: XCTestCase {
     /// `WorkoutEngine` would have produced via `ExecutionLogBuilder`
     /// after a 3-interval workout (warmup 30s → rest 15s → plank 60s).
     ///
-    /// We construct the dict literal directly here instead of driving
-    /// `ExecutionLogBuilder` because exercising the production builder
-    /// from a non-`@MainActor` XCTestCase trips a Swift 6
-    /// `swift_task_deinitOnExecutorImpl` libmalloc abort during the
-    /// builder's deinit (confirmed via xcresult crash log:
-    /// `___BUG_IN_CLIENT_OF_LIBMALLOC_POINTER_BEING_FREED_WAS_NOT_ALLOCATED`
-    /// → `ExecutionLogBuilder.__deallocating_deinit`). Marking the
-    /// test class `@MainActor` did NOT help because the XCTest harness
-    /// still tears the instance down off the main actor.
-    ///
-    /// `ExecutionLogBuilder` itself has dedicated direct-call coverage
-    /// elsewhere (the WorkoutEngineTests / WorkoutEngineEdgeCaseTests
-    /// suites construct + deinit it inside `@MainActor` engine
-    /// fixtures, which avoids this teardown path). For AMA-1834 the
-    /// load-bearing assertion is the WIRE SHAPE the BFF receives —
-    /// proving that shape from a literal dictionary is exactly the
-    /// contract the backend integration tests on mapper-api are also
-    /// pinned against (services/mapper-api/tests/test_workout_completions.py).
-    /// Follow-up: AMA-1844 — make `ExecutionLogBuilder` safe to
-    /// deinit off-main so the live builder can be wired back in here.
+    /// AMA-1844: drives the LIVE `ExecutionLogBuilder` so this test
+    /// pins the actual production wire shape, not a literal mirror.
+    /// Previous behaviour (pre-AMA-1844) was to build the dict literal
+    /// directly because exercising the production builder from a
+    /// non-`@MainActor` XCTestCase tripped a Swift 6 libmalloc deinit
+    /// abort. That bug is now fixed — `ExecutionLogBuilder` is
+    /// `@MainActor`-isolated to match its only production owner.
     private func buildExecutionLogForCompletedWorkout() -> [String: Any] {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let baseTs = Date(timeIntervalSince1970: 1_700_000_000)
-        let i0Start = formatter.string(from: baseTs)
-        let i0End = formatter.string(from: baseTs.addingTimeInterval(30))
-        let i1End = formatter.string(from: baseTs.addingTimeInterval(45))
-        let i2End = formatter.string(from: baseTs.addingTimeInterval(105))
-        return [
-            "version": 2,
-            "intervals": [
-                [
-                    "interval_index": 0,
-                    "status": "completed",
-                    "planned_kind": "timed",
-                    "planned_name": "Warmup",
-                    "planned_duration_seconds": 30,
-                    "actual_duration_seconds": 30,
-                    "started_at": i0Start,
-                    "ended_at": i0End
-                ],
-                [
-                    "interval_index": 1,
-                    "status": "completed",
-                    "planned_kind": "rest",
-                    "planned_name": "Rest",
-                    "planned_duration_seconds": 15,
-                    "actual_duration_seconds": 15,
-                    "started_at": i0End,
-                    "ended_at": i1End
-                ],
-                [
-                    "interval_index": 2,
-                    "status": "completed",
-                    "planned_kind": "timed",
-                    "planned_name": "Plank",
-                    "planned_duration_seconds": 60,
-                    "actual_duration_seconds": 60,
-                    "started_at": i1End,
-                    "ended_at": i2End
-                ]
-            ],
-            "summary": [
-                "total_intervals": 3,
-                "completed": 3,
-                "skipped": 0,
-                "not_reached": 0,
-                "completion_percentage": 100.0,
-                "total_sets": 0,
-                "sets_completed": 0,
-                "sets_skipped": 0,
-                "total_duration_seconds": 105,
-                "active_duration_seconds": 90  // excludes the 15s rest interval
-            ]
-        ] as [String: Any]
+        var builder = ExecutionLogBuilder()
+
+        // Three intervals: warmup 30s → rest 15s → plank 60s.
+        builder.startInterval(index: 0, kind: "timed", name: "Warmup", plannedDuration: 30, elapsedSeconds: 0)
+        builder.endCurrentInterval(actualDuration: 30, elapsedSeconds: 30)
+
+        builder.startInterval(index: 1, kind: "rest", name: "Rest", plannedDuration: 15, elapsedSeconds: 30)
+        builder.endCurrentInterval(actualDuration: 15, elapsedSeconds: 45)
+
+        builder.startInterval(index: 2, kind: "timed", name: "Plank", plannedDuration: 60, elapsedSeconds: 45)
+        builder.endCurrentInterval(actualDuration: 60, elapsedSeconds: 105)
+
+        return builder.build()
     }
 
     /// The 3 intervals the user actually performed — feeds the
