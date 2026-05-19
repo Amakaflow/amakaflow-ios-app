@@ -27,6 +27,22 @@ Required: Test impact + Validation summary + Merge rule sections must be filled.
 <!-- Infrastructure blockers as separate Linear tickets — link them here, not buried in test results. -->
 - 
 
+## Verify by
+<!--
+AMA-1853 / Production-Readiness gap #4: every PR must tell the reviewer
+exactly how to confirm the change works WITHOUT re-running it. Two-line
+bullets in the form "thing to look at → expected result". The reviewer
+will often be on a phone — link to GitHub artifacts, Linear tickets,
+Maestro evidence dirs, or single shell commands they can paste into a
+terminal. Do NOT just say "run the tests".
+
+Example:
+- `gh pr view 213 --json mergedAt` → returns non-null mergedAt
+- Maestro evidence at `e2e/evidence/ama-1834-l4/run-fix6/screenshots/` → `step10a-history-row-found.png` is the load-bearing artifact
+- Linear AMA-1844 → status = Done
+-->
+- 
+
 ## Merge rule
 - [ ] This PR meets all required layers for its scope
 - [ ] This PR does not rely on Maestro alone as validation
