@@ -63,6 +63,21 @@ linear_query() {
     -d "{\"query\":$(jq -Rs . <<<"$query")}"
 }
 
+# Linear GraphQL query against the OpenClaw workspace (separate API key).
+# Returns empty JSON if LINEAR_API_KEY_OPENCLAW is not configured so the
+# digest still works for AmakaFlow-only setups.
+linear_query_openclaw() {
+  local query="$1"
+  if [ -z "${LINEAR_API_KEY_OPENCLAW:-}" ]; then
+    echo '{"data":{}}'
+    return
+  fi
+  curl -sS -X POST https://api.linear.app/graphql \
+    -H "Authorization: $LINEAR_API_KEY_OPENCLAW" \
+    -H "Content-Type: application/json" \
+    -d "{\"query\":$(jq -Rs . <<<"$query")}"
+}
+
 # ---------- data fetch ----------
 
 since=$(date -u -v-24H '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ')
@@ -94,6 +109,33 @@ linear_done=$(linear_query "query {
       completedAt: { gte: \"$since\" }
     }
     first: 30
+  ) {
+    nodes { identifier title }
+  }
+}")
+
+# OpenClaw (OPE workspace) — open tickets snapshot.
+# Separate workspace, separate API key. Skips silently if key not set.
+openclaw_open=$(linear_query_openclaw "query {
+  issues(
+    filter: {
+      team: { key: { eq: \"OPE\" } }
+      state: { type: { neq: \"completed\" } }
+    }
+    first: 20
+  ) {
+    nodes { identifier title state { name } priorityLabel }
+  }
+}")
+
+# OpenClaw — tickets completed last 24h
+openclaw_done=$(linear_query_openclaw "query {
+  issues(
+    filter: {
+      team: { key: { eq: \"OPE\" } }
+      completedAt: { gte: \"$since\" }
+    }
+    first: 20
   ) {
     nodes { identifier title }
   }
@@ -148,14 +190,35 @@ else
   pr_v1_section+="  • All gaps closed 🎉"$'\n'
 fi
 
-# Section: Linear-completed last 24h
+# Section: Linear-completed last 24h (AmakaFlow workspace, AMA team)
 done_section=""
 n_linear_done=$(jq '.data.issues.nodes | length' <<<"$linear_done")
 if [ "$n_linear_done" -gt 0 ]; then
-  done_section="📋 *Linear closed last 24h ($n_linear_done)*"$'\n'
+  done_section="📋 *AMA closed last 24h ($n_linear_done)*"$'\n'
   while IFS= read -r line; do
     [ -n "$line" ] && done_section+="  • $line"$'\n'
   done < <(jq -r '.data.issues.nodes[] | "\(.identifier) — \(.title)"' <<<"$linear_done")
+fi
+
+# Section: OpenClaw (OPE team in the openclawjoshua workspace) snapshot
+ope_section=""
+ope_nodes=$(jq -r '(.data.issues.nodes // []) | sort_by(.identifier)' <<<"$openclaw_open")
+n_ope_open=$(jq 'length' <<<"$ope_nodes")
+if [ "$n_ope_open" -gt 0 ]; then
+  ope_section="🦞 *OpenClaw OPE open ($n_ope_open)*"$'\n'
+  while IFS= read -r line; do
+    [ -n "$line" ] && ope_section+="  • $line"$'\n'
+  done < <(jq -r '.[] | "\(.identifier) [\(.state.name)] [\(.priorityLabel // "—")] — \(.title)"' <<<"$ope_nodes")
+fi
+
+# Section: OpenClaw closed last 24h
+ope_done_section=""
+n_ope_done=$(jq '(.data.issues.nodes // []) | length' <<<"$openclaw_done")
+if [ "$n_ope_done" -gt 0 ]; then
+  ope_done_section="📋 *OPE closed last 24h ($n_ope_done)*"$'\n'
+  while IFS= read -r line; do
+    [ -n "$line" ] && ope_done_section+="  • $line"$'\n'
+  done < <(jq -r '.data.issues.nodes[] | "\(.identifier) — \(.title)"' <<<"$openclaw_done")
 fi
 
 # Header
@@ -163,7 +226,7 @@ header="🦞 *AmakaFlow Daily Digest — $(date '+%a %b %-d')*"$'\n\n'
 
 # Assemble (skip empty sections)
 message="$header"
-for section in "$merged_section" "$open_clean_section" "$open_other_section" "$pr_v1_section" "$done_section"; do
+for section in "$merged_section" "$open_clean_section" "$open_other_section" "$pr_v1_section" "$done_section" "$ope_section" "$ope_done_section"; do
   if [ -n "$section" ]; then
     message+="$section"$'\n'
   fi
