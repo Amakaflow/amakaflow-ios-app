@@ -21,21 +21,29 @@ final class AuthViewModel: ObservableObject {
   func start() {
     guard authEventsTask == nil else { return }
 
-    // AMA-1843: UITest bypass. When the `UITEST_CLERK_TEST_SESSION` env
-    // var is set on a DEBUG build, skip the real Clerk subscription
-    // entirely and pretend the user is signed in. This lets XCUITest
-    // drive screens past PairingView/AuthView without depending on
-    // ClerkKitUI's WKWebView (which ships zero accessibilityIdentifier
-    // values — see clerk-ios#413 / blueprint L3 limitations).
+    // AMA-1843: UITest mock bypass. When `UITEST_CLERK_TEST_SESSION`
+    // is set on a DEBUG build, skip Clerk entirely and pretend the
+    // user is signed in. No real JWT — backend API calls return 401.
+    // Useful for UI-only journey validation.
     //
-    // Mock-only — there is no real Clerk JWT, so any backend API call
-    // from the running test will 401. That is the documented limit of
-    // Option B in AMA-1843; the proper bypass (real session via raw
-    // Clerk Frontend API + setActive) is filed as a follow-up.
+    // AMA-1849: UITest REAL-session bypass. When
+    // `UITEST_CLERK_REAL_SESSION_EMAIL` is set on a DEBUG build,
+    // create an actual Clerk session via the Frontend API (using
+    // Clerk's universal test code 424242) and plumb it into
+    // `Clerk.shared` via the public `setActive(sessionId:)` API.
+    // `AuthViewModel.token()` then returns a valid Clerk JWT and
+    // backend calls authenticate as the test user. Removes the
+    // 401-everywhere limit of the mock bypass.
     //
-    // Gated by both `#if DEBUG` and the env var so Release builds do
-    // not compile the bypass code at all (DoD).
+    // Both are gated by `#if DEBUG` so Release builds do not compile
+    // the bypass code (DoD inspected via PlistBuddy on the IPA).
     #if DEBUG
+    if AuthViewModel.uiTestRealSessionRequested() {
+      Task { [weak self] in
+        await self?.applyUITestRealSessionBypass()
+      }
+      return
+    }
     if AuthViewModel.uiTestBypassRequested() {
       applyUITestBypass()
       return
@@ -100,6 +108,145 @@ final class AuthViewModel: ObservableObject {
     needsReauth = false
     // No cachedToken — `token()` will return nil so any backend call
     // surfaces a real failure rather than masquerading as success.
+  }
+
+  /// AMA-1849: real-session bypass probe. Format:
+  ///   `UITEST_CLERK_REAL_SESSION_EMAIL=claude+clerk_test@amakaflow.dev`
+  /// (the `+clerk_test` subaddress is how Clerk routes to its universal
+  /// test code 424242 on dev/staging instances.)
+  static func uiTestRealSessionRequested() -> Bool {
+    !(ProcessInfo.processInfo.environment["UITEST_CLERK_REAL_SESSION_EMAIL"] ?? "").isEmpty
+  }
+
+  /// AMA-1849: bypass that creates a REAL Clerk session via the
+  /// Frontend API, then hands it to the SDK via `setActive`. Unlike
+  /// the mock bypass, `Clerk.shared.session` is populated and
+  /// `AuthViewModel.token()` returns a valid JWT — backend API calls
+  /// authenticate as the test user.
+  ///
+  /// Three-step flow:
+  ///   1. POST /v1/client/sign_ins (strategy: email_code)
+  ///   2. POST /v1/client/sign_ins/<id>/attempt_first_factor with code=424242
+  ///   3. await Clerk.shared.auth.setActive(sessionId: createdSessionId)
+  ///
+  /// Frontend API URL is derived from `Clerk.shared.publishableKey`
+  /// (matches Clerk SDK's own `extractFrontendApiUrl` logic — the
+  /// part after `pk_test_` / `pk_live_` is base64-encoded host).
+  private func applyUITestRealSessionBypass() async {
+    let email = ProcessInfo.processInfo.environment["UITEST_CLERK_REAL_SESSION_EMAIL"] ?? ""
+    let code = ProcessInfo.processInfo.environment["UITEST_CLERK_REAL_SESSION_CODE"] ?? "424242"
+
+    guard let host = AuthViewModel.deriveClerkFrontendHost(from: Clerk.shared.publishableKey) else {
+      print("[AuthViewModel] AMA-1849 bypass FAILED: could not derive frontend API host from publishable key")
+      return
+    }
+    let base = "https://\(host)"
+
+    do {
+      // 1. Create sign-in
+      let signIn = try await postClerkForm(
+        url: URL(string: "\(base)/v1/client/sign_ins?_is_native=true")!,
+        body: "identifier=\(urlEncode(email))&strategy=email_code"
+      )
+      guard let signInId = (signIn["response"] as? [String: Any])?["id"] as? String
+              ?? signIn["id"] as? String else {
+        print("[AuthViewModel] AMA-1849 bypass FAILED: no sign-in id in response: \(signIn)")
+        return
+      }
+
+      // 2. Attempt first factor with universal test code
+      let verified = try await postClerkForm(
+        url: URL(string: "\(base)/v1/client/sign_ins/\(signInId)/attempt_first_factor?_is_native=true")!,
+        body: "strategy=email_code&code=\(code)"
+      )
+      guard let sessionId = (verified["response"] as? [String: Any])?["created_session_id"] as? String
+              ?? verified["created_session_id"] as? String else {
+        print("[AuthViewModel] AMA-1849 bypass FAILED: no created_session_id in response: \(verified)")
+        return
+      }
+
+      // 3. Activate the session via the public Clerk SDK API
+      try await Clerk.shared.auth.setActive(sessionId: sessionId)
+
+      print("[AuthViewModel] AMA-1849 bypass OK: session \(sessionId) active for \(email)")
+
+      // Mirror the normal start() event subscription so token refreshes
+      // and signOut events still flow through this view model.
+      refreshFromClerk()
+      authEventsTask = Task { [weak self] in
+        for await event in Clerk.shared.auth.events {
+          guard let self else { return }
+          switch event {
+          case .signedOut, .accountDeleted:
+            self.cachedToken = nil
+            self.refreshFromClerk()
+          case .sessionChanged:
+            self.cachedToken = nil
+            self.refreshFromClerk()
+          case .tokenRefreshed(let token):
+            self.cachedToken = token
+            self.lastTokenRefresh = Date()
+            self.refreshFromClerk()
+          case .signInCompleted, .signUpCompleted:
+            self.cachedToken = nil
+            self.needsReauth = false
+            self.refreshFromClerk()
+          }
+        }
+      }
+    } catch {
+      print("[AuthViewModel] AMA-1849 bypass FAILED: \(error)")
+    }
+  }
+
+  /// Decode the frontend-api host (`solid-chicken-50.clerk.accounts.dev`)
+  /// from `pk_test_<base64>` / `pk_live_<base64>`. Matches the logic in
+  /// `ConfigurationManager.extractFrontendApiUrl` (private in the SDK).
+  static func deriveClerkFrontendHost(from publishableKey: String) -> String? {
+    let payload: String
+    if publishableKey.hasPrefix("pk_test_") {
+      payload = String(publishableKey.dropFirst("pk_test_".count))
+    } else if publishableKey.hasPrefix("pk_live_") {
+      payload = String(publishableKey.dropFirst("pk_live_".count))
+    } else {
+      return nil
+    }
+    guard let data = Data(base64Encoded: payload),
+          var decoded = String(data: data, encoding: .utf8) else {
+      return nil
+    }
+    // Clerk encodes a trailing `$`; strip it.
+    if decoded.hasSuffix("$") { decoded.removeLast() }
+    return decoded.isEmpty ? nil : decoded
+  }
+
+  /// Minimal application/x-www-form-urlencoded POST helper for the
+  /// two Clerk Frontend API calls. Returns the decoded JSON dict.
+  /// Throws on transport, HTTP, or JSON errors.
+  private func postClerkForm(url: URL, body: String) async throws -> [String: Any] {
+    var req = URLRequest(url: url)
+    req.httpMethod = "POST"
+    req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+    req.setValue("AmakaFlowCompanion/UITest-AMA-1849", forHTTPHeaderField: "User-Agent")
+    req.httpBody = body.data(using: .utf8)
+
+    let (data, response) = try await URLSession.shared.data(for: req)
+    if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
+      let snippet = String(data: data, encoding: .utf8) ?? "<binary>"
+      throw NSError(
+        domain: "AMA-1849",
+        code: http.statusCode,
+        userInfo: [NSLocalizedDescriptionKey: "Clerk \(url.path) -> \(http.statusCode): \(snippet.prefix(500))"]
+      )
+    }
+    guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+      throw NSError(domain: "AMA-1849", code: -1, userInfo: [NSLocalizedDescriptionKey: "non-JSON response"])
+    }
+    return json
+  }
+
+  private func urlEncode(_ s: String) -> String {
+    s.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? s
   }
   #endif
 
