@@ -16,7 +16,7 @@
 | 2 | Subscription / IAP testing harness (RevenueCat Test Store) | [AMA-1851](https://linear.app/amakaflow/issue/AMA-1851) | 🔲 Not started | Launch-day revenue risk |
 | 3 | CI → TestFlight on `main` merge | [AMA-1852](https://linear.app/amakaflow/issue/AMA-1852) | 🔲 Not started | Manual + skippable today |
 | 4 | Release-readiness checklist + per-PR "Verify by" footer | [AMA-1853](https://linear.app/amakaflow/issue/AMA-1853) | 🟡 In this PR | No objective "shippable" gate |
-| 5 | CJ-01 L3 sign-in real-session bypass | [AMA-1849](https://linear.app/amakaflow/issue/AMA-1849) | 🔲 Not started (blocked on Frontend API plumbing) | L3 only validates UI nav, not end-to-end |
+| 5 | CJ-01 L3 sign-in real-session bypass | [AMA-1849](https://linear.app/amakaflow/issue/AMA-1849) | 🟡 In PR | L3 only validates UI nav, not end-to-end |
 | 6 | Crash-free startup gate | [AMA-1854](https://linear.app/amakaflow/issue/AMA-1854) | 🔲 Not started | Fresh installs may crash undetected |
 | 7 | Watch + Garmin path coverage | [AMA-1855](https://linear.app/amakaflow/issue/AMA-1855) | 🔲 Not started | Watch/Garmin users hit untested flows |
 
@@ -60,11 +60,11 @@ Legend: ✅ Done · 🟡 In progress · ⏳ Waiting on external · 🔲 Not star
 
 ### Gap 5 — AMA-1849: CJ-01 L3 sign-in real-session bypass
 
-- [ ] DEBUG-only Frontend API bypass populates `Clerk.shared.session` with a real session
-- [ ] `AuthViewModel.token()` returns a valid Clerk JWT after the bypass
-- [ ] CJ-01 L3 + AMA-1834 L4 produce a real `workout_completions` row on staging
-- [ ] Release archive PlistBuddy inspection confirms zero bypass code in the shipped binary
-- [ ] Blueprint updated to flip CJ-01 sign-in from "fragile" to "hard gate"
+- [x] DEBUG-only Frontend API bypass populates `Clerk.shared.session` with a real session (via public `Clerk.shared.auth.setActive(sessionId:)`)
+- [x] `AuthViewModel.token()` returns a valid Clerk JWT after the bypass (uses normal SDK path post-setActive)
+- [ ] CJ-01 L3 + AMA-1834 L4 produce a real `workout_completions` row on staging (depends on AMA-1850 deploy first)
+- [ ] Release archive PlistBuddy inspection confirms zero bypass code in the shipped binary (verify pre-archive)
+- [ ] Blueprint updated to flip CJ-01 sign-in from "fragile" to "hard gate" (after L3 wiring exercises this bypass)
 
 ### Gap 6 — AMA-1854: Crash-free startup gate
 
