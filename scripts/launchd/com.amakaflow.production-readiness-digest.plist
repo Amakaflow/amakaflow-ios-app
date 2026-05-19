@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.amakaflow.production-readiness-digest</string>
+
+    <key>Comment</key>
+    <string>AMA-1853 / Production-Ready v1 — daily Telegram digest at 05:00 US Central. See ~/amakaflow-ios-app/scripts/production-readiness-digest.sh</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-lc</string>
+        <string>/Users/davidmini/amakaflow-ios-app/scripts/production-readiness-digest.sh</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>10</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardErrorPath</key>
+    <string>/Volumes/SSD1/openclaw/logs/production-digest.launchd.err.log</string>
+
+    <key>StandardOutPath</key>
+    <string>/Volumes/SSD1/openclaw/logs/production-digest.launchd.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>HOME</key>
+        <string>/Users/davidmini</string>
+    </dict>
+</dict>
+</plist>
