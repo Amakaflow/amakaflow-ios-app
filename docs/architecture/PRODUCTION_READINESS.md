@@ -17,7 +17,7 @@
 | 3 | CI → TestFlight on `main` merge | [AMA-1852](https://linear.app/amakaflow/issue/AMA-1852) | 🔲 Not started | Manual + skippable today |
 | 4 | Release-readiness checklist + per-PR "Verify by" footer | [AMA-1853](https://linear.app/amakaflow/issue/AMA-1853) | 🟡 In this PR | No objective "shippable" gate |
 | 5 | CJ-01 L3 sign-in real-session bypass | [AMA-1849](https://linear.app/amakaflow/issue/AMA-1849) | 🔲 Not started (blocked on Frontend API plumbing) | L3 only validates UI nav, not end-to-end |
-| 6 | Crash-free startup gate | [AMA-1854](https://linear.app/amakaflow/issue/AMA-1854) | 🔲 Not started | Fresh installs may crash undetected |
+| 6 | Crash-free startup gate | [AMA-1854](https://linear.app/amakaflow/issue/AMA-1854) | 🟡 In PR | Fresh installs may crash undetected |
 | 7 | Watch + Garmin path coverage | [AMA-1855](https://linear.app/amakaflow/issue/AMA-1855) | 🔲 Not started | Watch/Garmin users hit untested flows |
 
 Legend: ✅ Done · 🟡 In progress · ⏳ Waiting on external · 🔲 Not started
@@ -68,11 +68,11 @@ Legend: ✅ Done · 🟡 In progress · ⏳ Waiting on external · 🔲 Not star
 
 ### Gap 6 — AMA-1854: Crash-free startup gate
 
-- [ ] Minimum supported iOS version decided
-- [ ] Device matrix decided (cost-aware)
-- [ ] `.github/workflows/ios-cold-launch-matrix.yml` merged
-- [ ] Helper script `scripts/cold-launch-check.sh` ships + works locally
-- [ ] At least one synthetic-crash PR verified the gate catches it
+- [x] Minimum supported iOS version decided (matrix: iOS 26.2 + iOS 18.5)
+- [x] Device matrix decided (cost-aware: 2 sims per PR run)
+- [x] `.github/workflows/ios-cold-launch-matrix.yml` merged (in this PR)
+- [x] Helper script `scripts/cold-launch-check.sh` ships + works locally (verified 2026-05-19 — PID 95878, +15s grace, pass)
+- [ ] At least one synthetic-crash PR verified the gate catches it (filed as follow-up)
 
 ### Gap 7 — AMA-1855: Watch + Garmin coverage
 
