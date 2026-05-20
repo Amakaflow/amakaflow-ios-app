@@ -119,14 +119,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Keep the matrix small to control runner minutes. Pick one
-        # current iOS and one prior-major variant — expand later if
-        # we want broader coverage.
+        # AmakaFlow's main app sets IPHONEOS_DEPLOYMENT_TARGET = 26.1
+        # in pbxproj, so iOS < 26 sims reject `simctl install` with
+        # exit 16. The matrix stays iOS 26+ only until we lower the
+        # deployment target (filed as a follow-up — "broaden supported
+        # iOS range" ticket).
         include:
           - runtime: "iOS 26.2"
             device: "iPhone 16 Pro Max"
-          - runtime: "iOS 18.5"
-            device: "iPhone 15"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
