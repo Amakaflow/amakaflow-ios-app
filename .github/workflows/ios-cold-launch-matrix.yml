@@ -83,7 +83,7 @@ jobs:
             CLERK_PUBLISHABLE_KEY_DEV="${CLERK_PUBLISHABLE_KEY_DEV:-pk_test_c29saWQtY2hpY2tlbi01MC5jbGVyay5hY2NvdW50cy5kZXYk}" \
             CLERK_PUBLISHABLE_KEY_STAGING="${CLERK_PUBLISHABLE_KEY_STAGING:-pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA}" \
             CLERK_PUBLISHABLE_KEY_PRODUCTION="${CLERK_PUBLISHABLE_KEY_PRODUCTION:-pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA}" \
-            -allowProvisioningUpdates 2>&1 | tail -5
+            -allowProvisioningUpdates 2>&1 | tee build.log | tail -20
           APP_PATH=$(find DerivedData/Build/Products/Debug-iphonesimulator -maxdepth 1 -name "AmakaFlowCompanion.app" | head -1)
           if [ -z "$APP_PATH" ]; then
             echo "::error::Could not find built .app under DerivedData"

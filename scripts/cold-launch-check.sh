@@ -119,17 +119,12 @@ sleep "$((GRACE_SECONDS - half))"
 # 5. Assert process still alive.
 # `simctl spawn ... launchctl print system/${PID}` would be most robust
 # but `kill -0` works too — and runs in the host context.
-if ! kill -0 "$PID" 2>/dev/null; then
-  echo "❌ FAIL: app process $PID is GONE after ${GRACE_SECONDS}s — cold-launch crash" >&2
-  echo "::error::Cold-launch crash on sim $SIM_UDID: $BUNDLE_ID died within ${GRACE_SECONDS}s"
-fi
-PROCESS_ALIVE=$?
-# kill -0 returns 0 if alive, 1 if not. PROCESS_ALIVE captures the *negated* status above.
-# Recompute cleanly:
 if kill -0 "$PID" 2>/dev/null; then
   PROCESS_ALIVE=1   # alive (good)
 else
   PROCESS_ALIVE=0   # dead (bad)
+  echo "❌ FAIL: app process $PID is GONE after ${GRACE_SECONDS}s — cold-launch crash" >&2
+  echo "::error::Cold-launch crash on sim $SIM_UDID: $BUNDLE_ID died within ${GRACE_SECONDS}s"
 fi
 
 # 6. Check for fresh crash reports.
