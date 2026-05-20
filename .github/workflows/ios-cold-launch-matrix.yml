@@ -1,0 +1,209 @@
+# AMA-1854 / Production-Ready v1 gap #6 — Crash-free startup gate.
+#
+# Builds the iOS app and launches it on a clean iOS Simulator across an
+# OS/device matrix. Fails the run if the app crashes or its process
+# dies within the grace period. Catches cold-launch crashes BEFORE the
+# App Store reviewer or real users do.
+#
+# Wired as required on PRs touching app entrypoint code (paths-filter
+# below). Other PRs skip the matrix to save runner minutes.
+
+name: iOS Cold-Launch Matrix
+
+on:
+  pull_request:
+    paths:
+      - 'AmakaFlow/**'
+      - 'AmakaFlowCompanion/AmakaFlowCompanion/**'
+      - 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/**'
+      - 'AmakaFlowCompanion/AmakaFlowCompanionApp/**'
+      - 'scripts/cold-launch-check.sh'
+      - '.github/workflows/ios-cold-launch-matrix.yml'
+  push:
+    branches: [main]
+
+# Avoid stacking matrix runs on rapid pushes.
+concurrency:
+  group: cold-launch-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Debug-sim .app
+    runs-on: macos-15
+    timeout-minutes: 30
+    outputs:
+      app-artifact: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode (latest available)
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          echo "Using Xcode: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
+          xcodebuild -version
+
+      - name: Restore SPM cache
+        id: spm
+        uses: actions/cache@v4
+        with:
+          path: AmakaFlowCompanion/.spm
+          key: spm-${{ runner.os }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+
+      - name: Restore DerivedData cache
+        uses: actions/cache@v4
+        with:
+          path: AmakaFlowCompanion/DerivedData
+          key: dd-coldlaunch-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            dd-coldlaunch-${{ runner.os }}-
+
+      # Build a Debug-iphonesimulator .app. The cold-launch gate runs
+      # against this binary on every matrix combo. Inject Clerk keys
+      # the same way scripts/sim-build.sh does — without them the
+      # Environment.swift readers crash at launch (per
+      # ios-clerk-keys-empty-in-pbxproj memory).
+      - name: Build .app
+        working-directory: AmakaFlowCompanion
+        env:
+          CLERK_PUBLISHABLE_KEY_DEV: ${{ secrets.CLERK_PUBLISHABLE_KEY_DEV }}
+          CLERK_PUBLISHABLE_KEY_STAGING: ${{ secrets.CLERK_PUBLISHABLE_KEY_STAGING }}
+          CLERK_PUBLISHABLE_KEY_PRODUCTION: ${{ secrets.CLERK_PUBLISHABLE_KEY_PRODUCTION }}
+        run: |
+          set -e
+          xcodebuild build \
+            -scheme AmakaFlowCompanion \
+            -project AmakaFlowCompanion.xcodeproj \
+            -configuration Debug \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm \
+            CLERK_PUBLISHABLE_KEY_DEV="${CLERK_PUBLISHABLE_KEY_DEV:-pk_test_c29saWQtY2hpY2tlbi01MC5jbGVyay5hY2NvdW50cy5kZXYk}" \
+            CLERK_PUBLISHABLE_KEY_STAGING="${CLERK_PUBLISHABLE_KEY_STAGING:-pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA}" \
+            CLERK_PUBLISHABLE_KEY_PRODUCTION="${CLERK_PUBLISHABLE_KEY_PRODUCTION:-pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA}" \
+            -allowProvisioningUpdates 2>&1 | tee build.log | tail -20
+          APP_PATH=$(find DerivedData/Build/Products/Debug-iphonesimulator -maxdepth 1 -name "AmakaFlowCompanion.app" | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::Could not find built .app under DerivedData"
+            exit 1
+          fi
+          echo "APP_PATH=$APP_PATH"
+          # Verify Clerk keys substituted in the resulting Info.plist
+          /usr/libexec/PlistBuddy -c "Print :CLERK_PUBLISHABLE_KEY_STAGING" "$APP_PATH/Info.plist" | head -c 30 || true
+
+      # Tar the .app before upload — actions/upload-artifact@v4 strips
+      # the parent directory of an uploaded `.app` bundle, so on
+      # download the `.app/` wrapper is gone and the gate can't find
+      # the bundle at `built-app/AmakaFlowCompanion.app`. Tarring
+      # preserves the directory structure across the upload/download
+      # round-trip.
+      - name: Tar the .app for round-trip-safe artifact transfer
+        working-directory: AmakaFlowCompanion/DerivedData/Build/Products/Debug-iphonesimulator
+        run: tar -cf /tmp/cold-launch-app.tar AmakaFlowCompanion.app
+
+      - name: Upload .app tarball
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: cold-launch-app
+          path: /tmp/cold-launch-app.tar
+          retention-days: 3
+
+  cold-launch:
+    name: Cold-launch on ${{ matrix.runtime }} / ${{ matrix.device }}
+    needs: build
+    runs-on: macos-15
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # AmakaFlow's main app sets IPHONEOS_DEPLOYMENT_TARGET = 26.1
+        # in pbxproj, so iOS < 26 sims reject `simctl install` with
+        # exit 16. The matrix stays iOS 26+ only until we lower the
+        # deployment target (filed as a follow-up — "broaden supported
+        # iOS range" ticket).
+        include:
+          - runtime: "iOS 26.2"
+            device: "iPhone 16 Pro Max"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode (latest)
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE_PATH"
+
+      - name: Download .app tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: cold-launch-app
+          path: built-app
+
+      - name: Untar the .app bundle
+        working-directory: built-app
+        run: |
+          tar -xf cold-launch-app.tar
+          ls -la
+          test -d AmakaFlowCompanion.app  # bundle must be present after extraction
+
+      # Locate a sim runtime matching the matrix entry; if missing, skip
+      # this combo rather than fail the whole gate (older runtimes can
+      # vanish between Xcode releases).
+      - name: Create sim for ${{ matrix.runtime }} / ${{ matrix.device }}
+        id: create-sim
+        run: |
+          set -e
+          runtime_id=$(xcrun simctl list runtimes -j 2>/dev/null | \
+            jq -r --arg name "${{ matrix.runtime }}" \
+              '.runtimes[] | select(.isAvailable and (.name == $name)) | .identifier' | head -1)
+          if [ -z "$runtime_id" ]; then
+            echo "::warning::runtime ${{ matrix.runtime }} not available on this runner — skipping"
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          devtype=$(xcrun simctl list devicetypes -j | \
+            jq -r --arg n "${{ matrix.device }}" \
+              '.devicetypes[] | select(.name == $n) | .identifier' | head -1)
+          if [ -z "$devtype" ]; then
+            echo "::warning::device ${{ matrix.device }} not available — skipping"
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          sim_name="cold-launch-${{ github.run_id }}-${{ strategy.job-index }}"
+          udid=$(xcrun simctl create "$sim_name" "$devtype" "$runtime_id")
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+          echo "skipped=false" >> "$GITHUB_OUTPUT"
+          echo "Created sim $udid for $sim_name"
+
+      - name: Run cold-launch gate
+        if: steps.create-sim.outputs.skipped != 'true'
+        env:
+          UDID: ${{ steps.create-sim.outputs.udid }}
+        run: |
+          set -e
+          chmod +x scripts/cold-launch-check.sh
+          scripts/cold-launch-check.sh \
+            --sim-udid "$UDID" \
+            --app-path built-app/AmakaFlowCompanion.app \
+            --grace-seconds 60 \
+            --screenshot-path /tmp/cold-launch-${{ strategy.job-index }}.png
+
+      - name: Upload evidence screenshot
+        if: always() && steps.create-sim.outputs.skipped != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cold-launch-evidence-${{ strategy.job-index }}
+          path: /tmp/cold-launch-${{ strategy.job-index }}.png
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Tear down sim
+        if: always() && steps.create-sim.outputs.skipped != 'true'
+        env:
+          UDID: ${{ steps.create-sim.outputs.udid }}
+        run: |
+          xcrun simctl shutdown "$UDID" 2>/dev/null || true
+          xcrun simctl delete "$UDID" 2>/dev/null || true
