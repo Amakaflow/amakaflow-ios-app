@@ -55,10 +55,15 @@ appId: com.myamaka.AmakaFlowCompanion
       - assertVisible: "Coach"
       # Already signed in — nothing else to do.
 
-# Sign-in path: only runs if Coach tab is NOT yet visible.
+# Sign-in path: only runs if Coach tab is NOT yet visible AND the email
+# input is visible. (If Coach isn't visible but email isn't either, the
+# session persisted from a previous run and we just need to walk
+# onboarding — the post-signin loop below handles that.)
 - runFlow:
     when:
       notVisible: "Coach"
+      visible:
+        text: "Enter your email"
     commands:
       # Some builds show a one-time "Skip" intro before the email field.
       - runFlow:
@@ -71,11 +76,36 @@ appId: com.myamaka.AmakaFlowCompanion
 
       - tapOn:
           text: "Enter your email"
+      # Clear any autofilled / leftover text (Clerk shows "Last Used"
+      # email after a prior session — appending to it produces an
+      # invalid identifier on the next run).
+      - eraseText
       - inputText: "claude+clerk_test@amakaflow.dev"
       - tapOn:
           text: "Continue"
       - waitForAnimationToEnd:
           timeout: 10000
+
+      # Clerk staging is configured password-first for this test user
+      # (the "Email code" link on "Use another method" only shows
+      # Apple/Google on this instance — no email-code factor). Enter
+      # the known dev-instance password, then Continue. Per
+      # ios-sim-test-loop-recipe.md: this password is for a Clerk DEV
+      # test user on the staging Clerk instance (ruling-mite-84) only;
+      # it grants no production access and is paired with a `+clerk_test`
+      # subaddress whose 424242 universal code is documented public.
+      - runFlow:
+          when:
+            visible: "Enter password"
+          commands:
+            - tapOn:
+                text: "Enter your password"
+            - eraseText
+            - inputText: "ClaudeTest!2026-Persistence"
+            - tapOn:
+                text: "Continue"
+            - waitForAnimationToEnd:
+                timeout: 12000
 
       # Clerk flow may show a password field first OR jump straight to the
       # 6-digit code screen depending on instance config. Handle both.
@@ -94,9 +124,33 @@ appId: com.myamaka.AmakaFlowCompanion
             - waitForAnimationToEnd:
                 timeout: 12000
 
-      # Final assertion: Home/Coach tab must be visible within 30s. If not,
-      # this fails loudly and aborts the calling flow.
-      - extendedWaitUntil:
-          visible: "Coach"
-          timeout: 30000
-      - assertVisible: "Coach"
+# Post-signin onboarding: fresh-install users see a stack of cards
+# (Nutrition Awareness, Biometric consent, etc.) before the Coach tab
+# is reachable. Tap "Not now" / "Skip" on whatever appears, up to 6
+# cards (per ios-sim-test-loop-recipe.md). Lives OUTSIDE the sign-in
+# branch so it also runs when the session persisted from a prior run
+# and the app launched directly into the onboarding stack.
+- repeat:
+    times: 6
+    commands:
+      - runFlow:
+          when:
+            visible: "Not now"
+          commands:
+            - tapOn: "Not now"
+            - waitForAnimationToEnd:
+                timeout: 3000
+      - runFlow:
+          when:
+            visible: "Skip"
+          commands:
+            - tapOn: "Skip"
+            - waitForAnimationToEnd:
+                timeout: 3000
+
+# Final assertion: Home/Coach tab must be visible within 30s. If not,
+# this fails loudly and aborts the calling flow.
+- extendedWaitUntil:
+    visible: "Coach"
+    timeout: 30000
+- assertVisible: "Coach"
