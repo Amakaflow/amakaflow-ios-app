@@ -78,7 +78,7 @@ Legend: ✅ Done · 🟡 In progress · ⏳ Waiting on external · 🔲 Not star
 
 - [x] CJ-02 Watch: L1 backend (PR #411, 5 cases) + L2 iOS (PR #220, 8 assembly cases pinning the Watch wire shape)
 - [x] CJ-03 Garmin: L1 backend (PR #411 includes Garmin path) + L2 iOS (PR #222, 11 assembly cases including AMA-1867 `workout_name` round-trip via test seam `makeGarminCompletionRequestForTesting`)
-- [ ] Both listed in `docs/testing/critical-journeys.md` ([AMA-1869](https://linear.app/amakaflow/issue/AMA-1869) — small docs follow-up, separate from the test work)
+- [x] Both listed in `docs/testing/critical-journeys.md` (added in this PR — see CJ-02 and CJ-03 sections; closes [AMA-1869](https://linear.app/amakaflow/issue/AMA-1869))
 - [ ] Real-device smoke on Apple Watch + Garmin (deferred to TestFlight pipeline / post-launch; sim verification covers the contract)
 - [ ] L3 (XCUITest Watch sim driving) deferred — L4 evidence flow (AMA-1850's run) exercises the same `WorkoutCompletionRequest` assembly that L3 would, and the 19 L2 assembly tests pin every wire-shape invariant. Adding L3 is post-launch work.
 

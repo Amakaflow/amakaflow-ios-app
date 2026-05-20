@@ -103,3 +103,13 @@ iOSInjectionProject/
 **/xcshareddata/WorkspaceSettings.xcsettings
 
 .worktrees/
+
+# Maestro `takeScreenshot:` outputs land in the working tree root by
+# default (one PNG per step). Evidence runs save many of these; keep
+# them out of git. CI uploads them as artifacts via Maestro's
+# --debug-output flag — that path is separate.
+cj01-step*.png
+ama1834-step*.png
+ama-*-step*.png
+maestro-evidence*/
+/tmp/ama*-evidence/

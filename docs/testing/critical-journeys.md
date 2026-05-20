@@ -275,10 +275,136 @@ failing run:
 
 ---
 
-## CJ-02 / CJ-03 / CJ-04
+## CJ-02 — Watch standalone workout completion
 
-Not yet implemented at any layer. Per the blueprint:
+**Linear umbrella: AMA-1855.** Implements the Watch half of the
+Production-Ready v1 Gap #7. Covers the journey where a user starts
+and completes a workout on Apple Watch without ever opening the
+phone app.
+
+User outcome being validated:
+
+> A user with a paired Apple Watch can complete a workout entirely
+> on the Watch (the iPhone app may be backgrounded or asleep), and
+> the resulting completion lands on the backend with `source =
+> "apple_watch"` and `device_info.platform = "watchos"`, then shows
+> in iOS Activity History when the user next opens the phone.
+
+### Backend routes touched
+
+- `POST /workouts/complete` (mapper-api) — invoked from
+  `WorkoutCompletionService.postWatchWorkoutCompletion(summary:)` on
+  iOS, fed from a `StandaloneWorkoutSummary` value emitted by the
+  watchOS companion app via WatchConnectivity.
+
+### Layer status (as of 2026-05-20)
+
+| Layer | Status | Authoritative location | Notes |
+|---|---|---|---|
+| L1 | Green | `services/mapper-api/tests/test_workout_completions.py` (AMA-1855 block, lines 312+) | Two Watch-path tests: `test_watch_completion_with_workout_id` and `test_watch_completion_with_event_id`. Both assert the request reaches `repo.save` with `source == "apple_watch"`. PR #411. |
+| L2 | Green | `AmakaFlowCompanion/AmakaFlowCompanionTests/AMA1855/AMA1855_WatchGarmin_AssemblyTests.swift` (Watch section) | 8 assembly tests pinning the wire shape via the DEBUG seam `WorkoutCompletionService.makeWatchCompletionRequestForTesting`: source = "apple_watch", `device_info.platform == "watchos"`, `device_info.model == "Apple Watch"`, HR + active_calories from `StandaloneWorkoutSummary`, `execution_log` / `set_logs` / `heart_rate_samples` absent, `is_simulated` absent, `client_generated_id` always populated, top-level keys subset of the Codable surface. PR #220. |
+| L3 | Deferred (post-launch) | n/a | XCUITest driving a paired Watch sim from iOS UITest harness is out of scope for v1. The L2 assembly tests + the L4 evidence flow exercise the same `WorkoutCompletionRequest` builder, so the contract is pinned without L3 driving real WatchConnectivity. |
+| L4 | Green (evidence-only, covered by CJ-01 run) | `e2e/maestro/flows/workout-lifecycle/ama1839-cj01-signin-generate-saveend-evidence.yaml` | The same Maestro flow that validates CJ-01 exercises `WorkoutCompletionRequest` end-to-end through `postCompletion(...)`, including the same router path the Watch source uses. Real Watch hardware smoke deferred to post-launch / TestFlight. |
+
+### What L1 currently asserts
+
+- `test_watch_completion_with_workout_id` — POST with `source:
+  "apple_watch"` + `workout_id` succeeds, repo receives `source ==
+  "apple_watch"`.
+- `test_watch_completion_with_event_id` — same path when iOS
+  pre-creates a `workout_event_id` instead of a local `workout_id`.
+
+### What L2 currently asserts
+
+See `AMA1855_WatchGarmin_AssemblyTests.swift` Watch section — 8
+cases, all run in ~0.05s. Tests use the DEBUG-only seam
+`makeWatchCompletionRequestForTesting(summary:)` so they pin the
+request *without* driving the network.
+
+### Edge cases / blockers deferred to later layers
+
+- Real WatchConnectivity round-trip (Watch app emits a
+  `StandaloneWorkoutSummary` → iOS receives it → posts) is exercised
+  by L2 only at the iOS side. The Watch-app side is post-launch.
+- HK injection on the Watch sim during a live workout is deferred —
+  the v1 path captures avg HR + active calories from the summary
+  payload, not from a HK sample stream.
+
+---
+
+## CJ-03 — Garmin push workout completion
+
+**Linear umbrella: AMA-1855.** Implements the Garmin half of
+Production-Ready v1 Gap #7. Covers the journey where a workout is
+recorded on a Garmin device, synced via GarminConnect → mapper-api
+→ iOS, and shows up in Activity History.
+
+User outcome being validated:
+
+> A workout completed on a Garmin device (free-form like a "Sunday
+> long run", or via a "Run Again" template) lands on the backend
+> with `source = "garmin"` and `device_info.platform = "garmin"`,
+> preserves the client-supplied `workout_name`, and is visible in
+> iOS Activity History with the correct title.
+
+### Backend routes touched
+
+- `POST /workouts/complete` (mapper-api) — invoked from
+  `WorkoutCompletionService.postGarminWorkoutCompletion(...)` on
+  iOS, fed from Garmin-side metadata (workout_id, started_at,
+  ended_at, avg HR, active calories, optional workout_name +
+  workout_structure).
+
+### Layer status (as of 2026-05-20)
+
+| Layer | Status | Authoritative location | Notes |
+|---|---|---|---|
+| L1 | Green | `services/mapper-api/tests/test_workout_completions.py` (AMA-1855 block) | Three Garmin-path tests: `test_garmin_completion_with_workout_id`, `test_garmin_completion_event_id_with_workout_name` (pins the AMA-1867 `workout_name` round-trip end-to-end), `test_garmin_completion_unknown_source_still_accepts` (future-extensibility of source strings). Plus the AMA-1872 cgid-wiring regression tests in the same file. PR #411 + PR #413. |
+| L2 | Green | `AmakaFlowCompanion/AmakaFlowCompanionTests/AMA1855/AMA1855_WatchGarmin_AssemblyTests.swift` (Garmin section) | 11 assembly tests pinning the wire shape via the DEBUG seam `WorkoutCompletionService.makeGarminCompletionRequestForTesting`. Pins: source = "garmin", `device_info.platform == "garmin"`, `device_info.model` from caller (incl. nil-when-disconnected case), `workout_id` preserved (no event_id/follow_along on iOS Garmin path today), health metrics from args, all of `execution_log` / `set_logs` / `heart_rate_samples` / `is_simulated` absent, `client_generated_id` always populated (AMA-1848 Bug B guard), `workout_name` round-trips when provided (AMA-1867), top-level keys subset of Codable surface, ISO8601 UTC regex on timestamps. PR #222. |
+| L3 | Deferred (post-launch) | n/a | The Garmin path requires either the real mock-garmin service (port 8099) or a real device — both out of scope for v1 sim CI. The L2 assembly tests + the AMA-1850 L4 evidence run pin the contract. |
+| L4 | Green (evidence-only, covered by CJ-01 run + repo unit tests) | `e2e/maestro/flows/workout-lifecycle/ama1839-cj01-signin-generate-saveend-evidence.yaml` + `services/mapper-api/tests/test_infrastructure_repositories.py::TestCompletionRepositoryUpsertsProfileRow` | The Maestro flow exercises the shared `/workouts/complete` router that the Garmin source uses; the repo-level tests pin the placeholder profile + cgid fallback that any Garmin-source request also relies on. Real Garmin hardware smoke deferred to post-launch. |
+
+### What L1 currently asserts
+
+- `test_garmin_completion_with_workout_id` — POST with `source:
+  "garmin"` + `workout_id` reaches repo with `source == "garmin"`.
+- `test_garmin_completion_event_id_with_workout_name` — Garmin
+  pushes with a `workout_event_id` and a free-form `workout_name`
+  (e.g., "Sunday long run") forward both to the repo, so the name
+  persists into `workout_completions.workout_name` (AMA-1867).
+- `test_garmin_completion_unknown_source_still_accepts` — endpoint
+  is source-agnostic (e.g., a future "garmin_edge_840" sub-device
+  variant does not 422); only the repo / read side care about the
+  exact string.
+
+### What L2 currently asserts
+
+See `AMA1855_WatchGarmin_AssemblyTests.swift` Garmin section — 11
+cases including the `deviceModel: nil` defensive pin and the AMA-1867
+`workout_name` round-trip both directions (round-trips when provided,
+absent when not). Runs in ~0.03s.
+
+### Edge cases / blockers deferred to later layers
+
+- Real Garmin device round-trip is not in sim CI. Local dev runs
+  against the mock-garmin service (port 8099) when needed (see
+  memory `garmin-mock-vs-real.md`).
+- iOS Garmin path today uses `workout_id` only (server-resolves
+  events). If iOS ever starts sending `workout_event_id` directly,
+  the test `test_makeGarminCompletionRequest__workoutIdPreserved`
+  fails loudly so the change becomes visible.
+
+---
+
+## CJ-04 / future journeys
+
+Not yet implemented. Per the blueprint:
 
 > Do not expand beyond one pilot critical journey until CJ-01 has
 > produced two consecutive trustworthy CI runs and one trustworthy
 > local developer run under the new model.
+
+CJ-01 has now exceeded that gate (multiple green runs through
+2026-05-20). Candidate post-v1 journeys: voice-driven workout flow,
+follow-along playback, persistence-across-uninstall. Add new
+sections here as they get wired up.
