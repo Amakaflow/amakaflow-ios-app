@@ -9,27 +9,36 @@
 #    warn-only signal with screenshot artifacts. The authoritative
 #    validators are L1 (FastAPI pytest), L2 (XCTest), and L3 (XCUITest).
 #
-# Filename suffix `-evidence` follows blueprint "Naming conventions":
-#   `<ticket>-<journey>-<purpose>.yaml` with `-evidence` indicating
-#   screenshot/observability runs.
+# Navigation map (resynced 2026-05-20 for AMA-1868):
+#   Tabs are Home / Workouts / More (AMA-1412 consolidated). The flow used
+#   to navigate into a "Coach" tab and tap a suggest button there, but
+#   post-AMA-1412:
+#     - Suggest Workout button lives directly on Home.
+#     - Coach is a NavigationLink row inside the More tab (chat view).
+#     - Activity History is a NavigationLink row inside the More tab.
+#   So the flow goes: Home -> Suggest -> Accept -> Start -> End/Save
+#     -> More tab -> History row -> Activity History list.
 #
 # Selectors:
 #   - Most steps use `id:` matchers backed by accessibilityIdentifiers
-#     introduced in AMA-1842 (`ama1842.coach.row`, `ama1842.history.row`,
-#     `ama1842.suggest.button`, `ama1842.suggest.preview`,
-#     `ama1842.accept.button`, `ama1842.start.button`,
-#     `ama1842.endWorkout.button`, `ama1842.activityHistory.cell.<index>`).
+#     introduced in AMA-1842 (`ama1842.suggest.button`,
+#     `ama1842.suggest.preview`, `ama1842.accept.button`,
+#     `ama1842.start.button`, `ama1842.endWorkout.button`,
+#     `ama1842.history.row`, `ama1842.activityHistory.cell.<index>`).
 #   - "Save & End" is a SwiftUI alert button without a custom identifier,
 #     so it uses a text matcher.
+#   - The More tab item on the tab bar does not yet have an
+#     accessibilityIdentifier — we match by visible text "More". If that
+#     ever proves fragile, the small follow-up is adding
+#     `.accessibilityIdentifier("ama1842.tab.more")` to the More tab item.
 #
 # Sign-in is delegated to `_lib/clerk-signin.yaml` (real Clerk staging
-# auth via `+clerk_test` subaddress + universal code 424242).
+# auth via `+clerk_test` subaddress + universal code 424242, plus the
+# password + onboarding-skip handling landed via PR #221).
 #
-# Screenshot checkpoints (9 total) align with blueprint Phase 2 step 4:
+# Screenshot checkpoints align with blueprint Phase 2 step 4:
 #   "Screenshots after sign-in, after generate, after save and end, after
 #    verification, and after reopen."
-# Additional intermediate checkpoints capture per-tap state for richer
-# evidence when a step fails mid-journey.
 
 appId: com.myamaka.AmakaFlowCompanion
 ---
@@ -37,37 +46,87 @@ appId: com.myamaka.AmakaFlowCompanion
 - runFlow: ../../_lib/clerk-signin.yaml
 - takeScreenshot: cj01-step1-signed-in
 
-# --- Step 2: navigate to Coach tab + tap Suggest a Workout ---
-- tapOn:
-    id: "ama1842.coach.row"
-- waitForAnimationToEnd:
-    timeout: 3000
-- takeScreenshot: cj01-step2-coach-tab
-
+# --- Step 2: tap Suggest Workout (already on Home post-signin) ---
 - tapOn:
     id: "ama1842.suggest.button"
-- takeScreenshot: cj01-step3-suggest-tapped
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: cj01-step2-suggest-tapped
+
+# The Suggest sheet may show a one-time biometric-consent gate
+# ("Before we begin — I agree — continue") before kicking off LLM
+# Generate. Em-dash in the button label, so regex matcher per
+# ios-sim-test-loop-recipe.md.
+- runFlow:
+    when:
+      visible:
+        text: ".*agree.*continue.*"
+    commands:
+      - tapOn:
+          text: ".*agree.*continue.*"
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+# Fresh-profile users see CoachingProfileOnboardingView next
+# (Experience Level / Primary Goal / Days Per Week). Defaults are
+# pre-selected; scroll to + tap the "Generate My Workout" button at
+# the bottom of the form to submit and kick off LLM Generate.
+- runFlow:
+    when:
+      visible:
+        text: "What are you training for?"
+    commands:
+      - scrollUntilVisible:
+          element:
+            text: "Generate My Workout"
+          direction: DOWN
+          speed: 25
+      - tapOn:
+          text: "Generate My Workout"
+      - waitForAnimationToEnd:
+          timeout: 3000
 
 # LLM Generate can take 10-30s; allow generous timeout.
 - extendedWaitUntil:
     visible:
       id: "ama1842.suggest.preview"
     timeout: 30000
-- takeScreenshot: cj01-step4-suggestion-generated
+- takeScreenshot: cj01-step3-suggestion-generated
 
 # --- Step 3: accept the generated suggestion ---
+# The Accept & Save button sits below the scrollable list of workout
+# steps (10+ items typical), so scroll to bring it into view first.
+- scrollUntilVisible:
+    element:
+      id: "ama1842.accept.button"
+    direction: DOWN
+    speed: 25
 - tapOn:
     id: "ama1842.accept.button"
 - waitForAnimationToEnd:
     timeout: 3000
-- takeScreenshot: cj01-step5-accepted
+- takeScreenshot: cj01-step4-accepted
 
 # --- Step 4: start the accepted workout ---
 - tapOn:
     id: "ama1842.start.button"
 - waitForAnimationToEnd:
     timeout: 3000
-- takeScreenshot: cj01-step6-workout-started
+
+# Start flow shows a "Waiting for Apple Watch" pairing screen before
+# the WorkoutPlayer. On a sim no real watch will pair — tap
+# "Start on Phone Only" to skip it. (No-op on devices that did pair.)
+- runFlow:
+    when:
+      visible:
+        text: "Start on Phone Only"
+    commands:
+      - tapOn:
+          text: "Start on Phone Only"
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+- takeScreenshot: cj01-step5-workout-started
 
 # --- Step 5: end + save the workout ---
 - tapOn:
@@ -80,9 +139,16 @@ appId: com.myamaka.AmakaFlowCompanion
     text: "Save & End"
 - waitForAnimationToEnd:
     timeout: 5000
-- takeScreenshot: cj01-step7-saved-and-ended
+- takeScreenshot: cj01-step6-saved-and-ended
 
-# --- Step 6: verify in Activity History ---
+# --- Step 6: navigate to More -> History to verify ---
+# Tab-bar text matcher (no a11y id on tab items yet).
+- tapOn:
+    text: "More"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: cj01-step7-more-tab
+
 - tapOn:
     id: "ama1842.history.row"
 - extendedWaitUntil:
@@ -99,6 +165,10 @@ appId: com.myamaka.AmakaFlowCompanion
       notifications: deny
 - waitForAnimationToEnd:
     timeout: 5000
+- tapOn:
+    text: "More"
+- waitForAnimationToEnd:
+    timeout: 3000
 - tapOn:
     id: "ama1842.history.row"
 - extendedWaitUntil:
