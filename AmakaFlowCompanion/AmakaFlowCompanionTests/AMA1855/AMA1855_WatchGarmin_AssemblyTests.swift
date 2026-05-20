@@ -11,10 +11,11 @@
 //      (input: StandaloneWorkoutSummary; source = "apple_watch";
 //      platform = "watchos"; no execution_log, no set_logs).
 //
-//  Garmin path (postGarminWorkoutCompletion → source = "garmin",
-//  platform = "garmin") is deferred to a follow-up — it currently
-//  takes raw args rather than a summary value type, so it needs a
-//  small refactor to expose an assembly test seam.
+//  Garmin path: AMA-1855 follow-up exposed
+//  `makeGarminCompletionRequestForTesting` as a DEBUG-only seam
+//  mirroring the Watch helper. The Garmin tests below pin the same
+//  wire-shape invariants for the "garmin" / "garmin" source/platform
+//  combo, including the AMA-1867 `workout_name` round-trip.
 //
 //  Asserts pinned for AMA-1855 L1 backend invariants (mapper-api stores
 //  `source` exactly as sent — see
@@ -196,5 +197,161 @@ final class AMA1855_WatchGarmin_AssemblyTests: XCTestCase {
         ]
         let unknown = keys.subtracting(known)
         XCTAssertTrue(unknown.isEmpty, "Watch request emitted unknown keys: \(unknown)")
+    }
+
+    // MARK: - Garmin path (CJ-03)
+
+    private func makeGarminRequest(
+        workoutId: String = "garmin-workout-ama1855",
+        avgHeartRate: Int? = 142,
+        activeCalories: Int? = 410,
+        workoutName: String? = nil,
+        deviceModel: String? = "Garmin Forerunner 965"
+    ) -> WorkoutCompletionRequest {
+        WorkoutCompletionService.makeGarminCompletionRequestForTesting(
+            workoutId: workoutId,
+            startedAt: Date(timeIntervalSince1970: 1_700_010_000),
+            endedAt: Date(timeIntervalSince1970: 1_700_011_800),  // +30 min
+            avgHeartRate: avgHeartRate,
+            activeCalories: activeCalories,
+            workoutStructure: nil,
+            workoutName: workoutName,
+            deviceModel: deviceModel
+        )
+    }
+
+    func test_makeGarminCompletionRequest__producesGarminSource() throws {
+        let json = try encode(makeGarminRequest())
+        XCTAssertEqual(json["source"] as? String, "garmin",
+                       "AMA-1855 L1 invariant: Garmin path must POST source=garmin so mapper-api pins provenance.")
+    }
+
+    func test_makeGarminCompletionRequest__devicePlatformIsGarmin() throws {
+        let json = try encode(makeGarminRequest(deviceModel: "Garmin Forerunner 965"))
+        let deviceInfo = try XCTUnwrap(json["device_info"] as? [String: Any])
+        XCTAssertEqual(deviceInfo["platform"] as? String, "garmin")
+        XCTAssertEqual(deviceInfo["model"] as? String, "Garmin Forerunner 965")
+    }
+
+    func test_makeGarminCompletionRequest__deviceModelNilWhenNotConnected() throws {
+        // In production `GarminConnectManager.shared.connectedDeviceName` can
+        // return nil if iOS posts a completion before the device handshake
+        // completes (or after it disconnects). Pin that the request still
+        // builds cleanly: platform stays "garmin" and model is omitted/null
+        // rather than crashing or substituting a sentinel.
+        let json = try encode(makeGarminRequest(deviceModel: nil))
+        let deviceInfo = try XCTUnwrap(json["device_info"] as? [String: Any])
+        XCTAssertEqual(deviceInfo["platform"] as? String, "garmin")
+        let model = deviceInfo["model"]
+        XCTAssertTrue(model == nil || model is NSNull,
+                      "device_info.model should be absent/null when deviceModel is nil; got \(String(describing: model))")
+    }
+
+    func test_makeGarminCompletionRequest__workoutIdPreserved() throws {
+        let json = try encode(makeGarminRequest(workoutId: "garmin-cj03-789"))
+        XCTAssertEqual(json["workout_id"] as? String, "garmin-cj03-789")
+        // iOS today only drives Garmin via workout_id; event_id / follow_along
+        // are server-resolved if needed. Pin "iOS sends workout_id only" so a
+        // future change becomes visible.
+        let evt = json["workout_event_id"]
+        XCTAssertTrue(evt == nil || evt is NSNull,
+                      "iOS Garmin path should not send workout_event_id; got \(String(describing: evt))")
+        let follow = json["follow_along_workout_id"]
+        XCTAssertTrue(follow == nil || follow is NSNull)
+    }
+
+    func test_makeGarminCompletionRequest__healthMetricsFromArgs() throws {
+        let request = makeGarminRequest(avgHeartRate: 150, activeCalories: 560)
+        let json = try encode(request)
+        let metrics = try XCTUnwrap(json["health_metrics"] as? [String: Any])
+        XCTAssertEqual(metrics["avg_heart_rate"] as? Int, 150)
+        XCTAssertEqual(metrics["active_calories"] as? Int, 560)
+    }
+
+    func test_makeGarminCompletionRequest__omitsExecutionLogAndSetLogs() throws {
+        // Garmin watches don't surface phone-side execution_log / set_logs.
+        // If we ever start sending them, this test failure forces a design
+        // conversation about how Garmin will track per-set weight (AMA-288).
+        let json = try encode(makeGarminRequest())
+        let executionLog = json["execution_log"]
+        XCTAssertTrue(executionLog == nil || executionLog is NSNull)
+        let setLogs = json["set_logs"]
+        XCTAssertTrue(setLogs == nil || setLogs is NSNull)
+        let hrSamples = json["heart_rate_samples"]
+        XCTAssertTrue(hrSamples == nil || hrSamples is NSNull,
+                      "Garmin path doesn't ship time-series HR samples today (AMA-1855).")
+    }
+
+    func test_makeGarminCompletionRequest__isSimulatedAlwaysAbsent() throws {
+        // Garmin workouts are never marked simulated (phone-only construct).
+        let json = try encode(makeGarminRequest())
+        let isSim = json["is_simulated"]
+        XCTAssertTrue(isSim == nil || isSim is NSNull,
+                      "is_simulated should not be present on Garmin path.")
+    }
+
+    func test_makeGarminCompletionRequest__clientGeneratedIdAlwaysPresent() throws {
+        // AMA-1848 Bug B regression guard — same as Watch path.
+        let json = try encode(makeGarminRequest())
+        let cgid = try XCTUnwrap(
+            json["client_generated_id"] as? String,
+            "client_generated_id must be set on every WorkoutCompletionRequest (AMA-1848 Bug B)."
+        )
+        XCTAssertFalse(cgid.isEmpty)
+    }
+
+    func test_makeGarminCompletionRequest__workoutNameRoundTripsWhenProvided() throws {
+        // AMA-1867 round-trip: when iOS supplies a workout_name (Garmin push
+        // with a recognizable title), the field must reach the wire so
+        // mapper-api can persist it into workout_completions.workout_name.
+        let json = try encode(makeGarminRequest(workoutName: "Sunday long run"))
+        XCTAssertEqual(json["workout_name"] as? String, "Sunday long run",
+                       "AMA-1867: client-supplied workout_name must reach the wire.")
+    }
+
+    func test_makeGarminCompletionRequest__workoutNameAbsentWhenNotProvided() throws {
+        // Pin the negative side: when iOS doesn't supply a name (the common
+        // path), the field is null/absent so mapper-api falls back to the
+        // join-resolved name on read.
+        let json = try encode(makeGarminRequest(workoutName: nil))
+        let name = json["workout_name"]
+        XCTAssertTrue(name == nil || name is NSNull,
+                      "workout_name should be null/absent when not supplied; got \(String(describing: name))")
+    }
+
+    func test_makeGarminCompletionRequest__topLevelKeysMatchBackendContract() throws {
+        let json = try encode(makeGarminRequest(workoutName: "Sunday long run"))
+        let keys = Set(json.keys)
+
+        // Required:
+        XCTAssertTrue(keys.contains("source"))
+        XCTAssertTrue(keys.contains("started_at"))
+        XCTAssertTrue(keys.contains("ended_at"))
+        XCTAssertTrue(keys.contains("health_metrics"))
+        XCTAssertTrue(keys.contains("device_info"))
+        XCTAssertTrue(keys.contains("client_generated_id"))
+        XCTAssertTrue(keys.contains("workout_id"))
+        XCTAssertTrue(keys.contains("workout_name"))
+
+        // ISO8601 timestamps (same shape as Watch path; mapper-api parses
+        // with datetime.fromisoformat).
+        let isoPattern = #"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?Z$"#
+        let startedAt = try XCTUnwrap(json["started_at"] as? String)
+        let endedAt = try XCTUnwrap(json["ended_at"] as? String)
+        XCTAssertNotNil(startedAt.range(of: isoPattern, options: .regularExpression),
+                        "started_at must be ISO8601 UTC; got \(startedAt)")
+        XCTAssertNotNil(endedAt.range(of: isoPattern, options: .regularExpression),
+                        "ended_at must be ISO8601 UTC; got \(endedAt)")
+
+        // Sanity: no unknown keys beyond the documented Codable surface.
+        let known: Set<String> = [
+            "workout_event_id", "workout_id", "follow_along_workout_id",
+            "started_at", "ended_at", "health_metrics", "source",
+            "device_info", "heart_rate_samples", "workout_structure",
+            "workout_name", "is_simulated", "set_logs", "execution_log",
+            "client_generated_id",
+        ]
+        let unknown = keys.subtracting(known)
+        XCTAssertTrue(unknown.isEmpty, "Garmin request emitted unknown keys: \(unknown)")
     }
 }
