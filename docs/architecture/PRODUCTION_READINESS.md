@@ -63,8 +63,8 @@ Legend: ✅ Done · 🟡 In progress · ⏳ Waiting on external · 🔲 Not star
 - [x] DEBUG-only Frontend API bypass populates `Clerk.shared.session` with a real session (via public `Clerk.shared.auth.setActive(sessionId:)`)
 - [x] `AuthViewModel.token()` returns a valid Clerk JWT after the bypass (uses normal SDK path post-setActive)
 - [x] CJ-01 L3 + AMA-1834 L4 produce a real `workout_completions` row on staging — verified 2026-05-20 22:27 CT via the AMA-1850 E2E Maestro run
-- [ ] Release archive PlistBuddy inspection confirms zero bypass code in the shipped binary (verify pre-archive — deferred to TestFlight pipeline AMA-1852)
-- [ ] Blueprint update to flip CJ-01 sign-in from "fragile" to "hard gate" (small doc follow-up; tracked separately)
+- [ ] Release archive PlistBuddy inspection confirms zero bypass code in the shipped binary (verify pre-archive — deferred to TestFlight pipeline [AMA-1852](https://linear.app/amakaflow/issue/AMA-1852))
+- [ ] Blueprint update to flip CJ-01 sign-in from "fragile" to "hard gate" — [AMA-1874](https://linear.app/amakaflow/issue/AMA-1874)
 
 ### Gap 6 — AMA-1854: Crash-free startup gate
 
@@ -72,7 +72,7 @@ Legend: ✅ Done · 🟡 In progress · ⏳ Waiting on external · 🔲 Not star
 - [x] Device matrix decided (cost-aware: 1 sim per PR run on iOS 26.2 / iPhone 16 Pro Max)
 - [x] `.github/workflows/ios-cold-launch-matrix.yml` merged (PR #218)
 - [x] Helper script `scripts/cold-launch-check.sh` ships + works locally (verified 2026-05-19 — PID 95878, +15s grace, pass)
-- [x] Gate fires on PRs that touch app-entrypoint code — verified live on PR #222 which triggered the matrix (passed in 4m34s); synthetic-crash regression test deferred as separate follow-up
+- [x] Gate fires on PRs that touch app-entrypoint code — verified live on PR #222 which triggered the matrix (passed in 4m34s); synthetic-crash regression test deferred as separate follow-up — [AMA-1873](https://linear.app/amakaflow/issue/AMA-1873)
 
 ### Gap 7 — AMA-1855: Watch + Garmin coverage
 
