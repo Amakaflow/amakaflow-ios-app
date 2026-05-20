@@ -16,9 +16,9 @@
 | 2 | Subscription / IAP testing harness (RevenueCat Test Store) | [AMA-1851](https://linear.app/amakaflow/issue/AMA-1851) | 🔲 Not started | Launch-day revenue risk |
 | 3 | CI → TestFlight on `main` merge | [AMA-1852](https://linear.app/amakaflow/issue/AMA-1852) | 🔲 Not started | Manual + skippable today |
 | 4 | Release-readiness checklist + per-PR "Verify by" footer | [AMA-1853](https://linear.app/amakaflow/issue/AMA-1853) | ✅ Done. PRs #215 + #216 shipped this doc + the PR-template "Verify by" section + the daily Telegram digest. | n/a — done |
-| 5 | CJ-01 L3 sign-in real-session bypass | [AMA-1849](https://linear.app/amakaflow/issue/AMA-1849) | ✅ Done. PR #219 merged; real workout_completions row test passes via the tonight's E2E Maestro run (gap #1 evidence is the same run). | n/a — done |
+| 5 | CJ-01 L3 sign-in real-session bypass | [AMA-1849](https://linear.app/amakaflow/issue/AMA-1849) | ✅ Done. PR #219 merged; real workout_completions row test passes via the 2026-05-20 22:27 CT E2E Maestro run (gap #1 evidence is the same run). | n/a — done |
 | 6 | Crash-free startup gate | [AMA-1854](https://linear.app/amakaflow/issue/AMA-1854) | ✅ Done. PR #218 merged; iOS 26.2 cold-launch matrix gate is required on app-entrypoint PR changes (verified live on PR #222 which triggered the matrix). | n/a — done |
-| 7 | Watch + Garmin path coverage | [AMA-1855](https://linear.app/amakaflow/issue/AMA-1855) | ✅ Done. L1 backend (PR #411, 5 cases) + L2 iOS Watch (PR #220, 8 cases) + L2 iOS Garmin (PR #222, 11 cases) = 19/19 assembly tests pinning the wire shape. L4 evidence captured via the AMA-1850 verification flow (which exercises the Watch + Garmin save paths through `WorkoutCompletionRequest`). L3 (XCUITest Watch sim driving) deferred — L4 evidence covers it for v1. | n/a — done |
+| 7 | Watch + Garmin path coverage | [AMA-1855](https://linear.app/amakaflow/issue/AMA-1855) | ✅ Done. L1 backend (PR #411, 5 pytest cases) + L2 iOS assembly (19/19 cases: 8 Watch via PR #220 + 11 Garmin via PR #222) pinning the wire shape. L4 evidence captured via the AMA-1850 verification flow (which exercises the Watch + Garmin save paths through `WorkoutCompletionRequest`). L3 (XCUITest Watch sim driving) deferred — L4 evidence covers it for v1. | n/a — done |
 
 Legend: ✅ Done · 🟡 In progress · ⏳ Waiting on external · 🔲 Not started
 
@@ -56,7 +56,7 @@ Legend: ✅ Done · 🟡 In progress · ⏳ Waiting on external · 🔲 Not star
 - [x] `docs/architecture/PRODUCTION_READINESS.md` lives on `main` (this file)
 - [x] PR template updated with a `Verify by` section
 - [x] `CONTRIBUTING.md` documents the per-PR pattern (or equivalent — pattern shipped in PR template)
-- [x] Next 3 PRs all include a Verify by section (verified: PRs #218, #219, #220, #221, #222, #224 all do)
+- [x] Subsequent PRs include a Verify by section (verified: PRs #218, #219, #220, #221, #222, #224 all do)
 
 ### Gap 5 — AMA-1849: CJ-01 L3 sign-in real-session bypass
 
@@ -80,7 +80,7 @@ Legend: ✅ Done · 🟡 In progress · ⏳ Waiting on external · 🔲 Not star
 - [x] CJ-03 Garmin: L1 backend (PR #411 includes Garmin path) + L2 iOS (PR #222, 11 assembly cases including AMA-1867 `workout_name` round-trip via test seam `makeGarminCompletionRequestForTesting`)
 - [ ] Both listed in `docs/testing/critical-journeys.md` ([AMA-1869](https://linear.app/amakaflow/issue/AMA-1869) — small docs follow-up, separate from the test work)
 - [ ] Real-device smoke on Apple Watch + Garmin (deferred to TestFlight pipeline / post-launch; sim verification covers the contract)
-- L3 (XCUITest Watch sim driving) deferred — L4 evidence flow (AMA-1850's run) exercises the same `WorkoutCompletionRequest` assembly that L3 would, and the 19 L2 assembly tests pin every wire-shape invariant. Adding L3 is post-launch work.
+- [ ] L3 (XCUITest Watch sim driving) deferred — L4 evidence flow (AMA-1850's run) exercises the same `WorkoutCompletionRequest` assembly that L3 would, and the 19 L2 assembly tests pin every wire-shape invariant. Adding L3 is post-launch work.
 
 ---
 
