@@ -380,6 +380,32 @@ class WorkoutCompletionService: ObservableObject {
         workoutStructure: [WorkoutInterval]? = nil,  // (AMA-240) Workout structure for "Run Again"
         workoutName: String? = nil
     ) async throws -> WorkoutCompletionResponse? {
+        let request = Self.makeGarminCompletionRequest(
+            workoutId: workoutId,
+            startedAt: startedAt,
+            endedAt: endedAt,
+            avgHeartRate: avgHeartRate,
+            activeCalories: activeCalories,
+            workoutStructure: workoutStructure,
+            workoutName: workoutName,
+            deviceModel: GarminConnectManager.shared.connectedDeviceName
+        )
+        return try await postCompletion(request)
+    }
+
+    /// Build the Garmin completion request — pure function so AMA-1855 L2
+    /// assembly tests can pin the wire shape without driving a real
+    /// `postCompletion` call. Mirrors `makeWatchCompletionRequest`.
+    private static func makeGarminCompletionRequest(
+        workoutId: String,
+        startedAt: Date,
+        endedAt: Date,
+        avgHeartRate: Int? = nil,
+        activeCalories: Int? = nil,
+        workoutStructure: [WorkoutInterval]? = nil,
+        workoutName: String? = nil,
+        deviceModel: String? = nil
+    ) -> WorkoutCompletionRequest {
         let healthMetrics = HealthMetrics(
             avgHeartRate: avgHeartRate,
             maxHeartRate: nil,
@@ -392,11 +418,11 @@ class WorkoutCompletionService: ObservableObject {
 
         let deviceInfo = WorkoutDeviceInfo(
             platform: "garmin",
-            model: GarminConnectManager.shared.connectedDeviceName,
+            model: deviceModel,
             osVersion: nil
         )
 
-        let request = WorkoutCompletionRequest(
+        return WorkoutCompletionRequest(
             workoutEventId: nil,
             workoutId: workoutId,
             followAlongWorkoutId: nil,
@@ -413,9 +439,33 @@ class WorkoutCompletionService: ObservableObject {
             executionLog: nil, // (AMA-291) Garmin execution tracking coming later
             clientGeneratedId: UUID().uuidString.lowercased()  // (AMA-1848 Bug B)
         )
-
-        return try await postCompletion(request)
     }
+
+    #if DEBUG
+    /// DEBUG-only test seam mirroring `makeWatchCompletionRequestForTesting`.
+    /// Used by AMA-1855 L2 assembly tests to pin the Garmin wire shape.
+    static func makeGarminCompletionRequestForTesting(
+        workoutId: String,
+        startedAt: Date,
+        endedAt: Date,
+        avgHeartRate: Int? = nil,
+        activeCalories: Int? = nil,
+        workoutStructure: [WorkoutInterval]? = nil,
+        workoutName: String? = nil,
+        deviceModel: String? = nil
+    ) -> WorkoutCompletionRequest {
+        makeGarminCompletionRequest(
+            workoutId: workoutId,
+            startedAt: startedAt,
+            endedAt: endedAt,
+            avgHeartRate: avgHeartRate,
+            activeCalories: activeCalories,
+            workoutStructure: workoutStructure,
+            workoutName: workoutName,
+            deviceModel: deviceModel
+        )
+    }
+    #endif
 
     /// Retry all pending completions
     func retryPendingCompletions() async {
