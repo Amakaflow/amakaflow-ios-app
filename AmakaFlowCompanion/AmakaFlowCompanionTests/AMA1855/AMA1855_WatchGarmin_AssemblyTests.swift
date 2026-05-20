@@ -233,6 +233,20 @@ final class AMA1855_WatchGarmin_AssemblyTests: XCTestCase {
         XCTAssertEqual(deviceInfo["model"] as? String, "Garmin Forerunner 965")
     }
 
+    func test_makeGarminCompletionRequest__deviceModelNilWhenNotConnected() throws {
+        // In production `GarminConnectManager.shared.connectedDeviceName` can
+        // return nil if iOS posts a completion before the device handshake
+        // completes (or after it disconnects). Pin that the request still
+        // builds cleanly: platform stays "garmin" and model is omitted/null
+        // rather than crashing or substituting a sentinel.
+        let json = try encode(makeGarminRequest(deviceModel: nil))
+        let deviceInfo = try XCTUnwrap(json["device_info"] as? [String: Any])
+        XCTAssertEqual(deviceInfo["platform"] as? String, "garmin")
+        let model = deviceInfo["model"]
+        XCTAssertTrue(model == nil || model is NSNull,
+                      "device_info.model should be absent/null when deviceModel is nil; got \(String(describing: model))")
+    }
+
     func test_makeGarminCompletionRequest__workoutIdPreserved() throws {
         let json = try encode(makeGarminRequest(workoutId: "garmin-cj03-789"))
         XCTAssertEqual(json["workout_id"] as? String, "garmin-cj03-789")
