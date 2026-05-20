@@ -146,9 +146,11 @@ final class AMA1855_WatchGarmin_AssemblyTests: XCTestCase {
         let request = WorkoutCompletionService
             .makeWatchCompletionRequestForTesting(summary: makeStandaloneSummary())
         let json = try encode(request)
-        let cgid = json["client_generated_id"] as? String
-        XCTAssertNotNil(cgid, "client_generated_id must be set on every WorkoutCompletionRequest (AMA-1848 Bug B).")
-        XCTAssertFalse(cgid?.isEmpty ?? true)
+        let cgid = try XCTUnwrap(
+            json["client_generated_id"] as? String,
+            "client_generated_id must be set on every WorkoutCompletionRequest (AMA-1848 Bug B)."
+        )
+        XCTAssertFalse(cgid.isEmpty)
     }
 
     // MARK: - Wire-shape integration
