@@ -51,6 +51,15 @@ final class AuthViewModel: ObservableObject {
     #endif
 
     refreshFromClerk()
+    subscribeToAuthEvents()
+  }
+
+  /// Shared Clerk event-subscription loop. Called from both the normal
+  /// `start()` path and from the AMA-1849 bypass after it activates a
+  /// session. CR-suggested DRY extraction (PR #219) — keeps event
+  /// handling in one place so future changes only need to be applied
+  /// once.
+  private func subscribeToAuthEvents() {
     authEventsTask = Task { [weak self] in
       for await event in Clerk.shared.auth.events {
         guard let self else { return }
@@ -172,28 +181,10 @@ final class AuthViewModel: ObservableObject {
 
       // Mirror the normal start() event subscription so token refreshes
       // and signOut events still flow through this view model.
+      // Uses the shared subscribeToAuthEvents helper (CR-suggested DRY
+      // extraction, PR #219).
       refreshFromClerk()
-      authEventsTask = Task { [weak self] in
-        for await event in Clerk.shared.auth.events {
-          guard let self else { return }
-          switch event {
-          case .signedOut, .accountDeleted:
-            self.cachedToken = nil
-            self.refreshFromClerk()
-          case .sessionChanged:
-            self.cachedToken = nil
-            self.refreshFromClerk()
-          case .tokenRefreshed(let token):
-            self.cachedToken = token
-            self.lastTokenRefresh = Date()
-            self.refreshFromClerk()
-          case .signInCompleted, .signUpCompleted:
-            self.cachedToken = nil
-            self.needsReauth = false
-            self.refreshFromClerk()
-          }
-        }
-      }
+      subscribeToAuthEvents()
     } catch {
       print("[AuthViewModel] AMA-1849 bypass FAILED: \(error)")
     }
@@ -201,7 +192,9 @@ final class AuthViewModel: ObservableObject {
 
   /// Decode the frontend-api host (`solid-chicken-50.clerk.accounts.dev`)
   /// from `pk_test_<base64>` / `pk_live_<base64>`. Matches the logic in
-  /// `ConfigurationManager.extractFrontendApiUrl` (private in the SDK).
+  /// `ConfigurationManager.extractFrontendApiUrl` (private in the SDK)
+  /// — including SDK behavior of using **Base64URL** decoding (handles
+  /// `-` and `_` chars) rather than standard Base64.
   static func deriveClerkFrontendHost(from publishableKey: String) -> String? {
     let payload: String
     if publishableKey.hasPrefix("pk_test_") {
@@ -211,7 +204,15 @@ final class AuthViewModel: ObservableObject {
     } else {
       return nil
     }
-    guard let data = Data(base64Encoded: payload),
+    // Base64URL → standard Base64 conversion: substitute URL-safe
+    // alphabet back, then pad with `=` to a multiple of 4. Matches
+    // Clerk SDK's String.base64String() helper.
+    var b64 = payload
+      .replacingOccurrences(of: "-", with: "+")
+      .replacingOccurrences(of: "_", with: "/")
+    let pad = (4 - b64.count % 4) % 4
+    b64.append(String(repeating: "=", count: pad))
+    guard let data = Data(base64Encoded: b64),
           var decoded = String(data: data, encoding: .utf8) else {
       return nil
     }
@@ -222,21 +223,26 @@ final class AuthViewModel: ObservableObject {
 
   /// Minimal application/x-www-form-urlencoded POST helper for the
   /// two Clerk Frontend API calls. Returns the decoded JSON dict.
-  /// Throws on transport, HTTP, or JSON errors.
+  /// Throws on transport, HTTP, or JSON errors. 10-second timeout
+  /// so a slow Clerk API can't hang UITest startup indefinitely.
   private func postClerkForm(url: URL, body: String) async throws -> [String: Any] {
     var req = URLRequest(url: url)
     req.httpMethod = "POST"
+    req.timeoutInterval = 10  // bound UITest blast radius if Clerk slow
     req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
     req.setValue("AmakaFlowCompanion/UITest-AMA-1849", forHTTPHeaderField: "User-Agent")
     req.httpBody = body.data(using: .utf8)
 
     let (data, response) = try await URLSession.shared.data(for: req)
     if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
-      let snippet = String(data: data, encoding: .utf8) ?? "<binary>"
+      // Truncate response body in error message — Clerk responses can
+      // include session tokens or partial user data; keep the snippet
+      // short enough to diagnose without spilling secrets to logs.
+      let snippet = (String(data: data, encoding: .utf8) ?? "<binary>").prefix(200)
       throw NSError(
         domain: "AMA-1849",
         code: http.statusCode,
-        userInfo: [NSLocalizedDescriptionKey: "Clerk \(url.path) -> \(http.statusCode): \(snippet.prefix(500))"]
+        userInfo: [NSLocalizedDescriptionKey: "Clerk \(url.path) -> \(http.statusCode): \(snippet)"]
       )
     }
     guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
@@ -245,8 +251,14 @@ final class AuthViewModel: ObservableObject {
     return json
   }
 
+  /// Stricter percent-encoding for application/x-www-form-urlencoded
+  /// bodies — only unreserved RFC 3986 characters (alphanumeric +
+  /// `-._~`) pass through unencoded. `.urlQueryAllowed` would let
+  /// `&` and `=` through, which corrupts form pairs.
   private func urlEncode(_ s: String) -> String {
-    s.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? s
+    var allowed = CharacterSet.alphanumerics
+    allowed.insert(charactersIn: "-._~")
+    return s.addingPercentEncoding(withAllowedCharacters: allowed) ?? s
   }
   #endif
 
