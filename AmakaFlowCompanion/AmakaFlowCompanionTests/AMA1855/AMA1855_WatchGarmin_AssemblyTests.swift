@@ -5,14 +5,16 @@
 //  AMA-1855 / L2 — Watch + Garmin completion request assembly.
 //
 //  Phone-source coverage lives in AMA1834_WorkoutCompletionRequest_AssemblyTests.
-//  This file adds the same wire-shape pinning for the two non-phone sources:
+//  This file adds the same wire-shape pinning for the Watch path today:
 //
 //    - makeWatchCompletionRequest(...)  for Watch standalone workouts
 //      (input: StandaloneWorkoutSummary; source = "apple_watch";
 //      platform = "watchos"; no execution_log, no set_logs).
-//    - postGarminWorkoutCompletion(...) for Garmin push workouts
-//      (input: workoutId + dates + avg HR + active calories;
-//      source = "garmin"; platform = "garmin").
+//
+//  Garmin path (postGarminWorkoutCompletion → source = "garmin",
+//  platform = "garmin") is deferred to a follow-up — it currently
+//  takes raw args rather than a summary value type, so it needs a
+//  small refactor to expose an assembly test seam.
 //
 //  Asserts pinned for AMA-1855 L1 backend invariants (mapper-api stores
 //  `source` exactly as sent — see
@@ -94,7 +96,11 @@ final class AMA1855_WatchGarmin_AssemblyTests: XCTestCase {
         let json = try encode(request)
         let metrics = try XCTUnwrap(json["health_metrics"] as? [String: Any])
         // averageHeartRate is Double on the Summary; encoded as Int avg_heart_rate in the request.
-        XCTAssertEqual(metrics["avg_heart_rate"] as? Int, Int(summary.averageHeartRate ?? -1))
+        // The fixture always sets averageHeartRate non-nil — unwrap explicitly so a
+        // future fixture change to nil fails LOUDLY here rather than silently passing
+        // against a `?? -1` sentinel. The nil-HR encoding path is its own (TODO) test.
+        let avgHR = try XCTUnwrap(summary.averageHeartRate, "fixture must set averageHeartRate non-nil for this test")
+        XCTAssertEqual(metrics["avg_heart_rate"] as? Int, Int(avgHR))
         XCTAssertEqual(metrics["active_calories"] as? Int, Int(summary.totalCalories))
     }
 
@@ -106,8 +112,10 @@ final class AMA1855_WatchGarmin_AssemblyTests: XCTestCase {
         let request = WorkoutCompletionService
             .makeWatchCompletionRequestForTesting(summary: makeStandaloneSummary())
         let json = try encode(request)
-        // The JSONEncoder serialises Swift `nil` as JSON `null`, not as
-        // an absent key, so we check both ways.
+        // Whether an optional encodes as JSON `null` or is omitted
+        // depends on each type's Encodable impl (some properties on
+        // WorkoutCompletionRequest are omitted when nil; others encode
+        // as null). Accept either for these fields.
         let executionLog = json["execution_log"]
         XCTAssertTrue(executionLog == nil || executionLog is NSNull,
                       "execution_log should be null/absent on the Watch path; got \(String(describing: executionLog))")
@@ -162,6 +170,17 @@ final class AMA1855_WatchGarmin_AssemblyTests: XCTestCase {
         XCTAssertTrue(keys.contains("device_info"))
         XCTAssertTrue(keys.contains("client_generated_id"))
         XCTAssertTrue(keys.contains("workout_id"))
+
+        // started_at / ended_at must serialise as ISO8601 UTC strings
+        // (mapper-api parses with `datetime.fromisoformat`, which
+        // accepts the trailing `Z` only on Python ≥ 3.11).
+        let isoPattern = #"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?Z$"#
+        let startedAt = try XCTUnwrap(json["started_at"] as? String)
+        let endedAt = try XCTUnwrap(json["ended_at"] as? String)
+        XCTAssertNotNil(startedAt.range(of: isoPattern, options: .regularExpression),
+                        "started_at must be ISO8601 UTC; got \(startedAt)")
+        XCTAssertNotNil(endedAt.range(of: isoPattern, options: .regularExpression),
+                        "ended_at must be ISO8601 UTC; got \(endedAt)")
 
         // Documented-absent (asserted individually above; here we sanity-
         // check the Watch path doesn't accidentally emit unknown keys
