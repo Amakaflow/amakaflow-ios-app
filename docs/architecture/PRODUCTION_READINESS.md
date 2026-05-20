@@ -12,7 +12,7 @@
 
 | # | Gap | Linear | State | Risk if unlaunched |
 |---|---|---|---|---|
-| 1 | AMA-1847/1848 fixes deployed + verified on staging | [AMA-1850](https://linear.app/amakaflow/issue/AMA-1850) | ⏳ Awaiting Render deploy + L4 re-verify | Save & End workflow may still no-op silently |
+| 1 | AMA-1847/1848 fixes deployed + verified on staging | [AMA-1850](https://linear.app/amakaflow/issue/AMA-1850) | 🟡 Deploy ✅ (mapper-api + mobile-bff live 2026-05-20, health+smoke green); L4 evidence pending [AMA-1868](https://linear.app/amakaflow/issue/AMA-1868) (Maestro selector drift) | Save & End workflow may still no-op silently |
 | 2 | Subscription / IAP testing harness (RevenueCat Test Store) | [AMA-1851](https://linear.app/amakaflow/issue/AMA-1851) | 🔲 Not started | Launch-day revenue risk |
 | 3 | CI → TestFlight on `main` merge | [AMA-1852](https://linear.app/amakaflow/issue/AMA-1852) | 🔲 Not started | Manual + skippable today |
 | 4 | Release-readiness checklist + per-PR "Verify by" footer | [AMA-1853](https://linear.app/amakaflow/issue/AMA-1853) | 🟡 In this PR | No objective "shippable" gate |
