@@ -93,12 +93,22 @@ jobs:
           # Verify Clerk keys substituted in the resulting Info.plist
           /usr/libexec/PlistBuddy -c "Print :CLERK_PUBLISHABLE_KEY_STAGING" "$APP_PATH/Info.plist" | head -c 30 || true
 
-      - name: Upload built .app
+      # Tar the .app before upload — actions/upload-artifact@v4 strips
+      # the parent directory of an uploaded `.app` bundle, so on
+      # download the `.app/` wrapper is gone and the gate can't find
+      # the bundle at `built-app/AmakaFlowCompanion.app`. Tarring
+      # preserves the directory structure across the upload/download
+      # round-trip.
+      - name: Tar the .app for round-trip-safe artifact transfer
+        working-directory: AmakaFlowCompanion/DerivedData/Build/Products/Debug-iphonesimulator
+        run: tar -cf /tmp/cold-launch-app.tar AmakaFlowCompanion.app
+
+      - name: Upload .app tarball
         id: upload
         uses: actions/upload-artifact@v4
         with:
           name: cold-launch-app
-          path: AmakaFlowCompanion/DerivedData/Build/Products/Debug-iphonesimulator/AmakaFlowCompanion.app
+          path: /tmp/cold-launch-app.tar
           retention-days: 3
 
   cold-launch:
@@ -126,11 +136,18 @@ jobs:
           XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
           sudo xcode-select -s "$XCODE_PATH"
 
-      - name: Download .app artifact
+      - name: Download .app tarball
         uses: actions/download-artifact@v4
         with:
           name: cold-launch-app
           path: built-app
+
+      - name: Untar the .app bundle
+        working-directory: built-app
+        run: |
+          tar -xf cold-launch-app.tar
+          ls -la
+          test -d AmakaFlowCompanion.app  # bundle must be present after extraction
 
       # Locate a sim runtime matching the matrix entry; if missing, skip
       # this combo rather than fail the whole gate (older runtimes can
