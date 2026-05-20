@@ -89,11 +89,19 @@ appId: com.myamaka.AmakaFlowCompanion
       # Clerk staging is configured password-first for this test user
       # (the "Email code" link on "Use another method" only shows
       # Apple/Google on this instance — no email-code factor). Enter
-      # the known dev-instance password, then Continue. Per
-      # ios-sim-test-loop-recipe.md: this password is for a Clerk DEV
-      # test user on the staging Clerk instance (ruling-mite-84) only;
-      # it grants no production access and is paired with a `+clerk_test`
-      # subaddress whose 424242 universal code is documented public.
+      # the dev-instance password from the UITEST_CLERK_PASSWORD env
+      # var, then Continue.
+      #
+      # NEVER hardcode the password here. Pass it at run time:
+      #   UITEST_CLERK_PASSWORD=$(grep "^UITEST_CLERK_PASSWORD=" \
+      #     ~/.claude/projects/-Users-davidmini/secrets/keys.env \
+      #     | cut -d= -f2-) \
+      #   maestro test -e UITEST_CLERK_PASSWORD="$UITEST_CLERK_PASSWORD" \
+      #     e2e/maestro/.../<flow>.yaml
+      #
+      # See docs/testing/blueprint.md + memory keys-registry.md.
+      # Matches the existing UITEST_AUTH_SECRET / UITEST_USER_ID
+      # convention used by other Maestro flows in this repo.
       - runFlow:
           when:
             visible: "Enter password"
@@ -101,7 +109,7 @@ appId: com.myamaka.AmakaFlowCompanion
             - tapOn:
                 text: "Enter your password"
             - eraseText
-            - inputText: "ClaudeTest!2026-Persistence"
+            - inputText: ${UITEST_CLERK_PASSWORD}
             - tapOn:
                 text: "Continue"
             - waitForAnimationToEnd:
