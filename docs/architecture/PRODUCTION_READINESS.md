@@ -18,7 +18,7 @@
 | 4 | Release-readiness checklist + per-PR "Verify by" footer | [AMA-1853](https://linear.app/amakaflow/issue/AMA-1853) | 🟡 In this PR | No objective "shippable" gate |
 | 5 | CJ-01 L3 sign-in real-session bypass | [AMA-1849](https://linear.app/amakaflow/issue/AMA-1849) | 🟡 In PR | L3 only validates UI nav, not end-to-end |
 | 6 | Crash-free startup gate | [AMA-1854](https://linear.app/amakaflow/issue/AMA-1854) | 🟡 In PR | Fresh installs may crash undetected |
-| 7 | Watch + Garmin path coverage | [AMA-1855](https://linear.app/amakaflow/issue/AMA-1855) | 🟡 In PR (L1 + L2 Watch) | Watch/Garmin users hit untested flows |
+| 7 | Watch + Garmin path coverage | [AMA-1855](https://linear.app/amakaflow/issue/AMA-1855) | 🟡 L1 + L2 Watch + L2 Garmin done (18/18 assembly tests pinning the wire shape); L3 (XCUITest Watch sim driving) + L4 (Maestro evidence) pending [AMA-1868](https://linear.app/amakaflow/issue/AMA-1868) | Watch/Garmin users hit untested flows |
 
 Legend: ✅ Done · 🟡 In progress · ⏳ Waiting on external · 🔲 Not started
 
