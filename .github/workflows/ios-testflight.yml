@@ -111,9 +111,17 @@ jobs:
           CLERK_PUBLISHABLE_KEY_DEV: ${{ secrets.CLERK_PUBLISHABLE_KEY_DEV }}
           CLERK_PUBLISHABLE_KEY_STAGING: ${{ secrets.CLERK_PUBLISHABLE_KEY_STAGING }}
           CLERK_PUBLISHABLE_KEY_PRODUCTION: ${{ secrets.CLERK_PUBLISHABLE_KEY_STAGING }}
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
         run: |
           set -e
           BUILD_NUM=${{ steps.build-number.outputs.build_number }}
+          # Authenticate xcodebuild against the ASC API key directly
+          # (Xcode 13+ replacement for fastlane match). Without these
+          # flags `-allowProvisioningUpdates` can't download profiles
+          # because the CI runner has no Apple Developer account
+          # configured. Failure 2026-05-22 was exactly this:
+          # "No Accounts: Add a new account in Accounts settings".
           xcodebuild archive \
             -scheme AmakaFlowCompanion \
             -project AmakaFlowCompanion.xcodeproj \
@@ -123,6 +131,9 @@ jobs:
             -derivedDataPath DerivedData \
             -clonedSourcePackagesDirPath .spm \
             -allowProvisioningUpdates \
+            -authenticationKeyPath "$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             CURRENT_PROJECT_VERSION="$BUILD_NUM" \
             CLERK_PUBLISHABLE_KEY_DEV="$CLERK_PUBLISHABLE_KEY_DEV" \
             CLERK_PUBLISHABLE_KEY_STAGING="$CLERK_PUBLISHABLE_KEY_STAGING" \
@@ -158,13 +169,21 @@ jobs:
 
       - name: Export IPA
         working-directory: AmakaFlowCompanion
+        env:
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
         run: |
           set -e
+          # Same ASC auth flags as the archive step — exportArchive
+          # also needs them to download distribution profiles.
           xcodebuild -exportArchive \
             -archivePath build/AmakaFlowCompanion.xcarchive \
             -exportPath build/export \
             -exportOptionsPlist build/ExportOptions.plist \
             -allowProvisioningUpdates \
+            -authenticationKeyPath "$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             2>&1 | tee export.log | tail -20
           ls -la build/export/
 
