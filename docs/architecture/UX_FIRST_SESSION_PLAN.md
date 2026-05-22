@@ -6,18 +6,20 @@
 
 ---
 
-## TL;DR — Final recommendation
+## TL;DR — Final recommendation (revised 2026-05-22 per David)
 
-Ship a **demo-first onboarding ("Lean demo" variant)** for v1 plus flip `FeatureFlags.nonMvp` to `true`. Combined effort: **~5–7 working days**. This is the smallest change that fixes all six findings David surfaced on TestFlight build 103 and unblocks App Review submission.
+Ship the **"Full demo" onboarding variant** for v1 plus flip `FeatureFlags.nonMvp` to `true`. Combined effort: **~7–9 working days**. This addresses all six findings David surfaced on TestFlight build 103 AND lets users feel the full experience BEFORE being asked to commit / pay later.
 
-- Demo-first onboarding (3 screens, ~30s): goals quiz → AI generates a real workout in front of the user → Save & continue (signup lands here, not before).
+**Revision note:** the original spike recommended the "Lean demo" (3 screens / ~30s / ~3-4 days) as a pragmatic ship-speed call. David's 2026-05-22 directive — *"we want users to be able to see what they can do with the app before they decide to pay and give them a feeling of the overall experience"* — explicitly prioritizes completeness of the demo over ship-speed. The 2–3 day delta is small relative to the v1 timeline and the Full variant addresses all six findings vs Lean's four. Full is the v1 plan; Lean is documented as the fallback if the timeline blows out.
+
+- Demo-first onboarding (5–7 screens, ~90s): goals quiz → AI generates a real workout in front of the user → preview-on-week (so the user SEES the empty week fill with their workout) → "here's how Coach helps" → 2-3 feature callouts (Telegram, Garmin/Watch) → Save & continue (signup lands here, not before).
 - Flip `FeatureFlags.nonMvp` to `true` — un-hide Sources, Programs, Readiness History, Fatigue Advisor, Bulk Import. These already exist in code; the cost of exposing them is ~0.
 - Replace the empty `Workouts → This week` placeholder with the demo-generated sample workout + 2 follow-up suggestions seeded.
 - Promote AI Coach from "row inside More tab" to a Home-screen card (the surface is already drawn — `coachVisibilitySection` exists in `HomeView.swift:96`).
 - Splash: a short branded animation (Lottie or SwiftUI motion) under 1.5s — not a video loop. Industry research says video is overkill and hurts perceived performance.
 - Feature discoverability: add a "What can AmakaFlow do?" surface (one new view) reachable from More + a one-time post-onboarding "Did you know" coachmark card on Home.
 
-The "Full demo" variant (5–7 screens, ~90s, walks through accept → preview-on-week → "here's how Coach helps") is documented below for v1.1 — it's not v1-blocking, but it's the obvious next iteration after retention data comes in.
+The "Lean demo" variant is documented below (Section 5) as the fallback / v1.1 simplification path.
 
 ---
 
