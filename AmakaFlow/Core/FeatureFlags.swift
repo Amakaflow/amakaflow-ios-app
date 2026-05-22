@@ -18,20 +18,33 @@ import Foundation
 
 /// Centralized feature flags for the AmakaFlow iOS app.
 ///
-/// MVP scope = Home + Workouts + Pairing + Settings + minimal More.
-/// All other surfaces are behind `nonMvp` until the 30-day willingness-to-pay
-/// test resolves (see amakaflow-docs/concepts/Lean-Startup-Plan.md).
+/// **2026-05-22 status update (AMA-1875):** Default flipped to `true` for v1.
+///
+/// The original `false` default (AMA-1588) was the right call when v1 was
+/// going to ship paid at $9.99 and the narrow MVP was a willingness-to-pay
+/// experiment. The 2026-05-22 decision to ship v1 FREE (see
+/// docs/architecture/PRODUCTION_READINESS.md gap #2) inverted the calculus —
+/// hiding features now hurts retention, since users can't see the value
+/// they'd be retaining for. The TestFlight tap-test on build 103 surfaced
+/// "the app looks barren" as the #1 first-impression complaint.
+///
+/// All non-MVP surfaces (Sources, Programs, Readiness History, Fatigue
+/// Advisor, Bulk Import, Log Food) are now exposed by default.
+///
+/// To re-hide during local development (e.g., to test the MVP cut), set
+/// `AMAKAFLOW_NON_MVP=0` in the launch environment.
 enum FeatureFlags {
-    /// When `false` (the MVP default), all non-MVP surfaces are hidden
-    /// from navigation entry points. The code remains in the app so we
-    /// can re-enable it without a re-implementation.
+    /// Controls visibility of non-core feature surfaces.
     ///
-    /// Override for development / internal builds by setting
-    /// `AMAKAFLOW_NON_MVP=1` in the launch environment.
+    /// Default: `true` (all surfaces visible) per the 2026-05-22 v1 plan.
+    ///
+    /// Override via env var `AMAKAFLOW_NON_MVP`:
+    ///   - `0` / `false` → hide non-MVP surfaces (legacy MVP cut)
+    ///   - `1` / `true`  → show non-MVP surfaces (current default)
     static let nonMvp: Bool = {
         if let override = ProcessInfo.processInfo.environment["AMAKAFLOW_NON_MVP"] {
             return override == "1" || override.lowercased() == "true"
         }
-        return false
+        return true
     }()
 }
