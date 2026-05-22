@@ -10,6 +10,7 @@
 		00CBD8759EE7C769D1D7F82B /* AgentInboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EB7457100F5C1B6E4488558 /* AgentInboxView.swift */; };
 		056DCE6864994871816A3AF9 /* OpenAPIRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = 5428DFDDAABA4C78929FAD58 /* OpenAPIRuntime */; };
 		0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
+		AMA1875LOTTIEFILE /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1875LOTTIEPROD /* Lottie */; };
 		11C72B7C6EA17FC8DEA354FB /* CoachModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */; };
 		141CFD120F8C663BD0F2C3BC /* MentalModelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C1640626E3952B7DBBBF33 /* MentalModelView.swift */; };
 		1A7B03C2552441FEB810773A /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */; };
@@ -855,6 +856,7 @@
 				AMA1620CLKKIT01B /* ClerkKit in Frameworks */,
 				AMA1620CLKUI001B /* ClerkKitUI in Frameworks */,
 				F880AD622F09559A00E8D7D3 /* Sentry in Frameworks */,
+				AMA1875LOTTIEFILE /* Lottie in Frameworks */,
 				F84E22932ED0D9FA00459747 /* EventKit.framework in Frameworks */,
 				F84E22952ED0DA0200459747 /* HealthKit.framework in Frameworks */,
 				F84E22992ED0DA1F00459747 /* WorkoutKitSync in Frameworks */,
@@ -1352,6 +1354,7 @@
 				AMA1791GRDBPROD /* GRDB */,
 				5428DFDDAABA4C78929FAD58 /* OpenAPIRuntime */,
 				3D2A2E0648804CD7A88CF287 /* OpenAPIURLSession */,
+				AMA1875LOTTIEPROD /* Lottie */,
 			);
 			productName = AmakaFlowCompanion;
 			productReference = F84E21742ED0B0C800459747 /* AmakaFlowCompanion.app */;
@@ -1544,6 +1547,7 @@
 				AMA1791GRDBPKG /* XCRemoteSwiftPackageReference "GRDB.swift" */,
 				09208E7C85544D5D93929812 /* XCRemoteSwiftPackageReference "swift-openapi-runtime" */,
 				02CC5FB9C29845DF83B3F0CB /* XCRemoteSwiftPackageReference "swift-openapi-urlsession" */,
+				AMA1875LOTTIEPKG /* XCRemoteSwiftPackageReference "lottie-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F84E21752ED0B0C800459747 /* Products */;
@@ -2778,6 +2782,14 @@
 				minimumVersion = 1.0.0;
 			};
 		};
+		AMA1875LOTTIEPKG /* XCRemoteSwiftPackageReference "lottie-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/airbnb/lottie-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.5.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -2830,6 +2842,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = XCT4H34LTH00000003 /* XCRemoteSwiftPackageReference "XCTHealthKit" */;
 			productName = XCTHealthKit;
+		};
+		AMA1875LOTTIEPROD /* Lottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AMA1875LOTTIEPKG /* XCRemoteSwiftPackageReference "lottie-ios" */;
+			productName = Lottie;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
