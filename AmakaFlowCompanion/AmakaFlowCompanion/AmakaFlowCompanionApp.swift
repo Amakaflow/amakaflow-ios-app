@@ -13,6 +13,12 @@ import ClerkKit
 struct AmakaFlowCompanionApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var authViewModel = AuthViewModel.shared
+
+    /// AMA-1875: tracks whether the new-user animated-explainer onboarding
+    /// has been shown. Persisted via @AppStorage so it survives across
+    /// app launches. The flow runs ONCE before sign-in, so the key is
+    /// device-scoped (not per-user) — we don't have a user yet.
+    @AppStorage("ama1875_onboarding_seen") private var onboardingSeen: Bool = false
     @StateObject private var pairingService = PairingService.shared
     @StateObject private var workoutsViewModel: WorkoutsViewModel
     @StateObject private var watchConnectivity = WatchConnectivityManager.shared
@@ -161,7 +167,18 @@ struct AmakaFlowCompanionApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if !authViewModel.hasResolvedInitialSession {
+                if !onboardingSeen {
+                    // AMA-1875: first-time users get the animated-explainer
+                    // flow BEFORE any auth surface. Fires regardless of auth
+                    // state — even if a user somehow has a cached Clerk
+                    // session on first install, they should still see the
+                    // explainer once. Once they tap "Get started" (or
+                    // "Skip"), `onboardingSeen` flips and the normal auth/
+                    // app routing below takes over.
+                    OnboardingFlowView {
+                        onboardingSeen = true
+                    }
+                } else if !authViewModel.hasResolvedInitialSession {
                     // Wait for Clerk session hydration to avoid auth flash on startup
                     Color.black.ignoresSafeArea()
                 } else if authViewModel.isAuthenticated {
