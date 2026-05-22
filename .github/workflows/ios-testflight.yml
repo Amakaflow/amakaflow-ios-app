@@ -1,0 +1,253 @@
+# AMA-1852 / Production-Ready v1 gap #3 — CI → TestFlight auto-deploy.
+#
+# Builds an App Store Release archive, exports the IPA, inspects the
+# embedded Info.plist (per inspect-deployed-ipa-before-claiming-shippable
+# memory), and uploads to TestFlight via the App Store Connect API.
+#
+# Triggers ONLY on push to `main` so feature branches and PR runs don't
+# burn the build minutes. Sets the build number from a base offset +
+# `github.run_number` so we don't have to commit pbxproj bumps from CI
+# AND never collide with the manually-uploaded build history (build 39
+# was the last hand-driven upload per WORKING.md — base 100 puts CI
+# safely past that).
+#
+# v1 posture decision (2026-05-22): CLERK_PUBLISHABLE_KEY_PRODUCTION is
+# the STAGING Clerk key. Per AMA-1796 the iOS Release config defaults to
+# .staging, and per the 2026-05-22 plan "staging IS production for v1."
+# When the project moves to a real production stack (post-v1.1, new
+# AMA-XXXX ticket TBD), switch this to a separate
+# CLERK_PUBLISHABLE_KEY_PRODUCTION_REAL secret.
+
+name: iOS TestFlight Upload
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'AmakaFlow/**'
+      - 'AmakaFlowCompanion/**'
+      - '.github/workflows/ios-testflight.yml'
+  workflow_dispatch:  # allow manual re-runs from the Actions tab
+
+# Cancel any in-flight upload for the same ref so a rapid second merge
+# doesn't double-upload (TestFlight rejects duplicate build numbers).
+concurrency:
+  group: testflight-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  testflight:
+    name: Archive + Upload to TestFlight
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode (latest available)
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          echo "Using Xcode: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
+          xcodebuild -version
+
+      - name: Restore SPM cache
+        uses: actions/cache@v4
+        with:
+          path: AmakaFlowCompanion/.spm
+          key: spm-tf-${{ runner.os }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+
+      - name: Restore DerivedData cache
+        uses: actions/cache@v4
+        with:
+          path: AmakaFlowCompanion/DerivedData
+          key: dd-tf-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            dd-tf-${{ runner.os }}-
+
+      # Compute the TestFlight build number. Base 100 puts CI safely
+      # past the last manual upload (build 39 per WORKING.md). Every
+      # workflow run increments by 1 (run_number is workflow-scoped +
+      # monotonically increasing). Pinned in env so all subsequent
+      # steps reference the same value.
+      - name: Compute build number
+        id: build-number
+        run: |
+          BUILD_NUMBER=$((100 + ${{ github.run_number }}))
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "TestFlight build number for this run: $BUILD_NUMBER"
+
+      # Materialise the .p8 ASC API key from the secret. Written to a
+      # tmp file because xcrun altool's `--apiKey` argument expects a
+      # file path, not raw key contents.
+      - name: Restore App Store Connect API .p8 key
+        env:
+          ASC_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+        run: |
+          set -e
+          mkdir -p "$RUNNER_TEMP/private_keys"
+          # altool looks for AuthKey_<KEY_ID>.p8 in a couple of standard
+          # locations; the one altool wants is ~/private_keys/. Writing
+          # there + leaving a symlink under RUNNER_TEMP keeps the path
+          # discoverable from later steps too.
+          printf '%s' "$ASC_API_KEY" > "$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8" || (
+            mkdir -p "$HOME/private_keys"
+            printf '%s' "$ASC_API_KEY" > "$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          )
+          chmod 600 "$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          # Sanity: file must exist + be non-empty (don't print contents).
+          test -s "$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+
+      # Build the Release archive. Inject the Clerk keys the same way
+      # `scripts/sim-build.sh` does — without them Environment.swift
+      # readers crash at launch (per `ios-clerk-keys-empty-in-pbxproj`
+      # memory). For v1 the "production" key IS the staging Clerk key
+      # (see header comment).
+      - name: Archive (Release / iOS device)
+        working-directory: AmakaFlowCompanion
+        env:
+          CLERK_PUBLISHABLE_KEY_DEV: ${{ secrets.CLERK_PUBLISHABLE_KEY_DEV }}
+          CLERK_PUBLISHABLE_KEY_STAGING: ${{ secrets.CLERK_PUBLISHABLE_KEY_STAGING }}
+          CLERK_PUBLISHABLE_KEY_PRODUCTION: ${{ secrets.CLERK_PUBLISHABLE_KEY_STAGING }}
+        run: |
+          set -e
+          BUILD_NUM=${{ steps.build-number.outputs.build_number }}
+          xcodebuild archive \
+            -scheme AmakaFlowCompanion \
+            -project AmakaFlowCompanion.xcodeproj \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath build/AmakaFlowCompanion.xcarchive \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm \
+            -allowProvisioningUpdates \
+            CURRENT_PROJECT_VERSION="$BUILD_NUM" \
+            CLERK_PUBLISHABLE_KEY_DEV="$CLERK_PUBLISHABLE_KEY_DEV" \
+            CLERK_PUBLISHABLE_KEY_STAGING="$CLERK_PUBLISHABLE_KEY_STAGING" \
+            CLERK_PUBLISHABLE_KEY_PRODUCTION="$CLERK_PUBLISHABLE_KEY_PRODUCTION" \
+            2>&1 | tee archive.log | tail -50
+          # Sanity: the .xcarchive must exist + contain the .app
+          test -d build/AmakaFlowCompanion.xcarchive/Products/Applications/AmakaFlowCompanion.app
+
+      # Export the .ipa from the archive. ExportOptions.plist tells
+      # xcodebuild "this is an App Store distribution build" and that
+      # signing should use the team's automatic provisioning.
+      - name: Write ExportOptions.plist
+        working-directory: AmakaFlowCompanion
+        run: |
+          cat > build/ExportOptions.plist <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>destination</key>
+            <string>upload</string>
+            <key>signingStyle</key>
+            <string>automatic</string>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>stripSwiftSymbols</key>
+            <true/>
+          </dict>
+          </plist>
+          PLIST
+
+      - name: Export IPA
+        working-directory: AmakaFlowCompanion
+        run: |
+          set -e
+          xcodebuild -exportArchive \
+            -archivePath build/AmakaFlowCompanion.xcarchive \
+            -exportPath build/export \
+            -exportOptionsPlist build/ExportOptions.plist \
+            -allowProvisioningUpdates \
+            2>&1 | tee export.log | tail -20
+          ls -la build/export/
+
+      # Inspect the IPA's embedded Info.plist before claiming the upload
+      # is shippable (per `inspect-deployed-ipa-before-claiming-shippable`
+      # memory). Fail loudly if Clerk keys didn't substitute correctly,
+      # AND assert STRICT EQUALITY with the secret values — catches a
+      # silent xcodebuild arg-drop where the plist has _some_ value but
+      # not the right one (CR feedback on PR #228).
+      - name: Inspect IPA Info.plist
+        working-directory: AmakaFlowCompanion
+        env:
+          EXPECTED_CLERK_STAGING: ${{ secrets.CLERK_PUBLISHABLE_KEY_STAGING }}
+          EXPECTED_CLERK_DEV: ${{ secrets.CLERK_PUBLISHABLE_KEY_DEV }}
+        run: |
+          set -e
+          IPA=$(ls build/export/*.ipa | head -1)
+          test -f "$IPA"
+          echo "IPA: $IPA"
+          mkdir -p /tmp/ipa-extract
+          unzip -q -o "$IPA" -d /tmp/ipa-extract
+          PLIST="/tmp/ipa-extract/Payload/AmakaFlowCompanion.app/Info.plist"
+          test -f "$PLIST"
+          echo "=== Version + build ==="
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$PLIST"
+          # Non-empty + non-placeholder checks (cheap).
+          PROD_KEY=$(/usr/libexec/PlistBuddy -c "Print :CLERK_PUBLISHABLE_KEY_PRODUCTION" "$PLIST")
+          STAGING_KEY=$(/usr/libexec/PlistBuddy -c "Print :CLERK_PUBLISHABLE_KEY_STAGING" "$PLIST")
+          DEV_KEY=$(/usr/libexec/PlistBuddy -c "Print :CLERK_PUBLISHABLE_KEY_DEV" "$PLIST")
+          test -n "$PROD_KEY"
+          test "${PROD_KEY:0:1}" != '$'
+          test -n "$STAGING_KEY"
+          test "${STAGING_KEY:0:1}" != '$'
+          # Strict equality vs the secret values. Per the 2026-05-22
+          # "staging IS production for v1" decision, PROD == STAGING.
+          # Mismatch = xcodebuild silently dropped an arg; fail BEFORE
+          # altool spends 5-10min uploading a misconfigured build.
+          if [ "$PROD_KEY" != "$EXPECTED_CLERK_STAGING" ]; then
+            echo "::error::IPA Info.plist CLERK_PUBLISHABLE_KEY_PRODUCTION does not match the staging secret value. Expected hash $(echo -n "$EXPECTED_CLERK_STAGING" | shasum | cut -c1-8); got $(echo -n "$PROD_KEY" | shasum | cut -c1-8). xcodebuild arg substitution failed silently."
+            exit 1
+          fi
+          if [ "$STAGING_KEY" != "$EXPECTED_CLERK_STAGING" ]; then
+            echo "::error::IPA Info.plist CLERK_PUBLISHABLE_KEY_STAGING does not match the staging secret value."
+            exit 1
+          fi
+          if [ "$DEV_KEY" != "$EXPECTED_CLERK_DEV" ]; then
+            echo "::error::IPA Info.plist CLERK_PUBLISHABLE_KEY_DEV does not match the dev secret value."
+            exit 1
+          fi
+          echo "✅ Info.plist sanity checks passed (non-empty, no placeholder, strict equality vs secrets)."
+
+      - name: Upload IPA to TestFlight via altool
+        env:
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+        working-directory: AmakaFlowCompanion
+        run: |
+          set -e
+          IPA=$(ls build/export/*.ipa | head -1)
+          echo "Uploading $IPA to TestFlight..."
+          xcrun altool --upload-app \
+            -f "$IPA" \
+            -t ios \
+            --apiKey "$ASC_KEY_ID" \
+            --apiIssuer "$ASC_ISSUER_ID" \
+            --output-format normal \
+            2>&1 | tee altool.log
+          echo "✅ altool upload completed."
+
+      # Always upload the build artifacts for debugging — IPA + xcarchive
+      # contains the .dSYM bundle needed for symbolicated crash reports
+      # if/when Sentry symbol upload gets wired (deferred follow-up).
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testflight-build-${{ steps.build-number.outputs.build_number }}
+          path: |
+            AmakaFlowCompanion/build/export/*.ipa
+            AmakaFlowCompanion/build/AmakaFlowCompanion.xcarchive/dSYMs/
+            AmakaFlowCompanion/archive.log
+            AmakaFlowCompanion/export.log
+            AmakaFlowCompanion/altool.log
+          retention-days: 14
+          if-no-files-found: warn
