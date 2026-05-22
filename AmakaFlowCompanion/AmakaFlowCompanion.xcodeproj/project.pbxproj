@@ -272,6 +272,11 @@
 		F1XTUR34P15RV0000002 /* FixtureAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1XTUR34P15RV0000001 /* FixtureAPIService.swift */; };
 		F1XTUR3JS0N01000001 /* amrap_10min.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000001 /* amrap_10min.json */; };
 		F1XTUR3JS0N01000002 /* emom_strength.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000002 /* emom_strength.json */; };
+		AMA1875LOTTIE01FILE /* onboarding-ai-coach.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA1875LOTTIE01REF /* onboarding-ai-coach.json */; };
+		AMA1875LOTTIE02FILE /* onboarding-device-sync.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA1875LOTTIE02REF /* onboarding-device-sync.json */; };
+		AMA1875LOTTIE03FILE /* onboarding-telegram.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA1875LOTTIE03REF /* onboarding-telegram.json */; };
+		AMA1875LOTTIE04FILE /* onboarding-progress-ring.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA1875LOTTIE04REF /* onboarding-progress-ring.json */; };
+		AMA1875LOTTIE05FILE /* onboarding-start.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA1875LOTTIE05REF /* onboarding-start.json */; };
 		F1XTUR3JS0N01000003 /* for_time_conditioning.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000003 /* for_time_conditioning.json */; };
 		F1XTUR3JS0N01000004 /* strength_block_w1.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000004 /* strength_block_w1.json */; };
 		F1XTUR3JS0N01000005 /* running_long.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000005 /* running_long.json */; };
@@ -695,6 +700,11 @@
 		F1XTUR34P15RV0000001 /* FixtureAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FixtureAPIService.swift; path = ../AmakaFlow/DependencyInjection/FixtureAPIService.swift; sourceTree = SOURCE_ROOT; };
 		F1XTUR3JS0N00000001 /* amrap_10min.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = amrap_10min.json; path = ../AmakaFlow/Resources/Fixtures/amrap_10min.json; sourceTree = SOURCE_ROOT; };
 		F1XTUR3JS0N00000002 /* emom_strength.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = emom_strength.json; path = ../AmakaFlow/Resources/Fixtures/emom_strength.json; sourceTree = SOURCE_ROOT; };
+		AMA1875LOTTIE01REF /* onboarding-ai-coach.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "onboarding-ai-coach.json"; path = "../AmakaFlow/Resources/OnboardingLottie/onboarding-ai-coach.json"; sourceTree = SOURCE_ROOT; };
+		AMA1875LOTTIE02REF /* onboarding-device-sync.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "onboarding-device-sync.json"; path = "../AmakaFlow/Resources/OnboardingLottie/onboarding-device-sync.json"; sourceTree = SOURCE_ROOT; };
+		AMA1875LOTTIE03REF /* onboarding-telegram.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "onboarding-telegram.json"; path = "../AmakaFlow/Resources/OnboardingLottie/onboarding-telegram.json"; sourceTree = SOURCE_ROOT; };
+		AMA1875LOTTIE04REF /* onboarding-progress-ring.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "onboarding-progress-ring.json"; path = "../AmakaFlow/Resources/OnboardingLottie/onboarding-progress-ring.json"; sourceTree = SOURCE_ROOT; };
+		AMA1875LOTTIE05REF /* onboarding-start.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "onboarding-start.json"; path = "../AmakaFlow/Resources/OnboardingLottie/onboarding-start.json"; sourceTree = SOURCE_ROOT; };
 		F1XTUR3JS0N00000003 /* for_time_conditioning.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = for_time_conditioning.json; path = ../AmakaFlow/Resources/Fixtures/for_time_conditioning.json; sourceTree = SOURCE_ROOT; };
 		F1XTUR3JS0N00000004 /* strength_block_w1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = strength_block_w1.json; path = ../AmakaFlow/Resources/Fixtures/strength_block_w1.json; sourceTree = SOURCE_ROOT; };
 		F1XTUR3JS0N00000005 /* running_long.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = running_long.json; path = ../AmakaFlow/Resources/Fixtures/running_long.json; sourceTree = SOURCE_ROOT; };
@@ -1231,6 +1241,11 @@
 				F1XTUR3JS0N00000004 /* strength_block_w1.json */,
 				F1XTUR3JS0N00000005 /* running_long.json */,
 				F1XTUR3JS0N00000006 /* hiit_follow_along.json */,
+				AMA1875LOTTIE01REF /* onboarding-ai-coach.json */,
+				AMA1875LOTTIE02REF /* onboarding-device-sync.json */,
+				AMA1875LOTTIE03REF /* onboarding-telegram.json */,
+				AMA1875LOTTIE04REF /* onboarding-progress-ring.json */,
+				AMA1875LOTTIE05REF /* onboarding-start.json */,
 				8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */,
 				AMA12820001A /* PRDetectionService.swift */,
 				AMA12840002A /* ShareCardGenerator.swift */,
@@ -1593,6 +1608,11 @@
 				F1XTUR3JS0N01000004 /* strength_block_w1.json in Resources */,
 				F1XTUR3JS0N01000005 /* running_long.json in Resources */,
 				F1XTUR3JS0N01000006 /* hiit_follow_along.json in Resources */,
+				AMA1875LOTTIE01FILE /* onboarding-ai-coach.json in Resources */,
+				AMA1875LOTTIE02FILE /* onboarding-device-sync.json in Resources */,
+				AMA1875LOTTIE03FILE /* onboarding-telegram.json in Resources */,
+				AMA1875LOTTIE04FILE /* onboarding-progress-ring.json in Resources */,
+				AMA1875LOTTIE05FILE /* onboarding-start.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
