@@ -6,20 +6,45 @@
 
 ---
 
-## TL;DR — Final recommendation (revised 2026-05-22 per David)
+## TL;DR — Final recommendation (revised 2026-05-22 per David's clarification)
 
-Ship the **"Full demo" onboarding variant** for v1 plus flip `FeatureFlags.nonMvp` to `true`. Combined effort: **~7–9 working days**. This addresses all six findings David surfaced on TestFlight build 103 AND lets users feel the full experience BEFORE being asked to commit / pay later.
+Ship an **animated-explainer onboarding** for v1 plus flip `FeatureFlags.nonMvp` to `true`. Combined effort: **~3–4 working days**.
 
-**Revision note:** the original spike recommended the "Lean demo" (3 screens / ~30s / ~3-4 days) as a pragmatic ship-speed call. David's 2026-05-22 directive — *"we want users to be able to see what they can do with the app before they decide to pay and give them a feeling of the overall experience"* — explicitly prioritizes completeness of the demo over ship-speed. The 2–3 day delta is small relative to the v1 timeline and the Full variant addresses all six findings vs Lean's four. Full is the v1 plan; Lean is documented as the fallback if the timeline blows out.
+**Critical clarification from David 2026-05-22 19:27:** when he said "demo," he meant *"something that shows the user how it works in animation rather than a actual demo of the app"* — i.e., motion-graphics explainer like Headspace / Calm / Duolingo, NOT a live demo running the real AI. This is a major shape change: no live API calls during onboarding, no real workout generation, no real state. Just 4-5 animated screens explaining what the app does, ending in Clerk sign-up.
 
-- Demo-first onboarding (5–7 screens, ~90s): goals quiz → AI generates a real workout in front of the user → preview-on-week (so the user SEES the empty week fill with their workout) → "here's how Coach helps" → 2-3 feature callouts (Telegram, Garmin/Watch) → Save & continue (signup lands here, not before).
-- Flip `FeatureFlags.nonMvp` to `true` — un-hide Sources, Programs, Readiness History, Fatigue Advisor, Bulk Import. These already exist in code; the cost of exposing them is ~0.
-- Replace the empty `Workouts → This week` placeholder with the demo-generated sample workout + 2 follow-up suggestions seeded.
-- Promote AI Coach from "row inside More tab" to a Home-screen card (the surface is already drawn — `coachVisibilitySection` exists in `HomeView.swift:96`).
-- Splash: a short branded animation (Lottie or SwiftUI motion) under 1.5s — not a video loop. Industry research says video is overkill and hurts perceived performance.
-- Feature discoverability: add a "What can AmakaFlow do?" surface (one new view) reachable from More + a one-time post-onboarding "Did you know" coachmark card on Home.
+**Why the change matters:**
+- Live AI demo (the earlier plan) had a 5-20s wait while LLM ran during onboarding — bad UX in a first-impression context, expensive in API costs per visitor.
+- Animated explainer can introduce 4-5 features in ~30-45s of motion (vs Live demo which could only really show the Suggest flow).
+- No real state to manage = nothing to break.
+- Lottie files from lottiefiles.com (David's pick — confirmed 19:33) give premium aesthetic at zero design cost.
 
-The "Lean demo" variant is documented below (Section 5) as the fallback / v1.1 simplification path.
+**The flow (4-5 screens, ~45s total, no user input until end):**
+
+1. *"Your AI coach plans your workouts"* — Lottie of a calendar/plan being built
+2. *"Connect Watch, Garmin, or Strava"* — Lottie of devices syncing
+3. *"Get nudges in Telegram (if you want)"* — Lottie of chat bubbles
+4. *"Track your week + see progress"* — Lottie of a ring filling
+5. *Sign-up CTA* — Clerk hosted flow
+
+Auto-advance per screen (~7-9s), with a "Skip" tap target in top-right. No backout state to design — every back tap just goes to previous slide.
+
+**Other changes (still in scope):**
+
+- Flip `FeatureFlags.nonMvp` to `true` — un-hide Sources, Programs, Readiness History, Fatigue Advisor, Bulk Import. Already in code; cost of exposing them is ~0.
+- Replace the empty `Workouts → This week` placeholder with 1 seeded sample workout + an "Ask coach" CTA so it's not totally barren on day 1.
+- Promote AI Coach from "row inside More tab" to a Home-screen card.
+- Splash: a Lottie animation under 1.5s with the AmakaFlow logo.
+- Discover hub ("What can AmakaFlow do?") in More tab, SF Symbols + copy, reachable for users who want to browse beyond the core flow.
+- Delete `MentalModelView` — the animated explainer subsumes its role.
+
+**David's answers to spike Open Questions:**
+1. No designer/brand kit → Lottie files from lottiefiles.com (free pack)
+2. No commissioned icons → SF Symbols throughout
+3. No live AI demo → animated explainer instead
+4. "Sign in instead" question moot (no decision-tree screens, just linear advance)
+5. Delete `MentalModelView`
+
+The earlier "Lean demo" (live AI, 3 screens) and "Full demo" (live AI, 5-7 screens) sections below are now historical context — the chosen approach is neither. Animated explainer is its own variant; details in Section 5b (new).
 
 ---
 
