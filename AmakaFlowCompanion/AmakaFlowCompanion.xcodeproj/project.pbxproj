@@ -13,6 +13,9 @@
 		AMA1875LOTTIEFILE /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1875LOTTIEPROD /* Lottie */; };
 		11C72B7C6EA17FC8DEA354FB /* CoachModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */; };
 		141CFD120F8C663BD0F2C3BC /* MentalModelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C1640626E3952B7DBBBF33 /* MentalModelView.swift */; };
+		AMA1875ONBSLIDEFILE /* OnboardingSlide.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1875ONBSLIDEREF /* OnboardingSlide.swift */; };
+		AMA1875ONBVIEWFILE /* OnboardingSlideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1875ONBVIEWREF /* OnboardingSlideView.swift */; };
+		AMA1875ONBFLOWFILE /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1875ONBFLOWREF /* OnboardingFlowView.swift */; };
 		1A7B03C2552441FEB810773A /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */; };
 		1N5T4GR4MR33L0002 /* InstagramReelIngestionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */; };
 		224589E0DBE4430DA0043265 /* RPEFeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BD17097D21D4FB48D023E24 /* RPEFeedbackView.swift */; };
@@ -669,6 +672,9 @@
 		C2C967F7EB5505FDB36864F9 /* FeatureFlags.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FeatureFlags.swift; path = ../AmakaFlow/Core/FeatureFlags.swift; sourceTree = "<group>"; };
 		CC2192F9A69B4A51B54A138F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeView.swift; path = ../AmakaFlow/Views/HomeView.swift; sourceTree = SOURCE_ROOT; };
 		D0C1640626E3952B7DBBBF33 /* MentalModelView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MentalModelView.swift; path = ../AmakaFlow/Views/MentalModelView.swift; sourceTree = SOURCE_ROOT; };
+		AMA1875ONBSLIDEREF /* OnboardingSlide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnboardingSlide.swift; path = ../AmakaFlow/Views/Onboarding/OnboardingSlide.swift; sourceTree = SOURCE_ROOT; };
+		AMA1875ONBVIEWREF /* OnboardingSlideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnboardingSlideView.swift; path = ../AmakaFlow/Views/Onboarding/OnboardingSlideView.swift; sourceTree = SOURCE_ROOT; };
+		AMA1875ONBFLOWREF /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnboardingFlowView.swift; path = ../AmakaFlow/Views/Onboarding/OnboardingFlowView.swift; sourceTree = SOURCE_ROOT; };
 		D33PL1NK1MP0RTV0001 /* DeepLinkImportView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkImportView.swift; path = ../AmakaFlow/Views/DeepLinkImportView.swift; sourceTree = "<group>"; };
 		D33PL1NKMAN4G3R0001 /* DeepLinkManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkManager.swift; path = ../AmakaFlow/Services/DeepLinkManager.swift; sourceTree = "<group>"; };
 		D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkManagerTests.swift; path = AmakaFlowCompanionTests/DeepLinkManagerTests.swift; sourceTree = "<group>"; };
@@ -1151,6 +1157,9 @@
 				AMA14150009A /* BulkImportViewModelTests.swift */,
 				C2C967F7EB5505FDB36864F9 /* FeatureFlags.swift */,
 				D0C1640626E3952B7DBBBF33 /* MentalModelView.swift */,
+				AMA1875ONBSLIDEREF /* OnboardingSlide.swift */,
+				AMA1875ONBVIEWREF /* OnboardingSlideView.swift */,
+				AMA1875ONBFLOWREF /* OnboardingFlowView.swift */,
 				BAC6A807F5A4820B05339B99 /* PlanRevealView.swift */,
 				F3CF9663A6818FA77C6C02B0 /* WeeklyReviewView.swift */,
 				AC3C221C070C10388F89DF2A /* WatchDeliveryView.swift */,
@@ -1920,6 +1929,9 @@
 				AMA14150008B /* ImportProgressView.swift in Sources */,
 				6E4643C6639A84A033AF4DA1 /* FeatureFlags.swift in Sources */,
 				141CFD120F8C663BD0F2C3BC /* MentalModelView.swift in Sources */,
+				AMA1875ONBSLIDEFILE /* OnboardingSlide.swift in Sources */,
+				AMA1875ONBVIEWFILE /* OnboardingSlideView.swift in Sources */,
+				AMA1875ONBFLOWFILE /* OnboardingFlowView.swift in Sources */,
 				52BE28AB8A3D773F016F14E5 /* PlanRevealView.swift in Sources */,
 				D37C6098D3FACBE84D8D261D /* WeeklyReviewView.swift in Sources */,
 				72A766051AE36A2294C87B12 /* WatchDeliveryView.swift in Sources */,
