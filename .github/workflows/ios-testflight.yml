@@ -148,6 +148,12 @@ jobs:
       - name: Write ExportOptions.plist
         working-directory: AmakaFlowCompanion
         run: |
+          # destination=export (not upload). With `destination=upload`,
+          # xcodebuild uploads to ASC directly and DOESN'T leave a local
+          # IPA, which breaks our PlistBuddy inspection gate + the altool
+          # step. With `destination=export`, we get a local IPA, can
+          # inspect it (per memory inspect-deployed-ipa-before-claiming-shippable),
+          # then upload via altool — gate has teeth, single upload path.
           cat > build/ExportOptions.plist <<'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -156,7 +162,7 @@ jobs:
             <key>method</key>
             <string>app-store-connect</string>
             <key>destination</key>
-            <string>upload</string>
+            <string>export</string>
             <key>signingStyle</key>
             <string>automatic</string>
             <key>uploadSymbols</key>
