@@ -1,6 +1,33 @@
 {
   "components": {
     "schemas": {
+      "CompletionsListResponse": {
+        "description": "Response for GET /v1/workouts/completions.\n\nMirrors mapper-api's list_workout_completions_endpoint return shape:\n{success, completions: [...], total}.",
+        "properties": {
+          "completions": {
+            "items": {
+              "$ref": "#/components/schemas/WorkoutCompletionItem"
+            },
+            "title": "Completions",
+            "type": "array"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "success",
+          "completions",
+          "total"
+        ],
+        "title": "CompletionsListResponse",
+        "type": "object"
+      },
       "ConfirmSyncRequest": {
         "description": "Request body for POST /v1/sync/confirm.",
         "properties": {
@@ -66,6 +93,45 @@
         "title": "ConfirmSyncResponse",
         "type": "object"
       },
+      "DegradedResponse": {
+        "description": "Returned with HTTP 503 when a capability is unroutable. iOS shows user_message.",
+        "properties": {
+          "errorCode": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "ok": {
+            "default": false,
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "retryAfterMs": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retryafterms"
+          },
+          "retryable": {
+            "default": true,
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "userMessage": {
+            "title": "Usermessage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "errorCode",
+          "userMessage"
+        ],
+        "title": "DegradedResponse",
+        "type": "object"
+      },
       "DeviceType": {
         "description": "Mirrors mapper-api's DeviceType (services/mapper-api/api/routers/sync.py).",
         "enum": [
@@ -75,6 +141,196 @@
         ],
         "title": "DeviceType",
         "type": "string"
+      },
+      "ErrorCode": {
+        "description": "All typed error codes returned by AmakaFlow services. Single source of truth.",
+        "enum": [
+          "UNAVAILABLE",
+          "TIMEOUT",
+          "MISCONFIGURED",
+          "SAFETY_BLOCKED"
+        ],
+        "title": "ErrorCode",
+        "type": "string"
+      },
+      "ExerciseFollowAlongStep": {
+        "additionalProperties": false,
+        "description": "One exercise step (with reps / weight / station / media).",
+        "properties": {
+          "duration_sec": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Sec"
+          },
+          "gif_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gif Url"
+          },
+          "has_media": {
+            "default": false,
+            "title": "Has Media",
+            "type": "boolean"
+          },
+          "index": {
+            "minimum": 0.0,
+            "title": "Index",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reps": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps"
+          },
+          "set_number": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Set Number"
+          },
+          "source_video_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Video Url"
+          },
+          "station": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Station"
+          },
+          "telegram_file_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telegram File Id"
+          },
+          "total_sets": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Sets"
+          },
+          "type": {
+            "const": "exercise",
+            "default": "exercise",
+            "title": "Type",
+            "type": "string"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          }
+        },
+        "required": [
+          "index",
+          "name"
+        ],
+        "title": "ExerciseFollowAlongStep",
+        "type": "object"
+      },
+      "FollowAlongResponse": {
+        "additionalProperties": false,
+        "description": "Response body for GET /v1/workouts/{workout_id}/follow-along.",
+        "properties": {
+          "steps": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "exercise": "#/components/schemas/ExerciseFollowAlongStep",
+                  "rest": "#/components/schemas/RestFollowAlongStep"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ExerciseFollowAlongStep"
+                },
+                {
+                  "$ref": "#/components/schemas/RestFollowAlongStep"
+                }
+              ]
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "total_steps": {
+            "minimum": 0.0,
+            "title": "Total Steps",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "title",
+          "total_steps",
+          "steps"
+        ],
+        "title": "FollowAlongResponse",
+        "type": "object"
       },
       "HTTPValidationError": {
         "properties": {
@@ -513,6 +769,61 @@
         "title": "ReportSyncFailedResponse",
         "type": "object"
       },
+      "RestFollowAlongStep": {
+        "additionalProperties": false,
+        "description": "One rest step (only shared fields).",
+        "properties": {
+          "duration_sec": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Sec"
+          },
+          "gif_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gif Url"
+          },
+          "has_media": {
+            "default": false,
+            "title": "Has Media",
+            "type": "boolean"
+          },
+          "index": {
+            "minimum": 0.0,
+            "title": "Index",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "const": "rest",
+            "default": "rest",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "index",
+          "name"
+        ],
+        "title": "RestFollowAlongStep",
+        "type": "object"
+      },
       "SetEntry": {
         "description": "Individual set within an exercise log (AMA-281).",
         "properties": {
@@ -659,6 +970,234 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "WorkoutCompletionItem": {
+        "additionalProperties": true,
+        "description": "One row from the user's completion history.\n\nThe upstream router returns whatever the CompletionRepository's\nget_user_completions() emits \u2014 a loosely-shaped dict that includes\nhealth metrics, workout linkage IDs, fidelity, summary fields, etc.\nPer the AMA-1817 1:1-mirror principle (and matching how PendingSyncWorkout\nhandles upstream polymorphism), we leave non-load-bearing fields\nopen via model_config extra=\"allow\" rather than narrowing in v1.",
+        "properties": {
+          "active_calories": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Calories"
+          },
+          "avg_heart_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Heart Rate"
+          },
+          "client_generated_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Generated Id"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "distance_meters": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Meters"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "fidelity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fidelity"
+          },
+          "follow_along_workout_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follow Along Workout Id"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "is_simulated": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Simulated"
+          },
+          "max_heart_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Heart Rate"
+          },
+          "min_heart_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Heart Rate"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps"
+          },
+          "total_calories": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Calories"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "workout_event_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workout Event Id"
+          },
+          "workout_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workout Id"
+          }
+        },
+        "title": "WorkoutCompletionItem",
         "type": "object"
       },
       "WorkoutCompletionRequest": {
@@ -1024,7 +1563,7 @@
   "paths": {
     "/health": {
       "get": {
-        "description": "Health probe \u2014 used by Render and any load balancer in front.",
+        "description": "Health probe - used by Render and any load balancer in front.",
         "operationId": "health_health_get",
         "responses": {
           "200": {
@@ -1042,7 +1581,92 @@
             "description": "Successful Response"
           }
         },
+        "security": [],
         "summary": "Health"
+      }
+    },
+    "/healthz/live": {
+      "get": {
+        "operationId": "live_healthz_live_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "service": {
+                      "example": "mobile-bff",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "ok"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "service"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [],
+        "summary": "Live",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/healthz/ready": {
+      "get": {
+        "operationId": "ready_healthz_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "checks": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    },
+                    "service": {
+                      "example": "mobile-bff",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "ready",
+                        "not_ready"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "service",
+                    "checks"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [],
+        "summary": "Ready",
+        "tags": [
+          "Health"
+        ]
       }
     },
     "/v1/chat/stream": {
@@ -1057,6 +1681,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Chat Stream"
@@ -1074,6 +1708,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Coach Fatigue Advice"
@@ -1091,6 +1735,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Coach Memories"
@@ -1108,6 +1762,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Coach Message"
@@ -1125,6 +1789,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Coach Rpe Feedback"
@@ -1142,6 +1816,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Coach Suggest Workout"
@@ -1159,6 +1843,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Gamification Xp"
@@ -1176,6 +1870,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Knowledge Cards List"
@@ -1191,6 +1895,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Knowledge Cards Create"
@@ -1208,6 +1922,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Knowledge Cards Search"
@@ -1246,6 +1970,16 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Knowledge Cards Delete"
@@ -1263,6 +1997,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Nutrition Analyze Photo"
@@ -1301,6 +2045,16 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Nutrition Barcode"
@@ -1318,6 +2072,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Nutrition Fueling Status"
@@ -1335,6 +2099,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Nutrition Parse Text"
@@ -1352,6 +2126,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Nutrition Protein Nudge Check"
@@ -1391,6 +2175,16 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Sync Confirm"
@@ -1430,6 +2224,16 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Sync Failed"
@@ -1489,6 +2293,16 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Sync Pending"
@@ -1528,9 +2342,98 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Workouts Complete"
+      }
+    },
+    "/v1/workouts/completions": {
+      "get": {
+        "description": "iOS Verify / Reopen completions read (AMA-1841) -> mapper-api GET /workouts/completions.\n\nCJ-01 Verify + Reopen depend on this route \u2014 iOS reads the user's\ncompletion history through the BFF. Query params (limit, offset,\ninclude_simulated) and the Authorization header are forwarded\nverbatim by `_proxy`.",
+        "operationId": "v1_workouts_completions_v1_workouts_completions_get",
+        "parameters": [
+          {
+            "description": "Max records (default 50, max 100).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Max records (default 50, max 100).",
+              "maximum": 100,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Pagination offset.",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Pagination offset.",
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Include simulated completions (AMA-273).",
+            "in": "query",
+            "name": "include_simulated",
+            "required": false,
+            "schema": {
+              "default": true,
+              "description": "Include simulated completions (AMA-273).",
+              "title": "Include Simulated",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompletionsListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Workouts Completions"
       }
     },
     "/v1/workouts/planned": {
@@ -1583,9 +2486,69 @@
               }
             },
             "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "V1 Workouts Planned"
+      }
+    },
+    "/v1/workouts/{workout_id}/follow-along": {
+      "get": {
+        "description": "iOS FollowAlongScreen read (AMA-1917) \u2192 mapper-api GET /workouts/{id}/follow-along.\n\nTyped via FollowAlongResponse so the OpenAPI emit carries the\ndiscriminated-union step shape (ExerciseFollowAlongStep / RestFollowAlongStep)\nper ADR-008. iOS swift-openapi-generator picks this up to produce a\ntyped Swift sealed/oneOf result.\n\nThe Authorization header is forwarded verbatim by `_proxy`. Upstream\ntyping was added in AMA-1909 / PR #433 \u2014 this BFF route exposes the\nsame shape to iOS via the AMA-1820 / AMA-1824 contract surface.",
+        "operationId": "v1_workouts_follow_along_v1_workouts__workout_id__follow_along_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workout_id",
+            "required": true,
+            "schema": {
+              "title": "Workout Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowAlongResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Workouts Follow Along"
       }
     }
   },

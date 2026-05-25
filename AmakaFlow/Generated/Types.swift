@@ -46,6 +46,22 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /v1/workouts/planned`.
     /// - Remark: Generated from `#/paths//v1/workouts/planned/get(v1_workouts_planned_v1_workouts_planned_get)`.
     func v1WorkoutsPlannedV1WorkoutsPlannedGet(_ input: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Input) async throws -> Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Output
+    /// V1 Workouts Follow Along
+    ///
+    /// iOS FollowAlongScreen read (AMA-1917) → mapper-api GET /workouts/{id}/follow-along.
+    ///
+    /// Typed via FollowAlongResponse so the OpenAPI emit carries the
+    /// discriminated-union step shape (ExerciseFollowAlongStep / RestFollowAlongStep)
+    /// per ADR-008. iOS swift-openapi-generator picks this up to produce a
+    /// typed Swift sealed/oneOf result.
+    ///
+    /// The Authorization header is forwarded verbatim by `_proxy`. Upstream
+    /// typing was added in AMA-1909 / PR #433 — this BFF route exposes the
+    /// same shape to iOS via the AMA-1820 / AMA-1824 contract surface.
+    ///
+    /// - Remark: HTTP `GET /v1/workouts/{workout_id}/follow-along`.
+    /// - Remark: Generated from `#/paths//v1/workouts/{workout_id}/follow-along/get(v1_workouts_follow_along_v1_workouts__workout_id__follow_along_get)`.
+    func v1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet(_ input: Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Input) async throws -> Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Output
 }
 
 /// Convenience overloads for operation inputs.
@@ -125,6 +141,30 @@ extension APIProtocol {
             headers: headers
         ))
     }
+    /// V1 Workouts Follow Along
+    ///
+    /// iOS FollowAlongScreen read (AMA-1917) → mapper-api GET /workouts/{id}/follow-along.
+    ///
+    /// Typed via FollowAlongResponse so the OpenAPI emit carries the
+    /// discriminated-union step shape (ExerciseFollowAlongStep / RestFollowAlongStep)
+    /// per ADR-008. iOS swift-openapi-generator picks this up to produce a
+    /// typed Swift sealed/oneOf result.
+    ///
+    /// The Authorization header is forwarded verbatim by `_proxy`. Upstream
+    /// typing was added in AMA-1909 / PR #433 — this BFF route exposes the
+    /// same shape to iOS via the AMA-1820 / AMA-1824 contract surface.
+    ///
+    /// - Remark: HTTP `GET /v1/workouts/{workout_id}/follow-along`.
+    /// - Remark: Generated from `#/paths//v1/workouts/{workout_id}/follow-along/get(v1_workouts_follow_along_v1_workouts__workout_id__follow_along_get)`.
+    public func v1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet(
+        path: Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Input.Path,
+        headers: Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Input.Headers = .init()
+    ) async throws -> Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Output {
+        try await v1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet(Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Input(
+            path: path,
+            headers: headers
+        ))
+    }
 }
 
 /// Server URLs defined in the OpenAPI document.
@@ -176,6 +216,43 @@ public enum Components {
                 case success
             }
         }
+        /// Returned with HTTP 503 when a capability is unroutable. iOS shows user_message.
+        ///
+        /// - Remark: Generated from `#/components/schemas/DegradedResponse`.
+        public struct DegradedResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/DegradedResponse/errorCode`.
+            public var errorCode: Components.Schemas.ErrorCode
+            /// - Remark: Generated from `#/components/schemas/DegradedResponse/ok`.
+            public var ok: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/DegradedResponse/retryable`.
+            public var retryable: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/DegradedResponse/userMessage`.
+            public var userMessage: Swift.String
+            /// Creates a new `DegradedResponse`.
+            ///
+            /// - Parameters:
+            ///   - errorCode:
+            ///   - ok:
+            ///   - retryable:
+            ///   - userMessage:
+            public init(
+                errorCode: Components.Schemas.ErrorCode,
+                ok: Swift.Bool? = nil,
+                retryable: Swift.Bool? = nil,
+                userMessage: Swift.String
+            ) {
+                self.errorCode = errorCode
+                self.ok = ok
+                self.retryable = retryable
+                self.userMessage = userMessage
+            }
+            public enum CodingKeys: String, CodingKey {
+                case errorCode
+                case ok
+                case retryable
+                case userMessage
+            }
+        }
         /// Mirrors mapper-api's DeviceType (services/mapper-api/api/routers/sync.py).
         ///
         /// - Remark: Generated from `#/components/schemas/DeviceType`.
@@ -183,6 +260,171 @@ public enum Components {
             case ios = "ios"
             case android = "android"
             case garmin = "garmin"
+        }
+        /// All typed error codes returned by AmakaFlow services. Single source of truth.
+        ///
+        /// - Remark: Generated from `#/components/schemas/ErrorCode`.
+        @frozen public enum ErrorCode: String, Codable, Hashable, Sendable, CaseIterable {
+            case unavailable = "UNAVAILABLE"
+            case timeout = "TIMEOUT"
+            case misconfigured = "MISCONFIGURED"
+            case safetyBlocked = "SAFETY_BLOCKED"
+        }
+        /// One exercise step (with reps / weight / station / media).
+        ///
+        /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep`.
+        public struct ExerciseFollowAlongStep: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep/has_media`.
+            public var hasMedia: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep/index`.
+            public var index: Swift.Int
+            /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep/name`.
+            public var name: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep/type`.
+            @frozen public enum _TypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case exercise = "exercise"
+            }
+            /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep/type`.
+            public var _type: Components.Schemas.ExerciseFollowAlongStep._TypePayload?
+            /// Creates a new `ExerciseFollowAlongStep`.
+            ///
+            /// - Parameters:
+            ///   - hasMedia:
+            ///   - index:
+            ///   - name:
+            ///   - _type:
+            public init(
+                hasMedia: Swift.Bool? = nil,
+                index: Swift.Int,
+                name: Swift.String,
+                _type: Components.Schemas.ExerciseFollowAlongStep._TypePayload? = nil
+            ) {
+                self.hasMedia = hasMedia
+                self.index = index
+                self.name = name
+                self._type = _type
+            }
+            public enum CodingKeys: String, CodingKey {
+                case hasMedia = "has_media"
+                case index
+                case name
+                case _type = "type"
+            }
+            public init(from decoder: any Swift.Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                self.hasMedia = try container.decodeIfPresent(
+                    Swift.Bool.self,
+                    forKey: .hasMedia
+                )
+                self.index = try container.decode(
+                    Swift.Int.self,
+                    forKey: .index
+                )
+                self.name = try container.decode(
+                    Swift.String.self,
+                    forKey: .name
+                )
+                self._type = try container.decodeIfPresent(
+                    Components.Schemas.ExerciseFollowAlongStep._TypePayload.self,
+                    forKey: ._type
+                )
+                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                    "has_media",
+                    "index",
+                    "name",
+                    "type"
+                ])
+            }
+        }
+        /// Response body for GET /v1/workouts/{workout_id}/follow-along.
+        ///
+        /// - Remark: Generated from `#/components/schemas/FollowAlongResponse`.
+        public struct FollowAlongResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/FollowAlongResponse/StepsPayload`.
+            @frozen public enum StepsPayloadPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/FollowAlongResponse/StepsPayload/ExerciseFollowAlongStep`.
+                case exercise(Components.Schemas.ExerciseFollowAlongStep)
+                /// - Remark: Generated from `#/components/schemas/FollowAlongResponse/StepsPayload/RestFollowAlongStep`.
+                case rest(Components.Schemas.RestFollowAlongStep)
+                public enum CodingKeys: String, CodingKey {
+                    case _type = "type"
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                    let discriminator = try container.decode(
+                        Swift.String.self,
+                        forKey: ._type
+                    )
+                    switch discriminator {
+                    case "exercise":
+                        self = .exercise(try .init(from: decoder))
+                    case "rest":
+                        self = .rest(try .init(from: decoder))
+                    default:
+                        throw Swift.DecodingError.unknownOneOfDiscriminator(
+                            discriminatorKey: CodingKeys._type,
+                            discriminatorValue: discriminator,
+                            codingPath: decoder.codingPath
+                        )
+                    }
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    switch self {
+                    case let .exercise(value):
+                        try value.encode(to: encoder)
+                    case let .rest(value):
+                        try value.encode(to: encoder)
+                    }
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/FollowAlongResponse/steps`.
+            public typealias StepsPayload = [Components.Schemas.FollowAlongResponse.StepsPayloadPayload]
+            /// - Remark: Generated from `#/components/schemas/FollowAlongResponse/steps`.
+            public var steps: Components.Schemas.FollowAlongResponse.StepsPayload
+            /// - Remark: Generated from `#/components/schemas/FollowAlongResponse/title`.
+            public var title: Swift.String
+            /// - Remark: Generated from `#/components/schemas/FollowAlongResponse/total_steps`.
+            public var totalSteps: Swift.Int
+            /// Creates a new `FollowAlongResponse`.
+            ///
+            /// - Parameters:
+            ///   - steps:
+            ///   - title:
+            ///   - totalSteps:
+            public init(
+                steps: Components.Schemas.FollowAlongResponse.StepsPayload,
+                title: Swift.String,
+                totalSteps: Swift.Int
+            ) {
+                self.steps = steps
+                self.title = title
+                self.totalSteps = totalSteps
+            }
+            public enum CodingKeys: String, CodingKey {
+                case steps
+                case title
+                case totalSteps = "total_steps"
+            }
+            public init(from decoder: any Swift.Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                self.steps = try container.decode(
+                    Components.Schemas.FollowAlongResponse.StepsPayload.self,
+                    forKey: .steps
+                )
+                self.title = try container.decode(
+                    Swift.String.self,
+                    forKey: .title
+                )
+                self.totalSteps = try container.decode(
+                    Swift.Int.self,
+                    forKey: .totalSteps
+                )
+                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                    "steps",
+                    "title",
+                    "total_steps"
+                ])
+            }
         }
         /// - Remark: Generated from `#/components/schemas/HTTPValidationError`.
         public struct HTTPValidationError: Codable, Hashable, Sendable {
@@ -372,6 +614,72 @@ public enum Components {
             }
             public enum CodingKeys: String, CodingKey {
                 case success
+            }
+        }
+        /// One rest step (only shared fields).
+        ///
+        /// - Remark: Generated from `#/components/schemas/RestFollowAlongStep`.
+        public struct RestFollowAlongStep: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/RestFollowAlongStep/has_media`.
+            public var hasMedia: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/RestFollowAlongStep/index`.
+            public var index: Swift.Int
+            /// - Remark: Generated from `#/components/schemas/RestFollowAlongStep/name`.
+            public var name: Swift.String
+            /// - Remark: Generated from `#/components/schemas/RestFollowAlongStep/type`.
+            @frozen public enum _TypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case rest = "rest"
+            }
+            /// - Remark: Generated from `#/components/schemas/RestFollowAlongStep/type`.
+            public var _type: Components.Schemas.RestFollowAlongStep._TypePayload?
+            /// Creates a new `RestFollowAlongStep`.
+            ///
+            /// - Parameters:
+            ///   - hasMedia:
+            ///   - index:
+            ///   - name:
+            ///   - _type:
+            public init(
+                hasMedia: Swift.Bool? = nil,
+                index: Swift.Int,
+                name: Swift.String,
+                _type: Components.Schemas.RestFollowAlongStep._TypePayload? = nil
+            ) {
+                self.hasMedia = hasMedia
+                self.index = index
+                self.name = name
+                self._type = _type
+            }
+            public enum CodingKeys: String, CodingKey {
+                case hasMedia = "has_media"
+                case index
+                case name
+                case _type = "type"
+            }
+            public init(from decoder: any Swift.Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                self.hasMedia = try container.decodeIfPresent(
+                    Swift.Bool.self,
+                    forKey: .hasMedia
+                )
+                self.index = try container.decode(
+                    Swift.Int.self,
+                    forKey: .index
+                )
+                self.name = try container.decode(
+                    Swift.String.self,
+                    forKey: .name
+                )
+                self._type = try container.decodeIfPresent(
+                    Components.Schemas.RestFollowAlongStep._TypePayload.self,
+                    forKey: ._type
+                )
+                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                    "has_media",
+                    "index",
+                    "name",
+                    "type"
+                ])
             }
         }
         /// Individual set within an exercise log (AMA-281).
@@ -779,6 +1087,57 @@ public enum Operations {
                     }
                 }
             }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/sync/confirm/POST/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/sync/confirm/POST/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.V1SyncConfirmV1SyncConfirmPost.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.V1SyncConfirmV1SyncConfirmPost.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/sync/confirm/post(v1_sync_confirm_v1_sync_confirm_post)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.V1SyncConfirmV1SyncConfirmPost.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.V1SyncConfirmV1SyncConfirmPost.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
             /// Undocumented response.
             ///
             /// A response with a code that is not documented in the OpenAPI document.
@@ -948,6 +1307,57 @@ public enum Operations {
                     default:
                         try throwUnexpectedResponseStatus(
                             expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/sync/failed/POST/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/sync/failed/POST/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.V1SyncFailedV1SyncFailedPost.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.V1SyncFailedV1SyncFailedPost.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/sync/failed/post(v1_sync_failed_v1_sync_failed_post)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.V1SyncFailedV1SyncFailedPost.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.V1SyncFailedV1SyncFailedPost.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
                             response: self
                         )
                     }
@@ -1136,6 +1546,57 @@ public enum Operations {
                     }
                 }
             }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/sync/pending/GET/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/sync/pending/GET/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.V1SyncPendingV1SyncPendingGet.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.V1SyncPendingV1SyncPendingGet.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/sync/pending/get(v1_sync_pending_v1_sync_pending_get)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.V1SyncPendingV1SyncPendingGet.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.V1SyncPendingV1SyncPendingGet.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
             /// Undocumented response.
             ///
             /// A response with a code that is not documented in the OpenAPI document.
@@ -1305,6 +1766,57 @@ public enum Operations {
                     default:
                         try throwUnexpectedResponseStatus(
                             expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/workouts/complete/POST/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/workouts/complete/POST/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/workouts/complete/post(v1_workouts_complete_v1_workouts_complete_post)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.V1WorkoutsCompleteV1WorkoutsCompletePost.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
                             response: self
                         )
                     }
@@ -1497,6 +2009,298 @@ public enum Operations {
                     default:
                         try throwUnexpectedResponseStatus(
                             expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/workouts/planned/GET/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/workouts/planned/GET/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/workouts/planned/get(v1_workouts_planned_v1_workouts_planned_get)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.V1WorkoutsPlannedV1WorkoutsPlannedGet.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// V1 Workouts Follow Along
+    ///
+    /// iOS FollowAlongScreen read (AMA-1917) → mapper-api GET /workouts/{id}/follow-along.
+    ///
+    /// Typed via FollowAlongResponse so the OpenAPI emit carries the
+    /// discriminated-union step shape (ExerciseFollowAlongStep / RestFollowAlongStep)
+    /// per ADR-008. iOS swift-openapi-generator picks this up to produce a
+    /// typed Swift sealed/oneOf result.
+    ///
+    /// The Authorization header is forwarded verbatim by `_proxy`. Upstream
+    /// typing was added in AMA-1909 / PR #433 — this BFF route exposes the
+    /// same shape to iOS via the AMA-1820 / AMA-1824 contract surface.
+    ///
+    /// - Remark: HTTP `GET /v1/workouts/{workout_id}/follow-along`.
+    /// - Remark: Generated from `#/paths//v1/workouts/{workout_id}/follow-along/get(v1_workouts_follow_along_v1_workouts__workout_id__follow_along_get)`.
+    public enum V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet {
+        public static let id: Swift.String = "v1_workouts_follow_along_v1_workouts__workout_id__follow_along_get"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/workouts/{workout_id}/follow-along/GET/path`.
+            public struct Path: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/workouts/{workout_id}/follow-along/GET/path/workout_id`.
+                public var workoutId: Swift.String
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - workoutId:
+                public init(workoutId: Swift.String) {
+                    self.workoutId = workoutId
+                }
+            }
+            public var path: Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Input.Path
+            /// - Remark: Generated from `#/paths/v1/workouts/{workout_id}/follow-along/GET/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            public init(
+                path: Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Input.Path,
+                headers: Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Input.Headers = .init()
+            ) {
+                self.path = path
+                self.headers = headers
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/workouts/{workout_id}/follow-along/GET/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/workouts/{workout_id}/follow-along/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.FollowAlongResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.FollowAlongResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Successful Response
+            ///
+            /// - Remark: Generated from `#/paths//v1/workouts/{workout_id}/follow-along/get(v1_workouts_follow_along_v1_workouts__workout_id__follow_along_get)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/workouts/{workout_id}/follow-along/GET/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/workouts/{workout_id}/follow-along/GET/responses/422/content/application\/json`.
+                    case json(Components.Schemas.HTTPValidationError)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.HTTPValidationError {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// Validation Error
+            ///
+            /// - Remark: Generated from `#/paths//v1/workouts/{workout_id}/follow-along/get(v1_workouts_follow_along_v1_workouts__workout_id__follow_along_get)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/workouts/{workout_id}/follow-along/GET/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/workouts/{workout_id}/follow-along/GET/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/workouts/{workout_id}/follow-along/get(v1_workouts_follow_along_v1_workouts__workout_id__follow_along_get)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.V1WorkoutsFollowAlongV1WorkoutsWorkoutIdFollowAlongGet.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
                             response: self
                         )
                     }
