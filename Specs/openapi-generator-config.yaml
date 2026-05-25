@@ -17,6 +17,7 @@ filter:
   paths:
     - /v1/workouts/complete
     - /v1/workouts/planned
+    - /v1/workouts/{workout_id}/follow-along  # AMA-1917 D1 wedge A
     - /v1/sync/pending
     - /v1/sync/confirm
     - /v1/sync/failed
