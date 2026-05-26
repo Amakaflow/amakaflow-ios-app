@@ -62,6 +62,7 @@ final class FatigueHistoryViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.dayStates[1].date, "2026-04-01")
         XCTAssertFalse(viewModel.isLoading)
         XCTAssertNil(viewModel.errorMessage)
+        XCTAssertNil(viewModel.apiErrorDisplay)
     }
 
     func testLoadHistoryError() async {
@@ -72,18 +73,22 @@ final class FatigueHistoryViewModelTests: XCTestCase {
         XCTAssertTrue(mockAPI.fetchDayStatesCalled)
         XCTAssertEqual(viewModel.dayStates.count, 0)
         XCTAssertFalse(viewModel.isLoading)
-        XCTAssertEqual(viewModel.errorMessage, "Could not load readiness history")
+        XCTAssertEqual(viewModel.apiErrorDisplay?.category, .server)
+        XCTAssertEqual(viewModel.apiErrorDisplay?.message, "The server had a problem. Please try again.")
+        XCTAssertEqual(viewModel.errorMessage, "The server had a problem. Please try again.")
     }
 
     func testLoadHistoryClearsErrorOnRetry() async {
         mockAPI.fetchDayStatesResult = .failure(APIError.serverError(500))
         await viewModel.loadHistory()
         XCTAssertNotNil(viewModel.errorMessage)
+        XCTAssertNotNil(viewModel.apiErrorDisplay)
 
         mockAPI.fetchDayStatesResult = .success([])
         await viewModel.loadHistory()
 
         XCTAssertNil(viewModel.errorMessage)
+        XCTAssertNil(viewModel.apiErrorDisplay)
     }
 
     func testLoadHistorySetsIsLoadingDuringFetch() async {

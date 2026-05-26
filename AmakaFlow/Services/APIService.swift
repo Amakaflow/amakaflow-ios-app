@@ -22,6 +22,7 @@
 //  (or create a new one) — do NOT grow this coordinator.
 //
 
+import Combine
 import Foundation
 
 /// Service for API communication with backend.
@@ -31,6 +32,12 @@ import Foundation
 /// DependencyInjection/APIServiceProviding.swift) and all 19
 /// `APIService.shared.foo()` call sites continue to work after the
 /// AMA-1828 split. New endpoints belong on a domain extension file.
+protocol APIURLSession: AnyObject {
+    func data(for request: URLRequest) async throws -> (Data, URLResponse)
+}
+
+extension URLSession: APIURLSession {}
+
 class APIService {
     static let shared = APIService()
 
@@ -44,9 +51,16 @@ class APIService {
     /// bodies remain hand-coded until the BFF declares typed schemas.
     var bffURL: String { "\(AppEnvironment.current.mobileBFFURL)/v1" }
 
-    let session = URLSession.shared
+    let session: APIURLSession
+    let observabilityLogger: APIObservabilityLogging
 
-    private init() {}
+    init(
+        session: APIURLSession = URLSession.shared,
+        observabilityLogger: APIObservabilityLogging = DefaultAPIObservabilityLogger.shared
+    ) {
+        self.session = session
+        self.observabilityLogger = observabilityLogger
+    }
 
     // MARK: - Auth Headers
 
@@ -224,10 +238,20 @@ enum APIError: LocalizedError {
     case notImplemented
     case invalidURL
     case invalidResponse
-    case networkError(Error)
-    case decodingError(Error)
+
+    /// Transport-level failure (offline, timeout, TLS, cancellation, etc.).
+    case network(underlying: Error)
+    /// Response body could not be decoded into the endpoint's expected model.
+    case decoding(underlying: Error)
     case unauthorized
     case notFound
+    /// Any non-2xx HTTP response that is not mapped to a more specific category.
+    case server(status: Int)
+    case unknown
+
+    // Legacy cases kept while older repositories migrate onto APIService.request(...).
+    case networkError(Error)
+    case decodingError(Error)
     case serverError(Int)
     case serverErrorWithBody(Int, String)
 
@@ -239,18 +263,102 @@ enum APIError: LocalizedError {
             return "Invalid URL"
         case .invalidResponse:
             return "Invalid server response"
-        case .networkError(let error):
+        case .network(let error), .networkError(let error):
             return "Network error: \(error.localizedDescription)"
-        case .decodingError(let error):
+        case .decoding(let error), .decodingError(let error):
             return "Decoding error: \(error.localizedDescription)"
         case .unauthorized:
             return "Session expired. Please reconnect."
         case .notFound:
             return "Resource not found"
-        case .serverError(let code):
+        case .server(let code), .serverError(let code):
             return "Server error: \(code)"
         case .serverErrorWithBody(let code, let body):
             return "Server error \(code): \(body)"
+        case .unknown:
+            return "Unknown API error"
         }
+    }
+
+    var category: APIErrorCategory {
+        switch self {
+        case .notFound:
+            return .notFound
+        case .unauthorized:
+            return .unauthorized
+        case .server, .serverError, .serverErrorWithBody:
+            return .server
+        case .network, .networkError:
+            return .network
+        case .decoding, .decodingError:
+            return .decoding
+        case .notImplemented, .invalidURL, .invalidResponse, .unknown:
+            return .unknown
+        }
+    }
+
+    var sanitizedErrorType: String { category.rawValue }
+
+    var userFacingMessage: String {
+        switch category {
+        case .notFound:
+            return "We couldn’t find that resource."
+        case .unauthorized:
+            return "Session expired. Please reconnect."
+        case .server:
+            return "The server had a problem. Please try again."
+        case .network:
+            return "Network error. Please check your connection."
+        case .decoding:
+            return "We received an unexpected response. Please try again."
+        case .unknown:
+            return "Something went wrong. Please try again."
+        }
+    }
+}
+
+enum APIErrorCategory: String, Equatable {
+    case notFound
+    case unauthorized
+    case server
+    case network
+    case decoding
+    case unknown
+}
+
+struct APIErrorDisplayState: Identifiable, Equatable {
+    let id = UUID()
+    let category: APIErrorCategory
+    let message: String
+
+    init(error: Error) {
+        let apiError = APIError.coerce(error)
+        self.category = apiError.category
+        self.message = apiError.userFacingMessage
+    }
+}
+
+/// Reusable hook for ViewModels that want to expose typed API failures to Views.
+/// Add `@Published var apiError: APIErrorDisplayState?` or own one of these and
+/// call `present(_:)` in catch blocks instead of swallowing errors silently.
+@MainActor
+final class APIErrorState: ObservableObject {
+    @Published var current: APIErrorDisplayState?
+
+    func present(_ error: Error) {
+        current = APIErrorDisplayState(error: error)
+    }
+
+    func clear() {
+        current = nil
+    }
+}
+
+extension APIError {
+    static func coerce(_ error: Error) -> APIError {
+        if let annotated = error as? AnnotatedAPIError {
+            return annotated.underlying
+        }
+        return (error as? APIError) ?? .unknown
     }
 }

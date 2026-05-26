@@ -8,6 +8,187 @@
 import XCTest
 @testable import AmakaFlowCompanion
 
+private final class RecordingAPIObservabilityLogger: APIObservabilityLogging {
+    private(set) var events: [APILogEvent] = []
+
+    func log(_ event: APILogEvent) {
+        events.append(event)
+    }
+}
+
+private struct APITransportTestPayload: Decodable {
+    let name: String
+}
+
+// MARK: - API Transport Observability Tests
+
+final class APITransportObservabilityTests: XCTestCase {
+    private var logger: RecordingAPIObservabilityLogger!
+    private var api: APIService!
+
+    override func setUp() {
+        super.setUp()
+        MockURLProtocol.reset()
+        logger = RecordingAPIObservabilityLogger()
+        api = APIService(session: MockURLProtocol.mockSession(), observabilityLogger: logger)
+    }
+
+    override func tearDown() {
+        api = nil
+        logger = nil
+        MockURLProtocol.reset()
+        super.tearDown()
+    }
+
+    func test404MapsToNotFoundAndEmitsFailLog() async throws {
+        var outgoingRequestId: String?
+        MockURLProtocol.requestHandler = { request in
+            outgoingRequestId = request.value(forHTTPHeaderField: "X-Request-ID")
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 404,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Rndr-Id": "rndr-404"]
+            )!
+            return (response, Data())
+        }
+
+        do {
+            _ = try await api.requestData(makeRequest(path: "/missing", query: "token=secret"))
+            XCTFail("Expected .notFound")
+        } catch APIError.notFound {
+            let fail = try XCTUnwrap(logger.events.last)
+            XCTAssertEqual(fail.phase, .fail)
+            XCTAssertEqual(fail.endpoint, "/missing")
+            XCTAssertEqual(fail.httpMethod, "GET")
+            XCTAssertEqual(fail.statusCode, 404)
+            XCTAssertGreaterThanOrEqual(fail.durationMs, 0)
+            XCTAssertFalse(fail.requestId.isEmpty)
+            XCTAssertEqual(fail.requestId, outgoingRequestId)
+            XCTAssertEqual(fail.serverRequestId, "rndr-404")
+            XCTAssertEqual(fail.errorType, "notFound")
+        } catch {
+            XCTFail("Expected .notFound, got \(error)")
+        }
+    }
+
+    func test500MapsToServerStatus() async throws {
+        var outgoingRequestId: String?
+        MockURLProtocol.requestHandler = { request in
+            outgoingRequestId = request.value(forHTTPHeaderField: "X-Request-ID")
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 500,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Rndr-Id": "rndr-500"]
+            )!
+            return (response, Data())
+        }
+
+        do {
+            _ = try await api.requestData(makeRequest())
+            XCTFail("Expected .server(status: 500)")
+        } catch APIError.server(status: 500) {
+            let fail = try XCTUnwrap(logger.events.last)
+            XCTAssertEqual(fail.phase, .fail)
+            XCTAssertEqual(fail.statusCode, 500)
+            XCTAssertFalse(fail.requestId.isEmpty)
+            XCTAssertEqual(fail.requestId, outgoingRequestId)
+            XCTAssertEqual(fail.serverRequestId, "rndr-500")
+            XCTAssertEqual(fail.errorType, "server")
+        } catch {
+            XCTFail("Expected .server(status: 500), got \(error)")
+        }
+    }
+
+    func testTransportErrorMapsToNetwork() async throws {
+        MockURLProtocol.setError(URLError(.timedOut))
+
+        do {
+            _ = try await api.requestData(makeRequest())
+            XCTFail("Expected .network")
+        } catch APIError.network(underlying: let underlying) {
+            XCTAssertEqual((underlying as? URLError)?.code, .timedOut)
+            let fail = try XCTUnwrap(logger.events.last)
+            XCTAssertEqual(fail.phase, .fail)
+            XCTAssertNil(fail.statusCode)
+            XCTAssertFalse(fail.requestId.isEmpty)
+            XCTAssertNil(fail.serverRequestId)
+            XCTAssertEqual(fail.errorType, "network")
+        } catch {
+            XCTFail("Expected .network, got \(error)")
+        }
+    }
+
+    func testDecodeMismatchMapsToDecoding() async throws {
+        MockURLProtocol.requestHandler = { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Rndr-Id": "rndr-decode"]
+            )!
+            return (response, #"{"unexpected":"shape"}"#.data(using: .utf8)!)
+        }
+
+        do {
+            _ = try await api.request(makeRequest(), decode: APITransportTestPayload.self)
+            XCTFail("Expected .decoding")
+        } catch APIError.decoding(underlying: _) {
+            let fail = try XCTUnwrap(logger.events.last)
+            XCTAssertEqual(fail.phase, .fail)
+            XCTAssertEqual(fail.statusCode, 200)
+            XCTAssertFalse(fail.requestId.isEmpty)
+            XCTAssertEqual(fail.serverRequestId, "rndr-decode")
+            XCTAssertEqual(fail.errorType, "decoding")
+        } catch {
+            XCTFail("Expected .decoding, got \(error)")
+        }
+    }
+
+    func test200SuccessEmitsStartAndEndLogs() async throws {
+        var outgoingRequestId: String?
+        MockURLProtocol.requestHandler = { request in
+            outgoingRequestId = request.value(forHTTPHeaderField: "X-Request-ID")
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Rndr-Id": "rndr-success"]
+            )!
+            return (response, #"{"name":"ok"}"#.data(using: .utf8)!)
+        }
+
+        let result = try await api.request(makeRequest(path: "/ok"), decode: APITransportTestPayload.self)
+
+        XCTAssertEqual(result.name, "ok")
+        XCTAssertEqual(logger.events.map(\.phase), [.start, .end])
+        let start = logger.events[0]
+        XCTAssertEqual(start.endpoint, "/ok")
+        XCTAssertEqual(start.httpMethod, "GET")
+        XCTAssertGreaterThanOrEqual(start.durationMs, 0)
+        XCTAssertFalse(start.requestId.isEmpty)
+        XCTAssertEqual(start.requestId, outgoingRequestId)
+        XCTAssertNil(start.serverRequestId)
+
+        let end = logger.events[1]
+        XCTAssertEqual(end.endpoint, "/ok")
+        XCTAssertEqual(end.statusCode, 200)
+        XCTAssertGreaterThanOrEqual(end.durationMs, 0)
+        XCTAssertEqual(end.requestId, start.requestId)
+        XCTAssertEqual(end.serverRequestId, "rndr-success")
+        XCTAssertNil(end.errorType)
+    }
+
+    private func makeRequest(path: String = "/test", query: String? = nil) -> URLRequest {
+        var components = URLComponents(string: "https://example.test\(path)")!
+        components.query = query
+        var request = URLRequest(url: components.url!)
+        request.httpMethod = "GET"
+        return request
+    }
+}
+
 // MARK: - Model Decoding Tests
 
 final class PlanningModelTests: XCTestCase {
