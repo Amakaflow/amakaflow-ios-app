@@ -52,7 +52,7 @@ class APIService {
     var bffURL: String { "\(AppEnvironment.current.mobileBFFURL)/v1" }
 
     let session: APIURLSession
-    var observabilityLogger: APIObservabilityLogging
+    let observabilityLogger: APIObservabilityLogging
 
     init(
         session: APIURLSession = URLSession.shared,

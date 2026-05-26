@@ -234,6 +234,10 @@ extension APIService {
         do {
             return try encoder.encode(value)
         } catch {
+            // Don't swallow context: encoding failures are programmer errors and
+            // must be visible (CLAUDE.md: no silent failures / AMA-1933).
+            Logger(subsystem: "com.amakaflow.app", category: "network")
+                .error("JSON body encoding failed for \(String(describing: T.self), privacy: .public): \(error.localizedDescription, privacy: .public)")
             throw APIError.unknown
         }
     }
