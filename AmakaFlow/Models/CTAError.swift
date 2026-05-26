@@ -200,12 +200,12 @@ public extension CTAError {
                 // collapsing into .unknown previously made the
                 // toast generic and Retry-eligible by accident).
                 return .http(status: 404, body: nil, requestId: requestId)
-            case .invalidURL, .invalidResponse, .notImplemented:
+            case .invalidURL, .invalidResponse, .notImplemented, .unknown:
                 return .unknown(
                     description: apiError.errorDescription ?? "Unexpected error",
                     requestId: requestId
                 )
-            case .networkError(let underlying):
+            case .network(let underlying), .networkError(let underlying):
                 if let urlError = underlying as? URLError {
                     return .network(code: urlError.code, requestId: requestId)
                 }
@@ -213,12 +213,12 @@ public extension CTAError {
                     description: underlying.localizedDescription,
                     requestId: requestId
                 )
-            case .decodingError(let underlying):
+            case .decoding(let underlying), .decodingError(let underlying):
                 return .decoding(
                     description: underlying.localizedDescription,
                     requestId: requestId
                 )
-            case .serverError(let code):
+            case .server(let code), .serverError(let code):
                 return .http(status: code, body: nil, requestId: requestId)
             case .serverErrorWithBody(let code, let body):
                 // AMA-271: for 200 responses with `success: false`,

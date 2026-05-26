@@ -13,7 +13,13 @@ class FatigueHistoryViewModel: ObservableObject {
     @Published var dayStates: [DayState] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var apiErrorDisplay: APIErrorDisplayState?
     @Published var selectedRange: DateRange = .twoWeeks
+
+    /// AMA-1933 proof hook: Coach readiness history uses the shared APIErrorState
+    /// adapter so API failures from the migrated CoachAPIRepository render a typed
+    /// user-facing error state instead of a blank or silent failure.
+    private let apiErrorState = APIErrorState()
 
     enum DateRange: String, CaseIterable {
         case oneWeek = "1W"
@@ -38,6 +44,8 @@ class FatigueHistoryViewModel: ObservableObject {
     func loadHistory() async {
         isLoading = true
         errorMessage = nil
+        apiErrorDisplay = nil
+        apiErrorState.clear()
 
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
@@ -52,7 +60,9 @@ class FatigueHistoryViewModel: ObservableObject {
             dayStates = states.sorted { $0.date > $1.date }
         } catch {
             print("[FatigueHistoryVM] loadHistory failed: \(error)")
-            errorMessage = "Could not load readiness history"
+            apiErrorState.present(error)
+            apiErrorDisplay = apiErrorState.current
+            errorMessage = apiErrorDisplay?.message ?? "Could not load readiness history"
         }
 
         isLoading = false

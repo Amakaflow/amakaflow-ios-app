@@ -39,6 +39,9 @@ struct FatigueHistoryView: View {
             if viewModel.isLoading {
                 ProgressView("Loading history...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let apiError = viewModel.apiErrorDisplay {
+                apiErrorView(apiError)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let error = viewModel.errorMessage {
                 Text(error)
                     .font(Theme.Typography.body)
@@ -63,6 +66,46 @@ struct FatigueHistoryView: View {
         .task {
             await viewModel.loadHistory()
         }
+    }
+
+    private func apiErrorView(_ error: APIErrorDisplayState) -> some View {
+        VStack(spacing: Theme.Spacing.md) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 36))
+                .foregroundColor(Theme.Colors.accentOrange)
+
+            Text("Couldn't load readiness history")
+                .font(Theme.Typography.title3)
+                .foregroundColor(Theme.Colors.textPrimary)
+
+            Text(error.message)
+                .font(Theme.Typography.body)
+                .foregroundColor(Theme.Colors.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, Theme.Spacing.xl)
+
+            Text(error.category.rawValue.capitalized)
+                .font(Theme.Typography.captionBold)
+                .foregroundColor(Theme.Colors.accentOrange)
+                .padding(.horizontal, Theme.Spacing.sm)
+                .padding(.vertical, Theme.Spacing.xs)
+                .background(Theme.Colors.accentOrange.opacity(0.15))
+                .cornerRadius(Theme.CornerRadius.sm)
+
+            Button {
+                Task { await viewModel.loadHistory() }
+            } label: {
+                Label("Try Again", systemImage: "arrow.clockwise")
+                    .font(Theme.Typography.bodyBold)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, Theme.Spacing.xl)
+                    .padding(.vertical, Theme.Spacing.md)
+                    .background(Theme.Colors.accentOrange)
+                    .cornerRadius(Theme.CornerRadius.md)
+            }
+            .accessibilityIdentifier("readiness_history_retry")
+        }
+        .accessibilityIdentifier("readiness_history_api_error")
     }
 
     private func statPill(_ label: String, value: String) -> some View {

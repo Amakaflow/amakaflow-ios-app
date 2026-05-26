@@ -7,6 +7,13 @@
 //  (WatchConnectivityManager, etc.) and APIServiceProviding conformance
 //  keep working. Pure refactor.
 //
+//  AMA-1933 pilot: every endpoint in this repository routes through
+//  APIService.request(...), the shared async request path that provides
+//  typed APIError mapping plus structured start/end/fail observability.
+//  Migrate other repositories by building URLRequest values and calling
+//  request(_:decode:), requestData(_:), or requestVoid(_:) instead of
+//  session.data(for:) directly.
+//
 //  Endpoints in this file:
 //    GET  /api/v1/planning/day-state            (fetchDayState)
 //    POST /coach/quick                          (askCoach)
@@ -32,282 +39,149 @@ extension APIService {
 
     /// Fetch today's DayState from the planning API
     func fetchDayState() async throws -> DayStateResponse {
-        let url = URL(string: "\(baseURL)/api/v1/planning/day-state")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-
-        let (data, response) = try await session.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        switch httpResponse.statusCode {
-        case 200:
-            return try Self.makeDecoder().decode(DayStateResponse.self, from: data)
-        case 401:
-            throw APIError.unauthorized
-        default:
-            let body = String(data: data, encoding: .utf8) ?? "empty"
-            logError(endpoint: "/api/v1/planning/day-state", method: "GET",
-                     statusCode: httpResponse.statusCode, response: body, error: nil)
-            throw APIError.serverError(httpResponse.statusCode)
-        }
+        let request = try await makeAPIRequest(
+            path: "/api/v1/planning/day-state",
+            method: "GET"
+        )
+        return try await self.request(request, decode: DayStateResponse.self, successStatusCodes: 200...200)
     }
 
     /// Ask the AI coach a quick question
     func askCoach(question: String) async throws -> String {
-        let url = URL(string: "\(baseURL)/coach/quick")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-        request.httpBody = try JSONEncoder().encode(["question": question])
-
-        let (data, response) = try await session.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        switch httpResponse.statusCode {
-        case 200:
-            let result = try Self.makeDecoder().decode(CoachQuickResponse.self, from: data)
-            return result.answer
-        case 401:
-            throw APIError.unauthorized
-        default:
-            let body = String(data: data, encoding: .utf8) ?? "empty"
-            logError(endpoint: "/coach/quick", method: "POST",
-                     statusCode: httpResponse.statusCode, response: body, error: nil)
-            throw APIError.serverError(httpResponse.statusCode)
-        }
+        let request = try await makeAPIRequest(
+            path: "/coach/quick",
+            method: "POST",
+            body: try encodeJSONBody(["question": question])
+        )
+        let result = try await self.request(request, decode: CoachQuickResponse.self, successStatusCodes: 200...200)
+        return result.answer
     }
 
     /// Resolve a training conflict (adjust or keep)
     func resolveConflict(action: String, message: String) async throws {
-        let url = URL(string: "\(baseURL)/api/v1/planning/resolve-conflict")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-        request.httpBody = try JSONEncoder().encode(["action": action, "message": message])
-
-        let (data, response) = try await session.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        guard (200...299).contains(httpResponse.statusCode) else {
-            let body = String(data: data, encoding: .utf8) ?? "empty"
-            logError(endpoint: "/api/v1/planning/resolve-conflict", method: "POST",
-                     statusCode: httpResponse.statusCode, response: body, error: nil)
-            throw APIError.serverError(httpResponse.statusCode)
-        }
+        let request = try await makeAPIRequest(
+            path: "/api/v1/planning/resolve-conflict",
+            method: "POST",
+            body: try encodeJSONBody(["action": action, "message": message])
+        )
+        try await requestVoid(request)
     }
 
     // MARK: - Planning API (AMA-1147 / AMA-1133)
 
     func fetchDayStates(from: String, to: String) async throws -> [DayState] {
-        let url = URL(string: "\(baseURL)/api/v1/planning/day-states?from=\(from)&to=\(to)")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200:
-            return try Self.makeDecoder().decode([DayState].self, from: data)
-        case 401: throw APIError.unauthorized
-        default: throw APIError.serverError(httpResponse.statusCode)
-        }
+        let request = try await makeAPIRequest(
+            path: "/api/v1/planning/day-states",
+            queryItems: [
+                URLQueryItem(name: "from", value: from),
+                URLQueryItem(name: "to", value: to)
+            ],
+            method: "GET"
+        )
+        return try await self.request(request, decode: [DayState].self, successStatusCodes: 200...200)
     }
 
     func generateWeek(request genRequest: GenerateWeekRequest? = nil) async throws -> ProposedPlan {
-        let url = URL(string: "\(baseURL)/api/v1/planning/generate-week")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let genRequest = genRequest {
-            request.httpBody = try JSONEncoder().encode(genRequest)
-        } else {
-            request.httpBody = "{}".data(using: .utf8)
-        }
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200: return try Self.makeDecoder().decode(ProposedPlan.self, from: data)
-        case 401: throw APIError.unauthorized
-        default: throw APIError.serverError(httpResponse.statusCode)
-        }
+        let body = try encodeJSONBody(genRequest ?? GenerateWeekRequest(startDate: nil, preferences: nil))
+        let request = try await makeAPIRequest(
+            path: "/api/v1/planning/generate-week",
+            method: "POST",
+            body: body
+        )
+        return try await self.request(request, decode: ProposedPlan.self, successStatusCodes: 200...200)
     }
 
     func detectConflicts(startDate: String, endDate: String) async throws -> [Conflict] {
-        let url = URL(string: "\(baseURL)/api/v1/planning/conflicts?start_date=\(startDate)&end_date=\(endDate)")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200: return try Self.makeDecoder().decode([Conflict].self, from: data)
-        case 401: throw APIError.unauthorized
-        default: throw APIError.serverError(httpResponse.statusCode)
-        }
+        let request = try await makeAPIRequest(
+            path: "/api/v1/planning/conflicts",
+            queryItems: [
+                URLQueryItem(name: "start_date", value: startDate),
+                URLQueryItem(name: "end_date", value: endDate)
+            ],
+            method: "GET"
+        )
+        return try await self.request(request, decode: [Conflict].self, successStatusCodes: 200...200)
     }
 
     func parseWorkoutText(text: String, context: String? = nil) async throws -> ParsedWorkout {
-        let url = URL(string: "\(baseURL)/api/v1/planning/parse-workout")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(ParseWorkoutRequest(text: text, context: context))
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200: return try Self.makeDecoder().decode(ParsedWorkout.self, from: data)
-        case 401: throw APIError.unauthorized
-        default: throw APIError.serverError(httpResponse.statusCode)
-        }
+        let request = try await makeAPIRequest(
+            path: "/api/v1/planning/parse-workout",
+            method: "POST",
+            body: try encodeJSONBody(ParseWorkoutRequest(text: text, context: context))
+        )
+        return try await self.request(request, decode: ParsedWorkout.self, successStatusCodes: 200...200)
     }
 
     // MARK: - Actions API (AMA-1147 / AMA-1133)
 
     func fetchPendingActions() async throws -> [PendingAction] {
-        let url = URL(string: "\(baseURL)/api/v1/actions/pending")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200: return try Self.makeDecoder().decode([PendingAction].self, from: data)
-        case 401: throw APIError.unauthorized
-        default: throw APIError.serverError(httpResponse.statusCode)
-        }
+        let request = try await makeAPIRequest(
+            path: "/api/v1/actions/pending",
+            method: "GET"
+        )
+        return try await self.request(request, decode: [PendingAction].self, successStatusCodes: 200...200)
     }
 
     func respondToAction(id: String, response actionResponse: String) async throws -> ActionResponse {
-        let url = URL(string: "\(baseURL)/api/v1/actions/\(id)/respond")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(["response": actionResponse])
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200: return try Self.makeDecoder().decode(ActionResponse.self, from: data)
-        case 401: throw APIError.unauthorized
-        default: throw APIError.serverError(httpResponse.statusCode)
-        }
+        let request = try await makeAPIRequest(
+            path: "/api/v1/actions/\(id)/respond",
+            method: "POST",
+            body: try encodeJSONBody(["response": actionResponse])
+        )
+        return try await self.request(request, decode: ActionResponse.self, successStatusCodes: 200...200)
     }
 
     // MARK: - Analytics API (AMA-1147 / AMA-1133)
 
     func fetchShoeComparison() async throws -> [ShoeStats] {
-        let url = URL(string: "\(baseURL)/api/v1/analytics/shoes")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200: return try Self.makeDecoder().decode([ShoeStats].self, from: data)
-        case 401: throw APIError.unauthorized
-        default: throw APIError.serverError(httpResponse.statusCode)
-        }
+        let request = try await makeAPIRequest(
+            path: "/api/v1/analytics/shoes",
+            method: "GET"
+        )
+        return try await self.request(request, decode: [ShoeStats].self, successStatusCodes: 200...200)
     }
 
     // MARK: - Billing API (AMA-1147 / AMA-1133)
 
     func fetchSubscription() async throws -> Subscription {
-        let url = URL(string: "\(baseURL)/api/v1/billing/subscription")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200: return try Self.makeDecoder().decode(Subscription.self, from: data)
-        case 401: throw APIError.unauthorized
-        default: throw APIError.serverError(httpResponse.statusCode)
-        }
+        let request = try await makeAPIRequest(
+            path: "/api/v1/billing/subscription",
+            method: "GET"
+        )
+        return try await self.request(request, decode: Subscription.self, successStatusCodes: 200...200)
     }
 
     // MARK: - Notification Preferences API (AMA-1147 / AMA-1133)
 
     func fetchNotificationPreferences() async throws -> NotificationPreferences {
-        let url = URL(string: "\(baseURL)/api/v1/preferences/notifications")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200: return try Self.makeDecoder().decode(NotificationPreferences.self, from: data)
-        case 401: throw APIError.unauthorized
-        default: throw APIError.serverError(httpResponse.statusCode)
-        }
+        let request = try await makeAPIRequest(
+            path: "/api/v1/preferences/notifications",
+            method: "GET"
+        )
+        return try await self.request(request, decode: NotificationPreferences.self, successStatusCodes: 200...200)
     }
 
     func updateNotificationPreferences(_ prefs: NotificationPreferences) async throws -> NotificationPreferences {
-        let url = URL(string: "\(baseURL)/api/v1/preferences/notifications")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "PUT"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(prefs)
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200: return try Self.makeDecoder().decode(NotificationPreferences.self, from: data)
-        case 401: throw APIError.unauthorized
-        default: throw APIError.serverError(httpResponse.statusCode)
-        }
+        let request = try await makeAPIRequest(
+            path: "/api/v1/preferences/notifications",
+            method: "PUT",
+            body: try encodeJSONBody(prefs)
+        )
+        return try await self.request(request, decode: NotificationPreferences.self, successStatusCodes: 200...200)
     }
 
     // MARK: - Volume Analytics (AMA-1414)
 
     func fetchVolumeAnalytics(startDate: String, endDate: String, granularity: String) async throws -> VolumeAnalyticsResponse {
-        guard let url = URL(string: "\(baseURL)/progression/volume?start_date=\(startDate)&end_date=\(endDate)&granularity=\(granularity)") else { throw APIError.invalidURL }
-        var req = URLRequest(url: url)
-        req.httpMethod = "GET"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
-        let (data, response) = try await session.data(for: req)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-        switch httpResponse.statusCode {
-        case 200:
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-            return try decoder.decode(VolumeAnalyticsResponse.self, from: data)
-        case 401: throw APIError.unauthorized
-        default:
-            let body = String(data: data, encoding: .utf8) ?? "empty"
-            logError(endpoint: "/progression/volume", method: "GET", statusCode: httpResponse.statusCode, response: body, error: nil)
-            throw APIError.serverError(httpResponse.statusCode)
-        }
+        let request = try await makeAPIRequest(
+            path: "/progression/volume",
+            queryItems: [
+                URLQueryItem(name: "start_date", value: startDate),
+                URLQueryItem(name: "end_date", value: endDate),
+                URLQueryItem(name: "granularity", value: granularity)
+            ],
+            method: "GET"
+        )
+        return try await self.request(request, decode: VolumeAnalyticsResponse.self, successStatusCodes: 200...200)
     }
 }
