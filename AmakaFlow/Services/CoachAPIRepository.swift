@@ -35,13 +35,18 @@ extension APIService {
 
     // MARK: - DayState / Coach / Conflict (AMA-1150)
 
+    /// Stable yyyy-MM-dd formatter (DateFormatter init is expensive — build once).
+    static let dayKeyFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
     /// Fetch today's DayState from the BFF range-based planning API.
     func fetchDayState() async throws -> DayState {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd"
-        let today = formatter.string(from: Date())
+        let today = Self.dayKeyFormatter.string(from: Date())
         guard let state = try await fetchDayStates(from: today, to: today).first else {
             throw APIError.notFound
         }

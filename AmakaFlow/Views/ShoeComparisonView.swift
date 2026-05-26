@@ -157,7 +157,7 @@ struct ShoeComparisonView: View {
                 .font(.system(size: 44))
                 .foregroundColor(Theme.Colors.accentOrange)
 
-            Text("Shoe comparison not available yet")
+            Text("Shoe comparison unavailable")
                 .font(Theme.Typography.title2)
                 .foregroundColor(Theme.Colors.textPrimary)
 
