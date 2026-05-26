@@ -1,4 +1,8 @@
 .sentryclirc
 
+# Local Xcode/SwiftPM caches; CI may restore these paths, but they must not be committed.
+.spm/
+DerivedData/
+
 # Optional local E2E test credentials (Clerk test-user secrets)
 AmakaFlowCompanionUITests/TestCredentials.swift

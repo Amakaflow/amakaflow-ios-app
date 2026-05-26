@@ -20,10 +20,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Clone workoutkit-sync dependency
-        id: clone
-        run: git clone https://github.com/supergeri/workoutkit-sync.git ../../workoutkit-sync
-
       - name: Select Xcode (latest available)
         id: xcode
         run: |
@@ -150,10 +146,7 @@ jobs:
         if: always()
         id: outcome
         run: |
-          if [ "${{ steps.clone.outcome }}" == "failure" ]; then
-            echo "ci_outcome=failure" >> "$GITHUB_OUTPUT"
-            echo "failed_step=clone" >> "$GITHUB_OUTPUT"
-          elif [ "${{ steps.spm.outcome }}" == "failure" ]; then
+          if [ "${{ steps.spm.outcome }}" == "failure" ]; then
             echo "ci_outcome=failure" >> "$GITHUB_OUTPUT"
             echo "failed_step=spm" >> "$GITHUB_OUTPUT"
           elif [ "${{ steps.build.outcome }}" == "failure" ]; then
@@ -209,9 +202,7 @@ jobs:
           LOGS=""
           FAILED="${{ steps.outcome.outputs.failed_step }}"
 
-          if [ "$FAILED" == "clone" ]; then
-            LOGS="Failed to clone workoutkit-sync dependency. Check network access or repository permissions."
-          elif [ "$FAILED" == "spm" ]; then
+          if [ "$FAILED" == "spm" ]; then
             LOGS="SwiftPM dependency resolution failed. Check workflow run for full output."
           elif [ "$FAILED" == "build" ]; then
             if [ -f "build_output.log" ]; then

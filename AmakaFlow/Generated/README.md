@@ -1,7 +1,7 @@
 # Generated Swift OpenAPI client (AMA-1818)
 
 These files are **auto-generated** by `swift-openapi-generator` from
-`Specs/mapper-api.json`, filtered to the 5 first-wave mobile-facing
+`Specs/mobile-bff.json`, filtered to the first-wave mobile-facing BFF
 endpoints (per [AMA-1824 mobile-domains
 doc](../../docs/architecture/mobile-domains.md)):
 
@@ -13,7 +13,7 @@ doc](../../docs/architecture/mobile-domains.md)):
 
 ## DO NOT EDIT
 
-Regenerate via:
+Regenerate from the repo root:
 
 ```bash
 ./scripts/regen-openapi-client.sh
@@ -28,31 +28,19 @@ cd /tmp/swift-openapi-generator && swift build -c release --product swift-openap
 
 Then re-run the regen script.
 
-## Setup needed before these compile
+## Project integration
 
-The generated code imports `OpenAPIRuntime` and `HTTPTypes`. Add these
-SPM dependencies to `AmakaFlowCompanion.xcodeproj`:
+The generated code imports `OpenAPIRuntime`, `HTTPTypes`, and the URLSession
+transport package. Those dependencies are managed by
+`AmakaFlowCompanion.xcodeproj` and locked in the workspace `Package.resolved`.
 
-1. Open Xcode → File → Add Package Dependencies
-2. Add **`https://github.com/apple/swift-openapi-runtime`** (latest 1.x)
-3. Add **`https://github.com/apple/swift-openapi-urlsession`** (latest 1.x)
-4. Add this `Generated/` folder to the AmakaFlow target (drag into
-   Project Navigator → Add to AmakaFlow target only)
-
-Once added, the call-site swap can land:
-
-- `WorkoutCompletionService.WorkoutCompletionRequest` → use
-  `Components.Schemas.WorkoutCompletionRequest` from `Types.swift`
-- `APIService.fetchScheduledWorkouts` → use
-  `Client.listPlannedWorkoutsEndpointWorkoutsPlannedGet(...)` from
-  `Client.swift`
-
-That's the AMA-1820 (Phase 3 — split APIService) work.
+When the BFF contract changes, refresh `Specs/mobile-bff.json` from the backend
+artifact, run the regen script, and review both generated files together.
 
 ## Source
 
-- Spec: `Specs/mapper-api.json` (vendored from
-  amakaflow-backend's `openapi/mapper-api.json` artifact, refreshed via
+- Spec: `Specs/mobile-bff.json` (vendored from
+  amakaflow-backend's `openapi/mobile-bff.json` artifact, refreshed via
   AMA-1822 CI workflow)
 - Config: `Specs/openapi-generator-config.yaml`
 - Backed by:
