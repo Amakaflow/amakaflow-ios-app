@@ -46,9 +46,6 @@ jobs:
         with:
           fetch-depth: 0  # needed for diff base...head
 
-      - name: Clone workoutkit-sync dependency
-        run: git clone https://github.com/supergeri/workoutkit-sync.git ../../workoutkit-sync
-
       - name: Select Xcode (latest available)
         id: xcode
         run: |
@@ -223,9 +220,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Clone workoutkit-sync dependency
-        run: git clone https://github.com/supergeri/workoutkit-sync.git ../../workoutkit-sync
 
       - name: Select Xcode (latest available)
         id: xcode
