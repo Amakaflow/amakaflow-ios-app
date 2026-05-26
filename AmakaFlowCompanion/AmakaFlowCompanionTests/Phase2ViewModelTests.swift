@@ -106,6 +106,22 @@ final class Phase2CalendarViewModelTests: XCTestCase {
         XCTAssertTrue(mockAPI.detectConflictsCalled)
         XCTAssertEqual(viewModel.conflicts.count, 1)
         XCTAssertEqual(viewModel.conflicts.first?.severity, .high)
+        XCTAssertNil(viewModel.apiErrorDisplay)
+        XCTAssertNil(viewModel.errorMessage)
+    }
+
+    func testDetectConflictsErrorSurfacesAPIErrorState() async {
+        mockAPI.detectConflictsResult = .failure(APIError.serverError(500))
+
+        let from = Date()
+        let to = Calendar.current.date(byAdding: .day, value: 7, to: from)!
+        await viewModel.detectConflicts(from: from, to: to)
+
+        XCTAssertTrue(mockAPI.detectConflictsCalled)
+        XCTAssertEqual(viewModel.conflicts.count, 0)
+        XCTAssertEqual(viewModel.apiErrorDisplay?.category, .server)
+        XCTAssertEqual(viewModel.apiErrorDisplay?.message, "The server had a problem. Please try again.")
+        XCTAssertEqual(viewModel.errorMessage, "The server had a problem. Please try again.")
     }
 
     func testReadinessForDate() async {

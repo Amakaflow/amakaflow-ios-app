@@ -51,6 +51,10 @@ struct CalendarView: View {
                         }
 
                         // Conflict warnings (AMA-1133)
+                        if let apiError = calendarVM.apiErrorDisplay {
+                            conflictAPIErrorSection(apiError)
+                        }
+
                         if !calendarVM.conflicts.isEmpty {
                             conflictWarningsSection
                         }
@@ -405,11 +409,57 @@ struct CalendarView: View {
         .padding(.bottom, Theme.Spacing.md)
     }
 
+    private func conflictAPIErrorSection(_ error: APIErrorDisplayState) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            HStack(spacing: Theme.Spacing.sm) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(Theme.Colors.accentOrange)
+                Text("Couldn’t load conflicts")
+                    .font(Theme.Typography.bodyBold)
+                    .foregroundColor(Theme.Colors.textPrimary)
+            }
+
+            Text(error.message)
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.textSecondary)
+
+            HStack(spacing: Theme.Spacing.sm) {
+                Text(error.category.rawValue.capitalized)
+                    .font(Theme.Typography.captionBold)
+                    .foregroundColor(Theme.Colors.accentOrange)
+                    .padding(.horizontal, Theme.Spacing.sm)
+                    .padding(.vertical, Theme.Spacing.xs)
+                    .background(Theme.Colors.accentOrange.opacity(0.15))
+                    .cornerRadius(Theme.CornerRadius.sm)
+
+                Spacer()
+
+                Button {
+                    Task { await loadCalendarData() }
+                } label: {
+                    Label("Try Again", systemImage: "arrow.clockwise")
+                        .font(Theme.Typography.captionBold)
+                        .foregroundColor(Theme.Colors.accentBlue)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("calendar_conflicts_retry")
+            }
+        }
+        .padding(Theme.Spacing.md)
+        .background(Theme.Colors.accentOrange.opacity(0.05))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
+                .stroke(Theme.Colors.accentOrange.opacity(0.3), lineWidth: 1)
+        )
+        .cornerRadius(Theme.CornerRadius.lg)
+        .padding(.bottom, Theme.Spacing.md)
+        .accessibilityIdentifier("calendar_conflicts_api_error")
+    }
+
     private func conflictSeverityColor(_ severity: ConflictSeverity) -> Color {
         switch severity {
-        case .low: return Theme.Colors.accentOrange
-        case .medium: return Theme.Colors.accentOrange
-        case .high: return Theme.Colors.accentRed
+        case .warning, .low, .medium, .unknown: return Theme.Colors.accentOrange
+        case .critical, .high: return Theme.Colors.accentRed
         }
     }
 

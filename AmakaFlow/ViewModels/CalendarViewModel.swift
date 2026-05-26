@@ -16,7 +16,9 @@ class CalendarViewModel: ObservableObject {
     @Published var isLoadingDayStates = false
     @Published var isGeneratingWeek = false
     @Published var errorMessage: String?
+    @Published var apiErrorDisplay: APIErrorDisplayState?
 
+    private let apiErrorState = APIErrorState()
     private let dependencies: AppDependencies
 
     init(dependencies: AppDependencies = .live) {
@@ -74,6 +76,10 @@ class CalendarViewModel: ObservableObject {
     // MARK: - Conflict Detection
 
     func detectConflicts(from: Date, to: Date) async {
+        errorMessage = nil
+        apiErrorDisplay = nil
+        apiErrorState.clear()
+
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withFullDate]
 
@@ -84,6 +90,9 @@ class CalendarViewModel: ObservableObject {
             )
         } catch {
             print("[CalendarViewModel] detectConflicts failed: \(error)")
+            apiErrorState.present(error)
+            apiErrorDisplay = apiErrorState.current
+            errorMessage = apiErrorDisplay?.message ?? "Could not load scheduling conflicts"
         }
     }
 

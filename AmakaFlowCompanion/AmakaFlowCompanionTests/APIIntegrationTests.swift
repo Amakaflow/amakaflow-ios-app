@@ -282,6 +282,74 @@ final class CoachAPIRepositoryEndpointTests: XCTestCase {
         }
     }
 
+    func testDetectConflictsHitsBFFPlanningConflictsWithFromToAndDecodesConflict() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.httpMethod, "GET")
+            XCTAssertEqual(request.url?.path, "/v1/planning/conflicts")
+            let components = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)
+            XCTAssertEqual(components?.queryItems?.first(where: { $0.name == "from" })?.value, "2026-05-26")
+            XCTAssertEqual(components?.queryItems?.first(where: { $0.name == "to" })?.value, "2026-05-27")
+            XCTAssertNil(components?.queryItems?.first(where: { $0.name == "start_date" }))
+            XCTAssertNil(components?.queryItems?.first(where: { $0.name == "end_date" }))
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Rndr-Id": "rndr-planning-conflicts"]
+            )!
+            let data = """
+            [
+              {
+                "id": "conflict-1",
+                "date": "2026-05-26",
+                "type": "pre_fatigue",
+                "description": "Fatigue is elevated before a hard workout.",
+                "severity": "warning",
+                "suggestion": "Move the hard session by one day."
+              }
+            ]
+            """.data(using: .utf8)!
+            return (response, data)
+        }
+
+        let conflicts = try await api.detectConflicts(startDate: "2026-05-26", endDate: "2026-05-27")
+
+        XCTAssertEqual(conflicts.count, 1)
+        let conflict = try XCTUnwrap(conflicts.first)
+        XCTAssertEqual(conflict.id, "conflict-1")
+        XCTAssertEqual(conflict.type, .preFatigue)
+        XCTAssertEqual(conflict.severity, .warning)
+        XCTAssertEqual(conflict.suggestion, "Move the hard session by one day.")
+        XCTAssertEqual(logger.events.map(\.phase), [.start, .end])
+    }
+
+    func testConflictTypeAndSeverityDecodeAllBackendRawValuesAndFallback() throws {
+        let backendTypes: [(String, ConflictType)] = [
+            ("pre_fatigue", .preFatigue),
+            ("consecutive_hard", .consecutiveHard),
+            ("same_muscle_group", .sameMuscleGroup),
+            ("overload", .overload),
+            ("no_recovery", .noRecovery)
+        ]
+        for (rawValue, expected) in backendTypes {
+            let decoded = try JSONDecoder().decode(ConflictType.self, from: "\"\(rawValue)\"".data(using: .utf8)!)
+            XCTAssertEqual(decoded, expected, "Expected \(rawValue) to decode")
+        }
+
+        let backendSeverities: [(String, ConflictSeverity)] = [
+            ("warning", .warning),
+            ("critical", .critical)
+        ]
+        for (rawValue, expected) in backendSeverities {
+            let decoded = try JSONDecoder().decode(ConflictSeverity.self, from: "\"\(rawValue)\"".data(using: .utf8)!)
+            XCTAssertEqual(decoded, expected, "Expected \(rawValue) to decode")
+        }
+
+        XCTAssertEqual(try JSONDecoder().decode(ConflictType.self, from: "\"future_conflict\"".data(using: .utf8)!), .unknown)
+        XCTAssertEqual(try JSONDecoder().decode(ConflictSeverity.self, from: "\"future_severity\"".data(using: .utf8)!), .unknown)
+    }
+
     func testGhostEndpointThrowsNotImplementedWithoutNetworkCall() async throws {
         do {
             _ = try await api.fetchShoeComparison()

@@ -19,7 +19,7 @@
 //    STUB /coach/quick                          (askCoach; no backend route)
 //    POST /api/v1/planning/resolve-conflict     (resolveConflict; deferred)
 //    POST /api/v1/planning/generate-week        (generateWeek; deferred)
-//    GET  /api/v1/planning/conflicts            (detectConflicts; deferred)
+//    GET  /v1/planning/conflicts                (detectConflicts)
 //    POST /api/v1/planning/parse-workout        (parseWorkoutText; deferred)
 //    GET  /api/v1/actions/pending               (fetchPendingActions; deferred)
 //    POST /api/v1/actions/{id}/respond          (respondToAction; deferred)
@@ -97,12 +97,12 @@ extension APIService {
     }
 
     func detectConflicts(startDate: String, endDate: String) async throws -> [Conflict] {
-        // TODO(AMA-1936/1937/1938): repoint to bffURL once the BFF wedge ships
         let request = try await makeAPIRequest(
-            path: "/api/v1/planning/conflicts",
+            baseURL: bffURL,
+            path: "/planning/conflicts",
             queryItems: [
-                URLQueryItem(name: "start_date", value: startDate),
-                URLQueryItem(name: "end_date", value: endDate)
+                URLQueryItem(name: "from", value: startDate),
+                URLQueryItem(name: "to", value: endDate)
             ],
             method: "GET"
         )
