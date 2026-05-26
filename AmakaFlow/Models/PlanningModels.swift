@@ -325,16 +325,52 @@ struct Conflict: Codable, Identifiable {
 }
 
 enum ConflictType: String, Codable {
+    case preFatigue = "pre_fatigue"
+    case consecutiveHard = "consecutive_hard"
+    case sameMuscleGroup = "same_muscle_group"
     case overload
+    case noRecovery = "no_recovery"
+
+    // Legacy mapper-api values kept for backward compatibility with fixtures/tests.
     case backToBack = "back_to_back"
     case missingRecovery = "missing_recovery"
     case intensityClash = "intensity_clash"
+
+    case unknown
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(String.self)
+        self = Self(rawValue: rawValue) ?? .unknown
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 enum ConflictSeverity: String, Codable {
+    case warning
+    case critical
+
+    // Legacy mapper-api values kept for backward compatibility with fixtures/tests.
     case low
     case medium
     case high
+
+    case unknown
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(String.self)
+        self = Self(rawValue: rawValue) ?? .unknown
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 // MARK: - Parse Workout
