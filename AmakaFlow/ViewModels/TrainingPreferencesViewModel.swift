@@ -14,8 +14,10 @@ class TrainingPreferencesViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var isSaving = false
     @Published var errorMessage: String?
+    @Published var apiErrorDisplay: APIErrorDisplayState?
     @Published var saveSuccess = false
 
+    private let apiErrorState = APIErrorState()
     private let dependencies: AppDependencies
 
     init(dependencies: AppDependencies = .live) {
@@ -25,10 +27,15 @@ class TrainingPreferencesViewModel: ObservableObject {
     func loadPreferences() async {
         isLoading = true
         errorMessage = nil
+        apiErrorDisplay = nil
+        apiErrorState.clear()
 
         do {
             preferences = try await dependencies.apiService.fetchNotificationPreferences()
         } catch {
+            apiErrorState.present(error)
+            apiErrorDisplay = apiErrorState.current
+            errorMessage = apiErrorDisplay?.message ?? "Could not load preferences"
             print("[TrainingPreferencesViewModel] loadPreferences failed: \(error)")
         }
 
@@ -38,13 +45,17 @@ class TrainingPreferencesViewModel: ObservableObject {
     func savePreferences() async {
         isSaving = true
         errorMessage = nil
+        apiErrorDisplay = nil
+        apiErrorState.clear()
         saveSuccess = false
 
         do {
             preferences = try await dependencies.apiService.updateNotificationPreferences(preferences)
             saveSuccess = true
         } catch {
-            errorMessage = "Could not save preferences: \(error.localizedDescription)"
+            apiErrorState.present(error)
+            apiErrorDisplay = apiErrorState.current
+            errorMessage = apiErrorDisplay?.message ?? "Could not save preferences"
         }
 
         isSaving = false

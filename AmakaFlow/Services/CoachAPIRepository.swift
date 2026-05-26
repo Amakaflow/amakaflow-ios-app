@@ -15,19 +15,17 @@
 //  session.data(for:) directly.
 //
 //  Endpoints in this file:
-//    GET  /api/v1/planning/day-state            (fetchDayState)
-//    POST /coach/quick                          (askCoach)
-//    POST /api/v1/planning/resolve-conflict     (resolveConflict)
-//    GET  /api/v1/planning/day-states           (fetchDayStates)
-//    POST /api/v1/planning/generate-week        (generateWeek)
-//    GET  /api/v1/planning/conflicts            (detectConflicts)
-//    POST /api/v1/planning/parse-workout        (parseWorkoutText)
-//    GET  /api/v1/actions/pending               (fetchPendingActions)
-//    POST /api/v1/actions/{id}/respond          (respondToAction)
-//    GET  /api/v1/analytics/shoes               (fetchShoeComparison)
-//    GET  /api/v1/billing/subscription          (fetchSubscription)
-//    GET  /api/v1/preferences/notifications     (fetchNotificationPreferences)
-//    PUT  /api/v1/preferences/notifications     (updateNotificationPreferences)
+//    GET  /v1/planning/days                     (fetchDayState/fetchDayStates)
+//    STUB /coach/quick                          (askCoach; no backend route)
+//    POST /api/v1/planning/resolve-conflict     (resolveConflict; deferred)
+//    POST /api/v1/planning/generate-week        (generateWeek; deferred)
+//    GET  /api/v1/planning/conflicts            (detectConflicts; deferred)
+//    POST /api/v1/planning/parse-workout        (parseWorkoutText; deferred)
+//    GET  /api/v1/actions/pending               (fetchPendingActions; deferred)
+//    POST /api/v1/actions/{id}/respond          (respondToAction; deferred)
+//    STUB /analytics/shoes                      (fetchShoeComparison; no backend route)
+//    STUB /billing/subscription                 (fetchSubscription; no backend route)
+//    STUB /preferences/notifications            (fetch/updateNotificationPreferences; no backend route)
 //    GET  /progression/volume                   (fetchVolumeAnalytics)
 //
 
@@ -37,28 +35,33 @@ extension APIService {
 
     // MARK: - DayState / Coach / Conflict (AMA-1150)
 
-    /// Fetch today's DayState from the planning API
-    func fetchDayState() async throws -> DayStateResponse {
-        let request = try await makeAPIRequest(
-            path: "/api/v1/planning/day-state",
-            method: "GET"
-        )
-        return try await self.request(request, decode: DayStateResponse.self, successStatusCodes: 200...200)
+    /// Stable yyyy-MM-dd formatter (DateFormatter init is expensive — build once).
+    static let dayKeyFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
+    /// Fetch today's DayState from the BFF range-based planning API.
+    func fetchDayState() async throws -> DayState {
+        let today = Self.dayKeyFormatter.string(from: Date())
+        guard let state = try await fetchDayStates(from: today, to: today).first else {
+            throw APIError.notFound
+        }
+        return state
     }
 
     /// Ask the AI coach a quick question
     func askCoach(question: String) async throws -> String {
-        let request = try await makeAPIRequest(
-            path: "/coach/quick",
-            method: "POST",
-            body: try encodeJSONBody(["question": question])
-        )
-        let result = try await self.request(request, decode: CoachQuickResponse.self, successStatusCodes: 200...200)
-        return result.answer
+        // NOT IMPLEMENTED (AMA-1932): no backend route
+        throw APIError.notImplemented
     }
 
     /// Resolve a training conflict (adjust or keep)
     func resolveConflict(action: String, message: String) async throws {
+        // TODO(AMA-1936/1937/1938): repoint to bffURL once the BFF wedge ships
         let request = try await makeAPIRequest(
             path: "/api/v1/planning/resolve-conflict",
             method: "POST",
@@ -71,7 +74,8 @@ extension APIService {
 
     func fetchDayStates(from: String, to: String) async throws -> [DayState] {
         let request = try await makeAPIRequest(
-            path: "/api/v1/planning/day-states",
+            baseURL: bffURL,
+            path: "/planning/days",
             queryItems: [
                 URLQueryItem(name: "from", value: from),
                 URLQueryItem(name: "to", value: to)
@@ -82,6 +86,7 @@ extension APIService {
     }
 
     func generateWeek(request genRequest: GenerateWeekRequest? = nil) async throws -> ProposedPlan {
+        // TODO(AMA-1936/1937/1938): repoint to bffURL once the BFF wedge ships
         let body = try encodeJSONBody(genRequest ?? GenerateWeekRequest(startDate: nil, preferences: nil))
         let request = try await makeAPIRequest(
             path: "/api/v1/planning/generate-week",
@@ -92,6 +97,7 @@ extension APIService {
     }
 
     func detectConflicts(startDate: String, endDate: String) async throws -> [Conflict] {
+        // TODO(AMA-1936/1937/1938): repoint to bffURL once the BFF wedge ships
         let request = try await makeAPIRequest(
             path: "/api/v1/planning/conflicts",
             queryItems: [
@@ -104,6 +110,7 @@ extension APIService {
     }
 
     func parseWorkoutText(text: String, context: String? = nil) async throws -> ParsedWorkout {
+        // TODO(AMA-1936/1937/1938): repoint to bffURL once the BFF wedge ships
         let request = try await makeAPIRequest(
             path: "/api/v1/planning/parse-workout",
             method: "POST",
@@ -115,6 +122,7 @@ extension APIService {
     // MARK: - Actions API (AMA-1147 / AMA-1133)
 
     func fetchPendingActions() async throws -> [PendingAction] {
+        // TODO(AMA-1936/1937/1938): repoint to bffURL once the BFF wedge ships
         let request = try await makeAPIRequest(
             path: "/api/v1/actions/pending",
             method: "GET"
@@ -123,6 +131,7 @@ extension APIService {
     }
 
     func respondToAction(id: String, response actionResponse: String) async throws -> ActionResponse {
+        // TODO(AMA-1936/1937/1938): repoint to bffURL once the BFF wedge ships
         let request = try await makeAPIRequest(
             path: "/api/v1/actions/\(id)/respond",
             method: "POST",
@@ -134,40 +143,27 @@ extension APIService {
     // MARK: - Analytics API (AMA-1147 / AMA-1133)
 
     func fetchShoeComparison() async throws -> [ShoeStats] {
-        let request = try await makeAPIRequest(
-            path: "/api/v1/analytics/shoes",
-            method: "GET"
-        )
-        return try await self.request(request, decode: [ShoeStats].self, successStatusCodes: 200...200)
+        // NOT IMPLEMENTED (AMA-1932): no backend route
+        throw APIError.notImplemented
     }
 
     // MARK: - Billing API (AMA-1147 / AMA-1133)
 
     func fetchSubscription() async throws -> Subscription {
-        let request = try await makeAPIRequest(
-            path: "/api/v1/billing/subscription",
-            method: "GET"
-        )
-        return try await self.request(request, decode: Subscription.self, successStatusCodes: 200...200)
+        // NOT IMPLEMENTED (AMA-1932): no backend route
+        throw APIError.notImplemented
     }
 
     // MARK: - Notification Preferences API (AMA-1147 / AMA-1133)
 
     func fetchNotificationPreferences() async throws -> NotificationPreferences {
-        let request = try await makeAPIRequest(
-            path: "/api/v1/preferences/notifications",
-            method: "GET"
-        )
-        return try await self.request(request, decode: NotificationPreferences.self, successStatusCodes: 200...200)
+        // NOT IMPLEMENTED (AMA-1932): no backend route
+        throw APIError.notImplemented
     }
 
     func updateNotificationPreferences(_ prefs: NotificationPreferences) async throws -> NotificationPreferences {
-        let request = try await makeAPIRequest(
-            path: "/api/v1/preferences/notifications",
-            method: "PUT",
-            body: try encodeJSONBody(prefs)
-        )
-        return try await self.request(request, decode: NotificationPreferences.self, successStatusCodes: 200...200)
+        // NOT IMPLEMENTED (AMA-1932): no backend route
+        throw APIError.notImplemented
     }
 
     // MARK: - Volume Analytics (AMA-1414)

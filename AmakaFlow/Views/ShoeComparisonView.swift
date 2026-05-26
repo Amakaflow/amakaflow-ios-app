@@ -16,6 +16,8 @@ struct ShoeComparisonView: View {
                 if viewModel.isLoading && viewModel.shoes.isEmpty {
                     ProgressView("Loading shoe data...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let error = viewModel.apiErrorDisplay {
+                    unavailableState(message: error.message)
                 } else if viewModel.shoes.isEmpty {
                     emptyState
                 } else {
@@ -148,6 +150,24 @@ struct ShoeComparisonView: View {
     }
 
     // MARK: - Empty State
+
+    private func unavailableState(message: String) -> some View {
+        VStack(spacing: Theme.Spacing.md) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 44))
+                .foregroundColor(Theme.Colors.accentOrange)
+
+            Text("Shoe comparison unavailable")
+                .font(Theme.Typography.title2)
+                .foregroundColor(Theme.Colors.textPrimary)
+
+            Text(message)
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(Theme.Spacing.xl)
+    }
 
     private var emptyState: some View {
         VStack(spacing: Theme.Spacing.md) {
