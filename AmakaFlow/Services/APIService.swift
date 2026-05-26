@@ -258,7 +258,7 @@ enum APIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notImplemented:
-            return "API feature not yet implemented"
+            return "Feature not available yet"
         case .invalidURL:
             return "Invalid URL"
         case .invalidResponse:
@@ -300,6 +300,10 @@ enum APIError: LocalizedError {
     var sanitizedErrorType: String { category.rawValue }
 
     var userFacingMessage: String {
+        if case .notImplemented = self {
+            return "This feature isn’t available yet."
+        }
+
         switch category {
         case .notFound:
             return "We couldn’t find that resource."

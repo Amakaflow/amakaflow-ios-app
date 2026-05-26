@@ -189,6 +189,151 @@ final class APITransportObservabilityTests: XCTestCase {
     }
 }
 
+// MARK: - Coach API Repository Endpoint Tests
+
+final class CoachAPIRepositoryEndpointTests: XCTestCase {
+    private var logger: RecordingAPIObservabilityLogger!
+    private var api: APIService!
+
+    override func setUp() {
+        super.setUp()
+        MockURLProtocol.reset()
+        logger = RecordingAPIObservabilityLogger()
+        api = APIService(session: MockURLProtocol.mockSession(), observabilityLogger: logger)
+    }
+
+    override func tearDown() {
+        api = nil
+        logger = nil
+        MockURLProtocol.reset()
+        super.tearDown()
+    }
+
+    func testFetchDayStatesHitsBFFPlanningDaysAndDecodesCamelCaseDayState() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.httpMethod, "GET")
+            XCTAssertEqual(request.url?.path, "/v1/planning/days")
+            let components = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)
+            XCTAssertEqual(components?.queryItems?.first(where: { $0.name == "from" })?.value, "2026-05-26")
+            XCTAssertEqual(components?.queryItems?.first(where: { $0.name == "to" })?.value, "2026-05-27")
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Rndr-Id": "rndr-planning-days"]
+            )!
+            return (response, Self.dayStatesJSON)
+        }
+
+        let states = try await api.fetchDayStates(from: "2026-05-26", to: "2026-05-27")
+
+        XCTAssertEqual(states.count, 1)
+        let state = try XCTUnwrap(states.first)
+        XCTAssertEqual(state.date, "2026-05-26")
+        XCTAssertEqual(state.readinessScore, 87)
+        XCTAssertEqual(state.readiness, .green)
+        XCTAssertEqual(state.fatigueScore, 87)
+        XCTAssertEqual(state.goalPhase, "base")
+        XCTAssertEqual(state.acuteLoad, 12.5)
+        XCTAssertEqual(state.chronicLoad, 30.0)
+        XCTAssertEqual(state.constraints, ["travel"])
+        XCTAssertEqual(state.availableBlocks.first?.label, "Lunch")
+        XCTAssertEqual(state.plannedSessions.first?.estimatedDurationMinutes, 45)
+        XCTAssertEqual(state.plannedWorkouts.first?.sport, "run")
+        XCTAssertEqual(state.completedSessions.first?.durationMin, 42)
+        XCTAssertEqual(state.completedWorkouts, ["completed-1"])
+        XCTAssertEqual(logger.events.map(\.phase), [.start, .end])
+    }
+
+    func testFetchDayStateReturnsFirstElementFromBFFRangeEndpoint() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.url?.path, "/v1/planning/days")
+            let components = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)
+            let from = components?.queryItems?.first(where: { $0.name == "from" })?.value
+            let to = components?.queryItems?.first(where: { $0.name == "to" })?.value
+            XCTAssertEqual(from, to)
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: nil
+            )!
+            return (response, Self.dayStatesJSON)
+        }
+
+        let state = try await api.fetchDayState()
+
+        XCTAssertEqual(state.date, "2026-05-26")
+        XCTAssertEqual(state.readinessScore, 87)
+    }
+
+    func testFetchDayStateThrowsNotFoundWhenBFFReturnsEmptyRange() async throws {
+        MockURLProtocol.setResponse(statusCode: 200, data: "[]".data(using: .utf8)!)
+
+        do {
+            _ = try await api.fetchDayState()
+            XCTFail("Expected .notFound")
+        } catch APIError.notFound {
+            XCTAssertEqual(MockURLProtocol.interceptedRequests.first?.url?.path, "/v1/planning/days")
+        } catch {
+            XCTFail("Expected .notFound, got \(error)")
+        }
+    }
+
+    func testGhostEndpointThrowsNotImplementedWithoutNetworkCall() async throws {
+        do {
+            _ = try await api.fetchShoeComparison()
+            XCTFail("Expected .notImplemented")
+        } catch APIError.notImplemented {
+            XCTAssertTrue(MockURLProtocol.interceptedRequests.isEmpty)
+        } catch {
+            XCTFail("Expected .notImplemented, got \(error)")
+        }
+    }
+
+    private static let dayStatesJSON = """
+    [
+      {
+        "date": "2026-05-26",
+        "plannedSessions": [
+          {
+            "id": "planned-1",
+            "source": "amakaflow",
+            "sourceId": "agent-1",
+            "date": "2026-05-26",
+            "type": "run",
+            "intensity": "easy",
+            "durationMin": 45,
+            "structuredSteps": [{"kind": "warmup", "durationMin": 10}],
+            "modifiable": true,
+            "rationale": "Aerobic base"
+          }
+        ],
+        "completedSessions": [
+          {
+            "id": "completed-1",
+            "source": "garmin",
+            "date": "2026-05-26",
+            "type": "run",
+            "durationMin": 42,
+            "actualData": {"avgHr": 142}
+          }
+        ],
+        "readinessScore": 87,
+        "availableBlocks": [
+          {"start": "2026-05-26T12:00:00Z", "end": "2026-05-26T13:00:00Z", "label": "Lunch"}
+        ],
+        "constraints": ["travel"],
+        "goalPhase": "base",
+        "acuteLoad": 12.5,
+        "chronicLoad": 30.0
+      }
+    ]
+    """.data(using: .utf8)!
+}
+
 // MARK: - Model Decoding Tests
 
 final class PlanningModelTests: XCTestCase {

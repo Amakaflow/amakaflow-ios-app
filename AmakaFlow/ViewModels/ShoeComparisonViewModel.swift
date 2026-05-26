@@ -13,7 +13,9 @@ class ShoeComparisonViewModel: ObservableObject {
     @Published var shoes: [ShoeStats] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var apiErrorDisplay: APIErrorDisplayState?
 
+    private let apiErrorState = APIErrorState()
     private let dependencies: AppDependencies
 
     init(dependencies: AppDependencies = .live) {
@@ -23,11 +25,15 @@ class ShoeComparisonViewModel: ObservableObject {
     func loadShoes() async {
         isLoading = true
         errorMessage = nil
+        apiErrorDisplay = nil
+        apiErrorState.clear()
 
         do {
             shoes = try await dependencies.apiService.fetchShoeComparison()
         } catch {
-            errorMessage = "Could not load shoe data: \(error.localizedDescription)"
+            apiErrorState.present(error)
+            apiErrorDisplay = apiErrorState.current
+            errorMessage = apiErrorDisplay?.message ?? "Could not load shoe data"
             print("[ShoeComparisonViewModel] loadShoes failed: \(error)")
         }
 

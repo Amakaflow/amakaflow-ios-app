@@ -455,7 +455,8 @@ extension WatchConnectivityManager: WCSessionDelegate {
         Task { @MainActor in
             do {
                 let dayState = try await APIService.shared.fetchDayState()
-                let data = try JSONEncoder().encode(dayState)
+                let watchPayload = Self.makeWatchDayStateResponse(from: dayState)
+                let data = try JSONEncoder().encode(watchPayload)
                 if let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
                     replyHandler(["status": "success", "dayState": dict])
                 } else {
@@ -492,6 +493,51 @@ extension WatchConnectivityManager: WCSessionDelegate {
             } catch {
                 print("⌚️ Failed to resolve conflict: \(error)")
             }
+        }
+    }
+
+    private static func makeWatchDayStateResponse(from dayState: DayState) -> DayStateResponse {
+        let plannedSessions = dayState.plannedWorkouts.enumerated().map { index, workout in
+            DayStateSessionResponse(
+                id: workout.id,
+                name: workout.name,
+                scheduledTime: workout.scheduledTime,
+                sport: workout.sport,
+                durationMinutes: workout.estimatedDurationMinutes,
+                isCompleted: false,
+                isNext: index == 0
+            )
+        }
+
+        let completedSessions = dayState.completedSessions.map { session in
+            DayStateSessionResponse(
+                id: session.id,
+                name: session.type.capitalized,
+                scheduledTime: nil,
+                sport: session.type,
+                durationMinutes: session.durationMin,
+                isCompleted: true,
+                isNext: false
+            )
+        }
+
+        return DayStateResponse(
+            date: dayState.date,
+            readinessScore: dayState.readinessScore ?? Int(dayState.fatigueScore ?? 0),
+            readinessLabel: watchReadinessLabel(for: dayState.readiness),
+            sessions: plannedSessions + completedSessions,
+            conflictAlert: nil
+        )
+    }
+
+    private static func watchReadinessLabel(for readiness: ReadinessLevel) -> String {
+        switch readiness {
+        case .green:
+            return "ready"
+        case .yellow:
+            return "moderate"
+        case .red, .rest, .unknown:
+            return "rest"
         }
     }
 
