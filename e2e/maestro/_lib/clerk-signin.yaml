@@ -46,34 +46,82 @@ appId: com.myamaka.AmakaFlowCompanion
 - waitForAnimationToEnd:
     timeout: 5000
 
-# Fast path: already signed in. The "Coach" tab bar item is the canonical
-# proof of an authenticated Home state.
+# First-launch "mental model" value-prop carousel (multi-page; "Three
+# places. One coach." / "Coach agent" / … with a top-right Skip) appears
+# BEFORE the email field on a fresh install and hides the "Enter your
+# email" field the sign-in branch keys off. Dismiss via the Skip button's
+# resource-id (NOT text "Skip" — and NOT the bare "Coach" sentinel, which
+# substring-matches the carousel's "Coach agent" copy and corrupts the
+# guards). (AMA-1804: surfaced + fixed via golden-path local-sim repro
+# 2026-05-27.)
+# Two onboarding layers gate the auth screen on a fresh install:
+#   1. OnboardingFlowView value-prop carousel ("See your week fill with
+#      effort" …) — its "Skip" (accessibilityLabel "Skip onboarding")
+#      calls complete() directly, dismissing the whole carousel.
+#   2. MentalModelView ("Three places. One coach.") — AMA-1988 added a
+#      prominent "Continue without a watch" button (id below); also a
+#      top-bar Skip id.
+# Loop generously so we blow through both, whatever order they appear.
+- repeat:
+    times: 10
+    commands:
+      - runFlow:
+          when:
+            visible: "Skip onboarding"
+          commands:
+            - tapOn: "Skip onboarding"
+            - waitForAnimationToEnd:
+                timeout: 2500
+      - runFlow:
+          when:
+            visible:
+              id: "mental_model_continue_without_watch"
+          commands:
+            - tapOn:
+                id: "mental_model_continue_without_watch"
+            - waitForAnimationToEnd:
+                timeout: 2500
+      - runFlow:
+          when:
+            visible:
+              id: "mental_model_skip"
+          commands:
+            - tapOn:
+                id: "mental_model_skip"
+            - waitForAnimationToEnd:
+                timeout: 2500
+      - runFlow:
+          when:
+            visible:
+              id: "mental_model_skip"
+          commands:
+            - tapOn:
+                id: "mental_model_skip"
+            - waitForAnimationToEnd:
+                timeout: 2500
+
+# Fast path: already signed in. The Home "Suggest" button
+# (ama1842.suggest.button) is an unambiguous authenticated-Home sentinel —
+# unlike bare text "Coach", which collides with onboarding/intro copy.
 - runFlow:
     when:
-      visible: "Coach"
+      visible:
+        id: "ama1842.suggest.button"
     commands:
-      - assertVisible: "Coach"
+      - assertVisible:
+          id: "ama1842.suggest.button"
       # Already signed in — nothing else to do.
 
-# Sign-in path: only runs if Coach tab is NOT yet visible AND the email
-# input is visible. (If Coach isn't visible but email isn't either, the
-# session persisted from a previous run and we just need to walk
+# Sign-in path: only runs if Home is NOT yet visible AND the email input
+# is visible. (If neither is visible, a session persisted and we just walk
 # onboarding — the post-signin loop below handles that.)
 - runFlow:
     when:
-      notVisible: "Coach"
+      notVisible:
+        id: "ama1842.suggest.button"
       visible:
         text: "Enter your email"
     commands:
-      # Some builds show a one-time "Skip" intro before the email field.
-      - runFlow:
-          when:
-            visible: "Skip"
-          commands:
-            - tapOn: "Skip"
-            - waitForAnimationToEnd:
-                timeout: 3000
-
       - tapOn:
           text: "Enter your email"
       # Clear any autofilled / leftover text (Clerk shows "Last Used"
@@ -156,9 +204,11 @@ appId: com.myamaka.AmakaFlowCompanion
             - waitForAnimationToEnd:
                 timeout: 3000
 
-# Final assertion: Home/Coach tab must be visible within 30s. If not,
-# this fails loudly and aborts the calling flow.
+# Final assertion: the authenticated Home (Suggest button) must be visible
+# within 30s. If not, this fails loudly and aborts the calling flow.
 - extendedWaitUntil:
-    visible: "Coach"
+    visible:
+      id: "ama1842.suggest.button"
     timeout: 30000
-- assertVisible: "Coach"
+- assertVisible:
+    id: "ama1842.suggest.button"
