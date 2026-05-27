@@ -29,6 +29,26 @@ struct StravaView: View {
                 .padding(.bottom, 100)
             }
             .background(Theme.Colors.background.ignoresSafeArea())
+            .overlay(alignment: .bottom) {
+                if let ctaError = viewModel.ctaError {
+                    ErrorToast(
+                        actionTitle: "Couldn't connect Strava",
+                        error: ctaError,
+                        onRetry: { viewModel.retryConnect() },
+                        onReport: {
+                            ErrorReporter.shared.report(
+                                action: "strava_connect",
+                                error: ctaError,
+                                endpoint: "/strava/oauth/initiate",
+                                userId: PairingService.shared.userProfile?.id
+                            )
+                        },
+                        onDismiss: { viewModel.acknowledgeConnectError() }
+                    )
+                    .padding(.horizontal, Theme.Spacing.lg)
+                    .padding(.bottom, Theme.Spacing.lg)
+                }
+            }
             .navigationTitle("Strava")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
