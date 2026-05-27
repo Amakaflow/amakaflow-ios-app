@@ -1,0 +1,9 @@
+{
+  "client_generated_id": "33333333-3333-4333-8333-333333333333",
+  "workout_event_id": "44444444-4444-4444-8444-444444444444",
+  "started_at": "2026-05-27T10:00:00Z",
+  "ended_at": "2026-05-27T10:45:00Z",
+  "source": "apple_watch",
+  "health_metrics": { "avg_heart_rate": 142, "max_heart_rate": 175, "active_calories": 320, "distance_meters": 6200 },
+  "heart_rate_samples": [ { "t": 0, "bpm": 120 }, { "t": 60, "bpm": 138 } ]
+}
