@@ -5,6 +5,8 @@ import SwiftUI
 final class AgentInboxViewModel: ObservableObject {
     @Published var actions: [AgentAction] = []
     @Published var isLoading = false
+    /// Guards approve/reject/undo so a double-tap can't fire concurrent mutating calls.
+    @Published var isOperating = false
     @Published var apiErrorDisplay: APIErrorDisplayState?
 
     private let apiErrorState = APIErrorState()
@@ -51,6 +53,9 @@ final class AgentInboxViewModel: ObservableObject {
     }
 
     func undo(id: String) async {
+        guard !isOperating else { return }
+        isOperating = true
+        defer { isOperating = false }
         apiErrorDisplay = nil
         apiErrorState.clear()
 
@@ -65,6 +70,9 @@ final class AgentInboxViewModel: ObservableObject {
     }
 
     private func respond(id: String, decision: String) async {
+        guard !isOperating else { return }
+        isOperating = true
+        defer { isOperating = false }
         apiErrorDisplay = nil
         apiErrorState.clear()
 
@@ -183,6 +191,7 @@ struct AgentInboxView: View {
                             onReject: { Task { await viewModel.reject(id: action.id) } },
                             onUndo: { Task { await viewModel.undo(id: action.id) } }
                         )
+                        .disabled(viewModel.isOperating)
                     }
                 }
             }
