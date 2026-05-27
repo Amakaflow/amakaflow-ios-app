@@ -23,6 +23,7 @@ class StravaViewModel: ObservableObject {
     @Published var athlete: StravaAthlete?
     @Published var activities: [StravaActivity] = []
     @Published var errorMessage: String?
+    @Published var ctaError: CTAError?
     @Published var isConnecting: Bool = false
 
     private let stravaService = StravaService.shared
@@ -75,9 +76,19 @@ class StravaViewModel: ObservableObject {
         } catch {
             logger.error("Connect failed: \(error.localizedDescription)")
             errorMessage = error.localizedDescription
+            ctaError = CTAError.map(error)
         }
 
         isConnecting = false
+    }
+
+    func acknowledgeConnectError() {
+        ctaError = nil
+    }
+
+    func retryConnect() {
+        ctaError = nil
+        Task { await connect() }
     }
 
     // MARK: - Fetch Activities
