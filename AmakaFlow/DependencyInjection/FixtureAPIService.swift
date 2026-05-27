@@ -148,8 +148,14 @@ class FixtureAPIService: APIServiceProviding {
         ProposedPlan(weekStartDate: "2026-03-21", days: [], rationale: "Fixture plan", totalLoadScore: nil)
     }
     func detectConflicts(startDate: String, endDate: String) async throws -> [Conflict] { [] }
-    func parseWorkoutText(text: String, context: String?) async throws -> ParsedWorkout {
-        ParsedWorkout(name: "Fixture Workout", sport: "running", intervals: [], estimatedDurationMinutes: 30, confidence: 0.9)
+    func parseWorkoutText(text: String, context: String?) async throws -> ParseTextResult {
+        ParseTextResult(
+            success: true,
+            exercises: [ParsedExercise(rawName: "Fixture Exercise", sets: 3, reps: "10", order: 1)],
+            detectedFormat: "free_text",
+            confidence: 0.9,
+            source: context
+        )
     }
 
     // MARK: - Agent Actions (AMA-1956)

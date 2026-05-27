@@ -119,8 +119,8 @@ protocol APIServiceProviding: TelegramLinkAPIProviding {
     /// Detect scheduling conflicts
     func detectConflicts(startDate: String, endDate: String) async throws -> [Conflict]
 
-    /// Parse free-text workout description
-    func parseWorkoutText(text: String, context: String?) async throws -> ParsedWorkout
+    /// Parse free-text workout description into exercises
+    func parseWorkoutText(text: String, context: String?) async throws -> ParseTextResult
 
     // MARK: - Agent Actions (AMA-1956)
 
@@ -412,7 +412,7 @@ extension APIServiceProviding {
     }
 
     /// Convenience method with default parse context
-    func parseWorkoutText(text: String) async throws -> ParsedWorkout {
+    func parseWorkoutText(text: String) async throws -> ParseTextResult {
         try await parseWorkoutText(text: text, context: nil)
     }
 

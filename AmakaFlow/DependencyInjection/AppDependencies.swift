@@ -334,7 +334,7 @@ class MockAPIService: APIServiceProviding {
     var generateWeekCalled = false
     var detectConflictsResult: Result<[Conflict], Error> = .success([])
     var detectConflictsCalled = false
-    var parseWorkoutTextResult: Result<ParsedWorkout, Error>?
+    var parseWorkoutTextResult: Result<ParseTextResult, Error>?
     var parseWorkoutTextCalled = false
 
     func fetchDayStates(from: String, to: String) async throws -> [DayState] {
@@ -353,7 +353,7 @@ class MockAPIService: APIServiceProviding {
         return try detectConflictsResult.get()
     }
 
-    func parseWorkoutText(text: String, context: String?) async throws -> ParsedWorkout {
+    func parseWorkoutText(text: String, context: String?) async throws -> ParseTextResult {
         parseWorkoutTextCalled = true
         guard let result = parseWorkoutTextResult else { throw APIError.notImplemented }
         return try result.get()

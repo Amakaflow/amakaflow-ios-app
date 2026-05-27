@@ -375,15 +375,115 @@ enum ConflictSeverity: String, Codable {
 
 // MARK: - Parse Workout
 
-struct ParseWorkoutRequest: Codable {
+struct ParseTextRequest: Codable {
     let text: String
-    let context: String?
+    let source: String?
 }
 
-struct ParsedWorkout: Codable {
-    let name: String
-    let sport: String
-    let intervals: [WorkoutInterval]
-    let estimatedDurationMinutes: Int?
-    let confidence: Double?
+struct ParseTextResult: Codable {
+    let success: Bool
+    let exercises: [ParsedExercise]
+    let detectedFormat: String?
+    let confidence: Double
+    let source: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case success
+        case exercises
+        case detectedFormat
+        case confidence
+        case source
+    }
+
+    init(
+        success: Bool,
+        exercises: [ParsedExercise],
+        detectedFormat: String?,
+        confidence: Double,
+        source: String?
+    ) {
+        self.success = success
+        self.exercises = exercises
+        self.detectedFormat = detectedFormat
+        self.confidence = confidence
+        self.source = source
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        success = try container.decodeIfPresent(Bool.self, forKey: .success) ?? false
+        exercises = try container.decodeIfPresent([ParsedExercise].self, forKey: .exercises) ?? []
+        detectedFormat = try container.decodeIfPresent(String.self, forKey: .detectedFormat)
+        confidence = try container.decodeIfPresent(Double.self, forKey: .confidence) ?? 0
+        source = try container.decodeIfPresent(String.self, forKey: .source)
+    }
+}
+
+struct ParsedExercise: Codable {
+    let rawName: String
+    let sets: Int?
+    let reps: String?
+    let distance: String?
+    let supersetGroup: String?
+    let order: Int
+    let weight: String?
+    let weightUnit: String?
+    let rpe: Double?
+    let notes: String?
+    let restSeconds: Int?
+
+    private enum CodingKeys: String, CodingKey {
+        case rawName
+        case sets
+        case reps
+        case distance
+        case supersetGroup
+        case order
+        case weight
+        case weightUnit
+        case rpe
+        case notes
+        case restSeconds
+    }
+
+    init(
+        rawName: String,
+        sets: Int? = nil,
+        reps: String? = nil,
+        distance: String? = nil,
+        supersetGroup: String? = nil,
+        order: Int,
+        weight: String? = nil,
+        weightUnit: String? = nil,
+        rpe: Double? = nil,
+        notes: String? = nil,
+        restSeconds: Int? = nil
+    ) {
+        self.rawName = rawName
+        self.sets = sets
+        self.reps = reps
+        self.distance = distance
+        self.supersetGroup = supersetGroup
+        self.order = order
+        self.weight = weight
+        self.weightUnit = weightUnit
+        self.rpe = rpe
+        self.notes = notes
+        self.restSeconds = restSeconds
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        rawName = try container.decodeIfPresent(String.self, forKey: .rawName) ?? ""
+        sets = try container.decodeIfPresent(Int.self, forKey: .sets)
+        reps = try container.decodeIfPresent(String.self, forKey: .reps)
+        distance = try container.decodeIfPresent(String.self, forKey: .distance)
+        supersetGroup = try container.decodeIfPresent(String.self, forKey: .supersetGroup)
+        order = try container.decodeIfPresent(Int.self, forKey: .order) ?? 0
+        weight = try container.decodeIfPresent(String.self, forKey: .weight)
+        weightUnit = try container.decodeIfPresent(String.self, forKey: .weightUnit)
+        rpe = try container.decodeIfPresent(Double.self, forKey: .rpe)
+        notes = try container.decodeIfPresent(String.self, forKey: .notes)
+        restSeconds = try container.decodeIfPresent(Int.self, forKey: .restSeconds)
+    }
 }
