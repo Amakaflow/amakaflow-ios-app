@@ -122,13 +122,16 @@ protocol APIServiceProviding: TelegramLinkAPIProviding {
     /// Parse free-text workout description
     func parseWorkoutText(text: String, context: String?) async throws -> ParsedWorkout
 
-    // MARK: - Actions (AMA-1147)
+    // MARK: - Agent Actions (AMA-1956)
 
-    /// Fetch pending actions
-    func fetchPendingActions() async throws -> [PendingAction]
+    /// Fetch agent actions from the BFF inbox namespace.
+    func fetchAgentActions(status: String?) async throws -> [AgentAction]
 
-    /// Approve, reject, or undo a pending action
-    func respondToAction(id: String, response: String) async throws -> ActionResponse
+    /// Approve or reject a pending agent action.
+    func respondToAction(id: String, decision: String) async throws -> AgentAction
+
+    /// Undo an applied agent action when the backend marks it reversible.
+    func undoAction(id: String) async throws -> AgentAction
 
     // MARK: - Coach (AMA-1147)
 
@@ -396,6 +399,11 @@ extension APIServiceProviding {
     /// Convenience method with default generate-week request
     func generateWeek() async throws -> ProposedPlan {
         try await generateWeek(request: nil)
+    }
+
+    /// Convenience method with no status filter.
+    func fetchAgentActions() async throws -> [AgentAction] {
+        try await fetchAgentActions(status: nil)
     }
 
     /// Convenience method with default coach context

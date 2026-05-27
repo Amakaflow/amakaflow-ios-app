@@ -182,7 +182,7 @@ struct SyncDashboardView: View {
 
                 Spacer()
 
-                let pendingCount = activityFeedVM.actions.filter { $0.status == .pending }.count
+                let pendingCount = activityFeedVM.actions.filter { $0.decisionRequired || $0.status == .pending }.count
                 if pendingCount > 0 {
                     Text("\(pendingCount)")
                         .font(Theme.Typography.captionBold)
@@ -193,8 +193,8 @@ struct SyncDashboardView: View {
                 }
             }
 
-            let pendingActions = activityFeedVM.actions.filter { $0.status == .pending }
-            if pendingActions.isEmpty {
+            let needsDecisionActions = activityFeedVM.actions.filter { $0.decisionRequired || $0.status == .pending }
+            if needsDecisionActions.isEmpty {
                 HStack(spacing: Theme.Spacing.sm) {
                     Image(systemName: "checkmark.circle")
                         .foregroundColor(Theme.Colors.accentGreen)
@@ -207,7 +207,7 @@ struct SyncDashboardView: View {
                 .background(Theme.Colors.surface)
                 .cornerRadius(Theme.CornerRadius.md)
             } else {
-                ForEach(pendingActions) { action in
+                ForEach(needsDecisionActions) { action in
                     PendingDecisionCard(action: action) {
                         Task { await activityFeedVM.approveAction(action) }
                     } onReject: {
@@ -245,11 +245,9 @@ struct SyncDashboardView: View {
                             Text(action.title)
                                 .font(Theme.Typography.caption)
                                 .foregroundColor(Theme.Colors.textPrimary)
-                            if let time = action.createdAt {
-                                Text(time)
-                                    .font(Theme.Typography.footnote)
-                                    .foregroundColor(Theme.Colors.textTertiary)
-                            }
+                            Text(action.createdAt)
+                                .font(Theme.Typography.footnote)
+                                .foregroundColor(Theme.Colors.textTertiary)
                         }
 
                         Spacer()
@@ -266,10 +264,10 @@ struct SyncDashboardView: View {
         }
     }
 
-    private func statusIcon(_ status: ActionStatus) -> some View {
+    private func statusIcon(_ status: AgentActionStatus) -> some View {
         Group {
             switch status {
-            case .approved:
+            case .applied:
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(Theme.Colors.accentGreen)
             case .rejected:
@@ -281,16 +279,20 @@ struct SyncDashboardView: View {
             case .pending:
                 Image(systemName: "clock.fill")
                     .foregroundColor(Theme.Colors.accentOrange)
+            case .unknown:
+                Image(systemName: "questionmark.circle")
+                    .foregroundColor(Theme.Colors.textSecondary)
             }
         }
     }
 
-    private func statusColor(_ status: ActionStatus) -> Color {
+    private func statusColor(_ status: AgentActionStatus) -> Color {
         switch status {
-        case .approved: return Theme.Colors.accentGreen
+        case .applied: return Theme.Colors.accentGreen
         case .rejected: return Theme.Colors.accentRed
         case .undone: return Theme.Colors.textSecondary
         case .pending: return Theme.Colors.accentOrange
+        case .unknown: return Theme.Colors.textSecondary
         }
     }
 }
@@ -390,7 +392,7 @@ private struct PlatformStatusBar: View {
 // MARK: - Pending Decision Card
 
 private struct PendingDecisionCard: View {
-    let action: PendingAction
+    let action: AgentAction
     let onApprove: () -> Void
     let onReject: () -> Void
 
@@ -404,8 +406,8 @@ private struct PendingDecisionCard: View {
                     Text(action.title)
                         .font(Theme.Typography.bodyBold)
                         .foregroundColor(Theme.Colors.textPrimary)
-                    if let desc = action.description {
-                        Text(desc)
+                    if let summary = action.preview ?? action.rationale {
+                        Text(summary)
                             .font(Theme.Typography.caption)
                             .foregroundColor(Theme.Colors.textSecondary)
                             .lineLimit(2)
@@ -446,12 +448,19 @@ private struct PendingDecisionCard: View {
     }
 
     private var iconName: String {
-        switch action.type {
-        case .workoutSuggestion: return "figure.run"
-        case .scheduleChange: return "calendar.badge.clock"
-        case .recoveryReminder: return "bed.double.fill"
-        case .goalUpdate: return "target"
-        case .general: return "bell.fill"
+        switch action.kind {
+        case let value where value.contains("move") || value.contains("schedule"):
+            return "calendar.badge.clock"
+        case let value where value.contains("downgrade") || value.contains("recovery"):
+            return "arrow.down.circle"
+        case let value where value.contains("rest"):
+            return "bed.double.fill"
+        case let value where value.contains("week") || value.contains("plan"):
+            return "calendar"
+        case let value where value.contains("session") || value.contains("workout"):
+            return "figure.run"
+        default:
+            return "bell.fill"
         }
     }
 }

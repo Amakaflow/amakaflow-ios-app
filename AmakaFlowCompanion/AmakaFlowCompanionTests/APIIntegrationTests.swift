@@ -361,6 +361,84 @@ final class CoachAPIRepositoryEndpointTests: XCTestCase {
         }
     }
 
+    func testFetchAgentActionsHitsBFFAgentActionsAndDecodesCamelCaseEnvelope() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.httpMethod, "GET")
+            XCTAssertEqual(request.url?.path, "/v1/agent/actions")
+            let components = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)
+            XCTAssertEqual(components?.queryItems?.first(where: { $0.name == "status" })?.value, "pending")
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Rndr-Id": "rndr-agent-actions"]
+            )!
+            let data = """
+            [
+              {
+                "id": "act-1",
+                "kind": "session_moved",
+                "title": "Move tempo run",
+                "rationale": "Recovery dipped overnight.",
+                "status": "pending",
+                "decisionRequired": true,
+                "reversible": true,
+                "riskLevel": "medium",
+                "preview": "Tue 7am → Wed 6pm",
+                "expiresAt": null,
+                "createdAt": "2026-05-26T12:00:00Z",
+                "appliedAt": null,
+                "payload": {"sessionId": "s1"}
+              }
+            ]
+            """.data(using: .utf8)!
+            return (response, data)
+        }
+
+        let actions = try await api.fetchAgentActions(status: "pending")
+
+        XCTAssertEqual(actions.count, 1)
+        XCTAssertEqual(actions.first?.id, "act-1")
+        XCTAssertEqual(actions.first?.status, .pending)
+        XCTAssertEqual(actions.first?.riskLevel, .medium)
+        XCTAssertEqual(MockURLProtocol.interceptedRequests.first?.url?.path, "/v1/agent/actions")
+    }
+
+    func testRespondToActionPostsDecisionToBFFAgentRespondRoute() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.url?.path, "/v1/agent/actions/act-1/respond")
+            let body = try Self.httpBodyData(from: request)
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: String])
+            XCTAssertEqual(json["decision"], "approve")
+
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!
+            return (response, Self.agentActionJSON(status: "applied"))
+        }
+
+        let action = try await api.respondToAction(id: "act-1", decision: "approve")
+
+        XCTAssertEqual(action.status, .applied)
+        XCTAssertEqual(MockURLProtocol.interceptedRequests.first?.url?.path, "/v1/agent/actions/act-1/respond")
+    }
+
+    func testUndoActionPostsToBFFAgentUndoRoute() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.url?.path, "/v1/agent/actions/act-1/undo")
+            XCTAssertNil(request.httpBody)
+
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!
+            return (response, Self.agentActionJSON(status: "undone"))
+        }
+
+        let action = try await api.undoAction(id: "act-1")
+
+        XCTAssertEqual(action.status, .undone)
+        XCTAssertEqual(MockURLProtocol.interceptedRequests.first?.url?.path, "/v1/agent/actions/act-1/undo")
+    }
+
     private static let dayStatesJSON = """
     [
       {
@@ -400,6 +478,53 @@ final class CoachAPIRepositoryEndpointTests: XCTestCase {
       }
     ]
     """.data(using: .utf8)!
+
+    private static func httpBodyData(from request: URLRequest) throws -> Data {
+        if let body = request.httpBody {
+            return body
+        }
+
+        guard let stream = request.httpBodyStream else {
+            return Data()
+        }
+
+        stream.open()
+        defer { stream.close() }
+
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 1024)
+        while stream.hasBytesAvailable {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            if count < 0 {
+                throw stream.streamError ?? URLError(.cannotDecodeContentData)
+            }
+            if count == 0 {
+                break
+            }
+            data.append(buffer, count: count)
+        }
+        return data
+    }
+
+    private static func agentActionJSON(status: String) -> Data {
+        """
+        {
+          "id": "act-1",
+          "kind": "session_moved",
+          "title": "Move tempo run",
+          "rationale": "Recovery dipped overnight.",
+          "status": "\(status)",
+          "decisionRequired": false,
+          "reversible": true,
+          "riskLevel": "low",
+          "preview": "Tue 7am → Wed 6pm",
+          "expiresAt": null,
+          "createdAt": "2026-05-26T12:00:00Z",
+          "appliedAt": "2026-05-26T12:01:00Z",
+          "payload": null
+        }
+        """.data(using: .utf8)!
+    }
 }
 
 // MARK: - Model Decoding Tests
@@ -555,38 +680,36 @@ final class CoachModelTests: XCTestCase {
 
 final class ActionModelTests: XCTestCase {
 
-    func testPendingActionDecoding() throws {
+    func testAgentActionDecodesBFFEnvelopeWithUnknownFallbacksAndNullOptionals() throws {
         let json = """
         {
             "id": "act1",
-            "type": "workout_suggestion",
-            "title": "Add interval session",
-            "description": "Based on your goals",
-            "created_at": "2026-03-21T10:00:00Z",
-            "metadata": {"workout_id": "w1", "date": "2026-03-22"},
-            "status": "pending"
+            "kind": "future_agent_verb",
+            "title": "Move interval session",
+            "rationale": "Based on your goals",
+            "status": "future_status",
+            "decisionRequired": true,
+            "reversible": true,
+            "riskLevel": "future_risk",
+            "preview": null,
+            "expiresAt": null,
+            "createdAt": "2026-03-21T10:00:00Z",
+            "appliedAt": null,
+            "payload": {"workoutId": "w1", "nested": {"ok": true}}
         }
         """.data(using: .utf8)!
 
         let decoder = APIService.makeDecoder()
-        let action = try decoder.decode(PendingAction.self, from: json)
+        let action = try decoder.decode(AgentAction.self, from: json)
 
         XCTAssertEqual(action.id, "act1")
-        XCTAssertEqual(action.type, .workoutSuggestion)
-        XCTAssertEqual(action.status, .pending)
-        XCTAssertEqual(action.metadata?.workoutId, "w1")
-    }
-
-    func testActionResponseDecoding() throws {
-        let json = """
-        {"success": true, "message": "Action approved"}
-        """.data(using: .utf8)!
-
-        let decoder = APIService.makeDecoder()
-        let response = try decoder.decode(ActionResponse.self, from: json)
-
-        XCTAssertTrue(response.success)
-        XCTAssertEqual(response.message, "Action approved")
+        XCTAssertEqual(action.kind, "future_agent_verb")
+        XCTAssertEqual(action.status, .unknown)
+        XCTAssertEqual(action.riskLevel, .unknown)
+        XCTAssertNil(action.preview)
+        XCTAssertNil(action.expiresAt)
+        XCTAssertEqual(action.createdAt, "2026-03-21T10:00:00Z")
+        XCTAssertEqual(action.payload?["workoutId"]?.value as? String, "w1")
     }
 }
 
@@ -702,30 +825,40 @@ final class MockAPIServiceNewEndpointsTests: XCTestCase {
     }
 
     @MainActor
-    func testMockFetchPendingActions() async throws {
+    func testMockFetchAgentActions() async throws {
         let mock = MockAPIService()
-        let action = PendingAction(
+        let action = AgentAction(
             id: "a1",
-            type: .workoutSuggestion,
+            kind: "session_added",
             title: "Add run",
-            description: nil,
-            createdAt: nil,
-            metadata: nil,
-            status: .pending
+            status: .pending,
+            decisionRequired: true,
+            reversible: false,
+            createdAt: "2026-05-26T12:00:00Z"
         )
-        mock.fetchPendingActionsResult = .success([action])
+        mock.fetchAgentActionsResult = .success([action])
 
-        let actions = try await mock.fetchPendingActions()
-        XCTAssertTrue(mock.fetchPendingActionsCalled)
+        let actions = try await mock.fetchAgentActions(status: nil)
+        XCTAssertTrue(mock.fetchAgentActionsCalled)
         XCTAssertEqual(actions.count, 1)
     }
 
     @MainActor
     func testMockRespondToAction() async throws {
         let mock = MockAPIService()
-        let response = try await mock.respondToAction(id: "a1", response: "approve")
+        let response = try await mock.respondToAction(id: "a1", decision: "approve")
         XCTAssertTrue(mock.respondToActionCalled)
-        XCTAssertTrue(response.success)
+        XCTAssertEqual(mock.respondToActionDecision, "approve")
+        XCTAssertEqual(response.id, AgentAction.samplePending.id)
+    }
+
+    @MainActor
+    func testMockUndoAction() async throws {
+        let mock = MockAPIService()
+        let response = try await mock.undoAction(id: "a1")
+        XCTAssertTrue(mock.undoActionCalled)
+        XCTAssertEqual(mock.undoActionId, "a1")
+        XCTAssertEqual(response.id, AgentAction.sampleApplied.id)
     }
 
     @MainActor
@@ -898,11 +1031,17 @@ final class ActivityFeedViewModelTests: XCTestCase {
     @MainActor
     func testLoadActions() async {
         let mock = MockAPIService()
-        let action = PendingAction(
-            id: "a1", type: .recoveryReminder, title: "Rest day",
-            description: "Take a break", createdAt: nil, metadata: nil, status: .pending
+        let action = AgentAction(
+            id: "a1",
+            kind: "rest_day",
+            title: "Rest day",
+            rationale: "Take a break",
+            status: .pending,
+            decisionRequired: true,
+            reversible: true,
+            createdAt: "2026-05-26T12:00:00Z"
         )
-        mock.fetchPendingActionsResult = .success([action])
+        mock.fetchAgentActionsResult = .success([action])
 
         let deps = AppDependencies(
             apiService: mock,
@@ -922,11 +1061,16 @@ final class ActivityFeedViewModelTests: XCTestCase {
     @MainActor
     func testApproveAction() async {
         let mock = MockAPIService()
-        let action = PendingAction(
-            id: "a1", type: .general, title: "Test",
-            description: nil, createdAt: nil, metadata: nil, status: .pending
+        let action = AgentAction(
+            id: "a1",
+            kind: "general",
+            title: "Test",
+            status: .pending,
+            decisionRequired: true,
+            reversible: true,
+            createdAt: "2026-05-26T12:00:00Z"
         )
-        mock.fetchPendingActionsResult = .success([])
+        mock.fetchAgentActionsResult = .success([])
 
         let deps = AppDependencies(
             apiService: mock,
@@ -940,6 +1084,72 @@ final class ActivityFeedViewModelTests: XCTestCase {
 
         await vm.approveAction(action)
         XCTAssertTrue(mock.respondToActionCalled)
+    }
+}
+
+final class AgentInboxViewModelTests: XCTestCase {
+
+    @MainActor
+    func testNeedsYouCoachDidAndHistorySplit() async {
+        let mock = MockAPIService()
+        let pending = AgentAction(id: "pending", kind: "session_moved", title: "Pending", status: .pending, decisionRequired: true, reversible: true, createdAt: "2026-05-26T12:00:00Z")
+        let applied = AgentAction(id: "applied", kind: "rest_day", title: "Applied", status: .applied, decisionRequired: false, reversible: true, createdAt: "2026-05-26T12:00:00Z")
+        let rejected = AgentAction(id: "rejected", kind: "week_generated", title: "Rejected", status: .rejected, decisionRequired: false, reversible: false, createdAt: "2026-05-26T12:00:00Z")
+        mock.fetchAgentActionsResult = .success([pending, applied, rejected])
+        let vm = AgentInboxViewModel(dependencies: makeDependencies(apiService: mock))
+
+        await vm.load()
+
+        XCTAssertEqual(vm.needsYou.map(\.id), ["pending"])
+        XCTAssertEqual(vm.coachDid.map(\.id), ["applied"])
+        XCTAssertEqual(vm.historyTail.map(\.id), ["rejected"])
+    }
+
+    @MainActor
+    func testApproveRejectUndoCallRepositoryAndRefresh() async {
+        let mock = MockAPIService()
+        mock.fetchAgentActionsResult = .success([])
+        let vm = AgentInboxViewModel(dependencies: makeDependencies(apiService: mock))
+
+        await vm.approve(id: "a1")
+        XCTAssertTrue(mock.respondToActionCalled)
+        XCTAssertEqual(mock.respondToActionId, "a1")
+        XCTAssertEqual(mock.respondToActionDecision, "approve")
+        XCTAssertTrue(mock.fetchAgentActionsCalled)
+
+        mock.respondToActionCalled = false
+        await vm.reject(id: "a2")
+        XCTAssertTrue(mock.respondToActionCalled)
+        XCTAssertEqual(mock.respondToActionId, "a2")
+        XCTAssertEqual(mock.respondToActionDecision, "reject")
+
+        await vm.undo(id: "a3")
+        XCTAssertTrue(mock.undoActionCalled)
+        XCTAssertEqual(mock.undoActionId, "a3")
+    }
+
+    @MainActor
+    func testThrownErrorSetsAPIErrorDisplay() async {
+        let mock = MockAPIService()
+        mock.fetchAgentActionsResult = .failure(APIError.server(status: 500))
+        let vm = AgentInboxViewModel(dependencies: makeDependencies(apiService: mock))
+
+        await vm.load()
+
+        XCTAssertEqual(vm.apiErrorDisplay?.category, .server)
+        XCTAssertEqual(vm.apiErrorDisplay?.message, "The server had a problem. Please try again.")
+    }
+
+    @MainActor
+    private func makeDependencies(apiService: APIServiceProviding) -> AppDependencies {
+        AppDependencies(
+            apiService: apiService,
+            pairingService: MockPairingService(),
+            audioService: MockAudioService(),
+            progressStore: MockProgressStore(),
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
+        )
     }
 }
 

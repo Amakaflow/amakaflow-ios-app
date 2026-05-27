@@ -152,12 +152,11 @@ class FixtureAPIService: APIServiceProviding {
         ParsedWorkout(name: "Fixture Workout", sport: "running", intervals: [], estimatedDurationMinutes: 30, confidence: 0.9)
     }
 
-    // MARK: - Actions (AMA-1147)
+    // MARK: - Agent Actions (AMA-1956)
 
-    func fetchPendingActions() async throws -> [PendingAction] { [] }
-    func respondToAction(id: String, response: String) async throws -> ActionResponse {
-        ActionResponse(success: true, message: "OK")
-    }
+    func fetchAgentActions(status: String?) async throws -> [AgentAction] { [] }
+    func respondToAction(id: String, decision: String) async throws -> AgentAction { .samplePending }
+    func undoAction(id: String) async throws -> AgentAction { .sampleApplied }
 
     // MARK: - Coach (AMA-1147)
 

@@ -2,7 +2,7 @@
 //  ActivityFeedViewModel.swift
 //  AmakaFlow
 //
-//  ViewModel for pending actions / activity feed (AMA-1147)
+//  ViewModel for agent actions / activity feed (AMA-1956)
 //
 
 import Foundation
@@ -10,7 +10,7 @@ import Combine
 
 @MainActor
 class ActivityFeedViewModel: ObservableObject {
-    @Published var actions: [PendingAction] = []
+    @Published var actions: [AgentAction] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
 
@@ -25,7 +25,7 @@ class ActivityFeedViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            actions = try await dependencies.apiService.fetchPendingActions()
+            actions = try await dependencies.apiService.fetchAgentActions(status: nil)
         } catch {
             errorMessage = "Could not load activity feed: \(error.localizedDescription)"
             print("[ActivityFeedViewModel] loadActions failed: \(error)")
@@ -34,27 +34,27 @@ class ActivityFeedViewModel: ObservableObject {
         isLoading = false
     }
 
-    func approveAction(_ action: PendingAction) async {
+    func approveAction(_ action: AgentAction) async {
         do {
-            _ = try await dependencies.apiService.respondToAction(id: action.id, response: "approve")
+            _ = try await dependencies.apiService.respondToAction(id: action.id, decision: "approve")
             await loadActions()
         } catch {
             errorMessage = "Could not approve action: \(error.localizedDescription)"
         }
     }
 
-    func rejectAction(_ action: PendingAction) async {
+    func rejectAction(_ action: AgentAction) async {
         do {
-            _ = try await dependencies.apiService.respondToAction(id: action.id, response: "reject")
+            _ = try await dependencies.apiService.respondToAction(id: action.id, decision: "reject")
             await loadActions()
         } catch {
             errorMessage = "Could not reject action: \(error.localizedDescription)"
         }
     }
 
-    func undoAction(_ action: PendingAction) async {
+    func undoAction(_ action: AgentAction) async {
         do {
-            _ = try await dependencies.apiService.respondToAction(id: action.id, response: "undo")
+            _ = try await dependencies.apiService.undoAction(id: action.id)
             await loadActions()
         } catch {
             errorMessage = "Could not undo action: \(error.localizedDescription)"

@@ -1,61 +1,203 @@
+import Combine
 import SwiftUI
+
+@MainActor
+final class AgentInboxViewModel: ObservableObject {
+    @Published var actions: [AgentAction] = []
+    @Published var isLoading = false
+    @Published var apiErrorDisplay: APIErrorDisplayState?
+
+    private let apiErrorState = APIErrorState()
+    private let dependencies: AppDependencies
+
+    init(dependencies: AppDependencies = .live) {
+        self.dependencies = dependencies
+    }
+
+    var needsYou: [AgentAction] {
+        actions.filter { $0.decisionRequired || $0.status == .pending }
+    }
+
+    var coachDid: [AgentAction] {
+        actions.filter { $0.status == .applied }
+    }
+
+    var historyTail: [AgentAction] {
+        actions.filter { $0.status == .rejected || $0.status == .undone }
+    }
+
+    func load() async {
+        isLoading = true
+        apiErrorDisplay = nil
+        apiErrorState.clear()
+
+        do {
+            actions = try await dependencies.apiService.fetchAgentActions(status: nil)
+        } catch {
+            print("[AgentInboxViewModel] load failed: \(error)")
+            apiErrorState.present(error)
+            apiErrorDisplay = apiErrorState.current
+        }
+
+        isLoading = false
+    }
+
+    func approve(id: String) async {
+        await respond(id: id, decision: "approve")
+    }
+
+    func reject(id: String) async {
+        await respond(id: id, decision: "reject")
+    }
+
+    func undo(id: String) async {
+        apiErrorDisplay = nil
+        apiErrorState.clear()
+
+        do {
+            _ = try await dependencies.apiService.undoAction(id: id)
+            await load()
+        } catch {
+            print("[AgentInboxViewModel] undo failed: \(error)")
+            apiErrorState.present(error)
+            apiErrorDisplay = apiErrorState.current
+        }
+    }
+
+    private func respond(id: String, decision: String) async {
+        apiErrorDisplay = nil
+        apiErrorState.clear()
+
+        do {
+            _ = try await dependencies.apiService.respondToAction(id: id, decision: decision)
+            await load()
+        } catch {
+            print("[AgentInboxViewModel] respond failed: \(error)")
+            apiErrorState.present(error)
+            apiErrorDisplay = apiErrorState.current
+        }
+    }
+}
 
 struct AgentInboxView: View {
     let onDismiss: () -> Void
-    let events: [AgentEvent]
-    @State private var selectedFilter: AgentInboxFilter = .all
+    @StateObject private var viewModel: AgentInboxViewModel
 
-    init(events: [AgentEvent] = [], onDismiss: @escaping () -> Void) {
-        self.events = events
+    init(dependencies: AppDependencies = .live, onDismiss: @escaping () -> Void) {
         self.onDismiss = onDismiss
-    }
-
-    private var visibleEvents: [AgentEvent] {
-        selectedFilter == .all ? events : events.filter { $0.kind.rawValue == selectedFilter.rawValue }
+        _viewModel = StateObject(wrappedValue: AgentInboxViewModel(dependencies: dependencies))
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            AFTopBar(title: "Coach activity", subtitle: "Every agent decision in chronological order.") {
+            AFTopBar(title: "Agent inbox", subtitle: "Review what the coach needs and what it already did.") {
                 Button(action: onDismiss) { Image(systemName: "chevron.left") }
             } right: {
                 Button("Done", action: onDismiss).font(Theme.Typography.captionBold)
             }
 
-            Picker("Filter", selection: $selectedFilter) {
-                ForEach(AgentInboxFilter.allCases, id: \.self) { filter in
-                    Text(filter.rawValue).tag(filter)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, Theme.Spacing.lg)
-            .padding(.bottom, Theme.Spacing.md)
-
-            if visibleEvents.isEmpty {
-                emptyState(isFiltered: selectedFilter != .all && !events.isEmpty)
-            } else {
-                ScrollView {
-                    VStack(spacing: Theme.Spacing.sm) {
-                        ForEach(visibleEvents, id: \.id) { event in
-                            eventRow(event)
-                        }
-                    }
-                    .padding(.horizontal, Theme.Spacing.lg)
+            Group {
+                if viewModel.isLoading && viewModel.actions.isEmpty {
+                    ProgressView("Loading inbox...")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let apiError = viewModel.apiErrorDisplay {
+                    apiErrorView(apiError)
+                } else if viewModel.actions.isEmpty {
+                    emptyState
+                } else {
+                    inboxSections
                 }
             }
         }
         .background(Theme.Colors.background.ignoresSafeArea())
+        .task { await viewModel.load() }
     }
 
-    private func emptyState(isFiltered: Bool) -> some View {
+    private var inboxSections: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                actionSection(
+                    title: "Needs you",
+                    subtitle: "Approve or reject coach decisions before they apply.",
+                    actions: viewModel.needsYou,
+                    emptyText: "No pending decisions.",
+                    style: .needsYou
+                )
+
+                actionSection(
+                    title: "Coach did this",
+                    subtitle: "Auto-applied actions from your coach.",
+                    actions: viewModel.coachDid,
+                    emptyText: "No auto-applied actions yet.",
+                    style: .coachDid
+                )
+
+                if !viewModel.historyTail.isEmpty {
+                    actionSection(
+                        title: "History",
+                        subtitle: "Rejected and undone decisions.",
+                        actions: viewModel.historyTail,
+                        emptyText: "",
+                        style: .history
+                    )
+                }
+            }
+            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.bottom, Theme.Spacing.xl)
+        }
+        .refreshable { await viewModel.load() }
+    }
+
+    private func actionSection(
+        title: String,
+        subtitle: String,
+        actions: [AgentAction],
+        emptyText: String,
+        style: AgentActionCard.Style
+    ) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text(title)
+                    .font(Theme.Typography.title2)
+                    .foregroundColor(Theme.Colors.textPrimary)
+                Text(subtitle)
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textSecondary)
+            }
+
+            if actions.isEmpty {
+                Text(emptyText)
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textSecondary)
+                    .padding(Theme.Spacing.md)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.Colors.surface)
+                    .cornerRadius(Theme.CornerRadius.md)
+            } else {
+                VStack(spacing: Theme.Spacing.sm) {
+                    ForEach(actions) { action in
+                        AgentActionCard(
+                            action: action,
+                            style: style,
+                            onApprove: { Task { await viewModel.approve(id: action.id) } },
+                            onReject: { Task { await viewModel.reject(id: action.id) } },
+                            onUndo: { Task { await viewModel.undo(id: action.id) } }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private var emptyState: some View {
         VStack(spacing: Theme.Spacing.sm) {
-            Image(systemName: isFiltered ? "line.3.horizontal.decrease.circle" : "tray")
+            Image(systemName: "tray")
                 .font(Theme.Typography.largeTitle)
                 .foregroundColor(Theme.Colors.textTertiary)
-            Text(isFiltered ? "No matching activity" : "No coach activity yet")
+            Text("No agent actions yet")
                 .font(Theme.Typography.title3)
                 .foregroundColor(Theme.Colors.textPrimary)
-            Text(isFiltered ? "Try a different filter to see more events." : "Agent decisions will appear here when the backend sends activity events.")
+            Text("Coach decisions will appear here when the backend records actions.")
                 .font(Theme.Typography.caption)
                 .foregroundColor(Theme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -64,64 +206,129 @@ struct AgentInboxView: View {
         .padding(Theme.Spacing.lg)
     }
 
-    private func eventRow(_ event: AgentEvent) -> some View {
-        AFCard(padding: Theme.Spacing.md) {
-            HStack(alignment: .top, spacing: Theme.Spacing.md) {
-                Text(event.emoji)
-                    .font(Theme.Typography.title1)
-                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                    HStack(alignment: .top) {
-                        Text(event.title)
-                            .font(Theme.Typography.title3)
-                            .foregroundColor(Theme.Colors.textPrimary)
-                        Spacer()
-                        AFChip(text: event.kind.rawValue, outline: true)
-                    }
-                    Text(event.timestamp)
-                        .font(Theme.Typography.footnote)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                    Text(event.body)
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                        .lineSpacing(Theme.Spacing.xs)
-                }
+    private func apiErrorView(_ error: APIErrorDisplayState) -> some View {
+        VStack(spacing: Theme.Spacing.md) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 44))
+                .foregroundColor(Theme.Colors.accentOrange)
+            Text("Couldn’t load agent inbox")
+                .font(Theme.Typography.title3)
+                .foregroundColor(Theme.Colors.textPrimary)
+            Text(error.message)
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.textSecondary)
+                .multilineTextAlignment(.center)
+            Button("Try again") {
+                Task { await viewModel.load() }
             }
+            .buttonStyle(AFPrimaryButtonStyle())
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(Theme.Spacing.xl)
+    }
+}
+
+private struct AgentActionCard: View {
+    enum Style {
+        case needsYou
+        case coachDid
+        case history
+    }
+
+    let action: AgentAction
+    let style: Style
+    let onApprove: () -> Void
+    let onReject: () -> Void
+    let onUndo: () -> Void
+
+    var body: some View {
+        AFCard(padding: Theme.Spacing.md) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                HStack(alignment: .top, spacing: Theme.Spacing.md) {
+                    Image(systemName: iconName(for: action.kind))
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(iconColor)
+                        .frame(width: 36, height: 36)
+                        .background(iconColor.opacity(0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
+
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                        HStack(alignment: .top) {
+                            Text(action.title)
+                                .font(Theme.Typography.bodyBold)
+                                .foregroundColor(style == .history ? Theme.Colors.textSecondary : Theme.Colors.textPrimary)
+                            Spacer()
+                            AFChip(text: action.status.rawValue.capitalized, outline: true)
+                        }
+
+                        if let preview = action.preview, !preview.isEmpty {
+                            Text(preview)
+                                .font(Theme.Typography.captionBold)
+                                .foregroundColor(Theme.Colors.textPrimary)
+                        }
+
+                        if let rationale = action.rationale, !rationale.isEmpty {
+                            Text(rationale)
+                                .font(Theme.Typography.caption)
+                                .foregroundColor(Theme.Colors.textSecondary)
+                                .lineSpacing(Theme.Spacing.xs)
+                        }
+                    }
+                }
+
+                verbRow
+            }
+            .opacity(style == .history ? 0.68 : 1.0)
+        }
+    }
+
+    @ViewBuilder
+    private var verbRow: some View {
+        if style == .needsYou {
+            HStack(spacing: Theme.Spacing.sm) {
+                Button("Approve", action: onApprove)
+                    .buttonStyle(AFPrimaryButtonStyle())
+                Button("Reject", action: onReject)
+                    .buttonStyle(AFGhostButtonStyle())
+            }
+        } else if style == .coachDid && action.reversible {
+            Button("Undo", action: onUndo)
+                .buttonStyle(AFGhostButtonStyle())
+        }
+    }
+
+    private var iconColor: Color {
+        switch action.riskLevel {
+        case .high:
+            return Theme.Colors.accentRed
+        case .medium:
+            return Theme.Colors.accentOrange
+        case .low:
+            return Theme.Colors.accentGreen
+        case .unknown, nil:
+            return Theme.Colors.accentBlue
+        }
+    }
+
+    private func iconName(for kind: String) -> String {
+        switch kind {
+        case let value where value.contains("move") || value.contains("schedule"):
+            return "calendar.badge.clock"
+        case let value where value.contains("downgrade") || value.contains("recovery"):
+            return "arrow.down.circle"
+        case let value where value.contains("rest"):
+            return "bed.double.fill"
+        case let value where value.contains("week") || value.contains("plan"):
+            return "calendar"
+        case let value where value.contains("session") || value.contains("workout"):
+            return "figure.run"
+        default:
+            return "sparkles"
         }
     }
 }
 
-private enum AgentInboxFilter: String, CaseIterable {
-    case all = "All"
-    case plan = "Plan"
-    case watch = "Watch"
-    case safety = "Safety"
-}
-
-enum AgentEventKind: String {
-    case plan = "Plan"
-    case watch = "Watch"
-    case safety = "Safety"
-}
-
-struct AgentEvent {
-    let id = UUID()
-    let emoji: String
-    let title: String
-    let kind: AgentEventKind
-    let timestamp: String
-    let body: String
-}
-
 #Preview {
-    AgentInboxView(
-        events: [
-            AgentEvent(emoji: "📅", title: "Plan generated", kind: .plan, timestamp: "Mon 06:14", body: "4-week block built from 8 weeks of Garmin history and HRV trend."),
-            AgentEvent(emoji: "🔄", title: "Session swapped", kind: .plan, timestamp: "Tue 14:22", body: "Moved threshold run to Friday — recovery dip overnight."),
-            AgentEvent(emoji: "⌚", title: "Sent to watch", kind: .watch, timestamp: "Wed 06:05", body: "Today's intervals pushed to Garmin Training Calendar."),
-            AgentEvent(emoji: "🚩", title: "Red-flag rest", kind: .safety, timestamp: "Thu 06:10", body: "Stacked fatigue + calf symptoms. Replaced with mobility + walk."),
-            AgentEvent(emoji: "📊", title: "Weekly review", kind: .plan, timestamp: "Sun 07:01", body: "83% adherence. Build week confirmed for next 7 days.")
-        ],
-        onDismiss: {}
-    )
+    AgentInboxView(onDismiss: {})
         .preferredColorScheme(.dark)
 }
