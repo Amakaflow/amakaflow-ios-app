@@ -474,7 +474,9 @@ struct ParsedExercise: Codable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        rawName = try container.decodeIfPresent(String.self, forKey: .rawName) ?? ""
+        // rawName is required by the ingestor contract — decode required so a missing
+        // name fails loudly (APIError.decoding) rather than hiding as an empty string.
+        rawName = try container.decode(String.self, forKey: .rawName)
         sets = try container.decodeIfPresent(Int.self, forKey: .sets)
         reps = try container.decodeIfPresent(String.self, forKey: .reps)
         distance = try container.decodeIfPresent(String.self, forKey: .distance)
