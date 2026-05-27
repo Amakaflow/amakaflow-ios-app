@@ -271,91 +271,94 @@ final class Phase2ActivityFeedViewModelTests: XCTestCase {
 
     func testLoadActions() async {
         let actions = [
-            PendingAction(
+            AgentAction(
                 id: "a1",
-                type: .workoutSuggestion,
+                kind: "session_added",
                 title: "Add tempo run to Wednesday",
-                description: "Based on your goals",
-                createdAt: "2026-03-22T10:00:00Z",
-                metadata: nil,
-                status: .pending
+                rationale: "Based on your goals",
+                status: .pending,
+                decisionRequired: true,
+                reversible: true,
+                createdAt: "2026-03-22T10:00:00Z"
             ),
-            PendingAction(
+            AgentAction(
                 id: "a2",
-                type: .recoveryReminder,
+                kind: "recovery_reminder",
                 title: "Take a rest day",
-                description: nil,
-                createdAt: "2026-03-21T08:00:00Z",
-                metadata: nil,
-                status: .approved
+                status: .applied,
+                decisionRequired: false,
+                reversible: true,
+                createdAt: "2026-03-21T08:00:00Z"
             )
         ]
-        mockAPI.fetchPendingActionsResult = .success(actions)
+        mockAPI.fetchAgentActionsResult = .success(actions)
 
         await viewModel.loadActions()
 
-        XCTAssertTrue(mockAPI.fetchPendingActionsCalled)
+        XCTAssertTrue(mockAPI.fetchAgentActionsCalled)
         XCTAssertEqual(viewModel.actions.count, 2)
         XCTAssertFalse(viewModel.isLoading)
         XCTAssertNil(viewModel.errorMessage)
     }
 
     func testApproveAction() async {
-        let action = PendingAction(
+        let action = AgentAction(
             id: "a1",
-            type: .workoutSuggestion,
+            kind: "session_added",
             title: "Test",
-            description: nil,
-            createdAt: nil,
-            metadata: nil,
-            status: .pending
+            status: .pending,
+            decisionRequired: true,
+            reversible: true,
+            createdAt: "2026-03-22T10:00:00Z"
         )
-        mockAPI.fetchPendingActionsResult = .success([action])
-        mockAPI.respondToActionResult = .success(ActionResponse(success: true, message: "Approved"))
+        mockAPI.fetchAgentActionsResult = .success([action])
+        mockAPI.respondToActionResult = .success(action)
 
         await viewModel.approveAction(action)
 
         XCTAssertTrue(mockAPI.respondToActionCalled)
+        XCTAssertEqual(mockAPI.respondToActionDecision, "approve")
     }
 
     func testRejectAction() async {
-        let action = PendingAction(
+        let action = AgentAction(
             id: "a1",
-            type: .scheduleChange,
+            kind: "schedule_change",
             title: "Test",
-            description: nil,
-            createdAt: nil,
-            metadata: nil,
-            status: .pending
+            status: .pending,
+            decisionRequired: true,
+            reversible: true,
+            createdAt: "2026-03-22T10:00:00Z"
         )
-        mockAPI.fetchPendingActionsResult = .success([action])
-        mockAPI.respondToActionResult = .success(ActionResponse(success: true, message: "Rejected"))
+        mockAPI.fetchAgentActionsResult = .success([action])
+        mockAPI.respondToActionResult = .success(action)
 
         await viewModel.rejectAction(action)
 
         XCTAssertTrue(mockAPI.respondToActionCalled)
+        XCTAssertEqual(mockAPI.respondToActionDecision, "reject")
     }
 
     func testUndoAction() async {
-        let action = PendingAction(
+        let action = AgentAction(
             id: "a1",
-            type: .general,
+            kind: "general",
             title: "Test",
-            description: nil,
-            createdAt: nil,
-            metadata: nil,
-            status: .approved
+            status: .applied,
+            decisionRequired: false,
+            reversible: true,
+            createdAt: "2026-03-22T10:00:00Z"
         )
-        mockAPI.fetchPendingActionsResult = .success([action])
-        mockAPI.respondToActionResult = .success(ActionResponse(success: true, message: "Undone"))
+        mockAPI.fetchAgentActionsResult = .success([action])
+        mockAPI.undoActionResult = .success(action)
 
         await viewModel.undoAction(action)
 
-        XCTAssertTrue(mockAPI.respondToActionCalled)
+        XCTAssertTrue(mockAPI.undoActionCalled)
     }
 
     func testLoadActionsError() async {
-        mockAPI.fetchPendingActionsResult = .failure(APIError.networkError(URLError(.notConnectedToInternet)))
+        mockAPI.fetchAgentActionsResult = .failure(APIError.networkError(URLError(.notConnectedToInternet)))
 
         await viewModel.loadActions()
 

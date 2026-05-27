@@ -359,21 +359,36 @@ class MockAPIService: APIServiceProviding {
         return try result.get()
     }
 
-    // MARK: - Actions (AMA-1147)
+    // MARK: - Agent Actions (AMA-1956)
 
-    var fetchPendingActionsResult: Result<[PendingAction], Error> = .success([])
-    var fetchPendingActionsCalled = false
-    var respondToActionResult: Result<ActionResponse, Error> = .success(ActionResponse(success: true, message: nil))
+    var fetchAgentActionsResult: Result<[AgentAction], Error> = .success([])
+    var fetchAgentActionsCalled = false
+    var fetchAgentActionsStatus: String?
+    var respondToActionResult: Result<AgentAction, Error> = .success(.samplePending)
     var respondToActionCalled = false
+    var respondToActionId: String?
+    var respondToActionDecision: String?
+    var undoActionResult: Result<AgentAction, Error> = .success(.sampleApplied)
+    var undoActionCalled = false
+    var undoActionId: String?
 
-    func fetchPendingActions() async throws -> [PendingAction] {
-        fetchPendingActionsCalled = true
-        return try fetchPendingActionsResult.get()
+    func fetchAgentActions(status: String?) async throws -> [AgentAction] {
+        fetchAgentActionsCalled = true
+        fetchAgentActionsStatus = status
+        return try fetchAgentActionsResult.get()
     }
 
-    func respondToAction(id: String, response: String) async throws -> ActionResponse {
+    func respondToAction(id: String, decision: String) async throws -> AgentAction {
         respondToActionCalled = true
+        respondToActionId = id
+        respondToActionDecision = decision
         return try respondToActionResult.get()
+    }
+
+    func undoAction(id: String) async throws -> AgentAction {
+        undoActionCalled = true
+        undoActionId = id
+        return try undoActionResult.get()
     }
 
     // MARK: - Coach (AMA-1147)

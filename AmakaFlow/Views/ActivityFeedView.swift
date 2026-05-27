@@ -78,7 +78,7 @@ struct ActivityFeedView: View {
 // MARK: - Action Card
 
 private struct ActionCard: View {
-    let action: PendingAction
+    let action: AgentAction
     let onApprove: () -> Void
     let onReject: () -> Void
     let onUndo: () -> Void
@@ -92,8 +92,8 @@ private struct ActionCard: View {
                         .font(Theme.Typography.bodyBold)
                         .foregroundColor(Theme.Colors.textPrimary)
 
-                    if let desc = action.description {
-                        Text(desc)
+                    if let summary = action.preview ?? action.rationale {
+                        Text(summary)
                             .font(Theme.Typography.caption)
                             .foregroundColor(Theme.Colors.textSecondary)
                             .lineLimit(2)
@@ -126,7 +126,7 @@ private struct ActionCard: View {
                             .cornerRadius(Theme.CornerRadius.md)
                     }
                 }
-            } else if action.status == .approved || action.status == .rejected {
+            } else if action.reversible {
                 Button(action: onUndo) {
                     Text("Undo")
                         .font(Theme.Typography.caption)
@@ -153,22 +153,28 @@ private struct ActionCard: View {
     }
 
     private var iconName: String {
-        switch action.type {
-        case .workoutSuggestion: return "figure.run"
-        case .scheduleChange: return "calendar.badge.clock"
-        case .recoveryReminder: return "bed.double.fill"
-        case .goalUpdate: return "target"
-        case .general: return "bell.fill"
+        switch action.kind {
+        case let value where value.contains("move") || value.contains("schedule"):
+            return "calendar.badge.clock"
+        case let value where value.contains("downgrade") || value.contains("recovery"):
+            return "arrow.down.circle"
+        case let value where value.contains("rest"):
+            return "bed.double.fill"
+        case let value where value.contains("week") || value.contains("plan"):
+            return "calendar"
+        case let value where value.contains("session") || value.contains("workout"):
+            return "figure.run"
+        default:
+            return "bell.fill"
         }
     }
 
     private var iconColor: Color {
-        switch action.type {
-        case .workoutSuggestion: return Theme.Colors.accentBlue
-        case .scheduleChange: return Theme.Colors.accentOrange
-        case .recoveryReminder: return Theme.Colors.accentGreen
-        case .goalUpdate: return Color(hex: "9333EA")
-        case .general: return Theme.Colors.textSecondary
+        switch action.riskLevel {
+        case .high: return Theme.Colors.accentRed
+        case .medium: return Theme.Colors.accentOrange
+        case .low: return Theme.Colors.accentGreen
+        case .unknown, nil: return Theme.Colors.accentBlue
         }
     }
 
@@ -179,7 +185,7 @@ private struct ActionCard: View {
                 Text("Pending")
                     .font(Theme.Typography.footnote)
                     .foregroundColor(Theme.Colors.accentOrange)
-            case .approved:
+            case .applied:
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(Theme.Colors.accentGreen)
             case .rejected:
@@ -187,6 +193,9 @@ private struct ActionCard: View {
                     .foregroundColor(Theme.Colors.accentRed)
             case .undone:
                 Image(systemName: "arrow.uturn.backward.circle")
+                    .foregroundColor(Theme.Colors.textSecondary)
+            case .unknown:
+                Image(systemName: "questionmark.circle")
                     .foregroundColor(Theme.Colors.textSecondary)
             }
         }

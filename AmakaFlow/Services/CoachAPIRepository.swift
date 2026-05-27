@@ -21,8 +21,9 @@
 //    POST /api/v1/planning/generate-week        (generateWeek; deferred)
 //    GET  /v1/planning/conflicts                (detectConflicts)
 //    POST /api/v1/planning/parse-workout        (parseWorkoutText; deferred)
-//    GET  /api/v1/actions/pending               (fetchPendingActions; deferred)
-//    POST /api/v1/actions/{id}/respond          (respondToAction; deferred)
+//    GET  /v1/agent/actions                    (fetchAgentActions)
+//    POST /v1/agent/actions/{id}/respond       (respondToAction)
+//    POST /v1/agent/actions/{id}/undo          (undoAction)
 //    STUB /analytics/shoes                      (fetchShoeComparison; no backend route)
 //    STUB /billing/subscription                 (fetchSubscription; no backend route)
 //    STUB /preferences/notifications            (fetch/updateNotificationPreferences; no backend route)
@@ -119,25 +120,36 @@ extension APIService {
         return try await self.request(request, decode: ParsedWorkout.self, successStatusCodes: 200...200)
     }
 
-    // MARK: - Actions API (AMA-1147 / AMA-1133)
+    // MARK: - Agent Actions API (AMA-1956 / AMA-1934)
 
-    func fetchPendingActions() async throws -> [PendingAction] {
-        // TODO(AMA-1936/1937/1938): repoint to bffURL once the BFF wedge ships
+    func fetchAgentActions(status: String? = nil) async throws -> [AgentAction] {
+        let queryItems = status.map { [URLQueryItem(name: "status", value: $0)] } ?? []
         let request = try await makeAPIRequest(
-            path: "/api/v1/actions/pending",
+            baseURL: bffURL,
+            path: "/agent/actions",
+            queryItems: queryItems,
             method: "GET"
         )
-        return try await self.request(request, decode: [PendingAction].self, successStatusCodes: 200...200)
+        return try await self.request(request, decode: [AgentAction].self, successStatusCodes: 200...200)
     }
 
-    func respondToAction(id: String, response actionResponse: String) async throws -> ActionResponse {
-        // TODO(AMA-1936/1937/1938): repoint to bffURL once the BFF wedge ships
+    func respondToAction(id: String, decision: String) async throws -> AgentAction {
         let request = try await makeAPIRequest(
-            path: "/api/v1/actions/\(id)/respond",
+            baseURL: bffURL,
+            path: "/agent/actions/\(id)/respond",
             method: "POST",
-            body: try encodeJSONBody(["response": actionResponse])
+            body: try encodeJSONBody(["decision": decision])
         )
-        return try await self.request(request, decode: ActionResponse.self, successStatusCodes: 200...200)
+        return try await self.request(request, decode: AgentAction.self, successStatusCodes: 200...200)
+    }
+
+    func undoAction(id: String) async throws -> AgentAction {
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/agent/actions/\(id)/undo",
+            method: "POST"
+        )
+        return try await self.request(request, decode: AgentAction.self, successStatusCodes: 200...200)
     }
 
     // MARK: - Analytics API (AMA-1147 / AMA-1133)
