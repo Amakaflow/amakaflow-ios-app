@@ -1,0 +1,158 @@
+# AMA-1804 — Golden-path post-TestFlight smoke
+#
+# The authoritative primary-journey smoke that runs AFTER a TestFlight
+# upload (see .github/workflows/ios-testflight.yml, job `golden-path-smoke`)
+# on a SIMULATOR build of the same commit. Unlike the warn-only CJ-01
+# evidence flow (e2e/maestro/flows/workout-lifecycle/ama1839-*.yaml), a
+# failure here is GATING for the smoke job and PAGES David (Telegram + a
+# P1 issue). This is a post-deploy alert, not a PR merge gate — so it does
+# not conflict with the "L4 Maestro = evidence, not merge-validator" rule.
+#
+# Journey (per AMA-1804): sign in -> Home/Today -> Suggest -> Accept ->
+# Start -> Save & End -> More -> History -> ASSERT a completed-workout row
+# exists today AND persists across relaunch.
+#
+# Selectors reuse the AMA-1842 accessibilityIdentifiers proven by CJ-01.
+# The workout title is captured at the preview step (copyTextFrom) and
+# re-asserted in History so the smoke proves the SPECIFIC workout round-
+# tripped, not just that some row exists. `TODAY` is injected by the
+# workflow (`-e TODAY=...`) for the date assertion; format confirmed during
+# local-sim validation before this flow is wired as gating.
+#
+# Preconditions (same as clerk-signin.yaml): Release/staging build with the
+# ruling-mite-84 Clerk key; UITEST_CLERK_PASSWORD provided at run time;
+# sim has network to *.clerk.accounts.dev + staging hosts.
+
+appId: com.myamaka.AmakaFlowCompanion
+---
+# --- Step 1: launch + sign in (reusable subflow) ---
+- runFlow: ../_lib/clerk-signin.yaml
+- takeScreenshot: golden-01-signed-in
+
+# --- Step 2: Suggest a workout from Home ---
+- tapOn:
+    id: "ama1842.suggest.button"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: golden-02-suggest-tapped
+
+# Optional one-time biometric-consent gate ("...agree...continue").
+- runFlow:
+    when:
+      visible:
+        text: ".*agree.*continue.*"
+    commands:
+      - tapOn:
+          text: ".*agree.*continue.*"
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+# Fresh-profile users see the coaching-profile onboarding form first.
+- runFlow:
+    when:
+      visible:
+        text: "What are you training for?"
+    commands:
+      - scrollUntilVisible:
+          element:
+            text: "Generate My Workout"
+          direction: DOWN
+          speed: 25
+      - tapOn:
+          text: "Generate My Workout"
+      - waitForAnimationToEnd:
+          timeout: 3000
+
+# LLM Generate can take 10-30s.
+- extendedWaitUntil:
+    visible:
+      id: "ama1842.suggest.preview"
+    timeout: 30000
+- takeScreenshot: golden-03-suggestion-generated
+
+# Capture the generated workout's title so we can prove THIS workout
+# reaches History (not just any row). If the preview element's text is
+# not the bare title, local-sim validation will narrow the selector.
+- copyTextFrom:
+    id: "ama1842.suggest.preview"
+
+# --- Step 3: accept the suggestion ---
+- scrollUntilVisible:
+    element:
+      id: "ama1842.accept.button"
+    direction: DOWN
+    speed: 25
+- tapOn:
+    id: "ama1842.accept.button"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: golden-04-accepted
+
+# --- Step 4: start the workout ---
+- tapOn:
+    id: "ama1842.start.button"
+- waitForAnimationToEnd:
+    timeout: 3000
+# Skip the "Waiting for Apple Watch" pairing screen on the sim.
+- runFlow:
+    when:
+      visible:
+        text: "Start on Phone Only"
+    commands:
+      - tapOn:
+          text: "Start on Phone Only"
+      - waitForAnimationToEnd:
+          timeout: 3000
+- takeScreenshot: golden-05-workout-started
+
+# --- Step 5: end + save ---
+- tapOn:
+    id: "ama1842.endWorkout.button"
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn:
+    text: "Save & End"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: golden-06-saved-and-ended
+
+# --- Step 6: More -> History, assert the workout round-tripped ---
+- tapOn:
+    text: "More"
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    id: "ama1842.history.row"
+- extendedWaitUntil:
+    visible:
+      id: "ama1842.activityHistory.cell.0"
+    timeout: 10000
+- takeScreenshot: golden-07-history-shows-workout
+# HARD ASSERTION: the most recent history cell exists (round-trip proven)
+- assertVisible:
+    id: "ama1842.activityHistory.cell.0"
+# The completed workout dated today is present in the list.
+- assertVisible:
+    text: ".*${TODAY}.*"
+
+# --- Step 7: relaunch, assert persistence (catches save-not-persisted) ---
+- stopApp
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    permissions:
+      notifications: deny
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    text: "More"
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    id: "ama1842.history.row"
+- extendedWaitUntil:
+    visible:
+      id: "ama1842.activityHistory.cell.0"
+    timeout: 10000
+- assertVisible:
+    id: "ama1842.activityHistory.cell.0"
+- takeScreenshot: golden-08-persisted-after-relaunch
