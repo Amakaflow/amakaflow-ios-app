@@ -40,7 +40,7 @@ class DeepLinkImportViewModel: ObservableObject {
             importResponse = response
             state = .success(response.title ?? "Workout imported")
         } catch {
-            state = .error(error.localizedDescription)
+            state = .error(CTAError.map(error))
         }
     }
 
@@ -142,7 +142,7 @@ enum DeepLinkImportState: Equatable {
     case ready
     case importing
     case success(String)
-    case error(String)
+    case error(CTAError)
 }
 
 struct DeepLinkIngestResponse: Codable {
@@ -319,29 +319,21 @@ struct DeepLinkImportView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
 
-                    case .error(let message):
-                        VStack(spacing: 12) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundColor(.red)
-                                Text("Import Failed")
-                                    .font(.subheadline.weight(.medium))
-                            }
-                            Text(message)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-
-                            Button("Try Again") {
-                                viewModel.requestImport()
-                            }
-                            .font(.subheadline.weight(.medium))
-                            .padding(.top, 4)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color.red.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    case .error(let ctaError):
+                        ErrorToast(
+                            actionTitle: "Couldn't import workout",
+                            error: ctaError,
+                            onRetry: { viewModel.requestImport() },
+                            onReport: {
+                                ErrorReporter.shared.report(
+                                    action: "deeplink_import",
+                                    error: ctaError,
+                                    endpoint: "/ingest/\(viewModel.platform.ingestSource)",
+                                    userId: PairingService.shared.userProfile?.id
+                                )
+                            },
+                            onDismiss: { viewModel.state = .ready }
+                        )
                     }
                 }
                 .padding(20)
