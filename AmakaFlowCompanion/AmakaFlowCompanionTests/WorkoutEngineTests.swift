@@ -472,6 +472,215 @@ final class WorkoutEngineTests: XCTestCase {
     }
 }
 
+@MainActor
+final class WorkoutEngineCompletionTests: XCTestCase {
+    private var engine: WorkoutEngine!
+    private var clock: TestClock!
+    private var audioService: MockAudioService!
+    private var progressStore: MockProgressStore!
+    private var pairingService: MockPairingService!
+    private var completionService: MockWorkoutCompletionService!
+
+    override func setUp() async throws {
+        try await super.setUp()
+        clock = TestClock()
+        audioService = MockAudioService()
+        progressStore = MockProgressStore()
+        pairingService = MockPairingService()
+        pairingService.isPaired = true
+        completionService = MockWorkoutCompletionService()
+
+        engine = WorkoutEngine(
+            clock: clock,
+            audioService: audioService,
+            progressStore: progressStore,
+            pairingService: pairingService,
+            completionService: completionService
+        )
+    }
+
+    override func tearDown() async throws {
+        engine.reset()
+        engine = nil
+        clock = nil
+        audioService = nil
+        progressStore = nil
+        pairingService = nil
+        completionService = nil
+        try await super.tearDown()
+    }
+
+    func testPostWorkoutCompletionSuccessClearsSaveErrorAndMarksSucceeded() async {
+        completionService.result = .success(
+            WorkoutCompletionResponse(
+                completionId: "completion-success",
+                id: nil,
+                status: "saved",
+                success: true
+            )
+        )
+
+        await endWorkoutAndWaitForCompletion()
+
+        XCTAssertTrue(completionService.postPhoneWorkoutCompletionCalled)
+        XCTAssertNil(engine.lastSaveError)
+        guard case .succeeded = engine.saveStatus else {
+            return XCTFail("expected .succeeded, got \(engine.saveStatus)")
+        }
+    }
+
+    func testPostWorkoutCompletionLyingSuccessFalseMarksFailedNonRetryable() async {
+        completionService.result = .success(
+            WorkoutCompletionResponse(
+                completionId: nil,
+                id: nil,
+                status: "rejected",
+                success: false
+            )
+        )
+
+        await endWorkoutAndWaitForCompletion()
+
+        let cta = assertFailedSaveStatus()
+        guard case .lyingSuccess(let message, let errorCode, _) = cta else {
+            return XCTFail("expected .lyingSuccess, got \(String(describing: cta))")
+        }
+        XCTAssertEqual(message, "Workout completion failed")
+        XCTAssertEqual(errorCode, "WORKOUT_COMPLETION_FAILED")
+        XCTAssertFalse(cta.isRetryable, "success:false is deterministic — Retry would re-fail")
+        XCTAssertEqual(engine.lastSaveError, cta)
+    }
+
+    func testPostWorkoutCompletion4xxMarksFailedNonRetryable() async {
+        completionService.result = .failure(APIError.serverError(422))
+
+        await endWorkoutAndWaitForCompletion()
+
+        let cta = assertFailedSaveStatus()
+        guard case .http(let status, _, _) = cta else {
+            return XCTFail("expected .http, got \(String(describing: cta))")
+        }
+        XCTAssertEqual(status, 422)
+        XCTAssertFalse(cta.isRetryable, "4xx completion failures must not offer Retry")
+        XCTAssertEqual(engine.lastSaveError, cta)
+    }
+
+    func testPostWorkoutCompletion5xxMarksFailedRetryable() async {
+        completionService.result = .failure(APIError.serverError(503))
+
+        await endWorkoutAndWaitForCompletion()
+
+        let cta = assertFailedSaveStatus()
+        guard case .http(let status, _, _) = cta else {
+            return XCTFail("expected .http, got \(String(describing: cta))")
+        }
+        XCTAssertEqual(status, 503)
+        XCTAssertTrue(cta.isRetryable, "5xx completion failures must offer Retry")
+        XCTAssertEqual(engine.lastSaveError, cta)
+    }
+
+    func testPostWorkoutCompletionNetworkFailureMarksFailedRetryable() async {
+        completionService.result = .failure(URLError(.notConnectedToInternet))
+
+        await endWorkoutAndWaitForCompletion()
+
+        let cta = assertFailedSaveStatus()
+        guard case .network(let code, _) = cta else {
+            return XCTFail("expected .network, got \(String(describing: cta))")
+        }
+        XCTAssertEqual(code, .notConnectedToInternet)
+        XCTAssertTrue(cta.isRetryable, "offline completion failures must offer Retry")
+        XCTAssertEqual(engine.lastSaveError, cta)
+    }
+
+    private func endWorkoutAndWaitForCompletion(
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) async {
+        let workout = TestFixtures.workout(
+            id: "completion-test-workout",
+            name: "Completion Test Workout",
+            duration: 60,
+            intervals: [
+                .reps(
+                    sets: nil,
+                    reps: 10,
+                    name: "Air Squat",
+                    load: nil,
+                    restSec: nil,
+                    followAlongUrl: nil
+                )
+            ]
+        )
+
+        engine.start(workout: workout)
+        engine.end(reason: .completed)
+        await waitForTerminalSaveStatus(file: file, line: line)
+    }
+
+    private func waitForTerminalSaveStatus(
+        timeoutNanoseconds: UInt64 = 1_000_000_000,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) async {
+        let deadline = ContinuousClock.now + .nanoseconds(Int(timeoutNanoseconds))
+        while true {
+            switch engine.saveStatus {
+            case .idle, .inFlight:
+                if ContinuousClock.now >= deadline {
+                    XCTFail("Timed out waiting for terminal saveStatus; got \(engine.saveStatus)", file: file, line: line)
+                    return
+                }
+                try? await Task.sleep(nanoseconds: 10_000_000)
+            case .succeeded, .failed:
+                return
+            }
+        }
+    }
+
+    private func assertFailedSaveStatus(
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> CTAError {
+        guard case .failed(let cta) = engine.saveStatus else {
+            XCTFail("expected .failed, got \(engine.saveStatus)", file: file, line: line)
+            return .unknown(description: "test did not fail as expected")
+        }
+        return cta
+    }
+}
+
+@MainActor
+private final class MockWorkoutCompletionService: WorkoutCompletionServiceProviding {
+    var result: Result<WorkoutCompletionResponse?, Error> = .success(
+        WorkoutCompletionResponse(
+            completionId: "completion-default",
+            id: nil,
+            status: "saved",
+            success: true
+        )
+    )
+    private(set) var postPhoneWorkoutCompletionCalled = false
+
+    func postPhoneWorkoutCompletion(
+        workoutId: String,
+        workoutName: String,
+        startedAt: Date,
+        endedAt: Date,
+        durationSeconds: Int,
+        avgHeartRate: Int?,
+        activeCalories: Int?,
+        heartRateSamples: [HRSample]?,
+        workoutStructure: [WorkoutInterval]?,
+        isSimulated: Bool,
+        setLogs: [SetLog]?,
+        executionLog: [String: Any]?
+    ) async throws -> WorkoutCompletionResponse? {
+        postPhoneWorkoutCompletionCalled = true
+        return try result.get()
+    }
+}
+
 // MARK: - FlattenedInterval Tests
 
 final class FlattenedIntervalTests: XCTestCase {

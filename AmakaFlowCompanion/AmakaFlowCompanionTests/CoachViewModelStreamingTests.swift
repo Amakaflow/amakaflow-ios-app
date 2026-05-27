@@ -168,6 +168,35 @@ final class CoachViewModelStreamingTests: XCTestCase {
         XCTAssertNil(viewModel.error, "successful retry must clear the typed error")
     }
 
+    func testTransportFailureSetsRetryableCTAErrorAndRetryLastMessageReSends() async {
+        mockStreamService.errorToThrow = URLError(.notConnectedToInternet)
+
+        await viewModel.sendMessage("Hello over a bad connection")
+
+        guard case .network(let code, _) = viewModel.error else {
+            return XCTFail("expected .network CTAError, got \(String(describing: viewModel.error))")
+        }
+        XCTAssertEqual(code, .notConnectedToInternet)
+        XCTAssertTrue(viewModel.error?.isRetryable ?? false, "offline transport failures must offer Retry")
+        XCTAssertTrue(viewModel.messages.isEmpty, "failed empty stream should remove the optimistic user/assistant pair")
+
+        mockStreamService.errorToThrow = nil
+        mockStreamService.streamCalled = false
+        mockStreamService.eventsToYield = [
+            .messageStart(sessionId: "s1", traceId: nil),
+            .contentDelta(text: "Back online"),
+            .messageEnd(sessionId: "s1", tokensUsed: 5, latencyMs: 50)
+        ]
+
+        await viewModel.retryLastMessage()
+
+        XCTAssertTrue(mockStreamService.streamCalled, "retryLastMessage must re-send through the SSE harness")
+        XCTAssertNil(viewModel.error, "successful retry must clear the typed network error")
+        XCTAssertEqual(viewModel.messages.count, 2)
+        XCTAssertEqual(viewModel.messages.first?.content, "Hello over a bad connection")
+        XCTAssertEqual(viewModel.messages.last?.content, "Back online")
+    }
+
     func testAcknowledgeErrorClearsTypedError() async {
         mockStreamService.eventsToYield = [
             .error(type: "x", message: "y", usage: nil, limit: nil)

@@ -124,6 +124,40 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     XCTAssertFalse(cta.userMessage.isEmpty)
   }
 
+  func testSuggestWorkout_422SetsNonRetryableCTAErrorAndLeavesSuggestionNil() async {
+    mockAPI.suggestWorkoutResult = .failure(APIError.serverError(422))
+
+    await viewModel.suggestWorkout()
+
+    XCTAssertTrue(mockAPI.suggestWorkoutCalled)
+    XCTAssertNil(viewModel.suggestedWorkout)
+    guard case .error(let cta) = viewModel.state else {
+      return XCTFail("Expected error state, got \(viewModel.state)")
+    }
+    guard case .http(let status, _, _) = cta else {
+      return XCTFail("Expected .http CTAError, got \(cta)")
+    }
+    XCTAssertEqual(status, 422)
+    XCTAssertFalse(cta.isRetryable, "4xx validation failures must not offer Retry")
+  }
+
+  func testSuggestWorkout_directURLErrorSetsRetryableCTAErrorAndLeavesSuggestionNil() async {
+    mockAPI.suggestWorkoutResult = .failure(URLError(.notConnectedToInternet))
+
+    await viewModel.suggestWorkout()
+
+    XCTAssertTrue(mockAPI.suggestWorkoutCalled)
+    XCTAssertNil(viewModel.suggestedWorkout)
+    guard case .error(let cta) = viewModel.state else {
+      return XCTFail("Expected error state, got \(viewModel.state)")
+    }
+    guard case .network(let code, _) = cta else {
+      return XCTFail("Expected .network CTAError, got \(cta)")
+    }
+    XCTAssertEqual(code, .notConnectedToInternet)
+    XCTAssertTrue(cta.isRetryable, "offline transport failures must offer Retry")
+  }
+
   func testCompleteOnboarding_savesProfileAndRequestsSuggestion() async throws {
     mockAPI.suggestWorkoutResult = .success(.single(kind: .rest(seconds: 60)))
 
