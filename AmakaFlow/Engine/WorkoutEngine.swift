@@ -31,6 +31,10 @@ class WorkoutEngine: ObservableObject {
     /// Pairing service for auth status
     private let pairingService: PairingServiceProviding
 
+    /// Completion posting service. Injected in tests so completion-save
+    /// error handling can be exercised without the singleton/network queue.
+    private let completionService: WorkoutCompletionServiceProviding
+
     // MARK: - Simulation Mode (AMA-271)
 
     /// Whether this engine is running in simulation mode
@@ -164,13 +168,15 @@ class WorkoutEngine: ObservableObject {
         clock: WorkoutClock? = nil,
         audioService: AudioProviding? = nil,
         progressStore: ProgressStoreProviding = LiveProgressStore.shared,
-        pairingService: PairingServiceProviding? = nil
+        pairingService: PairingServiceProviding? = nil,
+        completionService: WorkoutCompletionServiceProviding = WorkoutCompletionService.shared
     ) {
         self.clock = clock ?? RealClock()
         self.audioService = audioService ?? AudioCueManager()
         self.progressStore = progressStore
         // Use provided pairingService or default to shared (allows nil for convenience init)
         self.pairingService = pairingService ?? PairingService.shared
+        self.completionService = completionService
         self.isSimulation = false
         self.healthProvider = nil
         self.weightProvider = nil  // AMA-308
@@ -846,7 +852,7 @@ class WorkoutEngine: ObservableObject {
 
         Task {
             do {
-                let response = try await WorkoutCompletionService.shared.postPhoneWorkoutCompletion(
+                let response = try await completionService.postPhoneWorkoutCompletion(
                     workoutId: workoutId,
                     workoutName: workoutName ?? "Workout",
                     startedAt: startedAt,
@@ -860,6 +866,13 @@ class WorkoutEngine: ObservableObject {
                     setLogs: setLogs,             // (AMA-281) Weight tracking
                     executionLog: executionLog    // (AMA-291) Execution tracking
                 )
+                if response?.success == false {
+                    throw APIError.serverErrorWithBody(
+                        200,
+                        "{\"success\":false,\"message\":\"Workout completion failed\",\"error_code\":\"WORKOUT_COMPLETION_FAILED\"}"
+                    )
+                }
+
                 logger.info("Workout completion posted successfully")
                 DebugLogService.shared.log(
                     "Completion: SUCCESS",

@@ -215,7 +215,25 @@ struct PendingCompletion: Codable, Identifiable {
 // MARK: - WorkoutCompletionService
 
 @MainActor
-class WorkoutCompletionService: ObservableObject {
+protocol WorkoutCompletionServiceProviding: AnyObject {
+    func postPhoneWorkoutCompletion(
+        workoutId: String,
+        workoutName: String,
+        startedAt: Date,
+        endedAt: Date,
+        durationSeconds: Int,
+        avgHeartRate: Int?,
+        activeCalories: Int?,
+        heartRateSamples: [HRSample]?,
+        workoutStructure: [WorkoutInterval]?,
+        isSimulated: Bool,
+        setLogs: [SetLog]?,
+        executionLog: [String: Any]?
+    ) async throws -> WorkoutCompletionResponse?
+}
+
+@MainActor
+class WorkoutCompletionService: ObservableObject, WorkoutCompletionServiceProviding {
     static let shared = WorkoutCompletionService()
 
     @Published private(set) var pendingCount: Int = 0
