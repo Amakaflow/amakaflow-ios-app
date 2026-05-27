@@ -1,0 +1,9 @@
+{
+  "client_generated_id": "55555555-5555-4555-8555-555555555555",
+  "follow_along_workout_id": "66666666-6666-4666-8666-666666666666",
+  "started_at": "2026-05-27T18:00:00Z",
+  "ended_at": "2026-05-27T18:30:00Z",
+  "source": "phone",
+  "modality": "hiit",
+  "health_metrics": { "avg_heart_rate": 150, "max_heart_rate": 182, "active_calories": 280 }
+}

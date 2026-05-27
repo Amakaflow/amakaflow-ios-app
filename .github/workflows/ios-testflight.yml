@@ -36,8 +36,38 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # AMA-1806 — offline completion-contract gate. Validates the canonical
+  # iOS WorkoutCompletionRequest fixtures against staging mapper-api's
+  # published OpenAPI schema (with server _StrictModel strictness re-applied)
+  # BEFORE we spend ~10min archiving. Catches the Build-38 class (iOS wire
+  # payload drifted from the server Pydantic schema) deterministically — no
+  # auth, just the public /openapi.json. The archive job `needs:` this, so a
+  # drift fails fast and never promotes a build. (Runtime fidelity — DB
+  # constraints etc. — is covered by the non-gating nightly, see
+  # completion-contract-nightly.yml.)
+  completion-contract:
+    name: Completion contract (offline schema gate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install jsonschema
+        run: pip install "jsonschema>=4"
+      - name: Validate completion fixtures vs staging schema
+        run: |
+          python scripts/preflight/validate_completion_contract.py \
+            --openapi https://mapper-api.staging.amakaflow.com/openapi.json \
+            --fixtures-dir AmakaFlowCompanion/AmakaFlowCompanionTests/Fixtures/CompletionPayloads \
+            --schema WorkoutCompletionRequest
+
   testflight:
     name: Archive + Upload to TestFlight
+    needs: completion-contract
     runs-on: macos-15
     timeout-minutes: 45
 
