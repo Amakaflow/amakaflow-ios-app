@@ -54,9 +54,42 @@ appId: com.myamaka.AmakaFlowCompanion
 # substring-matches the carousel's "Coach agent" copy and corrupts the
 # guards). (AMA-1804: surfaced + fixed via golden-path local-sim repro
 # 2026-05-27.)
+# Two onboarding layers gate the auth screen on a fresh install:
+#   1. OnboardingFlowView value-prop carousel ("See your week fill with
+#      effort" …) — its "Skip" (accessibilityLabel "Skip onboarding")
+#      calls complete() directly, dismissing the whole carousel.
+#   2. MentalModelView ("Three places. One coach.") — AMA-1988 added a
+#      prominent "Continue without a watch" button (id below); also a
+#      top-bar Skip id.
+# Loop generously so we blow through both, whatever order they appear.
 - repeat:
-    times: 8
+    times: 10
     commands:
+      - runFlow:
+          when:
+            visible: "Skip onboarding"
+          commands:
+            - tapOn: "Skip onboarding"
+            - waitForAnimationToEnd:
+                timeout: 2500
+      - runFlow:
+          when:
+            visible:
+              id: "mental_model_continue_without_watch"
+          commands:
+            - tapOn:
+                id: "mental_model_continue_without_watch"
+            - waitForAnimationToEnd:
+                timeout: 2500
+      - runFlow:
+          when:
+            visible:
+              id: "mental_model_skip"
+          commands:
+            - tapOn:
+                id: "mental_model_skip"
+            - waitForAnimationToEnd:
+                timeout: 2500
       - runFlow:
           when:
             visible:
