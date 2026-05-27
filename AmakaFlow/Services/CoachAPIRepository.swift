@@ -18,9 +18,9 @@
 //    GET  /v1/planning/days                     (fetchDayState/fetchDayStates)
 //    STUB /coach/quick                          (askCoach; no backend route)
 //    POST /api/v1/planning/resolve-conflict     (resolveConflict; deferred)
-//    POST /api/v1/planning/generate-week        (generateWeek; deferred)
+//    POST /v1/planning/generate-week            (generateWeek)
 //    GET  /v1/planning/conflicts                (detectConflicts)
-//    POST /api/v1/planning/parse-workout        (parseWorkoutText; deferred)
+//    POST /v1/ingest/parse-text                 (parseWorkoutText)
 //    GET  /v1/agent/actions                    (fetchAgentActions)
 //    POST /v1/agent/actions/{id}/respond       (respondToAction)
 //    POST /v1/agent/actions/{id}/undo          (undoAction)
@@ -87,10 +87,10 @@ extension APIService {
     }
 
     func generateWeek(request genRequest: GenerateWeekRequest? = nil) async throws -> ProposedPlan {
-        // TODO(AMA-1936/1937/1938): repoint to bffURL once the BFF wedge ships
         let body = try encodeJSONBody(genRequest ?? GenerateWeekRequest(startDate: nil, preferences: nil))
         let request = try await makeAPIRequest(
-            path: "/api/v1/planning/generate-week",
+            baseURL: bffURL,
+            path: "/planning/generate-week",
             method: "POST",
             body: body
         )
@@ -110,14 +110,14 @@ extension APIService {
         return try await self.request(request, decode: [Conflict].self, successStatusCodes: 200...200)
     }
 
-    func parseWorkoutText(text: String, context: String? = nil) async throws -> ParsedWorkout {
-        // TODO(AMA-1936/1937/1938): repoint to bffURL once the BFF wedge ships
+    func parseWorkoutText(text: String, context: String? = nil) async throws -> ParseTextResult {
         let request = try await makeAPIRequest(
-            path: "/api/v1/planning/parse-workout",
+            baseURL: bffURL,
+            path: "/ingest/parse-text",
             method: "POST",
-            body: try encodeJSONBody(ParseWorkoutRequest(text: text, context: context))
+            body: try encodeJSONBody(ParseTextRequest(text: text, source: context))
         )
-        return try await self.request(request, decode: ParsedWorkout.self, successStatusCodes: 200...200)
+        return try await self.request(request, decode: ParseTextResult.self, successStatusCodes: 200...200)
     }
 
     // MARK: - Agent Actions API (AMA-1956 / AMA-1934)

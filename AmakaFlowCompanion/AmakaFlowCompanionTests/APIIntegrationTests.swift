@@ -324,6 +324,143 @@ final class CoachAPIRepositoryEndpointTests: XCTestCase {
         XCTAssertEqual(logger.events.map(\.phase), [.start, .end])
     }
 
+    func testGenerateWeekHitsBFFPlanningGenerateWeekAndDecodesRestDay() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.url?.path, "/v1/planning/generate-week")
+
+            let body = try Self.httpBodyData(from: request)
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+            XCTAssertEqual(json["startDate"] as? String, "2026-05-25")
+            let preferences = try XCTUnwrap(json["preferences"] as? [String: Any])
+            XCTAssertEqual(preferences["maxDaysPerWeek"] as? Int, 5)
+            XCTAssertEqual(preferences["preferredRestDays"] as? [Int], [1])
+            XCTAssertEqual(preferences["longRunDay"] as? Int, 6)
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Rndr-Id": "rndr-generate-week"]
+            )!
+            let data = """
+            {
+              "weekStartDate": "2026-05-25",
+              "days": [
+                {
+                  "date": "2026-05-25",
+                  "workouts": [],
+                  "isRestDay": true,
+                  "rationale": "Recovery after a high-load weekend."
+                },
+                {
+                  "date": "2026-05-26",
+                  "workouts": [
+                    {
+                      "id": "planned-tempo",
+                      "name": "Tempo Run",
+                      "sport": "running",
+                      "estimatedDurationMinutes": 45,
+                      "scheduledTime": "07:00",
+                      "priority": "key"
+                    }
+                  ],
+                  "isRestDay": false,
+                  "rationale": "Key aerobic stimulus."
+                }
+              ],
+              "rationale": "Balanced week around availability.",
+              "totalLoadScore": 72.5
+            }
+            """.data(using: .utf8)!
+            return (response, data)
+        }
+
+        let plan = try await api.generateWeek(
+            request: GenerateWeekRequest(
+                startDate: "2026-05-25",
+                preferences: WeekPreferences(maxDaysPerWeek: 5, preferredRestDays: [1], longRunDay: 6)
+            )
+        )
+
+        XCTAssertEqual(plan.weekStartDate, "2026-05-25")
+        XCTAssertEqual(plan.days.count, 2)
+        XCTAssertTrue(plan.days[0].isRestDay)
+        XCTAssertEqual(plan.days[0].rationale, "Recovery after a high-load weekend.")
+        XCTAssertEqual(plan.days[1].workouts.first?.name, "Tempo Run")
+        XCTAssertEqual(plan.days[1].workouts.first?.priority, .key)
+        XCTAssertEqual(plan.totalLoadScore, 72.5)
+        XCTAssertEqual(logger.events.map(\.phase), [.start, .end])
+    }
+
+    func testParseWorkoutTextHitsBFFIngestParseTextAndDecodesExerciseList() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.url?.path, "/v1/ingest/parse-text")
+
+            let body = try Self.httpBodyData(from: request)
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: String])
+            XCTAssertEqual(json["text"], "Back squat 3x5 @ 225 lb RPE 8")
+            XCTAssertEqual(json["source"], "manual_import")
+            XCTAssertNil(json["context"])
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Rndr-Id": "rndr-parse-text"]
+            )!
+            let data = """
+            {
+              "success": true,
+              "exercises": [
+                {
+                  "rawName": "Back squat",
+                  "sets": 3,
+                  "reps": "5",
+                  "distance": null,
+                  "supersetGroup": null,
+                  "order": 1,
+                  "weight": "225",
+                  "weightUnit": "lb",
+                  "rpe": 8.0,
+                  "notes": null,
+                  "restSeconds": null
+                }
+              ],
+              "detectedFormat": "strength",
+              "confidence": 0.91,
+              "source": "manual_import"
+            }
+            """.data(using: .utf8)!
+            return (response, data)
+        }
+
+        let result = try await api.parseWorkoutText(
+            text: "Back squat 3x5 @ 225 lb RPE 8",
+            context: "manual_import"
+        )
+
+        XCTAssertTrue(result.success)
+        XCTAssertEqual(result.detectedFormat, "strength")
+        XCTAssertEqual(result.confidence, 0.91)
+        XCTAssertEqual(result.source, "manual_import")
+        XCTAssertEqual(result.exercises.count, 1)
+        let exercise = try XCTUnwrap(result.exercises.first)
+        XCTAssertEqual(exercise.rawName, "Back squat")
+        XCTAssertEqual(exercise.sets, 3)
+        XCTAssertEqual(exercise.reps, "5")
+        XCTAssertNil(exercise.distance)
+        XCTAssertNil(exercise.supersetGroup)
+        XCTAssertEqual(exercise.order, 1)
+        XCTAssertEqual(exercise.weight, "225")
+        XCTAssertEqual(exercise.weightUnit, "lb")
+        XCTAssertEqual(exercise.rpe, 8.0)
+        XCTAssertNil(exercise.notes)
+        XCTAssertNil(exercise.restSeconds)
+        XCTAssertEqual(logger.events.map(\.phase), [.start, .end])
+    }
+
     func testConflictTypeAndSeverityDecodeAllBackendRawValuesAndFallback() throws {
         let backendTypes: [(String, ConflictType)] = [
             ("pre_fatigue", .preFatigue),
