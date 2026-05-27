@@ -67,6 +67,14 @@ struct MentalModelView: View {
             .buttonStyle(AFPrimaryButtonStyle())
             .padding(.horizontal, Theme.Spacing.lg)
             .padding(.vertical, Theme.Spacing.md)
+
+            Button(action: onSkip) {
+                Text("Continue without a watch")
+            }
+            .buttonStyle(AFGhostButtonStyle())
+            .accessibilityIdentifier("mental_model_continue_without_watch")
+            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.bottom, Theme.Spacing.md)
         }
         .background(Theme.Colors.background.ignoresSafeArea())
     }
