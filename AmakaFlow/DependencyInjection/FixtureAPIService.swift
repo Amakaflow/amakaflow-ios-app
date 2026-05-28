@@ -15,6 +15,15 @@ import Foundation
 /// without changes to ViewModels, Engine, or UI.
 class FixtureAPIService: APIServiceProviding {
     private var followedUserIds = Set<String>()
+    private var fixtureCoachingProfile = Components.Schemas.CoachingProfile(
+        createdAt: "2026-05-28T00:00:00Z",
+        equipment: nil,
+        experienceLevel: "intermediate",
+        primaryGoal: "general_fitness",
+        sessionsPerWeek: 3,
+        updatedAt: "2026-05-28T00:00:00Z",
+        userId: "fixture-test-user"
+    )
 
     // MARK: - Reads (from fixtures)
 
@@ -163,6 +172,26 @@ class FixtureAPIService: APIServiceProviding {
     func fetchAgentActions(status: String?) async throws -> [AgentAction] { [] }
     func respondToAction(id: String, decision: String) async throws -> AgentAction { .samplePending }
     func undoAction(id: String) async throws -> AgentAction { .sampleApplied }
+
+    // MARK: - Coaching Profile (AMA-1995)
+
+    func getCoachingProfile() async throws -> Components.Schemas.CoachingProfile {
+        fixtureCoachingProfile
+    }
+
+    func upsertCoachingProfile(_ profile: Components.Schemas.CoachingProfileUpsert) async throws -> Components.Schemas.CoachingProfile {
+        fixtureCoachingProfile = Components.Schemas.CoachingProfile(
+            createdAt: fixtureCoachingProfile.createdAt,
+            equipment: profile.equipment,
+            experienceLevel: profile.experienceLevel,
+            preFilledFromMemory: fixtureCoachingProfile.preFilledFromMemory,
+            primaryGoal: profile.primaryGoal,
+            sessionsPerWeek: profile.sessionsPerWeek,
+            updatedAt: "2026-05-28T00:00:01Z",
+            userId: fixtureCoachingProfile.userId
+        )
+        return fixtureCoachingProfile
+    }
 
     // MARK: - Coach (AMA-1147)
 

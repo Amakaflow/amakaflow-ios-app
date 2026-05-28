@@ -274,6 +274,14 @@ protocol APIServiceProviding: TelegramLinkAPIProviding {
     /// Check whether the user should be nudged to eat more protein
     func checkProteinNudge() async throws -> ProteinNudgeResponse
 
+    // MARK: - Coaching Profile (AMA-1995)
+
+    /// Fetch the user's coaching profile, including generated equipment inventory.
+    func getCoachingProfile() async throws -> Components.Schemas.CoachingProfile
+
+    /// Upsert the user's coaching profile through the mobile BFF.
+    func upsertCoachingProfile(_ profile: Components.Schemas.CoachingProfileUpsert) async throws -> Components.Schemas.CoachingProfile
+
     // MARK: - Coach Suggestions (AMA-1412)
 
     /// Request an AI-generated workout suggestion

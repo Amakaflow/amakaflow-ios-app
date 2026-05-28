@@ -19,7 +19,21 @@ final class AmakaFlowCompanionUITestsLaunchTests: XCTestCase {
 
     @MainActor
     func testLaunch() throws {
+        let processEnvironment = ProcessInfo.processInfo.environment
+        let publishableKey = processEnvironment["UITEST_CLERK_PUBLISHABLE_KEY"]
+            ?? processEnvironment["CLERK_PUBLISHABLE_KEY_STAGING"]
+            ?? processEnvironment["CLERK_PUBLISHABLE_KEY"]
+
+        guard let publishableKey, !publishableKey.isEmpty else {
+            throw XCTSkip(
+                "Launch screenshot test requires a Clerk publishable key. " +
+                "Set UITEST_CLERK_PUBLISHABLE_KEY or CLERK_PUBLISHABLE_KEY_STAGING before running UI tests."
+            )
+        }
+
         let app = XCUIApplication()
+        app.launchEnvironment["UITEST_CLERK_PUBLISHABLE_KEY"] = publishableKey
+        app.launchEnvironment["TEST_ENVIRONMENT"] = processEnvironment["TEST_ENVIRONMENT"] ?? "staging"
         app.launch()
 
         // Insert steps here to perform after app launch but before taking a screenshot,

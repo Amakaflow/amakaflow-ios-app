@@ -1306,6 +1306,31 @@ struct SettingsView: View {
                 }
             }
 
+            NavigationLink(destination: EquipmentProfileView()) {
+                HStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: "dumbbell.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(Theme.Colors.readyHigh)
+                        .frame(width: 28)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Equipment")
+                            .font(Theme.Typography.body)
+                            .foregroundColor(Theme.Colors.textPrimary)
+                        Text("What you can train with")
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(Theme.Colors.textSecondary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                }
+            }
+            .accessibilityIdentifier("settings_row_equipment")
+
             NavigationLink(destination: ActivityFeedView()) {
                 HStack(spacing: Theme.Spacing.md) {
                     Image(systemName: "bell.badge.fill")

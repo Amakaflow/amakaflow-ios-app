@@ -130,14 +130,7 @@
             "type": "string"
           },
           "equipment": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/EquipmentInventory"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/EquipmentInventory"
           },
           "experience_level": {
             "title": "Experience Level",
@@ -216,14 +209,7 @@
         "description": "Request body for PUT /v1/coaching/profile.",
         "properties": {
           "equipment": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/EquipmentInventory"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/EquipmentInventory"
           },
           "experience_level": {
             "title": "Experience Level",
@@ -645,17 +631,10 @@
             "type": "object"
           },
           "dumbbellRangeKg": {
-            "anyOf": [
-              {
-                "maximum": 100.0,
-                "minimum": 5.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Dumbbellrangekg"
+            "maximum": 100.0,
+            "minimum": 5.0,
+            "title": "Dumbbellrangekg",
+            "type": "integer"
           },
           "mobility": {
             "additionalProperties": {

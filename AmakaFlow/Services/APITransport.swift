@@ -107,7 +107,21 @@ extension APIService {
     nonisolated static func makeDecoder() -> JSONDecoder {
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
-        decoder.dateDecodingStrategy = .custom { decoder in
+        decoder.dateDecodingStrategy = apiDateDecodingStrategy
+        return decoder
+    }
+
+    /// Generated OpenAPI models declare explicit CodingKeys (for example
+    /// `createdAt = "created_at"`), so they must not be decoded with
+    /// `.convertFromSnakeCase` on top.
+    nonisolated static func makeGeneratedDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = apiDateDecodingStrategy
+        return decoder
+    }
+
+    private nonisolated static var apiDateDecodingStrategy: JSONDecoder.DateDecodingStrategy {
+        .custom { decoder in
             let container = try decoder.singleValueContainer()
             let dateString = try container.decode(String.self)
 
@@ -130,7 +144,6 @@ extension APIService {
                 debugDescription: "Cannot decode date: \(dateString)"
             )
         }
-        return decoder
     }
 
     // MARK: - Shared Request Path (AMA-1933)

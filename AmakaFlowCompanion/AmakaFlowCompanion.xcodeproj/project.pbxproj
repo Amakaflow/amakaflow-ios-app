@@ -157,6 +157,9 @@
 		AK00TST025B /* XPBarViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST025A /* XPBarViewTests.swift */; };
 		AK00XP001B /* XPBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00XP001A /* XPBarView.swift */; };
 		AK00XP002B /* LevelUpCelebrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00XP002A /* LevelUpCelebrationView.swift */; };
+		AMA1995EQVM000000000B /* EquipmentProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1995EQVM000000000A /* EquipmentProfileViewModel.swift */; };
+		AMA1995EQVIEW00000000B /* EquipmentProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1995EQVIEW00000000A /* EquipmentProfileView.swift */; };
+		AMA1995EQTST000000000B /* EquipmentProfileViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1995EQTST000000000A /* EquipmentProfileViewModelTests.swift */; };
 		AMA12650011 /* SuggestWorkoutViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA12650001 /* SuggestWorkoutViewModel.swift */; };
 		AMA12650012 /* SuggestWorkoutButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA12650002 /* SuggestWorkoutButton.swift */; };
 		AMA12650013 /* SuggestWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA12650003 /* SuggestWorkoutView.swift */; };
@@ -587,6 +590,9 @@
 		AK00TST025A /* XPBarViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = XPBarViewTests.swift; path = AmakaFlowCompanionTests/XPBarViewTests.swift; sourceTree = "<group>"; };
 		AK00XP001A /* XPBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = XPBarView.swift; path = ../AmakaFlow/Views/XPBarView.swift; sourceTree = "<group>"; };
 		AK00XP002A /* LevelUpCelebrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LevelUpCelebrationView.swift; path = ../AmakaFlow/Views/LevelUpCelebrationView.swift; sourceTree = "<group>"; };
+		AMA1995EQVM000000000A /* EquipmentProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EquipmentProfileViewModel.swift; path = ../AmakaFlow/ViewModels/EquipmentProfileViewModel.swift; sourceTree = SOURCE_ROOT; };
+		AMA1995EQVIEW00000000A /* EquipmentProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EquipmentProfileView.swift; path = ../AmakaFlow/Views/EquipmentProfileView.swift; sourceTree = SOURCE_ROOT; };
+		AMA1995EQTST000000000A /* EquipmentProfileViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EquipmentProfileViewModelTests.swift; path = AmakaFlowCompanionTests/EquipmentProfileViewModelTests.swift; sourceTree = "<group>"; };
 		AMA12650001 /* SuggestWorkoutViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SuggestWorkoutViewModel.swift; path = ../AmakaFlow/ViewModels/SuggestWorkoutViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA12650002 /* SuggestWorkoutButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SuggestWorkoutButton.swift; path = ../AmakaFlow/Views/Components/SuggestWorkoutButton.swift; sourceTree = SOURCE_ROOT; };
 		AMA12650003 /* SuggestWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SuggestWorkoutView.swift; path = ../AmakaFlow/Views/SuggestWorkoutView.swift; sourceTree = SOURCE_ROOT; };
@@ -1014,6 +1020,7 @@
 				A19401AA0000000BB000000B /* ExecutionLogSection.swift */,
 				CC2192F9A69B4A51B54A138F /* HomeView.swift */,
 				AMA12650003 /* SuggestWorkoutView.swift */,
+				AMA1995EQVIEW00000000A /* EquipmentProfileView.swift */,
 				AMA16080001 /* BiometricConsentView.swift */,
 				AMA12650004 /* CoachingProfileOnboardingView.swift */,
 				AMA12650002 /* SuggestWorkoutButton.swift */,
@@ -1083,6 +1090,7 @@
 				AMA12820010A /* PRDetectionServiceTests.swift */,
 				D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */,
 				AMA12650021 /* SuggestWorkoutViewModelTests.swift */,
+				AMA1995EQTST000000000A /* EquipmentProfileViewModelTests.swift */,
 				AK00CHL001A /* ChallengeModels.swift */,
 				AK00CHL002A /* ChallengesViewModel.swift */,
 				AK00CHL003A /* ChallengesView.swift */,
@@ -1243,6 +1251,7 @@
 				V01C300400000000000000 /* WorkoutParsingService.swift */,
 				V01C300500000000000000 /* VoiceWorkoutViewModel.swift */,
 				AMA12650001 /* SuggestWorkoutViewModel.swift */,
+				AMA1995EQVM000000000A /* EquipmentProfileViewModel.swift */,
 				V01C300600000000000000 /* VoiceWorkoutView.swift */,
 				V01C300700000000000000 /* VoiceRecordingView.swift */,
 				V01C300800000000000000 /* TranscriptionReviewView.swift */,
@@ -1798,8 +1807,10 @@
 				V01C301400000000000000 /* WorkoutParsingService.swift in Sources */,
 				V01C301500000000000000 /* VoiceWorkoutViewModel.swift in Sources */,
 				AMA12650011 /* SuggestWorkoutViewModel.swift in Sources */,
+				AMA1995EQVM000000000B /* EquipmentProfileViewModel.swift in Sources */,
 				AMA12650012 /* SuggestWorkoutButton.swift in Sources */,
 				AMA12650013 /* SuggestWorkoutView.swift in Sources */,
+				AMA1995EQVIEW00000000B /* EquipmentProfileView.swift in Sources */,
 				AMA16080002 /* BiometricConsentView.swift in Sources */,
 				AMA12650014 /* CoachingProfileOnboardingView.swift in Sources */,
 				V01C301600000000000000 /* VoiceWorkoutView.swift in Sources */,
@@ -1955,6 +1966,7 @@
 				A1B2C3D4E5F647889ABCDEF0 /* RPEFeedbackViewModelTests.swift in Sources */,
 				D33PL1NKT35T50002 /* DeepLinkManagerTests.swift in Sources */,
 				AMA12650022 /* SuggestWorkoutViewModelTests.swift in Sources */,
+				AMA1995EQTST000000000B /* EquipmentProfileViewModelTests.swift in Sources */,
 				AK00TST001B /* ActivityHistoryTests.swift in Sources */,
 				AK00TST002B /* ActivityHistoryViewModelTests.swift in Sources */,
 				AK00TST003B /* AmakaFlowCompanionTests.swift in Sources */,
