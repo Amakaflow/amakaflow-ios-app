@@ -50,14 +50,11 @@ final class WatchConnectivityE2ETests: XCTestCase {
         XCTAssertTrue(TestAuthHelper.waitForMainContent(app, timeout: 15),
                      "App should load main content")
 
-        // Navigate to settings - could be Settings tab or More tab
-        let settingsTab = app.tabBars.buttons["Settings"]
-        let moreTab = app.tabBars.buttons["More"]
+        // Navigate to Profile tab (Settings root after AMA-1992).
+        let profileTab = TestAuthHelper.tab(app, "profile_tab", label: "Profile")
 
-        if settingsTab.exists && settingsTab.isHittable {
-            settingsTab.tap()
-        } else if moreTab.exists && moreTab.isHittable {
-            moreTab.tap()
+        if profileTab.exists && profileTab.isHittable {
+            profileTab.tap()
         }
 
         sleep(1)
@@ -68,8 +65,9 @@ final class WatchConnectivityE2ETests: XCTestCase {
         ).firstMatch
 
         // Verify we navigated somewhere (tab bar should still be visible)
-        let tabBar = app.tabBars.firstMatch
-        XCTAssertTrue(tabBar.exists, "Tab bar should still be visible after navigation")
+        let tabBar = TestAuthHelper.tabBar(app)
+        XCTAssertTrue(tabBar.exists || TestAuthHelper.tab(app, "home_tab", label: "Home").exists,
+                      "Tab bar should still be visible after navigation")
     }
 
     // MARK: - Application Context Sync Tests
@@ -83,7 +81,7 @@ final class WatchConnectivityE2ETests: XCTestCase {
                      "App should load main content")
 
         // Navigate to workouts tab
-        let workoutsTab = app.tabBars.buttons["Workouts"]
+        let workoutsTab = TestAuthHelper.tab(app, "workouts_tab", label: "Workouts")
         if workoutsTab.exists && workoutsTab.isHittable {
             workoutsTab.tap()
         }
@@ -164,7 +162,7 @@ final class WatchConnectivityE2ETests: XCTestCase {
                      "App should load main content")
 
         // Navigate to workouts
-        let workoutsTab = app.tabBars.buttons["Workouts"]
+        let workoutsTab = TestAuthHelper.tab(app, "workouts_tab", label: "Workouts")
         if workoutsTab.exists && workoutsTab.isHittable {
             workoutsTab.tap()
         }
@@ -218,7 +216,7 @@ final class WatchConnectivityE2ETests: XCTestCase {
                      "App should load main content")
 
         // Navigate to workouts
-        let workoutsTab = app.tabBars.buttons["Workouts"]
+        let workoutsTab = TestAuthHelper.tab(app, "workouts_tab", label: "Workouts")
         if workoutsTab.exists {
             workoutsTab.tap()
         }

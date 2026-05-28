@@ -9,6 +9,7 @@ import XCTest
 
 /// Configures XCUIApplication for E2E testing with Clerk test authentication
 enum TestAuthHelper {
+    static let tabBarIdentifier = "af_tabbar"
 
     /// Configure app with test credentials to sign in with a real Clerk test user
     /// - Parameters:
@@ -55,12 +56,10 @@ enum TestAuthHelper {
     /// - Returns: True if main content appeared within timeout
     @discardableResult
     static func waitForMainContent(_ app: XCUIApplication, timeout: TimeInterval = 10) -> Bool {
-        // Look for elements that indicate we're past the pairing screen
-        // The app shows a tab bar with Home, Workouts, etc. when paired
-        let tabBar = app.tabBars.firstMatch
-
-        // Wait for tab bar to appear - this is the primary indicator
-        if tabBar.waitForExistence(timeout: timeout) {
+        // Look for elements that indicate we're past the pairing screen.
+        // AMA-1992 replaced native TabView chrome with a custom six-tab bar,
+        // so the primary indicator is the custom tabbar marker or Home tab.
+        if tabBar(app).waitForExistence(timeout: timeout) || tab(app, "home_tab", label: "Home").exists {
             return true
         }
 
@@ -71,6 +70,19 @@ enum TestAuthHelper {
         }
 
         return false
+    }
+
+    /// Custom AMA-1992 tab bar container.
+    static func tabBar(_ app: XCUIApplication) -> XCUIElement {
+        app.otherElements[tabBarIdentifier]
+    }
+
+    /// Custom AMA-1992 tab button lookup. Prefer stable accessibility ids,
+    /// with a label fallback for older builds still using native TabView.
+    static func tab(_ app: XCUIApplication, _ identifier: String, label: String) -> XCUIElement {
+        let byIdentifier = app.buttons[identifier]
+        if byIdentifier.exists { return byIdentifier }
+        return app.buttons[label]
     }
 
     /// Wait for a specific element to appear

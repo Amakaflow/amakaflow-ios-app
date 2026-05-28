@@ -114,19 +114,18 @@ final class AMA1839_CJ01_WorkoutLifecycle_CriticalJourneyTests: XCTestCase {
     // MARK: - Step helpers
 
     private func openCoachFromMore() throws {
-        let moreTab = app.tabBars.buttons["more_tab"]
-        XCTAssertTrue(moreTab.waitForExistence(timeout: 10),
-                      "More tab not found — `more_tab` accessibilityIdentifier missing on TabView item")
-        moreTab.tap()
+        let coachTab = TestAuthHelper.tab(app, "coach_tab", label: "Coach")
+        XCTAssertTrue(coachTab.waitForExistence(timeout: 10),
+                      "Coach tab not found — `coach_tab` accessibilityIdentifier missing")
+        coachTab.tap()
 
-        let coachRow = app.buttons["ama1842.coach.row"]
-        XCTAssertTrue(coachRow.waitForExistence(timeout: 5),
-                      "Coach row not found in More — `ama1842.coach.row` accessibilityIdentifier missing")
-        coachRow.tap()
+        let coachRoot = app.otherElements["coach_screen"]
+        XCTAssertTrue(coachRoot.waitForExistence(timeout: 5),
+                      "Coach root did not render after tapping `coach_tab`")
 
         // Pop back to Home for the Suggest flow — the Suggest sheet is
         // launched from the Home tab, not the Coach surface.
-        let homeTab = app.tabBars.buttons["home_tab"]
+        let homeTab = TestAuthHelper.tab(app, "home_tab", label: "Home")
         XCTAssertTrue(homeTab.waitForExistence(timeout: 5),
                       "Home tab not found — `home_tab` accessibilityIdentifier missing")
         homeTab.tap()
@@ -185,15 +184,10 @@ final class AMA1839_CJ01_WorkoutLifecycle_CriticalJourneyTests: XCTestCase {
     }
 
     private func assertWorkoutInActivityHistory(timeout: TimeInterval) throws {
-        let moreTab = app.tabBars.buttons["more_tab"]
-        XCTAssertTrue(moreTab.waitForExistence(timeout: 10),
-                      "More tab not visible — cannot navigate to Activity History")
-        moreTab.tap()
-
-        let historyRow = app.buttons["ama1842.history.row"]
-        XCTAssertTrue(historyRow.waitForExistence(timeout: 5),
-                      "History row not found in More — `ama1842.history.row` missing")
-        historyRow.tap()
+        let historyTab = TestAuthHelper.tab(app, "history_tab", label: "History")
+        XCTAssertTrue(historyTab.waitForExistence(timeout: 10),
+                      "History tab not visible — cannot navigate to Activity History")
+        historyTab.tap()
 
         // Authoritative assertion: the history screen renders AND
         // contains the just-saved completion at index 0.
@@ -242,6 +236,7 @@ final class AMA1839_CJ01_WorkoutLifecycle_CriticalJourneyTests: XCTestCase {
     // MARK: - Selector helpers
 
     private func waitForTabBar(timeout: TimeInterval) -> Bool {
-        return app.tabBars.firstMatch.waitForExistence(timeout: timeout)
+        return TestAuthHelper.tabBar(app).waitForExistence(timeout: timeout)
+            || TestAuthHelper.tab(app, "home_tab", label: "Home").waitForExistence(timeout: 2)
     }
 }

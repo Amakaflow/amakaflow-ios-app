@@ -12,8 +12,13 @@ struct UITestAccessibility {
     
     // MARK: - Main Navigation
     
+    static let tabBar = "af_tabbar"
     static let homeTab = "home_tab"
     static let workoutsTab = "workouts_tab"
+    static let coachTab = "coach_tab"
+    static let libraryTab = "library_tab"
+    static let historyTab = "history_tab"
+    static let profileTab = "profile_tab"
     static let settingsTab = "settings_tab"
     static let calendarTab = "calendar_tab"
     
@@ -21,6 +26,10 @@ struct UITestAccessibility {
     
     static let homeScreen = "home_screen"
     static let workoutsScreen = "workouts_screen"
+    static let coachScreen = "coach_screen"
+    static let libraryScreen = "library_screen"
+    static let historyScreen = "history_screen"
+    static let profileScreen = "profile_screen"
     static let settingsScreen = "settings_screen"
     
     // MARK: - Workout Controls
