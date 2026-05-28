@@ -56,6 +56,13 @@ struct MoreView: View {
                     // Legacy ID: "more_row_history".
                     .accessibilityIdentifier("ama1842.history.row")
 
+                    NavigationLink {
+                        DevicesView()
+                    } label: {
+                        moreRow(icon: "applewatch", title: "Devices")
+                    }
+                    .accessibilityIdentifier("more_row_devices")
+
                     if FeatureFlags.nonMvp {
                         NavigationLink {
                             SourcesView()

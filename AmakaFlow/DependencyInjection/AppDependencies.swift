@@ -652,6 +652,31 @@ class MockAPIService: APIServiceProviding {
         return try result.get()
     }
 
+    // MARK: - Devices (AMA-1996)
+
+    var listDevicesResult: Result<[Components.Schemas.PairedDevice], Error> = .success([
+        Components.Schemas.PairedDevice(
+            id: "mock-garmin-955",
+            lastSyncAt: "2026-05-28T14:07:00Z",
+            model: "Forerunner 955",
+            name: "Garmin Forerunner",
+            roles: [.workouts, .recovery]
+        ),
+        Components.Schemas.PairedDevice(
+            id: "mock-apple-watch",
+            lastSyncAt: "2026-05-28T13:12:00Z",
+            model: "Series 9",
+            name: "Apple Watch",
+            roles: [.recovery]
+        )
+    ])
+    var listDevicesCalled = false
+
+    func listDevices() async throws -> [Components.Schemas.PairedDevice] {
+        listDevicesCalled = true
+        return try listDevicesResult.get()
+    }
+
     // MARK: - Coaching Profile (AMA-1995)
 
     var getCoachingProfileResult: Result<Components.Schemas.CoachingProfile, Error> = .success(

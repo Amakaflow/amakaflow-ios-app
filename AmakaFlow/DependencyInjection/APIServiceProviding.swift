@@ -274,6 +274,11 @@ protocol APIServiceProviding: TelegramLinkAPIProviding {
     /// Check whether the user should be nudged to eat more protein
     func checkProteinNudge() async throws -> ProteinNudgeResponse
 
+    // MARK: - Devices (AMA-1996)
+
+    /// Fetch the user's paired devices from the mobile BFF.
+    func listDevices() async throws -> [Components.Schemas.PairedDevice]
+
     // MARK: - Coaching Profile (AMA-1995)
 
     /// Fetch the user's coaching profile, including generated equipment inventory.

@@ -25,6 +25,29 @@ class FixtureAPIService: APIServiceProviding {
         updatedAt: "2026-05-28T00:00:00Z",
         userId: "fixture-test-user"
     )
+    private let fixtureDevices: [Components.Schemas.PairedDevice] = [
+        Components.Schemas.PairedDevice(
+            id: "fixture-garmin-955",
+            lastSyncAt: "2026-05-28T14:07:00Z",
+            model: "Forerunner 955",
+            name: "Garmin Forerunner",
+            roles: [.workouts, .recovery]
+        ),
+        Components.Schemas.PairedDevice(
+            id: "fixture-apple-watch",
+            lastSyncAt: "2026-05-28T13:12:00Z",
+            model: "Series 9",
+            name: "Apple Watch",
+            roles: [.recovery]
+        ),
+        Components.Schemas.PairedDevice(
+            id: "fixture-whoop",
+            lastSyncAt: nil,
+            model: "WHOOP 4.0",
+            name: "WHOOP Band",
+            roles: nil
+        )
+    ]
 
     // MARK: - Reads (from fixtures)
 
@@ -173,6 +196,12 @@ class FixtureAPIService: APIServiceProviding {
     func fetchAgentActions(status: String?) async throws -> [AgentAction] { [] }
     func respondToAction(id: String, decision: String) async throws -> AgentAction { .samplePending }
     func undoAction(id: String) async throws -> AgentAction { .sampleApplied }
+
+    // MARK: - Devices (AMA-1996)
+
+    func listDevices() async throws -> [Components.Schemas.PairedDevice] {
+        fixtureDevices
+    }
 
     // MARK: - Coaching Profile (AMA-1995)
 
