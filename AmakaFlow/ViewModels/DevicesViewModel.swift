@@ -57,8 +57,11 @@ final class DevicesViewModel: ObservableObject {
     }
 
     var displayDevices: [DisplayDevice] {
-        devices.map { device in
-            let relative = Self.relativeSyncText(lastSyncAt: device.lastSyncAt, now: now())
+        // Capture one "now" per render pass so every row's "synced X ago"
+        // caption is computed against the same instant (consistent rows).
+        let currentNow = now()
+        return devices.map { device in
+            let relative = Self.relativeSyncText(lastSyncAt: device.lastSyncAt, now: currentNow)
             return DisplayDevice(
                 device: device,
                 syncCaption: relative,

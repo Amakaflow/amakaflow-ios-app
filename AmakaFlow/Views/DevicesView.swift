@@ -152,10 +152,9 @@ struct DevicesView: View {
             title: "Devices",
             subtitle: headerSubtitle,
             backIdentifier: "devices_back",
-            backAction: { dismiss() }
-        ) {
-            AFChip(text: "Read", outline: true)
-        }
+            backAction: { dismiss() },
+            right: { AFChip(text: "Read", outline: true) }
+        )
     }
 
     private var headerSubtitle: String {
