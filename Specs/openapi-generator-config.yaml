@@ -21,6 +21,7 @@ filter:
     - /v1/sync/pending
     - /v1/sync/confirm
     - /v1/sync/failed
+    - /v1/coaching/profile  # AMA-2008 D5 W2 — equipment/profile (CoachingProfile + EquipmentInventory)
 
 accessModifier: public
 
