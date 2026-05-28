@@ -25,6 +25,14 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `PUT /v1/coaching/profile`.
     /// - Remark: Generated from `#/paths//v1/coaching/profile/put(upsertCoachingProfile)`.
     func upsertCoachingProfile(_ input: Operations.UpsertCoachingProfile.Input) async throws -> Operations.UpsertCoachingProfile.Output
+    /// V1 Devices List
+    ///
+    /// iOS PairingScreen device list → mapper-api GET /mobile/pairing/devices,
+    /// reshaped into the typed PairedDevice list (AMA-2026).
+    ///
+    /// - Remark: HTTP `GET /v1/devices`.
+    /// - Remark: Generated from `#/paths//v1/devices/get(listDevices)`.
+    func listDevices(_ input: Operations.ListDevices.Input) async throws -> Operations.ListDevices.Output
     /// V1 Sync Confirm
     ///
     /// SyncEngine confirm-success → mapper-api POST /sync/confirm.
@@ -103,6 +111,16 @@ extension APIProtocol {
             headers: headers,
             body: body
         ))
+    }
+    /// V1 Devices List
+    ///
+    /// iOS PairingScreen device list → mapper-api GET /mobile/pairing/devices,
+    /// reshaped into the typed PairedDevice list (AMA-2026).
+    ///
+    /// - Remark: HTTP `GET /v1/devices`.
+    /// - Remark: Generated from `#/paths//v1/devices/get(listDevices)`.
+    public func listDevices(headers: Operations.ListDevices.Input.Headers = .init()) async throws -> Operations.ListDevices.Output {
+        try await listDevices(Operations.ListDevices.Input(headers: headers))
     }
     /// V1 Sync Confirm
     ///
@@ -462,6 +480,16 @@ public enum Components {
                 case retryable
                 case userMessage
             }
+        }
+        /// Which metric a device feeds (PairingScreen role chips). Multi-per-device
+        /// AND multi-device-per-role; conflicts resolved by most-recently-synced wins
+        /// (screens-flow.jsx:360). Assigned in Wedge C (AMA-2030).
+        ///
+        /// - Remark: Generated from `#/components/schemas/DeviceRole`.
+        @frozen public enum DeviceRole: String, Codable, Hashable, Sendable, CaseIterable {
+            case workouts = "workouts"
+            case recovery = "recovery"
+            case strength = "strength"
         }
         /// Mirrors mapper-api's DeviceType (services/mapper-api/api/routers/sync.py).
         ///
@@ -963,6 +991,69 @@ public enum Components {
                 case minHeartRate = "min_heart_rate"
                 case steps
                 case totalCalories = "total_calories"
+            }
+        }
+        /// One paired device for PairingScreen. Typed projection over mapper-api
+        /// GET /mobile/pairing/devices (untyped dict upstream): flattens device_info,
+        /// surfaces the stable device_info.device_id as `id`, and maps paired_at →
+        /// lastSyncAt (Wedge A proxy; real last-sync is AMA-2032).
+        ///
+        /// - Remark: Generated from `#/components/schemas/PairedDevice`.
+        public struct PairedDevice: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/PairedDevice/id`.
+            public var id: Swift.String
+            /// - Remark: Generated from `#/components/schemas/PairedDevice/lastSyncAt`.
+            public var lastSyncAt: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/PairedDevice/model`.
+            public var model: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/PairedDevice/name`.
+            public var name: Swift.String
+            /// - Remark: Generated from `#/components/schemas/PairedDevice/roles`.
+            public var roles: [Components.Schemas.DeviceRole]?
+            /// Creates a new `PairedDevice`.
+            ///
+            /// - Parameters:
+            ///   - id:
+            ///   - lastSyncAt:
+            ///   - model:
+            ///   - name:
+            ///   - roles:
+            public init(
+                id: Swift.String,
+                lastSyncAt: Swift.String? = nil,
+                model: Swift.String? = nil,
+                name: Swift.String,
+                roles: [Components.Schemas.DeviceRole]? = nil
+            ) {
+                self.id = id
+                self.lastSyncAt = lastSyncAt
+                self.model = model
+                self.name = name
+                self.roles = roles
+            }
+            public enum CodingKeys: String, CodingKey {
+                case id
+                case lastSyncAt
+                case model
+                case name
+                case roles
+            }
+        }
+        /// Response body for GET /v1/devices.
+        ///
+        /// - Remark: Generated from `#/components/schemas/PairedDeviceList`.
+        public struct PairedDeviceList: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/PairedDeviceList/devices`.
+            public var devices: [Components.Schemas.PairedDevice]?
+            /// Creates a new `PairedDeviceList`.
+            ///
+            /// - Parameters:
+            ///   - devices:
+            public init(devices: [Components.Schemas.PairedDevice]? = nil) {
+                self.devices = devices
+            }
+            public enum CodingKeys: String, CodingKey {
+                case devices
             }
         }
         /// Response for GET /v1/sync/pending.
@@ -2252,6 +2343,170 @@ public enum Operations {
             /// - Throws: An error if `self` is not `.serviceUnavailable`.
             /// - SeeAlso: `.serviceUnavailable`.
             public var serviceUnavailable: Operations.UpsertCoachingProfile.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// V1 Devices List
+    ///
+    /// iOS PairingScreen device list → mapper-api GET /mobile/pairing/devices,
+    /// reshaped into the typed PairedDevice list (AMA-2026).
+    ///
+    /// - Remark: HTTP `GET /v1/devices`.
+    /// - Remark: Generated from `#/paths//v1/devices/get(listDevices)`.
+    public enum ListDevices {
+        public static let id: Swift.String = "listDevices"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/devices/GET/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.ListDevices.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.ListDevices.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.ListDevices.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            public init(headers: Operations.ListDevices.Input.Headers = .init()) {
+                self.headers = headers
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/GET/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/devices/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.PairedDeviceList)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.PairedDeviceList {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.ListDevices.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.ListDevices.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Successful Response
+            ///
+            /// - Remark: Generated from `#/paths//v1/devices/get(listDevices)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.ListDevices.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.ListDevices.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/GET/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/devices/GET/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.ListDevices.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.ListDevices.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/devices/get(listDevices)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.ListDevices.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.ListDevices.Output.ServiceUnavailable {
                 get throws {
                     switch self {
                     case let .serviceUnavailable(response):
