@@ -11,6 +11,34 @@ import XCTest
 enum TestAuthHelper {
     static let tabBarIdentifier = "af_tabbar"
 
+    static var hasRequiredClerkCredentials: Bool {
+        let environment = ProcessInfo.processInfo.environment
+        return [
+            "UITEST_CLERK_EMAIL",
+            "UITEST_CLERK_PASSWORD",
+            "UITEST_CLERK_PUBLISHABLE_KEY"
+        ].allSatisfy { key in
+            guard let value = environment[key] else { return false }
+            return !value.isEmpty && !value.hasPrefix("$(")
+        }
+    }
+
+    static var isCI: Bool {
+        let environment = ProcessInfo.processInfo.environment
+        return environment["CI"] == "true"
+            || environment["GITHUB_ACTIONS"] == "true"
+            || environment["XCODE_CLOUD"] == "true"
+    }
+
+    static func requireClerkCredentialsOrSkipLocally() throws {
+        guard hasRequiredClerkCredentials || isCI else {
+            throw XCTSkip(
+                "Skipping authenticated UI E2E locally because Clerk test credentials are not configured. " +
+                "Set UITEST_CLERK_EMAIL, UITEST_CLERK_PASSWORD, and UITEST_CLERK_PUBLISHABLE_KEY to run it. CI does not skip this guard."
+            )
+        }
+    }
+
     /// Configure app with test credentials to sign in with a real Clerk test user
     /// - Parameters:
     ///   - app: The XCUIApplication instance to configure

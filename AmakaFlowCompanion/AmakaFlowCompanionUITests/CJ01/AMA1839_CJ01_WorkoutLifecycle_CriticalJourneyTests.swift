@@ -41,10 +41,13 @@ final class AMA1839_CJ01_WorkoutLifecycle_CriticalJourneyTests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
+        try requireClerkTestSessionOrSkip()
+        try ClerkLaunchPreflight.requirePublishableKeyOrSkipLocally()
         XCUIDevice.shared.orientation = .portrait
 
         app = XCUIApplication()
         configureLaunch(app)
+        ClerkLaunchPreflight.propagateKeys(to: app)
 
         PermissionInterruptionHandlers.register(on: self)
 

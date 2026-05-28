@@ -7,6 +7,52 @@
 
 import XCTest
 
+enum ClerkLaunchPreflight {
+    static var hasPublishableKey: Bool {
+        let env = ProcessInfo.processInfo.environment
+        return [
+            "UITEST_CLERK_PUBLISHABLE_KEY",
+            "CLERK_PUBLISHABLE_KEY",
+            "CLERK_PUBLISHABLE_KEY_DEV",
+            "CLERK_PUBLISHABLE_KEY_STAGING",
+            "CLERK_PUBLISHABLE_KEY_PRODUCTION"
+        ].contains { key in
+            guard let value = env[key] else { return false }
+            return !value.isEmpty && !value.hasPrefix("$(")
+        }
+    }
+
+    static var isCI: Bool {
+        let env = ProcessInfo.processInfo.environment
+        return env["CI"] == "true" || env["GITHUB_ACTIONS"] == "true" || env["XCODE_CLOUD"] == "true"
+    }
+
+    static func requirePublishableKeyOrSkipLocally() throws {
+        guard hasPublishableKey || isCI else {
+            throw XCTSkip(
+                "Skipping launch screenshot locally because no Clerk publishable key is configured. " +
+                "Set UITEST_CLERK_PUBLISHABLE_KEY or CLERK_PUBLISHABLE_KEY_STAGING to run it. CI does not skip this guard."
+            )
+        }
+    }
+
+    static func propagateKeys(to app: XCUIApplication) {
+        var launchEnvironment = app.launchEnvironment
+        for key in [
+            "UITEST_CLERK_PUBLISHABLE_KEY",
+            "CLERK_PUBLISHABLE_KEY",
+            "CLERK_PUBLISHABLE_KEY_DEV",
+            "CLERK_PUBLISHABLE_KEY_STAGING",
+            "CLERK_PUBLISHABLE_KEY_PRODUCTION"
+        ] {
+            if let value = ProcessInfo.processInfo.environment[key], !value.isEmpty {
+                launchEnvironment[key] = value
+            }
+        }
+        app.launchEnvironment = launchEnvironment
+    }
+}
+
 final class AmakaFlowCompanionUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
@@ -19,21 +65,10 @@ final class AmakaFlowCompanionUITestsLaunchTests: XCTestCase {
 
     @MainActor
     func testLaunch() throws {
-        let processEnvironment = ProcessInfo.processInfo.environment
-        let publishableKey = processEnvironment["UITEST_CLERK_PUBLISHABLE_KEY"]
-            ?? processEnvironment["CLERK_PUBLISHABLE_KEY_STAGING"]
-            ?? processEnvironment["CLERK_PUBLISHABLE_KEY"]
-
-        guard let publishableKey, !publishableKey.isEmpty else {
-            throw XCTSkip(
-                "Launch screenshot test requires a Clerk publishable key. " +
-                "Set UITEST_CLERK_PUBLISHABLE_KEY or CLERK_PUBLISHABLE_KEY_STAGING before running UI tests."
-            )
-        }
+        try ClerkLaunchPreflight.requirePublishableKeyOrSkipLocally()
 
         let app = XCUIApplication()
-        app.launchEnvironment["UITEST_CLERK_PUBLISHABLE_KEY"] = publishableKey
-        app.launchEnvironment["TEST_ENVIRONMENT"] = processEnvironment["TEST_ENVIRONMENT"] ?? "staging"
+        ClerkLaunchPreflight.propagateKeys(to: app)
         app.launch()
 
         // Insert steps here to perform after app launch but before taking a screenshot,

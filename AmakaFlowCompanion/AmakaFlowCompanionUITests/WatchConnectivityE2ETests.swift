@@ -25,6 +25,7 @@ final class WatchConnectivityE2ETests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
+        try TestAuthHelper.requireClerkCredentialsOrSkipLocally()
 
         // Force portrait orientation
         XCUIDevice.shared.orientation = .portrait
@@ -36,7 +37,7 @@ final class WatchConnectivityE2ETests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
-        app.terminate()
+        app?.terminate()
         app = nil
     }
 
