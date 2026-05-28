@@ -5,15 +5,8 @@
         "description": "Generic Agent Inbox envelope for calendar-api ActionResponse rows.",
         "properties": {
           "appliedAt": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Appliedat"
+            "title": "Appliedat",
+            "type": "string"
           },
           "createdAt": {
             "title": "Createdat",
@@ -24,15 +17,8 @@
             "type": "boolean"
           },
           "expiresAt": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Expiresat"
+            "title": "Expiresat",
+            "type": "string"
           },
           "id": {
             "title": "Id",
@@ -43,52 +29,24 @@
             "type": "string"
           },
           "payload": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Payload"
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
           },
           "preview": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Preview"
+            "title": "Preview",
+            "type": "string"
           },
           "rationale": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rationale"
+            "title": "Rationale",
+            "type": "string"
           },
           "reversible": {
             "title": "Reversible",
             "type": "boolean"
           },
           "riskLevel": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/RiskLevel"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/RiskLevel"
           },
           "status": {
             "$ref": "#/components/schemas/AgentActionStatus"
@@ -136,16 +94,16 @@
             "title": "Experience Level",
             "type": "string"
           },
+          "goals": {
+            "items": {
+              "$ref": "#/components/schemas/GoalEntry"
+            },
+            "title": "Goals",
+            "type": "array"
+          },
           "injuries_limitations": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Injuries Limitations"
+            "title": "Injuries Limitations",
+            "type": "string"
           },
           "pre_filled_from_memory": {
             "default": false,
@@ -153,33 +111,19 @@
             "type": "boolean"
           },
           "preferred_days": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Preferred Days"
+            "items": {
+              "type": "string"
+            },
+            "title": "Preferred Days",
+            "type": "array"
           },
           "primary_goal": {
             "title": "Primary Goal",
             "type": "string"
           },
           "session_duration_minutes": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Session Duration Minutes"
+            "title": "Session Duration Minutes",
+            "type": "integer"
           },
           "sessions_per_week": {
             "title": "Sessions Per Week",
@@ -197,7 +141,6 @@
         "required": [
           "user_id",
           "experience_level",
-          "primary_goal",
           "sessions_per_week",
           "created_at",
           "updated_at"
@@ -215,48 +158,34 @@
             "title": "Experience Level",
             "type": "string"
           },
+          "goals": {
+            "items": {
+              "$ref": "#/components/schemas/GoalEntry"
+            },
+            "title": "Goals",
+            "type": "array"
+          },
           "injuries_limitations": {
-            "anyOf": [
-              {
-                "maxLength": 1000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Injuries Limitations"
+            "maxLength": 1000,
+            "title": "Injuries Limitations",
+            "type": "string"
           },
           "preferred_days": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Preferred Days"
+            "items": {
+              "type": "string"
+            },
+            "title": "Preferred Days",
+            "type": "array"
           },
           "primary_goal": {
             "title": "Primary Goal",
             "type": "string"
           },
           "session_duration_minutes": {
-            "anyOf": [
-              {
-                "maximum": 120.0,
-                "minimum": 15.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Session Duration Minutes"
+            "maximum": 120.0,
+            "minimum": 15.0,
+            "title": "Session Duration Minutes",
+            "type": "integer"
           },
           "sessions_per_week": {
             "maximum": 7.0,
@@ -267,7 +196,6 @@
         },
         "required": [
           "experience_level",
-          "primary_goal",
           "sessions_per_week"
         ],
         "title": "CoachingProfileUpsert",
@@ -277,16 +205,9 @@
         "description": "BFF-owned mirror of the draft CompletedSession schema.",
         "properties": {
           "actualData": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Actualdata"
+            "additionalProperties": true,
+            "title": "Actualdata",
+            "type": "object"
           },
           "date": {
             "format": "date",
@@ -351,15 +272,8 @@
         "description": "Request body for POST /v1/sync/confirm.",
         "properties": {
           "device_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Device Id"
+            "title": "Device Id",
+            "type": "string"
           },
           "device_type": {
             "$ref": "#/components/schemas/DeviceType"
@@ -380,30 +294,16 @@
         "description": "Response for POST /v1/sync/confirm.",
         "properties": {
           "status": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Status"
+            "title": "Status",
+            "type": "string"
           },
           "success": {
             "title": "Success",
             "type": "boolean"
           },
           "synced_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Synced At"
+            "title": "Synced At",
+            "type": "string"
           }
         },
         "required": [
@@ -432,15 +332,8 @@
             "$ref": "#/components/schemas/ConflictSeverity"
           },
           "suggestion": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Suggestion"
+            "title": "Suggestion",
+            "type": "string"
           },
           "type": {
             "$ref": "#/components/schemas/ConflictType"
@@ -481,15 +374,8 @@
         "description": "BFF-owned mirror of the draft DayState schema (camelCase on the wire).",
         "properties": {
           "acuteLoad": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Acuteload"
+            "title": "Acuteload",
+            "type": "number"
           },
           "availableBlocks": {
             "items": {
@@ -499,15 +385,8 @@
             "type": "array"
           },
           "chronicLoad": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Chronicload"
+            "title": "Chronicload",
+            "type": "number"
           },
           "completedSessions": {
             "items": {
@@ -540,17 +419,10 @@
             "type": "array"
           },
           "readinessScore": {
-            "anyOf": [
-              {
-                "maximum": 100.0,
-                "minimum": 0.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Readinessscore"
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Readinessscore",
+            "type": "integer"
           }
         },
         "required": [
@@ -576,15 +448,8 @@
             "type": "boolean"
           },
           "retryAfterMs": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Retryafterms"
+            "title": "Retryafterms",
+            "type": "integer"
           },
           "retryable": {
             "default": true,
@@ -680,15 +545,8 @@
             "type": "string"
           },
           "requestId": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Requestid"
+            "title": "Requestid",
+            "type": "string"
           },
           "userMessage": {
             "title": "Usermessage",
@@ -707,27 +565,13 @@
         "description": "One exercise step (with reps / weight / station / media).",
         "properties": {
           "duration_sec": {
-            "anyOf": [
-              {
-                "minimum": 0.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Sec"
+            "minimum": 0.0,
+            "title": "Duration Sec",
+            "type": "integer"
           },
           "gif_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Gif Url"
+            "title": "Gif Url",
+            "type": "string"
           },
           "has_media": {
             "default": false,
@@ -744,73 +588,31 @@
             "type": "string"
           },
           "reps": {
-            "anyOf": [
-              {
-                "minimum": 1.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reps"
+            "minimum": 1.0,
+            "title": "Reps",
+            "type": "integer"
           },
           "set_number": {
-            "anyOf": [
-              {
-                "minimum": 1.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Set Number"
+            "minimum": 1.0,
+            "title": "Set Number",
+            "type": "integer"
           },
           "source_video_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source Video Url"
+            "title": "Source Video Url",
+            "type": "string"
           },
           "station": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Station"
+            "title": "Station",
+            "type": "string"
           },
           "telegram_file_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Telegram File Id"
+            "title": "Telegram File Id",
+            "type": "string"
           },
           "total_sets": {
-            "anyOf": [
-              {
-                "minimum": 1.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Total Sets"
+            "minimum": 1.0,
+            "title": "Total Sets",
+            "type": "integer"
           },
           "type": {
             "const": "exercise",
@@ -819,16 +621,9 @@
             "type": "string"
           },
           "weight": {
-            "anyOf": [
-              {
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Weight"
+            "minimum": 0.0,
+            "title": "Weight",
+            "type": "number"
           }
         },
         "required": [
@@ -885,31 +680,44 @@
         "description": "BFF-owned request body for weekly plan proposal generation.",
         "properties": {
           "preferences": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Preferences"
+            "additionalProperties": true,
+            "title": "Preferences",
+            "type": "object"
           },
           "startDate": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Startdate"
+            "format": "date",
+            "title": "Startdate",
+            "type": "string"
           }
         },
         "title": "GenerateWeekRequest",
+        "type": "object"
+      },
+      "GoalEntry": {
+        "description": "One training goal (AMA-2018, D5 W1). camelCase wire shape (strengthSubtype).\nMulti-select; `none` is mutually exclusive (validated upstream in chat-api).",
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "event": {
+            "title": "Event",
+            "type": "string"
+          },
+          "strengthSubtype": {
+            "title": "Strengthsubtype",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "GoalEntry",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -929,81 +737,32 @@
         "description": "Health metrics captured during the workout (Apple Watch / Garmin).",
         "properties": {
           "active_calories": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Active Calories"
+            "title": "Active Calories",
+            "type": "integer"
           },
           "avg_heart_rate": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avg Heart Rate"
+            "title": "Avg Heart Rate",
+            "type": "integer"
           },
           "distance_meters": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Distance Meters"
+            "title": "Distance Meters",
+            "type": "integer"
           },
           "max_heart_rate": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Max Heart Rate"
+            "title": "Max Heart Rate",
+            "type": "integer"
           },
           "min_heart_rate": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Min Heart Rate"
+            "title": "Min Heart Rate",
+            "type": "integer"
           },
           "steps": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Steps"
+            "title": "Steps",
+            "type": "integer"
           },
           "total_calories": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Total Calories"
+            "title": "Total Calories",
+            "type": "integer"
           }
         },
         "title": "HealthMetrics",
@@ -1013,15 +772,8 @@
         "description": "BFF-owned request body for freeform workout text parsing.",
         "properties": {
           "source": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source"
+            "title": "Source",
+            "type": "string"
           },
           "text": {
             "title": "Text",
@@ -1042,15 +794,8 @@
             "type": "number"
           },
           "detectedFormat": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Detectedformat"
+            "title": "Detectedformat",
+            "type": "string"
           },
           "exercises": {
             "items": {
@@ -1060,15 +805,8 @@
             "type": "array"
           },
           "source": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source"
+            "title": "Source",
+            "type": "string"
           },
           "success": {
             "title": "Success",
@@ -1087,26 +825,12 @@
         "description": "Faithful mobile-facing mirror of ingestor ParsedExerciseResponse.",
         "properties": {
           "distance": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Distance"
+            "title": "Distance",
+            "type": "string"
           },
           "notes": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Notes"
+            "title": "Notes",
+            "type": "string"
           },
           "order": {
             "title": "Order",
@@ -1117,81 +841,32 @@
             "type": "string"
           },
           "reps": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reps"
+            "title": "Reps",
+            "type": "string"
           },
           "restSeconds": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Restseconds"
+            "title": "Restseconds",
+            "type": "integer"
           },
           "rpe": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rpe"
+            "title": "Rpe",
+            "type": "number"
           },
           "sets": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sets"
+            "title": "Sets",
+            "type": "integer"
           },
           "supersetGroup": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Supersetgroup"
+            "title": "Supersetgroup",
+            "type": "string"
           },
           "weight": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Weight"
+            "title": "Weight",
+            "type": "string"
           },
           "weightUnit": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Weightunit"
+            "title": "Weightunit",
+            "type": "string"
           }
         },
         "required": [
@@ -1232,37 +907,16 @@
         "description": "One pending workout entry returned by /sync/pending.\n\nIntervals stay as a free-form list of dicts \u2014 the upstream router\nruns `to_workoutkit(...).intervals` and the resulting WorkoutKit\ninterval shapes are large and themselves polymorphic (warmup,\ncooldown, repeat, single). Modeling them strictly in v1 would either\ndrift from upstream or pull a large dependency tree into the BFF;\ndeferring per the AMA-1817 1:1-mirror principle.",
         "properties": {
           "created_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Created At"
+            "title": "Created At",
+            "type": "string"
           },
           "duration": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration"
+            "title": "Duration",
+            "type": "integer"
           },
           "id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Id"
+            "title": "Id",
+            "type": "string"
           },
           "intervals": {
             "items": {
@@ -1273,59 +927,24 @@
             "type": "array"
           },
           "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
+            "title": "Name",
+            "type": "string"
           },
           "queued_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Queued At"
+            "title": "Queued At",
+            "type": "string"
           },
           "source": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source"
+            "title": "Source",
+            "type": "string"
           },
           "sourceUrl": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sourceurl"
+            "title": "Sourceurl",
+            "type": "string"
           },
           "sport": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sport"
+            "title": "Sport",
+            "type": "string"
           }
         },
         "title": "PendingSyncWorkout",
@@ -1373,45 +992,24 @@
             "type": "boolean"
           },
           "rationale": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rationale"
+            "title": "Rationale",
+            "type": "string"
           },
           "source": {
             "title": "Source",
             "type": "string"
           },
           "sourceId": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sourceid"
+            "title": "Sourceid",
+            "type": "string"
           },
           "structuredSteps": {
-            "anyOf": [
-              {
-                "items": {
-                  "additionalProperties": true,
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Structuredsteps"
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Structuredsteps",
+            "type": "array"
           },
           "type": {
             "title": "Type",
@@ -1434,39 +1032,18 @@
         "description": "Subset of `workout_events` returned to iOS.\n\nAliases (camelCase) preserved from mapper-api so the wire shape stays\nidentical across BFF and upstream \u2014 iOS already decodes this format.",
         "properties": {
           "clientGeneratedId": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Clientgeneratedid"
+            "title": "Clientgeneratedid",
+            "type": "string"
           },
           "date": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Date"
+            "format": "date",
+            "title": "Date",
+            "type": "string"
           },
           "endTime": {
-            "anyOf": [
-              {
-                "format": "time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Endtime"
+            "format": "time",
+            "title": "Endtime",
+            "type": "string"
           },
           "id": {
             "format": "uuid",
@@ -1474,72 +1051,30 @@
             "type": "string"
           },
           "jsonPayload": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Jsonpayload"
+            "additionalProperties": true,
+            "title": "Jsonpayload",
+            "type": "object"
           },
           "serverVersion": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Serverversion"
+            "title": "Serverversion",
+            "type": "integer"
           },
           "source": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source"
+            "title": "Source",
+            "type": "string"
           },
           "startTime": {
-            "anyOf": [
-              {
-                "format": "time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Starttime"
+            "format": "time",
+            "title": "Starttime",
+            "type": "string"
           },
           "status": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Status"
+            "title": "Status",
+            "type": "string"
           },
           "title": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Title"
+            "title": "Title",
+            "type": "string"
           },
           "userId": {
             "title": "Userid",
@@ -1566,15 +1101,8 @@
             "type": "boolean"
           },
           "rationale": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rationale"
+            "title": "Rationale",
+            "type": "string"
           },
           "workouts": {
             "items": {
@@ -1603,26 +1131,12 @@
             "type": "array"
           },
           "rationale": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rationale"
+            "title": "Rationale",
+            "type": "string"
           },
           "totalLoadScore": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Totalloadscore"
+            "title": "Totalloadscore",
+            "type": "number"
           },
           "weekStartDate": {
             "format": "date",
@@ -1641,15 +1155,8 @@
         "description": "Request body for POST /v1/sync/failed.",
         "properties": {
           "device_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Device Id"
+            "title": "Device Id",
+            "type": "string"
           },
           "device_type": {
             "$ref": "#/components/schemas/DeviceType"
@@ -1675,26 +1182,12 @@
         "description": "Response for POST /v1/sync/failed.",
         "properties": {
           "failed_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Failed At"
+            "title": "Failed At",
+            "type": "string"
           },
           "status": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Status"
+            "title": "Status",
+            "type": "string"
           },
           "success": {
             "title": "Success",
@@ -1730,27 +1223,13 @@
         "description": "One rest step (only shared fields).",
         "properties": {
           "duration_sec": {
-            "anyOf": [
-              {
-                "minimum": 0.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Sec"
+            "minimum": 0.0,
+            "title": "Duration Sec",
+            "type": "integer"
           },
           "gif_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Gif Url"
+            "title": "Gif Url",
+            "type": "string"
           },
           "has_media": {
             "default": false,
@@ -1804,26 +1283,12 @@
             "type": "integer"
           },
           "unit": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Unit"
+            "title": "Unit",
+            "type": "string"
           },
           "weight": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Weight"
+            "title": "Weight",
+            "type": "number"
           }
         },
         "required": [
@@ -1863,37 +1328,16 @@
         "description": "Simulation parameters when workout runs in simulation mode (AMA-273).",
         "properties": {
           "behavior_profile": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Behavior Profile"
+            "title": "Behavior Profile",
+            "type": "string"
           },
           "hr_profile": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Hr Profile"
+            "title": "Hr Profile",
+            "type": "string"
           },
           "speed": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Speed"
+            "title": "Speed",
+            "type": "number"
           }
         },
         "title": "SimulationConfig",
@@ -1908,15 +1352,8 @@
             "type": "string"
           },
           "label": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Label"
+            "title": "Label",
+            "type": "string"
           },
           "start": {
             "format": "date-time",
@@ -1976,224 +1413,84 @@
         "description": "One row from the user's completion history.\n\nThe upstream router returns whatever the CompletionRepository's\nget_user_completions() emits \u2014 a loosely-shaped dict that includes\nhealth metrics, workout linkage IDs, fidelity, summary fields, etc.\nPer the AMA-1817 1:1-mirror principle (and matching how PendingSyncWorkout\nhandles upstream polymorphism), we leave non-load-bearing fields\nopen via model_config extra=\"allow\" rather than narrowing in v1.",
         "properties": {
           "active_calories": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Active Calories"
+            "title": "Active Calories",
+            "type": "integer"
           },
           "avg_heart_rate": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avg Heart Rate"
+            "title": "Avg Heart Rate",
+            "type": "integer"
           },
           "client_generated_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Client Generated Id"
+            "title": "Client Generated Id",
+            "type": "string"
           },
           "created_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Created At"
+            "title": "Created At",
+            "type": "string"
           },
           "distance_meters": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Distance Meters"
+            "title": "Distance Meters",
+            "type": "integer"
           },
           "duration_seconds": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Seconds"
+            "title": "Duration Seconds",
+            "type": "integer"
           },
           "ended_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ended At"
+            "title": "Ended At",
+            "type": "string"
           },
           "fidelity": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Fidelity"
+            "title": "Fidelity",
+            "type": "string"
           },
           "follow_along_workout_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Follow Along Workout Id"
+            "title": "Follow Along Workout Id",
+            "type": "string"
           },
           "id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Id"
+            "title": "Id",
+            "type": "string"
           },
           "is_simulated": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Is Simulated"
+            "title": "Is Simulated",
+            "type": "boolean"
           },
           "max_heart_rate": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Max Heart Rate"
+            "title": "Max Heart Rate",
+            "type": "integer"
           },
           "min_heart_rate": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Min Heart Rate"
+            "title": "Min Heart Rate",
+            "type": "integer"
           },
           "source": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source"
+            "title": "Source",
+            "type": "string"
           },
           "started_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Started At"
+            "title": "Started At",
+            "type": "string"
           },
           "steps": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Steps"
+            "title": "Steps",
+            "type": "integer"
           },
           "total_calories": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Total Calories"
+            "title": "Total Calories",
+            "type": "integer"
           },
           "user_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "User Id"
+            "title": "User Id",
+            "type": "string"
           },
           "workout_event_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Workout Event Id"
+            "title": "Workout Event Id",
+            "type": "string"
           },
           "workout_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Workout Id"
+            "title": "Workout Id",
+            "type": "string"
           }
         },
         "title": "WorkoutCompletionItem",
@@ -2203,28 +1500,14 @@
         "description": "Request body for POST /v1/workouts/complete.\n\nMirrors `WorkoutCompletionRequest` in mapper-api\n(services/mapper-api/backend/workout_completions.py) 1:1.\n\nNote: `execution_log`, `heart_rate_samples`, `workout_structure`,\n`intervals`, and `device_info` stay as free-form dicts here \u2014 the\nupstream model deliberately uses `Dict[str, Any]` after the AMA-1813\nsaga (the strict ExecutionLog tree rejected the iOS payload). We do\nNOT narrow these in v1; that's reserved for a future contract ticket.",
         "properties": {
           "client_generated_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "description": "Idempotency key \u2014 same value on every retry of the same logical completion.",
-            "title": "Client Generated Id"
+            "title": "Client Generated Id",
+            "type": "string"
           },
           "device_info": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Device Info"
+            "additionalProperties": true,
+            "title": "Device Info",
+            "type": "object"
           },
           "ended_at": {
             "description": "ISO 8601 timestamp.",
@@ -2232,60 +1515,32 @@
             "type": "string"
           },
           "execution_log": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Execution Log"
+            "additionalProperties": true,
+            "title": "Execution Log",
+            "type": "object"
           },
           "follow_along_workout_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Follow Along Workout Id"
+            "title": "Follow Along Workout Id",
+            "type": "string"
           },
           "health_metrics": {
             "$ref": "#/components/schemas/HealthMetrics"
           },
           "heart_rate_samples": {
-            "anyOf": [
-              {
-                "items": {
-                  "additionalProperties": true,
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Heart Rate Samples"
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Heart Rate Samples",
+            "type": "array"
           },
           "intervals": {
-            "anyOf": [
-              {
-                "items": {
-                  "additionalProperties": true,
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Intervals"
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Intervals",
+            "type": "array"
           },
           "is_simulated": {
             "default": false,
@@ -2293,72 +1548,30 @@
             "type": "boolean"
           },
           "modality": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Modality"
+            "title": "Modality",
+            "type": "string"
           },
           "planned_avg_hr": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Planned Avg Hr"
+            "title": "Planned Avg Hr",
+            "type": "integer"
           },
           "planned_duration_seconds": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Planned Duration Seconds"
+            "title": "Planned Duration Seconds",
+            "type": "integer"
           },
           "planned_modality": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Planned Modality"
+            "title": "Planned Modality",
+            "type": "string"
           },
           "set_logs": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/SetLog"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Set Logs"
+            "items": {
+              "$ref": "#/components/schemas/SetLog"
+            },
+            "title": "Set Logs",
+            "type": "array"
           },
           "simulation_config": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/SimulationConfig"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/SimulationConfig"
           },
           "source": {
             "default": "apple_watch",
@@ -2367,15 +1580,8 @@
             "type": "string"
           },
           "source_workout_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source Workout Id"
+            "title": "Source Workout Id",
+            "type": "string"
           },
           "started_at": {
             "description": "ISO 8601 timestamp.",
@@ -2383,41 +1589,20 @@
             "type": "string"
           },
           "workout_event_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Workout Event Id"
+            "title": "Workout Event Id",
+            "type": "string"
           },
           "workout_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Workout Id"
+            "title": "Workout Id",
+            "type": "string"
           },
           "workout_structure": {
-            "anyOf": [
-              {
-                "items": {
-                  "additionalProperties": true,
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Workout Structure"
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Workout Structure",
+            "type": "array"
           }
         },
         "required": [
@@ -2432,73 +1617,31 @@
         "description": "Response for POST /v1/workouts/complete.\n\nMirrors mapper-api's `WorkoutCompletionResponse` plus the optional\n`fidelity`, `idempotent`, and `error_code` fields that the router\nactually emits in practice (see record_workout_completion_endpoint).",
         "properties": {
           "error_code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error Code"
+            "title": "Error Code",
+            "type": "string"
           },
           "fidelity": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Fidelity"
+            "title": "Fidelity",
+            "type": "string"
           },
           "id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Id"
+            "title": "Id",
+            "type": "string"
           },
           "idempotent": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Idempotent"
+            "title": "Idempotent",
+            "type": "boolean"
           },
           "message": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Message"
+            "title": "Message",
+            "type": "string"
           },
           "success": {
             "title": "Success",
             "type": "boolean"
           },
           "summary": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/WorkoutCompletionSummary"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/WorkoutCompletionSummary"
           }
         },
         "required": [
@@ -2511,26 +1654,12 @@
         "description": "Summary echoed back after a successful completion.",
         "properties": {
           "avg_heart_rate": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avg Heart Rate"
+            "title": "Avg Heart Rate",
+            "type": "integer"
           },
           "calories": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Calories"
+            "title": "Calories",
+            "type": "integer"
           },
           "duration_formatted": {
             "title": "Duration Formatted",
@@ -2679,16 +1808,9 @@
             "name": "status",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
               "description": "Optional upstream action status filter.",
-              "title": "Status"
+              "title": "Status",
+              "type": "string"
             }
           },
           {
@@ -3668,14 +2790,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/GenerateWeekRequest"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
+                "$ref": "#/components/schemas/GenerateWeekRequest",
                 "title": "Body"
               }
             }
@@ -3845,16 +2960,9 @@
             "name": "device_id",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
               "description": "Optional device identifier.",
-              "title": "Device Id"
+              "title": "Device Id",
+              "type": "string"
             }
           }
         ],

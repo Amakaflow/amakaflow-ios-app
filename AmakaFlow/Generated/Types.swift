@@ -222,10 +222,18 @@ public enum Components {
             public var equipment: Components.Schemas.EquipmentInventory?
             /// - Remark: Generated from `#/components/schemas/CoachingProfile/experience_level`.
             public var experienceLevel: Swift.String
+            /// - Remark: Generated from `#/components/schemas/CoachingProfile/goals`.
+            public var goals: [Components.Schemas.GoalEntry]?
+            /// - Remark: Generated from `#/components/schemas/CoachingProfile/injuries_limitations`.
+            public var injuriesLimitations: Swift.String?
             /// - Remark: Generated from `#/components/schemas/CoachingProfile/pre_filled_from_memory`.
             public var preFilledFromMemory: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/CoachingProfile/preferred_days`.
+            public var preferredDays: [Swift.String]?
             /// - Remark: Generated from `#/components/schemas/CoachingProfile/primary_goal`.
-            public var primaryGoal: Swift.String
+            public var primaryGoal: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/CoachingProfile/session_duration_minutes`.
+            public var sessionDurationMinutes: Swift.Int?
             /// - Remark: Generated from `#/components/schemas/CoachingProfile/sessions_per_week`.
             public var sessionsPerWeek: Swift.Int
             /// - Remark: Generated from `#/components/schemas/CoachingProfile/updated_at`.
@@ -238,8 +246,12 @@ public enum Components {
             ///   - createdAt:
             ///   - equipment:
             ///   - experienceLevel:
+            ///   - goals:
+            ///   - injuriesLimitations:
             ///   - preFilledFromMemory:
+            ///   - preferredDays:
             ///   - primaryGoal:
+            ///   - sessionDurationMinutes:
             ///   - sessionsPerWeek:
             ///   - updatedAt:
             ///   - userId:
@@ -247,8 +259,12 @@ public enum Components {
                 createdAt: Swift.String,
                 equipment: Components.Schemas.EquipmentInventory? = nil,
                 experienceLevel: Swift.String,
+                goals: [Components.Schemas.GoalEntry]? = nil,
+                injuriesLimitations: Swift.String? = nil,
                 preFilledFromMemory: Swift.Bool? = nil,
-                primaryGoal: Swift.String,
+                preferredDays: [Swift.String]? = nil,
+                primaryGoal: Swift.String? = nil,
+                sessionDurationMinutes: Swift.Int? = nil,
                 sessionsPerWeek: Swift.Int,
                 updatedAt: Swift.String,
                 userId: Swift.String
@@ -256,8 +272,12 @@ public enum Components {
                 self.createdAt = createdAt
                 self.equipment = equipment
                 self.experienceLevel = experienceLevel
+                self.goals = goals
+                self.injuriesLimitations = injuriesLimitations
                 self.preFilledFromMemory = preFilledFromMemory
+                self.preferredDays = preferredDays
                 self.primaryGoal = primaryGoal
+                self.sessionDurationMinutes = sessionDurationMinutes
                 self.sessionsPerWeek = sessionsPerWeek
                 self.updatedAt = updatedAt
                 self.userId = userId
@@ -266,8 +286,12 @@ public enum Components {
                 case createdAt = "created_at"
                 case equipment
                 case experienceLevel = "experience_level"
+                case goals
+                case injuriesLimitations = "injuries_limitations"
                 case preFilledFromMemory = "pre_filled_from_memory"
+                case preferredDays = "preferred_days"
                 case primaryGoal = "primary_goal"
+                case sessionDurationMinutes = "session_duration_minutes"
                 case sessionsPerWeek = "sessions_per_week"
                 case updatedAt = "updated_at"
                 case userId = "user_id"
@@ -281,8 +305,16 @@ public enum Components {
             public var equipment: Components.Schemas.EquipmentInventory?
             /// - Remark: Generated from `#/components/schemas/CoachingProfileUpsert/experience_level`.
             public var experienceLevel: Swift.String
+            /// - Remark: Generated from `#/components/schemas/CoachingProfileUpsert/goals`.
+            public var goals: [Components.Schemas.GoalEntry]?
+            /// - Remark: Generated from `#/components/schemas/CoachingProfileUpsert/injuries_limitations`.
+            public var injuriesLimitations: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/CoachingProfileUpsert/preferred_days`.
+            public var preferredDays: [Swift.String]?
             /// - Remark: Generated from `#/components/schemas/CoachingProfileUpsert/primary_goal`.
-            public var primaryGoal: Swift.String
+            public var primaryGoal: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/CoachingProfileUpsert/session_duration_minutes`.
+            public var sessionDurationMinutes: Swift.Int?
             /// - Remark: Generated from `#/components/schemas/CoachingProfileUpsert/sessions_per_week`.
             public var sessionsPerWeek: Swift.Int
             /// Creates a new `CoachingProfileUpsert`.
@@ -290,23 +322,39 @@ public enum Components {
             /// - Parameters:
             ///   - equipment:
             ///   - experienceLevel:
+            ///   - goals:
+            ///   - injuriesLimitations:
+            ///   - preferredDays:
             ///   - primaryGoal:
+            ///   - sessionDurationMinutes:
             ///   - sessionsPerWeek:
             public init(
                 equipment: Components.Schemas.EquipmentInventory? = nil,
                 experienceLevel: Swift.String,
-                primaryGoal: Swift.String,
+                goals: [Components.Schemas.GoalEntry]? = nil,
+                injuriesLimitations: Swift.String? = nil,
+                preferredDays: [Swift.String]? = nil,
+                primaryGoal: Swift.String? = nil,
+                sessionDurationMinutes: Swift.Int? = nil,
                 sessionsPerWeek: Swift.Int
             ) {
                 self.equipment = equipment
                 self.experienceLevel = experienceLevel
+                self.goals = goals
+                self.injuriesLimitations = injuriesLimitations
+                self.preferredDays = preferredDays
                 self.primaryGoal = primaryGoal
+                self.sessionDurationMinutes = sessionDurationMinutes
                 self.sessionsPerWeek = sessionsPerWeek
             }
             public enum CodingKeys: String, CodingKey {
                 case equipment
                 case experienceLevel = "experience_level"
+                case goals
+                case injuriesLimitations = "injuries_limitations"
+                case preferredDays = "preferred_days"
                 case primaryGoal = "primary_goal"
+                case sessionDurationMinutes = "session_duration_minutes"
                 case sessionsPerWeek = "sessions_per_week"
             }
         }
@@ -314,6 +362,8 @@ public enum Components {
         ///
         /// - Remark: Generated from `#/components/schemas/ConfirmSyncRequest`.
         public struct ConfirmSyncRequest: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ConfirmSyncRequest/device_id`.
+            public var deviceId: Swift.String?
             /// - Remark: Generated from `#/components/schemas/ConfirmSyncRequest/device_type`.
             public var deviceType: Components.Schemas.DeviceType
             /// - Remark: Generated from `#/components/schemas/ConfirmSyncRequest/workout_id`.
@@ -321,16 +371,20 @@ public enum Components {
             /// Creates a new `ConfirmSyncRequest`.
             ///
             /// - Parameters:
+            ///   - deviceId:
             ///   - deviceType:
             ///   - workoutId:
             public init(
+                deviceId: Swift.String? = nil,
                 deviceType: Components.Schemas.DeviceType,
                 workoutId: Swift.String
             ) {
+                self.deviceId = deviceId
                 self.deviceType = deviceType
                 self.workoutId = workoutId
             }
             public enum CodingKeys: String, CodingKey {
+                case deviceId = "device_id"
                 case deviceType = "device_type"
                 case workoutId = "workout_id"
             }
@@ -339,17 +393,31 @@ public enum Components {
         ///
         /// - Remark: Generated from `#/components/schemas/ConfirmSyncResponse`.
         public struct ConfirmSyncResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ConfirmSyncResponse/status`.
+            public var status: Swift.String?
             /// - Remark: Generated from `#/components/schemas/ConfirmSyncResponse/success`.
             public var success: Swift.Bool
+            /// - Remark: Generated from `#/components/schemas/ConfirmSyncResponse/synced_at`.
+            public var syncedAt: Swift.String?
             /// Creates a new `ConfirmSyncResponse`.
             ///
             /// - Parameters:
+            ///   - status:
             ///   - success:
-            public init(success: Swift.Bool) {
+            ///   - syncedAt:
+            public init(
+                status: Swift.String? = nil,
+                success: Swift.Bool,
+                syncedAt: Swift.String? = nil
+            ) {
+                self.status = status
                 self.success = success
+                self.syncedAt = syncedAt
             }
             public enum CodingKeys: String, CodingKey {
+                case status
                 case success
+                case syncedAt = "synced_at"
             }
         }
         /// Returned with HTTP 503 when a capability is unroutable. iOS shows user_message.
@@ -360,6 +428,8 @@ public enum Components {
             public var errorCode: Components.Schemas.ErrorCode
             /// - Remark: Generated from `#/components/schemas/DegradedResponse/ok`.
             public var ok: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/DegradedResponse/retryAfterMs`.
+            public var retryAfterMs: Swift.Int?
             /// - Remark: Generated from `#/components/schemas/DegradedResponse/retryable`.
             public var retryable: Swift.Bool?
             /// - Remark: Generated from `#/components/schemas/DegradedResponse/userMessage`.
@@ -369,22 +439,26 @@ public enum Components {
             /// - Parameters:
             ///   - errorCode:
             ///   - ok:
+            ///   - retryAfterMs:
             ///   - retryable:
             ///   - userMessage:
             public init(
                 errorCode: Components.Schemas.ErrorCode,
                 ok: Swift.Bool? = nil,
+                retryAfterMs: Swift.Int? = nil,
                 retryable: Swift.Bool? = nil,
                 userMessage: Swift.String
             ) {
                 self.errorCode = errorCode
                 self.ok = ok
+                self.retryAfterMs = retryAfterMs
                 self.retryable = retryable
                 self.userMessage = userMessage
             }
             public enum CodingKeys: String, CodingKey {
                 case errorCode
                 case ok
+                case retryAfterMs
                 case retryable
                 case userMessage
             }
@@ -532,44 +606,106 @@ public enum Components {
         ///
         /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep`.
         public struct ExerciseFollowAlongStep: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep/duration_sec`.
+            public var durationSec: Swift.Int?
+            /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep/gif_url`.
+            public var gifUrl: Swift.String?
             /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep/has_media`.
             public var hasMedia: Swift.Bool?
             /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep/index`.
             public var index: Swift.Int
             /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep/name`.
             public var name: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep/reps`.
+            public var reps: Swift.Int?
+            /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep/set_number`.
+            public var setNumber: Swift.Int?
+            /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep/source_video_url`.
+            public var sourceVideoUrl: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep/station`.
+            public var station: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep/telegram_file_id`.
+            public var telegramFileId: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep/total_sets`.
+            public var totalSets: Swift.Int?
             /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep/type`.
             @frozen public enum _TypePayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case exercise = "exercise"
             }
             /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep/type`.
             public var _type: Components.Schemas.ExerciseFollowAlongStep._TypePayload?
+            /// - Remark: Generated from `#/components/schemas/ExerciseFollowAlongStep/weight`.
+            public var weight: Swift.Double?
             /// Creates a new `ExerciseFollowAlongStep`.
             ///
             /// - Parameters:
+            ///   - durationSec:
+            ///   - gifUrl:
             ///   - hasMedia:
             ///   - index:
             ///   - name:
+            ///   - reps:
+            ///   - setNumber:
+            ///   - sourceVideoUrl:
+            ///   - station:
+            ///   - telegramFileId:
+            ///   - totalSets:
             ///   - _type:
+            ///   - weight:
             public init(
+                durationSec: Swift.Int? = nil,
+                gifUrl: Swift.String? = nil,
                 hasMedia: Swift.Bool? = nil,
                 index: Swift.Int,
                 name: Swift.String,
-                _type: Components.Schemas.ExerciseFollowAlongStep._TypePayload? = nil
+                reps: Swift.Int? = nil,
+                setNumber: Swift.Int? = nil,
+                sourceVideoUrl: Swift.String? = nil,
+                station: Swift.String? = nil,
+                telegramFileId: Swift.String? = nil,
+                totalSets: Swift.Int? = nil,
+                _type: Components.Schemas.ExerciseFollowAlongStep._TypePayload? = nil,
+                weight: Swift.Double? = nil
             ) {
+                self.durationSec = durationSec
+                self.gifUrl = gifUrl
                 self.hasMedia = hasMedia
                 self.index = index
                 self.name = name
+                self.reps = reps
+                self.setNumber = setNumber
+                self.sourceVideoUrl = sourceVideoUrl
+                self.station = station
+                self.telegramFileId = telegramFileId
+                self.totalSets = totalSets
                 self._type = _type
+                self.weight = weight
             }
             public enum CodingKeys: String, CodingKey {
+                case durationSec = "duration_sec"
+                case gifUrl = "gif_url"
                 case hasMedia = "has_media"
                 case index
                 case name
+                case reps
+                case setNumber = "set_number"
+                case sourceVideoUrl = "source_video_url"
+                case station
+                case telegramFileId = "telegram_file_id"
+                case totalSets = "total_sets"
                 case _type = "type"
+                case weight
             }
             public init(from decoder: any Swift.Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
+                self.durationSec = try container.decodeIfPresent(
+                    Swift.Int.self,
+                    forKey: .durationSec
+                )
+                self.gifUrl = try container.decodeIfPresent(
+                    Swift.String.self,
+                    forKey: .gifUrl
+                )
                 self.hasMedia = try container.decodeIfPresent(
                     Swift.Bool.self,
                     forKey: .hasMedia
@@ -582,15 +718,52 @@ public enum Components {
                     Swift.String.self,
                     forKey: .name
                 )
+                self.reps = try container.decodeIfPresent(
+                    Swift.Int.self,
+                    forKey: .reps
+                )
+                self.setNumber = try container.decodeIfPresent(
+                    Swift.Int.self,
+                    forKey: .setNumber
+                )
+                self.sourceVideoUrl = try container.decodeIfPresent(
+                    Swift.String.self,
+                    forKey: .sourceVideoUrl
+                )
+                self.station = try container.decodeIfPresent(
+                    Swift.String.self,
+                    forKey: .station
+                )
+                self.telegramFileId = try container.decodeIfPresent(
+                    Swift.String.self,
+                    forKey: .telegramFileId
+                )
+                self.totalSets = try container.decodeIfPresent(
+                    Swift.Int.self,
+                    forKey: .totalSets
+                )
                 self._type = try container.decodeIfPresent(
                     Components.Schemas.ExerciseFollowAlongStep._TypePayload.self,
                     forKey: ._type
                 )
+                self.weight = try container.decodeIfPresent(
+                    Swift.Double.self,
+                    forKey: .weight
+                )
                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                    "duration_sec",
+                    "gif_url",
                     "has_media",
                     "index",
                     "name",
-                    "type"
+                    "reps",
+                    "set_number",
+                    "source_video_url",
+                    "station",
+                    "telegram_file_id",
+                    "total_sets",
+                    "type",
+                    "weight"
                 ])
             }
         }
@@ -684,6 +857,44 @@ public enum Components {
                 ])
             }
         }
+        /// One training goal (AMA-2018, D5 W1). camelCase wire shape (strengthSubtype).
+        /// Multi-select; `none` is mutually exclusive (validated upstream in chat-api).
+        ///
+        /// - Remark: Generated from `#/components/schemas/GoalEntry`.
+        public struct GoalEntry: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/GoalEntry/date`.
+            public var date: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/GoalEntry/event`.
+            public var event: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/GoalEntry/strengthSubtype`.
+            public var strengthSubtype: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/GoalEntry/type`.
+            public var _type: Swift.String
+            /// Creates a new `GoalEntry`.
+            ///
+            /// - Parameters:
+            ///   - date:
+            ///   - event:
+            ///   - strengthSubtype:
+            ///   - _type:
+            public init(
+                date: Swift.String? = nil,
+                event: Swift.String? = nil,
+                strengthSubtype: Swift.String? = nil,
+                _type: Swift.String
+            ) {
+                self.date = date
+                self.event = event
+                self.strengthSubtype = strengthSubtype
+                self._type = _type
+            }
+            public enum CodingKeys: String, CodingKey {
+                case date
+                case event
+                case strengthSubtype
+                case _type = "type"
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/HTTPValidationError`.
         public struct HTTPValidationError: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/HTTPValidationError/detail`.
@@ -703,8 +914,56 @@ public enum Components {
         ///
         /// - Remark: Generated from `#/components/schemas/HealthMetrics`.
         public struct HealthMetrics: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/HealthMetrics/active_calories`.
+            public var activeCalories: Swift.Int?
+            /// - Remark: Generated from `#/components/schemas/HealthMetrics/avg_heart_rate`.
+            public var avgHeartRate: Swift.Int?
+            /// - Remark: Generated from `#/components/schemas/HealthMetrics/distance_meters`.
+            public var distanceMeters: Swift.Int?
+            /// - Remark: Generated from `#/components/schemas/HealthMetrics/max_heart_rate`.
+            public var maxHeartRate: Swift.Int?
+            /// - Remark: Generated from `#/components/schemas/HealthMetrics/min_heart_rate`.
+            public var minHeartRate: Swift.Int?
+            /// - Remark: Generated from `#/components/schemas/HealthMetrics/steps`.
+            public var steps: Swift.Int?
+            /// - Remark: Generated from `#/components/schemas/HealthMetrics/total_calories`.
+            public var totalCalories: Swift.Int?
             /// Creates a new `HealthMetrics`.
-            public init() {}
+            ///
+            /// - Parameters:
+            ///   - activeCalories:
+            ///   - avgHeartRate:
+            ///   - distanceMeters:
+            ///   - maxHeartRate:
+            ///   - minHeartRate:
+            ///   - steps:
+            ///   - totalCalories:
+            public init(
+                activeCalories: Swift.Int? = nil,
+                avgHeartRate: Swift.Int? = nil,
+                distanceMeters: Swift.Int? = nil,
+                maxHeartRate: Swift.Int? = nil,
+                minHeartRate: Swift.Int? = nil,
+                steps: Swift.Int? = nil,
+                totalCalories: Swift.Int? = nil
+            ) {
+                self.activeCalories = activeCalories
+                self.avgHeartRate = avgHeartRate
+                self.distanceMeters = distanceMeters
+                self.maxHeartRate = maxHeartRate
+                self.minHeartRate = minHeartRate
+                self.steps = steps
+                self.totalCalories = totalCalories
+            }
+            public enum CodingKeys: String, CodingKey {
+                case activeCalories = "active_calories"
+                case avgHeartRate = "avg_heart_rate"
+                case distanceMeters = "distance_meters"
+                case maxHeartRate = "max_heart_rate"
+                case minHeartRate = "min_heart_rate"
+                case steps
+                case totalCalories = "total_calories"
+            }
         }
         /// Response for GET /v1/sync/pending.
         ///
@@ -748,6 +1007,12 @@ public enum Components {
         ///
         /// - Remark: Generated from `#/components/schemas/PendingSyncWorkout`.
         public struct PendingSyncWorkout: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/PendingSyncWorkout/created_at`.
+            public var createdAt: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/PendingSyncWorkout/duration`.
+            public var duration: Swift.Int?
+            /// - Remark: Generated from `#/components/schemas/PendingSyncWorkout/id`.
+            public var id: Swift.String?
             /// - Remark: Generated from `#/components/schemas/PendingSyncWorkout/IntervalsPayload`.
             public struct IntervalsPayloadPayload: Codable, Hashable, Sendable {
                 /// A container of undocumented properties.
@@ -770,15 +1035,59 @@ public enum Components {
             public typealias IntervalsPayload = [Components.Schemas.PendingSyncWorkout.IntervalsPayloadPayload]
             /// - Remark: Generated from `#/components/schemas/PendingSyncWorkout/intervals`.
             public var intervals: Components.Schemas.PendingSyncWorkout.IntervalsPayload?
+            /// - Remark: Generated from `#/components/schemas/PendingSyncWorkout/name`.
+            public var name: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/PendingSyncWorkout/queued_at`.
+            public var queuedAt: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/PendingSyncWorkout/source`.
+            public var source: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/PendingSyncWorkout/sourceUrl`.
+            public var sourceUrl: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/PendingSyncWorkout/sport`.
+            public var sport: Swift.String?
             /// Creates a new `PendingSyncWorkout`.
             ///
             /// - Parameters:
+            ///   - createdAt:
+            ///   - duration:
+            ///   - id:
             ///   - intervals:
-            public init(intervals: Components.Schemas.PendingSyncWorkout.IntervalsPayload? = nil) {
+            ///   - name:
+            ///   - queuedAt:
+            ///   - source:
+            ///   - sourceUrl:
+            ///   - sport:
+            public init(
+                createdAt: Swift.String? = nil,
+                duration: Swift.Int? = nil,
+                id: Swift.String? = nil,
+                intervals: Components.Schemas.PendingSyncWorkout.IntervalsPayload? = nil,
+                name: Swift.String? = nil,
+                queuedAt: Swift.String? = nil,
+                source: Swift.String? = nil,
+                sourceUrl: Swift.String? = nil,
+                sport: Swift.String? = nil
+            ) {
+                self.createdAt = createdAt
+                self.duration = duration
+                self.id = id
                 self.intervals = intervals
+                self.name = name
+                self.queuedAt = queuedAt
+                self.source = source
+                self.sourceUrl = sourceUrl
+                self.sport = sport
             }
             public enum CodingKeys: String, CodingKey {
+                case createdAt = "created_at"
+                case duration
+                case id
                 case intervals
+                case name
+                case queuedAt = "queued_at"
+                case source
+                case sourceUrl
+                case sport
             }
         }
         /// Response for GET /v1/workouts/planned.
@@ -805,24 +1114,96 @@ public enum Components {
         ///
         /// - Remark: Generated from `#/components/schemas/PlannedWorkout`.
         public struct PlannedWorkout: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/PlannedWorkout/clientGeneratedId`.
+            public var clientGeneratedId: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/PlannedWorkout/date`.
+            public var date: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/PlannedWorkout/endTime`.
+            public var endTime: Swift.String?
             /// - Remark: Generated from `#/components/schemas/PlannedWorkout/id`.
             public var id: Swift.String
+            /// - Remark: Generated from `#/components/schemas/PlannedWorkout/jsonPayload`.
+            public struct JsonPayloadPayload: Codable, Hashable, Sendable {
+                /// A container of undocumented properties.
+                public var additionalProperties: OpenAPIRuntime.OpenAPIObjectContainer
+                /// Creates a new `JsonPayloadPayload`.
+                ///
+                /// - Parameters:
+                ///   - additionalProperties: A container of undocumented properties.
+                public init(additionalProperties: OpenAPIRuntime.OpenAPIObjectContainer = .init()) {
+                    self.additionalProperties = additionalProperties
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [])
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try encoder.encodeAdditionalProperties(additionalProperties)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/PlannedWorkout/jsonPayload`.
+            public var jsonPayload: Components.Schemas.PlannedWorkout.JsonPayloadPayload?
+            /// - Remark: Generated from `#/components/schemas/PlannedWorkout/serverVersion`.
+            public var serverVersion: Swift.Int?
+            /// - Remark: Generated from `#/components/schemas/PlannedWorkout/source`.
+            public var source: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/PlannedWorkout/startTime`.
+            public var startTime: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/PlannedWorkout/status`.
+            public var status: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/PlannedWorkout/title`.
+            public var title: Swift.String?
             /// - Remark: Generated from `#/components/schemas/PlannedWorkout/userId`.
             public var userId: Swift.String
             /// Creates a new `PlannedWorkout`.
             ///
             /// - Parameters:
+            ///   - clientGeneratedId:
+            ///   - date:
+            ///   - endTime:
             ///   - id:
+            ///   - jsonPayload:
+            ///   - serverVersion:
+            ///   - source:
+            ///   - startTime:
+            ///   - status:
+            ///   - title:
             ///   - userId:
             public init(
+                clientGeneratedId: Swift.String? = nil,
+                date: Swift.String? = nil,
+                endTime: Swift.String? = nil,
                 id: Swift.String,
+                jsonPayload: Components.Schemas.PlannedWorkout.JsonPayloadPayload? = nil,
+                serverVersion: Swift.Int? = nil,
+                source: Swift.String? = nil,
+                startTime: Swift.String? = nil,
+                status: Swift.String? = nil,
+                title: Swift.String? = nil,
                 userId: Swift.String
             ) {
+                self.clientGeneratedId = clientGeneratedId
+                self.date = date
+                self.endTime = endTime
                 self.id = id
+                self.jsonPayload = jsonPayload
+                self.serverVersion = serverVersion
+                self.source = source
+                self.startTime = startTime
+                self.status = status
+                self.title = title
                 self.userId = userId
             }
             public enum CodingKeys: String, CodingKey {
+                case clientGeneratedId
+                case date
+                case endTime
                 case id
+                case jsonPayload
+                case serverVersion
+                case source
+                case startTime
+                case status
+                case title
                 case userId
             }
         }
@@ -830,6 +1211,8 @@ public enum Components {
         ///
         /// - Remark: Generated from `#/components/schemas/ReportSyncFailedRequest`.
         public struct ReportSyncFailedRequest: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ReportSyncFailedRequest/device_id`.
+            public var deviceId: Swift.String?
             /// - Remark: Generated from `#/components/schemas/ReportSyncFailedRequest/device_type`.
             public var deviceType: Components.Schemas.DeviceType
             /// - Remark: Generated from `#/components/schemas/ReportSyncFailedRequest/error`.
@@ -839,19 +1222,23 @@ public enum Components {
             /// Creates a new `ReportSyncFailedRequest`.
             ///
             /// - Parameters:
+            ///   - deviceId:
             ///   - deviceType:
             ///   - error:
             ///   - workoutId:
             public init(
+                deviceId: Swift.String? = nil,
                 deviceType: Components.Schemas.DeviceType,
                 error: Swift.String,
                 workoutId: Swift.String
             ) {
+                self.deviceId = deviceId
                 self.deviceType = deviceType
                 self.error = error
                 self.workoutId = workoutId
             }
             public enum CodingKeys: String, CodingKey {
+                case deviceId = "device_id"
                 case deviceType = "device_type"
                 case error
                 case workoutId = "workout_id"
@@ -861,16 +1248,30 @@ public enum Components {
         ///
         /// - Remark: Generated from `#/components/schemas/ReportSyncFailedResponse`.
         public struct ReportSyncFailedResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ReportSyncFailedResponse/failed_at`.
+            public var failedAt: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/ReportSyncFailedResponse/status`.
+            public var status: Swift.String?
             /// - Remark: Generated from `#/components/schemas/ReportSyncFailedResponse/success`.
             public var success: Swift.Bool
             /// Creates a new `ReportSyncFailedResponse`.
             ///
             /// - Parameters:
+            ///   - failedAt:
+            ///   - status:
             ///   - success:
-            public init(success: Swift.Bool) {
+            public init(
+                failedAt: Swift.String? = nil,
+                status: Swift.String? = nil,
+                success: Swift.Bool
+            ) {
+                self.failedAt = failedAt
+                self.status = status
                 self.success = success
             }
             public enum CodingKeys: String, CodingKey {
+                case failedAt = "failed_at"
+                case status
                 case success
             }
         }
@@ -878,6 +1279,10 @@ public enum Components {
         ///
         /// - Remark: Generated from `#/components/schemas/RestFollowAlongStep`.
         public struct RestFollowAlongStep: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/RestFollowAlongStep/duration_sec`.
+            public var durationSec: Swift.Int?
+            /// - Remark: Generated from `#/components/schemas/RestFollowAlongStep/gif_url`.
+            public var gifUrl: Swift.String?
             /// - Remark: Generated from `#/components/schemas/RestFollowAlongStep/has_media`.
             public var hasMedia: Swift.Bool?
             /// - Remark: Generated from `#/components/schemas/RestFollowAlongStep/index`.
@@ -893,22 +1298,30 @@ public enum Components {
             /// Creates a new `RestFollowAlongStep`.
             ///
             /// - Parameters:
+            ///   - durationSec:
+            ///   - gifUrl:
             ///   - hasMedia:
             ///   - index:
             ///   - name:
             ///   - _type:
             public init(
+                durationSec: Swift.Int? = nil,
+                gifUrl: Swift.String? = nil,
                 hasMedia: Swift.Bool? = nil,
                 index: Swift.Int,
                 name: Swift.String,
                 _type: Components.Schemas.RestFollowAlongStep._TypePayload? = nil
             ) {
+                self.durationSec = durationSec
+                self.gifUrl = gifUrl
                 self.hasMedia = hasMedia
                 self.index = index
                 self.name = name
                 self._type = _type
             }
             public enum CodingKeys: String, CodingKey {
+                case durationSec = "duration_sec"
+                case gifUrl = "gif_url"
                 case hasMedia = "has_media"
                 case index
                 case name
@@ -916,6 +1329,14 @@ public enum Components {
             }
             public init(from decoder: any Swift.Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
+                self.durationSec = try container.decodeIfPresent(
+                    Swift.Int.self,
+                    forKey: .durationSec
+                )
+                self.gifUrl = try container.decodeIfPresent(
+                    Swift.String.self,
+                    forKey: .gifUrl
+                )
                 self.hasMedia = try container.decodeIfPresent(
                     Swift.Bool.self,
                     forKey: .hasMedia
@@ -933,6 +1354,8 @@ public enum Components {
                     forKey: ._type
                 )
                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                    "duration_sec",
+                    "gif_url",
                     "has_media",
                     "index",
                     "name",
@@ -948,21 +1371,33 @@ public enum Components {
             public var completed: Swift.Bool?
             /// - Remark: Generated from `#/components/schemas/SetEntry/set_number`.
             public var setNumber: Swift.Int
+            /// - Remark: Generated from `#/components/schemas/SetEntry/unit`.
+            public var unit: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/SetEntry/weight`.
+            public var weight: Swift.Double?
             /// Creates a new `SetEntry`.
             ///
             /// - Parameters:
             ///   - completed:
             ///   - setNumber:
+            ///   - unit:
+            ///   - weight:
             public init(
                 completed: Swift.Bool? = nil,
-                setNumber: Swift.Int
+                setNumber: Swift.Int,
+                unit: Swift.String? = nil,
+                weight: Swift.Double? = nil
             ) {
                 self.completed = completed
                 self.setNumber = setNumber
+                self.unit = unit
+                self.weight = weight
             }
             public enum CodingKeys: String, CodingKey {
                 case completed
                 case setNumber = "set_number"
+                case unit
+                case weight
             }
         }
         /// Log of sets for a single exercise (AMA-281).
@@ -1000,8 +1435,32 @@ public enum Components {
         ///
         /// - Remark: Generated from `#/components/schemas/SimulationConfig`.
         public struct SimulationConfig: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/SimulationConfig/behavior_profile`.
+            public var behaviorProfile: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/SimulationConfig/hr_profile`.
+            public var hrProfile: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/SimulationConfig/speed`.
+            public var speed: Swift.Double?
             /// Creates a new `SimulationConfig`.
-            public init() {}
+            ///
+            /// - Parameters:
+            ///   - behaviorProfile:
+            ///   - hrProfile:
+            ///   - speed:
+            public init(
+                behaviorProfile: Swift.String? = nil,
+                hrProfile: Swift.String? = nil,
+                speed: Swift.Double? = nil
+            ) {
+                self.behaviorProfile = behaviorProfile
+                self.hrProfile = hrProfile
+                self.speed = speed
+            }
+            public enum CodingKeys: String, CodingKey {
+                case behaviorProfile = "behavior_profile"
+                case hrProfile = "hr_profile"
+                case speed
+            }
         }
         /// - Remark: Generated from `#/components/schemas/ValidationError`.
         public struct ValidationError: Codable, Hashable, Sendable {
@@ -1106,49 +1565,243 @@ public enum Components {
         ///
         /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest`.
         public struct WorkoutCompletionRequest: Codable, Hashable, Sendable {
+            /// Idempotency key — same value on every retry of the same logical completion.
+            ///
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/client_generated_id`.
+            public var clientGeneratedId: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/device_info`.
+            public struct DeviceInfoPayload: Codable, Hashable, Sendable {
+                /// A container of undocumented properties.
+                public var additionalProperties: OpenAPIRuntime.OpenAPIObjectContainer
+                /// Creates a new `DeviceInfoPayload`.
+                ///
+                /// - Parameters:
+                ///   - additionalProperties: A container of undocumented properties.
+                public init(additionalProperties: OpenAPIRuntime.OpenAPIObjectContainer = .init()) {
+                    self.additionalProperties = additionalProperties
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [])
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try encoder.encodeAdditionalProperties(additionalProperties)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/device_info`.
+            public var deviceInfo: Components.Schemas.WorkoutCompletionRequest.DeviceInfoPayload?
             /// ISO 8601 timestamp.
             ///
             /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/ended_at`.
             public var endedAt: Swift.String
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/execution_log`.
+            public struct ExecutionLogPayload: Codable, Hashable, Sendable {
+                /// A container of undocumented properties.
+                public var additionalProperties: OpenAPIRuntime.OpenAPIObjectContainer
+                /// Creates a new `ExecutionLogPayload`.
+                ///
+                /// - Parameters:
+                ///   - additionalProperties: A container of undocumented properties.
+                public init(additionalProperties: OpenAPIRuntime.OpenAPIObjectContainer = .init()) {
+                    self.additionalProperties = additionalProperties
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [])
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try encoder.encodeAdditionalProperties(additionalProperties)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/execution_log`.
+            public var executionLog: Components.Schemas.WorkoutCompletionRequest.ExecutionLogPayload?
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/follow_along_workout_id`.
+            public var followAlongWorkoutId: Swift.String?
             /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/health_metrics`.
             public var healthMetrics: Components.Schemas.HealthMetrics
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/HeartRateSamplesPayload`.
+            public struct HeartRateSamplesPayloadPayload: Codable, Hashable, Sendable {
+                /// A container of undocumented properties.
+                public var additionalProperties: OpenAPIRuntime.OpenAPIObjectContainer
+                /// Creates a new `HeartRateSamplesPayloadPayload`.
+                ///
+                /// - Parameters:
+                ///   - additionalProperties: A container of undocumented properties.
+                public init(additionalProperties: OpenAPIRuntime.OpenAPIObjectContainer = .init()) {
+                    self.additionalProperties = additionalProperties
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [])
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try encoder.encodeAdditionalProperties(additionalProperties)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/heart_rate_samples`.
+            public typealias HeartRateSamplesPayload = [Components.Schemas.WorkoutCompletionRequest.HeartRateSamplesPayloadPayload]
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/heart_rate_samples`.
+            public var heartRateSamples: Components.Schemas.WorkoutCompletionRequest.HeartRateSamplesPayload?
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/IntervalsPayload`.
+            public struct IntervalsPayloadPayload: Codable, Hashable, Sendable {
+                /// A container of undocumented properties.
+                public var additionalProperties: OpenAPIRuntime.OpenAPIObjectContainer
+                /// Creates a new `IntervalsPayloadPayload`.
+                ///
+                /// - Parameters:
+                ///   - additionalProperties: A container of undocumented properties.
+                public init(additionalProperties: OpenAPIRuntime.OpenAPIObjectContainer = .init()) {
+                    self.additionalProperties = additionalProperties
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [])
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try encoder.encodeAdditionalProperties(additionalProperties)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/intervals`.
+            public typealias IntervalsPayload = [Components.Schemas.WorkoutCompletionRequest.IntervalsPayloadPayload]
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/intervals`.
+            public var intervals: Components.Schemas.WorkoutCompletionRequest.IntervalsPayload?
             /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/is_simulated`.
             public var isSimulated: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/modality`.
+            public var modality: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/planned_avg_hr`.
+            public var plannedAvgHr: Swift.Int?
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/planned_duration_seconds`.
+            public var plannedDurationSeconds: Swift.Int?
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/planned_modality`.
+            public var plannedModality: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/set_logs`.
+            public var setLogs: [Components.Schemas.SetLog]?
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/simulation_config`.
+            public var simulationConfig: Components.Schemas.SimulationConfig?
             /// apple_watch | garmin | manual.
             ///
             /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/source`.
             public var source: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/source_workout_id`.
+            public var sourceWorkoutId: Swift.String?
             /// ISO 8601 timestamp.
             ///
             /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/started_at`.
             public var startedAt: Swift.String
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/workout_event_id`.
+            public var workoutEventId: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/workout_id`.
+            public var workoutId: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/WorkoutStructurePayload`.
+            public struct WorkoutStructurePayloadPayload: Codable, Hashable, Sendable {
+                /// A container of undocumented properties.
+                public var additionalProperties: OpenAPIRuntime.OpenAPIObjectContainer
+                /// Creates a new `WorkoutStructurePayloadPayload`.
+                ///
+                /// - Parameters:
+                ///   - additionalProperties: A container of undocumented properties.
+                public init(additionalProperties: OpenAPIRuntime.OpenAPIObjectContainer = .init()) {
+                    self.additionalProperties = additionalProperties
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [])
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try encoder.encodeAdditionalProperties(additionalProperties)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/workout_structure`.
+            public typealias WorkoutStructurePayload = [Components.Schemas.WorkoutCompletionRequest.WorkoutStructurePayloadPayload]
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionRequest/workout_structure`.
+            public var workoutStructure: Components.Schemas.WorkoutCompletionRequest.WorkoutStructurePayload?
             /// Creates a new `WorkoutCompletionRequest`.
             ///
             /// - Parameters:
+            ///   - clientGeneratedId: Idempotency key — same value on every retry of the same logical completion.
+            ///   - deviceInfo:
             ///   - endedAt: ISO 8601 timestamp.
+            ///   - executionLog:
+            ///   - followAlongWorkoutId:
             ///   - healthMetrics:
+            ///   - heartRateSamples:
+            ///   - intervals:
             ///   - isSimulated:
+            ///   - modality:
+            ///   - plannedAvgHr:
+            ///   - plannedDurationSeconds:
+            ///   - plannedModality:
+            ///   - setLogs:
+            ///   - simulationConfig:
             ///   - source: apple_watch | garmin | manual.
+            ///   - sourceWorkoutId:
             ///   - startedAt: ISO 8601 timestamp.
+            ///   - workoutEventId:
+            ///   - workoutId:
+            ///   - workoutStructure:
             public init(
+                clientGeneratedId: Swift.String? = nil,
+                deviceInfo: Components.Schemas.WorkoutCompletionRequest.DeviceInfoPayload? = nil,
                 endedAt: Swift.String,
+                executionLog: Components.Schemas.WorkoutCompletionRequest.ExecutionLogPayload? = nil,
+                followAlongWorkoutId: Swift.String? = nil,
                 healthMetrics: Components.Schemas.HealthMetrics,
+                heartRateSamples: Components.Schemas.WorkoutCompletionRequest.HeartRateSamplesPayload? = nil,
+                intervals: Components.Schemas.WorkoutCompletionRequest.IntervalsPayload? = nil,
                 isSimulated: Swift.Bool? = nil,
+                modality: Swift.String? = nil,
+                plannedAvgHr: Swift.Int? = nil,
+                plannedDurationSeconds: Swift.Int? = nil,
+                plannedModality: Swift.String? = nil,
+                setLogs: [Components.Schemas.SetLog]? = nil,
+                simulationConfig: Components.Schemas.SimulationConfig? = nil,
                 source: Swift.String? = nil,
-                startedAt: Swift.String
+                sourceWorkoutId: Swift.String? = nil,
+                startedAt: Swift.String,
+                workoutEventId: Swift.String? = nil,
+                workoutId: Swift.String? = nil,
+                workoutStructure: Components.Schemas.WorkoutCompletionRequest.WorkoutStructurePayload? = nil
             ) {
+                self.clientGeneratedId = clientGeneratedId
+                self.deviceInfo = deviceInfo
                 self.endedAt = endedAt
+                self.executionLog = executionLog
+                self.followAlongWorkoutId = followAlongWorkoutId
                 self.healthMetrics = healthMetrics
+                self.heartRateSamples = heartRateSamples
+                self.intervals = intervals
                 self.isSimulated = isSimulated
+                self.modality = modality
+                self.plannedAvgHr = plannedAvgHr
+                self.plannedDurationSeconds = plannedDurationSeconds
+                self.plannedModality = plannedModality
+                self.setLogs = setLogs
+                self.simulationConfig = simulationConfig
                 self.source = source
+                self.sourceWorkoutId = sourceWorkoutId
                 self.startedAt = startedAt
+                self.workoutEventId = workoutEventId
+                self.workoutId = workoutId
+                self.workoutStructure = workoutStructure
             }
             public enum CodingKeys: String, CodingKey {
+                case clientGeneratedId = "client_generated_id"
+                case deviceInfo = "device_info"
                 case endedAt = "ended_at"
+                case executionLog = "execution_log"
+                case followAlongWorkoutId = "follow_along_workout_id"
                 case healthMetrics = "health_metrics"
+                case heartRateSamples = "heart_rate_samples"
+                case intervals
                 case isSimulated = "is_simulated"
+                case modality
+                case plannedAvgHr = "planned_avg_hr"
+                case plannedDurationSeconds = "planned_duration_seconds"
+                case plannedModality = "planned_modality"
+                case setLogs = "set_logs"
+                case simulationConfig = "simulation_config"
                 case source
+                case sourceWorkoutId = "source_workout_id"
                 case startedAt = "started_at"
+                case workoutEventId = "workout_event_id"
+                case workoutId = "workout_id"
+                case workoutStructure = "workout_structure"
             }
         }
         /// Response for POST /v1/workouts/complete.
@@ -1159,33 +1812,85 @@ public enum Components {
         ///
         /// - Remark: Generated from `#/components/schemas/WorkoutCompletionResponse`.
         public struct WorkoutCompletionResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionResponse/error_code`.
+            public var errorCode: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionResponse/fidelity`.
+            public var fidelity: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionResponse/id`.
+            public var id: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionResponse/idempotent`.
+            public var idempotent: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionResponse/message`.
+            public var message: Swift.String?
             /// - Remark: Generated from `#/components/schemas/WorkoutCompletionResponse/success`.
             public var success: Swift.Bool
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionResponse/summary`.
+            public var summary: Components.Schemas.WorkoutCompletionSummary?
             /// Creates a new `WorkoutCompletionResponse`.
             ///
             /// - Parameters:
+            ///   - errorCode:
+            ///   - fidelity:
+            ///   - id:
+            ///   - idempotent:
+            ///   - message:
             ///   - success:
-            public init(success: Swift.Bool) {
+            ///   - summary:
+            public init(
+                errorCode: Swift.String? = nil,
+                fidelity: Swift.String? = nil,
+                id: Swift.String? = nil,
+                idempotent: Swift.Bool? = nil,
+                message: Swift.String? = nil,
+                success: Swift.Bool,
+                summary: Components.Schemas.WorkoutCompletionSummary? = nil
+            ) {
+                self.errorCode = errorCode
+                self.fidelity = fidelity
+                self.id = id
+                self.idempotent = idempotent
+                self.message = message
                 self.success = success
+                self.summary = summary
             }
             public enum CodingKeys: String, CodingKey {
+                case errorCode = "error_code"
+                case fidelity
+                case id
+                case idempotent
+                case message
                 case success
+                case summary
             }
         }
         /// Summary echoed back after a successful completion.
         ///
         /// - Remark: Generated from `#/components/schemas/WorkoutCompletionSummary`.
         public struct WorkoutCompletionSummary: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionSummary/avg_heart_rate`.
+            public var avgHeartRate: Swift.Int?
+            /// - Remark: Generated from `#/components/schemas/WorkoutCompletionSummary/calories`.
+            public var calories: Swift.Int?
             /// - Remark: Generated from `#/components/schemas/WorkoutCompletionSummary/duration_formatted`.
             public var durationFormatted: Swift.String
             /// Creates a new `WorkoutCompletionSummary`.
             ///
             /// - Parameters:
+            ///   - avgHeartRate:
+            ///   - calories:
             ///   - durationFormatted:
-            public init(durationFormatted: Swift.String) {
+            public init(
+                avgHeartRate: Swift.Int? = nil,
+                calories: Swift.Int? = nil,
+                durationFormatted: Swift.String
+            ) {
+                self.avgHeartRate = avgHeartRate
+                self.calories = calories
                 self.durationFormatted = durationFormatted
             }
             public enum CodingKeys: String, CodingKey {
+                case avgHeartRate = "avg_heart_rate"
+                case calories
                 case durationFormatted = "duration_formatted"
             }
         }
@@ -2055,12 +2760,21 @@ public enum Operations {
                 ///
                 /// - Remark: Generated from `#/paths/v1/sync/pending/GET/query/device_type`.
                 public var deviceType: Components.Schemas.DeviceType
+                /// Optional device identifier.
+                ///
+                /// - Remark: Generated from `#/paths/v1/sync/pending/GET/query/device_id`.
+                public var deviceId: Swift.String?
                 /// Creates a new `Query`.
                 ///
                 /// - Parameters:
                 ///   - deviceType: Device type: ios | android | garmin.
-                public init(deviceType: Components.Schemas.DeviceType) {
+                ///   - deviceId: Optional device identifier.
+                public init(
+                    deviceType: Components.Schemas.DeviceType,
+                    deviceId: Swift.String? = nil
+                ) {
                     self.deviceType = deviceType
+                    self.deviceId = deviceId
                 }
             }
             public var query: Operations.V1SyncPendingV1SyncPendingGet.Input.Query
