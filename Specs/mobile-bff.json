@@ -130,11 +130,32 @@
             "type": "string"
           },
           "equipment": {
-            "$ref": "#/components/schemas/EquipmentInventory"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EquipmentInventory"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "experience_level": {
             "title": "Experience Level",
             "type": "string"
+          },
+          "goals": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/GoalEntry"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goals"
           },
           "injuries_limitations": {
             "anyOf": [
@@ -167,8 +188,15 @@
             "title": "Preferred Days"
           },
           "primary_goal": {
-            "title": "Primary Goal",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Goal"
           },
           "session_duration_minutes": {
             "anyOf": [
@@ -197,7 +225,6 @@
         "required": [
           "user_id",
           "experience_level",
-          "primary_goal",
           "sessions_per_week",
           "created_at",
           "updated_at"
@@ -209,11 +236,32 @@
         "description": "Request body for PUT /v1/coaching/profile.",
         "properties": {
           "equipment": {
-            "$ref": "#/components/schemas/EquipmentInventory"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EquipmentInventory"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "experience_level": {
             "title": "Experience Level",
             "type": "string"
+          },
+          "goals": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/GoalEntry"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goals"
           },
           "injuries_limitations": {
             "anyOf": [
@@ -242,8 +290,15 @@
             "title": "Preferred Days"
           },
           "primary_goal": {
-            "title": "Primary Goal",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Goal"
           },
           "session_duration_minutes": {
             "anyOf": [
@@ -267,7 +322,6 @@
         },
         "required": [
           "experience_level",
-          "primary_goal",
           "sessions_per_week"
         ],
         "title": "CoachingProfileUpsert",
@@ -631,10 +685,17 @@
             "type": "object"
           },
           "dumbbellRangeKg": {
-            "maximum": 100.0,
-            "minimum": 5.0,
-            "title": "Dumbbellrangekg",
-            "type": "integer"
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 5.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dumbbellrangekg"
           },
           "mobility": {
             "additionalProperties": {
@@ -910,6 +971,54 @@
           }
         },
         "title": "GenerateWeekRequest",
+        "type": "object"
+      },
+      "GoalEntry": {
+        "description": "One training goal (AMA-2018, D5 W1). camelCase wire shape (strengthSubtype).\nMulti-select; `none` is mutually exclusive (validated upstream in chat-api).",
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event"
+          },
+          "strengthSubtype": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strengthsubtype"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "GoalEntry",
         "type": "object"
       },
       "HTTPValidationError": {

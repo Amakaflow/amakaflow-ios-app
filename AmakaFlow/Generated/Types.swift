@@ -218,14 +218,10 @@ public enum Components {
         public struct CoachingProfile: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/CoachingProfile/created_at`.
             public var createdAt: Swift.String
-            /// - Remark: Generated from `#/components/schemas/CoachingProfile/equipment`.
-            public var equipment: Components.Schemas.EquipmentInventory?
             /// - Remark: Generated from `#/components/schemas/CoachingProfile/experience_level`.
             public var experienceLevel: Swift.String
             /// - Remark: Generated from `#/components/schemas/CoachingProfile/pre_filled_from_memory`.
             public var preFilledFromMemory: Swift.Bool?
-            /// - Remark: Generated from `#/components/schemas/CoachingProfile/primary_goal`.
-            public var primaryGoal: Swift.String
             /// - Remark: Generated from `#/components/schemas/CoachingProfile/sessions_per_week`.
             public var sessionsPerWeek: Swift.Int
             /// - Remark: Generated from `#/components/schemas/CoachingProfile/updated_at`.
@@ -236,38 +232,30 @@ public enum Components {
             ///
             /// - Parameters:
             ///   - createdAt:
-            ///   - equipment:
             ///   - experienceLevel:
             ///   - preFilledFromMemory:
-            ///   - primaryGoal:
             ///   - sessionsPerWeek:
             ///   - updatedAt:
             ///   - userId:
             public init(
                 createdAt: Swift.String,
-                equipment: Components.Schemas.EquipmentInventory? = nil,
                 experienceLevel: Swift.String,
                 preFilledFromMemory: Swift.Bool? = nil,
-                primaryGoal: Swift.String,
                 sessionsPerWeek: Swift.Int,
                 updatedAt: Swift.String,
                 userId: Swift.String
             ) {
                 self.createdAt = createdAt
-                self.equipment = equipment
                 self.experienceLevel = experienceLevel
                 self.preFilledFromMemory = preFilledFromMemory
-                self.primaryGoal = primaryGoal
                 self.sessionsPerWeek = sessionsPerWeek
                 self.updatedAt = updatedAt
                 self.userId = userId
             }
             public enum CodingKeys: String, CodingKey {
                 case createdAt = "created_at"
-                case equipment
                 case experienceLevel = "experience_level"
                 case preFilledFromMemory = "pre_filled_from_memory"
-                case primaryGoal = "primary_goal"
                 case sessionsPerWeek = "sessions_per_week"
                 case updatedAt = "updated_at"
                 case userId = "user_id"
@@ -277,36 +265,24 @@ public enum Components {
         ///
         /// - Remark: Generated from `#/components/schemas/CoachingProfileUpsert`.
         public struct CoachingProfileUpsert: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/CoachingProfileUpsert/equipment`.
-            public var equipment: Components.Schemas.EquipmentInventory?
             /// - Remark: Generated from `#/components/schemas/CoachingProfileUpsert/experience_level`.
             public var experienceLevel: Swift.String
-            /// - Remark: Generated from `#/components/schemas/CoachingProfileUpsert/primary_goal`.
-            public var primaryGoal: Swift.String
             /// - Remark: Generated from `#/components/schemas/CoachingProfileUpsert/sessions_per_week`.
             public var sessionsPerWeek: Swift.Int
             /// Creates a new `CoachingProfileUpsert`.
             ///
             /// - Parameters:
-            ///   - equipment:
             ///   - experienceLevel:
-            ///   - primaryGoal:
             ///   - sessionsPerWeek:
             public init(
-                equipment: Components.Schemas.EquipmentInventory? = nil,
                 experienceLevel: Swift.String,
-                primaryGoal: Swift.String,
                 sessionsPerWeek: Swift.Int
             ) {
-                self.equipment = equipment
                 self.experienceLevel = experienceLevel
-                self.primaryGoal = primaryGoal
                 self.sessionsPerWeek = sessionsPerWeek
             }
             public enum CodingKeys: String, CodingKey {
-                case equipment
                 case experienceLevel = "experience_level"
-                case primaryGoal = "primary_goal"
                 case sessionsPerWeek = "sessions_per_week"
             }
         }
@@ -442,8 +418,6 @@ public enum Components {
             }
             /// - Remark: Generated from `#/components/schemas/EquipmentInventory/cardio`.
             public var cardio: Components.Schemas.EquipmentInventory.CardioPayload?
-            /// - Remark: Generated from `#/components/schemas/EquipmentInventory/dumbbellRangeKg`.
-            public var dumbbellRangeKg: Swift.Int?
             /// - Remark: Generated from `#/components/schemas/EquipmentInventory/mobility`.
             public struct MobilityPayload: Codable, Hashable, Sendable {
                 /// A container of undocumented properties.
@@ -491,21 +465,18 @@ public enum Components {
             /// - Parameters:
             ///   - bodyweight:
             ///   - cardio:
-            ///   - dumbbellRangeKg:
             ///   - mobility:
             ///   - strength:
             ///   - trainingLocation:
             public init(
                 bodyweight: Components.Schemas.EquipmentInventory.BodyweightPayload? = nil,
                 cardio: Components.Schemas.EquipmentInventory.CardioPayload? = nil,
-                dumbbellRangeKg: Swift.Int? = nil,
                 mobility: Components.Schemas.EquipmentInventory.MobilityPayload? = nil,
                 strength: Components.Schemas.EquipmentInventory.StrengthPayload? = nil,
                 trainingLocation: Swift.String
             ) {
                 self.bodyweight = bodyweight
                 self.cardio = cardio
-                self.dumbbellRangeKg = dumbbellRangeKg
                 self.mobility = mobility
                 self.strength = strength
                 self.trainingLocation = trainingLocation
@@ -513,7 +484,6 @@ public enum Components {
             public enum CodingKeys: String, CodingKey {
                 case bodyweight
                 case cardio
-                case dumbbellRangeKg
                 case mobility
                 case strength
                 case trainingLocation
@@ -682,6 +652,24 @@ public enum Components {
                     "title",
                     "total_steps"
                 ])
+            }
+        }
+        /// One training goal (AMA-2018, D5 W1). camelCase wire shape (strengthSubtype).
+        /// Multi-select; `none` is mutually exclusive (validated upstream in chat-api).
+        ///
+        /// - Remark: Generated from `#/components/schemas/GoalEntry`.
+        public struct GoalEntry: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/GoalEntry/type`.
+            public var _type: Swift.String
+            /// Creates a new `GoalEntry`.
+            ///
+            /// - Parameters:
+            ///   - _type:
+            public init(_type: Swift.String) {
+                self._type = _type
+            }
+            public enum CodingKeys: String, CodingKey {
+                case _type = "type"
             }
         }
         /// - Remark: Generated from `#/components/schemas/HTTPValidationError`.
