@@ -1,6 +1,339 @@
 {
   "components": {
     "schemas": {
+      "AgentAction": {
+        "description": "Generic Agent Inbox envelope for calendar-api ActionResponse rows.",
+        "properties": {
+          "appliedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Appliedat"
+          },
+          "createdAt": {
+            "title": "Createdat",
+            "type": "string"
+          },
+          "decisionRequired": {
+            "title": "Decisionrequired",
+            "type": "boolean"
+          },
+          "expiresAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiresat"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "preview": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "reversible": {
+            "title": "Reversible",
+            "type": "boolean"
+          },
+          "riskLevel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RiskLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/AgentActionStatus"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "status",
+          "decisionRequired",
+          "reversible",
+          "createdAt"
+        ],
+        "title": "AgentAction",
+        "type": "object"
+      },
+      "AgentActionStatus": {
+        "description": "BFF-owned status for generic agent actions.",
+        "enum": [
+          "pending",
+          "applied",
+          "rejected",
+          "undone",
+          "unknown"
+        ],
+        "title": "AgentActionStatus",
+        "type": "string"
+      },
+      "CoachingProfile": {
+        "description": "Response body for GET/PUT /v1/coaching/profile.",
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "equipment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EquipmentInventory"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "experience_level": {
+            "title": "Experience Level",
+            "type": "string"
+          },
+          "injuries_limitations": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Injuries Limitations"
+          },
+          "pre_filled_from_memory": {
+            "default": false,
+            "title": "Pre Filled From Memory",
+            "type": "boolean"
+          },
+          "preferred_days": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred Days"
+          },
+          "primary_goal": {
+            "title": "Primary Goal",
+            "type": "string"
+          },
+          "session_duration_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Duration Minutes"
+          },
+          "sessions_per_week": {
+            "title": "Sessions Per Week",
+            "type": "integer"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "experience_level",
+          "primary_goal",
+          "sessions_per_week",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CoachingProfile",
+        "type": "object"
+      },
+      "CoachingProfileUpsert": {
+        "description": "Request body for PUT /v1/coaching/profile.",
+        "properties": {
+          "equipment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EquipmentInventory"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "experience_level": {
+            "title": "Experience Level",
+            "type": "string"
+          },
+          "injuries_limitations": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Injuries Limitations"
+          },
+          "preferred_days": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred Days"
+          },
+          "primary_goal": {
+            "title": "Primary Goal",
+            "type": "string"
+          },
+          "session_duration_minutes": {
+            "anyOf": [
+              {
+                "maximum": 120.0,
+                "minimum": 15.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Duration Minutes"
+          },
+          "sessions_per_week": {
+            "maximum": 7.0,
+            "minimum": 1.0,
+            "title": "Sessions Per Week",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "experience_level",
+          "primary_goal",
+          "sessions_per_week"
+        ],
+        "title": "CoachingProfileUpsert",
+        "type": "object"
+      },
+      "CompletedSession": {
+        "description": "BFF-owned mirror of the draft CompletedSession schema.",
+        "properties": {
+          "actualData": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actualdata"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "durationMin": {
+            "title": "Durationmin",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "date",
+          "type",
+          "durationMin"
+        ],
+        "title": "CompletedSession",
+        "type": "object"
+      },
       "CompletionsListResponse": {
         "description": "Response for GET /v1/workouts/completions.\n\nMirrors mapper-api's list_workout_completions_endpoint return shape:\n{success, completions: [...], total}.",
         "properties": {
@@ -93,6 +426,158 @@
         "title": "ConfirmSyncResponse",
         "type": "object"
       },
+      "Conflict": {
+        "description": "BFF-owned iOS Conflict shape for GET /v1/planning/conflicts.",
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/ConflictSeverity"
+          },
+          "suggestion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggestion"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ConflictType"
+          }
+        },
+        "required": [
+          "id",
+          "date",
+          "type",
+          "description",
+          "severity"
+        ],
+        "title": "Conflict",
+        "type": "object"
+      },
+      "ConflictSeverity": {
+        "description": "BFF-owned Conflict.severity enum from the coach-loop draft contract.",
+        "enum": [
+          "warning",
+          "critical"
+        ],
+        "title": "ConflictSeverity",
+        "type": "string"
+      },
+      "ConflictType": {
+        "description": "BFF-owned Conflict.type enum from the coach-loop draft contract.",
+        "enum": [
+          "pre_fatigue",
+          "consecutive_hard",
+          "same_muscle_group",
+          "overload",
+          "no_recovery"
+        ],
+        "title": "ConflictType",
+        "type": "string"
+      },
+      "DayState": {
+        "description": "BFF-owned mirror of the draft DayState schema (camelCase on the wire).",
+        "properties": {
+          "acuteLoad": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acuteload"
+          },
+          "availableBlocks": {
+            "items": {
+              "$ref": "#/components/schemas/TimeBlock"
+            },
+            "title": "Availableblocks",
+            "type": "array"
+          },
+          "chronicLoad": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chronicload"
+          },
+          "completedSessions": {
+            "items": {
+              "$ref": "#/components/schemas/CompletedSession"
+            },
+            "title": "Completedsessions",
+            "type": "array"
+          },
+          "constraints": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Constraints",
+            "type": "array"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "goalPhase": {
+            "title": "Goalphase",
+            "type": "string"
+          },
+          "plannedSessions": {
+            "items": {
+              "$ref": "#/components/schemas/PlannedSession"
+            },
+            "title": "Plannedsessions",
+            "type": "array"
+          },
+          "readinessScore": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readinessscore"
+          }
+        },
+        "required": [
+          "date",
+          "plannedSessions",
+          "completedSessions",
+          "availableBlocks",
+          "constraints",
+          "goalPhase"
+        ],
+        "title": "DayState",
+        "type": "object"
+      },
       "DegradedResponse": {
         "description": "Returned with HTTP 503 when a capability is unroutable. iOS shows user_message.",
         "properties": {
@@ -142,6 +627,61 @@
         "title": "DeviceType",
         "type": "string"
       },
+      "EquipmentInventory": {
+        "description": "Structured equipment inventory (camelCase wire shape: dumbbellRangeKg,\ntrainingLocation). Single set per user.",
+        "properties": {
+          "bodyweight": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Bodyweight",
+            "type": "object"
+          },
+          "cardio": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Cardio",
+            "type": "object"
+          },
+          "dumbbellRangeKg": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 5.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dumbbellrangekg"
+          },
+          "mobility": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Mobility",
+            "type": "object"
+          },
+          "strength": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Strength",
+            "type": "object"
+          },
+          "trainingLocation": {
+            "title": "Traininglocation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trainingLocation"
+        ],
+        "title": "EquipmentInventory",
+        "type": "object"
+      },
       "ErrorCode": {
         "description": "All typed error codes returned by AmakaFlow services. Single source of truth.",
         "enum": [
@@ -152,6 +692,36 @@
         ],
         "title": "ErrorCode",
         "type": "string"
+      },
+      "ErrorEnvelope": {
+        "description": "Stable BFF error envelope for planning upstream failures.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "requestId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requestid"
+          },
+          "userMessage": {
+            "title": "Usermessage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "userMessage"
+        ],
+        "title": "ErrorEnvelope",
+        "type": "object"
       },
       "ExerciseFollowAlongStep": {
         "additionalProperties": false,
@@ -332,6 +902,37 @@
         "title": "FollowAlongResponse",
         "type": "object"
       },
+      "GenerateWeekRequest": {
+        "description": "BFF-owned request body for weekly plan proposal generation.",
+        "properties": {
+          "preferences": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferences"
+          },
+          "startDate": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startdate"
+          }
+        },
+        "title": "GenerateWeekRequest",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -427,6 +1028,198 @@
           }
         },
         "title": "HealthMetrics",
+        "type": "object"
+      },
+      "ParseTextRequest": {
+        "description": "BFF-owned request body for freeform workout text parsing.",
+        "properties": {
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "ParseTextRequest",
+        "type": "object"
+      },
+      "ParseTextResult": {
+        "description": "Parsed exercise list returned by POST /v1/ingest/parse-text.",
+        "properties": {
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "detectedFormat": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detectedformat"
+          },
+          "exercises": {
+            "items": {
+              "$ref": "#/components/schemas/ParsedExercise"
+            },
+            "title": "Exercises",
+            "type": "array"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "exercises",
+          "confidence"
+        ],
+        "title": "ParseTextResult",
+        "type": "object"
+      },
+      "ParsedExercise": {
+        "description": "Faithful mobile-facing mirror of ingestor ParsedExerciseResponse.",
+        "properties": {
+          "distance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "order": {
+            "title": "Order",
+            "type": "integer"
+          },
+          "rawName": {
+            "title": "Rawname",
+            "type": "string"
+          },
+          "reps": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps"
+          },
+          "restSeconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Restseconds"
+          },
+          "rpe": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpe"
+          },
+          "sets": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sets"
+          },
+          "supersetGroup": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersetgroup"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          },
+          "weightUnit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weightunit"
+          }
+        },
+        "required": [
+          "rawName",
+          "order"
+        ],
+        "title": "ParsedExercise",
         "type": "object"
       },
       "PendingSyncResponse": {
@@ -576,6 +1369,88 @@
         "title": "PlannedListResponse",
         "type": "object"
       },
+      "PlannedSession": {
+        "description": "BFF-owned mirror of the draft PlannedSession schema.",
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "durationMin": {
+            "title": "Durationmin",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "intensity": {
+            "title": "Intensity",
+            "type": "string"
+          },
+          "modifiable": {
+            "title": "Modifiable",
+            "type": "boolean"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "sourceId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceid"
+          },
+          "structuredSteps": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Structuredsteps"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "date",
+          "type",
+          "intensity",
+          "durationMin",
+          "modifiable"
+        ],
+        "title": "PlannedSession",
+        "type": "object"
+      },
       "PlannedWorkout": {
         "description": "Subset of `workout_events` returned to iOS.\n\nAliases (camelCase) preserved from mapper-api so the wire shape stays\nidentical across BFF and upstream \u2014 iOS already decodes this format.",
         "properties": {
@@ -699,6 +1574,90 @@
         "title": "PlannedWorkout",
         "type": "object"
       },
+      "ProposedDay": {
+        "description": "One day of a proposed week, including synthesized rest days.",
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "isRestDay": {
+            "title": "Isrestday",
+            "type": "boolean"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "workouts": {
+            "items": {
+              "$ref": "#/components/schemas/PlannedSession"
+            },
+            "title": "Workouts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "date",
+          "workouts",
+          "isRestDay"
+        ],
+        "title": "ProposedDay",
+        "type": "object"
+      },
+      "ProposedPlan": {
+        "description": "Mobile-facing weekly plan proposal.",
+        "properties": {
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/ProposedDay"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "totalLoadScore": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Totalloadscore"
+          },
+          "weekStartDate": {
+            "format": "date",
+            "title": "Weekstartdate",
+            "type": "string"
+          }
+        },
+        "required": [
+          "weekStartDate",
+          "days"
+        ],
+        "title": "ProposedPlan",
+        "type": "object"
+      },
       "ReportSyncFailedRequest": {
         "description": "Request body for POST /v1/sync/failed.",
         "properties": {
@@ -769,6 +1728,24 @@
         "title": "ReportSyncFailedResponse",
         "type": "object"
       },
+      "RespondRequest": {
+        "description": "Request body for POST /v1/agent/actions/{id}/respond.",
+        "properties": {
+          "decision": {
+            "enum": [
+              "approve",
+              "reject"
+            ],
+            "title": "Decision",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "RespondRequest",
+        "type": "object"
+      },
       "RestFollowAlongStep": {
         "additionalProperties": false,
         "description": "One rest step (only shared fields).",
@@ -823,6 +1800,17 @@
         ],
         "title": "RestFollowAlongStep",
         "type": "object"
+      },
+      "RiskLevel": {
+        "description": "BFF-owned risk level for generic agent actions.",
+        "enum": [
+          "low",
+          "medium",
+          "high",
+          "unknown"
+        ],
+        "title": "RiskLevel",
+        "type": "string"
       },
       "SetEntry": {
         "description": "Individual set within an exercise log (AMA-281).",
@@ -930,6 +1918,38 @@
           }
         },
         "title": "SimulationConfig",
+        "type": "object"
+      },
+      "TimeBlock": {
+        "description": "BFF-owned mirror of the draft TimeBlock schema.",
+        "properties": {
+          "end": {
+            "format": "date-time",
+            "title": "End",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "start": {
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "TimeBlock",
         "type": "object"
       },
       "ValidationError": {
@@ -1669,6 +2689,223 @@
         ]
       }
     },
+    "/v1/agent/actions": {
+      "get": {
+        "description": "iOS Agent Inbox read \u2192 calendar-api GET /actions.",
+        "operationId": "getAgentActions",
+        "parameters": [
+          {
+            "description": "Optional upstream action status filter.",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional upstream action status filter.",
+              "title": "Status"
+            }
+          },
+          {
+            "description": "Max records (default 50, max 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Max records (default 50, max 200).",
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentAction"
+                  },
+                  "title": "Response Getagentactions",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          }
+        },
+        "summary": "(W3a) Agent action log \u2014 generic AgentAction envelope"
+      }
+    },
+    "/v1/agent/actions/{id}/respond": {
+      "post": {
+        "description": "iOS Agent Inbox decision \u2192 calendar-api POST /actions/{id}/approve|reject.",
+        "operationId": "respondAgentAction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RespondRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentAction"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          }
+        },
+        "summary": "(W3b) Approve or reject an agent action"
+      }
+    },
+    "/v1/agent/actions/{id}/undo": {
+      "post": {
+        "description": "iOS Agent Inbox undo \u2192 calendar-api POST /actions/{id}/undo.",
+        "operationId": "undoAgentAction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentAction"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          }
+        },
+        "summary": "(W3b) Undo an approved agent action"
+      }
+    },
     "/v1/chat/stream": {
       "post": {
         "description": "iOS ChatStreamService \u2192 chat-api POST /chat/stream (SSE).\n\nUses `_proxy_stream` so chunks reach iOS as the LLM produces them;\nthe standard buffered proxy would defeat SSE.",
@@ -1831,6 +3068,82 @@
         "summary": "V1 Coach Suggest Workout"
       }
     },
+    "/v1/coaching/profile": {
+      "get": {
+        "description": "iOS coaching/equipment profile read \u2192 chat-api GET /coach/profile.",
+        "operationId": "getCoachingProfile",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachingProfile"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Coaching Profile Get"
+      },
+      "put": {
+        "description": "iOS onboarding/equipment profile save \u2192 chat-api PUT /coach/profile.",
+        "operationId": "upsertCoachingProfile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachingProfileUpsert"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoachingProfile"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Coaching Profile Upsert"
+      }
+    },
     "/v1/gamification/xp": {
       "get": {
         "description": "iOS fetchXP \u2192 chat-api GET /gamification/xp.",
@@ -1856,6 +3169,75 @@
           }
         },
         "summary": "V1 Gamification Xp"
+      }
+    },
+    "/v1/ingest/parse-text": {
+      "post": {
+        "description": "iOS ingest parse-text \u2192 workout-ingestor-api POST /parse/text.",
+        "operationId": "ingestParseText",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParseTextRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParseTextResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          }
+        },
+        "summary": "(W4) Parse freeform workout text into a structured exercise list"
       }
     },
     "/v1/knowledge/cards": {
@@ -2139,6 +3521,230 @@
           }
         },
         "summary": "V1 Nutrition Protein Nudge Check"
+      }
+    },
+    "/v1/planning/conflicts": {
+      "get": {
+        "description": "iOS planning conflict read \u2192 calendar-api GET /days + POST /detect-conflicts.",
+        "operationId": "getPlanningConflicts",
+        "parameters": [
+          {
+            "description": "Inclusive start date (ISO 8601).",
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "description": "Inclusive start date (ISO 8601).",
+              "format": "date",
+              "title": "From",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Inclusive end date (ISO 8601).",
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "description": "Inclusive end date (ISO 8601).",
+              "format": "date",
+              "title": "To",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Conflict"
+                  },
+                  "title": "Response Getplanningconflicts",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          }
+        },
+        "summary": "(W2) Detect scheduling conflicts for a date range"
+      }
+    },
+    "/v1/planning/days": {
+      "get": {
+        "description": "iOS Home/Fatigue day-state read \u2192 calendar-api GET /days.",
+        "operationId": "v1_planning_days_v1_planning_days_get",
+        "parameters": [
+          {
+            "description": "Inclusive start date (ISO 8601).",
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "description": "Inclusive start date (ISO 8601).",
+              "format": "date",
+              "title": "From",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Inclusive end date (ISO 8601).",
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "description": "Inclusive end date (ISO 8601).",
+              "format": "date",
+              "title": "To",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DayState"
+                  },
+                  "title": "Response V1 Planning Days V1 Planning Days Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          }
+        },
+        "summary": "V1 Planning Days"
+      }
+    },
+    "/v1/planning/generate-week": {
+      "post": {
+        "description": "iOS weekly planning proposal \u2192 calendar-api POST /generate-week.",
+        "operationId": "generateWeekPlan",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/GenerateWeekRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposedPlan"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          }
+        },
+        "summary": "(W2b) Generate a proposed weekly plan"
       }
     },
     "/v1/sync/confirm": {

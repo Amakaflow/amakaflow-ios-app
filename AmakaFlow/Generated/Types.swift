@@ -11,6 +11,20 @@ import struct Foundation.Date
 #endif
 /// A type that performs HTTP operations defined by the OpenAPI document.
 public protocol APIProtocol: Sendable {
+    /// V1 Coaching Profile Get
+    ///
+    /// iOS coaching/equipment profile read → chat-api GET /coach/profile.
+    ///
+    /// - Remark: HTTP `GET /v1/coaching/profile`.
+    /// - Remark: Generated from `#/paths//v1/coaching/profile/get(getCoachingProfile)`.
+    func getCoachingProfile(_ input: Operations.GetCoachingProfile.Input) async throws -> Operations.GetCoachingProfile.Output
+    /// V1 Coaching Profile Upsert
+    ///
+    /// iOS onboarding/equipment profile save → chat-api PUT /coach/profile.
+    ///
+    /// - Remark: HTTP `PUT /v1/coaching/profile`.
+    /// - Remark: Generated from `#/paths//v1/coaching/profile/put(upsertCoachingProfile)`.
+    func upsertCoachingProfile(_ input: Operations.UpsertCoachingProfile.Input) async throws -> Operations.UpsertCoachingProfile.Output
     /// V1 Sync Confirm
     ///
     /// SyncEngine confirm-success → mapper-api POST /sync/confirm.
@@ -66,6 +80,30 @@ public protocol APIProtocol: Sendable {
 
 /// Convenience overloads for operation inputs.
 extension APIProtocol {
+    /// V1 Coaching Profile Get
+    ///
+    /// iOS coaching/equipment profile read → chat-api GET /coach/profile.
+    ///
+    /// - Remark: HTTP `GET /v1/coaching/profile`.
+    /// - Remark: Generated from `#/paths//v1/coaching/profile/get(getCoachingProfile)`.
+    public func getCoachingProfile(headers: Operations.GetCoachingProfile.Input.Headers = .init()) async throws -> Operations.GetCoachingProfile.Output {
+        try await getCoachingProfile(Operations.GetCoachingProfile.Input(headers: headers))
+    }
+    /// V1 Coaching Profile Upsert
+    ///
+    /// iOS onboarding/equipment profile save → chat-api PUT /coach/profile.
+    ///
+    /// - Remark: HTTP `PUT /v1/coaching/profile`.
+    /// - Remark: Generated from `#/paths//v1/coaching/profile/put(upsertCoachingProfile)`.
+    public func upsertCoachingProfile(
+        headers: Operations.UpsertCoachingProfile.Input.Headers = .init(),
+        body: Operations.UpsertCoachingProfile.Input.Body
+    ) async throws -> Operations.UpsertCoachingProfile.Output {
+        try await upsertCoachingProfile(Operations.UpsertCoachingProfile.Input(
+            headers: headers,
+            body: body
+        ))
+    }
     /// V1 Sync Confirm
     ///
     /// SyncEngine confirm-success → mapper-api POST /sync/confirm.
@@ -174,6 +212,92 @@ public enum Servers {}
 public enum Components {
     /// Types generated from the `#/components/schemas` section of the OpenAPI document.
     public enum Schemas {
+        /// Response body for GET/PUT /v1/coaching/profile.
+        ///
+        /// - Remark: Generated from `#/components/schemas/CoachingProfile`.
+        public struct CoachingProfile: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/CoachingProfile/created_at`.
+            public var createdAt: Swift.String
+            /// - Remark: Generated from `#/components/schemas/CoachingProfile/experience_level`.
+            public var experienceLevel: Swift.String
+            /// - Remark: Generated from `#/components/schemas/CoachingProfile/pre_filled_from_memory`.
+            public var preFilledFromMemory: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/CoachingProfile/primary_goal`.
+            public var primaryGoal: Swift.String
+            /// - Remark: Generated from `#/components/schemas/CoachingProfile/sessions_per_week`.
+            public var sessionsPerWeek: Swift.Int
+            /// - Remark: Generated from `#/components/schemas/CoachingProfile/updated_at`.
+            public var updatedAt: Swift.String
+            /// - Remark: Generated from `#/components/schemas/CoachingProfile/user_id`.
+            public var userId: Swift.String
+            /// Creates a new `CoachingProfile`.
+            ///
+            /// - Parameters:
+            ///   - createdAt:
+            ///   - experienceLevel:
+            ///   - preFilledFromMemory:
+            ///   - primaryGoal:
+            ///   - sessionsPerWeek:
+            ///   - updatedAt:
+            ///   - userId:
+            public init(
+                createdAt: Swift.String,
+                experienceLevel: Swift.String,
+                preFilledFromMemory: Swift.Bool? = nil,
+                primaryGoal: Swift.String,
+                sessionsPerWeek: Swift.Int,
+                updatedAt: Swift.String,
+                userId: Swift.String
+            ) {
+                self.createdAt = createdAt
+                self.experienceLevel = experienceLevel
+                self.preFilledFromMemory = preFilledFromMemory
+                self.primaryGoal = primaryGoal
+                self.sessionsPerWeek = sessionsPerWeek
+                self.updatedAt = updatedAt
+                self.userId = userId
+            }
+            public enum CodingKeys: String, CodingKey {
+                case createdAt = "created_at"
+                case experienceLevel = "experience_level"
+                case preFilledFromMemory = "pre_filled_from_memory"
+                case primaryGoal = "primary_goal"
+                case sessionsPerWeek = "sessions_per_week"
+                case updatedAt = "updated_at"
+                case userId = "user_id"
+            }
+        }
+        /// Request body for PUT /v1/coaching/profile.
+        ///
+        /// - Remark: Generated from `#/components/schemas/CoachingProfileUpsert`.
+        public struct CoachingProfileUpsert: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/CoachingProfileUpsert/experience_level`.
+            public var experienceLevel: Swift.String
+            /// - Remark: Generated from `#/components/schemas/CoachingProfileUpsert/primary_goal`.
+            public var primaryGoal: Swift.String
+            /// - Remark: Generated from `#/components/schemas/CoachingProfileUpsert/sessions_per_week`.
+            public var sessionsPerWeek: Swift.Int
+            /// Creates a new `CoachingProfileUpsert`.
+            ///
+            /// - Parameters:
+            ///   - experienceLevel:
+            ///   - primaryGoal:
+            ///   - sessionsPerWeek:
+            public init(
+                experienceLevel: Swift.String,
+                primaryGoal: Swift.String,
+                sessionsPerWeek: Swift.Int
+            ) {
+                self.experienceLevel = experienceLevel
+                self.primaryGoal = primaryGoal
+                self.sessionsPerWeek = sessionsPerWeek
+            }
+            public enum CodingKeys: String, CodingKey {
+                case experienceLevel = "experience_level"
+                case primaryGoal = "primary_goal"
+                case sessionsPerWeek = "sessions_per_week"
+            }
+        }
         /// Request body for POST /v1/sync/confirm.
         ///
         /// - Remark: Generated from `#/components/schemas/ConfirmSyncRequest`.
@@ -260,6 +384,122 @@ public enum Components {
             case ios = "ios"
             case android = "android"
             case garmin = "garmin"
+        }
+        /// Structured equipment inventory (camelCase wire shape: dumbbellRangeKg,
+        /// trainingLocation). Single set per user.
+        ///
+        /// - Remark: Generated from `#/components/schemas/EquipmentInventory`.
+        public struct EquipmentInventory: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/EquipmentInventory/bodyweight`.
+            public struct BodyweightPayload: Codable, Hashable, Sendable {
+                /// A container of undocumented properties.
+                public var additionalProperties: [String: Swift.Bool]
+                /// Creates a new `BodyweightPayload`.
+                ///
+                /// - Parameters:
+                ///   - additionalProperties: A container of undocumented properties.
+                public init(additionalProperties: [String: Swift.Bool] = .init()) {
+                    self.additionalProperties = additionalProperties
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [])
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try encoder.encodeAdditionalProperties(additionalProperties)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/EquipmentInventory/bodyweight`.
+            public var bodyweight: Components.Schemas.EquipmentInventory.BodyweightPayload?
+            /// - Remark: Generated from `#/components/schemas/EquipmentInventory/cardio`.
+            public struct CardioPayload: Codable, Hashable, Sendable {
+                /// A container of undocumented properties.
+                public var additionalProperties: [String: Swift.Bool]
+                /// Creates a new `CardioPayload`.
+                ///
+                /// - Parameters:
+                ///   - additionalProperties: A container of undocumented properties.
+                public init(additionalProperties: [String: Swift.Bool] = .init()) {
+                    self.additionalProperties = additionalProperties
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [])
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try encoder.encodeAdditionalProperties(additionalProperties)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/EquipmentInventory/cardio`.
+            public var cardio: Components.Schemas.EquipmentInventory.CardioPayload?
+            /// - Remark: Generated from `#/components/schemas/EquipmentInventory/mobility`.
+            public struct MobilityPayload: Codable, Hashable, Sendable {
+                /// A container of undocumented properties.
+                public var additionalProperties: [String: Swift.Bool]
+                /// Creates a new `MobilityPayload`.
+                ///
+                /// - Parameters:
+                ///   - additionalProperties: A container of undocumented properties.
+                public init(additionalProperties: [String: Swift.Bool] = .init()) {
+                    self.additionalProperties = additionalProperties
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [])
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try encoder.encodeAdditionalProperties(additionalProperties)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/EquipmentInventory/mobility`.
+            public var mobility: Components.Schemas.EquipmentInventory.MobilityPayload?
+            /// - Remark: Generated from `#/components/schemas/EquipmentInventory/strength`.
+            public struct StrengthPayload: Codable, Hashable, Sendable {
+                /// A container of undocumented properties.
+                public var additionalProperties: [String: Swift.Bool]
+                /// Creates a new `StrengthPayload`.
+                ///
+                /// - Parameters:
+                ///   - additionalProperties: A container of undocumented properties.
+                public init(additionalProperties: [String: Swift.Bool] = .init()) {
+                    self.additionalProperties = additionalProperties
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [])
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try encoder.encodeAdditionalProperties(additionalProperties)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/EquipmentInventory/strength`.
+            public var strength: Components.Schemas.EquipmentInventory.StrengthPayload?
+            /// - Remark: Generated from `#/components/schemas/EquipmentInventory/trainingLocation`.
+            public var trainingLocation: Swift.String
+            /// Creates a new `EquipmentInventory`.
+            ///
+            /// - Parameters:
+            ///   - bodyweight:
+            ///   - cardio:
+            ///   - mobility:
+            ///   - strength:
+            ///   - trainingLocation:
+            public init(
+                bodyweight: Components.Schemas.EquipmentInventory.BodyweightPayload? = nil,
+                cardio: Components.Schemas.EquipmentInventory.CardioPayload? = nil,
+                mobility: Components.Schemas.EquipmentInventory.MobilityPayload? = nil,
+                strength: Components.Schemas.EquipmentInventory.StrengthPayload? = nil,
+                trainingLocation: Swift.String
+            ) {
+                self.bodyweight = bodyweight
+                self.cardio = cardio
+                self.mobility = mobility
+                self.strength = strength
+                self.trainingLocation = trainingLocation
+            }
+            public enum CodingKeys: String, CodingKey {
+                case bodyweight
+                case cardio
+                case mobility
+                case strength
+                case trainingLocation
+            }
         }
         /// All typed error codes returned by AmakaFlow services. Single source of truth.
         ///
@@ -944,6 +1184,394 @@ public enum Components {
 
 /// API operations, with input and output types, generated from `#/paths` in the OpenAPI document.
 public enum Operations {
+    /// V1 Coaching Profile Get
+    ///
+    /// iOS coaching/equipment profile read → chat-api GET /coach/profile.
+    ///
+    /// - Remark: HTTP `GET /v1/coaching/profile`.
+    /// - Remark: Generated from `#/paths//v1/coaching/profile/get(getCoachingProfile)`.
+    public enum GetCoachingProfile {
+        public static let id: Swift.String = "getCoachingProfile"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/coaching/profile/GET/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.GetCoachingProfile.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.GetCoachingProfile.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.GetCoachingProfile.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            public init(headers: Operations.GetCoachingProfile.Input.Headers = .init()) {
+                self.headers = headers
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/coaching/profile/GET/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/coaching/profile/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.CoachingProfile)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.CoachingProfile {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.GetCoachingProfile.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.GetCoachingProfile.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Successful Response
+            ///
+            /// - Remark: Generated from `#/paths//v1/coaching/profile/get(getCoachingProfile)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.GetCoachingProfile.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.GetCoachingProfile.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/coaching/profile/GET/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/coaching/profile/GET/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.GetCoachingProfile.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.GetCoachingProfile.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/coaching/profile/get(getCoachingProfile)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.GetCoachingProfile.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.GetCoachingProfile.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// V1 Coaching Profile Upsert
+    ///
+    /// iOS onboarding/equipment profile save → chat-api PUT /coach/profile.
+    ///
+    /// - Remark: HTTP `PUT /v1/coaching/profile`.
+    /// - Remark: Generated from `#/paths//v1/coaching/profile/put(upsertCoachingProfile)`.
+    public enum UpsertCoachingProfile {
+        public static let id: Swift.String = "upsertCoachingProfile"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/coaching/profile/PUT/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.UpsertCoachingProfile.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.UpsertCoachingProfile.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.UpsertCoachingProfile.Input.Headers
+            /// - Remark: Generated from `#/paths/v1/coaching/profile/PUT/requestBody`.
+            @frozen public enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/coaching/profile/PUT/requestBody/content/application\/json`.
+                case json(Components.Schemas.CoachingProfileUpsert)
+            }
+            public var body: Operations.UpsertCoachingProfile.Input.Body
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            ///   - body:
+            public init(
+                headers: Operations.UpsertCoachingProfile.Input.Headers = .init(),
+                body: Operations.UpsertCoachingProfile.Input.Body
+            ) {
+                self.headers = headers
+                self.body = body
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/coaching/profile/PUT/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/coaching/profile/PUT/responses/200/content/application\/json`.
+                    case json(Components.Schemas.CoachingProfile)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.CoachingProfile {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.UpsertCoachingProfile.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.UpsertCoachingProfile.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Successful Response
+            ///
+            /// - Remark: Generated from `#/paths//v1/coaching/profile/put(upsertCoachingProfile)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.UpsertCoachingProfile.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.UpsertCoachingProfile.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/coaching/profile/PUT/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/coaching/profile/PUT/responses/422/content/application\/json`.
+                    case json(Components.Schemas.HTTPValidationError)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.HTTPValidationError {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.UpsertCoachingProfile.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.UpsertCoachingProfile.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// Validation Error
+            ///
+            /// - Remark: Generated from `#/paths//v1/coaching/profile/put(upsertCoachingProfile)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.UpsertCoachingProfile.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.UpsertCoachingProfile.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/coaching/profile/PUT/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/coaching/profile/PUT/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.UpsertCoachingProfile.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.UpsertCoachingProfile.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/coaching/profile/put(upsertCoachingProfile)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.UpsertCoachingProfile.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.UpsertCoachingProfile.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
     /// V1 Sync Confirm
     ///
     /// SyncEngine confirm-success → mapper-api POST /sync/confirm.
