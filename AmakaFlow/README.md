@@ -14,7 +14,7 @@ AmakaFlow/
 ├── Generated/             # Swift OpenAPI client/types generated from Specs/mobile-bff.json
 ├── LiveActivity/          # Live Activity shared code
 ├── Models/                # App/domain models
-├── Resources/             # Fixtures and bundled resources such as onboarding Lottie files
+├── Resources/             # Fixtures and bundled resources
 ├── Services/              # API, auth, HealthKit, WatchConnectivity, imports, transcription
 ├── Simulation/            # Simulation helpers
 ├── Storage/               # GRDB migrations and repositories

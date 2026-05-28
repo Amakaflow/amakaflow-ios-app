@@ -218,6 +218,9 @@
 		AMA1620CLKKIT01B /* ClerkKit in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1620CLKKIT01P /* ClerkKit */; };
 		AMA1620CLKUI001B /* ClerkKitUI in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1620CLKUI001P /* ClerkKitUI */; };
 		AMA1620UITEST01B /* UITestEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620UITEST01A /* UITestEnvironment.swift */; };
+		AMA2007SIGNUPVMBLD /* SignUpViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2007SIGNUPVMREF /* SignUpViewModel.swift */; };
+		AMA2007SIGNUPVIEWBLD /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2007SIGNUPVIEWREF /* SignUpView.swift */; };
+		AMA2007SIGNUPDEMBLD /* SignUpDemoHeroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2007SIGNUPDEMREF /* SignUpDemoHeroView.swift */; };
 		AMA1791ACCEPTREPOBLD /* AcceptedSuggestionsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791ACCEPTREPOREF /* AcceptedSuggestionsRepository.swift */; };
 		AMA1791APPDBBLD /* AppDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791APPDBREF /* AppDatabase.swift */; };
 		AMA1791ENGINEBLD /* SyncEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791ENGINEREF /* SyncEngine.swift */; };
@@ -236,15 +239,6 @@
 		AMA1828TELEG00B /* TelegramAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828TELEG00A /* TelegramAPIRepository.swift */; };
 		AMA1828TRANS00B /* APITransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828TRANS00A /* APITransport.swift */; };
 		AMA1828WORKO00B /* WorkoutAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828WORKO00A /* WorkoutAPIRepository.swift */; };
-		AMA1875LOTTIE01FILE /* onboarding-ai-coach.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA1875LOTTIE01REF /* onboarding-ai-coach.json */; };
-		AMA1875LOTTIE02FILE /* onboarding-device-sync.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA1875LOTTIE02REF /* onboarding-device-sync.json */; };
-		AMA1875LOTTIE03FILE /* onboarding-telegram.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA1875LOTTIE03REF /* onboarding-telegram.json */; };
-		AMA1875LOTTIE04FILE /* onboarding-progress-ring.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA1875LOTTIE04REF /* onboarding-progress-ring.json */; };
-		AMA1875LOTTIE05FILE /* onboarding-start.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA1875LOTTIE05REF /* onboarding-start.json */; };
-		AMA1875LOTTIEFILE /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1875LOTTIEPROD /* Lottie */; };
-		AMA1875ONBFLOWFILE /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1875ONBFLOWREF /* OnboardingFlowView.swift */; };
-		AMA1875ONBSLIDEFILE /* OnboardingSlide.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1875ONBSLIDEREF /* OnboardingSlide.swift */; };
-		AMA1875ONBVIEWFILE /* OnboardingSlideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1875ONBVIEWREF /* OnboardingSlideView.swift */; };
 		B1910EAEA57AF40FBA6FEDD3 /* FollowAlongPlayerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */; };
 		B44263A997564169A4DE795A /* KeychainClerkTokenPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CA747C5C41B432C9BEE9C9F /* KeychainClerkTokenPersistence.swift */; };
 		B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E57529578481B8991A91F /* SourcesView.swift */; };
@@ -649,6 +643,10 @@
 		AMA1620AUTHINT01A /* ClerkAuthorizationInterceptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ClerkAuthorizationInterceptor.swift; path = ../AmakaFlow/Services/ClerkAuthorizationInterceptor.swift; sourceTree = SOURCE_ROOT; };
 		AMA1620AUTHVM001A /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AuthViewModel.swift; path = ../AmakaFlow/ViewModels/AuthViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA1620UITEST01A /* UITestEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UITestEnvironment.swift; path = ../AmakaFlow/Services/UITestEnvironment.swift; sourceTree = SOURCE_ROOT; };
+		AMA2007SIGNUPVMREF /* SignUpViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SignUpViewModel.swift; path = ../AmakaFlow/ViewModels/SignUpViewModel.swift; sourceTree = SOURCE_ROOT; };
+		AMA2007SIGNUPVIEWREF /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SignUpView.swift; path = ../AmakaFlow/Views/SignUpView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2007SIGNUPDEMREF /* SignUpDemoHeroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SignUpDemoHeroView.swift; path = ../AmakaFlow/Views/SignUpDemoHeroView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2007SIGNUPTESTREF /* SignUpViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SignUpViewModelTests.swift; path = AmakaFlowCompanionTests/SignUpViewModelTests.swift; sourceTree = "<group>"; };
 		AMA1791ACCEPTREPOREF /* AcceptedSuggestionsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AcceptedSuggestionsRepository.swift; path = ../AmakaFlow/Storage/Repositories/AcceptedSuggestionsRepository.swift; sourceTree = SOURCE_ROOT; };
 		AMA1791APPDBREF /* AppDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDatabase.swift; path = ../AmakaFlow/Storage/AppDatabase.swift; sourceTree = SOURCE_ROOT; };
 		AMA1791ENGINEREF /* SyncEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SyncEngine.swift; path = ../AmakaFlow/Services/SyncEngine.swift; sourceTree = SOURCE_ROOT; };
@@ -666,14 +664,6 @@
 		AMA1828TELEG00A /* TelegramAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TelegramAPIRepository.swift; path = ../AmakaFlow/Services/TelegramAPIRepository.swift; sourceTree = SOURCE_ROOT; };
 		AMA1828TRANS00A /* APITransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APITransport.swift; path = ../AmakaFlow/Services/APITransport.swift; sourceTree = SOURCE_ROOT; };
 		AMA1828WORKO00A /* WorkoutAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutAPIRepository.swift; path = ../AmakaFlow/Services/WorkoutAPIRepository.swift; sourceTree = SOURCE_ROOT; };
-		AMA1875LOTTIE01REF /* onboarding-ai-coach.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "onboarding-ai-coach.json"; path = "../AmakaFlow/Resources/OnboardingLottie/onboarding-ai-coach.json"; sourceTree = SOURCE_ROOT; };
-		AMA1875LOTTIE02REF /* onboarding-device-sync.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "onboarding-device-sync.json"; path = "../AmakaFlow/Resources/OnboardingLottie/onboarding-device-sync.json"; sourceTree = SOURCE_ROOT; };
-		AMA1875LOTTIE03REF /* onboarding-telegram.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "onboarding-telegram.json"; path = "../AmakaFlow/Resources/OnboardingLottie/onboarding-telegram.json"; sourceTree = SOURCE_ROOT; };
-		AMA1875LOTTIE04REF /* onboarding-progress-ring.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "onboarding-progress-ring.json"; path = "../AmakaFlow/Resources/OnboardingLottie/onboarding-progress-ring.json"; sourceTree = SOURCE_ROOT; };
-		AMA1875LOTTIE05REF /* onboarding-start.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "onboarding-start.json"; path = "../AmakaFlow/Resources/OnboardingLottie/onboarding-start.json"; sourceTree = SOURCE_ROOT; };
-		AMA1875ONBFLOWREF /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnboardingFlowView.swift; path = ../AmakaFlow/Views/Onboarding/OnboardingFlowView.swift; sourceTree = SOURCE_ROOT; };
-		AMA1875ONBSLIDEREF /* OnboardingSlide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnboardingSlide.swift; path = ../AmakaFlow/Views/Onboarding/OnboardingSlide.swift; sourceTree = SOURCE_ROOT; };
-		AMA1875ONBVIEWREF /* OnboardingSlideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnboardingSlideView.swift; path = ../AmakaFlow/Views/Onboarding/OnboardingSlideView.swift; sourceTree = SOURCE_ROOT; };
 		B44D7C6673CB9BE868FC1006 /* ShareImportViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShareImportViewModel.swift; sourceTree = "<group>"; };
 		BAC6A807F5A4820B05339B99 /* PlanRevealView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlanRevealView.swift; path = ../AmakaFlow/Views/PlanRevealView.swift; sourceTree = SOURCE_ROOT; };
 		BC16168084DD4307BA295F94 /* CTAError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CTAError.swift; path = ../AmakaFlow/Models/CTAError.swift; sourceTree = SOURCE_ROOT; };
@@ -870,7 +860,6 @@
 				AMA1620CLKKIT01B /* ClerkKit in Frameworks */,
 				AMA1620CLKUI001B /* ClerkKitUI in Frameworks */,
 				F880AD622F09559A00E8D7D3 /* Sentry in Frameworks */,
-				AMA1875LOTTIEFILE /* Lottie in Frameworks */,
 				F84E22932ED0D9FA00459747 /* EventKit.framework in Frameworks */,
 				F84E22952ED0DA0200459747 /* HealthKit.framework in Frameworks */,
 				F84E22992ED0DA1F00459747 /* WorkoutKitSync in Frameworks */,
@@ -1091,6 +1080,7 @@
 				D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */,
 				AMA12650021 /* SuggestWorkoutViewModelTests.swift */,
 				AMA1995EQTST000000000A /* EquipmentProfileViewModelTests.swift */,
+				AMA2007SIGNUPTESTREF /* SignUpViewModelTests.swift */,
 				AK00CHL001A /* ChallengeModels.swift */,
 				AK00CHL002A /* ChallengesViewModel.swift */,
 				AK00CHL003A /* ChallengesView.swift */,
@@ -1161,9 +1151,8 @@
 				AMA14150009A /* BulkImportViewModelTests.swift */,
 				C2C967F7EB5505FDB36864F9 /* FeatureFlags.swift */,
 				D0C1640626E3952B7DBBBF33 /* MentalModelView.swift */,
-				AMA1875ONBSLIDEREF /* OnboardingSlide.swift */,
-				AMA1875ONBVIEWREF /* OnboardingSlideView.swift */,
-				AMA1875ONBFLOWREF /* OnboardingFlowView.swift */,
+				AMA2007SIGNUPVIEWREF /* SignUpView.swift */,
+				AMA2007SIGNUPDEMREF /* SignUpDemoHeroView.swift */,
 				BAC6A807F5A4820B05339B99 /* PlanRevealView.swift */,
 				F3CF9663A6818FA77C6C02B0 /* WeeklyReviewView.swift */,
 				AC3C221C070C10388F89DF2A /* WatchDeliveryView.swift */,
@@ -1224,6 +1213,7 @@
 				D33PL1NKMAN4G3R0001 /* DeepLinkManager.swift */,
 				85D3757E5B284286B341C75C /* PairingService.swift */,
 				AMA1620AUTHVM001A /* AuthViewModel.swift */,
+				AMA2007SIGNUPVMREF /* SignUpViewModel.swift */,
 				AMA1620AUTHINT01A /* ClerkAuthorizationInterceptor.swift */,
 				AMA1620UITEST01A /* UITestEnvironment.swift */,
 				F1XTUR3L0AD3R0000001 /* FixtureLoader.swift */,
@@ -1234,11 +1224,6 @@
 				F1XTUR3JS0N00000004 /* strength_block_w1.json */,
 				F1XTUR3JS0N00000005 /* running_long.json */,
 				F1XTUR3JS0N00000006 /* hiit_follow_along.json */,
-				AMA1875LOTTIE01REF /* onboarding-ai-coach.json */,
-				AMA1875LOTTIE02REF /* onboarding-device-sync.json */,
-				AMA1875LOTTIE03REF /* onboarding-telegram.json */,
-				AMA1875LOTTIE04REF /* onboarding-progress-ring.json */,
-				AMA1875LOTTIE05REF /* onboarding-start.json */,
 				8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */,
 				AMA12820001A /* PRDetectionService.swift */,
 				AMA12840002A /* ShareCardGenerator.swift */,
@@ -1372,7 +1357,6 @@
 				AMA1791GRDBPROD /* GRDB */,
 				5428DFDDAABA4C78929FAD58 /* OpenAPIRuntime */,
 				3D2A2E0648804CD7A88CF287 /* OpenAPIURLSession */,
-				AMA1875LOTTIEPROD /* Lottie */,
 			);
 			productName = AmakaFlowCompanion;
 			productReference = F84E21742ED0B0C800459747 /* AmakaFlowCompanion.app */;
@@ -1565,7 +1549,6 @@
 				AMA1791GRDBPKG /* XCRemoteSwiftPackageReference "GRDB.swift" */,
 				09208E7C85544D5D93929812 /* XCRemoteSwiftPackageReference "swift-openapi-runtime" */,
 				02CC5FB9C29845DF83B3F0CB /* XCRemoteSwiftPackageReference "swift-openapi-urlsession" */,
-				AMA1875LOTTIEPKG /* XCRemoteSwiftPackageReference "lottie-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F84E21752ED0B0C800459747 /* Products */;
@@ -1602,11 +1585,6 @@
 				F1XTUR3JS0N01000004 /* strength_block_w1.json in Resources */,
 				F1XTUR3JS0N01000005 /* running_long.json in Resources */,
 				F1XTUR3JS0N01000006 /* hiit_follow_along.json in Resources */,
-				AMA1875LOTTIE01FILE /* onboarding-ai-coach.json in Resources */,
-				AMA1875LOTTIE02FILE /* onboarding-device-sync.json in Resources */,
-				AMA1875LOTTIE03FILE /* onboarding-telegram.json in Resources */,
-				AMA1875LOTTIE04FILE /* onboarding-progress-ring.json in Resources */,
-				AMA1875LOTTIE05FILE /* onboarding-start.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1944,9 +1922,9 @@
 				AMA14150008B /* ImportProgressView.swift in Sources */,
 				6E4643C6639A84A033AF4DA1 /* FeatureFlags.swift in Sources */,
 				141CFD120F8C663BD0F2C3BC /* MentalModelView.swift in Sources */,
-				AMA1875ONBSLIDEFILE /* OnboardingSlide.swift in Sources */,
-				AMA1875ONBVIEWFILE /* OnboardingSlideView.swift in Sources */,
-				AMA1875ONBFLOWFILE /* OnboardingFlowView.swift in Sources */,
+				AMA2007SIGNUPVMBLD /* SignUpViewModel.swift in Sources */,
+				AMA2007SIGNUPVIEWBLD /* SignUpView.swift in Sources */,
+				AMA2007SIGNUPDEMBLD /* SignUpDemoHeroView.swift in Sources */,
 				52BE28AB8A3D773F016F14E5 /* PlanRevealView.swift in Sources */,
 				D37C6098D3FACBE84D8D261D /* WeeklyReviewView.swift in Sources */,
 				72A766051AE36A2294C87B12 /* WatchDeliveryView.swift in Sources */,
@@ -2794,14 +2772,6 @@
 				minimumVersion = 7.0.0;
 			};
 		};
-		AMA1875LOTTIEPKG /* XCRemoteSwiftPackageReference "lottie-ios" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/airbnb/lottie-ios";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 4.5.0;
-			};
-		};
 		F84E225F2ED0B84300459747 /* XCRemoteSwiftPackageReference "workoutkit-sync" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Amakaflow/workoutkit-sync";
@@ -2850,11 +2820,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AMA1791GRDBPKG /* XCRemoteSwiftPackageReference "GRDB.swift" */;
 			productName = GRDB;
-		};
-		AMA1875LOTTIEPROD /* Lottie */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = AMA1875LOTTIEPKG /* XCRemoteSwiftPackageReference "lottie-ios" */;
-			productName = Lottie;
 		};
 		F84E22982ED0DA1F00459747 /* WorkoutKitSync */ = {
 			isa = XCSwiftPackageProductDependency;
