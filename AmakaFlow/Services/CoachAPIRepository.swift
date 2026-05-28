@@ -15,6 +15,7 @@
 //  session.data(for:) directly.
 //
 //  Endpoints in this file:
+//    GET  /v1/devices                           (listDevices)
 //    GET  /v1/coaching/profile                  (getCoachingProfile)
 //    PUT  /v1/coaching/profile                  (upsertCoachingProfile)
 //    GET  /v1/planning/days                     (fetchDayState/fetchDayStates)
@@ -35,6 +36,30 @@
 import Foundation
 
 extension APIService {
+
+    // MARK: - Devices (AMA-1996)
+
+    func listDevices() async throws -> [Components.Schemas.PairedDevice] {
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/devices",
+            method: "GET"
+        )
+        let response = try await self.request(
+            request,
+            decode: Components.Schemas.PairedDeviceList.self,
+            decoder: APIService.makeGeneratedDecoder(),
+            successStatusCodes: 200...200
+        )
+        guard let devices = response.devices else {
+            throw APIError.decodingError(
+                DecodingError.dataCorrupted(
+                    .init(codingPath: [], debugDescription: "Missing devices in PairedDeviceList")
+                )
+            )
+        }
+        return devices
+    }
 
     // MARK: - Coaching Profile (AMA-1995)
 
