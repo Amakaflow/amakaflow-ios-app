@@ -494,6 +494,13 @@ public struct Client: APIProtocol {
                     name: "device_type",
                     value: input.query.deviceType
                 )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "device_id",
+                    value: input.query.deviceId
+                )
                 converter.setAcceptHeader(
                     in: &request.headerFields,
                     contentTypes: input.headers.accept
