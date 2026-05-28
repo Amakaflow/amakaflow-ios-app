@@ -183,7 +183,11 @@ final class EquipmentProfileViewModel: ObservableObject {
         let upsert = CoachingProfileUpsert(
             equipment: inventory,
             experienceLevel: profile.experienceLevel,
+            goals: profile.goals,
+            injuriesLimitations: profile.injuriesLimitations,
+            preferredDays: profile.preferredDays,
             primaryGoal: profile.primaryGoal,
+            sessionDurationMinutes: profile.sessionDurationMinutes,
             sessionsPerWeek: profile.sessionsPerWeek
         )
 
