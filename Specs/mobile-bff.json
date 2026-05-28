@@ -468,6 +468,16 @@
         "title": "DegradedResponse",
         "type": "object"
       },
+      "DeviceRole": {
+        "description": "Which metric a device feeds (PairingScreen role chips). Multi-per-device\nAND multi-device-per-role; conflicts resolved by most-recently-synced wins\n(screens-flow.jsx:360). Assigned in Wedge C (AMA-2030).",
+        "enum": [
+          "workouts",
+          "recovery",
+          "strength"
+        ],
+        "title": "DeviceRole",
+        "type": "string"
+      },
       "DeviceType": {
         "description": "Mirrors mapper-api's DeviceType (services/mapper-api/api/routers/sync.py).",
         "enum": [
@@ -766,6 +776,54 @@
           }
         },
         "title": "HealthMetrics",
+        "type": "object"
+      },
+      "PairedDevice": {
+        "description": "One paired device for PairingScreen. Typed projection over mapper-api\nGET /mobile/pairing/devices (untyped dict upstream): flattens device_info,\nsurfaces the stable device_info.device_id as `id`, and maps paired_at \u2192\nlastSyncAt (Wedge A proxy; real last-sync is AMA-2032).",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "lastSyncAt": {
+            "title": "Lastsyncat",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/DeviceRole"
+            },
+            "title": "Roles",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "PairedDevice",
+        "type": "object"
+      },
+      "PairedDeviceList": {
+        "description": "Response body for GET /v1/devices.",
+        "properties": {
+          "devices": {
+            "items": {
+              "$ref": "#/components/schemas/PairedDevice"
+            },
+            "title": "Devices",
+            "type": "array"
+          }
+        },
+        "title": "PairedDeviceList",
         "type": "object"
       },
       "ParseTextRequest": {
@@ -2243,6 +2301,35 @@
           }
         },
         "summary": "V1 Coaching Profile Upsert"
+      }
+    },
+    "/v1/devices": {
+      "get": {
+        "description": "iOS PairingScreen device list \u2192 mapper-api GET /mobile/pairing/devices,\nreshaped into the typed PairedDevice list (AMA-2026).",
+        "operationId": "listDevices",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PairedDeviceList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Devices List"
       }
     },
     "/v1/gamification/xp": {
