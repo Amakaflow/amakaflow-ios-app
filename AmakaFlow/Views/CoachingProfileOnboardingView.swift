@@ -178,9 +178,8 @@ final class CoachingProfileOnboardingViewModel: ObservableObject {
             let mapped = CTAError.map(error)
             ctaError = mapped
             lastFailedAction = .save
-            if case .loading = state {
-                state = .error(mapped)
-            }
+            // Save failures keep the form visible and surface a toast (inline
+            // recovery); the screen only enters .error on a failed initial load.
             isSaving = false
             return false
         }

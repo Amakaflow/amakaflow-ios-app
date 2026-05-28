@@ -62,7 +62,7 @@ final class CoachingProfileOnboardingViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.isSelected(.none))
     }
 
-    func testRaceExpandsEventDateAndBuildsOnlyRaceFields() async {
+    func testRaceExpandsEventDateAndBuildsOnlyRaceFields() async throws {
         api.getCoachingProfileResult = .success(profile(goals: nil))
         await viewModel.load()
 
@@ -70,20 +70,20 @@ final class CoachingProfileOnboardingViewModelTests: XCTestCase {
         viewModel.raceEvent = "  Chicago Marathon  "
         viewModel.raceDate = " 2026-10-11 "
 
-        let race = try! XCTUnwrap(viewModel.buildGoals().first)
+        let race = try XCTUnwrap(viewModel.buildGoals().first)
         XCTAssertEqual(race._type, "race")
         XCTAssertEqual(race.event, "Chicago Marathon")
         XCTAssertEqual(race.date, "2026-10-11")
         XCTAssertNil(race.strengthSubtype)
     }
 
-    func testStrengthExpandsSubtypeAndBuildsOnlyStrengthFields() async {
+    func testStrengthExpandsSubtypeAndBuildsOnlyStrengthFields() async throws {
         api.getCoachingProfileResult = .success(profile(goals: nil))
         await viewModel.load()
 
         viewModel.selectStrengthSubtype(.lookGood)
 
-        let strength = try! XCTUnwrap(viewModel.buildGoals().first)
+        let strength = try XCTUnwrap(viewModel.buildGoals().first)
         XCTAssertEqual(strength._type, "strength")
         XCTAssertEqual(strength.strengthSubtype, "look_good")
         XCTAssertNil(strength.event)
@@ -181,7 +181,7 @@ final class CoachingProfileOnboardingViewModelTests: XCTestCase {
         }
     }
 
-    func testSaveErrorMatrixMapsToCTAErrorAndDoesNotClearSelection() async {
+    func testSaveErrorMatrixMapsToCTAErrorAndDoesNotClearSelection() async throws {
         let cases: [(Error, (CTAError) -> Bool, String)] = [
             (URLError(.timedOut), { if case .network(let code, _) = $0 { return code == .timedOut }; return false }, "network"),
             (APIError.serverError(500), { if case .http(let status, _, _) = $0 { return status == 500 }; return false }, "http"),
@@ -200,7 +200,7 @@ final class CoachingProfileOnboardingViewModelTests: XCTestCase {
             let didSave = await viewModel.save()
 
             XCTAssertFalse(didSave)
-            let ctaError = try! XCTUnwrap(viewModel.ctaError, "Missing CTAError for \(label)")
+            let ctaError = try XCTUnwrap(viewModel.ctaError, "Missing CTAError for \(label)")
             XCTAssertTrue(matcher(ctaError), "Wrong CTAError mapping for \(label): \(ctaError)")
             XCTAssertEqual(viewModel.lastFailedAction, .save)
             XCTAssertTrue(viewModel.isSelected(.health))
