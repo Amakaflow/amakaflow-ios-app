@@ -652,6 +652,46 @@ class MockAPIService: APIServiceProviding {
         return try result.get()
     }
 
+    // MARK: - Coaching Profile (AMA-1995)
+
+    var getCoachingProfileResult: Result<Components.Schemas.CoachingProfile, Error> = .success(
+        Components.Schemas.CoachingProfile(
+            createdAt: "2026-05-28T00:00:00Z",
+            equipment: nil,
+            experienceLevel: "intermediate",
+            primaryGoal: "general_fitness",
+            sessionsPerWeek: 3,
+            updatedAt: "2026-05-28T00:00:00Z",
+            userId: "mock-user"
+        )
+    )
+    var upsertCoachingProfileResult: Result<Components.Schemas.CoachingProfile, Error>?
+    var getCoachingProfileCalled = false
+    var upsertCoachingProfileCalled = false
+    var lastCoachingProfileUpsert: Components.Schemas.CoachingProfileUpsert?
+
+    func getCoachingProfile() async throws -> Components.Schemas.CoachingProfile {
+        getCoachingProfileCalled = true
+        return try getCoachingProfileResult.get()
+    }
+
+    func upsertCoachingProfile(_ profile: Components.Schemas.CoachingProfileUpsert) async throws -> Components.Schemas.CoachingProfile {
+        upsertCoachingProfileCalled = true
+        lastCoachingProfileUpsert = profile
+        if let upsertCoachingProfileResult {
+            return try upsertCoachingProfileResult.get()
+        }
+        return Components.Schemas.CoachingProfile(
+            createdAt: "2026-05-28T00:00:00Z",
+            equipment: profile.equipment,
+            experienceLevel: profile.experienceLevel,
+            primaryGoal: profile.primaryGoal,
+            sessionsPerWeek: profile.sessionsPerWeek,
+            updatedAt: "2026-05-28T00:00:01Z",
+            userId: "mock-user"
+        )
+    }
+
     // MARK: - Coach Suggestions (AMA-1412)
 
     var suggestWorkoutResult: Result<SuggestWorkoutResponse, Error>?

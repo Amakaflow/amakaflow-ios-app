@@ -15,6 +15,8 @@
 //  session.data(for:) directly.
 //
 //  Endpoints in this file:
+//    GET  /v1/coaching/profile                  (getCoachingProfile)
+//    PUT  /v1/coaching/profile                  (upsertCoachingProfile)
 //    GET  /v1/planning/days                     (fetchDayState/fetchDayStates)
 //    STUB /coach/quick                          (askCoach; no backend route)
 //    POST /api/v1/planning/resolve-conflict     (resolveConflict; deferred)
@@ -33,6 +35,37 @@
 import Foundation
 
 extension APIService {
+
+    // MARK: - Coaching Profile (AMA-1995)
+
+    func getCoachingProfile() async throws -> Components.Schemas.CoachingProfile {
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/coaching/profile",
+            method: "GET"
+        )
+        return try await self.request(
+            request,
+            decode: Components.Schemas.CoachingProfile.self,
+            decoder: APIService.makeGeneratedDecoder(),
+            successStatusCodes: 200...200
+        )
+    }
+
+    func upsertCoachingProfile(_ profile: Components.Schemas.CoachingProfileUpsert) async throws -> Components.Schemas.CoachingProfile {
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/coaching/profile",
+            method: "PUT",
+            body: try encodeJSONBody(profile)
+        )
+        return try await self.request(
+            request,
+            decode: Components.Schemas.CoachingProfile.self,
+            decoder: APIService.makeGeneratedDecoder(),
+            successStatusCodes: 200...200
+        )
+    }
 
     // MARK: - DayState / Coach / Conflict (AMA-1150)
 

@@ -135,6 +135,36 @@ struct CoachingProfileOnboardingView: View {
                     )
                     .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
 
+                    // Equipment step (AMA-1995 reachability; AMA-1997 will make this mandatory after multi-goal).
+                    NavigationLink {
+                        EquipmentProfileView()
+                    } label: {
+                        HStack(spacing: Theme.Spacing.md) {
+                            Image(systemName: "dumbbell.fill")
+                                .foregroundColor(Theme.Colors.readyHigh)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Equipment")
+                                    .font(Theme.Typography.bodyBold)
+                                    .foregroundColor(Theme.Colors.textPrimary)
+                                Text("Tell coach what you can train with before generating.")
+                                    .font(Theme.Typography.caption)
+                                    .foregroundColor(Theme.Colors.textSecondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(Theme.Colors.textTertiary)
+                        }
+                        .padding(Theme.Spacing.lg)
+                        .background(Theme.Colors.surface)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                                .stroke(Theme.Colors.borderLight, lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
+                    }
+                    .accessibilityIdentifier("coaching_onboarding_equipment")
+
                     // Submit button
                     Button {
                         viewModel.completeOnboarding(
