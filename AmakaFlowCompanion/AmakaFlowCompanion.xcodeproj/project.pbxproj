@@ -10,12 +10,8 @@
 		00CBD8759EE7C769D1D7F82B /* AgentInboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EB7457100F5C1B6E4488558 /* AgentInboxView.swift */; };
 		056DCE6864994871816A3AF9 /* OpenAPIRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = 5428DFDDAABA4C78929FAD58 /* OpenAPIRuntime */; };
 		0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
-		AMA1875LOTTIEFILE /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1875LOTTIEPROD /* Lottie */; };
 		11C72B7C6EA17FC8DEA354FB /* CoachModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */; };
 		141CFD120F8C663BD0F2C3BC /* MentalModelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C1640626E3952B7DBBBF33 /* MentalModelView.swift */; };
-		AMA1875ONBSLIDEFILE /* OnboardingSlide.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1875ONBSLIDEREF /* OnboardingSlide.swift */; };
-		AMA1875ONBVIEWFILE /* OnboardingSlideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1875ONBVIEWREF /* OnboardingSlideView.swift */; };
-		AMA1875ONBFLOWFILE /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1875ONBFLOWREF /* OnboardingFlowView.swift */; };
 		1A7B03C2552441FEB810773A /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */; };
 		1N5T4GR4MR33L0002 /* InstagramReelIngestionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */; };
 		224589E0DBE4430DA0043265 /* RPEFeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BD17097D21D4FB48D023E24 /* RPEFeedbackView.swift */; };
@@ -237,6 +233,15 @@
 		AMA1828TELEG00B /* TelegramAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828TELEG00A /* TelegramAPIRepository.swift */; };
 		AMA1828TRANS00B /* APITransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828TRANS00A /* APITransport.swift */; };
 		AMA1828WORKO00B /* WorkoutAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828WORKO00A /* WorkoutAPIRepository.swift */; };
+		AMA1875LOTTIE01FILE /* onboarding-ai-coach.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA1875LOTTIE01REF /* onboarding-ai-coach.json */; };
+		AMA1875LOTTIE02FILE /* onboarding-device-sync.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA1875LOTTIE02REF /* onboarding-device-sync.json */; };
+		AMA1875LOTTIE03FILE /* onboarding-telegram.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA1875LOTTIE03REF /* onboarding-telegram.json */; };
+		AMA1875LOTTIE04FILE /* onboarding-progress-ring.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA1875LOTTIE04REF /* onboarding-progress-ring.json */; };
+		AMA1875LOTTIE05FILE /* onboarding-start.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA1875LOTTIE05REF /* onboarding-start.json */; };
+		AMA1875LOTTIEFILE /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1875LOTTIEPROD /* Lottie */; };
+		AMA1875ONBFLOWFILE /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1875ONBFLOWREF /* OnboardingFlowView.swift */; };
+		AMA1875ONBSLIDEFILE /* OnboardingSlide.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1875ONBSLIDEREF /* OnboardingSlide.swift */; };
+		AMA1875ONBVIEWFILE /* OnboardingSlideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1875ONBVIEWREF /* OnboardingSlideView.swift */; };
 		B1910EAEA57AF40FBA6FEDD3 /* FollowAlongPlayerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */; };
 		B44263A997564169A4DE795A /* KeychainClerkTokenPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CA747C5C41B432C9BEE9C9F /* KeychainClerkTokenPersistence.swift */; };
 		B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E57529578481B8991A91F /* SourcesView.swift */; };
@@ -271,11 +276,6 @@
 		F1XTUR34P15RV0000002 /* FixtureAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1XTUR34P15RV0000001 /* FixtureAPIService.swift */; };
 		F1XTUR3JS0N01000001 /* amrap_10min.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000001 /* amrap_10min.json */; };
 		F1XTUR3JS0N01000002 /* emom_strength.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000002 /* emom_strength.json */; };
-		AMA1875LOTTIE01FILE /* onboarding-ai-coach.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA1875LOTTIE01REF /* onboarding-ai-coach.json */; };
-		AMA1875LOTTIE02FILE /* onboarding-device-sync.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA1875LOTTIE02REF /* onboarding-device-sync.json */; };
-		AMA1875LOTTIE03FILE /* onboarding-telegram.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA1875LOTTIE03REF /* onboarding-telegram.json */; };
-		AMA1875LOTTIE04FILE /* onboarding-progress-ring.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA1875LOTTIE04REF /* onboarding-progress-ring.json */; };
-		AMA1875LOTTIE05FILE /* onboarding-start.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA1875LOTTIE05REF /* onboarding-start.json */; };
 		F1XTUR3JS0N01000003 /* for_time_conditioning.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000003 /* for_time_conditioning.json */; };
 		F1XTUR3JS0N01000004 /* strength_block_w1.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000004 /* strength_block_w1.json */; };
 		F1XTUR3JS0N01000005 /* running_long.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000005 /* running_long.json */; };
@@ -660,6 +660,14 @@
 		AMA1828TELEG00A /* TelegramAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TelegramAPIRepository.swift; path = ../AmakaFlow/Services/TelegramAPIRepository.swift; sourceTree = SOURCE_ROOT; };
 		AMA1828TRANS00A /* APITransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APITransport.swift; path = ../AmakaFlow/Services/APITransport.swift; sourceTree = SOURCE_ROOT; };
 		AMA1828WORKO00A /* WorkoutAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutAPIRepository.swift; path = ../AmakaFlow/Services/WorkoutAPIRepository.swift; sourceTree = SOURCE_ROOT; };
+		AMA1875LOTTIE01REF /* onboarding-ai-coach.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "onboarding-ai-coach.json"; path = "../AmakaFlow/Resources/OnboardingLottie/onboarding-ai-coach.json"; sourceTree = SOURCE_ROOT; };
+		AMA1875LOTTIE02REF /* onboarding-device-sync.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "onboarding-device-sync.json"; path = "../AmakaFlow/Resources/OnboardingLottie/onboarding-device-sync.json"; sourceTree = SOURCE_ROOT; };
+		AMA1875LOTTIE03REF /* onboarding-telegram.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "onboarding-telegram.json"; path = "../AmakaFlow/Resources/OnboardingLottie/onboarding-telegram.json"; sourceTree = SOURCE_ROOT; };
+		AMA1875LOTTIE04REF /* onboarding-progress-ring.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "onboarding-progress-ring.json"; path = "../AmakaFlow/Resources/OnboardingLottie/onboarding-progress-ring.json"; sourceTree = SOURCE_ROOT; };
+		AMA1875LOTTIE05REF /* onboarding-start.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "onboarding-start.json"; path = "../AmakaFlow/Resources/OnboardingLottie/onboarding-start.json"; sourceTree = SOURCE_ROOT; };
+		AMA1875ONBFLOWREF /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnboardingFlowView.swift; path = ../AmakaFlow/Views/Onboarding/OnboardingFlowView.swift; sourceTree = SOURCE_ROOT; };
+		AMA1875ONBSLIDEREF /* OnboardingSlide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnboardingSlide.swift; path = ../AmakaFlow/Views/Onboarding/OnboardingSlide.swift; sourceTree = SOURCE_ROOT; };
+		AMA1875ONBVIEWREF /* OnboardingSlideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnboardingSlideView.swift; path = ../AmakaFlow/Views/Onboarding/OnboardingSlideView.swift; sourceTree = SOURCE_ROOT; };
 		B44D7C6673CB9BE868FC1006 /* ShareImportViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShareImportViewModel.swift; sourceTree = "<group>"; };
 		BAC6A807F5A4820B05339B99 /* PlanRevealView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlanRevealView.swift; path = ../AmakaFlow/Views/PlanRevealView.swift; sourceTree = SOURCE_ROOT; };
 		BC16168084DD4307BA295F94 /* CTAError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CTAError.swift; path = ../AmakaFlow/Models/CTAError.swift; sourceTree = SOURCE_ROOT; };
@@ -669,9 +677,6 @@
 		C2C967F7EB5505FDB36864F9 /* FeatureFlags.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FeatureFlags.swift; path = ../AmakaFlow/Core/FeatureFlags.swift; sourceTree = "<group>"; };
 		CC2192F9A69B4A51B54A138F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeView.swift; path = ../AmakaFlow/Views/HomeView.swift; sourceTree = SOURCE_ROOT; };
 		D0C1640626E3952B7DBBBF33 /* MentalModelView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MentalModelView.swift; path = ../AmakaFlow/Views/MentalModelView.swift; sourceTree = SOURCE_ROOT; };
-		AMA1875ONBSLIDEREF /* OnboardingSlide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnboardingSlide.swift; path = ../AmakaFlow/Views/Onboarding/OnboardingSlide.swift; sourceTree = SOURCE_ROOT; };
-		AMA1875ONBVIEWREF /* OnboardingSlideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnboardingSlideView.swift; path = ../AmakaFlow/Views/Onboarding/OnboardingSlideView.swift; sourceTree = SOURCE_ROOT; };
-		AMA1875ONBFLOWREF /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnboardingFlowView.swift; path = ../AmakaFlow/Views/Onboarding/OnboardingFlowView.swift; sourceTree = SOURCE_ROOT; };
 		D33PL1NK1MP0RTV0001 /* DeepLinkImportView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkImportView.swift; path = ../AmakaFlow/Views/DeepLinkImportView.swift; sourceTree = "<group>"; };
 		D33PL1NKMAN4G3R0001 /* DeepLinkManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkManager.swift; path = ../AmakaFlow/Services/DeepLinkManager.swift; sourceTree = "<group>"; };
 		D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkManagerTests.swift; path = AmakaFlowCompanionTests/DeepLinkManagerTests.swift; sourceTree = "<group>"; };
@@ -692,11 +697,6 @@
 		F1XTUR34P15RV0000001 /* FixtureAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FixtureAPIService.swift; path = ../AmakaFlow/DependencyInjection/FixtureAPIService.swift; sourceTree = SOURCE_ROOT; };
 		F1XTUR3JS0N00000001 /* amrap_10min.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = amrap_10min.json; path = ../AmakaFlow/Resources/Fixtures/amrap_10min.json; sourceTree = SOURCE_ROOT; };
 		F1XTUR3JS0N00000002 /* emom_strength.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = emom_strength.json; path = ../AmakaFlow/Resources/Fixtures/emom_strength.json; sourceTree = SOURCE_ROOT; };
-		AMA1875LOTTIE01REF /* onboarding-ai-coach.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "onboarding-ai-coach.json"; path = "../AmakaFlow/Resources/OnboardingLottie/onboarding-ai-coach.json"; sourceTree = SOURCE_ROOT; };
-		AMA1875LOTTIE02REF /* onboarding-device-sync.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "onboarding-device-sync.json"; path = "../AmakaFlow/Resources/OnboardingLottie/onboarding-device-sync.json"; sourceTree = SOURCE_ROOT; };
-		AMA1875LOTTIE03REF /* onboarding-telegram.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "onboarding-telegram.json"; path = "../AmakaFlow/Resources/OnboardingLottie/onboarding-telegram.json"; sourceTree = SOURCE_ROOT; };
-		AMA1875LOTTIE04REF /* onboarding-progress-ring.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "onboarding-progress-ring.json"; path = "../AmakaFlow/Resources/OnboardingLottie/onboarding-progress-ring.json"; sourceTree = SOURCE_ROOT; };
-		AMA1875LOTTIE05REF /* onboarding-start.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "onboarding-start.json"; path = "../AmakaFlow/Resources/OnboardingLottie/onboarding-start.json"; sourceTree = SOURCE_ROOT; };
 		F1XTUR3JS0N00000003 /* for_time_conditioning.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = for_time_conditioning.json; path = ../AmakaFlow/Resources/Fixtures/for_time_conditioning.json; sourceTree = SOURCE_ROOT; };
 		F1XTUR3JS0N00000004 /* strength_block_w1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = strength_block_w1.json; path = ../AmakaFlow/Resources/Fixtures/strength_block_w1.json; sourceTree = SOURCE_ROOT; };
 		F1XTUR3JS0N00000005 /* running_long.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = running_long.json; path = ../AmakaFlow/Resources/Fixtures/running_long.json; sourceTree = SOURCE_ROOT; };
@@ -2782,6 +2782,14 @@
 				minimumVersion = 7.0.0;
 			};
 		};
+		AMA1875LOTTIEPKG /* XCRemoteSwiftPackageReference "lottie-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/airbnb/lottie-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.5.0;
+			};
+		};
 		F84E225F2ED0B84300459747 /* XCRemoteSwiftPackageReference "workoutkit-sync" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Amakaflow/workoutkit-sync";
@@ -2796,14 +2804,6 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 1.0.0;
-			};
-		};
-		AMA1875LOTTIEPKG /* XCRemoteSwiftPackageReference "lottie-ios" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/airbnb/lottie-ios";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 4.5.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -2839,6 +2839,11 @@
 			package = AMA1791GRDBPKG /* XCRemoteSwiftPackageReference "GRDB.swift" */;
 			productName = GRDB;
 		};
+		AMA1875LOTTIEPROD /* Lottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AMA1875LOTTIEPKG /* XCRemoteSwiftPackageReference "lottie-ios" */;
+			productName = Lottie;
+		};
 		F84E22982ED0DA1F00459747 /* WorkoutKitSync */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = F84E225F2ED0B84300459747 /* XCRemoteSwiftPackageReference "workoutkit-sync" */;
@@ -2858,11 +2863,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = XCT4H34LTH00000003 /* XCRemoteSwiftPackageReference "XCTHealthKit" */;
 			productName = XCTHealthKit;
-		};
-		AMA1875LOTTIEPROD /* Lottie */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = AMA1875LOTTIEPKG /* XCRemoteSwiftPackageReference "lottie-ios" */;
-			productName = Lottie;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

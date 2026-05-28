@@ -101,7 +101,7 @@ class RealWorkoutTestCase: XCTestCase {
             return false
         }
 
-        let workoutsTab = app.tabBars.buttons["Workouts"]
+        let workoutsTab = TestAuthHelper.tab(app, "workouts_tab", label: "Workouts")
         guard workoutsTab.waitForExistence(timeout: 5) else {
             return false
         }
@@ -452,8 +452,8 @@ class RealWorkoutTestCase: XCTestCase {
         }
 
         // Check if we're still in the workout player or back at main screen
-        let tabBar = app.tabBars.firstMatch
-        if tabBar.exists {
+        let tabBar = TestAuthHelper.tabBar(app)
+        if tabBar.exists || TestAuthHelper.tab(app, "home_tab", label: "Home").exists {
             print("[E2E] Tab bar visible - workout player was dismissed without showing confirmation")
             // The workout may have ended automatically or the close button dismissed it
             // Consider this a "success" if we got back to the main app
@@ -465,41 +465,13 @@ class RealWorkoutTestCase: XCTestCase {
 
     /// Verify workout appears in Activity History
     func verifyWorkoutInHistory() -> Bool {
-        // Navigate to activity history
-        // The app has 6 tabs: Home, Workouts, Sources, Calendar, History, Settings
-        // iOS shows only 5 tabs at once, so History and Settings are under "More"
-
-        // First, try finding History tab directly
-        let historyTab = app.tabBars.buttons["History"]
-        if historyTab.waitForExistence(timeout: 2) {
-            historyTab.tap()
-        } else {
-            // History is likely under "More" tab
-            let moreTab = app.tabBars.buttons["More"]
-            if moreTab.waitForExistence(timeout: 2) {
-                print("[E2E] Tapping More tab to access History")
-                moreTab.tap()
-                sleep(1)
-
-                // Look for History row in More menu
-                let historyRow = app.staticTexts["History"]
-                if historyRow.waitForExistence(timeout: 3) {
-                    historyRow.tap()
-                } else {
-                    // Try tapping by table cell
-                    let historyCell = app.cells["History"]
-                    if historyCell.exists {
-                        historyCell.tap()
-                    } else {
-                        print("[E2E] Could not find History in More menu")
-                        return false
-                    }
-                }
-            } else {
-                print("[E2E] Could not find History or More tab")
-                return false
-            }
+        // Navigate to activity history via AMA-1992's top-level History tab.
+        let historyTab = TestAuthHelper.tab(app, "history_tab", label: "History")
+        guard historyTab.waitForExistence(timeout: 5) else {
+            print("[E2E] Could not find History tab")
+            return false
         }
+        historyTab.tap()
 
         sleep(3)  // Wait for API call to complete
 
@@ -736,17 +708,10 @@ final class EnvironmentE2ETests: RealWorkoutTestCase {
         XCTAssertTrue(TestAuthHelper.waitForMainContent(app, timeout: 15),
                      "App should load main content")
 
-        // Navigate to More tab
-        let moreTab = app.tabBars.buttons["More"]
-        XCTAssertTrue(moreTab.waitForExistence(timeout: 5), "More tab should exist")
-        moreTab.tap()
-        sleep(1)
-
-        // Tap into Settings (nested inside More tab after tab consolidation)
-        let settingsCell = app.cells.containing(.staticText, identifier: "Settings").firstMatch
-        let settingsButton = settingsCell.exists ? settingsCell : app.staticTexts["Settings"]
-        XCTAssertTrue(settingsButton.waitForExistence(timeout: 5), "Settings should be visible in More tab")
-        settingsButton.tap()
+        // Navigate to Profile tab (Settings root after AMA-1992 tab consolidation).
+        let profileTab = TestAuthHelper.tab(app, "profile_tab", label: "Profile")
+        XCTAssertTrue(profileTab.waitForExistence(timeout: 5), "Profile tab should exist")
+        profileTab.tap()
         sleep(1)
 
         // Look for "Development" or "localhost" indicator

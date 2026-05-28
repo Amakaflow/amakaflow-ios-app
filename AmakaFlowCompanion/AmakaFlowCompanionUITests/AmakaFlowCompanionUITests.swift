@@ -53,13 +53,13 @@ final class AppLaunchE2ETests: BaseE2ETestCase {
         XCTAssertTrue(TestAuthHelper.waitForMainContent(app, timeout: 15),
                      "App should load main content")
 
-        let tabBar = app.tabBars.firstMatch
+        let tabBar = TestAuthHelper.tabBar(app)
         XCTAssertTrue(tabBar.waitForExistence(timeout: 5),
-                     "Tab bar should be displayed")
+                     "Custom tab bar should be displayed")
 
         // Verify expected tabs exist
-        XCTAssertTrue(app.tabBars.buttons.count >= 2,
-                     "Should have at least 2 tabs")
+        XCTAssertTrue(TestAuthHelper.tab(app, "home_tab", label: "Home").exists)
+        XCTAssertTrue(TestAuthHelper.tab(app, "workouts_tab", label: "Workouts").exists)
     }
 
     @MainActor
@@ -78,7 +78,7 @@ final class NavigationE2ETests: BaseE2ETestCase {
         XCTAssertTrue(TestAuthHelper.waitForMainContent(app, timeout: 15),
                      "App should load main content")
 
-        let workoutsTab = app.tabBars.buttons["Workouts"]
+        let workoutsTab = TestAuthHelper.tab(app, "workouts_tab", label: "Workouts")
         if workoutsTab.exists && workoutsTab.isHittable {
             workoutsTab.tap()
 
@@ -92,16 +92,10 @@ final class NavigationE2ETests: BaseE2ETestCase {
         XCTAssertTrue(TestAuthHelper.waitForMainContent(app, timeout: 15),
                      "App should load main content")
 
-        // Settings might be in "More" tab
-        let settingsTab = app.tabBars.buttons["Settings"]
-        let moreTab = app.tabBars.buttons["More"]
+        let profileTab = TestAuthHelper.tab(app, "profile_tab", label: "Profile")
 
-        if settingsTab.exists && settingsTab.isHittable {
-            settingsTab.tap()
-        } else if moreTab.exists && moreTab.isHittable {
-            moreTab.tap()
-            // Settings might be in a More menu
-            sleep(1)
+        if profileTab.exists && profileTab.isHittable {
+            profileTab.tap()
         }
 
         // Look for settings-related content (could be nav bar or any settings text)
@@ -113,13 +107,10 @@ final class NavigationE2ETests: BaseE2ETestCase {
         XCTAssertTrue(TestAuthHelper.waitForMainContent(app, timeout: 15),
                      "App should load main content")
 
-        // Look for Activity or History tab
-        let activityTab = app.tabBars.buttons.matching(
-            NSPredicate(format: "label CONTAINS[c] 'activity' OR label CONTAINS[c] 'history'")
-        ).firstMatch
+        let historyTab = TestAuthHelper.tab(app, "history_tab", label: "History")
 
-        if activityTab.exists && activityTab.isHittable {
-            activityTab.tap()
+        if historyTab.exists && historyTab.isHittable {
+            historyTab.tap()
             sleep(1)
             XCTAssertTrue(true, "Successfully navigated to Activity History")
         }
@@ -135,7 +126,7 @@ final class WorkoutFlowE2ETests: BaseE2ETestCase {
                      "App should load main content")
 
         // Navigate to workouts
-        let workoutsTab = app.tabBars.buttons["Workouts"]
+        let workoutsTab = TestAuthHelper.tab(app, "workouts_tab", label: "Workouts")
         if workoutsTab.exists {
             workoutsTab.tap()
         }
@@ -181,7 +172,7 @@ final class WorkoutFlowE2ETests: BaseE2ETestCase {
         XCTAssertTrue(TestAuthHelper.waitForMainContent(app, timeout: 15),
                      "App should load main content")
 
-        let workoutsTab = app.tabBars.buttons["Workouts"]
+        let workoutsTab = TestAuthHelper.tab(app, "workouts_tab", label: "Workouts")
         if workoutsTab.exists {
             workoutsTab.tap()
         }
@@ -208,7 +199,7 @@ final class WorkoutFlowE2ETests: BaseE2ETestCase {
         XCTAssertTrue(TestAuthHelper.waitForMainContent(app, timeout: 15),
                      "App should load main content")
 
-        let workoutsTab = app.tabBars.buttons["Workouts"]
+        let workoutsTab = TestAuthHelper.tab(app, "workouts_tab", label: "Workouts")
         if workoutsTab.exists {
             workoutsTab.tap()
         }
@@ -241,7 +232,7 @@ final class WorkoutFlowE2ETests: BaseE2ETestCase {
         XCTAssertTrue(TestAuthHelper.waitForMainContent(app, timeout: 15),
                      "App should load main content")
 
-        let workoutsTab = app.tabBars.buttons["Workouts"]
+        let workoutsTab = TestAuthHelper.tab(app, "workouts_tab", label: "Workouts")
         if workoutsTab.exists {
             workoutsTab.tap()
         }
@@ -274,7 +265,7 @@ final class StrengthWorkoutE2ETests: BaseE2ETestCase {
         XCTAssertTrue(TestAuthHelper.waitForMainContent(app, timeout: 15),
                      "App should load main content")
 
-        let workoutsTab = app.tabBars.buttons["Workouts"]
+        let workoutsTab = TestAuthHelper.tab(app, "workouts_tab", label: "Workouts")
         if workoutsTab.exists {
             workoutsTab.tap()
         }
@@ -320,7 +311,7 @@ final class WorkoutControlE2ETests: BaseE2ETestCase {
                      "App should load main content")
 
         // Navigate to workout and start
-        let workoutsTab = app.tabBars.buttons["Workouts"]
+        let workoutsTab = TestAuthHelper.tab(app, "workouts_tab", label: "Workouts")
         if workoutsTab.exists {
             workoutsTab.tap()
         }
@@ -381,7 +372,7 @@ final class AppLifecycleE2ETests: BaseE2ETestCase {
                      "App should load main content")
 
         // Navigate to Workouts tab (more reliable than Settings)
-        let workoutsTab = app.tabBars.buttons["Workouts"]
+        let workoutsTab = TestAuthHelper.tab(app, "workouts_tab", label: "Workouts")
         if workoutsTab.exists {
             workoutsTab.tap()
             sleep(1)
@@ -400,13 +391,63 @@ final class AppLifecycleE2ETests: BaseE2ETestCase {
 
 // MARK: - Pull to Refresh Tests
 
+final class SixTabNavigationE2ETests: BaseE2ETestCase {
+
+    func testSixTabBarRendersAllTopLevelTabs() throws {
+        XCTAssertTrue(TestAuthHelper.waitForMainContent(app, timeout: 15),
+                     "App should load main content")
+
+        let tabs = [
+            ("home_tab", "Home"),
+            ("workouts_tab", "Workouts"),
+            ("coach_tab", "Coach"),
+            ("library_tab", "Library"),
+            ("history_tab", "History"),
+            ("profile_tab", "Profile")
+        ]
+
+        for tab in tabs {
+            XCTAssertTrue(
+                TestAuthHelper.tab(app, tab.0, label: tab.1).waitForExistence(timeout: 5),
+                "Missing \(tab.1) tab (\(tab.0))"
+            )
+        }
+    }
+
+    func testTappingEachSixTabShowsTheExpectedRoot() throws {
+        XCTAssertTrue(TestAuthHelper.waitForMainContent(app, timeout: 15),
+                     "App should load main content")
+
+        let tabs = [
+            ("home_tab", "Home", "home_screen"),
+            ("workouts_tab", "Workouts", "workouts_screen"),
+            ("coach_tab", "Coach", "coach_screen"),
+            ("library_tab", "Library", "library_screen"),
+            ("history_tab", "History", "history_screen"),
+            ("profile_tab", "Profile", "profile_screen")
+        ]
+
+        for tab in tabs {
+            let tabButton = TestAuthHelper.tab(app, tab.0, label: tab.1)
+            XCTAssertTrue(tabButton.waitForExistence(timeout: 5), "Missing \(tab.1) tab")
+            tabButton.tap()
+
+            let root = app.descendants(matching: .any)[tab.2]
+            XCTAssertTrue(
+                root.waitForExistence(timeout: 5),
+                "Tapping \(tab.1) did not show root marker \(tab.2)"
+            )
+        }
+    }
+}
+
 final class RefreshE2ETests: BaseE2ETestCase {
 
     func testPullToRefreshWorkouts() throws {
         XCTAssertTrue(TestAuthHelper.waitForMainContent(app, timeout: 15),
                      "App should load main content")
 
-        let workoutsTab = app.tabBars.buttons["Workouts"]
+        let workoutsTab = TestAuthHelper.tab(app, "workouts_tab", label: "Workouts")
         if workoutsTab.exists {
             workoutsTab.tap()
         }

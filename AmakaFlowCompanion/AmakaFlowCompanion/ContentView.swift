@@ -7,96 +7,135 @@
 
 import SwiftUI
 
-struct ContentView: View {
-    @EnvironmentObject var viewModel: WorkoutsViewModel
-    @State private var selectedTab: Tab = .home
-    @State private var showingWorkoutPlayer = false
-    @State private var showSyncDashboard = false
-    // AMA-1625: NavigationPath for the More tab — held here so re-tapping
-    // the active More tab can reset it to root, matching native iOS TabView
-    // pop-to-root behaviour.
-    @State private var morePath = NavigationPath()
+/// Top-level chrome destinations for the AMA-1992 six-tab navigation.
+enum AFTab: String, CaseIterable, Identifiable {
+    case home = "Home"
+    case workouts = "Workouts"
+    case coach = "Coach"
+    case library = "Library"
+    case history = "History"
+    case profile = "Profile"
 
-    enum Tab: String, CaseIterable {
-        case home = "Home"
-        case workouts = "Workouts"
-        case calendar = "Calendar"
-        case social = "Social"
-        case more = "More"
+    var id: Self { self }
 
-        var icon: String {
-            switch self {
-            case .home: return "house.fill"
-            case .workouts: return "figure.run"
-            case .calendar: return "calendar"
-            case .social: return "person.2.fill"
-            case .more: return "ellipsis.circle.fill"
-            }
+    var title: String { rawValue }
+
+    var activeIcon: String {
+        switch self {
+        case .home: return "house.fill"
+        case .workouts: return "square.grid.2x2.fill"
+        case .coach: return "bubble.left.and.text.bubble.fill"
+        case .library: return "bookmark.fill"
+        case .history: return "clock.arrow.circlepath"
+        case .profile: return "person.crop.circle.fill"
         }
     }
 
-    var body: some View {
-        // AMA-1625: custom selection setter detects re-tap on the active
-        // More tab and pops the More NavigationStack to root.
-        let tabSelection = Binding<Tab>(
-            get: { selectedTab },
-            set: { newValue in
-                if newValue == .more && selectedTab == .more {
-                    morePath = NavigationPath()
-                }
-                selectedTab = newValue
-            }
-        )
-        return TabView(selection: tabSelection) {
-            HomeView()
-                .tabItem {
-                    Image(systemName: Tab.home.icon)
-                    Text(Tab.home.rawValue)
-                }
-                .tag(Tab.home)
-                .accessibilityIdentifier("home_tab")
-
-            WorkoutsView()
-                .tabItem {
-                    Image(systemName: Tab.workouts.icon)
-                    Text(Tab.workouts.rawValue)
-                }
-                .tag(Tab.workouts)
-                .accessibilityIdentifier("workouts_tab")
-
-            // AMA-1588: Calendar + Social tabs are non-MVP.
-            // Hidden until FeatureFlags.nonMvp is enabled. Code stays in
-            // the app so we can re-enable once the willingness-to-pay test
-            // resolves.
-            if FeatureFlags.nonMvp {
-                CalendarView(onAddWorkout: {
-                        selectedTab = .workouts
-                    })
-                    .tabItem {
-                        Image(systemName: Tab.calendar.icon)
-                        Text(Tab.calendar.rawValue)
-                    }
-                    .tag(Tab.calendar)
-                    .accessibilityIdentifier("calendar_tab")
-
-                FeedView()
-                    .tabItem {
-                        Image(systemName: Tab.social.icon)
-                        Text(Tab.social.rawValue)
-                    }
-                    .tag(Tab.social)
-                    .accessibilityIdentifier("social_tab")
-            }
-
-            MoreView(navigateToSyncDashboard: $showSyncDashboard, path: $morePath)
-                .tabItem {
-                    Image(systemName: Tab.more.icon)
-                    Text(Tab.more.rawValue)
-                }
-                .tag(Tab.more)
-                .accessibilityIdentifier("more_tab")
+    var inactiveIcon: String {
+        switch self {
+        case .home: return "house"
+        case .workouts: return "square.grid.2x2"
+        case .coach: return "bubble.left.and.text.bubble"
+        case .library: return "bookmark"
+        case .history: return "clock.arrow.circlepath"
+        case .profile: return "person.crop.circle"
         }
-        .tint(Theme.Colors.accentBlue)
+    }
+
+    var accessibilityIdentifier: String {
+        switch self {
+        case .home: return "home_tab"
+        case .workouts: return "workouts_tab"
+        case .coach: return "coach_tab"
+        case .library: return "library_tab"
+        case .history: return "history_tab"
+        case .profile: return "profile_tab"
+        }
+    }
+
+    var rootAccessibilityIdentifier: String {
+        switch self {
+        case .home: return "home_screen"
+        case .workouts: return "workouts_screen"
+        case .coach: return "coach_screen"
+        case .library: return "library_screen"
+        case .history: return "history_screen"
+        case .profile: return "profile_screen"
+        }
+    }
+
+    static func destination(forDeepLink name: Notification.Name) -> AFTab? {
+        switch name {
+        case .deepLinkToCoach:
+            return .coach
+        case .deepLinkToWorkout:
+            return .workouts
+        case .deepLinkToCalendar:
+            // Calendar is no longer top-level chrome; route to the closest
+            // planning surface so the deep link lands on a real tab.
+            return .workouts
+        case .deepLinkToSync, .deepLinkToNutrition:
+            return .profile
+        default:
+            return nil
+        }
+    }
+}
+
+enum AFTabSelectionAction: Equatable {
+    case switchTo(AFTab)
+    case popToRoot(AFTab)
+}
+
+struct AFTabSelectionState: Equatable {
+    private(set) var selectedTab: AFTab
+    private var resetCounts: [AFTab: Int]
+
+    init(selectedTab: AFTab = .home) {
+        self.selectedTab = selectedTab
+        self.resetCounts = Dictionary(uniqueKeysWithValues: AFTab.allCases.map { ($0, 0) })
+    }
+
+    mutating func select(_ tab: AFTab) -> AFTabSelectionAction {
+        guard tab != selectedTab else {
+            resetCounts[tab, default: 0] += 1
+            return .popToRoot(tab)
+        }
+
+        selectedTab = tab
+        return .switchTo(tab)
+    }
+
+    mutating func route(to tab: AFTab) {
+        selectedTab = tab
+    }
+
+    func resetCount(for tab: AFTab) -> Int {
+        resetCounts[tab, default: 0]
+    }
+}
+
+struct ContentView: View {
+    @EnvironmentObject var viewModel: WorkoutsViewModel
+    @State private var tabState = AFTabSelectionState(selectedTab: .home)
+    @State private var showingWorkoutPlayer = false
+    @State private var showSyncDashboard = false
+    @State private var profilePath = NavigationPath()
+    @State private var resetTokens: [AFTab: UUID] = Dictionary(
+        uniqueKeysWithValues: AFTab.allCases.map { ($0, UUID()) }
+    )
+
+    private var selectedTab: AFTab { tabState.selectedTab }
+
+    var body: some View {
+        ZStack {
+            Theme.Colors.background.ignoresSafeArea()
+            activeDestination
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            AFTabBar(selectedTab: selectedTab, onSelect: selectTab)
+        }
+        .tint(Theme.Colors.readyHigh)
         .task {
             // Check for pending workouts on app open
             await viewModel.checkPendingWorkouts()
@@ -111,23 +150,25 @@ struct ContentView: View {
         }
         // Deep link notification handlers (AMA-1133, AMA-1640)
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToCalendar)) { note in
-            // AMA-1588: Calendar tab is hidden in MVP. If a deep-link fires
-            // while the tab is gated off, fall back to Workouts (closest
-            // adjacent surface) so the user doesn't land on a non-existent
-            // tab state.
-            selectedTab = FeatureFlags.nonMvp ? .calendar : .workouts
+            routeDeepLink(.deepLinkToCalendar)
             if let date = note.userInfo?["date"] as? String {
                 viewModel.preselectCalendarDate(date)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToCoach)) { note in
-            selectedTab = .more
+            routeDeepLink(.deepLinkToCoach)
             if let threadId = note.userInfo?["threadId"] as? String {
-                NotificationCenter.default.post(name: .openCoachThread, object: nil, userInfo: ["threadId": threadId])
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(
+                        name: .openCoachThread,
+                        object: nil,
+                        userInfo: ["threadId": threadId]
+                    )
+                }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToWorkout)) { note in
-            selectedTab = .workouts
+            routeDeepLink(.deepLinkToWorkout)
             if let workoutId = note.userInfo?["workoutId"] as? String {
                 viewModel.selectWorkout(byId: workoutId)
             }
@@ -136,12 +177,171 @@ struct ContentView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToSync)) { _ in
-            selectedTab = .more
+            routeDeepLink(.deepLinkToSync)
             showSyncDashboard = true
         }
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToNutrition)) { _ in
-            selectedTab = .more
+            routeDeepLink(.deepLinkToNutrition)
         }
+    }
+
+    @ViewBuilder
+    private var activeDestination: some View {
+        switch selectedTab {
+        case .home:
+            tabRoot(.home) {
+                HomeView()
+            }
+        case .workouts:
+            tabRoot(.workouts) {
+                WorkoutsView()
+            }
+        case .coach:
+            tabRoot(.coach) {
+                CoachChatView()
+            }
+        case .library:
+            tabRoot(.library) {
+                KnowledgeLibraryView()
+            }
+        case .history:
+            tabRoot(.history) {
+                // AMA-1992: top-level History must show real completed
+                // workouts. `HistoryView` is still sample-backed design work;
+                // keep it out of primary chrome until AMA-200x rebuilds it
+                // against production data.
+                ActivityHistoryView()
+            }
+        case .profile:
+            tabRoot(.profile) {
+                NavigationStack(path: $profilePath) {
+                    SettingsView(navigateToSyncDashboard: $showSyncDashboard)
+                }
+            }
+        }
+    }
+
+    private func selectTab(_ tab: AFTab) {
+        let action = tabState.select(tab)
+        if case let .popToRoot(tab) = action {
+            popToRoot(tab)
+        }
+    }
+
+    private func routeDeepLink(_ name: Notification.Name) {
+        guard let tab = AFTab.destination(forDeepLink: name) else { return }
+        tabState.route(to: tab)
+    }
+
+    private func popToRoot(_ tab: AFTab) {
+        if tab == .profile {
+            profilePath = NavigationPath()
+            showSyncDashboard = false
+        }
+        resetTokens[tab] = UUID()
+    }
+
+    private func resetToken(for tab: AFTab) -> UUID {
+        resetTokens[tab] ?? UUID()
+    }
+
+    private func tabRoot<Content: View>(
+        _ tab: AFTab,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        content()
+            .id(resetToken(for: tab))
+            .overlay(alignment: .top) {
+                // Invisible root marker for XCUITest/Maestro. Some SwiftUI
+                // containers do not expose identifiers reliably on iOS 26.
+                Text(" ")
+                    .font(.system(size: 1))
+                    .opacity(0.01)
+                    .accessibilityIdentifier(tab.rootAccessibilityIdentifier)
+            }
+    }
+}
+
+struct AFTabBar: View {
+    let selectedTab: AFTab
+    let onSelect: (AFTab) -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(Theme.Colors.borderLight)
+                .frame(height: 1)
+
+            HStack(spacing: 0) {
+                ForEach(AFTab.allCases) { tab in
+                    AFTabBarButton(
+                        tab: tab,
+                        isSelected: selectedTab == tab,
+                        onSelect: onSelect
+                    )
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .padding(.horizontal, Theme.Spacing.sm)
+            .padding(.top, Theme.Spacing.sm)
+            .padding(.bottom, Theme.Spacing.sm)
+        }
+        .background(
+            Theme.Colors.surface
+                .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: -4)
+                .ignoresSafeArea(edges: .bottom)
+        )
+        .accessibilityIdentifier("af_tabbar")
+        .accessibilityElement(children: .contain)
+    }
+}
+
+private struct AFTabBarButton: View {
+    let tab: AFTab
+    let isSelected: Bool
+    let onSelect: (AFTab) -> Void
+
+    var body: some View {
+        Button {
+            onSelect(tab)
+        } label: {
+            VStack(spacing: 3) {
+                ZStack {
+                    if isSelected {
+                        Capsule()
+                            .fill(Theme.Colors.readyHigh.opacity(0.30))
+                            .frame(width: 46, height: 30)
+                    }
+
+                    ZStack(alignment: .topTrailing) {
+                        Image(systemName: isSelected ? tab.activeIcon : tab.inactiveIcon)
+                            .font(.system(size: 17, weight: isSelected ? .semibold : .medium))
+
+                        if tab == .coach, isSelected {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 7, weight: .bold))
+                                .offset(x: 8, y: -7)
+                        }
+                    }
+                    .foregroundColor(isSelected ? Theme.Colors.readyHigh : Theme.Colors.textTertiary)
+                }
+                .frame(height: 32)
+
+                Text(tab.title)
+                    .font(Theme.Typography.label)
+                    .foregroundColor(isSelected ? Theme.Colors.textPrimary : Theme.Colors.textTertiary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(tab.title)
+        .accessibilityIdentifier(tab.accessibilityIdentifier)
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }
 
@@ -149,4 +349,16 @@ struct ContentView: View {
     ContentView()
         .environmentObject(WorkoutsViewModel())
         .environmentObject(WatchConnectivityManager.shared)
+}
+
+#Preview("AFTabBar · Light") {
+    AFTabBar(selectedTab: .home) { _ in }
+        .background(Theme.Colors.background)
+        .environment(\.colorScheme, .light)
+}
+
+#Preview("AFTabBar · Dark") {
+    AFTabBar(selectedTab: .coach) { _ in }
+        .background(Theme.Colors.background)
+        .environment(\.colorScheme, .dark)
 }
