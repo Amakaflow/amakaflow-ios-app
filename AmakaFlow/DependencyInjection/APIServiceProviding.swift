@@ -291,6 +291,17 @@ protocol APIServiceProviding: TelegramLinkAPIProviding {
         roles: [Components.Schemas.DeviceRole]
     ) async throws -> Components.Schemas.DeviceRolesResult
 
+    // MARK: - Messaging Channels (AMA-2027)
+
+    /// Fetch messaging channels and coaching-delivery prefs from the mobile BFF.
+    func listMessagingChannels() async throws -> Components.Schemas.MessagingChannelList
+
+    /// Persist coaching-delivery prefs for a messaging channel.
+    func setChannelPrefs(
+        channelId: String,
+        prefs: Components.Schemas.ChannelPrefsRequest
+    ) async throws -> Components.Schemas.ChannelPrefsResult
+
     // MARK: - Coaching Profile (AMA-1995)
 
     /// Fetch the user's coaching profile, including generated equipment inventory.

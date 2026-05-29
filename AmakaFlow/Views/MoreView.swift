@@ -63,6 +63,13 @@ struct MoreView: View {
                     }
                     .accessibilityIdentifier("more_row_devices")
 
+                    NavigationLink {
+                        MessagingView()
+                    } label: {
+                        moreRow(icon: "bubble.left.and.bubble.right.fill", title: "Messaging")
+                    }
+                    .accessibilityIdentifier("more_row_messaging")
+
                     if FeatureFlags.nonMvp {
                         NavigationLink {
                             SourcesView()

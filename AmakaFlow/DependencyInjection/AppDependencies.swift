@@ -677,14 +677,46 @@ class MockAPIService: APIServiceProviding {
         Components.Schemas.PairDeviceResult(message: "Device removed", success: true)
     )
     var setDeviceRolesResult: Result<Components.Schemas.DeviceRolesResult, Error>?
+    var listMessagingChannelsResult: Result<Components.Schemas.MessagingChannelList, Error> = .success(
+        Components.Schemas.MessagingChannelList(
+            channels: [
+                Components.Schemas.MessagingChannel(
+                    comingSoon: false,
+                    connected: true,
+                    handle: "@mock_amaka",
+                    id: "telegram",
+                    name: "Telegram",
+                    prefs: Components.Schemas.ChannelPrefs(briefing: true, checkin: true, quietEnd: "07:00", quietStart: "21:00", swap: false)
+                ),
+                Components.Schemas.MessagingChannel(
+                    comingSoon: true,
+                    connected: false,
+                    handle: nil,
+                    id: "whatsapp",
+                    name: "WhatsApp",
+                    prefs: Components.Schemas.ChannelPrefs(briefing: false, checkin: false, swap: false)
+                )
+            ],
+            deliveryLive: false
+        )
+    )
+    var setChannelPrefsResult: Result<Components.Schemas.ChannelPrefsResult, Error>?
+    var setChannelPrefsResultsByChannel: [String: Result<Components.Schemas.ChannelPrefsResult, Error>] = [:]
+    var setChannelPrefsDelayNanoseconds: UInt64 = 0
+    var setChannelPrefsDelaysByChannel: [String: UInt64] = [:]
     var listDevicesCalled = false
     var pairDeviceCalled = false
     var revokeDeviceCalled = false
     var setDeviceRolesCalled = false
+    var listMessagingChannelsCalled = false
+    var setChannelPrefsCalled = false
+    var setChannelPrefsCallCount = 0
     var lastPairedShortCode: String?
     var lastRevokedDeviceId: String?
     var lastSetDeviceRolesId: String?
     var lastSetDeviceRoles: [Components.Schemas.DeviceRole]?
+    var lastSetChannelPrefsId: String?
+    var lastSetChannelPrefs: Components.Schemas.ChannelPrefsRequest?
 
     func listDevices() async throws -> [Components.Schemas.PairedDevice] {
         listDevicesCalled = true
@@ -714,6 +746,42 @@ class MockAPIService: APIServiceProviding {
             return try setDeviceRolesResult.get()
         }
         return Components.Schemas.DeviceRolesResult(roles: roles, success: true)
+    }
+
+    func listMessagingChannels() async throws -> Components.Schemas.MessagingChannelList {
+        listMessagingChannelsCalled = true
+        return try listMessagingChannelsResult.get()
+    }
+
+    func setChannelPrefs(
+        channelId: String,
+        prefs: Components.Schemas.ChannelPrefsRequest
+    ) async throws -> Components.Schemas.ChannelPrefsResult {
+        setChannelPrefsCalled = true
+        setChannelPrefsCallCount += 1
+        lastSetChannelPrefsId = channelId
+        lastSetChannelPrefs = prefs
+        let delay = setChannelPrefsDelaysByChannel[channelId] ?? setChannelPrefsDelayNanoseconds
+        if delay > 0 {
+            try await Task.sleep(nanoseconds: delay)
+        }
+        if let channelResult = setChannelPrefsResultsByChannel[channelId] {
+            return try channelResult.get()
+        }
+        if let setChannelPrefsResult {
+            return try setChannelPrefsResult.get()
+        }
+        return Components.Schemas.ChannelPrefsResult(
+            channelId: channelId,
+            prefs: Components.Schemas.ChannelPrefs(
+                briefing: prefs.briefing,
+                checkin: prefs.checkin,
+                quietEnd: prefs.quietEnd,
+                quietStart: prefs.quietStart,
+                swap: prefs.swap
+            ),
+            success: true
+        )
     }
 
     // MARK: - Coaching Profile (AMA-1995)

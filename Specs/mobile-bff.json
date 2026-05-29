@@ -80,6 +80,89 @@
         "title": "AgentActionStatus",
         "type": "string"
       },
+      "ChannelPrefs": {
+        "description": "Coaching-delivery prefs for a messaging channel. Delivery isn't wired yet\n(see MessagingChannelList.deliveryLive) \u2014 these persist intent only.",
+        "properties": {
+          "briefing": {
+            "default": false,
+            "title": "Briefing",
+            "type": "boolean"
+          },
+          "checkin": {
+            "default": false,
+            "title": "Checkin",
+            "type": "boolean"
+          },
+          "quietEnd": {
+            "title": "Quietend",
+            "type": "string"
+          },
+          "quietStart": {
+            "title": "Quietstart",
+            "type": "string"
+          },
+          "swap": {
+            "default": false,
+            "title": "Swap",
+            "type": "boolean"
+          }
+        },
+        "title": "ChannelPrefs",
+        "type": "object"
+      },
+      "ChannelPrefsRequest": {
+        "additionalProperties": false,
+        "description": "Body for PUT /v1/messaging/channels/{id}/prefs.",
+        "properties": {
+          "briefing": {
+            "default": false,
+            "title": "Briefing",
+            "type": "boolean"
+          },
+          "checkin": {
+            "default": false,
+            "title": "Checkin",
+            "type": "boolean"
+          },
+          "quietEnd": {
+            "title": "Quietend",
+            "type": "string"
+          },
+          "quietStart": {
+            "title": "Quietstart",
+            "type": "string"
+          },
+          "swap": {
+            "default": false,
+            "title": "Swap",
+            "type": "boolean"
+          }
+        },
+        "title": "ChannelPrefsRequest",
+        "type": "object"
+      },
+      "ChannelPrefsResult": {
+        "description": "Response for PUT /v1/messaging/channels/{id}/prefs.",
+        "properties": {
+          "channelId": {
+            "title": "Channelid",
+            "type": "string"
+          },
+          "prefs": {
+            "$ref": "#/components/schemas/ChannelPrefs"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "channelId"
+        ],
+        "title": "ChannelPrefsResult",
+        "type": "object"
+      },
       "CoachingProfile": {
         "description": "Response body for GET/PUT /v1/coaching/profile.",
         "properties": {
@@ -812,6 +895,61 @@
           }
         },
         "title": "HealthMetrics",
+        "type": "object"
+      },
+      "MessagingChannel": {
+        "description": "One messaging provider for the MessagingScreen.",
+        "properties": {
+          "comingSoon": {
+            "default": false,
+            "title": "Comingsoon",
+            "type": "boolean"
+          },
+          "connected": {
+            "default": false,
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "handle": {
+            "title": "Handle",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "prefs": {
+            "$ref": "#/components/schemas/ChannelPrefs"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "MessagingChannel",
+        "type": "object"
+      },
+      "MessagingChannelList": {
+        "description": "Response for GET /v1/messaging/channels.",
+        "properties": {
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/MessagingChannel"
+            },
+            "title": "Channels",
+            "type": "array"
+          },
+          "deliveryLive": {
+            "default": false,
+            "title": "Deliverylive",
+            "type": "boolean"
+          }
+        },
+        "title": "MessagingChannelList",
         "type": "object"
       },
       "PairDeviceRequest": {
@@ -2783,6 +2921,95 @@
           }
         },
         "summary": "V1 Knowledge Cards Delete"
+      }
+    },
+    "/v1/messaging/channels": {
+      "get": {
+        "description": "iOS MessagingScreen \u2192 mapper-api GET /api/messaging/channels (AMA-2027).\n\nReshapes the snake_case channel catalog (Telegram connection + WhatsApp/Slack\ncoming-soon + per-channel prefs) into the typed camelCase list. `deliveryLive`\nis False until the briefing/checkin/swap senders exist.",
+        "operationId": "listMessagingChannels",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessagingChannelList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Messaging Channels"
+      }
+    },
+    "/v1/messaging/channels/{channel_id}/prefs": {
+      "put": {
+        "description": "iOS channel prefs \u2192 mapper-api PUT /api/messaging/channels/{id}/prefs (AMA-2027).",
+        "operationId": "setMessagingChannelPrefs",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel_id",
+            "required": true,
+            "schema": {
+              "title": "Channel Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChannelPrefsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelPrefsResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Messaging Set Prefs"
       }
     },
     "/v1/nutrition/analyze-photo": {
