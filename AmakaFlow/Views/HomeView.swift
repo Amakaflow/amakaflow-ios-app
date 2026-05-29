@@ -15,6 +15,7 @@ enum HomeBannerKind {
 
 struct HomeView: View {
     @EnvironmentObject var viewModel: WorkoutsViewModel
+    @StateObject private var homeViewModel = HomeViewModel()
     @StateObject private var historyViewModel = ActivityHistoryViewModel()
     @ObservedObject private var simulationSettings = SimulationSettings.shared
     @AppStorage("devicePreference") private var devicePreference: DevicePreference = .appleWatchPhone
@@ -42,6 +43,7 @@ struct HomeView: View {
     @State private var showingPlanAdoptedAlert = false
     @State private var showingWeeklyReview = false
     @State private var showingAgentInbox = false
+    @State private var showingProgramWizard = false
 
     private var today: Date { Date() }
 
@@ -80,63 +82,7 @@ struct HomeView: View {
                     }
                     #endif
 
-                    // Resume Workout banner (if saved progress exists)
-                    if let progress = savedProgress {
-                        resumeWorkoutBanner(progress: progress)
-                    }
-
-                    readinessCard
-
-                    if let homeBannerKind {
-                        homeBanner(homeBannerKind)
-                    }
-
-                    todaysWorkoutHero
-
-                    coachVisibilitySection
-
-                    // Nutrition Dashboard Card (AMA-1290)
-                    if nutritionViewModel.settings.isEnabled {
-                        NutritionDashboardCard(viewModel: nutritionViewModel)
-                            .onTapGesture {
-                                showingProteinTracker = true
-                            }
-                    }
-
-                    // Suggest Workout button (AMA-1265)
-                    SuggestWorkoutButton {
-                        suggestWorkoutViewModel.requestSuggestion()
-                        showingSuggestWorkout = true
-                    }
-
-                    // XP progress bar (AMA-1285)
-                    if let xp = xpData {
-                        XPBarView(
-                            xpTotal: xp.xpTotal,
-                            currentLevel: xp.currentLevel,
-                            levelName: xp.levelName,
-                            xpToNextLevel: xp.xpToNextLevel,
-                            xpToday: xp.xpToday,
-                            dailyCap: xp.dailyCap
-                        )
-                    }
-
-                    // Quick action buttons
-                    HStack(spacing: Theme.Spacing.md) {
-                        quickStartButton
-                        voiceWorkoutButton
-                    }
-
-                    // Rest Day Button (AMA-1286)
-                    RestDayButton {
-                        // TODO: call POST /gamification/rest-day
-                    }
-
-                    weekGlanceCard
-
-                    #if DEBUG
-                    homeBannerDebugControls
-                    #endif
+                    homeStateContent
                 }
                 .padding(.horizontal, Theme.Spacing.lg)
                 .padding(.bottom, 100) // Space for tab bar
@@ -218,6 +164,9 @@ struct HomeView: View {
             .sheet(isPresented: $showingVoiceWorkout) {
                 VoiceWorkoutView()
             }
+            .sheet(isPresented: $showingProgramWizard) {
+                ProgramWizardView()
+            }
             .sheet(isPresented: $showingPlanReveal) {
                 PlanRevealView(
                     isReady: planRevealReady,
@@ -289,6 +238,7 @@ struct HomeView: View {
                 AgentInboxView { showingAgentInbox = false }
             }
             .onAppear {
+                refreshHomeScreenState()
                 // Load saved workout progress on background to avoid blocking main thread (AMA-1075)
                 Task {
                     let progress = await Task.detached(priority: .utility) {
@@ -317,6 +267,12 @@ struct HomeView: View {
                     }
                 }
             }
+            .onChange(of: viewModel.isLoading) { _, _ in refreshHomeScreenState() }
+            .onChange(of: viewModel.hasLoadedWorkouts) { _, _ in refreshHomeScreenState() }
+            .onChange(of: viewModel.ctaError) { _, _ in refreshHomeScreenState() }
+            .onChange(of: viewModel.incomingWorkouts) { _, _ in refreshHomeScreenState() }
+            .onChange(of: viewModel.upcomingWorkouts) { _, _ in refreshHomeScreenState() }
+            .onChange(of: viewModel.activeBlock) { _, _ in refreshHomeScreenState() }
             .overlay {
                 // Level-up celebration overlay (AMA-1285)
                 if showLevelUp {
@@ -338,6 +294,224 @@ struct HomeView: View {
         }
     }
 
+
+    // MARK: - Home State
+
+    @ViewBuilder
+    private var homeStateContent: some View {
+        switch homeViewModel.state {
+        case .loading:
+            homeLoadingState
+        case .content:
+            populatedHomeContent
+        case .empty:
+            homeEmptyState
+        case .error(let ctaError):
+            homeErrorState(ctaError)
+        }
+    }
+
+    @ViewBuilder
+    private var populatedHomeContent: some View {
+        // Resume Workout banner (if saved progress exists)
+        if let progress = savedProgress {
+            resumeWorkoutBanner(progress: progress)
+        }
+
+        readinessCard
+
+        if let homeBannerKind {
+            homeBanner(homeBannerKind)
+        }
+
+        todaysWorkoutHero
+
+        coachVisibilitySection
+
+        // Nutrition Dashboard Card (AMA-1290)
+        if nutritionViewModel.settings.isEnabled {
+            NutritionDashboardCard(viewModel: nutritionViewModel)
+                .onTapGesture {
+                    showingProteinTracker = true
+                }
+        }
+
+        // Suggest Workout button (AMA-1265)
+        SuggestWorkoutButton {
+            suggestWorkoutViewModel.requestSuggestion()
+            showingSuggestWorkout = true
+        }
+
+        // XP progress bar (AMA-1285)
+        if let xp = xpData {
+            XPBarView(
+                xpTotal: xp.xpTotal,
+                currentLevel: xp.currentLevel,
+                levelName: xp.levelName,
+                xpToNextLevel: xp.xpToNextLevel,
+                xpToday: xp.xpToday,
+                dailyCap: xp.dailyCap
+            )
+        }
+
+        // Quick action buttons
+        HStack(spacing: Theme.Spacing.md) {
+            quickStartButton
+            voiceWorkoutButton
+        }
+
+        // Rest Day Button (AMA-1286)
+        RestDayButton {
+            // TODO: call POST /gamification/rest-day
+        }
+
+        weekGlanceCard
+
+        #if DEBUG
+        homeBannerDebugControls
+        #endif
+    }
+
+    private var homeLoadingState: some View {
+        AFCard(padding: Theme.Spacing.lg) {
+            HStack(spacing: Theme.Spacing.md) {
+                ProgressView()
+                    .tint(Theme.Colors.accentGreen)
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text("Loading your training")
+                        .font(Theme.Typography.title3)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    Text("Checking for your plan and today’s workout.")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                }
+                Spacer()
+            }
+        }
+        .accessibilityIdentifier("af_home_loading")
+    }
+
+    private var homeEmptyState: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                AFLabel(text: "Program / Empty State")
+                Text("Start with a path")
+                    .font(Theme.Typography.largeTitle)
+                    .foregroundColor(Theme.Colors.textPrimary)
+                Text("No active plan or workout is scheduled for today. Choose how AmakaFlow should get you moving.")
+                    .font(Theme.Typography.body)
+                    .foregroundColor(Theme.Colors.textSecondary)
+                    .lineSpacing(3)
+            }
+
+            VStack(spacing: Theme.Spacing.sm) {
+                Button {
+                    showingProgramWizard = true
+                } label: {
+                    emptyStateOptionLabel(
+                        icon: "sparkles",
+                        title: "Build me a plan",
+                        subtitle: "Create a structured block around your goals.",
+                        isPrimary: true
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_home_empty_build_plan")
+
+                Button {
+                    suggestWorkoutViewModel.requestSuggestion()
+                    showingSuggestWorkout = true
+                } label: {
+                    emptyStateOptionLabel(
+                        icon: "bolt.heart",
+                        title: "Just today’s workout",
+                        subtitle: "Get one coach-generated session for now.",
+                        isPrimary: false
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_home_empty_just_today")
+
+                Button {
+                    NotificationCenter.default.post(name: .deepLinkToCoach, object: nil)
+                } label: {
+                    emptyStateOptionLabel(
+                        icon: "bubble.left.and.bubble.right.fill",
+                        title: "Coach picks for me",
+                        subtitle: "Open the coach and let them choose the next step.",
+                        isPrimary: false
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_home_empty_coach_picks")
+            }
+        }
+        .padding(Theme.Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.Colors.surfaceElevated)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.lg, style: .continuous)
+                .stroke(Theme.Colors.borderLight, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.lg, style: .continuous))
+        .accessibilityIdentifier("af_home_empty_state")
+    }
+
+    private func emptyStateOptionLabel(icon: String, title: String, subtitle: String, isPrimary: Bool) -> some View {
+        HStack(spacing: Theme.Spacing.md) {
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .semibold))
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text(title)
+                    .font(Theme.Typography.bodyBold)
+                Text(subtitle)
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(isPrimary ? Color.black.opacity(0.72) : Theme.Colors.textSecondary)
+                    .lineLimit(2)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(isPrimary ? Color.black.opacity(0.72) : Theme.Colors.textTertiary)
+        }
+        .foregroundColor(isPrimary ? Color.black : Theme.Colors.textPrimary)
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.vertical, Theme.Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(isPrimary ? Theme.Colors.accentGreen : Color.clear)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous)
+                .stroke(isPrimary ? Color.clear : Theme.Colors.borderMedium, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous))
+    }
+
+    private func homeErrorState(_ ctaError: CTAError) -> some View {
+        VStack(spacing: Theme.Spacing.md) {
+            ErrorToast(
+                actionTitle: "Couldn't load Home",
+                error: ctaError,
+                onRetry: ctaError.isRetryable ? {
+                    Task { await viewModel.refreshWorkouts() }
+                } : nil,
+                onReport: {
+                    homeViewModel.reportError()
+                },
+                onDismiss: nil
+            )
+
+            Text("We couldn’t verify whether you have a plan or a workout today.")
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .accessibilityIdentifier("af_home_error_state")
+    }
+
+    private func refreshHomeScreenState() {
+        homeViewModel.update(from: viewModel)
+    }
 
 
     // MARK: - Coach Visibility

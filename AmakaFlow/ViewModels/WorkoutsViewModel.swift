@@ -36,7 +36,9 @@ class WorkoutsViewModel: ObservableObject {
     @Published var incomingWorkouts: [Workout] = []
     @Published var searchQuery: String = ""
     @Published var isLoading: Bool = false
+    @Published var hasLoadedWorkouts: Bool = false
     @Published var errorMessage: String?
+    @Published var ctaError: CTAError?
     @Published var useDemoMode: Bool = false
     @Published var pendingWorkoutsStatus: String = ""  // Debug status for pending workouts
 
@@ -134,11 +136,13 @@ class WorkoutsViewModel: ObservableObject {
     func loadWorkouts() async {
         isLoading = true
         errorMessage = nil
+        ctaError = nil
 
         if useDemoMode {
             print("[WorkoutsViewModel] Demo mode enabled, loading mock data")
             loadMockData()
             isLoading = false
+            hasLoadedWorkouts = true
             return
         }
 
@@ -152,6 +156,7 @@ class WorkoutsViewModel: ObservableObject {
             print("[WorkoutsViewModel] Not authenticated yet; serving \(localIncoming.count) row(s) from local repo")
             upcomingWorkouts = []
             isLoading = false
+            hasLoadedWorkouts = true
             return
         }
 
@@ -188,6 +193,8 @@ class WorkoutsViewModel: ObservableObject {
             upcomingWorkouts = scheduled
         } catch let error as APIError {
             print("[WorkoutsViewModel] API error: \(error.localizedDescription)")
+            let mapped = CTAError.map(error)
+            ctaError = mapped
             if case .unauthorized = error {
                 errorMessage = "Session expired. Please reconnect."
             } else {
@@ -202,6 +209,7 @@ class WorkoutsViewModel: ObservableObject {
             }
         } catch {
             print("[WorkoutsViewModel] Error: \(error.localizedDescription)")
+            ctaError = CTAError.map(error)
             errorMessage = "Failed to load workouts: \(error.localizedDescription)"
             DebugLogService.shared.log(
                 "Workouts refresh threw; serving local repo only",
@@ -211,6 +219,7 @@ class WorkoutsViewModel: ObservableObject {
         }
 
         isLoading = false
+        hasLoadedWorkouts = true
     }
 
     /// Decode planned `workout_events` rows for `userId` into the UI's
@@ -627,6 +636,8 @@ class WorkoutsViewModel: ObservableObject {
     
     // MARK: - Mock Data
     private func loadMockData() {
+        ctaError = nil
+        hasLoadedWorkouts = true
         upcomingWorkouts = [
             ScheduledWorkout(
                 workout: Workout(
