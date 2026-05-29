@@ -9,8 +9,8 @@
 //  working unchanged. Pure refactor — no behaviour change.
 //
 //  Endpoints:
-//    POST  /api/telegram/link-token
-//    GET   /api/telegram/link-status?token=…
+//    POST  /v1/messaging/telegram/setup
+//    GET   /v1/messaging/telegram/status?token=…
 //
 
 import Foundation
@@ -20,65 +20,55 @@ extension APIService {
     // MARK: - Telegram Linking
 
     func mintTelegramLinkToken() async throws -> TelegramLinkTokenResponse {
-        guard let url = URL(string: "\(baseURL)/api/telegram/link-token") else {
-            throw APIError.invalidURL
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.httpBody = Data("{}".utf8)
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        switch httpResponse.statusCode {
-        case 200:
-            do {
-                return try APIService.makeDecoder().decode(TelegramLinkTokenResponse.self, from: data)
-            } catch {
-                throw APIError.decodingError(error)
-            }
-        case 401:
-            throw APIError.unauthorized
-        case 503:
-            throw APIError.serverErrorWithBody(503, "Telegram linking is temporarily unavailable. Please try again in a few minutes.")
-        default:
-            let responseString = String(data: data, encoding: .utf8) ?? ""
-            throw APIError.serverErrorWithBody(httpResponse.statusCode, responseString)
-        }
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/messaging/telegram/setup",
+            method: "POST"
+        )
+        let response = try await self.request(
+            request,
+            decode: Components.Schemas.TelegramSetupResponse.self,
+            decoder: APIService.makeGeneratedDecoder(),
+            successStatusCodes: 200...200
+        )
+        return TelegramLinkTokenResponse(response)
     }
 
     func getTelegramLinkStatus(token: String) async throws -> TelegramLinkStatusResponse {
-        var components = URLComponents(string: "\(baseURL)/api/telegram/link-status")
-        components?.queryItems = [URLQueryItem(name: "token", value: token)]
-        guard let url = components?.url else {
-            throw APIError.invalidURL
-        }
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/messaging/telegram/status",
+            queryItems: [URLQueryItem(name: "token", value: token)],
+            method: "GET"
+        )
+        let response = try await self.request(
+            request,
+            decode: Components.Schemas.TelegramStatusResponse.self,
+            decoder: APIService.makeGeneratedDecoder(),
+            successStatusCodes: 200...200
+        )
+        return TelegramLinkStatusResponse(response)
+    }
+}
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+private extension TelegramLinkTokenResponse {
+    init(_ response: Components.Schemas.TelegramSetupResponse) {
+        self.init(
+            token: response.token,
+            deepLink: response.deepLink,
+            nativeLink: response.nativeLink,
+            expiresInSeconds: response.expiresInSeconds
+        )
+    }
+}
 
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        switch httpResponse.statusCode {
-        case 200:
-            do {
-                return try APIService.makeDecoder().decode(TelegramLinkStatusResponse.self, from: data)
-            } catch {
-                throw APIError.decodingError(error)
-            }
-        case 401:
-            throw APIError.unauthorized
-        default:
-            let responseString = String(data: data, encoding: .utf8) ?? ""
-            throw APIError.serverErrorWithBody(httpResponse.statusCode, responseString)
-        }
+private extension TelegramLinkStatusResponse {
+    init(_ response: Components.Schemas.TelegramStatusResponse) {
+        self.init(
+            linked: response.linked,
+            telegramId: nil,
+            telegramIdHash: response.telegramIdHash,
+            usedAt: nil
+        )
     }
 }

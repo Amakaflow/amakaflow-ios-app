@@ -222,6 +222,7 @@ struct MessagingView: View {
 private struct MessagingChannelCard: View {
     @ObservedObject var viewModel: MessagingViewModel
     let channel: MessagingViewModel.MessagingChannel
+    @State private var isShowingTelegramSetup = false
 
     private let quietOptions = ["20:00", "21:00", "22:00", "23:00", "06:00", "07:00", "08:00"]
 
@@ -264,6 +265,25 @@ private struct MessagingChannelCard: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("af_messaging_channel_\(channel.id)")
+        .sheet(isPresented: $isShowingTelegramSetup, onDismiss: {
+            Task { await viewModel.load() }
+        }) {
+            NavigationStack {
+                TelegramSetupView(
+                    onConnected: { telegramId in
+                        TelegramLinkCache.markLinked(
+                            telegramId: telegramId,
+                            userID: PairingService.shared.userProfile?.id
+                        )
+                        isShowingTelegramSetup = false
+                    },
+                    onSkip: {
+                        isShowingTelegramSetup = false
+                    }
+                )
+            }
+            .accessibilityIdentifier("af_messaging_telegram_setup_sheet")
+        }
     }
 
     private var iconTile: some View {
@@ -298,8 +318,8 @@ private struct MessagingChannelCard: View {
         } else if viewModel.isConnected(channel) {
             AFChip(text: "Connected", outline: true)
         } else if channel.id.lowercased() == "telegram" {
-            NavigationLink {
-                TelegramSetupView()
+            Button {
+                isShowingTelegramSetup = true
             } label: {
                 Text("Connect")
             }

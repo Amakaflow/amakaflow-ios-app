@@ -210,8 +210,17 @@ struct TelegramLinkTokenResponse: Codable, Equatable, Sendable {
 
 struct TelegramLinkStatusResponse: Codable, Equatable, Sendable {
     let linked: Bool
+    /// Legacy numeric ID retained for older local/settings flows. The AMA-2031 BFF only returns a hash.
     let telegramId: Int?
+    let telegramIdHash: String?
     let usedAt: Date?
+
+    init(linked: Bool, telegramId: Int? = nil, telegramIdHash: String? = nil, usedAt: Date? = nil) {
+        self.linked = linked
+        self.telegramId = telegramId
+        self.telegramIdHash = telegramIdHash
+        self.usedAt = usedAt
+    }
 }
 
 // MARK: - API Errors
