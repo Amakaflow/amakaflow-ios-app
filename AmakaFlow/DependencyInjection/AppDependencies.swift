@@ -877,11 +877,15 @@ class MockAPIService: APIServiceProviding {
 
     var suggestWorkoutResult: Result<SuggestWorkoutResponse, Error>?
     var suggestWorkoutCalled = false
+    var suggestWorkoutCallCount = 0
+    var lastSuggestWorkoutRequest: SuggestWorkoutRequest?
     var postRPEFeedbackResult: Result<RPEFeedbackResponse, Error>?
     var postRPEFeedbackCalled = false
 
     func suggestWorkout(request: SuggestWorkoutRequest) async throws -> SuggestWorkoutResponse {
         suggestWorkoutCalled = true
+        suggestWorkoutCallCount += 1
+        lastSuggestWorkoutRequest = request
         guard let result = suggestWorkoutResult else { throw APIError.notImplemented }
         return try result.get()
     }

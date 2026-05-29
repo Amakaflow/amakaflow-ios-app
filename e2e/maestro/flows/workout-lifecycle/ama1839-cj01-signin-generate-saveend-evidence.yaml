@@ -22,7 +22,7 @@
 # Selectors:
 #   - Most steps use `id:` matchers backed by accessibilityIdentifiers
 #     introduced in AMA-1842 (`ama1842.suggest.button`,
-#     `ama1842.suggest.preview`, `ama1842.accept.button`,
+#     `ama1842.suggest.preview`, `af_suggest_start`,
 #     `ama1842.start.button`, `ama1842.endWorkout.button`,
 #     `ama1842.history.row`, `ama1842.activityHistory.cell.<index>`).
 #   - "Save & End" is a SwiftUI alert button without a custom identifier,
@@ -93,16 +93,16 @@ appId: com.myamaka.AmakaFlowCompanion
     timeout: 30000
 - takeScreenshot: cj01-step3-suggestion-generated
 
-# --- Step 3: accept the generated suggestion ---
-# The Accept & Save button sits below the scrollable list of workout
+# --- Step 3: start/save the generated suggestion ---
+# The Start workout button sits below the scrollable list of workout
 # steps (10+ items typical), so scroll to bring it into view first.
 - scrollUntilVisible:
     element:
-      id: "ama1842.accept.button"
+      text: "Start workout"
     direction: DOWN
     speed: 25
 - tapOn:
-    id: "ama1842.accept.button"
+    id: "af_suggest_start"
 - waitForAnimationToEnd:
     timeout: 3000
 - takeScreenshot: cj01-step4-accepted

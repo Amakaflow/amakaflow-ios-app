@@ -108,8 +108,8 @@ env:
 - takeScreenshot: ama1834-step04-suggestion-generated
 
 # ─────────────────────────────────────────────
-# STEP 3: Accept the suggestion ("Accept & Save" button in the sheet)
-# The Accept button is at the bottom of the SuggestWorkoutView preview.
+# STEP 3: Start/save the suggestion ("Start workout" button in the sheet)
+# The Start button is at the bottom of the SuggestWorkoutView preview.
 # LLM plans can be 13–25+ steps so Accept is reliably below the fold.
 # Maestro's `tapOn id:` does NOT auto-scroll into view (verified
 # 2026-05-10 — fails with "Element not found"). Use scrollUntilVisible
@@ -118,14 +118,14 @@ env:
 # ─────────────────────────────────────────────
 - scrollUntilVisible:
     element:
-      text: "Accept & Save"
+      text: "Start workout"
     direction: DOWN
     speed: 40
     visibilityPercentage: 60
     timeout: 30000
     centerElement: true
 - tapOn:
-    id: "ama1842.accept.button"
+    id: "af_suggest_start"
 - waitForAnimationToEnd:
     timeout: 5000
 - takeScreenshot: ama1834-step05-accepted
