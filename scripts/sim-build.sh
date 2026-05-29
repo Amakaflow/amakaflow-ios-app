@@ -17,8 +17,9 @@
 #
 # Env requirements: an iOS Simulator must be available. Default UDID is
 # the iPhone 16 Pro Max sim (87AA26D0...) per ios-sim-test-loop-recipe.md.
-# If that's unavailable, the script prefers any booted iPhone 16* over
-# creating a new one (creating sims has been flaky on this Mini per
+# If that's unavailable, the script falls back to any booted iPhone sim,
+# then any available iPhone sim (model-agnostic — don't assume iPhone 16),
+# rather than creating one (creating sims has been flaky on this Mini per
 # session-2026-05-07-ios-debugging-recap.md memory).
 
 set -euo pipefail
@@ -56,16 +57,20 @@ case "$ENV" in
   *) echo "Unknown env: $ENV (expected dev|staging)" >&2; exit 2 ;;
 esac
 
-# Verify sim is bookable. If the requested UDID isn't found, try a
-# booted iPhone 16 instead.
-if ! xcrun simctl list devices "iPhone 16" 2>/dev/null | grep -qi "$SIM_UDID"; then
-  ALT=$(xcrun simctl list devices booted 2>/dev/null | grep -iE "iPhone 16" | head -1 | grep -oE '\([0-9A-F-]{36}\)' | tr -d '()' || true)
+# Verify the requested sim exists. If not, fall back model-agnostically:
+# any booted iPhone sim first, then any available iPhone sim. (AMA-2029: was
+# iPhone-16-only, which dead-ended on Macs whose newest sim is e.g. iPhone 17.)
+if ! xcrun simctl list devices available 2>/dev/null | grep -qi "$SIM_UDID"; then
+  ALT=$(xcrun simctl list devices booted 2>/dev/null | grep -iE "iPhone" | head -1 | grep -oE '\([0-9A-Fa-f-]{36}\)' | tr -d '()' || true)
+  if [[ -z "$ALT" ]]; then
+    ALT=$(xcrun simctl list devices available 2>/dev/null | grep -iE "iPhone" | head -1 | grep -oE '\([0-9A-Fa-f-]{36}\)' | tr -d '()' || true)
+  fi
   if [[ -n "$ALT" ]]; then
-    echo "WARN: requested sim $SIM_UDID not found; falling back to booted $ALT" >&2
+    echo "WARN: requested sim $SIM_UDID not found; falling back to iPhone sim $ALT" >&2
     SIM_UDID="$ALT"
   else
-    echo "ERROR: sim $SIM_UDID not available + no booted iPhone 16 to fall back to." >&2
-    echo "       Either boot one in Simulator.app or pass --sim <UDID>." >&2
+    echo "ERROR: sim $SIM_UDID not available + no iPhone simulator to fall back to." >&2
+    echo "       Create/boot one in Simulator.app or pass --sim <UDID>." >&2
     exit 3
   fi
 fi
