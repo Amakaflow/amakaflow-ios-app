@@ -32,6 +32,35 @@ class FixtureAPIService: APIServiceProviding {
         Components.Schemas.PairDeviceResult(message: "Fixture device removed", success: true)
     )
     var setDeviceRolesResult: Result<Components.Schemas.DeviceRolesResult, Error>?
+    var listMessagingChannelsResult: Result<Components.Schemas.MessagingChannelList, Error>?
+    var setChannelPrefsResult: Result<Components.Schemas.ChannelPrefsResult, Error>?
+    private var fixtureMessagingDeliveryLive = false
+    private var fixtureMessagingChannels: [Components.Schemas.MessagingChannel] = [
+        Components.Schemas.MessagingChannel(
+            comingSoon: false,
+            connected: true,
+            handle: "@amakaflow_fixture",
+            id: "telegram",
+            name: "Telegram",
+            prefs: Components.Schemas.ChannelPrefs(briefing: true, checkin: true, quietEnd: "07:00", quietStart: "21:00", swap: false)
+        ),
+        Components.Schemas.MessagingChannel(
+            comingSoon: true,
+            connected: false,
+            handle: nil,
+            id: "whatsapp",
+            name: "WhatsApp",
+            prefs: Components.Schemas.ChannelPrefs(briefing: false, checkin: false, swap: false)
+        ),
+        Components.Schemas.MessagingChannel(
+            comingSoon: true,
+            connected: false,
+            handle: nil,
+            id: "slack",
+            name: "Slack",
+            prefs: Components.Schemas.ChannelPrefs(briefing: false, checkin: false, swap: false)
+        )
+    ]
     private var fixtureDevices: [Components.Schemas.PairedDevice] = [
         Components.Schemas.PairedDevice(
             id: "fixture-garmin-955",
@@ -255,6 +284,48 @@ class FixtureAPIService: APIServiceProviding {
         )
         print("[FixtureAPIService] Stub: setDeviceRoles(\(id), \(roles.map(\.rawValue))) -> success")
         return Components.Schemas.DeviceRolesResult(roles: roles, success: true)
+    }
+
+    // MARK: - Messaging Channels (AMA-2027)
+
+    func listMessagingChannels() async throws -> Components.Schemas.MessagingChannelList {
+        if let listMessagingChannelsResult {
+            return try listMessagingChannelsResult.get()
+        }
+        return Components.Schemas.MessagingChannelList(
+            channels: fixtureMessagingChannels,
+            deliveryLive: fixtureMessagingDeliveryLive
+        )
+    }
+
+    func setChannelPrefs(
+        channelId: String,
+        prefs: Components.Schemas.ChannelPrefsRequest
+    ) async throws -> Components.Schemas.ChannelPrefsResult {
+        if let setChannelPrefsResult {
+            return try setChannelPrefsResult.get()
+        }
+        guard let index = fixtureMessagingChannels.firstIndex(where: { $0.id == channelId }) else {
+            throw APIError.serverErrorWithBody(404, "{\"detail\":\"Messaging channel not found\"}")
+        }
+        let updatedPrefs = Components.Schemas.ChannelPrefs(
+            briefing: prefs.briefing,
+            checkin: prefs.checkin,
+            quietEnd: prefs.quietEnd,
+            quietStart: prefs.quietStart,
+            swap: prefs.swap
+        )
+        let existing = fixtureMessagingChannels[index]
+        fixtureMessagingChannels[index] = Components.Schemas.MessagingChannel(
+            comingSoon: existing.comingSoon,
+            connected: existing.connected,
+            handle: existing.handle,
+            id: existing.id,
+            name: existing.name,
+            prefs: updatedPrefs
+        )
+        print("[FixtureAPIService] Stub: setChannelPrefs(\(channelId)) -> saved prefs only; deliveryLive=false")
+        return Components.Schemas.ChannelPrefsResult(channelId: channelId, prefs: updatedPrefs, success: true)
     }
 
     // MARK: - Coaching Profile (AMA-1995)

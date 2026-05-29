@@ -64,6 +64,24 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `PUT /v1/devices/{device_id}/roles`.
     /// - Remark: Generated from `#/paths//v1/devices/{device_id}/roles/put(setDeviceRoles)`.
     func setDeviceRoles(_ input: Operations.SetDeviceRoles.Input) async throws -> Operations.SetDeviceRoles.Output
+    /// V1 Messaging Channels
+    ///
+    /// iOS MessagingScreen → mapper-api GET /api/messaging/channels (AMA-2027).
+    ///
+    /// Reshapes the snake_case channel catalog (Telegram connection + WhatsApp/Slack
+    /// coming-soon + per-channel prefs) into the typed camelCase list. `deliveryLive`
+    /// is False until the briefing/checkin/swap senders exist.
+    ///
+    /// - Remark: HTTP `GET /v1/messaging/channels`.
+    /// - Remark: Generated from `#/paths//v1/messaging/channels/get(listMessagingChannels)`.
+    func listMessagingChannels(_ input: Operations.ListMessagingChannels.Input) async throws -> Operations.ListMessagingChannels.Output
+    /// V1 Messaging Set Prefs
+    ///
+    /// iOS channel prefs → mapper-api PUT /api/messaging/channels/{id}/prefs (AMA-2027).
+    ///
+    /// - Remark: HTTP `PUT /v1/messaging/channels/{channel_id}/prefs`.
+    /// - Remark: Generated from `#/paths//v1/messaging/channels/{channel_id}/prefs/put(setMessagingChannelPrefs)`.
+    func setMessagingChannelPrefs(_ input: Operations.SetMessagingChannelPrefs.Input) async throws -> Operations.SetMessagingChannelPrefs.Output
     /// V1 Sync Confirm
     ///
     /// SyncEngine confirm-success → mapper-api POST /sync/confirm.
@@ -210,6 +228,36 @@ extension APIProtocol {
             body: body
         ))
     }
+    /// V1 Messaging Channels
+    ///
+    /// iOS MessagingScreen → mapper-api GET /api/messaging/channels (AMA-2027).
+    ///
+    /// Reshapes the snake_case channel catalog (Telegram connection + WhatsApp/Slack
+    /// coming-soon + per-channel prefs) into the typed camelCase list. `deliveryLive`
+    /// is False until the briefing/checkin/swap senders exist.
+    ///
+    /// - Remark: HTTP `GET /v1/messaging/channels`.
+    /// - Remark: Generated from `#/paths//v1/messaging/channels/get(listMessagingChannels)`.
+    public func listMessagingChannels(headers: Operations.ListMessagingChannels.Input.Headers = .init()) async throws -> Operations.ListMessagingChannels.Output {
+        try await listMessagingChannels(Operations.ListMessagingChannels.Input(headers: headers))
+    }
+    /// V1 Messaging Set Prefs
+    ///
+    /// iOS channel prefs → mapper-api PUT /api/messaging/channels/{id}/prefs (AMA-2027).
+    ///
+    /// - Remark: HTTP `PUT /v1/messaging/channels/{channel_id}/prefs`.
+    /// - Remark: Generated from `#/paths//v1/messaging/channels/{channel_id}/prefs/put(setMessagingChannelPrefs)`.
+    public func setMessagingChannelPrefs(
+        path: Operations.SetMessagingChannelPrefs.Input.Path,
+        headers: Operations.SetMessagingChannelPrefs.Input.Headers = .init(),
+        body: Operations.SetMessagingChannelPrefs.Input.Body
+    ) async throws -> Operations.SetMessagingChannelPrefs.Output {
+        try await setMessagingChannelPrefs(Operations.SetMessagingChannelPrefs.Input(
+            path: path,
+            headers: headers,
+            body: body
+        ))
+    }
     /// V1 Sync Confirm
     ///
     /// SyncEngine confirm-success → mapper-api POST /sync/confirm.
@@ -318,6 +366,154 @@ public enum Servers {}
 public enum Components {
     /// Types generated from the `#/components/schemas` section of the OpenAPI document.
     public enum Schemas {
+        /// Coaching-delivery prefs for a messaging channel. Delivery isn't wired yet
+        /// (see MessagingChannelList.deliveryLive) — these persist intent only.
+        ///
+        /// - Remark: Generated from `#/components/schemas/ChannelPrefs`.
+        public struct ChannelPrefs: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ChannelPrefs/briefing`.
+            public var briefing: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/ChannelPrefs/checkin`.
+            public var checkin: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/ChannelPrefs/quietEnd`.
+            public var quietEnd: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/ChannelPrefs/quietStart`.
+            public var quietStart: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/ChannelPrefs/swap`.
+            public var swap: Swift.Bool?
+            /// Creates a new `ChannelPrefs`.
+            ///
+            /// - Parameters:
+            ///   - briefing:
+            ///   - checkin:
+            ///   - quietEnd:
+            ///   - quietStart:
+            ///   - swap:
+            public init(
+                briefing: Swift.Bool? = nil,
+                checkin: Swift.Bool? = nil,
+                quietEnd: Swift.String? = nil,
+                quietStart: Swift.String? = nil,
+                swap: Swift.Bool? = nil
+            ) {
+                self.briefing = briefing
+                self.checkin = checkin
+                self.quietEnd = quietEnd
+                self.quietStart = quietStart
+                self.swap = swap
+            }
+            public enum CodingKeys: String, CodingKey {
+                case briefing
+                case checkin
+                case quietEnd
+                case quietStart
+                case swap
+            }
+        }
+        /// Body for PUT /v1/messaging/channels/{id}/prefs.
+        ///
+        /// - Remark: Generated from `#/components/schemas/ChannelPrefsRequest`.
+        public struct ChannelPrefsRequest: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ChannelPrefsRequest/briefing`.
+            public var briefing: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/ChannelPrefsRequest/checkin`.
+            public var checkin: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/ChannelPrefsRequest/quietEnd`.
+            public var quietEnd: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/ChannelPrefsRequest/quietStart`.
+            public var quietStart: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/ChannelPrefsRequest/swap`.
+            public var swap: Swift.Bool?
+            /// Creates a new `ChannelPrefsRequest`.
+            ///
+            /// - Parameters:
+            ///   - briefing:
+            ///   - checkin:
+            ///   - quietEnd:
+            ///   - quietStart:
+            ///   - swap:
+            public init(
+                briefing: Swift.Bool? = nil,
+                checkin: Swift.Bool? = nil,
+                quietEnd: Swift.String? = nil,
+                quietStart: Swift.String? = nil,
+                swap: Swift.Bool? = nil
+            ) {
+                self.briefing = briefing
+                self.checkin = checkin
+                self.quietEnd = quietEnd
+                self.quietStart = quietStart
+                self.swap = swap
+            }
+            public enum CodingKeys: String, CodingKey {
+                case briefing
+                case checkin
+                case quietEnd
+                case quietStart
+                case swap
+            }
+            public init(from decoder: any Swift.Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                self.briefing = try container.decodeIfPresent(
+                    Swift.Bool.self,
+                    forKey: .briefing
+                )
+                self.checkin = try container.decodeIfPresent(
+                    Swift.Bool.self,
+                    forKey: .checkin
+                )
+                self.quietEnd = try container.decodeIfPresent(
+                    Swift.String.self,
+                    forKey: .quietEnd
+                )
+                self.quietStart = try container.decodeIfPresent(
+                    Swift.String.self,
+                    forKey: .quietStart
+                )
+                self.swap = try container.decodeIfPresent(
+                    Swift.Bool.self,
+                    forKey: .swap
+                )
+                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                    "briefing",
+                    "checkin",
+                    "quietEnd",
+                    "quietStart",
+                    "swap"
+                ])
+            }
+        }
+        /// Response for PUT /v1/messaging/channels/{id}/prefs.
+        ///
+        /// - Remark: Generated from `#/components/schemas/ChannelPrefsResult`.
+        public struct ChannelPrefsResult: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ChannelPrefsResult/channelId`.
+            public var channelId: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ChannelPrefsResult/prefs`.
+            public var prefs: Components.Schemas.ChannelPrefs?
+            /// - Remark: Generated from `#/components/schemas/ChannelPrefsResult/success`.
+            public var success: Swift.Bool
+            /// Creates a new `ChannelPrefsResult`.
+            ///
+            /// - Parameters:
+            ///   - channelId:
+            ///   - prefs:
+            ///   - success:
+            public init(
+                channelId: Swift.String,
+                prefs: Components.Schemas.ChannelPrefs? = nil,
+                success: Swift.Bool
+            ) {
+                self.channelId = channelId
+                self.prefs = prefs
+                self.success = success
+            }
+            public enum CodingKeys: String, CodingKey {
+                case channelId
+                case prefs
+                case success
+            }
+        }
         /// Response body for GET/PUT /v1/coaching/profile.
         ///
         /// - Remark: Generated from `#/components/schemas/CoachingProfile`.
@@ -1134,6 +1330,80 @@ public enum Components {
                 case minHeartRate = "min_heart_rate"
                 case steps
                 case totalCalories = "total_calories"
+            }
+        }
+        /// One messaging provider for the MessagingScreen.
+        ///
+        /// - Remark: Generated from `#/components/schemas/MessagingChannel`.
+        public struct MessagingChannel: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/MessagingChannel/comingSoon`.
+            public var comingSoon: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/MessagingChannel/connected`.
+            public var connected: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/MessagingChannel/handle`.
+            public var handle: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/MessagingChannel/id`.
+            public var id: Swift.String
+            /// - Remark: Generated from `#/components/schemas/MessagingChannel/name`.
+            public var name: Swift.String
+            /// - Remark: Generated from `#/components/schemas/MessagingChannel/prefs`.
+            public var prefs: Components.Schemas.ChannelPrefs?
+            /// Creates a new `MessagingChannel`.
+            ///
+            /// - Parameters:
+            ///   - comingSoon:
+            ///   - connected:
+            ///   - handle:
+            ///   - id:
+            ///   - name:
+            ///   - prefs:
+            public init(
+                comingSoon: Swift.Bool? = nil,
+                connected: Swift.Bool? = nil,
+                handle: Swift.String? = nil,
+                id: Swift.String,
+                name: Swift.String,
+                prefs: Components.Schemas.ChannelPrefs? = nil
+            ) {
+                self.comingSoon = comingSoon
+                self.connected = connected
+                self.handle = handle
+                self.id = id
+                self.name = name
+                self.prefs = prefs
+            }
+            public enum CodingKeys: String, CodingKey {
+                case comingSoon
+                case connected
+                case handle
+                case id
+                case name
+                case prefs
+            }
+        }
+        /// Response for GET /v1/messaging/channels.
+        ///
+        /// - Remark: Generated from `#/components/schemas/MessagingChannelList`.
+        public struct MessagingChannelList: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/MessagingChannelList/channels`.
+            public var channels: [Components.Schemas.MessagingChannel]?
+            /// - Remark: Generated from `#/components/schemas/MessagingChannelList/deliveryLive`.
+            public var deliveryLive: Swift.Bool?
+            /// Creates a new `MessagingChannelList`.
+            ///
+            /// - Parameters:
+            ///   - channels:
+            ///   - deliveryLive:
+            public init(
+                channels: [Components.Schemas.MessagingChannel]? = nil,
+                deliveryLive: Swift.Bool? = nil
+            ) {
+                self.channels = channels
+                self.deliveryLive = deliveryLive
+            }
+            public enum CodingKeys: String, CodingKey {
+                case channels
+                case deliveryLive
             }
         }
         /// Request body for POST /v1/devices/pair (AMA-2029, Wedge B).
@@ -3418,6 +3688,414 @@ public enum Operations {
             /// - Throws: An error if `self` is not `.serviceUnavailable`.
             /// - SeeAlso: `.serviceUnavailable`.
             public var serviceUnavailable: Operations.SetDeviceRoles.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// V1 Messaging Channels
+    ///
+    /// iOS MessagingScreen → mapper-api GET /api/messaging/channels (AMA-2027).
+    ///
+    /// Reshapes the snake_case channel catalog (Telegram connection + WhatsApp/Slack
+    /// coming-soon + per-channel prefs) into the typed camelCase list. `deliveryLive`
+    /// is False until the briefing/checkin/swap senders exist.
+    ///
+    /// - Remark: HTTP `GET /v1/messaging/channels`.
+    /// - Remark: Generated from `#/paths//v1/messaging/channels/get(listMessagingChannels)`.
+    public enum ListMessagingChannels {
+        public static let id: Swift.String = "listMessagingChannels"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/messaging/channels/GET/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.ListMessagingChannels.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.ListMessagingChannels.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.ListMessagingChannels.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            public init(headers: Operations.ListMessagingChannels.Input.Headers = .init()) {
+                self.headers = headers
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/messaging/channels/GET/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/messaging/channels/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.MessagingChannelList)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.MessagingChannelList {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.ListMessagingChannels.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.ListMessagingChannels.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Successful Response
+            ///
+            /// - Remark: Generated from `#/paths//v1/messaging/channels/get(listMessagingChannels)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.ListMessagingChannels.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.ListMessagingChannels.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/messaging/channels/GET/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/messaging/channels/GET/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.ListMessagingChannels.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.ListMessagingChannels.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/messaging/channels/get(listMessagingChannels)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.ListMessagingChannels.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.ListMessagingChannels.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// V1 Messaging Set Prefs
+    ///
+    /// iOS channel prefs → mapper-api PUT /api/messaging/channels/{id}/prefs (AMA-2027).
+    ///
+    /// - Remark: HTTP `PUT /v1/messaging/channels/{channel_id}/prefs`.
+    /// - Remark: Generated from `#/paths//v1/messaging/channels/{channel_id}/prefs/put(setMessagingChannelPrefs)`.
+    public enum SetMessagingChannelPrefs {
+        public static let id: Swift.String = "setMessagingChannelPrefs"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/messaging/channels/{channel_id}/prefs/PUT/path`.
+            public struct Path: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/messaging/channels/{channel_id}/prefs/PUT/path/channel_id`.
+                public var channelId: Swift.String
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - channelId:
+                public init(channelId: Swift.String) {
+                    self.channelId = channelId
+                }
+            }
+            public var path: Operations.SetMessagingChannelPrefs.Input.Path
+            /// - Remark: Generated from `#/paths/v1/messaging/channels/{channel_id}/prefs/PUT/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.SetMessagingChannelPrefs.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.SetMessagingChannelPrefs.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.SetMessagingChannelPrefs.Input.Headers
+            /// - Remark: Generated from `#/paths/v1/messaging/channels/{channel_id}/prefs/PUT/requestBody`.
+            @frozen public enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/messaging/channels/{channel_id}/prefs/PUT/requestBody/content/application\/json`.
+                case json(Components.Schemas.ChannelPrefsRequest)
+            }
+            public var body: Operations.SetMessagingChannelPrefs.Input.Body
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            ///   - body:
+            public init(
+                path: Operations.SetMessagingChannelPrefs.Input.Path,
+                headers: Operations.SetMessagingChannelPrefs.Input.Headers = .init(),
+                body: Operations.SetMessagingChannelPrefs.Input.Body
+            ) {
+                self.path = path
+                self.headers = headers
+                self.body = body
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/messaging/channels/{channel_id}/prefs/PUT/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/messaging/channels/{channel_id}/prefs/PUT/responses/200/content/application\/json`.
+                    case json(Components.Schemas.ChannelPrefsResult)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.ChannelPrefsResult {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.SetMessagingChannelPrefs.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.SetMessagingChannelPrefs.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Successful Response
+            ///
+            /// - Remark: Generated from `#/paths//v1/messaging/channels/{channel_id}/prefs/put(setMessagingChannelPrefs)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.SetMessagingChannelPrefs.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.SetMessagingChannelPrefs.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/messaging/channels/{channel_id}/prefs/PUT/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/messaging/channels/{channel_id}/prefs/PUT/responses/422/content/application\/json`.
+                    case json(Components.Schemas.HTTPValidationError)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.HTTPValidationError {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.SetMessagingChannelPrefs.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.SetMessagingChannelPrefs.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// Validation Error
+            ///
+            /// - Remark: Generated from `#/paths//v1/messaging/channels/{channel_id}/prefs/put(setMessagingChannelPrefs)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.SetMessagingChannelPrefs.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.SetMessagingChannelPrefs.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/messaging/channels/{channel_id}/prefs/PUT/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/messaging/channels/{channel_id}/prefs/PUT/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.SetMessagingChannelPrefs.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.SetMessagingChannelPrefs.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/messaging/channels/{channel_id}/prefs/put(setMessagingChannelPrefs)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.SetMessagingChannelPrefs.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.SetMessagingChannelPrefs.Output.ServiceUnavailable {
                 get throws {
                     switch self {
                     case let .serviceUnavailable(response):

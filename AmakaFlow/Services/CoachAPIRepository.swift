@@ -19,6 +19,8 @@
 //    POST /v1/devices/pair                      (pairDevice)
 //    DELETE /v1/devices/{device_id}             (revokeDevice)
 //    PUT  /v1/devices/{device_id}/roles         (setDeviceRoles)
+//    GET  /v1/messaging/channels                (listMessagingChannels)
+//    PUT  /v1/messaging/channels/{id}/prefs     (setChannelPrefs)
 //    GET  /v1/coaching/profile                  (getCoachingProfile)
 //    PUT  /v1/coaching/profile                  (upsertCoachingProfile)
 //    GET  /v1/planning/days                     (fetchDayState/fetchDayStates)
@@ -114,6 +116,45 @@ extension APIService {
     }
 
     static func deviceIDPathSegment(_ id: String) throws -> String {
+        try pathSegment(id)
+    }
+
+    // MARK: - Messaging Channels (AMA-2027)
+
+    func listMessagingChannels() async throws -> Components.Schemas.MessagingChannelList {
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/messaging/channels",
+            method: "GET"
+        )
+        return try await self.request(
+            request,
+            decode: Components.Schemas.MessagingChannelList.self,
+            decoder: APIService.makeGeneratedDecoder(),
+            successStatusCodes: 200...200
+        )
+    }
+
+    func setChannelPrefs(
+        channelId: String,
+        prefs: Components.Schemas.ChannelPrefsRequest
+    ) async throws -> Components.Schemas.ChannelPrefsResult {
+        let encodedID = try Self.pathSegment(channelId)
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/messaging/channels/\(encodedID)/prefs",
+            method: "PUT",
+            body: try encodeJSONBody(prefs)
+        )
+        return try await self.request(
+            request,
+            decode: Components.Schemas.ChannelPrefsResult.self,
+            decoder: APIService.makeGeneratedDecoder(),
+            successStatusCodes: 200...200
+        )
+    }
+
+    static func pathSegment(_ id: String) throws -> String {
         var allowed = CharacterSet.urlPathAllowed
         allowed.remove(charactersIn: "/%?#")
         guard let encoded = id.addingPercentEncoding(withAllowedCharacters: allowed),

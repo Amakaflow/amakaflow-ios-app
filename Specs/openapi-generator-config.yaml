@@ -26,6 +26,8 @@ filter:
     - /v1/devices/pair  # AMA-2029 Wedge B — add device (confirm 6-digit)
     - /v1/devices/{device_id}  # AMA-2029 Wedge B — remove device
     - /v1/devices/{device_id}/roles  # AMA-2030 Wedge C — set device roles
+    - /v1/messaging/channels  # AMA-2027 Wedge D — messaging channels + coaching-delivery prefs
+    - /v1/messaging/channels/{channel_id}/prefs  # AMA-2027 Wedge D — set messaging channel prefs
 
 accessModifier: public
 
