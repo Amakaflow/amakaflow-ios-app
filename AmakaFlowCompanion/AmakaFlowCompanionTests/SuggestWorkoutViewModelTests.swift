@@ -92,11 +92,26 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
   }
 
   func testSuggestWorkout_successBuildsWorkoutAndStoresSuggestion() async {
+    mockAPI.getFatigueAdviceResult = .success(
+      FatigueAdvice(
+        level: .low,
+        message: "You’re recovered",
+        recommendations: [],
+        suggestedRestDays: nil,
+        recoveryActivities: nil
+      )
+    )
     mockAPI.suggestWorkoutResult = .success(.single(kind: .time(seconds: 300, target: "zone 2")))
 
     await viewModel.suggestWorkout(durationMinutes: 30, focusMuscleGroups: ["quads"], notes: "easy")
 
+    XCTAssertTrue(mockAPI.getFatigueAdviceCalled)
+    XCTAssertEqual(viewModel.readinessLevel, .green)
+    XCTAssertEqual(viewModel.readinessMessage, "You’re recovered")
     XCTAssertTrue(mockAPI.suggestWorkoutCalled)
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.durationMinutes, 30)
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.focusMuscleGroups, ["quads"])
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.notes, "easy")
     XCTAssertEqual(viewModel.suggestedWorkout?.name, "AI Suggested Workout")
     XCTAssertEqual(viewModel.suggestedWorkout?.sport, .strength)
     XCTAssertEqual(viewModel.suggestedWorkout?.duration, 300)
@@ -106,6 +121,57 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
       return
     }
     XCTAssertEqual(workout.intervals, [.time(seconds: 300, target: "zone 2")])
+  }
+
+  func testSuggestWorkout_emptyResponseSetsEmptyStateAndNoSuggestion() async {
+    mockAPI.suggestWorkoutResult = .success(
+      SuggestWorkoutResponse(
+        blocks: [],
+        warmUp: nil,
+        cooldown: nil,
+        name: nil,
+        sport: nil,
+        durationSeconds: nil,
+        description: nil
+      )
+    )
+
+    await viewModel.suggestWorkout()
+
+    XCTAssertTrue(mockAPI.suggestWorkoutCalled)
+    XCTAssertNil(viewModel.suggestedWorkout)
+    XCTAssertEqual(viewModel.state, .empty)
+  }
+
+  func testSuggestWorkout_readinessMappingsAreLevelOnly() async {
+    mockAPI.getFatigueAdviceResult = .success(
+      FatigueAdvice(
+        level: .critical,
+        message: "Keep this easy",
+        recommendations: ["Rest"],
+        suggestedRestDays: 1,
+        recoveryActivities: nil
+      )
+    )
+    mockAPI.suggestWorkoutResult = .success(.single(kind: .time(seconds: 180, target: "walk")))
+
+    await viewModel.suggestWorkout()
+
+    XCTAssertEqual(viewModel.readinessLevel, .red)
+    XCTAssertEqual(viewModel.readinessMessage, "Keep this easy")
+  }
+
+  func testSuggestWorkout_readinessFailureIsUnknownButDoesNotFabricateMetrics() async {
+    mockAPI.getFatigueAdviceResult = .failure(APIError.serverError(503))
+    mockAPI.suggestWorkoutResult = .success(.single(kind: .time(seconds: 180, target: "walk")))
+
+    await viewModel.suggestWorkout()
+
+    XCTAssertEqual(viewModel.readinessLevel, .unknown)
+    XCTAssertNil(viewModel.readinessMessage)
+    guard case .success = viewModel.state else {
+      return XCTFail("Expected success with unknown readiness, got \(viewModel.state)")
+    }
   }
 
   func testSuggestWorkout_errorSetsErrorStateAndLeavesSuggestionNil() async {
@@ -178,8 +244,42 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     }
   }
 
+  func testSuggestAnotherReRequestsFreshSuggestionWithVariationNote() async {
+    mockAPI.suggestWorkoutResult = .success(.single(kind: .time(seconds: 300, target: "zone 2")))
+
+    await viewModel.suggestWorkout()
+    await viewModel.suggestAnother()
+
+    XCTAssertEqual(mockAPI.suggestWorkoutCallCount, 2)
+    XCTAssertEqual(
+      mockAPI.lastSuggestWorkoutRequest?.notes,
+      "Suggest a different session than the previous suggestion."
+    )
+    guard case .success = viewModel.state else {
+      return XCTFail("Expected success after swap re-request, got \(viewModel.state)")
+    }
+  }
+
+  func testRestTodayMarksRestAndClearsSuggestion() {
+    viewModel.suggestedWorkout = Workout(
+      name: "Test",
+      sport: .strength,
+      duration: 1800,
+      intervals: [.time(seconds: 60, target: "move")],
+      source: .coach
+    )
+    viewModel.state = .success(viewModel.suggestedWorkout!)
+
+    viewModel.restToday()
+
+    XCTAssertTrue(viewModel.didChooseRestToday)
+    XCTAssertEqual(viewModel.state, .idle)
+    XCTAssertNil(viewModel.suggestedWorkout)
+  }
+
   func testReset_clearsState() {
     viewModel.state = .error(.unknown(description: "test error"))
+    viewModel.ctaError = .unknown(description: "test error")
     viewModel.suggestedWorkout = Workout(
       name: "Test",
       sport: .strength,
@@ -192,6 +292,7 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
 
     XCTAssertEqual(viewModel.state, .idle)
     XCTAssertNil(viewModel.suggestedWorkout)
+    XCTAssertNil(viewModel.ctaError)
   }
 
   // MARK: - buildWorkout(from:) Translation Tests
@@ -369,6 +470,7 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     XCTAssertEqual(SuggestWorkoutState.idle, SuggestWorkoutState.idle)
     XCTAssertEqual(SuggestWorkoutState.loading, SuggestWorkoutState.loading)
     XCTAssertEqual(SuggestWorkoutState.needsOnboarding, SuggestWorkoutState.needsOnboarding)
+    XCTAssertEqual(SuggestWorkoutState.empty, SuggestWorkoutState.empty)
     // AMA-1803 P1: state.error now carries CTAError. Two errors with
     // the same shape compare equal; different shapes don't.
     XCTAssertEqual(
@@ -644,6 +746,30 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
       return XCTFail("expected .success after retry, got \(viewModel.state)")
     }
     XCTAssertEqual(workout.name, "Retry Win")
+  }
+
+  func testSuggestAnotherFailureClearsPreviousSuggestion() async {
+    mockAPI.suggestWorkoutResult = .success(
+      SuggestWorkoutResponse(
+        blocks: [.time(seconds: 300, target: "zone 2")],
+        warmUp: nil,
+        cooldown: nil,
+        name: "First Suggestion",
+        sport: .running,
+        durationSeconds: 300,
+        description: nil
+      )
+    )
+    await viewModel.suggestWorkout()
+    XCTAssertEqual(viewModel.suggestedWorkout?.name, "First Suggestion")
+
+    mockAPI.suggestWorkoutResult = .failure(APIError.serverError(503))
+    await viewModel.suggestAnother()
+
+    guard case .error = viewModel.state else {
+      return XCTFail("expected .error after failed swap, got \(viewModel.state)")
+    }
+    XCTAssertNil(viewModel.suggestedWorkout)
   }
 
   private enum TestError: Error {

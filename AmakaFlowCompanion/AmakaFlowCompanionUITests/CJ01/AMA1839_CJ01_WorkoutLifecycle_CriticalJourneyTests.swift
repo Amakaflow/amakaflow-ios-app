@@ -138,7 +138,7 @@ final class AMA1839_CJ01_WorkoutLifecycle_CriticalJourneyTests: XCTestCase {
         // Suggest button on Home — this triggers a request and presents
         // the Suggest sheet. The sheet auto-generates on open (no
         // separate "Generate" button in this app), so we wait for the
-        // preview state to render before tapping Accept.
+        // preview state to render before tapping Start.
         let suggest = app.buttons["ama1842.suggest.button"]
         XCTAssertTrue(suggest.waitForExistence(timeout: 10),
                       "Suggest Workout button not found — `ama1842.suggest.button` missing")
@@ -151,10 +151,19 @@ final class AMA1839_CJ01_WorkoutLifecycle_CriticalJourneyTests: XCTestCase {
         XCTAssertTrue(previewExists,
                       "Suggest preview never rendered — generation may have failed (LLM/network) or the `ama1842.suggest.preview` identifier is on the wrong subtree")
 
-        let accept = app.buttons["ama1842.accept.button"]
-        XCTAssertTrue(accept.waitForExistence(timeout: 10),
-                      "Accept button not found — `ama1842.accept.button` missing")
-        accept.tap()
+        let start = app.buttons["af_suggest_start"]
+        for _ in 0..<8 where !start.isHittable {
+            if preview.exists {
+                preview.swipeUp()
+            } else {
+                app.swipeUp()
+            }
+        }
+        XCTAssertTrue(start.waitForExistence(timeout: 10),
+                      "Start button not found — `af_suggest_start` missing")
+        XCTAssertTrue(start.isHittable,
+                      "Start button exists but is not hittable — scroll container may not expose it")
+        start.tap()
         app.tap()
     }
 

@@ -76,14 +76,14 @@ appId: com.myamaka.AmakaFlowCompanion
 - copyTextFrom:
     id: "ama1842.suggest.preview"
 
-# --- Step 3: accept the suggestion ---
+# --- Step 3: start/save the suggestion ---
 - scrollUntilVisible:
     element:
-      id: "ama1842.accept.button"
+      text: "Start workout"
     direction: DOWN
     speed: 25
 - tapOn:
-    id: "ama1842.accept.button"
+    id: "af_suggest_start"
 - waitForAnimationToEnd:
     timeout: 3000
 - takeScreenshot: golden-04-accepted

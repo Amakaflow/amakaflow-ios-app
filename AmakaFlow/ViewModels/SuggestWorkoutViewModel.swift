@@ -79,6 +79,7 @@ enum SuggestWorkoutState: Equatable {
     case needsOnboarding
     case loading
     case success(Workout)
+    case empty
     /// AMA-1803 P1: carries the typed CTAError so the error UI can
     /// surface error_code, render Retry only when the failure is
     /// transient, and produce a Sentry breadcrumb correlated to
@@ -90,9 +91,28 @@ enum SuggestWorkoutState: Equatable {
         case (.idle, .idle): return true
         case (.needsOnboarding, .needsOnboarding): return true
         case (.loading, .loading): return true
+        case (.empty, .empty): return true
         case (.success(let a), .success(let b)): return a.id == b.id
         case (.error(let a), .error(let b)): return a == b
         default: return false
+        }
+    }
+}
+
+enum SuggestReadinessLevel: Equatable {
+    case green
+    case yellow
+    case red
+    case unknown
+
+    init(fatigueLevel: FatigueLevel) {
+        switch fatigueLevel {
+        case .low:
+            self = .green
+        case .moderate:
+            self = .yellow
+        case .high, .critical:
+            self = .red
         }
     }
 }
@@ -103,6 +123,10 @@ enum SuggestWorkoutState: Equatable {
 class SuggestWorkoutViewModel: ObservableObject {
     @Published var state: SuggestWorkoutState = .idle
     @Published var suggestedWorkout: Workout?
+    @Published var readinessLevel: SuggestReadinessLevel = .unknown
+    @Published var readinessMessage: String?
+    @Published var ctaError: CTAError?
+    @Published private(set) var didChooseRestToday = false
 
     private let dependencies: AppDependencies
     private static let profileKey = "coaching_profile"
@@ -153,6 +177,11 @@ class SuggestWorkoutViewModel: ObservableObject {
     /// Call the suggest-workout API
     func suggestWorkout(durationMinutes: Int? = nil, focusMuscleGroups: [String]? = nil, notes: String? = nil) async {
         state = .loading
+        suggestedWorkout = nil
+        ctaError = nil
+        didChooseRestToday = false
+
+        await fetchReadinessLevel()
 
         let body = SuggestWorkoutRequest(
             durationMinutes: durationMinutes,
@@ -162,6 +191,12 @@ class SuggestWorkoutViewModel: ObservableObject {
 
         do {
             let decoded = try await dependencies.apiService.suggestWorkout(request: body)
+            guard Self.hasSuggestedWorkout(decoded) else {
+                suggestedWorkout = nil
+                state = .empty
+                return
+            }
+
             let workout = buildWorkout(from: decoded)
             suggestedWorkout = workout
             state = .success(workout)
@@ -171,8 +206,26 @@ class SuggestWorkoutViewModel: ObservableObject {
             // instead of a stringly-typed `localizedDescription`. When
             // the upstream throws an AnnotatedAPIError (AMA-1808), its
             // requestId propagates here for Report-button correlation.
-            state = .error(CTAError.map(error))
+            let mapped = CTAError.map(error)
+            suggestedWorkout = nil
+            ctaError = mapped
+            state = .error(mapped)
         }
+    }
+
+    private func fetchReadinessLevel() async {
+        do {
+            let advice = try await dependencies.apiService.getFatigueAdvice(fatigueScore: nil, loadHistory: nil)
+            readinessLevel = SuggestReadinessLevel(fatigueLevel: advice.level)
+            readinessMessage = advice.message
+        } catch {
+            readinessLevel = .unknown
+            readinessMessage = nil
+        }
+    }
+
+    private static func hasSuggestedWorkout(_ response: SuggestWorkoutResponse) -> Bool {
+        response.warmUp != nil || response.cooldown != nil || !response.blocks.isEmpty
     }
 
     // MARK: - Build Workout from Response
@@ -216,8 +269,39 @@ class SuggestWorkoutViewModel: ObservableObject {
 
     // MARK: - Actions
 
+    func suggestAnother() async {
+        await suggestWorkout(notes: "Suggest a different session than the previous suggestion.")
+    }
+
+    func restToday() {
+        didChooseRestToday = true
+        ctaError = nil
+        state = .idle
+        suggestedWorkout = nil
+    }
+
+    func retry() async {
+        await suggestWorkout()
+    }
+
+    func dismissError() {
+        ctaError = nil
+    }
+
+    func reportError(reporter: ErrorReporting? = nil) {
+        guard let ctaError else { return }
+        let reporter = reporter ?? ErrorReporter.shared
+        reporter.report(
+            action: "suggest_workout",
+            error: ctaError,
+            endpoint: "/coach/suggest-workout",
+            userId: PairingService.shared.userProfile?.id
+        )
+    }
+
     func reset() {
         state = .idle
         suggestedWorkout = nil
+        ctaError = nil
     }
 }

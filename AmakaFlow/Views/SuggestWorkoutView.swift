@@ -2,7 +2,7 @@
 //  SuggestWorkoutView.swift
 //  AmakaFlow
 //
-//  Sheet view showing AI-generated workout preview with accept/modify/dismiss actions (AMA-1265).
+//  Sheet view showing AI-generated workout preview with start/swap/rest actions (AMA-1994).
 //
 
 import SwiftUI
@@ -19,7 +19,7 @@ struct SuggestWorkoutView: View {
 
                 switch viewModel.state {
                 case .idle:
-                    EmptyView()
+                    loadingView
 
                 case .needsOnboarding:
                     CoachingProfileOnboardingView(viewModel: viewModel)
@@ -28,252 +28,340 @@ struct SuggestWorkoutView: View {
                     loadingView
 
                 case .success(let workout):
-                    workoutPreview(workout)
+                    contentView(workout)
+
+                case .empty:
+                    emptyView
 
                 case .error(let ctaError):
                     errorView(ctaError)
                 }
             }
-            .navigationTitle("Suggested Workout")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
+            .navigationBarHidden(true)
+            .overlay(alignment: .top) {
+                if let error = viewModel.ctaError {
+                    ErrorToast(
+                        actionTitle: "Couldn't generate workout",
+                        error: error,
+                        onRetry: error.isRetryable ? { Task { await viewModel.retry() } } : nil,
+                        onReport: { viewModel.reportError() },
+                        onDismiss: { viewModel.dismissError() }
+                    )
+                    .padding(.horizontal, Theme.Spacing.lg)
+                    .padding(.top, Theme.Spacing.md)
                 }
             }
         }
     }
 
-    // MARK: - Loading View
+    // MARK: - Loading
 
     private var loadingView: some View {
         VStack(spacing: Theme.Spacing.lg) {
             ProgressView()
-                .scaleEffect(1.5)
-                .tint(Theme.Colors.accentOrange)
+                .scaleEffect(1.4)
+                .tint(Theme.Colors.textPrimary)
 
-            Text("Generating your workout...")
-                .font(Theme.Typography.body)
-                .foregroundColor(Theme.Colors.textSecondary)
-
-            Text("Our AI coach is crafting a workout based on your profile")
-                .font(Theme.Typography.caption)
-                .foregroundColor(Theme.Colors.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, Theme.Spacing.xl)
+            VStack(spacing: Theme.Spacing.sm) {
+                Text("Generating your workout")
+                    .afH2()
+                Text("The coach is using today’s available signals. No fallback workout will be shown if generation fails.")
+                    .afMuted()
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, Theme.Spacing.xl)
+            }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier("suggest_workout_loading")
     }
 
-    // MARK: - Workout Preview
+    // MARK: - Content
 
-    private func workoutPreview(_ workout: Workout) -> some View {
-        ScrollView {
-            VStack(spacing: Theme.Spacing.lg) {
-                // Workout header
-                VStack(spacing: Theme.Spacing.sm) {
+    private func contentView(_ workout: Workout) -> some View {
+        scrollContainer {
+            readinessCard
+            workoutCard(workout)
+            actionButtons(for: workout)
+        }
+        .accessibilityIdentifier("ama1842.suggest.preview")
+    }
+
+    private var readinessCard: some View {
+        AFCard {
+            HStack(alignment: .top, spacing: Theme.Spacing.md) {
+                ZStack {
+                    Circle()
+                        .fill(viewModel.readinessLevel.color.opacity(0.14))
+                    Circle()
+                        .fill(viewModel.readinessLevel.color)
+                        .frame(width: 14, height: 14)
+                }
+                .frame(width: 42, height: 42)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    AFLabel(text: "Readiness")
                     HStack(spacing: Theme.Spacing.sm) {
-                        Image(systemName: "sparkles")
-                            .foregroundColor(Theme.Colors.accentOrange)
-                        Text("AI Coach Suggestion")
-                            .font(Theme.Typography.caption)
-                            .foregroundColor(Theme.Colors.accentOrange)
+                        Text(viewModel.readinessLevel.title)
+                            .afH2()
+                        AFChip(text: viewModel.readinessLevel.badgeText, outline: true)
                     }
 
-                    Text(workout.name)
-                        .font(Theme.Typography.title2)
-                        .foregroundColor(Theme.Colors.textPrimary)
+                    if let message = viewModel.readinessMessage, !message.isEmpty {
+                        Text(message)
+                            .afMuted()
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text("Connect a wearable for detailed metrics.")
+                            .afMuted()
+                    }
+                }
+
+                Spacer(minLength: 0)
+            }
+        }
+        .accessibilityIdentifier("af_suggest_readiness")
+    }
+
+    private func workoutCard(_ workout: Workout) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            AFCard(padding: Theme.Spacing.lg) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                    HStack(alignment: .top, spacing: Theme.Spacing.md) {
+                        iconTile(symbolName: workout.sport.symbolName)
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            AFLabel(text: "Suggested workout")
+                            Text(workout.name)
+                                .font(Theme.Typography.title1)
+                                .foregroundColor(Theme.Colors.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            workoutMeta(workout)
+                        }
+                    }
+
+                    if let rationale = workout.description?.trimmingCharacters(in: .whitespacesAndNewlines), !rationale.isEmpty {
+                        Divider()
+                            .overlay(Theme.Colors.borderLight)
+
+                        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                            AFLabel(text: "About this session")
+                            Text(rationale)
+                                .afBody()
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+
+            if !workout.intervals.isEmpty {
+                AFCard {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                        AFLabel(text: "Session plan")
+                        LazyVStack(spacing: Theme.Spacing.sm) {
+                            ForEach(Array(workout.intervals.enumerated()), id: \.offset) { index, interval in
+                                SuggestIntervalRow(index: index + 1, interval: interval)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func workoutMeta(_ workout: Workout) -> some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            AFChip(text: workout.formattedDuration)
+            AFChip(text: workout.sport.displayName)
+            AFChip(text: "\(workout.intervals.count) steps")
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func actionButtons(for workout: Workout) -> some View {
+        VStack(spacing: Theme.Spacing.sm) {
+            Button {
+                startWorkout(workout)
+            } label: {
+                Label("Start workout", systemImage: "play.fill")
+            }
+            .buttonStyle(AFPrimaryButtonStyle(size: .lg))
+            .accessibilityIdentifier("af_suggest_start")
+
+            Button {
+                Task { await viewModel.suggestAnother() }
+            } label: {
+                Label("Suggest another", systemImage: "arrow.triangle.2.circlepath")
+            }
+            .buttonStyle(AFGhostButtonStyle(size: .lg))
+            .accessibilityIdentifier("af_suggest_swap")
+
+            Button {
+                viewModel.restToday()
+                dismiss()
+            } label: {
+                Label("Rest today", systemImage: "moon.zzz")
+            }
+            .buttonStyle(AFGhostButtonStyle(size: .lg))
+            .accessibilityIdentifier("af_suggest_rest")
+        }
+    }
+
+    // MARK: - Empty + Error
+
+    private var emptyView: some View {
+        scrollContainer {
+            AFCard(padding: Theme.Spacing.lg) {
+                VStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: "sparkles.square.filled.on.square")
+                        .font(.system(size: 34, weight: .semibold))
+                        .foregroundColor(Theme.Colors.textSecondary)
+                    Text("No suggestion available")
+                        .afH2()
+                    Text("The coach did not return a workout for today. Try again when you’re ready.")
+                        .afMuted()
                         .multilineTextAlignment(.center)
 
-                    HStack(spacing: Theme.Spacing.md) {
-                        Label(workout.formattedDuration, systemImage: "clock")
-                        Label(workout.sport.rawValue.capitalized, systemImage: "figure.run")
-                        Label("\(workout.intervals.count) steps", systemImage: "list.bullet")
+                    Button {
+                        Task { await viewModel.retry() }
+                    } label: {
+                        Text("Try again")
                     }
-                    .font(Theme.Typography.caption)
-                    .foregroundColor(Theme.Colors.textSecondary)
-
-                    if let description = workout.description {
-                        Text(description)
-                            .font(Theme.Typography.body)
-                            .foregroundColor(Theme.Colors.textSecondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.top, Theme.Spacing.xs)
-                    }
+                    .buttonStyle(AFPrimaryButtonStyle(size: .md))
                 }
-                .padding(Theme.Spacing.lg)
                 .frame(maxWidth: .infinity)
-                .background(Theme.Colors.surface)
-                .cornerRadius(Theme.CornerRadius.lg)
+            }
+            .accessibilityIdentifier("suggest_workout_empty")
+        }
+    }
 
-                // Workout intervals
-                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                    Text("Workout Steps")
-                        .font(Theme.Typography.bodyBold)
-                        .foregroundColor(Theme.Colors.textPrimary)
+    private func errorView(_ error: CTAError) -> some View {
+        scrollContainer {
+            AFCard(padding: Theme.Spacing.lg) {
+                VStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 34, weight: .semibold))
+                        .foregroundColor(Theme.Colors.accentRed)
+                    Text(errorTitle(for: error))
+                        .afH2()
+                        .multilineTextAlignment(.center)
+                    Text(error.userMessage)
+                        .afMuted()
+                        .multilineTextAlignment(.center)
 
-                    ForEach(Array(workout.intervals.enumerated()), id: \.offset) { index, interval in
-                        SuggestIntervalRow(index: index + 1, interval: interval)
+                    if error.isRetryable {
+                        Button {
+                            Task { await viewModel.retry() }
+                        } label: {
+                            Text("Retry")
+                        }
+                        .buttonStyle(AFPrimaryButtonStyle(size: .md))
+                        .accessibilityIdentifier("suggest_workout_retry")
                     }
                 }
-                .padding(Theme.Spacing.lg)
-                .background(Theme.Colors.surface)
-                .cornerRadius(Theme.CornerRadius.lg)
+                .frame(maxWidth: .infinity)
+            }
+            .accessibilityIdentifier("suggest_workout_error")
+        }
+    }
 
-                // Action buttons
-                VStack(spacing: Theme.Spacing.sm) {
-                    // Accept button
-                    Button {
-                        acceptWorkout(workout)
-                    } label: {
-                        HStack {
-                            Image(systemName: "checkmark.circle.fill")
-                            Text("Accept & Save")
-                        }
-                        .font(Theme.Typography.bodyBold)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, Theme.Spacing.md)
-                        .background(Theme.Colors.accentGreen)
-                        .cornerRadius(Theme.CornerRadius.md)
-                    }
-                    // AMA-1842: stable a11y identifier for CJ-01 L3.
-                    // Legacy ID: "accept_workout_button" (renamed to ticket-tagged form).
-                    .accessibilityIdentifier("ama1842.accept.button")
+    private func errorTitle(for error: CTAError) -> String {
+        if case .unauthenticated = error {
+            return "Please sign in again"
+        }
+        return "Couldn’t generate a workout"
+    }
 
-                    // Try again button
-                    Button {
-                        Task {
-                            await viewModel.suggestWorkout()
-                        }
-                    } label: {
-                        HStack {
-                            Image(systemName: "arrow.clockwise")
-                            Text("Suggest Another")
-                        }
-                        .font(Theme.Typography.bodyBold)
-                        .foregroundColor(Theme.Colors.accentBlue)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, Theme.Spacing.md)
-                        .background(Theme.Colors.surface)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
-                                .stroke(Theme.Colors.accentBlue, lineWidth: 1)
-                        )
-                        .cornerRadius(Theme.CornerRadius.md)
-                    }
-                    .accessibilityIdentifier("suggest_another_button")
+    // MARK: - Shared layout
 
-                    // Dismiss button
-                    Button {
-                        viewModel.reset()
-                        dismiss()
-                    } label: {
-                        Text("Dismiss")
-                            .font(Theme.Typography.body)
-                            .foregroundColor(Theme.Colors.textSecondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, Theme.Spacing.sm)
-                    }
-                }
+    @ViewBuilder
+    private func scrollContainer<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                AFTopBar(
+                    title: "Today’s suggestion",
+                    subtitle: "Readiness, rationale, and one generated session",
+                    backIdentifier: "suggest_workout_done",
+                    backAction: { dismiss() },
+                    right: { AFChip(text: "AI Coach", outline: true) }
+                )
+                .padding(.horizontal, -Theme.Spacing.lg)
+
+                content()
             }
             .padding(.horizontal, Theme.Spacing.lg)
             .padding(.bottom, 40)
         }
-        // AMA-1842: marker for the L3 test to know the suggest sheet has loaded a result.
-        // Legacy ID retained as a comment for grep: "suggest_workout_preview".
-        .accessibilityIdentifier("ama1842.suggest.preview")
     }
 
-    // MARK: - Error View
-
-    /// AMA-1803 P1: render the typed CTAError. Title varies with the
-    /// failure shape (sign-in for unauthenticated, otherwise generic),
-    /// body text comes from `userMessage` (which already includes the
-    /// server's error_code when present), Try Again only renders when
-    /// the failure is transient (per CTAError.isRetryable), and Report
-    /// drops a Sentry breadcrumb correlated to AMA-1805 server tags
-    /// via request_id.
-    private func errorView(_ error: CTAError) -> some View {
-        let title: String = {
-            if case .unauthenticated = error {
-                return "Please sign in again"
-            }
-            return "Couldn't generate a workout"
-        }()
-
-        return VStack(spacing: Theme.Spacing.lg) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 40))
-                .foregroundColor(Theme.Colors.accentOrange)
-
-            Text(title)
-                .font(Theme.Typography.title3)
-                .foregroundColor(Theme.Colors.textPrimary)
-
-            Text(error.userMessage)
-                .font(Theme.Typography.body)
-                .foregroundColor(Theme.Colors.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, Theme.Spacing.xl)
-
-            HStack(spacing: Theme.Spacing.md) {
-                if error.isRetryable {
-                    Button {
-                        Task {
-                            await viewModel.suggestWorkout()
-                        }
-                    } label: {
-                        HStack {
-                            Image(systemName: "arrow.clockwise")
-                            Text("Try Again")
-                        }
-                        .font(Theme.Typography.bodyBold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, Theme.Spacing.xl)
-                        .padding(.vertical, Theme.Spacing.md)
-                        .background(Theme.Colors.accentOrange)
-                        .cornerRadius(Theme.CornerRadius.md)
-                    }
-                    .accessibilityIdentifier("suggest_workout_retry")
-                }
-
-                Button {
-                    ErrorReporter.shared.report(
-                        action: "suggest_workout",
-                        error: error,
-                        endpoint: "/coach/suggest-workout",
-                        userId: PairingService.shared.userProfile?.id
-                    )
-                } label: {
-                    HStack {
-                        Image(systemName: "exclamationmark.bubble")
-                        Text("Report")
-                    }
-                    .font(Theme.Typography.bodyBold)
-                    .foregroundColor(Theme.Colors.accentOrange)
-                    .padding(.horizontal, Theme.Spacing.xl)
-                    .padding(.vertical, Theme.Spacing.md)
-                    .background(Theme.Colors.accentOrange.opacity(0.15))
-                    .cornerRadius(Theme.CornerRadius.md)
-                }
-                .accessibilityIdentifier("suggest_workout_report")
-            }
-        }
-        .accessibilityIdentifier("suggest_workout_error")
+    private func iconTile(symbolName: String) -> some View {
+        RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous)
+            .fill(Theme.Colors.accentBackground)
+            .frame(width: 46, height: 46)
+            .overlay(
+                Image(systemName: symbolName)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(Theme.Colors.textPrimary)
+            )
     }
 
     // MARK: - Actions
 
-    private func acceptWorkout(_ workout: Workout) {
+    private func startWorkout(_ workout: Workout) {
         // AMA-1751: persist + surface. Backend has no accept-suggestion
         // endpoint yet, so the view model's local store is the only thing
         // keeping this workout alive across the next API refresh.
         workoutsViewModel.acceptSuggestedWorkout(workout)
         viewModel.reset()
         dismiss()
+    }
+}
+
+// MARK: - Display helpers
+
+private extension SuggestReadinessLevel {
+    var title: String {
+        switch self {
+        case .green: return "Ready to train"
+        case .yellow: return "Proceed with care"
+        case .red: return "Recovery-first day"
+        case .unknown: return "Readiness unavailable"
+        }
+    }
+
+    var badgeText: String {
+        switch self {
+        case .green: return "Green"
+        case .yellow: return "Yellow"
+        case .red: return "Red"
+        case .unknown: return "Unknown"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .green: return Theme.Colors.readyHigh
+        case .yellow: return Theme.Colors.readyModerate
+        case .red: return Theme.Colors.readyLow
+        case .unknown: return Theme.Colors.textTertiary
+        }
+    }
+}
+
+private extension WorkoutSport {
+    var displayName: String {
+        rawValue.capitalized
+    }
+
+    var symbolName: String {
+        switch self {
+        case .running: return "figure.run"
+        case .cycling: return "figure.outdoor.cycle"
+        case .strength: return "dumbbell.fill"
+        case .mobility: return "figure.flexibility"
+        case .swimming: return "figure.pool.swim"
+        case .cardio: return "heart.fill"
+        case .other: return "figure.mixed.cardio"
+        }
     }
 }
 
@@ -292,10 +380,9 @@ private struct SuggestIntervalRow: View {
                 .background(intervalColor)
                 .clipShape(Circle())
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(intervalName)
-                    .font(Theme.Typography.bodyBold)
-                    .foregroundColor(Theme.Colors.textPrimary)
+                    .afH3()
 
                 if let detail = intervalDetail {
                     Text(detail)
@@ -355,5 +442,4 @@ private struct SuggestIntervalRow: View {
 #Preview {
     SuggestWorkoutView(viewModel: SuggestWorkoutViewModel())
         .environmentObject(WorkoutsViewModel())
-        .preferredColorScheme(.dark)
 }
