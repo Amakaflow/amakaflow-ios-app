@@ -304,11 +304,12 @@ extension APIService {
                 throw apiError
             }
 
-            let rndrId = httpResponse.value(forHTTPHeaderField: "Rndr-Id")
-            let serverRequestId = rndrId == generatedRequestId ? nil : rndrId
+            let responseRequestId = httpResponse.value(forHTTPHeaderField: "X-Request-ID")
+                ?? httpResponse.value(forHTTPHeaderField: "Rndr-Id")
+            let serverRequestId = responseRequestId == generatedRequestId ? nil : responseRequestId
             let statusCode = httpResponse.statusCode
             guard successStatusCodes.contains(statusCode) else {
-                let apiError = Self.mapStatusCode(statusCode)
+                let apiError = Self.mapStatusCode(statusCode, data: data)
                 logAPIEvent(
                     phase: .fail,
                     endpoint: endpoint,
@@ -377,7 +378,17 @@ extension APIService {
         return url.path.isEmpty ? "/" : url.path
     }
 
-    static func mapStatusCode(_ statusCode: Int) -> APIError {
+    static func mapStatusCode(_ statusCode: Int, data: Data? = nil) -> APIError {
+        if statusCode == 401 {
+            return .unauthorized
+        }
+
+        if let data,
+           let body = String(data: data, encoding: .utf8),
+           !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return .serverErrorWithBody(statusCode, body)
+        }
+
         switch statusCode {
         case 401:
             return .unauthorized

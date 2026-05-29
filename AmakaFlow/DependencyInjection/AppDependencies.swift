@@ -670,11 +670,33 @@ class MockAPIService: APIServiceProviding {
             roles: [.recovery]
         )
     ])
+    var pairDeviceResult: Result<Components.Schemas.PairDeviceResult, Error> = .success(
+        Components.Schemas.PairDeviceResult(message: "Device paired", success: true)
+    )
+    var revokeDeviceResult: Result<Components.Schemas.PairDeviceResult, Error> = .success(
+        Components.Schemas.PairDeviceResult(message: "Device removed", success: true)
+    )
     var listDevicesCalled = false
+    var pairDeviceCalled = false
+    var revokeDeviceCalled = false
+    var lastPairedShortCode: String?
+    var lastRevokedDeviceId: String?
 
     func listDevices() async throws -> [Components.Schemas.PairedDevice] {
         listDevicesCalled = true
         return try listDevicesResult.get()
+    }
+
+    func pairDevice(shortCode: String) async throws -> Components.Schemas.PairDeviceResult {
+        pairDeviceCalled = true
+        lastPairedShortCode = shortCode
+        return try pairDeviceResult.get()
+    }
+
+    func revokeDevice(id: String) async throws -> Components.Schemas.PairDeviceResult {
+        revokeDeviceCalled = true
+        lastRevokedDeviceId = id
+        return try revokeDeviceResult.get()
     }
 
     // MARK: - Coaching Profile (AMA-1995)

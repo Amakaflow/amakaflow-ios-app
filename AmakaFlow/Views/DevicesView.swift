@@ -11,6 +11,8 @@ struct DevicesView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: DevicesViewModel
     @State private var didLoad = false
+    @State private var showingPairSheet = false
+    @State private var pendingRemoval: DevicesViewModel.PairedDevice?
 
     init(viewModel: DevicesViewModel? = nil) {
         _viewModel = StateObject(wrappedValue: viewModel ?? DevicesViewModel())
@@ -37,7 +39,7 @@ struct DevicesView: View {
         .overlay(alignment: .top) {
             if let error = viewModel.ctaError {
                 ErrorToast(
-                    actionTitle: "Couldn't load devices",
+                    actionTitle: errorActionTitle,
                     error: error,
                     onRetry: error.isRetryable ? { Task { await viewModel.retryLastAction() } } : nil,
                     onReport: { viewModel.reportError() },
@@ -46,6 +48,26 @@ struct DevicesView: View {
                 .padding(.horizontal, Theme.Spacing.lg)
                 .padding(.top, Theme.Spacing.md)
             }
+        }
+        .sheet(isPresented: $showingPairSheet) {
+            PairDeviceSheet(viewModel: viewModel)
+        }
+        .confirmationDialog(
+            "Remove this device?",
+            isPresented: Binding(
+                get: { pendingRemoval != nil },
+                set: { if !$0 { pendingRemoval = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Remove", role: .destructive) {
+                guard let device = pendingRemoval else { return }
+                pendingRemoval = nil
+                Task { await viewModel.remove(device) }
+            }
+            Button("Cancel", role: .cancel) { pendingRemoval = nil }
+        } message: {
+            Text("You'll need to re-pair it.")
         }
         .task {
             guard !didLoad else { return }
@@ -171,6 +193,19 @@ struct DevicesView: View {
         return viewModel.ctaError
     }
 
+    private var errorActionTitle: String {
+        switch viewModel.lastFailedAction {
+        case .load:
+            return "Couldn't load devices"
+        case .pair:
+            return "Couldn't add device"
+        case .remove:
+            return "Couldn't remove device"
+        case .none:
+            return "Device action failed"
+        }
+    }
+
     private var devicesSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             HStack(alignment: .center) {
@@ -214,7 +249,11 @@ struct DevicesView: View {
                     }
                 }
 
-                roleChips(for: display.device)
+                HStack(alignment: .center, spacing: Theme.Spacing.md) {
+                    roleChips(for: display.device)
+                    Spacer(minLength: 0)
+                    removeButton(for: display.device)
+                }
             }
         }
         .accessibilityElement(children: .contain)
@@ -254,21 +293,30 @@ struct DevicesView: View {
     }
 
     private var addDeviceButton: some View {
-        Button { } label: {
+        Button { showingPairSheet = true } label: {
             HStack(spacing: Theme.Spacing.xs) {
                 Image(systemName: "plus")
                 Text("Add device")
-                Text("SOON")
-                    .font(Theme.Typography.captionBold)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Theme.Colors.chipBackground)
-                    .clipShape(Capsule())
             }
         }
         .buttonStyle(AFGhostButtonStyle(size: .sm, isWide: false))
-        .disabled(true)
-        .accessibilityIdentifier("devices_add_device")
+        .accessibilityIdentifier("af_devices_add")
+    }
+
+    private func removeButton(for device: DevicesViewModel.PairedDevice) -> some View {
+        Button(role: .destructive) {
+            pendingRemoval = device
+        } label: {
+            Label("Remove", systemImage: "trash")
+                .labelStyle(.iconOnly)
+                .font(Theme.Typography.body.weight(.semibold))
+                .foregroundColor(Theme.Colors.accentRed)
+                .padding(8)
+                .background(Theme.Colors.surfaceElevated)
+                .clipShape(Circle())
+        }
+        .accessibilityLabel("Remove \(device.name)")
+        .accessibilityIdentifier("af_device_remove_\(device.id)")
     }
 
     private var infoNote: some View {
@@ -282,6 +330,114 @@ struct DevicesView: View {
             }
         }
         .accessibilityIdentifier("devices_roles_note")
+    }
+}
+
+private struct PairDeviceSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var viewModel: DevicesViewModel
+    @State private var shortCode = ""
+    @State private var isSubmitting = false
+
+    private var normalizedCode: String {
+        Self.normalize(shortCode)
+    }
+
+    private var canSubmit: Bool {
+        normalizedCode.count == 6 && !isSubmitting
+    }
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            Theme.Colors.background.ignoresSafeArea()
+
+            VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Text("Add Garmin")
+                        .afH2()
+                    Text("Enter the code shown on your Garmin watch")
+                        .afMuted()
+                }
+
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Text("6-digit code")
+                        .font(Theme.Typography.footnote.weight(.semibold))
+                        .foregroundColor(Theme.Colors.textSecondary)
+                    TextField("ABC123", text: $shortCode)
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled()
+                        .keyboardType(.asciiCapable)
+                        .font(.system(size: 24, weight: .bold, design: .monospaced))
+                        .foregroundColor(Theme.Colors.textPrimary)
+                        .tint(Theme.Colors.readyHigh)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .background(Theme.Colors.inputBackground)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.CornerRadius.sm, style: .continuous)
+                                .stroke(Theme.Colors.borderMedium, lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.sm, style: .continuous))
+                        .onChange(of: shortCode) { value in
+                            let normalized = Self.normalize(value)
+                            if normalized != value {
+                                shortCode = normalized
+                            }
+                        }
+                        .accessibilityIdentifier("af_device_pair_field")
+                }
+
+                Button {
+                    Task { await submit() }
+                } label: {
+                    if isSubmitting {
+                        ProgressView()
+                            .tint(Theme.Colors.primaryForeground)
+                    } else {
+                        Text("Pair device")
+                    }
+                }
+                .buttonStyle(AFPrimaryButtonStyle(size: .lg))
+                .disabled(!canSubmit)
+                .accessibilityIdentifier("af_device_pair_submit")
+
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(AFGhostButtonStyle(size: .md))
+
+                Spacer()
+            }
+            .padding(Theme.Spacing.lg)
+
+            if let error = viewModel.ctaError, viewModel.lastFailedAction == .pair {
+                ErrorToast(
+                    actionTitle: "Couldn't add device",
+                    error: error,
+                    onRetry: error.isRetryable ? { Task { await viewModel.retryLastAction() } } : nil,
+                    onReport: { viewModel.reportError() },
+                    onDismiss: { viewModel.dismissError() }
+                )
+                .padding(.horizontal, Theme.Spacing.lg)
+                .padding(.top, Theme.Spacing.md)
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        .presentationBackground(Theme.Colors.background)
+    }
+
+    private func submit() async {
+        guard canSubmit else { return }
+        isSubmitting = true
+        defer { isSubmitting = false }
+
+        await viewModel.pair(shortCode: normalizedCode)
+        if viewModel.lastFailedAction != .pair {
+            dismiss()
+        }
+    }
+
+    private static func normalize(_ value: String) -> String {
+        String(value.uppercased().filter { $0.isLetter || $0.isNumber }.prefix(6))
     }
 }
 
