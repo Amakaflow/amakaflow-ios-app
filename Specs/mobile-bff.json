@@ -478,6 +478,42 @@
         "title": "DeviceRole",
         "type": "string"
       },
+      "DeviceRolesRequest": {
+        "additionalProperties": false,
+        "description": "Body for PUT /v1/devices/{id}/roles (AMA-2030, Wedge C).\n\nTyped against the DeviceRole enum, so an unknown role is rejected at the BFF\n(422) before it ever reaches mapper-api / the device_roles CHECK constraint.",
+        "properties": {
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/DeviceRole"
+            },
+            "title": "Roles",
+            "type": "array"
+          }
+        },
+        "title": "DeviceRolesRequest",
+        "type": "object"
+      },
+      "DeviceRolesResult": {
+        "description": "Response for PUT /v1/devices/{id}/roles \u2014 the device's roles after the write.",
+        "properties": {
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/DeviceRole"
+            },
+            "title": "Roles",
+            "type": "array"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "title": "DeviceRolesResult",
+        "type": "object"
+      },
       "DeviceType": {
         "description": "Mirrors mapper-api's DeviceType (services/mapper-api/api/routers/sync.py).",
         "enum": [
@@ -2464,6 +2500,66 @@
           }
         },
         "summary": "V1 Devices Revoke"
+      }
+    },
+    "/v1/devices/{device_id}/roles": {
+      "put": {
+        "description": "iOS role chips \u2192 mapper-api PUT /mobile/pairing/devices/{id}/roles (AMA-2030).\n\nRoles are typed against the DeviceRole enum (FastAPI 422s an unknown role\nbefore it reaches mapper). The backend resolves {id} \u2192 device_type and\nupserts device_roles keyed on (clerk_user_id, device_type).",
+        "operationId": "setDeviceRoles",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "device_id",
+            "required": true,
+            "schema": {
+              "title": "Device Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceRolesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceRolesResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Devices Set Roles"
       }
     },
     "/v1/gamification/xp": {

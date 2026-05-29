@@ -285,6 +285,12 @@ protocol APIServiceProviding: TelegramLinkAPIProviding {
     /// Revoke an existing paired device.
     func revokeDevice(id: String) async throws -> Components.Schemas.PairDeviceResult
 
+    /// Assign roles for a paired device via the mobile BFF.
+    func setDeviceRoles(
+        id: String,
+        roles: [Components.Schemas.DeviceRole]
+    ) async throws -> Components.Schemas.DeviceRolesResult
+
     // MARK: - Coaching Profile (AMA-1995)
 
     /// Fetch the user's coaching profile, including generated equipment inventory.

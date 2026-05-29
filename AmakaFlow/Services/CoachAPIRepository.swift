@@ -18,6 +18,7 @@
 //    GET  /v1/devices                           (listDevices)
 //    POST /v1/devices/pair                      (pairDevice)
 //    DELETE /v1/devices/{device_id}             (revokeDevice)
+//    PUT  /v1/devices/{device_id}/roles         (setDeviceRoles)
 //    GET  /v1/coaching/profile                  (getCoachingProfile)
 //    PUT  /v1/coaching/profile                  (upsertCoachingProfile)
 //    GET  /v1/planning/days                     (fetchDayState/fetchDayStates)
@@ -79,9 +80,10 @@ extension APIService {
     }
 
     func revokeDevice(id: String) async throws -> Components.Schemas.PairDeviceResult {
+        let encodedID = try Self.deviceIDPathSegment(id)
         let request = try await makeAPIRequest(
             baseURL: bffURL,
-            path: "/devices/\(id)",
+            path: "/devices/\(encodedID)",
             method: "DELETE"
         )
         return try await self.request(
@@ -90,6 +92,35 @@ extension APIService {
             decoder: APIService.makeGeneratedDecoder(),
             successStatusCodes: 200...200
         )
+    }
+
+    func setDeviceRoles(
+        id: String,
+        roles: [Components.Schemas.DeviceRole]
+    ) async throws -> Components.Schemas.DeviceRolesResult {
+        let encodedID = try Self.deviceIDPathSegment(id)
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/devices/\(encodedID)/roles",
+            method: "PUT",
+            body: try encodeJSONBody(["roles": roles.map(\.rawValue)])
+        )
+        return try await self.request(
+            request,
+            decode: Components.Schemas.DeviceRolesResult.self,
+            decoder: APIService.makeGeneratedDecoder(),
+            successStatusCodes: 200...200
+        )
+    }
+
+    static func deviceIDPathSegment(_ id: String) throws -> String {
+        var allowed = CharacterSet.urlPathAllowed
+        allowed.remove(charactersIn: "/%?#")
+        guard let encoded = id.addingPercentEncoding(withAllowedCharacters: allowed),
+              !encoded.isEmpty else {
+            throw APIError.invalidURL
+        }
+        return encoded
     }
 
     // MARK: - Coaching Profile (AMA-1995)

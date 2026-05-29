@@ -31,6 +31,7 @@ class FixtureAPIService: APIServiceProviding {
     var revokeDeviceResult: Result<Components.Schemas.PairDeviceResult, Error> = .success(
         Components.Schemas.PairDeviceResult(message: "Fixture device removed", success: true)
     )
+    var setDeviceRolesResult: Result<Components.Schemas.DeviceRolesResult, Error>?
     private var fixtureDevices: [Components.Schemas.PairedDevice] = [
         Components.Schemas.PairedDevice(
             id: "fixture-garmin-955",
@@ -232,6 +233,28 @@ class FixtureAPIService: APIServiceProviding {
         fixtureDevices.removeAll { $0.id == id }
         print("[FixtureAPIService] Stub: revokeDevice(\(id)) -> success")
         return result
+    }
+
+    func setDeviceRoles(
+        id: String,
+        roles: [Components.Schemas.DeviceRole]
+    ) async throws -> Components.Schemas.DeviceRolesResult {
+        if let setDeviceRolesResult {
+            return try setDeviceRolesResult.get()
+        }
+        guard let index = fixtureDevices.firstIndex(where: { $0.id == id }) else {
+            throw APIError.serverErrorWithBody(404, "{\"detail\":\"Device pairing not found\"}")
+        }
+        let existing = fixtureDevices[index]
+        fixtureDevices[index] = Components.Schemas.PairedDevice(
+            id: existing.id,
+            lastSyncAt: existing.lastSyncAt,
+            model: existing.model,
+            name: existing.name,
+            roles: roles
+        )
+        print("[FixtureAPIService] Stub: setDeviceRoles(\(id), \(roles.map(\.rawValue))) -> success")
+        return Components.Schemas.DeviceRolesResult(roles: roles, success: true)
     }
 
     // MARK: - Coaching Profile (AMA-1995)

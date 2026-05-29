@@ -2,7 +2,8 @@
 //  DevicesViewModel.swift
 //  AmakaFlow
 //
-//  AMA-1996: Connected devices read-only list state + display mapping.
+//  AMA-1996: Connected devices list state + display mapping.
+//  AMA-2030: role assignment CTA state.
 //
 
 import Combine
@@ -24,6 +25,7 @@ final class DevicesViewModel: ObservableObject {
         case load
         case pair
         case remove(id: String)
+        case setRoles(id: String)
     }
 
     struct DisplayDevice: Identifiable, Equatable {
@@ -41,11 +43,13 @@ final class DevicesViewModel: ObservableObject {
     @Published private(set) var state: ScreenState = .loading
     @Published private(set) var ctaError: CTAError?
     @Published private(set) var devices: [PairedDevice] = []
+    @Published private(set) var roleUpdatesInFlight: Set<String> = []
     private(set) var lastFailedAction: FailedAction?
 
     private let apiService: APIServiceProviding
     private let now: () -> Date
     private var lastPairShortCode: String?
+    private var lastSetRolesRequest: (id: String, roles: [DeviceRole])?
 
     init(
         apiService: APIServiceProviding? = nil,
@@ -123,8 +127,53 @@ final class DevicesViewModel: ObservableObject {
             await pair(shortCode: lastPairShortCode)
         case .remove(let id):
             await revokeDevice(id: id)
+        case .setRoles(let id):
+            guard let request = lastSetRolesRequest, request.id == id else { return }
+            await setRoles(id: id, roles: request.roles)
         case .none:
             break
+        }
+    }
+
+    func setRoles(_ device: PairedDevice, roles: [DeviceRole]) async {
+        await setRoles(id: device.id, roles: roles)
+    }
+
+    func toggleRole(_ role: DeviceRole, for device: PairedDevice) async {
+        let latestDevice = devices.first(where: { $0.id == device.id }) ?? device
+        var roles = Set(latestDevice.roles ?? [])
+        if roles.contains(role) {
+            roles.remove(role)
+        } else {
+            roles.insert(role)
+        }
+        await setRoles(id: device.id, roles: Self.displayRoles.filter { roles.contains($0) })
+    }
+
+    func isSettingRoles(for device: PairedDevice) -> Bool {
+        roleUpdatesInFlight.contains(device.id)
+    }
+
+    private func setRoles(id: String, roles: [DeviceRole]) async {
+        guard !roleUpdatesInFlight.contains(id) else { return }
+        roleUpdatesInFlight.insert(id)
+        defer { roleUpdatesInFlight.remove(id) }
+
+        ctaError = nil
+        lastSetRolesRequest = (id: id, roles: roles)
+
+        do {
+            let result = try await apiService.setDeviceRoles(id: id, roles: roles)
+            if let failure = Self.ctaError(from: result) {
+                ctaError = failure
+                lastFailedAction = .setRoles(id: id)
+                return
+            }
+            patchDeviceRoles(id: id, roles: result.roles ?? roles)
+            lastFailedAction = nil
+        } catch {
+            ctaError = CTAError.map(error)
+            lastFailedAction = .setRoles(id: id)
         }
     }
 
@@ -173,6 +222,8 @@ final class DevicesViewModel: ObservableObject {
             return "devices_pair"
         case .remove:
             return "devices_remove"
+        case .setRoles:
+            return "devices_set_roles"
         case .none:
             return "devices_unknown"
         }
@@ -186,6 +237,8 @@ final class DevicesViewModel: ObservableObject {
             return "/v1/devices/pair"
         case .remove(let id):
             return "/v1/devices/\(id)"
+        case .setRoles(let id):
+            return "/v1/devices/\(id)/roles"
         case .none:
             return "/v1/devices"
         }
@@ -195,9 +248,27 @@ final class DevicesViewModel: ObservableObject {
         device.roles?.contains(role) == true
     }
 
+    private func patchDeviceRoles(id: String, roles: [DeviceRole]) {
+        guard let index = devices.firstIndex(where: { $0.id == id }) else { return }
+        let existing = devices[index]
+        devices[index] = PairedDevice(
+            id: existing.id,
+            lastSyncAt: existing.lastSyncAt,
+            model: existing.model,
+            name: existing.name,
+            roles: roles
+        )
+        state = devices.isEmpty ? .empty : .content
+    }
+
     private static func ctaError(from result: Components.Schemas.PairDeviceResult) -> CTAError? {
         guard !result.success else { return nil }
         return CTAError.map(APIError.serverErrorWithBody(200, lyingSuccessBody(message: result.message)))
+    }
+
+    private static func ctaError(from result: Components.Schemas.DeviceRolesResult) -> CTAError? {
+        guard !result.success else { return nil }
+        return CTAError.map(APIError.serverErrorWithBody(200, lyingSuccessBody(message: "Device role update failed")))
     }
 
     private static func lyingSuccessBody(message: String?) -> String {
