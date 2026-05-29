@@ -53,6 +53,17 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `DELETE /v1/devices/{device_id}`.
     /// - Remark: Generated from `#/paths//v1/devices/{device_id}/delete(revokeDevice)`.
     func revokeDevice(_ input: Operations.RevokeDevice.Input) async throws -> Operations.RevokeDevice.Output
+    /// V1 Devices Set Roles
+    ///
+    /// iOS role chips → mapper-api PUT /mobile/pairing/devices/{id}/roles (AMA-2030).
+    ///
+    /// Roles are typed against the DeviceRole enum (FastAPI 422s an unknown role
+    /// before it reaches mapper). The backend resolves {id} → device_type and
+    /// upserts device_roles keyed on (clerk_user_id, device_type).
+    ///
+    /// - Remark: HTTP `PUT /v1/devices/{device_id}/roles`.
+    /// - Remark: Generated from `#/paths//v1/devices/{device_id}/roles/put(setDeviceRoles)`.
+    func setDeviceRoles(_ input: Operations.SetDeviceRoles.Input) async throws -> Operations.SetDeviceRoles.Output
     /// V1 Sync Confirm
     ///
     /// SyncEngine confirm-success → mapper-api POST /sync/confirm.
@@ -176,6 +187,27 @@ extension APIProtocol {
         try await revokeDevice(Operations.RevokeDevice.Input(
             path: path,
             headers: headers
+        ))
+    }
+    /// V1 Devices Set Roles
+    ///
+    /// iOS role chips → mapper-api PUT /mobile/pairing/devices/{id}/roles (AMA-2030).
+    ///
+    /// Roles are typed against the DeviceRole enum (FastAPI 422s an unknown role
+    /// before it reaches mapper). The backend resolves {id} → device_type and
+    /// upserts device_roles keyed on (clerk_user_id, device_type).
+    ///
+    /// - Remark: HTTP `PUT /v1/devices/{device_id}/roles`.
+    /// - Remark: Generated from `#/paths//v1/devices/{device_id}/roles/put(setDeviceRoles)`.
+    public func setDeviceRoles(
+        path: Operations.SetDeviceRoles.Input.Path,
+        headers: Operations.SetDeviceRoles.Input.Headers = .init(),
+        body: Operations.SetDeviceRoles.Input.Body
+    ) async throws -> Operations.SetDeviceRoles.Output {
+        try await setDeviceRoles(Operations.SetDeviceRoles.Input(
+            path: path,
+            headers: headers,
+            body: body
         ))
     }
     /// V1 Sync Confirm
@@ -546,6 +578,61 @@ public enum Components {
             case workouts = "workouts"
             case recovery = "recovery"
             case strength = "strength"
+        }
+        /// Body for PUT /v1/devices/{id}/roles (AMA-2030, Wedge C).
+        ///
+        /// Typed against the DeviceRole enum, so an unknown role is rejected at the BFF
+        /// (422) before it ever reaches mapper-api / the device_roles CHECK constraint.
+        ///
+        /// - Remark: Generated from `#/components/schemas/DeviceRolesRequest`.
+        public struct DeviceRolesRequest: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/DeviceRolesRequest/roles`.
+            public var roles: [Components.Schemas.DeviceRole]?
+            /// Creates a new `DeviceRolesRequest`.
+            ///
+            /// - Parameters:
+            ///   - roles:
+            public init(roles: [Components.Schemas.DeviceRole]? = nil) {
+                self.roles = roles
+            }
+            public enum CodingKeys: String, CodingKey {
+                case roles
+            }
+            public init(from decoder: any Swift.Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                self.roles = try container.decodeIfPresent(
+                    [Components.Schemas.DeviceRole].self,
+                    forKey: .roles
+                )
+                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                    "roles"
+                ])
+            }
+        }
+        /// Response for PUT /v1/devices/{id}/roles — the device's roles after the write.
+        ///
+        /// - Remark: Generated from `#/components/schemas/DeviceRolesResult`.
+        public struct DeviceRolesResult: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/DeviceRolesResult/roles`.
+            public var roles: [Components.Schemas.DeviceRole]?
+            /// - Remark: Generated from `#/components/schemas/DeviceRolesResult/success`.
+            public var success: Swift.Bool
+            /// Creates a new `DeviceRolesResult`.
+            ///
+            /// - Parameters:
+            ///   - roles:
+            ///   - success:
+            public init(
+                roles: [Components.Schemas.DeviceRole]? = nil,
+                success: Swift.Bool
+            ) {
+                self.roles = roles
+                self.success = success
+            }
+            public enum CodingKeys: String, CodingKey {
+                case roles
+                case success
+            }
         }
         /// Mirrors mapper-api's DeviceType (services/mapper-api/api/routers/sync.py).
         ///
@@ -3086,6 +3173,251 @@ public enum Operations {
             /// - Throws: An error if `self` is not `.serviceUnavailable`.
             /// - SeeAlso: `.serviceUnavailable`.
             public var serviceUnavailable: Operations.RevokeDevice.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// V1 Devices Set Roles
+    ///
+    /// iOS role chips → mapper-api PUT /mobile/pairing/devices/{id}/roles (AMA-2030).
+    ///
+    /// Roles are typed against the DeviceRole enum (FastAPI 422s an unknown role
+    /// before it reaches mapper). The backend resolves {id} → device_type and
+    /// upserts device_roles keyed on (clerk_user_id, device_type).
+    ///
+    /// - Remark: HTTP `PUT /v1/devices/{device_id}/roles`.
+    /// - Remark: Generated from `#/paths//v1/devices/{device_id}/roles/put(setDeviceRoles)`.
+    public enum SetDeviceRoles {
+        public static let id: Swift.String = "setDeviceRoles"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/devices/{device_id}/roles/PUT/path`.
+            public struct Path: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/{device_id}/roles/PUT/path/device_id`.
+                public var deviceId: Swift.String
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - deviceId:
+                public init(deviceId: Swift.String) {
+                    self.deviceId = deviceId
+                }
+            }
+            public var path: Operations.SetDeviceRoles.Input.Path
+            /// - Remark: Generated from `#/paths/v1/devices/{device_id}/roles/PUT/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.SetDeviceRoles.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.SetDeviceRoles.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.SetDeviceRoles.Input.Headers
+            /// - Remark: Generated from `#/paths/v1/devices/{device_id}/roles/PUT/requestBody`.
+            @frozen public enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/{device_id}/roles/PUT/requestBody/content/application\/json`.
+                case json(Components.Schemas.DeviceRolesRequest)
+            }
+            public var body: Operations.SetDeviceRoles.Input.Body
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            ///   - body:
+            public init(
+                path: Operations.SetDeviceRoles.Input.Path,
+                headers: Operations.SetDeviceRoles.Input.Headers = .init(),
+                body: Operations.SetDeviceRoles.Input.Body
+            ) {
+                self.path = path
+                self.headers = headers
+                self.body = body
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/{device_id}/roles/PUT/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/devices/{device_id}/roles/PUT/responses/200/content/application\/json`.
+                    case json(Components.Schemas.DeviceRolesResult)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DeviceRolesResult {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.SetDeviceRoles.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.SetDeviceRoles.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Successful Response
+            ///
+            /// - Remark: Generated from `#/paths//v1/devices/{device_id}/roles/put(setDeviceRoles)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.SetDeviceRoles.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.SetDeviceRoles.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/{device_id}/roles/PUT/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/devices/{device_id}/roles/PUT/responses/422/content/application\/json`.
+                    case json(Components.Schemas.HTTPValidationError)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.HTTPValidationError {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.SetDeviceRoles.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.SetDeviceRoles.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// Validation Error
+            ///
+            /// - Remark: Generated from `#/paths//v1/devices/{device_id}/roles/put(setDeviceRoles)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.SetDeviceRoles.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.SetDeviceRoles.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/{device_id}/roles/PUT/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/devices/{device_id}/roles/PUT/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.SetDeviceRoles.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.SetDeviceRoles.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/devices/{device_id}/roles/put(setDeviceRoles)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.SetDeviceRoles.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.SetDeviceRoles.Output.ServiceUnavailable {
                 get throws {
                     switch self {
                     case let .serviceUnavailable(response):

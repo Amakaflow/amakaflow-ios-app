@@ -252,6 +252,123 @@ final class DevicesViewModelTests: XCTestCase {
         XCTAssertEqual(message, "Remove failed")
     }
 
+    func testSetRolesSuccessUpdatesRolesAndKeepsListIntact() async {
+        let garmin = device(id: "garmin-roles", name: "Garmin Forerunner", roles: [.workouts])
+        let whoop = device(id: "whoop-roles", name: "WHOOP Band", roles: [.recovery])
+        api.listDevicesResult = .success([garmin, whoop])
+        await viewModel.load()
+
+        api.setDeviceRolesResult = .success(Components.Schemas.DeviceRolesResult(roles: [.workouts, .strength], success: true))
+
+        await viewModel.setRoles(garmin, roles: [.workouts, .strength])
+
+        XCTAssertTrue(api.setDeviceRolesCalled)
+        XCTAssertEqual(api.lastSetDeviceRolesId, "garmin-roles")
+        XCTAssertEqual(api.lastSetDeviceRoles, [.workouts, .strength])
+        XCTAssertEqual(viewModel.devices.count, 2)
+        XCTAssertEqual(viewModel.devices.first?.roles, [.workouts, .strength])
+        XCTAssertEqual(viewModel.devices.last, whoop)
+        XCTAssertEqual(viewModel.state, .content)
+        XCTAssertNil(viewModel.ctaError)
+        XCTAssertNil(viewModel.lastFailedAction)
+    }
+
+    func testSetRolesFailureMaps404AndPreservesPriorRoles() async {
+        let existing = device(id: "garmin-existing", name: "Garmin Forerunner", roles: [.workouts])
+        api.listDevicesResult = .success([existing])
+        await viewModel.load()
+
+        api.setDeviceRolesResult = .failure(APIError.serverErrorWithBody(404, "{\"detail\":\"Device pairing not found\"}"))
+
+        await viewModel.setRoles(existing, roles: [.recovery])
+
+        XCTAssertTrue(api.setDeviceRolesCalled)
+        XCTAssertEqual(api.lastSetDeviceRolesId, "garmin-existing")
+        XCTAssertEqual(api.lastSetDeviceRoles, [.recovery])
+        XCTAssertEqual(viewModel.devices, [existing])
+        XCTAssertEqual(viewModel.state, .content)
+        XCTAssertEqual(viewModel.lastFailedAction, .setRoles(id: "garmin-existing"))
+        guard let ctaError = viewModel.ctaError else {
+            return XCTFail("Expected CTAError for failed set roles")
+        }
+        XCTAssertEqual(ctaError, .http(status: 404, body: "{\"detail\":\"Device pairing not found\"}", requestId: nil))
+        XCTAssertTrue(ctaError.userMessage.contains("Device pairing not found"))
+    }
+
+    func testSetRolesFailureMaps422AndPreservesPriorRoles() async {
+        let existing = device(id: "garmin-existing", name: "Garmin Forerunner", roles: [.workouts, .recovery])
+        api.listDevicesResult = .success([existing])
+        await viewModel.load()
+
+        api.setDeviceRolesResult = .failure(APIError.serverErrorWithBody(422, "{\"detail\":\"Invalid device role\"}"))
+
+        await viewModel.setRoles(existing, roles: [.strength])
+
+        XCTAssertEqual(viewModel.devices, [existing])
+        XCTAssertEqual(viewModel.lastFailedAction, .setRoles(id: "garmin-existing"))
+        guard let ctaError = viewModel.ctaError else {
+            return XCTFail("Expected CTAError for invalid role")
+        }
+        XCTAssertEqual(ctaError, .http(status: 422, body: "{\"detail\":\"Invalid device role\"}", requestId: nil))
+        XCTAssertTrue(ctaError.userMessage.contains("Invalid device role"))
+    }
+
+    func testSetRolesRoundTripsAssignAndClear() async throws {
+        let existing = device(id: "garmin-roundtrip", name: "Garmin Forerunner", roles: nil)
+        api.listDevicesResult = .success([existing])
+        await viewModel.load()
+
+        api.setDeviceRolesResult = .success(Components.Schemas.DeviceRolesResult(roles: [.workouts], success: true))
+        await viewModel.setRoles(existing, roles: [.workouts])
+        XCTAssertEqual(viewModel.devices.first?.roles, [.workouts])
+
+        let assigned = try XCTUnwrap(viewModel.devices.first)
+        api.setDeviceRolesResult = .success(Components.Schemas.DeviceRolesResult(roles: [], success: true))
+        await viewModel.setRoles(assigned, roles: [])
+
+        XCTAssertEqual(api.lastSetDeviceRoles, [])
+        XCTAssertEqual(viewModel.devices.first?.roles, [])
+        XCTAssertNil(viewModel.ctaError)
+    }
+
+    func testSetRolesLyingSuccessMapsFailureAndPreservesPriorRoles() async {
+        let existing = device(id: "garmin-existing", name: "Garmin Forerunner", roles: [.workouts])
+        api.listDevicesResult = .success([existing])
+        await viewModel.load()
+
+        api.setDeviceRolesResult = .success(Components.Schemas.DeviceRolesResult(roles: [.strength], success: false))
+
+        await viewModel.setRoles(existing, roles: [.strength])
+
+        XCTAssertEqual(viewModel.devices, [existing])
+        XCTAssertEqual(viewModel.lastFailedAction, .setRoles(id: "garmin-existing"))
+        guard let ctaError = viewModel.ctaError else {
+            return XCTFail("Expected CTAError for success:false set roles result")
+        }
+        guard case .lyingSuccess(let message, _, _) = ctaError else {
+            return XCTFail("Expected lyingSuccess, got \(ctaError)")
+        }
+        XCTAssertEqual(message, "Device role update failed")
+    }
+
+    func testToggleRoleUsesLatestDeviceStateForSubsequentWrites() async throws {
+        let original = device(id: "garmin-toggle", name: "Garmin Forerunner", roles: [.workouts])
+        api.listDevicesResult = .success([original])
+        await viewModel.load()
+
+        await viewModel.toggleRole(.strength, for: original)
+        XCTAssertEqual(api.lastSetDeviceRoles, [.workouts, .strength])
+        XCTAssertEqual(viewModel.devices.first?.roles, [.workouts, .strength])
+
+        // Reuse the stale pre-update device snapshot; ViewModel should compute
+        // from its latest row state, not from this captured value.
+        await viewModel.toggleRole(.workouts, for: original)
+
+        XCTAssertEqual(api.lastSetDeviceRoles, [.strength])
+        XCTAssertEqual(viewModel.devices.first?.roles, [.strength])
+        XCTAssertFalse(viewModel.isSettingRoles(for: try XCTUnwrap(viewModel.devices.first)))
+    }
+
     func testGeneratedDecoderHandlesPairedDeviceList() throws {
         let json = """
         {
@@ -273,6 +390,22 @@ final class DevicesViewModelTests: XCTestCase {
         XCTAssertEqual(decoded.devices?.first?.roles, [.workouts, .recovery])
     }
 
+    func testGeneratedDecoderHandlesDeviceRolesRequestAndResult() throws {
+        let requestJSON = """
+        { "roles": ["workouts", "strength"] }
+        """.data(using: .utf8)!
+        let resultJSON = """
+        { "success": true, "roles": ["recovery"] }
+        """.data(using: .utf8)!
+
+        let request = try APIService.makeGeneratedDecoder().decode(Components.Schemas.DeviceRolesRequest.self, from: requestJSON)
+        let result = try APIService.makeGeneratedDecoder().decode(Components.Schemas.DeviceRolesResult.self, from: resultJSON)
+
+        XCTAssertEqual(request.roles, [.workouts, .strength])
+        XCTAssertTrue(result.success)
+        XCTAssertEqual(result.roles, [.recovery])
+    }
+
     func testFixtureServiceListDevicesReturnsRenderableDevices() async throws {
         let fixture = FixtureAPIService()
 
@@ -281,6 +414,17 @@ final class DevicesViewModelTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(devices.count, 2)
         XCTAssertTrue(devices.contains { $0.name.contains("Garmin") && $0.roles?.contains(.workouts) == true })
         XCTAssertTrue(devices.contains { $0.name.contains("Apple Watch") && $0.roles?.contains(.recovery) == true })
+    }
+
+    func testFixtureServiceSetDeviceRolesEchoesAndUpdatesDevice() async throws {
+        let fixture = FixtureAPIService()
+
+        let result = try await fixture.setDeviceRoles(id: "fixture-garmin-955", roles: [.strength])
+        let devices = try await fixture.listDevices()
+
+        XCTAssertTrue(result.success)
+        XCTAssertEqual(result.roles, [.strength])
+        XCTAssertEqual(devices.first { $0.id == "fixture-garmin-955" }?.roles, [.strength])
     }
 
     private func device(

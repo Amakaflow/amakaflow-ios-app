@@ -209,6 +209,65 @@ final class CoachAPIRepositoryEndpointTests: XCTestCase {
         super.tearDown()
     }
 
+    func testSetDeviceRolesPutsEncodedDeviceIDAndRolesToBFF() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.httpMethod, "PUT")
+            XCTAssertTrue(
+                request.url?.absoluteString.contains("/v1/devices/device%2Fwith%20space%3Fid/roles") == true,
+                "Expected encoded device id in URL, got \(request.url?.absoluteString ?? "nil")"
+            )
+
+            let body = try Self.httpBodyData(from: request)
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: [String]])
+            XCTAssertEqual(json["roles"], ["workouts", "strength"])
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Rndr-Id": "rndr-device-roles"]
+            )!
+            let data = """
+            { "success": true, "roles": ["workouts", "strength"] }
+            """.data(using: .utf8)!
+            return (response, data)
+        }
+
+        let result = try await api.setDeviceRoles(id: "device/with space?id", roles: [.workouts, .strength])
+
+        XCTAssertTrue(result.success)
+        XCTAssertEqual(result.roles, [.workouts, .strength])
+        XCTAssertEqual(logger.events.map(\.phase), [.start, .end])
+    }
+
+    func testSetDeviceRolesPreservesRawServerErrorBody() async throws {
+        MockURLProtocol.requestHandler = { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 422,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["X-Request-ID": "req-invalid-role"]
+            )!
+            let data = """
+            { "detail": "Invalid device role" }
+            """.data(using: .utf8)!
+            return (response, data)
+        }
+
+        do {
+            _ = try await api.setDeviceRoles(id: "device-1", roles: [.strength])
+            XCTFail("Expected serverErrorWithBody")
+        } catch APIError.serverErrorWithBody(let status, let body) {
+            XCTAssertEqual(status, 422)
+            XCTAssertTrue(body.contains("Invalid device role"))
+            XCTAssertEqual(MockURLProtocol.interceptedRequests.first?.httpMethod, "PUT")
+            XCTAssertTrue(MockURLProtocol.interceptedRequests.first?.url?.absoluteString.contains("/v1/devices/device-1/roles") == true)
+            XCTAssertEqual(logger.events.map(\.phase), [.start, .fail])
+        } catch {
+            XCTFail("Expected serverErrorWithBody, got \(error)")
+        }
+    }
+
     func testFetchDayStatesHitsBFFPlanningDaysAndDecodesCamelCaseDayState() async throws {
         MockURLProtocol.requestHandler = { request in
             XCTAssertEqual(request.httpMethod, "GET")

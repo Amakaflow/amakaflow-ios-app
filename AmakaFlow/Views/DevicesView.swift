@@ -2,7 +2,8 @@
 //  DevicesView.swift
 //  AmakaFlow
 //
-//  AMA-1996: Connected devices screen (D4 Wedge A read-only list).
+//  AMA-1996: Connected devices screen (D4 Wedge A list).
+//  AMA-2030: role chips are writable toggles.
 //
 
 import SwiftUI
@@ -175,7 +176,7 @@ struct DevicesView: View {
             subtitle: headerSubtitle,
             backIdentifier: "devices_back",
             backAction: { dismiss() },
-            right: { AFChip(text: "Read", outline: true) }
+            right: { AFChip(text: "Roles", outline: true) }
         )
     }
 
@@ -201,6 +202,8 @@ struct DevicesView: View {
             return "Couldn't add device"
         case .remove:
             return "Couldn't remove device"
+        case .setRoles:
+            return "Couldn't update device roles"
         case .none:
             return "Device action failed"
         }
@@ -275,18 +278,31 @@ struct DevicesView: View {
         HStack(spacing: Theme.Spacing.sm) {
             ForEach(DevicesViewModel.displayRoles, id: \.self) { role in
                 let selected = viewModel.hasRole(role, in: device)
-                Text(DevicesViewModel.roleLabel(role))
-                    .font(Theme.Typography.footnote.weight(.semibold))
-                    .foregroundColor(selected ? Theme.Colors.primaryForeground : Theme.Colors.textPrimary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(selected ? Theme.Colors.primary : Color.clear)
-                    .overlay(
-                        Capsule().stroke(selected ? Theme.Colors.primary : Theme.Colors.borderMedium, lineWidth: 1)
-                    )
-                    .clipShape(Capsule())
-                    .accessibilityAddTraits(selected ? .isSelected : [])
-                    .accessibilityIdentifier("device_role_\(role.rawValue)")
+                let isUpdating = viewModel.isSettingRoles(for: device)
+                Button {
+                    Task {
+                        await viewModel.toggleRole(role, for: device)
+                    }
+                } label: {
+                    Text(DevicesViewModel.roleLabel(role))
+                        .font(Theme.Typography.footnote.weight(.semibold))
+                        .foregroundColor(selected ? Theme.Colors.primaryForeground : Theme.Colors.textPrimary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(selected ? Theme.Colors.primary : Color.clear)
+                        .overlay(
+                            Capsule().stroke(selected ? Theme.Colors.primary : Theme.Colors.borderMedium, lineWidth: 1)
+                        )
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(isUpdating)
+                .opacity(isUpdating ? 0.7 : 1)
+                .accessibilityLabel("\(DevicesViewModel.roleLabel(role)) role")
+                .accessibilityValue(selected ? "Selected" : "Not selected")
+                .accessibilityAddTraits(selected ? .isSelected : [])
+                .accessibilityHint(isUpdating ? "Updating roles" : "Double tap to toggle")
+                .accessibilityIdentifier("af_device_role_\(device.id)_\(role.rawValue)")
             }
         }
         .accessibilityIdentifier("device_roles_\(device.id)")

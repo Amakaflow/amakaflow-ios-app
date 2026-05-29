@@ -676,11 +676,15 @@ class MockAPIService: APIServiceProviding {
     var revokeDeviceResult: Result<Components.Schemas.PairDeviceResult, Error> = .success(
         Components.Schemas.PairDeviceResult(message: "Device removed", success: true)
     )
+    var setDeviceRolesResult: Result<Components.Schemas.DeviceRolesResult, Error>?
     var listDevicesCalled = false
     var pairDeviceCalled = false
     var revokeDeviceCalled = false
+    var setDeviceRolesCalled = false
     var lastPairedShortCode: String?
     var lastRevokedDeviceId: String?
+    var lastSetDeviceRolesId: String?
+    var lastSetDeviceRoles: [Components.Schemas.DeviceRole]?
 
     func listDevices() async throws -> [Components.Schemas.PairedDevice] {
         listDevicesCalled = true
@@ -697,6 +701,19 @@ class MockAPIService: APIServiceProviding {
         revokeDeviceCalled = true
         lastRevokedDeviceId = id
         return try revokeDeviceResult.get()
+    }
+
+    func setDeviceRoles(
+        id: String,
+        roles: [Components.Schemas.DeviceRole]
+    ) async throws -> Components.Schemas.DeviceRolesResult {
+        setDeviceRolesCalled = true
+        lastSetDeviceRolesId = id
+        lastSetDeviceRoles = roles
+        if let setDeviceRolesResult {
+            return try setDeviceRolesResult.get()
+        }
+        return Components.Schemas.DeviceRolesResult(roles: roles, success: true)
     }
 
     // MARK: - Coaching Profile (AMA-1995)
