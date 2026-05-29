@@ -291,6 +291,12 @@ protocol APIServiceProviding: TelegramLinkAPIProviding {
         roles: [Components.Schemas.DeviceRole]
     ) async throws -> Components.Schemas.DeviceRolesResult
 
+    /// Poll watch delivery state for a workout through the mobile BFF.
+    func watchDeliveryStatus(workoutId: String) async throws -> Components.Schemas.WatchDeliveryStatus
+
+    /// Resend a workout to the watch through the mobile BFF.
+    func resendWatchDelivery(workoutId: String) async throws -> Components.Schemas.WatchResendResult
+
     // MARK: - Messaging Channels (AMA-2027)
 
     /// Fetch messaging channels and coaching-delivery prefs from the mobile BFF.

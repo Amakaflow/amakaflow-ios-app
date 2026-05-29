@@ -44,6 +44,21 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `POST /v1/devices/pair`.
     /// - Remark: Generated from `#/paths//v1/devices/pair/post(pairDevice)`.
     func pairDevice(_ input: Operations.PairDevice.Input) async throws -> Operations.PairDevice.Output
+    /// V1 Watch Delivery Status
+    ///
+    /// iOS WatchDeliveryScreen poll → mapper-api GET /api/workout-delivery/status (AMA-2028).
+    ///
+    /// - Remark: HTTP `GET /v1/devices/watch-delivery/{workout_id}`.
+    /// - Remark: Generated from `#/paths//v1/devices/watch-delivery/{workout_id}/get(watchDeliveryStatus)`.
+    func watchDeliveryStatus(_ input: Operations.WatchDeliveryStatus.Input) async throws -> Operations.WatchDeliveryStatus.Output
+    /// V1 Watch Delivery Resend
+    ///
+    /// iOS Resend → mapper-api POST /api/workout-delivery/{id}/resend (AMA-2028).
+    /// Mapper returns 202 on success; 409 (state can't resend) / 422 (no Garmin) flow through.
+    ///
+    /// - Remark: HTTP `POST /v1/devices/watch-delivery/{workout_id}/resend`.
+    /// - Remark: Generated from `#/paths//v1/devices/watch-delivery/{workout_id}/resend/post(watchDeliveryResend)`.
+    func watchDeliveryResend(_ input: Operations.WatchDeliveryResend.Input) async throws -> Operations.WatchDeliveryResend.Output
     /// V1 Devices Revoke
     ///
     /// iOS "Remove device" → mapper-api DELETE /mobile/pairing/devices/{id}
@@ -204,6 +219,37 @@ extension APIProtocol {
         try await pairDevice(Operations.PairDevice.Input(
             headers: headers,
             body: body
+        ))
+    }
+    /// V1 Watch Delivery Status
+    ///
+    /// iOS WatchDeliveryScreen poll → mapper-api GET /api/workout-delivery/status (AMA-2028).
+    ///
+    /// - Remark: HTTP `GET /v1/devices/watch-delivery/{workout_id}`.
+    /// - Remark: Generated from `#/paths//v1/devices/watch-delivery/{workout_id}/get(watchDeliveryStatus)`.
+    public func watchDeliveryStatus(
+        path: Operations.WatchDeliveryStatus.Input.Path,
+        headers: Operations.WatchDeliveryStatus.Input.Headers = .init()
+    ) async throws -> Operations.WatchDeliveryStatus.Output {
+        try await watchDeliveryStatus(Operations.WatchDeliveryStatus.Input(
+            path: path,
+            headers: headers
+        ))
+    }
+    /// V1 Watch Delivery Resend
+    ///
+    /// iOS Resend → mapper-api POST /api/workout-delivery/{id}/resend (AMA-2028).
+    /// Mapper returns 202 on success; 409 (state can't resend) / 422 (no Garmin) flow through.
+    ///
+    /// - Remark: HTTP `POST /v1/devices/watch-delivery/{workout_id}/resend`.
+    /// - Remark: Generated from `#/paths//v1/devices/watch-delivery/{workout_id}/resend/post(watchDeliveryResend)`.
+    public func watchDeliveryResend(
+        path: Operations.WatchDeliveryResend.Input.Path,
+        headers: Operations.WatchDeliveryResend.Input.Headers = .init()
+    ) async throws -> Operations.WatchDeliveryResend.Output {
+        try await watchDeliveryResend(Operations.WatchDeliveryResend.Input(
+            path: path,
+            headers: headers
         ))
     }
     /// V1 Devices Revoke
@@ -2221,6 +2267,85 @@ public enum Components {
                 case _type = "type"
             }
         }
+        /// The 5 PRODUCT-SPEC §4.8 delivery states (mirrors mapper DeliveryState).
+        ///
+        /// - Remark: Generated from `#/components/schemas/WatchDeliveryState`.
+        @frozen public enum WatchDeliveryState: String, Codable, Hashable, Sendable, CaseIterable {
+            case generated = "generated"
+            case pushed = "pushed"
+            case fetchedByWidget = "fetched_by_widget"
+            case confirmedOnDevice = "confirmed_on_device"
+            case failed = "failed"
+        }
+        /// Response for GET /v1/devices/watch-delivery/{workout_id}. iOS derives the
+        /// emoji/tone from `state`; `title`/`subtitle` are the human labels.
+        ///
+        /// - Remark: Generated from `#/components/schemas/WatchDeliveryStatus`.
+        public struct WatchDeliveryStatus: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/WatchDeliveryStatus/canResend`.
+            public var canResend: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/WatchDeliveryStatus/occurredAt`.
+            public var occurredAt: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/WatchDeliveryStatus/state`.
+            public var state: Components.Schemas.WatchDeliveryState
+            /// - Remark: Generated from `#/components/schemas/WatchDeliveryStatus/subtitle`.
+            public var subtitle: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/WatchDeliveryStatus/title`.
+            public var title: Swift.String
+            /// Creates a new `WatchDeliveryStatus`.
+            ///
+            /// - Parameters:
+            ///   - canResend:
+            ///   - occurredAt:
+            ///   - state:
+            ///   - subtitle:
+            ///   - title:
+            public init(
+                canResend: Swift.Bool? = nil,
+                occurredAt: Swift.String? = nil,
+                state: Components.Schemas.WatchDeliveryState,
+                subtitle: Swift.String? = nil,
+                title: Swift.String
+            ) {
+                self.canResend = canResend
+                self.occurredAt = occurredAt
+                self.state = state
+                self.subtitle = subtitle
+                self.title = title
+            }
+            public enum CodingKeys: String, CodingKey {
+                case canResend
+                case occurredAt
+                case state
+                case subtitle
+                case title
+            }
+        }
+        /// Response for POST /v1/devices/watch-delivery/{workout_id}/resend.
+        ///
+        /// - Remark: Generated from `#/components/schemas/WatchResendResult`.
+        public struct WatchResendResult: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/WatchResendResult/deliveryIds`.
+            public var deliveryIds: [Swift.String]?
+            /// - Remark: Generated from `#/components/schemas/WatchResendResult/success`.
+            public var success: Swift.Bool
+            /// Creates a new `WatchResendResult`.
+            ///
+            /// - Parameters:
+            ///   - deliveryIds:
+            ///   - success:
+            public init(
+                deliveryIds: [Swift.String]? = nil,
+                success: Swift.Bool
+            ) {
+                self.deliveryIds = deliveryIds
+                self.success = success
+            }
+            public enum CodingKeys: String, CodingKey {
+                case deliveryIds
+                case success
+            }
+        }
         /// Request body for POST /v1/workouts/complete.
         ///
         /// Mirrors `WorkoutCompletionRequest` in mapper-api
@@ -3314,6 +3439,471 @@ public enum Operations {
             /// - Throws: An error if `self` is not `.serviceUnavailable`.
             /// - SeeAlso: `.serviceUnavailable`.
             public var serviceUnavailable: Operations.PairDevice.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// V1 Watch Delivery Status
+    ///
+    /// iOS WatchDeliveryScreen poll → mapper-api GET /api/workout-delivery/status (AMA-2028).
+    ///
+    /// - Remark: HTTP `GET /v1/devices/watch-delivery/{workout_id}`.
+    /// - Remark: Generated from `#/paths//v1/devices/watch-delivery/{workout_id}/get(watchDeliveryStatus)`.
+    public enum WatchDeliveryStatus {
+        public static let id: Swift.String = "watchDeliveryStatus"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/devices/watch-delivery/{workout_id}/GET/path`.
+            public struct Path: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/watch-delivery/{workout_id}/GET/path/workout_id`.
+                public var workoutId: Swift.String
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - workoutId:
+                public init(workoutId: Swift.String) {
+                    self.workoutId = workoutId
+                }
+            }
+            public var path: Operations.WatchDeliveryStatus.Input.Path
+            /// - Remark: Generated from `#/paths/v1/devices/watch-delivery/{workout_id}/GET/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.WatchDeliveryStatus.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.WatchDeliveryStatus.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.WatchDeliveryStatus.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            public init(
+                path: Operations.WatchDeliveryStatus.Input.Path,
+                headers: Operations.WatchDeliveryStatus.Input.Headers = .init()
+            ) {
+                self.path = path
+                self.headers = headers
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/watch-delivery/{workout_id}/GET/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/devices/watch-delivery/{workout_id}/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.WatchDeliveryStatus)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.WatchDeliveryStatus {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.WatchDeliveryStatus.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.WatchDeliveryStatus.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Successful Response
+            ///
+            /// - Remark: Generated from `#/paths//v1/devices/watch-delivery/{workout_id}/get(watchDeliveryStatus)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.WatchDeliveryStatus.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.WatchDeliveryStatus.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/watch-delivery/{workout_id}/GET/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/devices/watch-delivery/{workout_id}/GET/responses/422/content/application\/json`.
+                    case json(Components.Schemas.HTTPValidationError)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.HTTPValidationError {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.WatchDeliveryStatus.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.WatchDeliveryStatus.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// Validation Error
+            ///
+            /// - Remark: Generated from `#/paths//v1/devices/watch-delivery/{workout_id}/get(watchDeliveryStatus)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.WatchDeliveryStatus.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.WatchDeliveryStatus.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/watch-delivery/{workout_id}/GET/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/devices/watch-delivery/{workout_id}/GET/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.WatchDeliveryStatus.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.WatchDeliveryStatus.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/devices/watch-delivery/{workout_id}/get(watchDeliveryStatus)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.WatchDeliveryStatus.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.WatchDeliveryStatus.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// V1 Watch Delivery Resend
+    ///
+    /// iOS Resend → mapper-api POST /api/workout-delivery/{id}/resend (AMA-2028).
+    /// Mapper returns 202 on success; 409 (state can't resend) / 422 (no Garmin) flow through.
+    ///
+    /// - Remark: HTTP `POST /v1/devices/watch-delivery/{workout_id}/resend`.
+    /// - Remark: Generated from `#/paths//v1/devices/watch-delivery/{workout_id}/resend/post(watchDeliveryResend)`.
+    public enum WatchDeliveryResend {
+        public static let id: Swift.String = "watchDeliveryResend"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/devices/watch-delivery/{workout_id}/resend/POST/path`.
+            public struct Path: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/watch-delivery/{workout_id}/resend/POST/path/workout_id`.
+                public var workoutId: Swift.String
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - workoutId:
+                public init(workoutId: Swift.String) {
+                    self.workoutId = workoutId
+                }
+            }
+            public var path: Operations.WatchDeliveryResend.Input.Path
+            /// - Remark: Generated from `#/paths/v1/devices/watch-delivery/{workout_id}/resend/POST/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.WatchDeliveryResend.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.WatchDeliveryResend.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.WatchDeliveryResend.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            public init(
+                path: Operations.WatchDeliveryResend.Input.Path,
+                headers: Operations.WatchDeliveryResend.Input.Headers = .init()
+            ) {
+                self.path = path
+                self.headers = headers
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/watch-delivery/{workout_id}/resend/POST/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/devices/watch-delivery/{workout_id}/resend/POST/responses/200/content/application\/json`.
+                    case json(Components.Schemas.WatchResendResult)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.WatchResendResult {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.WatchDeliveryResend.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.WatchDeliveryResend.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Successful Response
+            ///
+            /// - Remark: Generated from `#/paths//v1/devices/watch-delivery/{workout_id}/resend/post(watchDeliveryResend)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.WatchDeliveryResend.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.WatchDeliveryResend.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/watch-delivery/{workout_id}/resend/POST/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/devices/watch-delivery/{workout_id}/resend/POST/responses/422/content/application\/json`.
+                    case json(Components.Schemas.HTTPValidationError)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.HTTPValidationError {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.WatchDeliveryResend.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.WatchDeliveryResend.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// Validation Error
+            ///
+            /// - Remark: Generated from `#/paths//v1/devices/watch-delivery/{workout_id}/resend/post(watchDeliveryResend)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.WatchDeliveryResend.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.WatchDeliveryResend.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/watch-delivery/{workout_id}/resend/POST/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/devices/watch-delivery/{workout_id}/resend/POST/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.WatchDeliveryResend.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.WatchDeliveryResend.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/devices/watch-delivery/{workout_id}/resend/post(watchDeliveryResend)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.WatchDeliveryResend.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.WatchDeliveryResend.Output.ServiceUnavailable {
                 get throws {
                     switch self {
                     case let .serviceUnavailable(response):

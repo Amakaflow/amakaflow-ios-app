@@ -30,6 +30,8 @@ filter:
     - /v1/messaging/channels/{channel_id}/prefs  # AMA-2027 Wedge D — set messaging channel prefs
     - /v1/messaging/telegram/setup  # AMA-2031 Wedge E — Telegram setup via BFF
     - /v1/messaging/telegram/status  # AMA-2031 Wedge E — Telegram link status via BFF
+    - /v1/devices/watch-delivery/{workout_id}  # AMA-2028 Wedge F — watch delivery status
+    - /v1/devices/watch-delivery/{workout_id}/resend  # AMA-2028 Wedge F — watch delivery resend
 
 accessModifier: public
 
