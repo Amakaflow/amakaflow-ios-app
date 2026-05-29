@@ -19,6 +19,8 @@
 //    POST /v1/devices/pair                      (pairDevice)
 //    DELETE /v1/devices/{device_id}             (revokeDevice)
 //    PUT  /v1/devices/{device_id}/roles         (setDeviceRoles)
+//    GET  /v1/devices/watch-delivery/{workout_id}          (watchDeliveryStatus)
+//    POST /v1/devices/watch-delivery/{workout_id}/resend   (resendWatchDelivery)
 //    GET  /v1/messaging/channels                (listMessagingChannels)
 //    PUT  /v1/messaging/channels/{id}/prefs     (setChannelPrefs)
 //    GET  /v1/coaching/profile                  (getCoachingProfile)
@@ -110,6 +112,36 @@ extension APIService {
         return try await self.request(
             request,
             decode: Components.Schemas.DeviceRolesResult.self,
+            decoder: APIService.makeGeneratedDecoder(),
+            successStatusCodes: 200...200
+        )
+    }
+
+    func watchDeliveryStatus(workoutId: String) async throws -> Components.Schemas.WatchDeliveryStatus {
+        let encodedWorkoutID = try Self.pathSegment(workoutId)
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/devices/watch-delivery/\(encodedWorkoutID)",
+            method: "GET"
+        )
+        return try await self.request(
+            request,
+            decode: Components.Schemas.WatchDeliveryStatus.self,
+            decoder: APIService.makeGeneratedDecoder(),
+            successStatusCodes: 200...200
+        )
+    }
+
+    func resendWatchDelivery(workoutId: String) async throws -> Components.Schemas.WatchResendResult {
+        let encodedWorkoutID = try Self.pathSegment(workoutId)
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/devices/watch-delivery/\(encodedWorkoutID)/resend",
+            method: "POST"
+        )
+        return try await self.request(
+            request,
+            decode: Components.Schemas.WatchResendResult.self,
             decoder: APIService.makeGeneratedDecoder(),
             successStatusCodes: 200...200
         )

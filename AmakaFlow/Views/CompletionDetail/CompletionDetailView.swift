@@ -86,8 +86,12 @@ struct CompletionDetailView: View {
                     summary: detail.hasExecutionLog ? detail.executionSummary : ExecutionLogSection.sampleSummary
                 )
 
-                // Source and Strava info
+                // Source, Strava, and watch-delivery info
                 sourceInfoSection(detail)
+
+                if let workoutId = detail.workoutId {
+                    watchDeliveryLink(workoutId: workoutId, workoutName: detail.workoutName)
+                }
 
                 // Save to Library Button (for voice-added workouts)
                 if viewModel.canSaveToLibrary {
@@ -239,6 +243,34 @@ struct CompletionDetailView: View {
         .padding()
         .background(Theme.Colors.surface)
         .cornerRadius(12)
+    }
+
+    private func watchDeliveryLink(workoutId: String, workoutName: String) -> some View {
+        NavigationLink {
+            WatchDeliveryView(workoutId: workoutId, workoutName: workoutName)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "applewatch")
+                    .foregroundColor(Theme.Colors.readyHigh)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Watch delivery")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    Text("Check Garmin delivery and resend if needed")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding()
+            .background(Theme.Colors.surface)
+            .cornerRadius(12)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("completion_watch_delivery_link")
     }
 
     // MARK: - Edit Workout Button

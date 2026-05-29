@@ -32,6 +32,8 @@ class FixtureAPIService: APIServiceProviding {
         Components.Schemas.PairDeviceResult(message: "Fixture device removed", success: true)
     )
     var setDeviceRolesResult: Result<Components.Schemas.DeviceRolesResult, Error>?
+    var watchDeliveryStatusResult: Result<Components.Schemas.WatchDeliveryStatus, Error>?
+    var resendWatchDeliveryResult: Result<Components.Schemas.WatchResendResult, Error>?
     var listMessagingChannelsResult: Result<Components.Schemas.MessagingChannelList, Error>?
     var setChannelPrefsResult: Result<Components.Schemas.ChannelPrefsResult, Error>?
     private var fixtureMessagingDeliveryLive = false
@@ -82,6 +84,43 @@ class FixtureAPIService: APIServiceProviding {
             model: "WHOOP 4.0",
             name: "WHOOP Band",
             roles: nil
+        )
+    ]
+    private var fixtureWatchDeliveryStatuses: [String: Components.Schemas.WatchDeliveryStatus] = [
+        "fixture-watch-generated": Components.Schemas.WatchDeliveryStatus(
+            canResend: false,
+            occurredAt: "2026-05-29T13:00:00Z",
+            state: .generated,
+            subtitle: "Queued for Garmin delivery.",
+            title: "Workout generated"
+        ),
+        "fixture-watch-pushed": Components.Schemas.WatchDeliveryStatus(
+            canResend: false,
+            occurredAt: "2026-05-29T13:00:03Z",
+            state: .pushed,
+            subtitle: "Sent to Garmin Connect.",
+            title: "Pushed to Garmin"
+        ),
+        "fixture-watch-fetched_by_widget": Components.Schemas.WatchDeliveryStatus(
+            canResend: false,
+            occurredAt: "2026-05-29T13:00:10Z",
+            state: .fetchedByWidget,
+            subtitle: "The watch widget fetched the workout.",
+            title: "Fetched by widget"
+        ),
+        "fixture-watch-confirmed_on_device": Components.Schemas.WatchDeliveryStatus(
+            canResend: false,
+            occurredAt: "2026-05-29T13:00:20Z",
+            state: .confirmedOnDevice,
+            subtitle: "Ready on your watch.",
+            title: "Confirmed on device"
+        ),
+        "fixture-watch-failed": Components.Schemas.WatchDeliveryStatus(
+            canResend: true,
+            occurredAt: "2026-05-29T13:00:20Z",
+            state: .failed,
+            subtitle: "Garmin did not acknowledge delivery.",
+            title: "Delivery failed"
         )
     ]
 
@@ -289,6 +328,37 @@ class FixtureAPIService: APIServiceProviding {
         )
         print("[FixtureAPIService] Stub: setDeviceRoles(\(id), \(roles.map(\.rawValue))) -> success")
         return Components.Schemas.DeviceRolesResult(roles: roles, success: true)
+    }
+
+    func watchDeliveryStatus(workoutId: String) async throws -> Components.Schemas.WatchDeliveryStatus {
+        if let watchDeliveryStatusResult {
+            return try watchDeliveryStatusResult.get()
+        }
+        if let exact = fixtureWatchDeliveryStatuses[workoutId] {
+            return exact
+        }
+        if workoutId.contains("failed") {
+            return fixtureWatchDeliveryStatuses["fixture-watch-failed"]!
+        }
+        if workoutId.contains("confirmed") {
+            return fixtureWatchDeliveryStatuses["fixture-watch-confirmed_on_device"]!
+        }
+        return fixtureWatchDeliveryStatuses["fixture-watch-pushed"]!
+    }
+
+    func resendWatchDelivery(workoutId: String) async throws -> Components.Schemas.WatchResendResult {
+        if let resendWatchDeliveryResult {
+            return try resendWatchDeliveryResult.get()
+        }
+        fixtureWatchDeliveryStatuses[workoutId] = Components.Schemas.WatchDeliveryStatus(
+            canResend: false,
+            occurredAt: "2026-05-29T13:01:00Z",
+            state: .generated,
+            subtitle: "Queued for Garmin delivery.",
+            title: "Workout generated"
+        )
+        print("[FixtureAPIService] Stub: resendWatchDelivery(\(workoutId)) -> success")
+        return Components.Schemas.WatchResendResult(deliveryIds: ["fixture-delivery-\(workoutId)"], success: true)
     }
 
     // MARK: - Messaging Channels (AMA-2027)

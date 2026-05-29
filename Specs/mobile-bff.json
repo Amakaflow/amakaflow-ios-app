@@ -1722,6 +1722,70 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "WatchDeliveryState": {
+        "description": "The 5 PRODUCT-SPEC \u00a74.8 delivery states (mirrors mapper DeliveryState).",
+        "enum": [
+          "generated",
+          "pushed",
+          "fetched_by_widget",
+          "confirmed_on_device",
+          "failed"
+        ],
+        "title": "WatchDeliveryState",
+        "type": "string"
+      },
+      "WatchDeliveryStatus": {
+        "description": "Response for GET /v1/devices/watch-delivery/{workout_id}. iOS derives the\nemoji/tone from `state`; `title`/`subtitle` are the human labels.",
+        "properties": {
+          "canResend": {
+            "default": false,
+            "title": "Canresend",
+            "type": "boolean"
+          },
+          "occurredAt": {
+            "title": "Occurredat",
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/WatchDeliveryState"
+          },
+          "subtitle": {
+            "title": "Subtitle",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "title"
+        ],
+        "title": "WatchDeliveryStatus",
+        "type": "object"
+      },
+      "WatchResendResult": {
+        "description": "Response for POST /v1/devices/watch-delivery/{workout_id}/resend.",
+        "properties": {
+          "deliveryIds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Deliveryids",
+            "type": "array"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "title": "WatchResendResult",
+        "type": "object"
+      },
       "WorkoutCompletionItem": {
         "additionalProperties": true,
         "description": "One row from the user's completion history.\n\nThe upstream router returns whatever the CompletionRepository's\nget_user_completions() emits \u2014 a loosely-shaped dict that includes\nhealth metrics, workout linkage IDs, fidelity, summary fields, etc.\nPer the AMA-1817 1:1-mirror principle (and matching how PendingSyncWorkout\nhandles upstream polymorphism), we leave non-load-bearing fields\nopen via model_config extra=\"allow\" rather than narrowing in v1.",
@@ -2635,6 +2699,106 @@
           }
         },
         "summary": "V1 Devices Pair"
+      }
+    },
+    "/v1/devices/watch-delivery/{workout_id}": {
+      "get": {
+        "description": "iOS WatchDeliveryScreen poll \u2192 mapper-api GET /api/workout-delivery/status (AMA-2028).",
+        "operationId": "watchDeliveryStatus",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workout_id",
+            "required": true,
+            "schema": {
+              "title": "Workout Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchDeliveryStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Watch Delivery Status"
+      }
+    },
+    "/v1/devices/watch-delivery/{workout_id}/resend": {
+      "post": {
+        "description": "iOS Resend \u2192 mapper-api POST /api/workout-delivery/{id}/resend (AMA-2028).\nMapper returns 202 on success; 409 (state can't resend) / 422 (no Garmin) flow through.",
+        "operationId": "watchDeliveryResend",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workout_id",
+            "required": true,
+            "schema": {
+              "title": "Workout Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchResendResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Watch Delivery Resend"
       }
     },
     "/v1/devices/{device_id}": {

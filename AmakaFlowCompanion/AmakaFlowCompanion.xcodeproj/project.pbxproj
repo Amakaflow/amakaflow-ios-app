@@ -36,6 +36,8 @@
 		6E4643C6639A84A033AF4DA1 /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2C967F7EB5505FDB36864F9 /* FeatureFlags.swift */; };
 		718A23C41FF542228DF9232B /* OpenAPIURLSession in Frameworks */ = {isa = PBXBuildFile; productRef = 3D2A2E0648804CD7A88CF287 /* OpenAPIURLSession */; };
 		72A766051AE36A2294C87B12 /* WatchDeliveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC3C221C070C10388F89DF2A /* WatchDeliveryView.swift */; };
+		AMA2028WDVM00000000B /* WatchDeliveryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2028WDVM00000000A /* WatchDeliveryViewModel.swift */; };
+		AMA2028WDTST0000000B /* WatchDeliveryViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2028WDTST0000000A /* WatchDeliveryViewModelTests.swift */; };
 		76A4BDCCD65A2C7EB4B82ACB /* TrainingPreferencesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0949526387D9FA932B940DF3 /* TrainingPreferencesViewModel.swift */; };
 		83FA8BE2A6AAF21B52B5B16A /* ShoeComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 887645B05D4D7BABC29CAB9A /* ShoeComparisonView.swift */; };
 		868593590A9CA72F3E328DDD /* CoachChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA5BD907B0A6F491AC66198E /* CoachChatView.swift */; };
@@ -491,6 +493,8 @@
 		A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CoachModels.swift; path = ../AmakaFlow/Models/CoachModels.swift; sourceTree = "<group>"; };
 		A87B639F1BA04DF8A5301F4C /* UserDefaultsAcceptedMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UserDefaultsAcceptedMigration.swift; path = ../AmakaFlow/Storage/Migrations/UserDefaultsAcceptedMigration.swift; sourceTree = SOURCE_ROOT; };
 		AC3C221C070C10388F89DF2A /* WatchDeliveryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WatchDeliveryView.swift; path = ../AmakaFlow/Views/WatchDeliveryView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2028WDVM00000000A /* WatchDeliveryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchDeliveryViewModel.swift; path = ../AmakaFlow/ViewModels/WatchDeliveryViewModel.swift; sourceTree = SOURCE_ROOT; };
+		AMA2028WDTST0000000A /* WatchDeliveryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchDeliveryViewModelTests.swift; path = AmakaFlowCompanionTests/WatchDeliveryViewModelTests.swift; sourceTree = "<group>"; };
 		AK00AFL001A /* FoodLoggingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FoodLoggingView.swift; path = ../AmakaFlow/Views/Nutrition/FoodLoggingView.swift; sourceTree = "<group>"; };
 		AK00AFL002A /* MealPhotoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MealPhotoView.swift; path = ../AmakaFlow/Views/Nutrition/MealPhotoView.swift; sourceTree = "<group>"; };
 		AK00AFL003A /* BarcodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BarcodeScannerView.swift; path = ../AmakaFlow/Views/Nutrition/BarcodeScannerView.swift; sourceTree = "<group>"; };
@@ -1166,6 +1170,7 @@
 				BAC6A807F5A4820B05339B99 /* PlanRevealView.swift */,
 				F3CF9663A6818FA77C6C02B0 /* WeeklyReviewView.swift */,
 				AC3C221C070C10388F89DF2A /* WatchDeliveryView.swift */,
+				AMA2028WDTST0000000A /* WatchDeliveryViewModelTests.swift */,
 				3EB7457100F5C1B6E4488558 /* AgentInboxView.swift */,
 				5DB39A8A5380FCFCD3BBA5EB /* EditProfileView.swift */,
 			);
@@ -1249,6 +1254,7 @@
 				AMA1995EQVM000000000A /* EquipmentProfileViewModel.swift */,
 				AMA1996DEVVM00000000A /* DevicesViewModel.swift */,
 				AMA2027MSGVM0000000A /* MessagingViewModel.swift */,
+				AMA2028WDVM00000000A /* WatchDeliveryViewModel.swift */,
 				V01C300600000000000000 /* VoiceWorkoutView.swift */,
 				V01C300700000000000000 /* VoiceRecordingView.swift */,
 				V01C300800000000000000 /* TranscriptionReviewView.swift */,
@@ -1800,6 +1806,7 @@
 				AMA1995EQVM000000000B /* EquipmentProfileViewModel.swift in Sources */,
 				AMA1996DEVVM00000000B /* DevicesViewModel.swift in Sources */,
 				AMA2027MSGVM0000000B /* MessagingViewModel.swift in Sources */,
+				AMA2028WDVM00000000B /* WatchDeliveryViewModel.swift in Sources */,
 				AMA12650012 /* SuggestWorkoutButton.swift in Sources */,
 				AMA12650013 /* SuggestWorkoutView.swift in Sources */,
 				AMA1995EQVIEW00000000B /* EquipmentProfileView.swift in Sources */,
@@ -1961,6 +1968,7 @@
 				D33PL1NKT35T50002 /* DeepLinkManagerTests.swift in Sources */,
 				AMA12650022 /* SuggestWorkoutViewModelTests.swift in Sources */,
 				AMA1995EQTST000000000B /* EquipmentProfileViewModelTests.swift in Sources */,
+				AMA2028WDTST0000000B /* WatchDeliveryViewModelTests.swift in Sources */,
 				AK00TST001B /* ActivityHistoryTests.swift in Sources */,
 				AK00TST002B /* ActivityHistoryViewModelTests.swift in Sources */,
 				AK00TST003B /* AmakaFlowCompanionTests.swift in Sources */,

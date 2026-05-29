@@ -49,8 +49,6 @@ struct SettingsView: View {
     @State private var showingPrivacyShareSheet = false
     @State private var showingWorkoutDebugSheet = false
     @State private var showingVoiceTranscriptionSettings = false
-    @State private var showingResendErrorAlert = false
-    @State private var resendErrorMessage: String?
     @StateObject private var nutritionViewModel = NutritionViewModel()
     @State private var showingNutritionSettings = false
     @State private var showingErrorLogSheet = false
@@ -59,7 +57,6 @@ struct SettingsView: View {
     @State private var debugTapResetTask: DispatchWorkItem?
     @State private var showingTelegramSetup = false
     @State private var connectedTelegramId: Int?
-    @State private var showingWatchDelivery = false
     @EnvironmentObject private var garminConnectivity: GarminConnectManager
     @EnvironmentObject private var pairingService: PairingService
     @EnvironmentObject private var workoutsViewModel: WorkoutsViewModel
@@ -1563,34 +1560,27 @@ struct SettingsView: View {
     // MARK: - Watch Delivery Card
 
     private var watchDeliveryCard: some View {
-        Button(action: { showingWatchDelivery = true }) {
-            HStack(spacing: Theme.Spacing.md) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
-                        .fill(Theme.Colors.garminBlue.opacity(0.1))
-                        .frame(width: 48, height: 48)
-                    Image(systemName: "applewatch")
-                        .font(.system(size: 22))
-                        .foregroundColor(Theme.Colors.garminBlue)
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Watch Delivery")
-                        .font(Theme.Typography.bodyBold)
-                        .foregroundColor(Theme.Colors.textPrimary)
-                    Text("View Garmin send states and resend failed workouts")
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(Theme.Colors.textTertiary)
+        HStack(spacing: Theme.Spacing.md) {
+            ZStack {
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                    .fill(Theme.Colors.garminBlue.opacity(0.1))
+                    .frame(width: 48, height: 48)
+                Image(systemName: "applewatch")
+                    .font(.system(size: 22))
+                    .foregroundColor(Theme.Colors.garminBlue)
             }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Watch Delivery")
+                    .font(Theme.Typography.bodyBold)
+                    .foregroundColor(Theme.Colors.textPrimary)
+                Text("Open a completed workout to view Garmin delivery and resend if needed")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textSecondary)
+            }
+
+            Spacer()
         }
-        .buttonStyle(.plain)
         .padding(Theme.Spacing.md)
         .background(Theme.Colors.surface)
         .overlay(
@@ -1598,26 +1588,7 @@ struct SettingsView: View {
                 .stroke(Theme.Colors.borderLight, lineWidth: 1)
         )
         .cornerRadius(Theme.CornerRadius.md)
-        .sheet(isPresented: $showingWatchDelivery) {
-            WatchDeliveryView(
-                onResend: {
-                    Task {
-                        do {
-                            try await APIService.shared.resendWatchDelivery()
-                        } catch {
-                            resendErrorMessage = error.localizedDescription
-                            showingResendErrorAlert = true
-                        }
-                    }
-                },
-                onDismiss: { showingWatchDelivery = false }
-            )
-        }
-        .alert("Failed to Resend", isPresented: $showingResendErrorAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(resendErrorMessage ?? "An unknown error occurred.")
-        }
+        .accessibilityIdentifier("settings_watch_delivery_info")
     }
 
     // MARK: - Telegram Card

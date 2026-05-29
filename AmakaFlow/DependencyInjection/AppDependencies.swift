@@ -677,6 +677,21 @@ class MockAPIService: APIServiceProviding {
         Components.Schemas.PairDeviceResult(message: "Device removed", success: true)
     )
     var setDeviceRolesResult: Result<Components.Schemas.DeviceRolesResult, Error>?
+    var watchDeliveryStatusResult: Result<Components.Schemas.WatchDeliveryStatus, Error> = .success(
+        Components.Schemas.WatchDeliveryStatus(
+            canResend: false,
+            occurredAt: "2026-05-29T13:00:00Z",
+            state: .pushed,
+            subtitle: "Sent to Garmin Connect.",
+            title: "Pushed to Garmin"
+        )
+    )
+    var watchDeliveryStatusResults: [Result<Components.Schemas.WatchDeliveryStatus, Error>] = []
+    var resendWatchDeliveryResult: Result<Components.Schemas.WatchResendResult, Error> = .success(
+        Components.Schemas.WatchResendResult(deliveryIds: ["mock-delivery-1"], success: true)
+    )
+    var watchDeliveryStatusDelayNanoseconds: UInt64 = 0
+    var resendWatchDeliveryDelayNanoseconds: UInt64 = 0
     var listMessagingChannelsResult: Result<Components.Schemas.MessagingChannelList, Error> = .success(
         Components.Schemas.MessagingChannelList(
             channels: [
@@ -708,6 +723,10 @@ class MockAPIService: APIServiceProviding {
     var pairDeviceCalled = false
     var revokeDeviceCalled = false
     var setDeviceRolesCalled = false
+    var watchDeliveryStatusCalled = false
+    var watchDeliveryStatusCallCount = 0
+    var resendWatchDeliveryCalled = false
+    var resendWatchDeliveryCallCount = 0
     var listMessagingChannelsCalled = false
     var setChannelPrefsCalled = false
     var setChannelPrefsCallCount = 0
@@ -715,6 +734,8 @@ class MockAPIService: APIServiceProviding {
     var lastRevokedDeviceId: String?
     var lastSetDeviceRolesId: String?
     var lastSetDeviceRoles: [Components.Schemas.DeviceRole]?
+    var lastWatchDeliveryWorkoutId: String?
+    var lastResendWatchDeliveryWorkoutId: String?
     var lastSetChannelPrefsId: String?
     var lastSetChannelPrefs: Components.Schemas.ChannelPrefsRequest?
 
@@ -746,6 +767,29 @@ class MockAPIService: APIServiceProviding {
             return try setDeviceRolesResult.get()
         }
         return Components.Schemas.DeviceRolesResult(roles: roles, success: true)
+    }
+
+    func watchDeliveryStatus(workoutId: String) async throws -> Components.Schemas.WatchDeliveryStatus {
+        watchDeliveryStatusCalled = true
+        watchDeliveryStatusCallCount += 1
+        lastWatchDeliveryWorkoutId = workoutId
+        if watchDeliveryStatusDelayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: watchDeliveryStatusDelayNanoseconds)
+        }
+        if !watchDeliveryStatusResults.isEmpty {
+            return try watchDeliveryStatusResults.removeFirst().get()
+        }
+        return try watchDeliveryStatusResult.get()
+    }
+
+    func resendWatchDelivery(workoutId: String) async throws -> Components.Schemas.WatchResendResult {
+        resendWatchDeliveryCalled = true
+        resendWatchDeliveryCallCount += 1
+        lastResendWatchDeliveryWorkoutId = workoutId
+        if resendWatchDeliveryDelayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: resendWatchDeliveryDelayNanoseconds)
+        }
+        return try resendWatchDeliveryResult.get()
     }
 
     func listMessagingChannels() async throws -> Components.Schemas.MessagingChannelList {
