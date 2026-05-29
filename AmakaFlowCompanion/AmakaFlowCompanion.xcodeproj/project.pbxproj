@@ -32,6 +32,7 @@
 		5489774E90118791AFF14D8C /* FollowAlongPlayerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 154769090318840B518509BF /* FollowAlongPlayerViewModel.swift */; };
 		63D97E9B43FEB4A771D87EE8 /* ActionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC35C6AFFE23A2DA83D8C2E7 /* ActionModels.swift */; };
 		67283958B3E2475BA2DA974A /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2192F9A69B4A51B54A138F /* HomeView.swift */; };
+		AMA1993HOMEVM000000B /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1993HOMEVM000000A /* HomeViewModel.swift */; };
 		688E97FB5938812BF52882A0 /* ShareExtensionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96BF60E98CCB044FBF23EB80 /* ShareExtensionTests.swift */; };
 		6E4643C6639A84A033AF4DA1 /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2C967F7EB5505FDB36864F9 /* FeatureFlags.swift */; };
 		718A23C41FF542228DF9232B /* OpenAPIURLSession in Frameworks */ = {isa = PBXBuildFile; productRef = 3D2A2E0648804CD7A88CF287 /* OpenAPIURLSession */; };
@@ -162,6 +163,7 @@
 		AMA1995EQVM000000000B /* EquipmentProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1995EQVM000000000A /* EquipmentProfileViewModel.swift */; };
 		AMA1995EQVIEW00000000B /* EquipmentProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1995EQVIEW00000000A /* EquipmentProfileView.swift */; };
 		AMA1995EQTST000000000B /* EquipmentProfileViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1995EQTST000000000A /* EquipmentProfileViewModelTests.swift */; };
+		AMA1993HOMETEST0000B /* HomeViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1993HOMETEST0000A /* HomeViewModelTests.swift */; };
 		AMA1996DEVVM00000000B /* DevicesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1996DEVVM00000000A /* DevicesViewModel.swift */; };
 		AMA1996DEVVIEW000000B /* DevicesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1996DEVVIEW000000A /* DevicesView.swift */; };
 		AMA2027MSGVM0000000B /* MessagingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2027MSGVM0000000A /* MessagingViewModel.swift */; };
@@ -595,6 +597,7 @@
 		AMA1995EQVM000000000A /* EquipmentProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EquipmentProfileViewModel.swift; path = ../AmakaFlow/ViewModels/EquipmentProfileViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA1995EQVIEW00000000A /* EquipmentProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EquipmentProfileView.swift; path = ../AmakaFlow/Views/EquipmentProfileView.swift; sourceTree = SOURCE_ROOT; };
 		AMA1995EQTST000000000A /* EquipmentProfileViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EquipmentProfileViewModelTests.swift; path = AmakaFlowCompanionTests/EquipmentProfileViewModelTests.swift; sourceTree = "<group>"; };
+		AMA1993HOMETEST0000A /* HomeViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeViewModelTests.swift; path = AmakaFlowCompanionTests/HomeViewModelTests.swift; sourceTree = "<group>"; };
 		AMA1996DEVVM00000000A /* DevicesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DevicesViewModel.swift; path = ../AmakaFlow/ViewModels/DevicesViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA1996DEVVIEW000000A /* DevicesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DevicesView.swift; path = ../AmakaFlow/Views/DevicesView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2027MSGVM0000000A /* MessagingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MessagingViewModel.swift; path = ../AmakaFlow/ViewModels/MessagingViewModel.swift; sourceTree = SOURCE_ROOT; };
@@ -684,6 +687,7 @@
 		C1660F7A199C30F1FF9B8DFD /* TrainingPreferencesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TrainingPreferencesView.swift; path = ../AmakaFlow/Views/Settings/TrainingPreferencesView.swift; sourceTree = "<group>"; };
 		C2C967F7EB5505FDB36864F9 /* FeatureFlags.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FeatureFlags.swift; path = ../AmakaFlow/Core/FeatureFlags.swift; sourceTree = "<group>"; };
 		CC2192F9A69B4A51B54A138F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeView.swift; path = ../AmakaFlow/Views/HomeView.swift; sourceTree = SOURCE_ROOT; };
+		AMA1993HOMEVM000000A /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeViewModel.swift; path = ../AmakaFlow/ViewModels/HomeViewModel.swift; sourceTree = SOURCE_ROOT; };
 		D0C1640626E3952B7DBBBF33 /* MentalModelView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MentalModelView.swift; path = ../AmakaFlow/Views/MentalModelView.swift; sourceTree = SOURCE_ROOT; };
 		D33PL1NK1MP0RTV0001 /* DeepLinkImportView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkImportView.swift; path = ../AmakaFlow/Views/DeepLinkImportView.swift; sourceTree = "<group>"; };
 		D33PL1NKMAN4G3R0001 /* DeepLinkManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkManager.swift; path = ../AmakaFlow/Services/DeepLinkManager.swift; sourceTree = "<group>"; };
@@ -1020,6 +1024,7 @@
 				A19401AA0000000AB000000A /* WorkoutStepsSection.swift */,
 				A19401AA0000000BB000000B /* ExecutionLogSection.swift */,
 				CC2192F9A69B4A51B54A138F /* HomeView.swift */,
+				AMA1993HOMEVM000000A /* HomeViewModel.swift */,
 				AMA12650003 /* SuggestWorkoutView.swift */,
 				AMA1995EQVIEW00000000A /* EquipmentProfileView.swift */,
 				AMA1996DEVVIEW000000A /* DevicesView.swift */,
@@ -1094,6 +1099,7 @@
 				D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */,
 				AMA12650021 /* SuggestWorkoutViewModelTests.swift */,
 				AMA1995EQTST000000000A /* EquipmentProfileViewModelTests.swift */,
+				AMA1993HOMETEST0000A /* HomeViewModelTests.swift */,
 				AMA2007SIGNUPTESTREF /* SignUpViewModelTests.swift */,
 				AK00CHL001A /* ChallengeModels.swift */,
 				AK00CHL002A /* ChallengesViewModel.swift */,
@@ -1757,6 +1763,7 @@
 				A19401BB0000000AC000000A /* WorkoutStepsSection.swift in Sources */,
 				A19401BB0000000BC000000B /* ExecutionLogSection.swift in Sources */,
 				67283958B3E2475BA2DA974A /* HomeView.swift in Sources */,
+				AMA1993HOMEVM000000B /* HomeViewModel.swift in Sources */,
 				F84E22742ED0D58300459747 /* WorkoutsViewModel.swift in Sources */,
 				F84E226F2ED0D55600459747 /* AmakaFlowApp.swift in Sources */,
 				F84E22862ED0D5D100459747 /* WorkoutKitConverter.swift in Sources */,
@@ -1968,6 +1975,7 @@
 				D33PL1NKT35T50002 /* DeepLinkManagerTests.swift in Sources */,
 				AMA12650022 /* SuggestWorkoutViewModelTests.swift in Sources */,
 				AMA1995EQTST000000000B /* EquipmentProfileViewModelTests.swift in Sources */,
+				AMA1993HOMETEST0000B /* HomeViewModelTests.swift in Sources */,
 				AMA2028WDTST0000000B /* WatchDeliveryViewModelTests.swift in Sources */,
 				AK00TST001B /* ActivityHistoryTests.swift in Sources */,
 				AK00TST002B /* ActivityHistoryViewModelTests.swift in Sources */,
