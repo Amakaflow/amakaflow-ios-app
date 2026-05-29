@@ -73,6 +73,28 @@ final class MessagingViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.ctaError)
     }
 
+    func testReloadAfterTelegramConnectReflectsConnectedChannel() async {
+        api.listMessagingChannelsResult = .success(
+            Components.Schemas.MessagingChannelList(
+                channels: [telegram(connected: false)],
+                deliveryLive: false
+            )
+        )
+        await viewModel.load()
+        XCTAssertFalse(viewModel.isConnected(viewModel.channels[0]))
+
+        api.listMessagingChannelsResult = .success(
+            Components.Schemas.MessagingChannelList(
+                channels: [telegram(connected: true)],
+                deliveryLive: false
+            )
+        )
+        await viewModel.load()
+
+        XCTAssertTrue(viewModel.isConnected(viewModel.channels[0]))
+        XCTAssertEqual(viewModel.connectedSubtitle, "1 connected")
+    }
+
     func testSetPrefsSuccessUpdatesOnlyTargetRow() async {
         let telegram = telegram(id: "telegram", briefing: true, checkin: true, swap: false)
         let slack = comingSoon(id: "slack", name: "Slack")
@@ -212,9 +234,25 @@ final class MessagingViewModelTests: XCTestCase {
         { "success": true, "channelId": "telegram", "prefs": { "briefing": false, "checkin": true, "swap": false } }
         """.data(using: .utf8)!
 
-        let list = try APIService.makeGeneratedDecoder().decode(Components.Schemas.MessagingChannelList.self, from: listJSON)
-        let request = try APIService.makeGeneratedDecoder().decode(Components.Schemas.ChannelPrefsRequest.self, from: requestJSON)
-        let result = try APIService.makeGeneratedDecoder().decode(Components.Schemas.ChannelPrefsResult.self, from: resultJSON)
+        let setupJSON = """
+        {
+          "token": "token-1",
+          "deepLink": "https://t.me/amakaflow_userbot?start=token-1",
+          "nativeLink": "tg://resolve?domain=amakaflow_userbot&start=token-1",
+          "expiresInSeconds": 900
+        }
+        """.data(using: .utf8)!
+
+        let telegramStatusJSON = """
+        { "linked": true, "telegramIdHash": "tg_hash_123" }
+        """.data(using: .utf8)!
+
+        let decoder = APIService.makeGeneratedDecoder()
+        let list = try decoder.decode(Components.Schemas.MessagingChannelList.self, from: listJSON)
+        let request = try decoder.decode(Components.Schemas.ChannelPrefsRequest.self, from: requestJSON)
+        let result = try decoder.decode(Components.Schemas.ChannelPrefsResult.self, from: resultJSON)
+        let setup = try decoder.decode(Components.Schemas.TelegramSetupResponse.self, from: setupJSON)
+        let telegramStatus = try decoder.decode(Components.Schemas.TelegramStatusResponse.self, from: telegramStatusJSON)
 
         XCTAssertEqual(list.channels?.first?.id, "telegram")
         XCTAssertEqual(list.channels?.first?.prefs?.quietStart, "21:00")
@@ -223,6 +261,12 @@ final class MessagingViewModelTests: XCTestCase {
         XCTAssertTrue(result.success)
         XCTAssertEqual(result.channelId, "telegram")
         XCTAssertEqual(result.prefs?.briefing, false)
+        XCTAssertEqual(setup.token, "token-1")
+        XCTAssertEqual(setup.deepLink, "https://t.me/amakaflow_userbot?start=token-1")
+        XCTAssertEqual(setup.nativeLink, "tg://resolve?domain=amakaflow_userbot&start=token-1")
+        XCTAssertEqual(setup.expiresInSeconds, 900)
+        XCTAssertTrue(telegramStatus.linked)
+        XCTAssertEqual(telegramStatus.telegramIdHash, "tg_hash_123")
     }
 
     func testFixtureServiceSurfacesTelegramAndDeliveryNotLive() async throws {
@@ -238,13 +282,14 @@ final class MessagingViewModelTests: XCTestCase {
 
     private func telegram(
         id: String = "telegram",
+        connected: Bool = true,
         briefing: Bool = true,
         checkin: Bool = true,
         swap: Bool = false
     ) -> Components.Schemas.MessagingChannel {
         Components.Schemas.MessagingChannel(
             comingSoon: false,
-            connected: true,
+            connected: connected,
             handle: "@amaka",
             id: id,
             name: "Telegram",

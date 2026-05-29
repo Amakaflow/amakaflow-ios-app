@@ -1674,14 +1674,15 @@ struct SettingsView: View {
         .cornerRadius(Theme.CornerRadius.md)
         .sheet(isPresented: $showingTelegramSetup) {
             NavigationStack {
-                TelegramSetupView(initialTelegramId: connectedTelegramId) { telegramId in
+                TelegramSetupView(
+                    initialTelegramId: connectedTelegramId,
+                    initiallyConnected: isTelegramLinked
+                ) { telegramId in
                     connectedTelegramId = telegramId
-                    if let telegramId {
-                        UserDefaults.standard.set(telegramId, forKey: telegramIdKey)
-                    } else {
-                        UserDefaults.standard.removeObject(forKey: telegramIdKey)
-                    }
-                    isTelegramLinked = true
+                    TelegramLinkCache.markLinked(
+                        telegramId: telegramId,
+                        userID: pairingService.userProfile?.id
+                    )
                     showingTelegramSetup = false
                 }
             }
@@ -2207,11 +2208,11 @@ struct SettingsView: View {
     }
 
     private var telegramLinkedKey: String {
-        "telegram_linked_\(pairingService.userProfile?.id ?? "anon")"
+        TelegramLinkCache.linkedKey(userID: pairingService.userProfile?.id)
     }
 
     private var telegramIdKey: String {
-        "telegram_id_\(pairingService.userProfile?.id ?? "anon")"
+        TelegramLinkCache.idKey(userID: pairingService.userProfile?.id)
     }
 
     private var telegramStatusSubtitle: String {
@@ -2236,8 +2237,7 @@ struct SettingsView: View {
     }
 
     private func clearTelegramLinked() {
-        UserDefaults.standard.removeObject(forKey: telegramLinkedKey)
-        UserDefaults.standard.removeObject(forKey: telegramIdKey)
+        TelegramLinkCache.clear(userID: pairingService.userProfile?.id)
         connectedTelegramId = nil
     }
 

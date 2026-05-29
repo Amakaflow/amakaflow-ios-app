@@ -133,7 +133,12 @@ class FixtureAPIService: APIServiceProviding {
     }
 
     func getTelegramLinkStatus(token: String) async throws -> TelegramLinkStatusResponse {
-        TelegramLinkStatusResponse(linked: true, telegramId: 123_456_789, usedAt: Date())
+        TelegramLinkStatusResponse(
+            linked: true,
+            telegramId: 123_456_789,
+            telegramIdHash: "fixture-telegram-hash",
+            usedAt: Date()
+        )
     }
 
     func parseVoiceWorkout(transcription: String, sportHint: WorkoutSport?) async throws -> VoiceWorkoutParseResponse {

@@ -142,6 +142,20 @@ final class ConnectTelegramViewModelTests: XCTestCase {
     )
   }
 
+  func testHashOnlyLinkedStatusCompletesWithoutLegacyNumericId() async throws {
+    api.tokenResponse = tokenResponse()
+    api.statusResponses = [
+      TelegramLinkStatusResponse(linked: true, telegramId: nil, telegramIdHash: "tg_hash_123", usedAt: nil),
+    ]
+    let viewModel = makeViewModel(pollIntervalNanoseconds: 1)
+
+    viewModel.connectTapped()
+
+    try await waitUntil { viewModel.state == .connected(telegramId: nil) }
+    XCTAssertEqual(connectedIds.count, 1)
+    XCTAssertNil(connectedIds[0])
+  }
+
   func testAlreadyConnectedRetapShowsNoOpMessage() {
     let viewModel = makeViewModel(initialTelegramId: 987)
 
@@ -154,8 +168,21 @@ final class ConnectTelegramViewModelTests: XCTestCase {
     XCTAssertEqual(api.mintCallCount, 0)
   }
 
+  func testInitiallyConnectedWithoutNumericIdRetapShowsNoOpMessage() {
+    let viewModel = makeViewModel(initiallyConnected: true)
+
+    viewModel.connectTapped()
+
+    XCTAssertEqual(
+      viewModel.state,
+      .failed("Telegram is already connected. Disconnect in Telegram if you want to switch accounts.")
+    )
+    XCTAssertEqual(api.mintCallCount, 0)
+  }
+
   private func makeViewModel(
     initialTelegramId: Int? = nil,
+    initiallyConnected: Bool = false,
     pollIntervalNanoseconds: UInt64 = 1,
     timeoutSeconds: TimeInterval = 90,
     nowProvider: (@Sendable () -> Date)? = nil
@@ -164,6 +191,7 @@ final class ConnectTelegramViewModelTests: XCTestCase {
       apiService: api,
       urlOpener: opener,
       initialTelegramId: initialTelegramId,
+      initiallyConnected: initiallyConnected,
       pollIntervalNanoseconds: pollIntervalNanoseconds,
       timeoutSeconds: timeoutSeconds,
       now: nowProvider ?? { [now] in now! },

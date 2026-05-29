@@ -82,6 +82,22 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `PUT /v1/messaging/channels/{channel_id}/prefs`.
     /// - Remark: Generated from `#/paths//v1/messaging/channels/{channel_id}/prefs/put(setMessagingChannelPrefs)`.
     func setMessagingChannelPrefs(_ input: Operations.SetMessagingChannelPrefs.Input) async throws -> Operations.SetMessagingChannelPrefs.Output
+    /// V1 Messaging Telegram Setup
+    ///
+    /// iOS TelegramSetup → mapper-api POST /api/telegram/link-token (AMA-2031).
+    ///
+    /// Mints a one-time deep-link token. snake_case upstream → camelCase out.
+    ///
+    /// - Remark: HTTP `POST /v1/messaging/telegram/setup`.
+    /// - Remark: Generated from `#/paths//v1/messaging/telegram/setup/post(setupTelegram)`.
+    func setupTelegram(_ input: Operations.SetupTelegram.Input) async throws -> Operations.SetupTelegram.Output
+    /// V1 Messaging Telegram Status
+    ///
+    /// iOS TelegramSetup polling → mapper-api GET /api/telegram/link-status (AMA-2031).
+    ///
+    /// - Remark: HTTP `GET /v1/messaging/telegram/status`.
+    /// - Remark: Generated from `#/paths//v1/messaging/telegram/status/get(telegramStatus)`.
+    func telegramStatus(_ input: Operations.TelegramStatus.Input) async throws -> Operations.TelegramStatus.Output
     /// V1 Sync Confirm
     ///
     /// SyncEngine confirm-success → mapper-api POST /sync/confirm.
@@ -256,6 +272,32 @@ extension APIProtocol {
             path: path,
             headers: headers,
             body: body
+        ))
+    }
+    /// V1 Messaging Telegram Setup
+    ///
+    /// iOS TelegramSetup → mapper-api POST /api/telegram/link-token (AMA-2031).
+    ///
+    /// Mints a one-time deep-link token. snake_case upstream → camelCase out.
+    ///
+    /// - Remark: HTTP `POST /v1/messaging/telegram/setup`.
+    /// - Remark: Generated from `#/paths//v1/messaging/telegram/setup/post(setupTelegram)`.
+    public func setupTelegram(headers: Operations.SetupTelegram.Input.Headers = .init()) async throws -> Operations.SetupTelegram.Output {
+        try await setupTelegram(Operations.SetupTelegram.Input(headers: headers))
+    }
+    /// V1 Messaging Telegram Status
+    ///
+    /// iOS TelegramSetup polling → mapper-api GET /api/telegram/link-status (AMA-2031).
+    ///
+    /// - Remark: HTTP `GET /v1/messaging/telegram/status`.
+    /// - Remark: Generated from `#/paths//v1/messaging/telegram/status/get(telegramStatus)`.
+    public func telegramStatus(
+        query: Operations.TelegramStatus.Input.Query,
+        headers: Operations.TelegramStatus.Input.Headers = .init()
+    ) async throws -> Operations.TelegramStatus.Output {
+        try await telegramStatus(Operations.TelegramStatus.Input(
+            query: query,
+            headers: headers
         ))
     }
     /// V1 Sync Confirm
@@ -2024,6 +2066,69 @@ public enum Components {
                 case behaviorProfile = "behavior_profile"
                 case hrProfile = "hr_profile"
                 case speed
+            }
+        }
+        /// Response for POST /v1/messaging/telegram/setup — a one-time deep-link token.
+        /// Typed projection over mapper-api /api/telegram/link-token (snake_case).
+        ///
+        /// - Remark: Generated from `#/components/schemas/TelegramSetupResponse`.
+        public struct TelegramSetupResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/TelegramSetupResponse/deepLink`.
+            public var deepLink: Swift.String
+            /// - Remark: Generated from `#/components/schemas/TelegramSetupResponse/expiresInSeconds`.
+            public var expiresInSeconds: Swift.Int
+            /// - Remark: Generated from `#/components/schemas/TelegramSetupResponse/nativeLink`.
+            public var nativeLink: Swift.String
+            /// - Remark: Generated from `#/components/schemas/TelegramSetupResponse/token`.
+            public var token: Swift.String
+            /// Creates a new `TelegramSetupResponse`.
+            ///
+            /// - Parameters:
+            ///   - deepLink:
+            ///   - expiresInSeconds:
+            ///   - nativeLink:
+            ///   - token:
+            public init(
+                deepLink: Swift.String,
+                expiresInSeconds: Swift.Int,
+                nativeLink: Swift.String,
+                token: Swift.String
+            ) {
+                self.deepLink = deepLink
+                self.expiresInSeconds = expiresInSeconds
+                self.nativeLink = nativeLink
+                self.token = token
+            }
+            public enum CodingKeys: String, CodingKey {
+                case deepLink
+                case expiresInSeconds
+                case nativeLink
+                case token
+            }
+        }
+        /// Response for GET /v1/messaging/telegram/status — has the bot consumed the token.
+        ///
+        /// - Remark: Generated from `#/components/schemas/TelegramStatusResponse`.
+        public struct TelegramStatusResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/TelegramStatusResponse/linked`.
+            public var linked: Swift.Bool
+            /// - Remark: Generated from `#/components/schemas/TelegramStatusResponse/telegramIdHash`.
+            public var telegramIdHash: Swift.String?
+            /// Creates a new `TelegramStatusResponse`.
+            ///
+            /// - Parameters:
+            ///   - linked:
+            ///   - telegramIdHash:
+            public init(
+                linked: Swift.Bool,
+                telegramIdHash: Swift.String? = nil
+            ) {
+                self.linked = linked
+                self.telegramIdHash = telegramIdHash
+            }
+            public enum CodingKeys: String, CodingKey {
+                case linked
+                case telegramIdHash
             }
         }
         /// - Remark: Generated from `#/components/schemas/ValidationError`.
@@ -4096,6 +4201,403 @@ public enum Operations {
             /// - Throws: An error if `self` is not `.serviceUnavailable`.
             /// - SeeAlso: `.serviceUnavailable`.
             public var serviceUnavailable: Operations.SetMessagingChannelPrefs.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// V1 Messaging Telegram Setup
+    ///
+    /// iOS TelegramSetup → mapper-api POST /api/telegram/link-token (AMA-2031).
+    ///
+    /// Mints a one-time deep-link token. snake_case upstream → camelCase out.
+    ///
+    /// - Remark: HTTP `POST /v1/messaging/telegram/setup`.
+    /// - Remark: Generated from `#/paths//v1/messaging/telegram/setup/post(setupTelegram)`.
+    public enum SetupTelegram {
+        public static let id: Swift.String = "setupTelegram"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/messaging/telegram/setup/POST/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.SetupTelegram.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.SetupTelegram.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.SetupTelegram.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            public init(headers: Operations.SetupTelegram.Input.Headers = .init()) {
+                self.headers = headers
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/messaging/telegram/setup/POST/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/messaging/telegram/setup/POST/responses/200/content/application\/json`.
+                    case json(Components.Schemas.TelegramSetupResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.TelegramSetupResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.SetupTelegram.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.SetupTelegram.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Successful Response
+            ///
+            /// - Remark: Generated from `#/paths//v1/messaging/telegram/setup/post(setupTelegram)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.SetupTelegram.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.SetupTelegram.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/messaging/telegram/setup/POST/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/messaging/telegram/setup/POST/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.SetupTelegram.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.SetupTelegram.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/messaging/telegram/setup/post(setupTelegram)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.SetupTelegram.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.SetupTelegram.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// V1 Messaging Telegram Status
+    ///
+    /// iOS TelegramSetup polling → mapper-api GET /api/telegram/link-status (AMA-2031).
+    ///
+    /// - Remark: HTTP `GET /v1/messaging/telegram/status`.
+    /// - Remark: Generated from `#/paths//v1/messaging/telegram/status/get(telegramStatus)`.
+    public enum TelegramStatus {
+        public static let id: Swift.String = "telegramStatus"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/messaging/telegram/status/GET/query`.
+            public struct Query: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/messaging/telegram/status/GET/query/token`.
+                public var token: Swift.String
+                /// Creates a new `Query`.
+                ///
+                /// - Parameters:
+                ///   - token:
+                public init(token: Swift.String) {
+                    self.token = token
+                }
+            }
+            public var query: Operations.TelegramStatus.Input.Query
+            /// - Remark: Generated from `#/paths/v1/messaging/telegram/status/GET/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.TelegramStatus.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.TelegramStatus.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.TelegramStatus.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - query:
+            ///   - headers:
+            public init(
+                query: Operations.TelegramStatus.Input.Query,
+                headers: Operations.TelegramStatus.Input.Headers = .init()
+            ) {
+                self.query = query
+                self.headers = headers
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/messaging/telegram/status/GET/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/messaging/telegram/status/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.TelegramStatusResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.TelegramStatusResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.TelegramStatus.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.TelegramStatus.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Successful Response
+            ///
+            /// - Remark: Generated from `#/paths//v1/messaging/telegram/status/get(telegramStatus)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.TelegramStatus.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.TelegramStatus.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/messaging/telegram/status/GET/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/messaging/telegram/status/GET/responses/422/content/application\/json`.
+                    case json(Components.Schemas.HTTPValidationError)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.HTTPValidationError {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.TelegramStatus.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.TelegramStatus.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// Validation Error
+            ///
+            /// - Remark: Generated from `#/paths//v1/messaging/telegram/status/get(telegramStatus)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.TelegramStatus.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.TelegramStatus.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/messaging/telegram/status/GET/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/messaging/telegram/status/GET/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.TelegramStatus.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.TelegramStatus.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/messaging/telegram/status/get(telegramStatus)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.TelegramStatus.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.TelegramStatus.Output.ServiceUnavailable {
                 get throws {
                     switch self {
                     case let .serviceUnavailable(response):

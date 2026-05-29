@@ -28,6 +28,8 @@ filter:
     - /v1/devices/{device_id}/roles  # AMA-2030 Wedge C — set device roles
     - /v1/messaging/channels  # AMA-2027 Wedge D — messaging channels + coaching-delivery prefs
     - /v1/messaging/channels/{channel_id}/prefs  # AMA-2027 Wedge D — set messaging channel prefs
+    - /v1/messaging/telegram/setup  # AMA-2031 Wedge E — Telegram setup via BFF
+    - /v1/messaging/telegram/status  # AMA-2031 Wedge E — Telegram link status via BFF
 
 accessModifier: public
 

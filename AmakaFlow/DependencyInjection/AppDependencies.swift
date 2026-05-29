@@ -133,7 +133,7 @@ class MockAPIService: APIServiceProviding {
         )
     )
     var getTelegramLinkStatusResult: Result<TelegramLinkStatusResponse, Error> = .success(
-        TelegramLinkStatusResponse(linked: false, telegramId: nil, usedAt: nil)
+        TelegramLinkStatusResponse(linked: false, telegramId: nil, telegramIdHash: nil, usedAt: nil)
     )
     var parseVoiceWorkoutResult: Result<VoiceWorkoutParseResponse, Error>?
     var ingestInstagramReelResult: Result<IngestInstagramReelResponse, Error>?

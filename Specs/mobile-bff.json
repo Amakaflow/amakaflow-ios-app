@@ -1610,6 +1610,53 @@
         "title": "SimulationConfig",
         "type": "object"
       },
+      "TelegramSetupResponse": {
+        "description": "Response for POST /v1/messaging/telegram/setup \u2014 a one-time deep-link token.\nTyped projection over mapper-api /api/telegram/link-token (snake_case).",
+        "properties": {
+          "deepLink": {
+            "title": "Deeplink",
+            "type": "string"
+          },
+          "expiresInSeconds": {
+            "title": "Expiresinseconds",
+            "type": "integer"
+          },
+          "nativeLink": {
+            "title": "Nativelink",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "deepLink",
+          "nativeLink",
+          "expiresInSeconds"
+        ],
+        "title": "TelegramSetupResponse",
+        "type": "object"
+      },
+      "TelegramStatusResponse": {
+        "description": "Response for GET /v1/messaging/telegram/status \u2014 has the bot consumed the token.",
+        "properties": {
+          "linked": {
+            "title": "Linked",
+            "type": "boolean"
+          },
+          "telegramIdHash": {
+            "title": "Telegramidhash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "linked"
+        ],
+        "title": "TelegramStatusResponse",
+        "type": "object"
+      },
       "TimeBlock": {
         "description": "BFF-owned mirror of the draft TimeBlock schema.",
         "properties": {
@@ -3010,6 +3057,85 @@
           }
         },
         "summary": "V1 Messaging Set Prefs"
+      }
+    },
+    "/v1/messaging/telegram/setup": {
+      "post": {
+        "description": "iOS TelegramSetup \u2192 mapper-api POST /api/telegram/link-token (AMA-2031).\n\nMints a one-time deep-link token. snake_case upstream \u2192 camelCase out.",
+        "operationId": "setupTelegram",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramSetupResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Messaging Telegram Setup"
+      }
+    },
+    "/v1/messaging/telegram/status": {
+      "get": {
+        "description": "iOS TelegramSetup polling \u2192 mapper-api GET /api/telegram/link-status (AMA-2031).",
+        "operationId": "telegramStatus",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Messaging Telegram Status"
       }
     },
     "/v1/nutrition/analyze-photo": {

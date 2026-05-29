@@ -635,6 +635,59 @@ final class CoachAPIRepositoryEndpointTests: XCTestCase {
         XCTAssertEqual(MockURLProtocol.interceptedRequests.first?.url?.path, "/v1/agent/actions/act-1/undo")
     }
 
+    func testTelegramSetupAndStatusUseMobileBFFRoutesAndGeneratedCamelCase() async throws {
+        MockURLProtocol.requestHandler = { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Rndr-Id": "rndr-telegram"]
+            )!
+
+            switch request.url?.path {
+            case "/v1/messaging/telegram/setup":
+                XCTAssertEqual(request.httpMethod, "POST")
+                XCTAssertNil(request.url?.query)
+                let data = """
+                {
+                  "token": "token-1",
+                  "deepLink": "https://t.me/amakaflow_userbot?start=token-1",
+                  "nativeLink": "tg://resolve?domain=amakaflow_userbot&start=token-1",
+                  "expiresInSeconds": 900
+                }
+                """.data(using: .utf8)!
+                return (response, data)
+            case "/v1/messaging/telegram/status":
+                XCTAssertEqual(request.httpMethod, "GET")
+                let components = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)
+                XCTAssertEqual(components?.queryItems?.first(where: { $0.name == "token" })?.value, "token-1")
+                let data = """
+                { "linked": true, "telegramIdHash": "tg_hash_123" }
+                """.data(using: .utf8)!
+                return (response, data)
+            default:
+                XCTFail("Unexpected Telegram request path: \(request.url?.path ?? "nil")")
+                return (response, Data("{}".utf8))
+            }
+        }
+
+        let token = try await api.mintTelegramLinkToken()
+        let status = try await api.getTelegramLinkStatus(token: token.token)
+
+        XCTAssertEqual(token.token, "token-1")
+        XCTAssertEqual(token.deepLink, "https://t.me/amakaflow_userbot?start=token-1")
+        XCTAssertEqual(token.nativeLink, "tg://resolve?domain=amakaflow_userbot&start=token-1")
+        XCTAssertEqual(token.expiresInSeconds, 900)
+        XCTAssertTrue(status.linked)
+        XCTAssertEqual(status.telegramIdHash, "tg_hash_123")
+        XCTAssertNil(status.telegramId)
+
+        let paths = MockURLProtocol.interceptedRequests.compactMap { $0.url?.path }
+        XCTAssertEqual(paths, ["/v1/messaging/telegram/setup", "/v1/messaging/telegram/status"])
+        XCTAssertFalse(paths.contains { $0.contains("/api/telegram/") })
+        XCTAssertEqual(logger.events.map(\.phase), [.start, .end, .start, .end])
+    }
+
     private static let dayStatesJSON = """
     [
       {

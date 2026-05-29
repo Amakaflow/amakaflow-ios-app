@@ -26,6 +26,30 @@ struct SystemURLOpener: URLOpener {
     }
 }
 
+enum TelegramLinkCache {
+    static func linkedKey(userID: String?) -> String {
+        "telegram_linked_\(userID ?? "anon")"
+    }
+
+    static func idKey(userID: String?) -> String {
+        "telegram_id_\(userID ?? "anon")"
+    }
+
+    static func markLinked(telegramId: Int?, userID: String?) {
+        UserDefaults.standard.set(true, forKey: linkedKey(userID: userID))
+        if let telegramId {
+            UserDefaults.standard.set(telegramId, forKey: idKey(userID: userID))
+        } else {
+            UserDefaults.standard.removeObject(forKey: idKey(userID: userID))
+        }
+    }
+
+    static func clear(userID: String?) {
+        UserDefaults.standard.removeObject(forKey: linkedKey(userID: userID))
+        UserDefaults.standard.removeObject(forKey: idKey(userID: userID))
+    }
+}
+
 @MainActor
 final class ConnectTelegramViewModel: ObservableObject {
     enum State: Equatable {
@@ -50,6 +74,7 @@ final class ConnectTelegramViewModel: ObservableObject {
         apiService: TelegramLinkAPIProviding = APIService.shared,
         urlOpener: URLOpener? = nil,
         initialTelegramId: Int? = nil,
+        initiallyConnected: Bool = false,
         pollIntervalNanoseconds: UInt64 = 3_000_000_000,
         timeoutSeconds: TimeInterval = 90,
         now: @escaping @Sendable () -> Date = Date.init,
@@ -63,6 +88,8 @@ final class ConnectTelegramViewModel: ObservableObject {
         self.onConnected = onConnected
         if let initialTelegramId {
             self.state = .connected(telegramId: initialTelegramId)
+        } else if initiallyConnected {
+            self.state = .connected(telegramId: nil)
         } else {
             self.state = .idle
         }
@@ -194,12 +221,14 @@ struct TelegramSetupView: View {
 
     init(
         initialTelegramId: Int? = nil,
+        initiallyConnected: Bool = false,
         onConnected: @escaping (Int?) -> Void = { _ in },
         onSkip: @escaping () -> Void = {}
     ) {
         _viewModel = StateObject(
             wrappedValue: ConnectTelegramViewModel(
                 initialTelegramId: initialTelegramId,
+                initiallyConnected: initiallyConnected,
                 onConnected: onConnected
             )
         )
