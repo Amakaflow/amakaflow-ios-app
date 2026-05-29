@@ -320,7 +320,7 @@ extension APIService {
                     serverRequestId: serverRequestId,
                     error: apiError
                 )
-                throw AnnotatedAPIError(apiError, requestId: serverRequestId ?? generatedRequestId)
+                throw apiError
             }
 
             return RequestResult(
@@ -332,8 +332,6 @@ extension APIService {
                 requestId: generatedRequestId,
                 serverRequestId: serverRequestId
             )
-        } catch let annotatedError as AnnotatedAPIError {
-            throw annotatedError
         } catch let apiError as APIError {
             throw apiError
         } catch {
