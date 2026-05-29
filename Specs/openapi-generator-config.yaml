@@ -23,6 +23,8 @@ filter:
     - /v1/sync/failed
     - /v1/coaching/profile  # AMA-2008 D5 W2 — equipment/profile (CoachingProfile + EquipmentInventory)
     - /v1/devices  # AMA-2026 D4 Wedge A — paired devices (PairedDevice + DeviceRole)
+    - /v1/devices/pair  # AMA-2029 Wedge B — add device (confirm 6-digit)
+    - /v1/devices/{device_id}  # AMA-2029 Wedge B — remove device
 
 accessModifier: public
 

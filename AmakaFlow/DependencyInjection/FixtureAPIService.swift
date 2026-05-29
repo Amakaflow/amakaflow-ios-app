@@ -25,7 +25,13 @@ class FixtureAPIService: APIServiceProviding {
         updatedAt: "2026-05-28T00:00:00Z",
         userId: "fixture-test-user"
     )
-    private let fixtureDevices: [Components.Schemas.PairedDevice] = [
+    var pairDeviceResult: Result<Components.Schemas.PairDeviceResult, Error> = .success(
+        Components.Schemas.PairDeviceResult(message: "Fixture Garmin paired", success: true)
+    )
+    var revokeDeviceResult: Result<Components.Schemas.PairDeviceResult, Error> = .success(
+        Components.Schemas.PairDeviceResult(message: "Fixture device removed", success: true)
+    )
+    private var fixtureDevices: [Components.Schemas.PairedDevice] = [
         Components.Schemas.PairedDevice(
             id: "fixture-garmin-955",
             lastSyncAt: "2026-05-28T14:07:00Z",
@@ -201,6 +207,31 @@ class FixtureAPIService: APIServiceProviding {
 
     func listDevices() async throws -> [Components.Schemas.PairedDevice] {
         fixtureDevices
+    }
+
+    func pairDevice(shortCode: String) async throws -> Components.Schemas.PairDeviceResult {
+        let result = try pairDeviceResult.get()
+        if !fixtureDevices.contains(where: { $0.id == "fixture-garmin-955" }) {
+            fixtureDevices.insert(
+                Components.Schemas.PairedDevice(
+                    id: "fixture-garmin-955",
+                    lastSyncAt: "2026-05-28T14:07:00Z",
+                    model: "Forerunner 955",
+                    name: "Garmin Forerunner",
+                    roles: [.workouts, .recovery]
+                ),
+                at: 0
+            )
+        }
+        print("[FixtureAPIService] Stub: pairDevice(\(shortCode)) -> success")
+        return result
+    }
+
+    func revokeDevice(id: String) async throws -> Components.Schemas.PairDeviceResult {
+        let result = try revokeDeviceResult.get()
+        fixtureDevices.removeAll { $0.id == id }
+        print("[FixtureAPIService] Stub: revokeDevice(\(id)) -> success")
+        return result
     }
 
     // MARK: - Coaching Profile (AMA-1995)

@@ -68,6 +68,9 @@ public extension CTAError {
             }
         case .http(let status, let body, _):
             if let body = body, !body.isEmpty {
+                if let detail = Self.extractField("detail", from: body) ?? Self.extractField("message", from: body) {
+                    return "Server error \(status): \(detail)"
+                }
                 let trimmed = body.prefix(160)
                 return "Server error \(status): \(trimmed)"
             }

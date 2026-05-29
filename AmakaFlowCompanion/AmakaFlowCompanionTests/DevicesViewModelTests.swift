@@ -136,6 +136,122 @@ final class DevicesViewModelTests: XCTestCase {
         XCTAssertEqual(DevicesViewModel.roleLabel(.strength), "Strength")
     }
 
+    func testPairSuccessReloadsDevicesAndClearsError() async {
+        let paired = device(id: "garmin-new", name: "Garmin Fenix", model: "Fenix 8", roles: [.workouts])
+        api.listDevicesResult = .success([paired])
+
+        await viewModel.pair(shortCode: " ab12cd ")
+
+        XCTAssertTrue(api.pairDeviceCalled)
+        XCTAssertEqual(api.lastPairedShortCode, "AB12CD")
+        XCTAssertTrue(api.listDevicesCalled)
+        XCTAssertEqual(viewModel.state, .content)
+        XCTAssertEqual(viewModel.devices, [paired])
+        XCTAssertNil(viewModel.ctaError)
+        XCTAssertNil(viewModel.lastFailedAction)
+    }
+
+    func testPairFailureMapsServerDetailAndPreservesList() async {
+        let existing = device(id: "garmin-existing", name: "Garmin Forerunner", roles: [.workouts])
+        api.listDevicesResult = .success([existing])
+        await viewModel.load()
+
+        api.pairDeviceResult = .failure(APIError.serverErrorWithBody(410, "{\"detail\":\"Pairing code expired\"}"))
+
+        await viewModel.pair(shortCode: "123456")
+
+        XCTAssertTrue(api.pairDeviceCalled)
+        XCTAssertEqual(viewModel.devices, [existing])
+        XCTAssertEqual(viewModel.state, .content)
+        XCTAssertEqual(viewModel.lastFailedAction, .pair)
+        guard let ctaError = viewModel.ctaError else {
+            return XCTFail("Expected CTAError for expired pair code")
+        }
+        XCTAssertEqual(ctaError, .http(status: 410, body: "{\"detail\":\"Pairing code expired\"}", requestId: nil))
+        XCTAssertTrue(ctaError.userMessage.contains("Pairing code expired"))
+    }
+
+    func testPairLyingSuccessMapsServerMessageAndPreservesList() async {
+        let existing = device(id: "garmin-existing", name: "Garmin Forerunner", roles: [.workouts])
+        api.listDevicesResult = .success([existing])
+        await viewModel.load()
+
+        api.pairDeviceResult = .success(Components.Schemas.PairDeviceResult(message: "Pairing code expired", success: false))
+
+        await viewModel.pair(shortCode: "123456")
+
+        XCTAssertTrue(api.pairDeviceCalled)
+        XCTAssertEqual(viewModel.devices, [existing])
+        XCTAssertEqual(viewModel.state, .content)
+        XCTAssertEqual(viewModel.lastFailedAction, .pair)
+        guard let ctaError = viewModel.ctaError else {
+            return XCTFail("Expected CTAError for success:false pair result")
+        }
+        guard case .lyingSuccess(let message, _, _) = ctaError else {
+            return XCTFail("Expected lyingSuccess, got \(ctaError)")
+        }
+        XCTAssertEqual(message, "Pairing code expired")
+    }
+
+    func testRemoveSuccessReloadsDevicesWithoutRemovedDevice() async {
+        let removed = device(id: "garmin-remove", name: "Garmin Forerunner", roles: [.workouts])
+        api.listDevicesResult = .success([removed])
+        await viewModel.load()
+
+        api.listDevicesResult = .success([])
+        await viewModel.remove(removed)
+
+        XCTAssertTrue(api.revokeDeviceCalled)
+        XCTAssertEqual(api.lastRevokedDeviceId, "garmin-remove")
+        XCTAssertEqual(viewModel.state, .empty)
+        XCTAssertTrue(viewModel.devices.isEmpty)
+        XCTAssertNil(viewModel.ctaError)
+        XCTAssertNil(viewModel.lastFailedAction)
+    }
+
+    func testRemoveFailureMapsErrorAndPreservesList() async {
+        let existing = device(id: "garmin-existing", name: "Garmin Forerunner", roles: [.workouts])
+        api.listDevicesResult = .success([existing])
+        await viewModel.load()
+
+        api.revokeDeviceResult = .failure(APIError.serverErrorWithBody(404, "{\"detail\":\"Device pairing not found\"}"))
+
+        await viewModel.remove(existing)
+
+        XCTAssertTrue(api.revokeDeviceCalled)
+        XCTAssertEqual(api.lastRevokedDeviceId, "garmin-existing")
+        XCTAssertEqual(viewModel.devices, [existing])
+        XCTAssertEqual(viewModel.state, .content)
+        XCTAssertEqual(viewModel.lastFailedAction, .remove(id: "garmin-existing"))
+        guard let ctaError = viewModel.ctaError else {
+            return XCTFail("Expected CTAError for failed revoke")
+        }
+        XCTAssertEqual(ctaError, .http(status: 404, body: "{\"detail\":\"Device pairing not found\"}", requestId: nil))
+        XCTAssertTrue(ctaError.userMessage.contains("Device pairing not found"))
+    }
+
+    func testRemoveLyingSuccessMapsServerMessageAndPreservesList() async {
+        let existing = device(id: "garmin-existing", name: "Garmin Forerunner", roles: [.workouts])
+        api.listDevicesResult = .success([existing])
+        await viewModel.load()
+
+        api.revokeDeviceResult = .success(Components.Schemas.PairDeviceResult(message: "Remove failed", success: false))
+
+        await viewModel.remove(existing)
+
+        XCTAssertTrue(api.revokeDeviceCalled)
+        XCTAssertEqual(viewModel.devices, [existing])
+        XCTAssertEqual(viewModel.state, .content)
+        XCTAssertEqual(viewModel.lastFailedAction, .remove(id: "garmin-existing"))
+        guard let ctaError = viewModel.ctaError else {
+            return XCTFail("Expected CTAError for success:false remove result")
+        }
+        guard case .lyingSuccess(let message, _, _) = ctaError else {
+            return XCTFail("Expected lyingSuccess, got \(ctaError)")
+        }
+        XCTAssertEqual(message, "Remove failed")
+    }
+
     func testGeneratedDecoderHandlesPairedDeviceList() throws {
         let json = """
         {

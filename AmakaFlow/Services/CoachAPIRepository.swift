@@ -16,6 +16,8 @@
 //
 //  Endpoints in this file:
 //    GET  /v1/devices                           (listDevices)
+//    POST /v1/devices/pair                      (pairDevice)
+//    DELETE /v1/devices/{device_id}             (revokeDevice)
 //    GET  /v1/coaching/profile                  (getCoachingProfile)
 //    PUT  /v1/coaching/profile                  (upsertCoachingProfile)
 //    GET  /v1/planning/days                     (fetchDayState/fetchDayStates)
@@ -59,6 +61,35 @@ extension APIService {
             )
         }
         return devices
+    }
+
+    func pairDevice(shortCode: String) async throws -> Components.Schemas.PairDeviceResult {
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/devices/pair",
+            method: "POST",
+            body: try encodeJSONBody(["shortCode": shortCode])
+        )
+        return try await self.request(
+            request,
+            decode: Components.Schemas.PairDeviceResult.self,
+            decoder: APIService.makeGeneratedDecoder(),
+            successStatusCodes: 200...200
+        )
+    }
+
+    func revokeDevice(id: String) async throws -> Components.Schemas.PairDeviceResult {
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/devices/\(id)",
+            method: "DELETE"
+        )
+        return try await self.request(
+            request,
+            decode: Components.Schemas.PairDeviceResult.self,
+            decoder: APIService.makeGeneratedDecoder(),
+            successStatusCodes: 200...200
+        )
     }
 
     // MARK: - Coaching Profile (AMA-1995)

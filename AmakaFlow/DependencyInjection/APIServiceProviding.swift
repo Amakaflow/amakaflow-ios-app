@@ -279,6 +279,12 @@ protocol APIServiceProviding: TelegramLinkAPIProviding {
     /// Fetch the user's paired devices from the mobile BFF.
     func listDevices() async throws -> [Components.Schemas.PairedDevice]
 
+    /// Confirm a Garmin pairing code shown on the watch.
+    func pairDevice(shortCode: String) async throws -> Components.Schemas.PairDeviceResult
+
+    /// Revoke an existing paired device.
+    func revokeDevice(id: String) async throws -> Components.Schemas.PairDeviceResult
+
     // MARK: - Coaching Profile (AMA-1995)
 
     /// Fetch the user's coaching profile, including generated equipment inventory.

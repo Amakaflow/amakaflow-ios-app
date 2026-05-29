@@ -22,6 +22,8 @@ final class DevicesViewModel: ObservableObject {
 
     enum FailedAction: Equatable {
         case load
+        case pair
+        case remove(id: String)
     }
 
     struct DisplayDevice: Identifiable, Equatable {
@@ -43,6 +45,7 @@ final class DevicesViewModel: ObservableObject {
 
     private let apiService: APIServiceProviding
     private let now: () -> Date
+    private var lastPairShortCode: String?
 
     init(
         apiService: APIServiceProviding? = nil,
@@ -88,12 +91,57 @@ final class DevicesViewModel: ObservableObject {
         }
     }
 
+    func pair(shortCode: String) async {
+        let trimmedCode = shortCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        lastPairShortCode = trimmedCode
+        ctaError = nil
+
+        do {
+            let result = try await apiService.pairDevice(shortCode: trimmedCode)
+            if let failure = Self.ctaError(from: result) {
+                ctaError = failure
+                lastFailedAction = .pair
+                return
+            }
+            await load()
+        } catch {
+            ctaError = CTAError.map(error)
+            lastFailedAction = .pair
+        }
+    }
+
+    func remove(_ device: PairedDevice) async {
+        await revokeDevice(id: device.id)
+    }
+
     func retryLastAction() async {
         switch lastFailedAction {
         case .load:
             await load()
+        case .pair:
+            guard let lastPairShortCode else { return }
+            await pair(shortCode: lastPairShortCode)
+        case .remove(let id):
+            await revokeDevice(id: id)
         case .none:
             break
+        }
+    }
+
+    private func revokeDevice(id: String) async {
+        ctaError = nil
+
+        do {
+            let result = try await apiService.revokeDevice(id: id)
+            if let failure = Self.ctaError(from: result) {
+                ctaError = failure
+                lastFailedAction = .remove(id: id)
+                return
+            }
+            await load()
+        } catch {
+            ctaError = CTAError.map(error)
+            lastFailedAction = .remove(id: id)
         }
     }
 
@@ -110,15 +158,58 @@ final class DevicesViewModel: ObservableObject {
         guard let ctaError else { return }
         let reporter = reporter ?? ErrorReporter.shared
         reporter.report(
-            action: "devices_load",
+            action: errorReportAction,
             error: ctaError,
-            endpoint: "/v1/devices",
+            endpoint: errorReportEndpoint,
             userId: PairingService.shared.userProfile?.id
         )
     }
 
+    private var errorReportAction: String {
+        switch lastFailedAction {
+        case .load:
+            return "devices_load"
+        case .pair:
+            return "devices_pair"
+        case .remove:
+            return "devices_remove"
+        case .none:
+            return "devices_unknown"
+        }
+    }
+
+    private var errorReportEndpoint: String {
+        switch lastFailedAction {
+        case .load:
+            return "/v1/devices"
+        case .pair:
+            return "/v1/devices/pair"
+        case .remove(let id):
+            return "/v1/devices/\(id)"
+        case .none:
+            return "/v1/devices"
+        }
+    }
+
     func hasRole(_ role: DeviceRole, in device: PairedDevice) -> Bool {
         device.roles?.contains(role) == true
+    }
+
+    private static func ctaError(from result: Components.Schemas.PairDeviceResult) -> CTAError? {
+        guard !result.success else { return nil }
+        return CTAError.map(APIError.serverErrorWithBody(200, lyingSuccessBody(message: result.message)))
+    }
+
+    private static func lyingSuccessBody(message: String?) -> String {
+        var payload: [String: Any] = ["success": false]
+        if let message, !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            payload["message"] = message
+        }
+        guard let data = try? JSONSerialization.data(withJSONObject: payload),
+              let body = String(data: data, encoding: .utf8) else {
+            return "{\"success\":false}"
+        }
+        return body
     }
 
     static var displayRoles: [DeviceRole] {

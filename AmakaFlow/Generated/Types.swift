@@ -33,6 +33,26 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /v1/devices`.
     /// - Remark: Generated from `#/paths//v1/devices/get(listDevices)`.
     func listDevices(_ input: Operations.ListDevices.Input) async throws -> Operations.ListDevices.Output
+    /// V1 Devices Pair
+    ///
+    /// iOS "Add device" → mapper-api POST /api/garmin/pair/confirm (AMA-2029).
+    ///
+    /// The 6-digit code is displayed on the Garmin watch (the CIQ widget called
+    /// /pair/request); the user enters it here and we confirm with their Clerk JWT.
+    /// camelCase `shortCode` in → snake_case `short_code` upstream.
+    ///
+    /// - Remark: HTTP `POST /v1/devices/pair`.
+    /// - Remark: Generated from `#/paths//v1/devices/pair/post(pairDevice)`.
+    func pairDevice(_ input: Operations.PairDevice.Input) async throws -> Operations.PairDevice.Output
+    /// V1 Devices Revoke
+    ///
+    /// iOS "Remove device" → mapper-api DELETE /mobile/pairing/devices/{id}
+    /// (AMA-2029). Deletes the pairing token row — the watch must re-pair to
+    /// reconnect. `device_id` is the PairedDevice.id from GET /v1/devices.
+    ///
+    /// - Remark: HTTP `DELETE /v1/devices/{device_id}`.
+    /// - Remark: Generated from `#/paths//v1/devices/{device_id}/delete(revokeDevice)`.
+    func revokeDevice(_ input: Operations.RevokeDevice.Input) async throws -> Operations.RevokeDevice.Output
     /// V1 Sync Confirm
     ///
     /// SyncEngine confirm-success → mapper-api POST /sync/confirm.
@@ -121,6 +141,42 @@ extension APIProtocol {
     /// - Remark: Generated from `#/paths//v1/devices/get(listDevices)`.
     public func listDevices(headers: Operations.ListDevices.Input.Headers = .init()) async throws -> Operations.ListDevices.Output {
         try await listDevices(Operations.ListDevices.Input(headers: headers))
+    }
+    /// V1 Devices Pair
+    ///
+    /// iOS "Add device" → mapper-api POST /api/garmin/pair/confirm (AMA-2029).
+    ///
+    /// The 6-digit code is displayed on the Garmin watch (the CIQ widget called
+    /// /pair/request); the user enters it here and we confirm with their Clerk JWT.
+    /// camelCase `shortCode` in → snake_case `short_code` upstream.
+    ///
+    /// - Remark: HTTP `POST /v1/devices/pair`.
+    /// - Remark: Generated from `#/paths//v1/devices/pair/post(pairDevice)`.
+    public func pairDevice(
+        headers: Operations.PairDevice.Input.Headers = .init(),
+        body: Operations.PairDevice.Input.Body
+    ) async throws -> Operations.PairDevice.Output {
+        try await pairDevice(Operations.PairDevice.Input(
+            headers: headers,
+            body: body
+        ))
+    }
+    /// V1 Devices Revoke
+    ///
+    /// iOS "Remove device" → mapper-api DELETE /mobile/pairing/devices/{id}
+    /// (AMA-2029). Deletes the pairing token row — the watch must re-pair to
+    /// reconnect. `device_id` is the PairedDevice.id from GET /v1/devices.
+    ///
+    /// - Remark: HTTP `DELETE /v1/devices/{device_id}`.
+    /// - Remark: Generated from `#/paths//v1/devices/{device_id}/delete(revokeDevice)`.
+    public func revokeDevice(
+        path: Operations.RevokeDevice.Input.Path,
+        headers: Operations.RevokeDevice.Input.Headers = .init()
+    ) async throws -> Operations.RevokeDevice.Output {
+        try await revokeDevice(Operations.RevokeDevice.Input(
+            path: path,
+            headers: headers
+        ))
     }
     /// V1 Sync Confirm
     ///
@@ -991,6 +1047,66 @@ public enum Components {
                 case minHeartRate = "min_heart_rate"
                 case steps
                 case totalCalories = "total_calories"
+            }
+        }
+        /// Request body for POST /v1/devices/pair (AMA-2029, Wedge B).
+        ///
+        /// The user reads the 6-digit code shown on their Garmin watch (the CIQ widget
+        /// obtained it via /api/garmin/pair/request) and enters it here. The BFF
+        /// forwards it (snake_case `short_code`) to mapper-api /api/garmin/pair/confirm
+        /// with the caller's Clerk JWT, which links the watch to the account.
+        ///
+        /// - Remark: Generated from `#/components/schemas/PairDeviceRequest`.
+        public struct PairDeviceRequest: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/PairDeviceRequest/shortCode`.
+            public var shortCode: Swift.String
+            /// Creates a new `PairDeviceRequest`.
+            ///
+            /// - Parameters:
+            ///   - shortCode:
+            public init(shortCode: Swift.String) {
+                self.shortCode = shortCode
+            }
+            public enum CodingKeys: String, CodingKey {
+                case shortCode
+            }
+            public init(from decoder: any Swift.Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                self.shortCode = try container.decode(
+                    Swift.String.self,
+                    forKey: .shortCode
+                )
+                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                    "shortCode"
+                ])
+            }
+        }
+        /// Response for POST /v1/devices/pair and DELETE /v1/devices/{id}.
+        ///
+        /// `success`/`message` are single words, so camelCase == the snake_case mapper
+        /// returns — the upstream body validates as-is.
+        ///
+        /// - Remark: Generated from `#/components/schemas/PairDeviceResult`.
+        public struct PairDeviceResult: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/PairDeviceResult/message`.
+            public var message: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/PairDeviceResult/success`.
+            public var success: Swift.Bool
+            /// Creates a new `PairDeviceResult`.
+            ///
+            /// - Parameters:
+            ///   - message:
+            ///   - success:
+            public init(
+                message: Swift.String? = nil,
+                success: Swift.Bool
+            ) {
+                self.message = message
+                self.success = success
+            }
+            public enum CodingKeys: String, CodingKey {
+                case message
+                case success
             }
         }
         /// One paired device for PairingScreen. Typed projection over mapper-api
@@ -2507,6 +2623,469 @@ public enum Operations {
             /// - Throws: An error if `self` is not `.serviceUnavailable`.
             /// - SeeAlso: `.serviceUnavailable`.
             public var serviceUnavailable: Operations.ListDevices.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// V1 Devices Pair
+    ///
+    /// iOS "Add device" → mapper-api POST /api/garmin/pair/confirm (AMA-2029).
+    ///
+    /// The 6-digit code is displayed on the Garmin watch (the CIQ widget called
+    /// /pair/request); the user enters it here and we confirm with their Clerk JWT.
+    /// camelCase `shortCode` in → snake_case `short_code` upstream.
+    ///
+    /// - Remark: HTTP `POST /v1/devices/pair`.
+    /// - Remark: Generated from `#/paths//v1/devices/pair/post(pairDevice)`.
+    public enum PairDevice {
+        public static let id: Swift.String = "pairDevice"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/devices/pair/POST/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.PairDevice.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.PairDevice.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.PairDevice.Input.Headers
+            /// - Remark: Generated from `#/paths/v1/devices/pair/POST/requestBody`.
+            @frozen public enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/pair/POST/requestBody/content/application\/json`.
+                case json(Components.Schemas.PairDeviceRequest)
+            }
+            public var body: Operations.PairDevice.Input.Body
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            ///   - body:
+            public init(
+                headers: Operations.PairDevice.Input.Headers = .init(),
+                body: Operations.PairDevice.Input.Body
+            ) {
+                self.headers = headers
+                self.body = body
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/pair/POST/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/devices/pair/POST/responses/200/content/application\/json`.
+                    case json(Components.Schemas.PairDeviceResult)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.PairDeviceResult {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.PairDevice.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.PairDevice.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Successful Response
+            ///
+            /// - Remark: Generated from `#/paths//v1/devices/pair/post(pairDevice)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.PairDevice.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.PairDevice.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/pair/POST/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/devices/pair/POST/responses/422/content/application\/json`.
+                    case json(Components.Schemas.HTTPValidationError)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.HTTPValidationError {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.PairDevice.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.PairDevice.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// Validation Error
+            ///
+            /// - Remark: Generated from `#/paths//v1/devices/pair/post(pairDevice)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.PairDevice.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.PairDevice.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/pair/POST/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/devices/pair/POST/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.PairDevice.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.PairDevice.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/devices/pair/post(pairDevice)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.PairDevice.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.PairDevice.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// V1 Devices Revoke
+    ///
+    /// iOS "Remove device" → mapper-api DELETE /mobile/pairing/devices/{id}
+    /// (AMA-2029). Deletes the pairing token row — the watch must re-pair to
+    /// reconnect. `device_id` is the PairedDevice.id from GET /v1/devices.
+    ///
+    /// - Remark: HTTP `DELETE /v1/devices/{device_id}`.
+    /// - Remark: Generated from `#/paths//v1/devices/{device_id}/delete(revokeDevice)`.
+    public enum RevokeDevice {
+        public static let id: Swift.String = "revokeDevice"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/devices/{device_id}/DELETE/path`.
+            public struct Path: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/{device_id}/DELETE/path/device_id`.
+                public var deviceId: Swift.String
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - deviceId:
+                public init(deviceId: Swift.String) {
+                    self.deviceId = deviceId
+                }
+            }
+            public var path: Operations.RevokeDevice.Input.Path
+            /// - Remark: Generated from `#/paths/v1/devices/{device_id}/DELETE/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.RevokeDevice.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.RevokeDevice.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.RevokeDevice.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            public init(
+                path: Operations.RevokeDevice.Input.Path,
+                headers: Operations.RevokeDevice.Input.Headers = .init()
+            ) {
+                self.path = path
+                self.headers = headers
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/{device_id}/DELETE/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/devices/{device_id}/DELETE/responses/200/content/application\/json`.
+                    case json(Components.Schemas.PairDeviceResult)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.PairDeviceResult {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.RevokeDevice.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.RevokeDevice.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Successful Response
+            ///
+            /// - Remark: Generated from `#/paths//v1/devices/{device_id}/delete(revokeDevice)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.RevokeDevice.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.RevokeDevice.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/{device_id}/DELETE/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/devices/{device_id}/DELETE/responses/422/content/application\/json`.
+                    case json(Components.Schemas.HTTPValidationError)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.HTTPValidationError {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.RevokeDevice.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.RevokeDevice.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// Validation Error
+            ///
+            /// - Remark: Generated from `#/paths//v1/devices/{device_id}/delete(revokeDevice)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.RevokeDevice.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.RevokeDevice.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/devices/{device_id}/DELETE/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/devices/{device_id}/DELETE/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.RevokeDevice.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.RevokeDevice.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/devices/{device_id}/delete(revokeDevice)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.RevokeDevice.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.RevokeDevice.Output.ServiceUnavailable {
                 get throws {
                     switch self {
                     case let .serviceUnavailable(response):

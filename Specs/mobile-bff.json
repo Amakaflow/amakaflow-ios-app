@@ -778,6 +778,41 @@
         "title": "HealthMetrics",
         "type": "object"
       },
+      "PairDeviceRequest": {
+        "additionalProperties": false,
+        "description": "Request body for POST /v1/devices/pair (AMA-2029, Wedge B).\n\nThe user reads the 6-digit code shown on their Garmin watch (the CIQ widget\nobtained it via /api/garmin/pair/request) and enters it here. The BFF\nforwards it (snake_case `short_code`) to mapper-api /api/garmin/pair/confirm\nwith the caller's Clerk JWT, which links the watch to the account.",
+        "properties": {
+          "shortCode": {
+            "maxLength": 12,
+            "minLength": 1,
+            "title": "Shortcode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shortCode"
+        ],
+        "title": "PairDeviceRequest",
+        "type": "object"
+      },
+      "PairDeviceResult": {
+        "description": "Response for POST /v1/devices/pair and DELETE /v1/devices/{id}.\n\n`success`/`message` are single words, so camelCase == the snake_case mapper\nreturns \u2014 the upstream body validates as-is.",
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "title": "PairDeviceResult",
+        "type": "object"
+      },
       "PairedDevice": {
         "description": "One paired device for PairingScreen. Typed projection over mapper-api\nGET /mobile/pairing/devices (untyped dict upstream): flattens device_info,\nsurfaces the stable device_info.device_id as `id`, and maps paired_at \u2192\nlastSyncAt (Wedge A proxy; real last-sync is AMA-2032).",
         "properties": {
@@ -2330,6 +2365,105 @@
           }
         },
         "summary": "V1 Devices List"
+      }
+    },
+    "/v1/devices/pair": {
+      "post": {
+        "description": "iOS \"Add device\" \u2192 mapper-api POST /api/garmin/pair/confirm (AMA-2029).\n\nThe 6-digit code is displayed on the Garmin watch (the CIQ widget called\n/pair/request); the user enters it here and we confirm with their Clerk JWT.\ncamelCase `shortCode` in \u2192 snake_case `short_code` upstream.",
+        "operationId": "pairDevice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PairDeviceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PairDeviceResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Devices Pair"
+      }
+    },
+    "/v1/devices/{device_id}": {
+      "delete": {
+        "description": "iOS \"Remove device\" \u2192 mapper-api DELETE /mobile/pairing/devices/{id}\n(AMA-2029). Deletes the pairing token row \u2014 the watch must re-pair to\nreconnect. `device_id` is the PairedDevice.id from GET /v1/devices.",
+        "operationId": "revokeDevice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "device_id",
+            "required": true,
+            "schema": {
+              "title": "Device Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PairDeviceResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Devices Revoke"
       }
     },
     "/v1/gamification/xp": {
