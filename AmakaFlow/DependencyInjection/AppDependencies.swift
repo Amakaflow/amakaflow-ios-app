@@ -931,9 +931,13 @@ class MockAPIService: APIServiceProviding {
         )
     )
     var upsertCoachingProfileResult: Result<Components.Schemas.CoachingProfile, Error>?
+    var postReadinessSampleResult: Result<ReadinessSampleWriteResult, Error>?
     var getCoachingProfileCalled = false
     var upsertCoachingProfileCalled = false
+    var postReadinessSampleCalled = false
+    var postReadinessSampleCallCount = 0
     var lastCoachingProfileUpsert: Components.Schemas.CoachingProfileUpsert?
+    var lastReadinessSample: (hrv: Double?, restingHr: Int?, sleepHours: Double?, sleepQuality: String?, sampleDate: String?)?
 
     func getCoachingProfile() async throws -> Components.Schemas.CoachingProfile {
         getCoachingProfileCalled = true
@@ -958,6 +962,29 @@ class MockAPIService: APIServiceProviding {
             sessionsPerWeek: profile.sessionsPerWeek,
             updatedAt: "2026-05-28T00:00:01Z",
             userId: "mock-user"
+        )
+    }
+
+    func postReadinessSample(
+        hrv: Double?,
+        restingHr: Int?,
+        sleepHours: Double?,
+        sleepQuality: String?,
+        sampleDate: String?
+    ) async throws -> ReadinessSampleWriteResult {
+        postReadinessSampleCalled = true
+        postReadinessSampleCallCount += 1
+        lastReadinessSample = (hrv, restingHr, sleepHours, sleepQuality, sampleDate)
+        if hrv == nil, restingHr == nil, sleepHours == nil, sleepQuality == nil {
+            throw APIError.serverErrorWithBody(422, "{\"detail\":\"At least one metric is required.\"}")
+        }
+        if let postReadinessSampleResult {
+            return try postReadinessSampleResult.get()
+        }
+        return ReadinessSampleWriteResult(
+            success: true,
+            date: sampleDate ?? "2026-05-30",
+            source: "apple_health"
         )
     }
 

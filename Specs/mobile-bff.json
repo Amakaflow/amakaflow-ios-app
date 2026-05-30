@@ -453,6 +453,71 @@
         "title": "ConflictType",
         "type": "string"
       },
+      "ConnectedCalendarList": {
+        "description": "Response for GET /v1/connected-calendars (AMA-2000 W-C).",
+        "properties": {
+          "calendars": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectedCalendarSummary"
+            },
+            "title": "Calendars",
+            "type": "array"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "ConnectedCalendarList",
+        "type": "object"
+      },
+      "ConnectedCalendarSummary": {
+        "description": "One connected third-party feed for the iOS Connected-apps screen.\n\nDELIBERATELY omits `ics_url`: the feed URL carries a subscription token and\nmust never reach the client (same token-safety as the W-A/W-B host-only\nlogging). The screen needs identity + sync health, not the raw feed URL.\n`lastSync`/`syncStatus`/`syncErrorMessage` back the \"last synced <time>\" /\nerror caption so a stale feed surfaces honestly (AMA-2000 \u00a71B), never a\nsilent empty row.",
+        "properties": {
+          "color": {
+            "title": "Color",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "lastSync": {
+            "title": "Lastsync",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "syncErrorMessage": {
+            "title": "Syncerrormessage",
+            "type": "string"
+          },
+          "syncStatus": {
+            "default": "active",
+            "title": "Syncstatus",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "workoutsThisWeek": {
+            "default": 0,
+            "title": "Workoutsthisweek",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type"
+        ],
+        "title": "ConnectedCalendarSummary",
+        "type": "object"
+      },
       "DayState": {
         "description": "BFF-owned mirror of the draft DayState schema (camelCase on the wire).",
         "properties": {
@@ -2770,6 +2835,35 @@
         "summary": "V1 Coaching Profile Upsert"
       }
     },
+    "/v1/connected-calendars": {
+      "get": {
+        "description": "iOS Connected-apps screen \u2192 calendar-api GET /calendar/connected-calendars,\nprojected to the typed summary (ics_url dropped \u2014 token safety). Feeds the\n\"last synced\" / error caption so a stale feed surfaces honestly (AMA-2000).",
+        "operationId": "listConnectedCalendars",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectedCalendarList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Connected Calendars"
+      }
+    },
     "/v1/devices": {
       "get": {
         "description": "iOS PairingScreen device list \u2192 mapper-api GET /mobile/pairing/devices,\nreshaped into the typed PairedDevice list (AMA-2026).",
@@ -3929,6 +4023,33 @@
           }
         },
         "summary": "(W2b) Generate a proposed weekly plan"
+      }
+    },
+    "/v1/readiness/sample": {
+      "put": {
+        "description": "iOS HealthKitHRVService \u2192 chat-api PUT /coach/readiness-sample.\n\nWrites a daily recovery sample (HRV/RHR/sleep) into daily_status with\nsource=apple_health. Thin passthrough \u2014 chat-api owns validation +\nthe daily_status upsert. Read side = /v1/readiness/today + /trend.",
+        "operationId": "v1_readiness_sample_v1_readiness_sample_put",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Readiness Sample"
       }
     },
     "/v1/sync/confirm": {

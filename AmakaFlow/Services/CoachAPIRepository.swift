@@ -27,6 +27,7 @@
 //    PUT  /v1/messaging/channels/{id}/prefs     (setChannelPrefs)
 //    GET  /v1/coaching/profile                  (getCoachingProfile)
 //    PUT  /v1/coaching/profile                  (upsertCoachingProfile)
+//    PUT  /v1/readiness/sample                  (postReadinessSample)
 //    GET  /v1/planning/days                     (fetchDayState/fetchDayStates)
 //    STUB /coach/quick                          (askCoach; no backend route)
 //    POST /api/v1/planning/resolve-conflict     (resolveConflict; deferred)
@@ -267,6 +268,55 @@ extension APIService {
         return try await self.request(
             request,
             decode: Components.Schemas.CoachingProfile.self,
+            decoder: APIService.makeGeneratedDecoder(),
+            successStatusCodes: 200...200
+        )
+    }
+
+    // MARK: - Readiness Sample (AMA-2052)
+
+    private struct ReadinessSampleWriteRequest: Encodable {
+        let sampleDate: String?
+        let hrv: Double?
+        let restingHr: Int?
+        let sleepHours: Double?
+        let sleepQuality: String?
+        let source: String
+
+        enum CodingKeys: String, CodingKey {
+            case sampleDate = "sample_date"
+            case hrv
+            case restingHr = "resting_hr"
+            case sleepHours = "sleep_hours"
+            case sleepQuality = "sleep_quality"
+            case source
+        }
+    }
+
+    func postReadinessSample(
+        hrv: Double?,
+        restingHr: Int?,
+        sleepHours: Double?,
+        sleepQuality: String?,
+        sampleDate: String?
+    ) async throws -> ReadinessSampleWriteResult {
+        let body = ReadinessSampleWriteRequest(
+            sampleDate: sampleDate,
+            hrv: hrv,
+            restingHr: restingHr,
+            sleepHours: sleepHours,
+            sleepQuality: sleepQuality,
+            source: "apple_health"
+        )
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/readiness/sample",
+            method: "PUT",
+            body: try encodeJSONBody(body)
+        )
+        return try await self.request(
+            request,
+            decode: ReadinessSampleWriteResult.self,
             decoder: APIService.makeGeneratedDecoder(),
             successStatusCodes: 200...200
         )

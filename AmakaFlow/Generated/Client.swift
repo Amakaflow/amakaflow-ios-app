@@ -1526,6 +1526,94 @@ public struct Client: APIProtocol {
             }
         )
     }
+    /// V1 Readiness Sample
+    ///
+    /// iOS HealthKitHRVService → chat-api PUT /coach/readiness-sample.
+    ///
+    /// Writes a daily recovery sample (HRV/RHR/sleep) into daily_status with
+    /// source=apple_health. Thin passthrough — chat-api owns validation +
+    /// the daily_status upsert. Read side = /v1/readiness/today + /trend.
+    ///
+    /// - Remark: HTTP `PUT /v1/readiness/sample`.
+    /// - Remark: Generated from `#/paths//v1/readiness/sample/put(v1_readiness_sample_v1_readiness_sample_put)`.
+    public func v1ReadinessSampleV1ReadinessSamplePut(_ input: Operations.V1ReadinessSampleV1ReadinessSamplePut.Input) async throws -> Operations.V1ReadinessSampleV1ReadinessSamplePut.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.V1ReadinessSampleV1ReadinessSamplePut.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/v1/readiness/sample",
+                    parameters: []
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .put
+                )
+                suppressMutabilityWarning(&request)
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 200:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.V1ReadinessSampleV1ReadinessSamplePut.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            OpenAPIRuntime.OpenAPIValueContainer.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(body: body))
+                case 503:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.V1ReadinessSampleV1ReadinessSamplePut.Output.ServiceUnavailable.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.DegradedResponse.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .serviceUnavailable(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
     /// V1 Sync Confirm
     ///
     /// SyncEngine confirm-success → mapper-api POST /sync/confirm.
