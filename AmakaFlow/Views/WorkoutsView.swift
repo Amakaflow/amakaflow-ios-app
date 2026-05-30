@@ -202,6 +202,7 @@ struct WorkoutsView: View {
                     title: workout.name,
                     duration: workout.formattedDuration,
                     zone: zoneLabel(for: workout),
+                    source: workout.source.rawValue,
                     icon: icon(for: workout.sport),
                     done: false,
                     today: calendar.isDateInToday(date),
@@ -348,6 +349,7 @@ struct WorkoutsView: View {
                     title: workout.name,
                     duration: workout.formattedDuration,
                     zone: zoneLabel(for: workout),
+                    source: workout.source.rawValue,
                     icon: icon(for: workout.sport),
                     done: false, today: isToday, rest: false, workout: workout
                 )
@@ -356,7 +358,7 @@ struct WorkoutsView: View {
                     id: "empty-\(isoDayString(date))",
                     day: dayLabel, date: dateLabel,
                     type: "—", title: "No session",
-                    duration: "—", zone: "—",
+                    duration: "—", zone: "—", source: nil,
                     icon: "minus.circle", done: false,
                     today: isToday, rest: true, workout: nil
                 )
@@ -425,6 +427,7 @@ private struct PlanRow {
     let title: String
     let duration: String
     let zone: String
+    let source: String?
     let icon: String
     let done: Bool
     let today: Bool
@@ -472,9 +475,13 @@ private struct PlanRowView: View {
                         .foregroundColor(Theme.Colors.textPrimary)
                         .lineLimit(1)
 
-                    Text("\(row.duration) · \(row.zone)")
-                        .font(.system(size: 11, weight: .regular, design: .monospaced))
-                        .foregroundColor(Theme.Colors.textSecondary)
+                    HStack(spacing: Theme.Spacing.xs) {
+                        Text("\(row.duration) · \(row.zone)")
+                            .font(.system(size: 11, weight: .regular, design: .monospaced))
+                            .foregroundColor(Theme.Colors.textSecondary)
+
+                        WorkoutSourceBadge(source: row.source)
+                    }
                 }
 
                 Spacer()

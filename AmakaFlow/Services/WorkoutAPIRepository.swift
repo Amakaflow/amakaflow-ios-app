@@ -121,6 +121,9 @@ extension APIService {
         switch httpResponse.statusCode {
         case 200:
             let decoder = APIService.makeDecoder()
+            if let plannedResponse = try? decoder.decode(PlannedWorkoutListDTO.self, from: data) {
+                return plannedResponse.workouts.map(ScheduledWorkout.init(plannedWorkout:))
+            }
             return try decoder.decode([ScheduledWorkout].self, from: data)
         case 401:
             guard !isRetry else { throw APIError.unauthorized }

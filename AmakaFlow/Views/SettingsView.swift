@@ -21,6 +21,78 @@ enum AudioBehavior: String, CaseIterable {
     }
 }
 
+struct ConnectedAppEntry: Identifiable, Equatable {
+    let id: String
+    let name: String
+    let detail: String
+    let icon: String
+}
+
+struct ConnectedAppsResolver {
+    static func entries(
+        calendars: [ConnectedCalendar],
+        garminConnected: Bool,
+        garminDeviceName: String?,
+        telegramLinked: Bool,
+        telegramIdentifier: String?
+    ) -> [ConnectedAppEntry] {
+        var entries: [ConnectedAppEntry] = calendars
+            .filter { isConnectedCalendarStatus($0.status) }
+            .map { calendar in
+                ConnectedAppEntry(
+                    id: "calendar-\(calendar.id)",
+                    name: displayName(forCalendarProvider: calendar.provider, fallback: calendar.name),
+                    detail: calendar.email ?? calendar.status.capitalized,
+                    icon: "calendar"
+                )
+            }
+
+        if garminConnected {
+            entries.append(
+                ConnectedAppEntry(
+                    id: "garmin",
+                    name: "Garmin",
+                    detail: garminDeviceName ?? "Connected watch",
+                    icon: "applewatch"
+                )
+            )
+        }
+
+        if telegramLinked {
+            entries.append(
+                ConnectedAppEntry(
+                    id: "telegram",
+                    name: "Telegram",
+                    detail: telegramIdentifier.map { "Connected to \($0)" } ?? "Coach messages connected",
+                    icon: "paperplane.fill"
+                )
+            )
+        }
+
+        return entries
+    }
+
+    private static func isConnectedCalendarStatus(_ status: String) -> Bool {
+        switch status.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "connected", "active", "syncing", "synced":
+            return true
+        default:
+            return false
+        }
+    }
+
+    private static func displayName(forCalendarProvider provider: String, fallback: String) -> String {
+        switch provider.lowercased() {
+        case "google": return "Google Calendar"
+        case "outlook", "microsoft": return "Microsoft Outlook"
+        case "runna": return "Runna"
+        case "stryd": return "Stryd"
+        case "ics", "ics_custom": return fallback.isEmpty ? "External calendar" : fallback
+        default: return fallback.isEmpty ? provider.capitalized : fallback
+        }
+    }
+}
+
 struct SettingsView: View {
     @Binding var navigateToSyncDashboard: Bool
     @AppStorage("devicePreference") private var deviceMode: DevicePreference = .appleWatchPhone
@@ -50,6 +122,7 @@ struct SettingsView: View {
     @State private var showingWorkoutDebugSheet = false
     @State private var showingVoiceTranscriptionSettings = false
     @StateObject private var nutritionViewModel = NutritionViewModel()
+    @StateObject private var calendarSyncViewModel = CalendarSyncViewModel()
     @State private var showingNutritionSettings = false
     @State private var showingErrorLogSheet = false
     @State private var showDebugSettings = false
@@ -1423,6 +1496,8 @@ struct SettingsView: View {
                 .tracking(1)
                 .padding(.horizontal, Theme.Spacing.xs)
 
+            connectedAppsCard
+
             VStack(spacing: Theme.Spacing.md) {
                 HStack(spacing: Theme.Spacing.md) {
                     ZStack {
@@ -1493,6 +1568,93 @@ struct SettingsView: View {
             // Telegram
             telegramCard
         }
+    }
+
+    private var connectedAppsCard: some View {
+        let entries = ConnectedAppsResolver.entries(
+            calendars: calendarSyncViewModel.calendars,
+            garminConnected: garminConnectivity.isConnected,
+            garminDeviceName: garminConnectivity.connectedDeviceName,
+            telegramLinked: isTelegramLinked,
+            telegramIdentifier: connectedTelegramId.map(String.init)
+        )
+
+        return VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Connected apps")
+                        .font(Theme.Typography.bodyBold)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    Text("Real linked services only")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                }
+                Spacer()
+                if calendarSyncViewModel.isLoading {
+                    ProgressView().scaleEffect(0.8)
+                }
+            }
+
+            if entries.isEmpty {
+                HStack(spacing: Theme.Spacing.sm) {
+                    Image(systemName: "link.badge.plus")
+                        .foregroundColor(Theme.Colors.textTertiary)
+                    Text("No connected apps yet")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                    Spacer()
+                }
+                .padding(Theme.Spacing.md)
+                .background(Theme.Colors.surfaceElevated)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
+                .accessibilityIdentifier("connected_apps_empty")
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                        connectedAppRow(entry)
+                        if index < entries.count - 1 {
+                            SettingsRowDivider()
+                        }
+                    }
+                }
+                .accessibilityIdentifier("connected_apps_list")
+            }
+        }
+        .padding(Theme.Spacing.md)
+        .background(Theme.Colors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                .stroke(Theme.Colors.borderLight, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
+        .task {
+            await calendarSyncViewModel.fetchCalendars()
+        }
+    }
+
+    private func connectedAppRow(_ entry: ConnectedAppEntry) -> some View {
+        HStack(spacing: Theme.Spacing.md) {
+            ZStack {
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
+                    .fill(Theme.Colors.accentBlue.opacity(0.1))
+                    .frame(width: 36, height: 36)
+                Image(systemName: entry.icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(Theme.Colors.accentBlue)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.name)
+                    .font(Theme.Typography.bodyBold)
+                    .foregroundColor(Theme.Colors.textPrimary)
+                Text(entry.detail)
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textSecondary)
+            }
+            Spacer()
+        }
+        .padding(.vertical, Theme.Spacing.sm)
+        .accessibilityIdentifier("connected_app_\(entry.id)")
     }
 
 
