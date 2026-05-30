@@ -10,6 +10,7 @@ import SwiftUI
 struct LibraryView: View {
     @StateObject private var viewModel: LibraryViewModel
     @State private var didLoad = false
+    @State private var showingAddToLibrary = false
 
     init(viewModel: LibraryViewModel? = nil) {
         _viewModel = StateObject(wrappedValue: viewModel ?? LibraryViewModel())
@@ -51,6 +52,11 @@ struct LibraryView: View {
                 .padding(.top, Theme.Spacing.md)
             }
         }
+        .sheet(isPresented: $showingAddToLibrary) {
+            AddKnowledgeView {
+                Task { await viewModel.load() }
+            }
+        }
         .task {
             guard !didLoad else { return }
             didLoad = true
@@ -82,7 +88,10 @@ struct LibraryView: View {
             if viewModel.hasActiveFilters {
                 filterSection
             }
-            LibraryEmptyStateView(clearFilters: viewModel.hasActiveFilters ? { viewModel.clearFilters() } : nil)
+            LibraryEmptyStateView(
+                clearFilters: viewModel.hasActiveFilters ? { viewModel.clearFilters() } : nil,
+                pasteLink: { showingAddToLibrary = true }
+            )
         }
     }
 
@@ -152,7 +161,7 @@ struct LibraryView: View {
                 .accessibilityHidden(true)
 
             Button {
-                // AMA-2006 AddToLibrary follows; keep the affordance visible but inert.
+                showingAddToLibrary = true
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 18, weight: .semibold))
@@ -161,9 +170,8 @@ struct LibraryView: View {
                     .clipShape(Circle())
             }
             .buttonStyle(.plain)
-            .disabled(true)
-            .accessibilityLabel("Add to Library coming soon")
-            .accessibilityIdentifier("af_library_add_stub")
+            .accessibilityLabel("Add to Library")
+            .accessibilityIdentifier("af_library_add")
         }
     }
 
@@ -373,6 +381,7 @@ private struct FlowPills: View {
 
 private struct LibraryEmptyStateView: View {
     let clearFilters: (() -> Void)?
+    let pasteLink: () -> Void
 
     var body: some View {
         AFCard {
@@ -387,13 +396,10 @@ private struct LibraryEmptyStateView: View {
                     .afMuted()
                     .multilineTextAlignment(.center)
 
-                Button {
-                    // AMA-2006 AddToLibrary follows.
-                } label: {
+                Button(action: pasteLink) {
                     Text(LibraryCopy.pasteLink)
                 }
                 .buttonStyle(AFPrimaryButtonStyle(size: .md))
-                .disabled(true)
                 .accessibilityIdentifier("af_library_empty_paste")
 
                 if let clearFilters {

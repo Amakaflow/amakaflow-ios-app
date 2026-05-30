@@ -163,8 +163,16 @@ class KnowledgeService: ObservableObject {
     }
 
     /// Ingest a new knowledge card from a URL or raw text.
-    /// Provide either `url` or `text`; `sourceType` is inferred automatically.
-    func ingest(url: String? = nil, text: String? = nil) async throws -> KnowledgeCard {
+    /// Provide either `url` or `text`; AddToLibrary passes kind/tags as metadata
+    /// because chat-api's IngestRequest has no first-class `kind` or `tags` write
+    /// field yet. Library list remains honest and only displays what GET returns.
+    func ingest(
+        url: String? = nil,
+        text: String? = nil,
+        kind: Components.Schemas.LibraryKind? = nil,
+        tags: [String] = [],
+        preview: OGPreview? = nil
+    ) async throws -> KnowledgeCard {
         guard url != nil || text != nil else {
             throw KnowledgeServiceError.invalidURL
         }
@@ -177,13 +185,37 @@ class KnowledgeService: ObservableObject {
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = try await authHeaders()
 
-        var body: [String: String] = [:]
+        var body: [String: Any] = [:]
         if let url {
             body["source_url"] = url
-            body["source_type"] = "url"
+            body["source_type"] = Self.sourceType(for: URL(string: url), requestedKind: kind)
         } else if let text {
-            body["text"] = text
+            body["raw_content"] = text
             body["source_type"] = "manual"
+        }
+        if let previewTitle = preview?.title, !previewTitle.isEmpty {
+            body["title"] = previewTitle
+        }
+
+        var metadata: [String: Any] = [:]
+        if let kind {
+            metadata["requested_library_kind"] = kind.rawValue
+        }
+        if !tags.isEmpty {
+            metadata["requested_tags"] = tags
+            // TODO(AMA-2006): backend gap — chat-api IngestRequest does not persist
+            // caller-provided tags on POST /v1/knowledge/cards yet. Keep this intent
+            // explicit; Library reload will only show tags if the backend returns them.
+            body["tags"] = tags
+        }
+        if let siteName = preview?.siteName {
+            metadata["og_site_name"] = siteName
+        }
+        if let image = preview?.imageURL?.absoluteString {
+            metadata["og_image"] = image
+        }
+        if !metadata.isEmpty {
+            body["metadata"] = metadata
         }
 
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -205,6 +237,29 @@ class KnowledgeService: ObservableObject {
             return try JSONDecoder().decode(KnowledgeCard.self, from: data)
         } catch {
             throw KnowledgeServiceError.decodingError(error)
+        }
+    }
+
+    private static func sourceType(
+        for url: URL?,
+        requestedKind: Components.Schemas.LibraryKind?
+    ) -> String {
+        let host = (url?.host ?? "").lowercased()
+        switch requestedKind {
+        case .video:
+            if host.contains("youtube") || host.contains("youtu.be") {
+                return "youtube"
+            }
+            return "social_media"
+        case .workout:
+            return "workout_log"
+        case .article, .none:
+            return "url"
+        case .plan:
+            // TODO(AMA-2006): backend gap — LibraryKind.plan has no persisted
+            // knowledge source_type mapping. Save as URL and preserve the requested
+            // kind in metadata instead of pretending the list will return `plan`.
+            return "url"
         }
     }
 
