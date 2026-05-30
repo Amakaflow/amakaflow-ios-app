@@ -227,13 +227,144 @@ final class EquipmentProfileViewModelTests: XCTestCase {
         XCTAssertEqual(fetched.equipment?.strength?.additionalProperties["dumbbells"], true)
     }
 
-    private func profile(equipment: Components.Schemas.EquipmentInventory?) -> Components.Schemas.CoachingProfile {
+    func testEditProfileLoadMapsBackendFieldsAndEmptyState() async {
+        let editViewModel = EditProfileViewModel(apiService: api)
+        api.getCoachingProfileResult = .success(profile(equipment: nil, goals: [], sessionsPerWeek: 3, sessionDurationMinutes: nil))
+
+        await editViewModel.load()
+
+        XCTAssertEqual(editViewModel.state, .empty)
+        XCTAssertEqual(editViewModel.experience, .intermediate)
+        XCTAssertEqual(editViewModel.sessionsPerWeek, 3)
+        XCTAssertEqual(editViewModel.sessionDurationMinutes, 45)
+        XCTAssertEqual(editViewModel.weeklyHoursLabel, "2.2 hr / week")
+        XCTAssertFalse(editViewModel.canSave)
+    }
+
+    func testEditProfileLoadWithGoalsShowsContentAndFields() async {
+        let editViewModel = EditProfileViewModel(apiService: api)
+        api.getCoachingProfileResult = .success(
+            profile(
+                equipment: nil,
+                experienceLevel: "advanced",
+                goals: [
+                    .init(date: "2026-10-11", event: "Chicago Marathon", _type: "race"),
+                    .init(strengthSubtype: "lose_weight", _type: "strength")
+                ],
+                sessionsPerWeek: 4,
+                sessionDurationMinutes: 60
+            )
+        )
+
+        await editViewModel.load()
+
+        XCTAssertEqual(editViewModel.state, .content)
+        XCTAssertEqual(editViewModel.experience, .advanced)
+        XCTAssertEqual(editViewModel.sessionsPerWeek, 4)
+        XCTAssertEqual(editViewModel.sessionDurationMinutes, 60)
+        XCTAssertEqual(editViewModel.weeklyHoursLabel, "4 hr / week")
+        XCTAssertTrue(editViewModel.isSelected(.race))
+        XCTAssertTrue(editViewModel.isSelected(.strength))
+        XCTAssertEqual(editViewModel.raceEvent, "Chicago Marathon")
+        XCTAssertEqual(editViewModel.raceDate, "2026-10-11")
+        XCTAssertEqual(editViewModel.strengthSubtype, .loseWeight)
+        XCTAssertFalse(editViewModel.canSave)
+    }
+
+    func testEditProfileEditAndSaveRoundTripsWithLoadBeforePut() async throws {
+        let editViewModel = EditProfileViewModel(apiService: api)
+        let initialEquipment = equipment(strength: ["dumbbells": true], dumbbellRangeKg: 24, location: "gym")
+        api.getCoachingProfileResult = .success(
+            profile(equipment: initialEquipment, goals: [.init(_type: "health")], sessionsPerWeek: 3, sessionDurationMinutes: 45)
+        )
+        await editViewModel.load()
+
+        let latestEquipment = equipment(cardio: ["rower": true], location: "outdoor")
+        api.getCoachingProfileResult = .success(
+            profile(equipment: latestEquipment, goals: [.init(_type: "health")], sessionsPerWeek: 3, sessionDurationMinutes: 45)
+        )
+        editViewModel.experience = .beginner
+        editViewModel.setSessionsPerWeek(5)
+        editViewModel.setSessionDurationMinutes(75)
+        editViewModel.toggleGoal(.mobility)
+        XCTAssertTrue(editViewModel.canSave)
+
+        await editViewModel.save()
+
+        XCTAssertTrue(api.upsertCoachingProfileCalled)
+        let upsert = try XCTUnwrap(api.lastCoachingProfileUpsert)
+        XCTAssertEqual(upsert.equipment, latestEquipment, "Save must preserve the freshest profile fields from load-before-PUT")
+        XCTAssertEqual(upsert.experienceLevel, "beginner")
+        XCTAssertEqual(upsert.sessionsPerWeek, 5)
+        XCTAssertEqual(upsert.sessionDurationMinutes, 75)
+        XCTAssertEqual(Set(upsert.goals?.map { $0._type } ?? []), ["health", "mobility"])
+        XCTAssertNil(editViewModel.ctaError)
+        XCTAssertFalse(editViewModel.canSave)
+    }
+
+    func testEditProfileSaveFailureUsesCTAErrorAndInlineRetrySurvivesToastDismissal() async throws {
+        let editViewModel = EditProfileViewModel(apiService: api)
+        api.getCoachingProfileResult = .success(profile(equipment: nil, goals: [.init(_type: "health")]))
+        await editViewModel.load()
+        editViewModel.setSessionsPerWeek(6)
+        api.upsertCoachingProfileResult = .failure(URLError(.timedOut))
+
+        await editViewModel.save()
+
+        let ctaError = try XCTUnwrap(editViewModel.ctaError)
+        if case .network(let code, _) = ctaError {
+            XCTAssertEqual(code, .timedOut)
+        } else {
+            XCTFail("Expected network CTAError, got \(ctaError)")
+        }
+        XCTAssertEqual(editViewModel.lastFailedAction, .save)
+        XCTAssertTrue(editViewModel.canSave)
+        XCTAssertTrue(editViewModel.showsInlineSaveRetry)
+
+        editViewModel.dismissError()
+        XCTAssertNil(editViewModel.ctaError)
+        XCTAssertTrue(editViewModel.showsInlineSaveRetry, "Inline retry must survive toast dismissal")
+
+        api.upsertCoachingProfileResult = nil
+        await editViewModel.retryLastAction()
+        XCTAssertNil(editViewModel.ctaError)
+        XCTAssertFalse(editViewModel.showsInlineSaveRetry)
+    }
+
+    func testEditProfileLoadErrorMapsCTAErrorAndRetry() async {
+        let editViewModel = EditProfileViewModel(apiService: api)
+        api.getCoachingProfileResult = .failure(APIError.serverErrorWithBody(503, "{\"detail\":\"profile unavailable\"}"))
+
+        await editViewModel.load()
+
+        guard case .error(let ctaError) = editViewModel.state else {
+            return XCTFail("Expected load error, got \(editViewModel.state)")
+        }
+        XCTAssertEqual(editViewModel.ctaError, ctaError)
+        XCTAssertEqual(editViewModel.lastFailedAction, .load)
+
+        api.getCoachingProfileResult = .success(profile(equipment: nil, goals: [.init(_type: "mobility")]))
+        await editViewModel.retryLastAction()
+        XCTAssertEqual(editViewModel.state, .content)
+        XCTAssertTrue(editViewModel.isSelected(.mobility))
+        XCTAssertNil(editViewModel.ctaError)
+    }
+
+    private func profile(
+        equipment: Components.Schemas.EquipmentInventory?,
+        experienceLevel: String = "intermediate",
+        goals: [Components.Schemas.GoalEntry]? = nil,
+        sessionsPerWeek: Int = 3,
+        sessionDurationMinutes: Int? = nil
+    ) -> Components.Schemas.CoachingProfile {
         Components.Schemas.CoachingProfile(
             createdAt: "2026-05-28T00:00:00Z",
             equipment: equipment,
-            experienceLevel: "intermediate",
+            experienceLevel: experienceLevel,
+            goals: goals,
             primaryGoal: "general_fitness",
-            sessionsPerWeek: 3,
+            sessionDurationMinutes: sessionDurationMinutes,
+            sessionsPerWeek: sessionsPerWeek,
             updatedAt: "2026-05-28T00:00:00Z",
             userId: "user-1"
         )
