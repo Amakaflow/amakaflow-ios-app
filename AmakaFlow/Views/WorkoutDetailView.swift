@@ -7,6 +7,67 @@
 
 import SwiftUI
 
+struct WorkoutSourceBadge: View {
+    let source: String?
+
+    var body: some View {
+        if let provenance = WorkoutSourceProvenance.badge(for: source) {
+            Text(provenance.label)
+                .font(Theme.Typography.footnote)
+                .foregroundColor(Theme.Colors.textSecondary)
+                .padding(.horizontal, Theme.Spacing.sm)
+                .padding(.vertical, 3)
+                .background(Theme.Colors.surfaceElevated)
+                .overlay(
+                    Capsule()
+                        .stroke(Theme.Colors.borderLight, lineWidth: 1)
+                )
+                .clipShape(Capsule())
+                .accessibilityLabel("Source: \(provenance.label)")
+        }
+    }
+}
+
+struct WorkoutSourceDetailBanner: View {
+    let workout: Workout
+
+    var body: some View {
+        if let label = WorkoutSourceProvenance.externalLabel(for: workout.source.rawValue) {
+            HStack(spacing: Theme.Spacing.md) {
+                Image(systemName: "arrow.down.circle.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(Theme.Colors.accentBlue)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("From \(label)")
+                        .font(Theme.Typography.bodyBold)
+                        .foregroundColor(Theme.Colors.textPrimary)
+
+                    if let url = WorkoutSourceProvenance.externalURL(for: workout) {
+                        Link("Open in \(label)", destination: url)
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(Theme.Colors.accentBlue)
+                    } else {
+                        Text("Imported source")
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(Theme.Colors.textSecondary)
+                    }
+                }
+
+                Spacer()
+            }
+            .padding(Theme.Spacing.md)
+            .background(Theme.Colors.surface)
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                    .stroke(Theme.Colors.borderLight, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
+            .accessibilityIdentifier("workout_source_detail_banner")
+        }
+    }
+}
+
 struct WorkoutDetailView: View {
     @EnvironmentObject var viewModel: WorkoutsViewModel
     @Environment(\.dismiss) var dismiss
@@ -31,6 +92,9 @@ struct WorkoutDetailView: View {
                     WorkoutHeaderCard(workout: workout)
                         .padding(.horizontal, Theme.Spacing.lg)
                         .padding(.top, Theme.Spacing.md)
+
+                    WorkoutSourceDetailBanner(workout: workout)
+                        .padding(.horizontal, Theme.Spacing.lg)
                     
                     // Fueling Status (AMA-1293)
                     FuelingStatusCard(viewModel: fuelingViewModel)

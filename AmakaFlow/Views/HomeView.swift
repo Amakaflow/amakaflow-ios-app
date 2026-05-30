@@ -916,6 +916,8 @@ struct HomeView: View {
                                     .font(Theme.Typography.title2)
                                     .foregroundColor(Theme.Colors.textPrimary)
 
+                                WorkoutSourceBadge(source: primaryWorkout?.source.rawValue)
+
                                 Text(primaryWorkoutSubtitle)
                                     .font(Theme.Typography.caption)
                                     .foregroundColor(Theme.Colors.textSecondary)
@@ -1393,6 +1395,8 @@ private struct TodayWorkoutCard: View {
                             .padding(.vertical, 2)
                             .background(Theme.Colors.surfaceElevated)
                             .cornerRadius(Theme.CornerRadius.sm)
+
+                        WorkoutSourceBadge(source: workout.source.rawValue)
                     }
                 }
 

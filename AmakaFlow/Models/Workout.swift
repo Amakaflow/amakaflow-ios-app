@@ -120,7 +120,23 @@ enum WorkoutInterval: Codable, Hashable {
 
 // MARK: - Workout Source
 enum WorkoutSource: String, Codable {
+    case manual
+    case gymManualSync = "gym_manual_sync"
+    case smartPlanner = "smart_planner"
+    case suggestionAccepted = "suggestion_accepted"
+    case trainingProgram = "training_program"
+    case template
+    case connectedCalendar = "connected_calendar"
     case instagram
+    case tiktok
+    case garmin
+    case runna
+    case stryd
+    case gymClass = "gym_class"
+
+    // Legacy / local-only sources that are still present in fixtures and older
+    // saved workouts. They intentionally map to no AMA-1999 provenance badge
+    // unless WorkoutSourceProvenance opts them in.
     case youtube
     case image
     case ai
@@ -133,6 +149,81 @@ enum WorkoutSource: String, Codable {
         let container = try decoder.singleValueContainer()
         let rawValue = try container.decode(String.self)
         self = WorkoutSource(rawValue: rawValue) ?? .other
+    }
+}
+
+struct WorkoutSourceProvenance: Equatable {
+    let rawValue: String
+    let label: String
+
+    static func badge(for source: String?) -> WorkoutSourceProvenance? {
+        guard let normalized = normalize(source) else { return nil }
+        switch normalized {
+        case "smart_planner", "amaka":
+            return WorkoutSourceProvenance(rawValue: normalized, label: "AI Coach")
+        case "suggestion_accepted":
+            return WorkoutSourceProvenance(rawValue: normalized, label: "AI Suggestion")
+        case "training_program", "template":
+            return WorkoutSourceProvenance(rawValue: normalized, label: "Program")
+        case "connected_calendar":
+            return WorkoutSourceProvenance(rawValue: normalized, label: "Calendar")
+        case "instagram":
+            return WorkoutSourceProvenance(rawValue: normalized, label: "Instagram")
+        case "tiktok":
+            return WorkoutSourceProvenance(rawValue: normalized, label: "TikTok")
+        case "garmin":
+            return WorkoutSourceProvenance(rawValue: normalized, label: "Garmin")
+        case "runna":
+            return WorkoutSourceProvenance(rawValue: normalized, label: "Runna")
+        case "stryd":
+            return WorkoutSourceProvenance(rawValue: normalized, label: "Stryd")
+        case "gym_class":
+            return WorkoutSourceProvenance(rawValue: normalized, label: "Gym Class")
+        default:
+            return nil
+        }
+    }
+
+    static func isExternal(_ source: String?) -> Bool {
+        guard let normalized = normalize(source) else { return false }
+        return ["instagram", "tiktok", "garmin", "runna", "stryd"].contains(normalized)
+    }
+
+    static func externalLabel(for source: String?) -> String? {
+        guard let normalized = normalize(source) else { return nil }
+        switch normalized {
+        case "instagram": return "Instagram"
+        case "tiktok": return "TikTok"
+        case "garmin": return "Garmin"
+        case "runna": return "Runna"
+        case "stryd": return "Stryd"
+        default: return nil
+        }
+    }
+
+    static func externalURL(for workout: Workout) -> URL? {
+        guard isExternal(workout.source.rawValue),
+              let sourceUrl = workout.sourceUrl,
+              let url = URL(string: sourceUrl),
+              let scheme = url.scheme?.lowercased(),
+              ["http", "https"].contains(scheme)
+        else { return nil }
+        return url
+    }
+
+    static func externalURLString(in payload: [String: WorkoutJSONValue]?) -> String? {
+        guard let payload else { return nil }
+        for key in ["sourceUrl", "source_url", "externalUrl", "external_url", "externalEventUrl", "external_event_url", "url", "link"] {
+            if let value = payload[key]?.stringValue, URL(string: value)?.scheme != nil {
+                return value
+            }
+        }
+        return nil
+    }
+
+    private static func normalize(_ source: String?) -> String? {
+        let trimmed = source?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return trimmed?.isEmpty == false ? trimmed : nil
     }
 }
 
@@ -433,6 +524,188 @@ struct ScheduledWorkout: Identifiable, Codable, Hashable {
         self.recurrenceDays = recurrenceDays
         self.recurrenceWeeks = recurrenceWeeks
         self.syncedToApple = syncedToApple
+    }
+
+    init(plannedWorkout: PlannedWorkoutDTO) {
+        self.workout = Workout(plannedWorkout: plannedWorkout)
+        self.scheduledDate = Self.parsePlannedDate(plannedWorkout.date)
+        self.scheduledTime = plannedWorkout.startTime.map { String($0.prefix(5)) }
+        self.isRecurring = false
+        self.recurrenceDays = nil
+        self.recurrenceWeeks = nil
+        self.syncedToApple = false
+    }
+
+    private static func parsePlannedDate(_ value: String?) -> Date? {
+        guard let value, !value.isEmpty else { return nil }
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = Calendar.current.timeZone
+        formatter.dateFormat = "yyyy-MM-dd"
+        if let day = formatter.date(from: value) { return day }
+        return ISO8601DateFormatter().date(from: value)
+    }
+}
+
+struct PlannedWorkoutListDTO: Decodable {
+    let workouts: [PlannedWorkoutDTO]
+}
+
+struct PlannedWorkoutDTO: Decodable, Equatable {
+    let id: String
+    let userId: String?
+    let title: String?
+    let date: String?
+    let startTime: String?
+    let endTime: String?
+    let status: String?
+    let source: String?
+    let jsonPayload: [String: WorkoutJSONValue]?
+    let clientGeneratedId: String?
+    let serverVersion: Int?
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case userId
+        case title
+        case date
+        case startTime
+        case endTime
+        case status
+        case source
+        case jsonPayload
+        case clientGeneratedId
+        case serverVersion
+    }
+}
+
+private extension Workout {
+    init(plannedWorkout: PlannedWorkoutDTO) {
+        let payloadWorkout = plannedWorkout.decodedPayloadWorkout
+        let payload = plannedWorkout.jsonPayload
+        let rawSource = plannedWorkout.source
+        let source = rawSource.flatMap(WorkoutSource.init(rawValue:)) ?? payloadWorkout?.source ?? .other
+        let sourceUrl = WorkoutSourceProvenance.externalURLString(in: payload) ?? payloadWorkout?.sourceUrl
+        let sport = payloadWorkout?.sport ?? Self.sport(from: payload?.firstString(for: ["sport", "type", "workoutType", "workout_type"]))
+        let decodedDuration = payloadWorkout?.duration
+        let duration = (decodedDuration ?? 0) > 0 ? decodedDuration! : Self.durationSeconds(from: payload)
+
+        self.init(
+            id: plannedWorkout.id,
+            name: payloadWorkout?.name
+                ?? payload?.firstString(for: ["name", "title"])
+                ?? plannedWorkout.title
+                ?? "Planned workout",
+            sport: sport,
+            duration: duration,
+            blocks: payloadWorkout?.blocks ?? [],
+            description: payloadWorkout?.description ?? payload?.firstString(for: ["description", "summary"]),
+            source: source,
+            sourceUrl: sourceUrl
+        )
+    }
+
+    private static func sport(from rawValue: String?) -> WorkoutSport {
+        guard let rawValue,
+              let data = try? JSONEncoder().encode(rawValue),
+              let sport = try? JSONDecoder().decode(WorkoutSport.self, from: data)
+        else { return .other }
+        return sport
+    }
+
+    private static func durationSeconds(from payload: [String: WorkoutJSONValue]?) -> Int {
+        if let seconds = payload?.firstInt(for: ["duration", "durationSeconds", "duration_seconds"]) {
+            return seconds
+        }
+        if let minutes = payload?.firstInt(for: ["estimatedDurationMinutes", "estimated_duration_minutes", "durationMin", "duration_min"]) {
+            return minutes * 60
+        }
+        return 0
+    }
+}
+
+private extension PlannedWorkoutDTO {
+    var decodedPayloadWorkout: Workout? {
+        guard let jsonPayload,
+              let data = try? JSONEncoder().encode(jsonPayload)
+        else { return nil }
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try? decoder.decode(Workout.self, from: data)
+    }
+}
+
+enum WorkoutJSONValue: Codable, Equatable {
+    case string(String)
+    case number(Double)
+    case bool(Bool)
+    case object([String: WorkoutJSONValue])
+    case array([WorkoutJSONValue])
+    case null
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() {
+            self = .null
+        } else if let value = try? container.decode(Bool.self) {
+            self = .bool(value)
+        } else if let value = try? container.decode(Double.self) {
+            self = .number(value)
+        } else if let value = try? container.decode(String.self) {
+            self = .string(value)
+        } else if let value = try? container.decode([String: WorkoutJSONValue].self) {
+            self = .object(value)
+        } else if let value = try? container.decode([WorkoutJSONValue].self) {
+            self = .array(value)
+        } else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported workout JSON value")
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .string(let value): try container.encode(value)
+        case .number(let value): try container.encode(value)
+        case .bool(let value): try container.encode(value)
+        case .object(let value): try container.encode(value)
+        case .array(let value): try container.encode(value)
+        case .null: try container.encodeNil()
+        }
+    }
+
+    var stringValue: String? {
+        if case .string(let value) = self { return value }
+        return nil
+    }
+
+    var intValue: Int? {
+        switch self {
+        case .number(let value): return Int(value)
+        case .string(let value): return Int(value)
+        default: return nil
+        }
+    }
+}
+
+private extension [String: WorkoutJSONValue] {
+    func firstString(for keys: [String]) -> String? {
+        for key in keys {
+            if let value = self[key]?.stringValue, !value.isEmpty {
+                return value
+            }
+        }
+        return nil
+    }
+
+    func firstInt(for keys: [String]) -> Int? {
+        for key in keys {
+            if let value = self[key]?.intValue {
+                return value
+            }
+        }
+        return nil
     }
 }
 

@@ -314,6 +314,164 @@ final class WorkoutModelTests: XCTestCase {
         }
     }
 
+    // MARK: - AMA-1999 Source Provenance Tests
+
+    func testWorkoutSourceBadgeMappingIsExhaustiveForPlannedWorkoutSources() {
+        let cases: [(String?, String?)] = [
+            ("manual", nil),
+            ("gym_manual_sync", nil),
+            ("smart_planner", "AI Coach"),
+            ("amaka", "AI Coach"),
+            ("suggestion_accepted", "AI Suggestion"),
+            ("training_program", "Program"),
+            ("template", "Program"),
+            ("connected_calendar", "Calendar"),
+            ("instagram", "Instagram"),
+            ("tiktok", "TikTok"),
+            ("garmin", "Garmin"),
+            ("runna", "Runna"),
+            ("stryd", "Stryd"),
+            ("gym_class", "Gym Class"),
+            (nil, nil),
+            ("", nil),
+            ("something_new", nil)
+        ]
+
+        for (rawSource, expectedLabel) in cases {
+            XCTAssertEqual(
+                WorkoutSourceProvenance.badge(for: rawSource)?.label,
+                expectedLabel,
+                "source=\(rawSource ?? "nil")"
+            )
+        }
+    }
+
+    func testWorkoutSourceDetailBannerLogicOnlyLinksRealExternalURLs() {
+        let instagram = Workout(
+            id: "ig-1",
+            name: "IG Strength",
+            sport: .strength,
+            duration: 1800,
+            source: .instagram,
+            sourceUrl: "https://instagram.com/reel/abc"
+        )
+        XCTAssertEqual(WorkoutSourceProvenance.externalLabel(for: instagram.source.rawValue), "Instagram")
+        XCTAssertEqual(WorkoutSourceProvenance.externalURL(for: instagram)?.host, "instagram.com")
+
+        let garminWithoutURL = Workout(
+            id: "garmin-1",
+            name: "Garmin Plan",
+            sport: .running,
+            duration: 2400,
+            source: .garmin,
+            sourceUrl: nil
+        )
+        XCTAssertEqual(WorkoutSourceProvenance.externalLabel(for: garminWithoutURL.source.rawValue), "Garmin")
+        XCTAssertNil(WorkoutSourceProvenance.externalURL(for: garminWithoutURL))
+
+        let program = Workout(
+            id: "program-1",
+            name: "Program Day",
+            sport: .running,
+            duration: 2400,
+            source: .trainingProgram,
+            sourceUrl: "https://example.com/program"
+        )
+        XCTAssertNil(WorkoutSourceProvenance.externalLabel(for: program.source.rawValue))
+        XCTAssertNil(WorkoutSourceProvenance.externalURL(for: program))
+    }
+
+    func testPlannedWorkoutDTOMapsRealSourceAndJsonPayloadURLIntoScheduledWorkout() throws {
+        let json = """
+        {
+          "workouts": [
+            {
+              "id": "planned-1",
+              "userId": "user-1",
+              "title": "Tempo from Runna",
+              "date": "2026-05-30",
+              "startTime": "07:30:00",
+              "status": "planned",
+              "source": "runna",
+              "jsonPayload": {
+                "id": "source-template-id",
+                "name": "Tempo intervals",
+                "sport": "run",
+                "estimatedDurationMinutes": 45,
+                "sourceUrl": "https://runna.com/workouts/tempo-1"
+              }
+            }
+          ]
+        }
+        """
+
+        let response = try JSONDecoder().decode(PlannedWorkoutListDTO.self, from: Data(json.utf8))
+        let scheduled = try XCTUnwrap(response.workouts.first.map(ScheduledWorkout.init(plannedWorkout:)))
+
+        XCTAssertEqual(scheduled.id, "planned-1")
+        XCTAssertEqual(scheduled.workout.id, "planned-1")
+        XCTAssertEqual(scheduled.scheduledTime, "07:30")
+        XCTAssertEqual(scheduled.workout.name, "Tempo intervals")
+        XCTAssertEqual(scheduled.workout.sport, .running)
+        XCTAssertEqual(scheduled.workout.duration, 2700)
+        XCTAssertEqual(scheduled.workout.source, .runna)
+        XCTAssertEqual(scheduled.workout.sourceUrl, "https://runna.com/workouts/tempo-1")
+        XCTAssertEqual(WorkoutSourceProvenance.badge(for: scheduled.workout.source.rawValue)?.label, "Runna")
+    }
+
+    func testConnectedAppsResolverRendersRealEntriesAndHonestEmpty() {
+        XCTAssertTrue(
+            ConnectedAppsResolver.entries(
+                calendars: [],
+                garminConnected: false,
+                garminDeviceName: nil,
+                telegramLinked: false,
+                telegramIdentifier: nil
+            ).isEmpty
+        )
+
+        XCTAssertTrue(
+            ConnectedAppsResolver.entries(
+                calendars: [
+                    ConnectedCalendar(
+                        id: "cal-error",
+                        name: "Expired calendar",
+                        provider: "runna",
+                        status: "error",
+                        email: nil,
+                        lastSyncAt: nil
+                    )
+                ],
+                garminConnected: false,
+                garminDeviceName: nil,
+                telegramLinked: false,
+                telegramIdentifier: nil
+            ).isEmpty
+        )
+
+        let entries = ConnectedAppsResolver.entries(
+            calendars: [
+                ConnectedCalendar(
+                    id: "cal-1",
+                    name: "Runna plan",
+                    provider: "runna",
+                    status: "connected",
+                    email: nil,
+                    lastSyncAt: "2026-05-30T12:00:00Z"
+                )
+            ],
+            garminConnected: true,
+            garminDeviceName: "Forerunner 955",
+            telegramLinked: true,
+            telegramIdentifier: "12345"
+        )
+
+        XCTAssertEqual(entries.map(\.name), ["Runna", "Garmin", "Telegram"])
+        XCTAssertEqual(entries.first?.detail, "Connected")
+        XCTAssertEqual(entries[1].detail, "Forerunner 955")
+        XCTAssertEqual(entries[2].detail, "Connected to 12345")
+    }
+
     // MARK: - ScheduledWorkout Tests
 
     func testScheduledWorkoutEncodeDecode() throws {
