@@ -297,6 +297,14 @@ protocol APIServiceProviding: TelegramLinkAPIProviding {
     /// Resend a workout to the watch through the mobile BFF.
     func resendWatchDelivery(workoutId: String) async throws -> Components.Schemas.WatchResendResult
 
+    // MARK: - Library (AMA-2004)
+
+    /// Fetch saved Library items from the mobile BFF.
+    func listLibraryItems(
+        kind: Components.Schemas.LibraryKind?,
+        tag: String?
+    ) async throws -> Components.Schemas.LibraryItemList
+
     // MARK: - Messaging Channels (AMA-2027)
 
     /// Fetch messaging channels and coaching-delivery prefs from the mobile BFF.
