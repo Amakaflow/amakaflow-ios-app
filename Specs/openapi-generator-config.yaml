@@ -33,6 +33,7 @@ filter:
     - /v1/devices/watch-delivery/{workout_id}  # AMA-2028 Wedge F — watch delivery status
     - /v1/devices/watch-delivery/{workout_id}/resend  # AMA-2028 Wedge F — watch delivery resend
     - /v1/library/items  # AMA-2004 Library
+    - /v1/library/items/{item_id}  # AMA-2005 LibraryDetail
 
 accessModifier: public
 

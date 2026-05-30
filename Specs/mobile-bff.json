@@ -948,6 +948,72 @@
         "title": "LibraryItem",
         "type": "object"
       },
+      "LibraryItemDetail": {
+        "description": "Response for GET /v1/library/items/{id} \u2014 LibraryItem + the body we have.\n\nNo `raw_content`/structured workout/plan/notes from knowledge_cards yet, so the\nbody is `summary` + `keyTakeaways`; structured bodies + notes are deferred\n(AMA-2046 / v1.1). No fabricated content.",
+        "properties": {
+          "bookmarked": {
+            "default": false,
+            "title": "Bookmarked",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "keyTakeaways": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keytakeaways",
+            "type": "array"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LibraryKind"
+          },
+          "microSummary": {
+            "title": "Microsummary",
+            "type": "string"
+          },
+          "savedAt": {
+            "title": "Savedat",
+            "type": "string"
+          },
+          "sourceDomain": {
+            "title": "Sourcedomain",
+            "type": "string"
+          },
+          "sourceUrl": {
+            "title": "Sourceurl",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "thumbnailUrl": {
+            "title": "Thumbnailurl",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "kind"
+        ],
+        "title": "LibraryItemDetail",
+        "type": "object"
+      },
       "LibraryItemList": {
         "description": "Response for GET /v1/library/items.",
         "properties": {
@@ -3272,6 +3338,56 @@
           }
         },
         "summary": "V1 Library Items"
+      }
+    },
+    "/v1/library/items/{item_id}": {
+      "get": {
+        "description": "iOS LibraryDetail \u2192 chat-api GET /knowledge/cards/{id} (AMA-2005).\n\nLibraryItem fields + the body we have (summary + key_takeaways). Structured\nworkout/plan bodies + notes are deferred (AMA-2046 / v1.1).",
+        "operationId": "getLibraryItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryItemDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Library Item Detail"
       }
     },
     "/v1/messaging/channels": {

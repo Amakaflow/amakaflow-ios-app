@@ -16,23 +16,28 @@ struct LibraryView: View {
     }
 
     var body: some View {
-        ZStack {
-            Theme.Colors.background.ignoresSafeArea()
+        NavigationStack {
+            ZStack {
+                Theme.Colors.background.ignoresSafeArea()
 
-            Group {
-                switch viewModel.state {
-                case .loading:
-                    loadingView
-                case .content:
-                    contentView
-                case .empty:
-                    emptyView
-                case .error:
-                    loadErrorView
+                Group {
+                    switch viewModel.state {
+                    case .loading:
+                        loadingView
+                    case .content:
+                        contentView
+                    case .empty:
+                        emptyView
+                    case .error:
+                        loadErrorView
+                    }
                 }
             }
+            .navigationBarHidden(true)
+            .navigationDestination(for: String.self) { itemID in
+                LibraryDetailView(itemID: itemID)
+            }
         }
-        .navigationBarHidden(true)
         .overlay(alignment: .top) {
             if let error = viewModel.ctaError {
                 ErrorToast(
@@ -251,8 +256,11 @@ struct LibraryView: View {
 
             LazyVStack(spacing: Theme.Spacing.md) {
                 ForEach(viewModel.items, id: \.id) { item in
-                    LibraryItemCard(item: item)
-                        .accessibilityIdentifier("af_library_item_\(item.id)")
+                    NavigationLink(value: item.id) {
+                        LibraryItemCard(item: item)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("af_library_item_\(item.id)")
                 }
             }
         }

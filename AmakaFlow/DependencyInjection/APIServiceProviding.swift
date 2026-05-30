@@ -305,6 +305,9 @@ protocol APIServiceProviding: TelegramLinkAPIProviding {
         tag: String?
     ) async throws -> Components.Schemas.LibraryItemList
 
+    /// Fetch a saved Library item detail from the mobile BFF.
+    func getLibraryItem(id: String) async throws -> Components.Schemas.LibraryItemDetail
+
     // MARK: - Messaging Channels (AMA-2027)
 
     /// Fetch messaging channels and coaching-delivery prefs from the mobile BFF.

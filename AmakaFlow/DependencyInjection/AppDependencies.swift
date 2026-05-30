@@ -699,6 +699,7 @@ class MockAPIService: APIServiceProviding {
                     bookmarked: false,
                     id: "mock-strength-basics",
                     kind: .workout,
+                    savedAt: "2026-05-29T12:00:00Z",
                     sourceDomain: "coach.amakaflow.com",
                     sourceUrl: "https://coach.amakaflow.com/library/strength-basics",
                     tags: ["strength", "beginner"],
@@ -709,6 +710,7 @@ class MockAPIService: APIServiceProviding {
                     bookmarked: false,
                     id: "mock-mobility-video",
                     kind: .video,
+                    savedAt: "2026-05-29T12:05:00Z",
                     sourceDomain: "youtube.com",
                     sourceUrl: "https://youtube.com/watch?v=mock",
                     tags: ["mobility"],
@@ -719,6 +721,7 @@ class MockAPIService: APIServiceProviding {
                     bookmarked: false,
                     id: "mock-zone-two",
                     kind: .article,
+                    savedAt: "2026-05-29T12:10:00Z",
                     sourceDomain: "trainingpeaks.com",
                     sourceUrl: "https://trainingpeaks.com/mock-zone-two",
                     tags: ["endurance", "base"],
@@ -729,6 +732,7 @@ class MockAPIService: APIServiceProviding {
                     bookmarked: false,
                     id: "mock-hyrox-plan",
                     kind: .plan,
+                    savedAt: "2026-05-29T12:15:00Z",
                     sourceDomain: "amakaflow.com",
                     sourceUrl: "https://amakaflow.com/plans/hyrox-mock",
                     tags: ["hyrox", "strength"],
@@ -737,6 +741,22 @@ class MockAPIService: APIServiceProviding {
                 )
             ],
             total: 4
+        )
+    )
+    var getLibraryItemResult: Result<Components.Schemas.LibraryItemDetail, Error> = .success(
+        Components.Schemas.LibraryItemDetail(
+            bookmarked: false,
+            id: "mock-strength-basics",
+            keyTakeaways: ["Use RPE when equipment changes.", "Keep strength blocks compact."],
+            kind: .workout,
+            microSummary: "Travel-friendly strength",
+            savedAt: "2026-05-29T12:00:00Z",
+            sourceDomain: "coach.amakaflow.com",
+            sourceUrl: "https://coach.amakaflow.com/library/strength-basics",
+            summary: "A compact strength template for weeks when travel or equipment limits your normal gym routine.",
+            tags: ["strength", "beginner"],
+            thumbnailUrl: nil,
+            title: "Strength basics for travel weeks"
         )
     )
     var listMessagingChannelsResult: Result<Components.Schemas.MessagingChannelList, Error> = .success(
@@ -768,6 +788,7 @@ class MockAPIService: APIServiceProviding {
     var setChannelPrefsDelaysByChannel: [String: UInt64] = [:]
     var listDevicesCalled = false
     var listLibraryItemsCalled = false
+    var getLibraryItemCalled = false
     var pairDeviceCalled = false
     var revokeDeviceCalled = false
     var setDeviceRolesCalled = false
@@ -786,6 +807,7 @@ class MockAPIService: APIServiceProviding {
     var lastResendWatchDeliveryWorkoutId: String?
     var lastListLibraryItemsKind: Components.Schemas.LibraryKind?
     var lastListLibraryItemsTag: String?
+    var lastGetLibraryItemId: String?
     var lastSetChannelPrefsId: String?
     var lastSetChannelPrefs: Components.Schemas.ChannelPrefsRequest?
 
@@ -850,6 +872,12 @@ class MockAPIService: APIServiceProviding {
         lastListLibraryItemsKind = kind
         lastListLibraryItemsTag = tag
         return try listLibraryItemsResult.get()
+    }
+
+    func getLibraryItem(id: String) async throws -> Components.Schemas.LibraryItemDetail {
+        getLibraryItemCalled = true
+        lastGetLibraryItemId = id
+        return try getLibraryItemResult.get()
     }
 
     func listMessagingChannels() async throws -> Components.Schemas.MessagingChannelList {

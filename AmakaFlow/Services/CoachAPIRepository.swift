@@ -22,6 +22,7 @@
 //    GET  /v1/devices/watch-delivery/{workout_id}          (watchDeliveryStatus)
 //    POST /v1/devices/watch-delivery/{workout_id}/resend   (resendWatchDelivery)
 //    GET  /v1/library/items                    (listLibraryItems)
+//    GET  /v1/library/items/{item_id}          (getLibraryItem)
 //    GET  /v1/messaging/channels                (listMessagingChannels)
 //    PUT  /v1/messaging/channels/{id}/prefs     (setChannelPrefs)
 //    GET  /v1/coaching/profile                  (getCoachingProfile)
@@ -175,6 +176,21 @@ extension APIService {
         return try await self.request(
             request,
             decode: Components.Schemas.LibraryItemList.self,
+            decoder: APIService.makeGeneratedDecoder(),
+            successStatusCodes: 200...200
+        )
+    }
+
+    func getLibraryItem(id: String) async throws -> Components.Schemas.LibraryItemDetail {
+        let encodedID = try Self.pathSegment(id)
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/library/items/\(encodedID)",
+            method: "GET"
+        )
+        return try await self.request(
+            request,
+            decode: Components.Schemas.LibraryItemDetail.self,
             decoder: APIService.makeGeneratedDecoder(),
             successStatusCodes: 200...200
         )
