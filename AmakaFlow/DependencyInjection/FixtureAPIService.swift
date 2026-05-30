@@ -36,6 +36,8 @@ class FixtureAPIService: APIServiceProviding {
     var resendWatchDeliveryResult: Result<Components.Schemas.WatchResendResult, Error>?
     var listMessagingChannelsResult: Result<Components.Schemas.MessagingChannelList, Error>?
     var setChannelPrefsResult: Result<Components.Schemas.ChannelPrefsResult, Error>?
+    var listLibraryItemsResult: Result<Components.Schemas.LibraryItemList, Error>?
+    var libraryItemsEmpty = false
     private var fixtureMessagingDeliveryLive = false
     private var fixtureMessagingChannels: [Components.Schemas.MessagingChannel] = [
         Components.Schemas.MessagingChannel(
@@ -61,6 +63,48 @@ class FixtureAPIService: APIServiceProviding {
             id: "slack",
             name: "Slack",
             prefs: Components.Schemas.ChannelPrefs(briefing: false, checkin: false, swap: false)
+        )
+    ]
+    private var fixtureLibraryItems: [Components.Schemas.LibraryItem] = [
+        Components.Schemas.LibraryItem(
+            bookmarked: false,
+            id: "fixture-strength-basics",
+            kind: .workout,
+            sourceDomain: "coach.amakaflow.com",
+            sourceUrl: "https://coach.amakaflow.com/library/strength-basics",
+            tags: ["strength", "beginner"],
+            thumbnailUrl: nil,
+            title: "Strength basics for travel weeks"
+        ),
+        Components.Schemas.LibraryItem(
+            bookmarked: false,
+            id: "fixture-ankle-mobility-video",
+            kind: .video,
+            sourceDomain: "youtube.com",
+            sourceUrl: "https://youtube.com/watch?v=fixture",
+            tags: ["mobility", "ankles"],
+            thumbnailUrl: nil,
+            title: "10-minute ankle mobility reset"
+        ),
+        Components.Schemas.LibraryItem(
+            bookmarked: false,
+            id: "fixture-zone-two-article",
+            kind: .article,
+            sourceDomain: "trainingpeaks.com",
+            sourceUrl: "https://trainingpeaks.com/fixture-zone-two",
+            tags: ["endurance", "base"],
+            thumbnailUrl: nil,
+            title: "Why zone two still matters"
+        ),
+        Components.Schemas.LibraryItem(
+            bookmarked: false,
+            id: "fixture-hyrox-plan",
+            kind: .plan,
+            sourceDomain: "amakaflow.com",
+            sourceUrl: "https://amakaflow.com/plans/hyrox-fixture",
+            tags: ["hyrox", "strength"],
+            thumbnailUrl: nil,
+            title: "Four-week HYROX tune-up"
         )
     ]
     private var fixtureDevices: [Components.Schemas.PairedDevice] = [
@@ -359,6 +403,29 @@ class FixtureAPIService: APIServiceProviding {
         )
         print("[FixtureAPIService] Stub: resendWatchDelivery(\(workoutId)) -> success")
         return Components.Schemas.WatchResendResult(deliveryIds: ["fixture-delivery-\(workoutId)"], success: true)
+    }
+
+    // MARK: - Library (AMA-2004)
+
+    func listLibraryItems(
+        kind: Components.Schemas.LibraryKind?,
+        tag: String?
+    ) async throws -> Components.Schemas.LibraryItemList {
+        if let listLibraryItemsResult {
+            return try listLibraryItemsResult.get()
+        }
+        var items = libraryItemsEmpty ? [] : fixtureLibraryItems
+        if let kind {
+            items = items.filter { $0.kind == kind }
+        }
+        if let tag = tag?.trimmingCharacters(in: .whitespacesAndNewlines), !tag.isEmpty {
+            items = items.filter { item in
+                (item.tags ?? []).contains { candidate in
+                    candidate.compare(tag, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+                }
+            }
+        }
+        return Components.Schemas.LibraryItemList(items: items, total: items.count)
     }
 
     // MARK: - Messaging Channels (AMA-2027)

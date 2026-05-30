@@ -897,6 +897,87 @@
         "title": "HealthMetrics",
         "type": "object"
       },
+      "LibraryItem": {
+        "description": "One saved-content card for the Library, projected from a knowledge_card.\n\n`thumbnailUrl`/`bookmarked` are not captured yet (no OG-image/bookmark on\nknowledge_cards) \u2014 null/false until that ingest+schema work lands (see the\nLibrary follow-up). No fabricated values.",
+        "properties": {
+          "bookmarked": {
+            "default": false,
+            "title": "Bookmarked",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LibraryKind"
+          },
+          "savedAt": {
+            "title": "Savedat",
+            "type": "string"
+          },
+          "sourceDomain": {
+            "title": "Sourcedomain",
+            "type": "string"
+          },
+          "sourceUrl": {
+            "title": "Sourceurl",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "thumbnailUrl": {
+            "title": "Thumbnailurl",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "kind"
+        ],
+        "title": "LibraryItem",
+        "type": "object"
+      },
+      "LibraryItemList": {
+        "description": "Response for GET /v1/library/items.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LibraryItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "LibraryItemList",
+        "type": "object"
+      },
+      "LibraryKind": {
+        "description": "Content kind for the Library filter chips. Derived from the card's\nsource_type (no stored `kind` column needed).",
+        "enum": [
+          "workout",
+          "video",
+          "article",
+          "plan"
+        ],
+        "title": "LibraryKind",
+        "type": "string"
+      },
       "MessagingChannel": {
         "description": "One messaging provider for the MessagingScreen.",
         "properties": {
@@ -3132,6 +3213,65 @@
           }
         },
         "summary": "V1 Knowledge Cards Delete"
+      }
+    },
+    "/v1/library/items": {
+      "get": {
+        "description": "iOS Library \u2192 chat-api GET /knowledge/cards, projected to typed LibraryItems\n(kind derived from source_type, domain from source_url). `kind` filters\nBFF-side (derived); `tag` passes through upstream (AMA-2004).",
+        "operationId": "listLibraryItems",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/LibraryKind",
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tag",
+            "required": false,
+            "schema": {
+              "title": "Tag",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryItemList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Library Items"
       }
     },
     "/v1/messaging/channels": {

@@ -21,6 +21,7 @@
 //    PUT  /v1/devices/{device_id}/roles         (setDeviceRoles)
 //    GET  /v1/devices/watch-delivery/{workout_id}          (watchDeliveryStatus)
 //    POST /v1/devices/watch-delivery/{workout_id}/resend   (resendWatchDelivery)
+//    GET  /v1/library/items                    (listLibraryItems)
 //    GET  /v1/messaging/channels                (listMessagingChannels)
 //    PUT  /v1/messaging/channels/{id}/prefs     (setChannelPrefs)
 //    GET  /v1/coaching/profile                  (getCoachingProfile)
@@ -149,6 +150,34 @@ extension APIService {
 
     static func deviceIDPathSegment(_ id: String) throws -> String {
         try pathSegment(id)
+    }
+
+    // MARK: - Library (AMA-2004)
+
+    func listLibraryItems(
+        kind: Components.Schemas.LibraryKind?,
+        tag: String?
+    ) async throws -> Components.Schemas.LibraryItemList {
+        var queryItems: [URLQueryItem] = []
+        if let kind {
+            queryItems.append(URLQueryItem(name: "kind", value: kind.rawValue))
+        }
+        if let tag = tag?.trimmingCharacters(in: .whitespacesAndNewlines), !tag.isEmpty {
+            queryItems.append(URLQueryItem(name: "tag", value: tag))
+        }
+
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/library/items",
+            queryItems: queryItems,
+            method: "GET"
+        )
+        return try await self.request(
+            request,
+            decode: Components.Schemas.LibraryItemList.self,
+            decoder: APIService.makeGeneratedDecoder(),
+            successStatusCodes: 200...200
+        )
     }
 
     // MARK: - Messaging Channels (AMA-2027)

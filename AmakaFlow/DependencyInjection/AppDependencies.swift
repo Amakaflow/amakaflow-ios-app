@@ -692,6 +692,53 @@ class MockAPIService: APIServiceProviding {
     )
     var watchDeliveryStatusDelayNanoseconds: UInt64 = 0
     var resendWatchDeliveryDelayNanoseconds: UInt64 = 0
+    var listLibraryItemsResult: Result<Components.Schemas.LibraryItemList, Error> = .success(
+        Components.Schemas.LibraryItemList(
+            items: [
+                Components.Schemas.LibraryItem(
+                    bookmarked: false,
+                    id: "mock-strength-basics",
+                    kind: .workout,
+                    sourceDomain: "coach.amakaflow.com",
+                    sourceUrl: "https://coach.amakaflow.com/library/strength-basics",
+                    tags: ["strength", "beginner"],
+                    thumbnailUrl: nil,
+                    title: "Strength basics for travel weeks"
+                ),
+                Components.Schemas.LibraryItem(
+                    bookmarked: false,
+                    id: "mock-mobility-video",
+                    kind: .video,
+                    sourceDomain: "youtube.com",
+                    sourceUrl: "https://youtube.com/watch?v=mock",
+                    tags: ["mobility"],
+                    thumbnailUrl: nil,
+                    title: "10-minute ankle mobility reset"
+                ),
+                Components.Schemas.LibraryItem(
+                    bookmarked: false,
+                    id: "mock-zone-two",
+                    kind: .article,
+                    sourceDomain: "trainingpeaks.com",
+                    sourceUrl: "https://trainingpeaks.com/mock-zone-two",
+                    tags: ["endurance", "base"],
+                    thumbnailUrl: nil,
+                    title: "Why zone two still matters"
+                ),
+                Components.Schemas.LibraryItem(
+                    bookmarked: false,
+                    id: "mock-hyrox-plan",
+                    kind: .plan,
+                    sourceDomain: "amakaflow.com",
+                    sourceUrl: "https://amakaflow.com/plans/hyrox-mock",
+                    tags: ["hyrox", "strength"],
+                    thumbnailUrl: nil,
+                    title: "Four-week HYROX tune-up"
+                )
+            ],
+            total: 4
+        )
+    )
     var listMessagingChannelsResult: Result<Components.Schemas.MessagingChannelList, Error> = .success(
         Components.Schemas.MessagingChannelList(
             channels: [
@@ -720,6 +767,7 @@ class MockAPIService: APIServiceProviding {
     var setChannelPrefsDelayNanoseconds: UInt64 = 0
     var setChannelPrefsDelaysByChannel: [String: UInt64] = [:]
     var listDevicesCalled = false
+    var listLibraryItemsCalled = false
     var pairDeviceCalled = false
     var revokeDeviceCalled = false
     var setDeviceRolesCalled = false
@@ -736,6 +784,8 @@ class MockAPIService: APIServiceProviding {
     var lastSetDeviceRoles: [Components.Schemas.DeviceRole]?
     var lastWatchDeliveryWorkoutId: String?
     var lastResendWatchDeliveryWorkoutId: String?
+    var lastListLibraryItemsKind: Components.Schemas.LibraryKind?
+    var lastListLibraryItemsTag: String?
     var lastSetChannelPrefsId: String?
     var lastSetChannelPrefs: Components.Schemas.ChannelPrefsRequest?
 
@@ -790,6 +840,16 @@ class MockAPIService: APIServiceProviding {
             try await Task.sleep(nanoseconds: resendWatchDeliveryDelayNanoseconds)
         }
         return try resendWatchDeliveryResult.get()
+    }
+
+    func listLibraryItems(
+        kind: Components.Schemas.LibraryKind?,
+        tag: String?
+    ) async throws -> Components.Schemas.LibraryItemList {
+        listLibraryItemsCalled = true
+        lastListLibraryItemsKind = kind
+        lastListLibraryItemsTag = tag
+        return try listLibraryItemsResult.get()
     }
 
     func listMessagingChannels() async throws -> Components.Schemas.MessagingChannelList {

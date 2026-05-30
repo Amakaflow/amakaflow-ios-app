@@ -202,7 +202,7 @@ struct ContentView: View {
             }
         case .library:
             tabRoot(.library) {
-                KnowledgeLibraryView()
+                LibraryView()
             }
         case .history:
             tabRoot(.history) {
