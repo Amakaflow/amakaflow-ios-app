@@ -24,7 +24,10 @@ final class FatigueHistoryViewModelTests: XCTestCase {
             watchSession: MockWatchSession(),
             chatStreamService: MockChatStreamService()
         )
-        viewModel = FatigueHistoryViewModel(dependencies: deps)
+        viewModel = FatigueHistoryViewModel(
+            dependencies: deps,
+            syncHealthKitHRV: { .empty("HealthKit HRV sync disabled in unit tests") }
+        )
     }
 
     override func tearDown() async throws {

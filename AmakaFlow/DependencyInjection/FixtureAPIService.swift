@@ -38,6 +38,8 @@ class FixtureAPIService: APIServiceProviding {
     var setChannelPrefsResult: Result<Components.Schemas.ChannelPrefsResult, Error>?
     var listLibraryItemsResult: Result<Components.Schemas.LibraryItemList, Error>?
     var getLibraryItemResult: Result<Components.Schemas.LibraryItemDetail, Error>?
+    var postReadinessSampleResult: Result<ReadinessSampleWriteResult, Error>?
+    private(set) var fixtureReadinessSamples: [ReadinessSampleWriteResult] = []
     var libraryItemsEmpty = false
     var libraryItemDetail404 = false
     private var fixtureMessagingDeliveryLive = false
@@ -567,6 +569,29 @@ class FixtureAPIService: APIServiceProviding {
             userId: fixtureCoachingProfile.userId
         )
         return fixtureCoachingProfile
+    }
+
+    func postReadinessSample(
+        hrv: Double?,
+        restingHr: Int?,
+        sleepHours: Double?,
+        sleepQuality: String?,
+        sampleDate: String?
+    ) async throws -> ReadinessSampleWriteResult {
+        if let postReadinessSampleResult {
+            return try postReadinessSampleResult.get()
+        }
+        guard hrv != nil || restingHr != nil || sleepHours != nil || sleepQuality != nil else {
+            throw APIError.serverErrorWithBody(422, "{\"detail\":\"At least one metric is required.\"}")
+        }
+        let result = ReadinessSampleWriteResult(
+            success: true,
+            date: sampleDate ?? "2026-05-30",
+            source: "apple_health"
+        )
+        fixtureReadinessSamples.append(result)
+        print("[FixtureAPIService] Stub: postReadinessSample(date=\(result.date), source=apple_health) -> success")
+        return result
     }
 
     // MARK: - Coach (AMA-1147)

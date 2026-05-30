@@ -36,9 +36,16 @@ class FatigueHistoryViewModel: ObservableObject {
     }
 
     private let dependencies: AppDependencies
+    private let syncHealthKitHRV: () async -> HealthKitHRVSyncResult
 
-    init(dependencies: AppDependencies = .live) {
+    init(
+        dependencies: AppDependencies = .live,
+        syncHealthKitHRV: @escaping () async -> HealthKitHRVSyncResult = {
+            await HealthKitHRVService.shared.syncRecentHRV()
+        }
+    ) {
         self.dependencies = dependencies
+        self.syncHealthKitHRV = syncHealthKitHRV
     }
 
     func loadHistory() async {
@@ -51,6 +58,16 @@ class FatigueHistoryViewModel: ObservableObject {
         formatter.dateFormat = "yyyy-MM-dd"
         let today = Date()
         let startDate = Calendar.current.date(byAdding: .day, value: -selectedRange.days, to: today) ?? today
+
+        // AMA-2052: opportunistically ingest real Apple Health HRV without
+        // blocking readiness history. Unavailable/denied/empty HK states are
+        // honest no-data outcomes and write-back failures stay non-fatal.
+        Task { [syncHealthKitHRV] in
+            let result = await syncHealthKitHRV()
+            if case .failed(let error) = result {
+                print("[FatigueHistoryVM] HealthKit HRV sync failed: \(error)")
+            }
+        }
 
         do {
             let states = try await dependencies.apiService.fetchDayStates(

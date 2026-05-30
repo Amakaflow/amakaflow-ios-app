@@ -327,6 +327,17 @@ protocol APIServiceProviding: TelegramLinkAPIProviding {
     /// Upsert the user's coaching profile through the mobile BFF.
     func upsertCoachingProfile(_ profile: Components.Schemas.CoachingProfileUpsert) async throws -> Components.Schemas.CoachingProfile
 
+    // MARK: - Readiness Sample (AMA-2052)
+
+    /// Write a real daily readiness sample through the mobile BFF.
+    func postReadinessSample(
+        hrv: Double?,
+        restingHr: Int?,
+        sleepHours: Double?,
+        sleepQuality: String?,
+        sampleDate: String?
+    ) async throws -> ReadinessSampleWriteResult
+
     // MARK: - Coach Suggestions (AMA-1412)
 
     /// Request an AI-generated workout suggestion

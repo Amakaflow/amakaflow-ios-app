@@ -728,6 +728,81 @@ final class CoachAPIRepositoryEndpointTests: XCTestCase {
     ]
     """.data(using: .utf8)!
 
+    func testPostReadinessSamplePutsAppleHealthHRVToBFF() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.httpMethod, "PUT")
+            XCTAssertEqual(request.url?.path, "/v1/readiness/sample")
+
+            let body = try Self.httpBodyData(from: request)
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+            XCTAssertEqual(json["source"] as? String, "apple_health")
+            XCTAssertEqual(json["sample_date"] as? String, "2026-05-30")
+            XCTAssertEqual(json["hrv"] as? Double, 55.5)
+            XCTAssertNil(json["resting_hr"])
+            XCTAssertNil(json["sleep_hours"])
+            XCTAssertNil(json["sleep_quality"])
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Rndr-Id": "rndr-readiness-sample"]
+            )!
+            return (response, #"{"success":true,"date":"2026-05-30","source":"apple_health"}"#.data(using: .utf8)!)
+        }
+
+        let result = try await api.postReadinessSample(
+            hrv: 55.5,
+            restingHr: nil,
+            sleepHours: nil,
+            sleepQuality: nil,
+            sampleDate: "2026-05-30"
+        )
+
+        XCTAssertTrue(result.success)
+        XCTAssertEqual(result.date, "2026-05-30")
+        XCTAssertEqual(result.source, "apple_health")
+        XCTAssertEqual(logger.events.map(\.phase), [.start, .end])
+    }
+
+    func testPostReadinessSampleErrorsMapToCTAError() async throws {
+        for status in [422, 503] {
+            MockURLProtocol.reset()
+            logger = RecordingAPIObservabilityLogger()
+            api = APIService(session: MockURLProtocol.mockSession(), observabilityLogger: logger)
+            MockURLProtocol.requestHandler = { request in
+                let response = HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: status,
+                    httpVersion: "HTTP/1.1",
+                    headerFields: ["X-Request-ID": "req-readiness-\(status)"]
+                )!
+                return (response, #"{"detail":"readiness sample error"}"#.data(using: .utf8)!)
+            }
+
+            do {
+                _ = try await api.postReadinessSample(
+                    hrv: 55,
+                    restingHr: nil,
+                    sleepHours: nil,
+                    sleepQuality: nil,
+                    sampleDate: "2026-05-30"
+                )
+                XCTFail("Expected readiness sample status \(status) to throw")
+            } catch {
+                let mapped = CTAError.map(error)
+                guard case .http(let mappedStatus, let body, _) = mapped else {
+                    XCTFail("Expected CTAError.http for \(status), got \(mapped)")
+                    continue
+                }
+                XCTAssertEqual(mappedStatus, status)
+                XCTAssertTrue(body?.contains("readiness sample error") == true)
+                XCTAssertEqual(logger.events.map(\.phase), [.start, .fail])
+                XCTAssertEqual(MockURLProtocol.interceptedRequests.first?.url?.path, "/v1/readiness/sample")
+            }
+        }
+    }
+
     private static func httpBodyData(from request: URLRequest) throws -> Data {
         if let body = request.httpBody {
             return body

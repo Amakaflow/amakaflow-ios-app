@@ -132,6 +132,17 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /v1/messaging/telegram/status`.
     /// - Remark: Generated from `#/paths//v1/messaging/telegram/status/get(telegramStatus)`.
     func telegramStatus(_ input: Operations.TelegramStatus.Input) async throws -> Operations.TelegramStatus.Output
+    /// V1 Readiness Sample
+    ///
+    /// iOS HealthKitHRVService → chat-api PUT /coach/readiness-sample.
+    ///
+    /// Writes a daily recovery sample (HRV/RHR/sleep) into daily_status with
+    /// source=apple_health. Thin passthrough — chat-api owns validation +
+    /// the daily_status upsert. Read side = /v1/readiness/today + /trend.
+    ///
+    /// - Remark: HTTP `PUT /v1/readiness/sample`.
+    /// - Remark: Generated from `#/paths//v1/readiness/sample/put(v1_readiness_sample_v1_readiness_sample_put)`.
+    func v1ReadinessSampleV1ReadinessSamplePut(_ input: Operations.V1ReadinessSampleV1ReadinessSamplePut.Input) async throws -> Operations.V1ReadinessSampleV1ReadinessSamplePut.Output
     /// V1 Sync Confirm
     ///
     /// SyncEngine confirm-success → mapper-api POST /sync/confirm.
@@ -399,6 +410,19 @@ extension APIProtocol {
             query: query,
             headers: headers
         ))
+    }
+    /// V1 Readiness Sample
+    ///
+    /// iOS HealthKitHRVService → chat-api PUT /coach/readiness-sample.
+    ///
+    /// Writes a daily recovery sample (HRV/RHR/sleep) into daily_status with
+    /// source=apple_health. Thin passthrough — chat-api owns validation +
+    /// the daily_status upsert. Read side = /v1/readiness/today + /trend.
+    ///
+    /// - Remark: HTTP `PUT /v1/readiness/sample`.
+    /// - Remark: Generated from `#/paths//v1/readiness/sample/put(v1_readiness_sample_v1_readiness_sample_put)`.
+    public func v1ReadinessSampleV1ReadinessSamplePut(headers: Operations.V1ReadinessSampleV1ReadinessSamplePut.Input.Headers = .init()) async throws -> Operations.V1ReadinessSampleV1ReadinessSamplePut.Output {
+        try await v1ReadinessSampleV1ReadinessSamplePut(Operations.V1ReadinessSampleV1ReadinessSamplePut.Input(headers: headers))
     }
     /// V1 Sync Confirm
     ///
@@ -5913,6 +5937,173 @@ public enum Operations {
             /// - Throws: An error if `self` is not `.serviceUnavailable`.
             /// - SeeAlso: `.serviceUnavailable`.
             public var serviceUnavailable: Operations.TelegramStatus.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// V1 Readiness Sample
+    ///
+    /// iOS HealthKitHRVService → chat-api PUT /coach/readiness-sample.
+    ///
+    /// Writes a daily recovery sample (HRV/RHR/sleep) into daily_status with
+    /// source=apple_health. Thin passthrough — chat-api owns validation +
+    /// the daily_status upsert. Read side = /v1/readiness/today + /trend.
+    ///
+    /// - Remark: HTTP `PUT /v1/readiness/sample`.
+    /// - Remark: Generated from `#/paths//v1/readiness/sample/put(v1_readiness_sample_v1_readiness_sample_put)`.
+    public enum V1ReadinessSampleV1ReadinessSamplePut {
+        public static let id: Swift.String = "v1_readiness_sample_v1_readiness_sample_put"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/readiness/sample/PUT/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.V1ReadinessSampleV1ReadinessSamplePut.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.V1ReadinessSampleV1ReadinessSamplePut.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.V1ReadinessSampleV1ReadinessSamplePut.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            public init(headers: Operations.V1ReadinessSampleV1ReadinessSamplePut.Input.Headers = .init()) {
+                self.headers = headers
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/readiness/sample/PUT/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/readiness/sample/PUT/responses/200/content/application\/json`.
+                    case json(OpenAPIRuntime.OpenAPIValueContainer)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: OpenAPIRuntime.OpenAPIValueContainer {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.V1ReadinessSampleV1ReadinessSamplePut.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.V1ReadinessSampleV1ReadinessSamplePut.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Successful Response
+            ///
+            /// - Remark: Generated from `#/paths//v1/readiness/sample/put(v1_readiness_sample_v1_readiness_sample_put)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.V1ReadinessSampleV1ReadinessSamplePut.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.V1ReadinessSampleV1ReadinessSamplePut.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/readiness/sample/PUT/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/readiness/sample/PUT/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.V1ReadinessSampleV1ReadinessSamplePut.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.V1ReadinessSampleV1ReadinessSamplePut.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/readiness/sample/put(v1_readiness_sample_v1_readiness_sample_put)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.V1ReadinessSampleV1ReadinessSamplePut.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.V1ReadinessSampleV1ReadinessSamplePut.Output.ServiceUnavailable {
                 get throws {
                     switch self {
                     case let .serviceUnavailable(response):
