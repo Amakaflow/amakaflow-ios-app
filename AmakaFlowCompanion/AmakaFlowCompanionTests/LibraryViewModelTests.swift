@@ -233,6 +233,182 @@ final class LibraryViewModelTests: XCTestCase {
         XCTAssertTrue(empty.items?.isEmpty == true)
     }
 
+    func testAddToLibraryURLNormalizationAndHTMLPreviewParsing() throws {
+        let normalized = try XCTUnwrap(AddToLibraryViewModel.normalizedURL(from: " example.com/workout "))
+        XCTAssertEqual(normalized.absoluteString, "https://example.com/workout")
+        XCTAssertNil(AddToLibraryViewModel.normalizedURL(from: "ftp://example.com/file"))
+
+        let html = """
+        <html><head>
+          <meta property="og:title" content="Strength &amp; Mobility">
+          <meta content="https://cdn.example.com/card.png" property="og:image">
+          <meta property="og:site_name" content="Coach Notes">
+        </head></html>
+        """
+        let preview = AddToLibraryHTMLParser.preview(from: html, baseURL: normalized)
+
+        XCTAssertEqual(preview.title, "Strength & Mobility")
+        XCTAssertEqual(preview.imageURL?.absoluteString, "https://cdn.example.com/card.png")
+        XCTAssertEqual(preview.siteName, "Coach Notes")
+    }
+
+    func testAddToLibraryKindAutoDetectsFromURLHost() throws {
+        XCTAssertEqual(
+            AddToLibraryViewModel.autoDetectKind(for: try XCTUnwrap(URL(string: "https://youtu.be/abc"))),
+            .video
+        )
+        XCTAssertEqual(
+            AddToLibraryViewModel.autoDetectKind(for: try XCTUnwrap(URL(string: "https://trainingpeaks.com/plan/123"))),
+            .plan
+        )
+        XCTAssertEqual(
+            AddToLibraryViewModel.autoDetectKind(for: try XCTUnwrap(URL(string: "https://strava.com/activities/1"))),
+            .workout
+        )
+        XCTAssertEqual(
+            AddToLibraryViewModel.autoDetectKind(for: try XCTUnwrap(URL(string: "https://example.com/article"))),
+            .article
+        )
+    }
+
+    func testAddToLibraryPreviewSuccessAndFailureStates() async {
+        let successPreview = OGPreview(
+            url: URL(string: "https://example.com/workout")!,
+            title: "Workout Preview",
+            imageURL: nil,
+            siteName: "Example"
+        )
+        let successFetcher = StubPreviewFetcher(result: .success(successPreview))
+        var viewModel = AddToLibraryViewModel(
+            urlText: "https://example.com/workout",
+            previewFetcher: successFetcher,
+            saver: StubKnowledgeSaver()
+        )
+
+        await viewModel.fetchPreview()
+
+        XCTAssertEqual(viewModel.previewState, .content(successPreview))
+        XCTAssertNil(viewModel.ctaError)
+
+        let failingFetcher = StubPreviewFetcher(result: .failure(URLError(.notConnectedToInternet)))
+        viewModel = AddToLibraryViewModel(
+            urlText: "https://example.com/workout",
+            previewFetcher: failingFetcher,
+            saver: StubKnowledgeSaver()
+        )
+
+        await viewModel.fetchPreview()
+
+        guard case .failed(let error) = viewModel.previewState else {
+            return XCTFail("Expected failed preview state, got \(viewModel.previewState)")
+        }
+        XCTAssertEqual(viewModel.ctaError, error)
+        XCTAssertEqual(viewModel.lastFailedAction, .fetchPreview)
+        XCTAssertTrue(error.isRetryable)
+    }
+
+    func testAddToLibrarySaveSuccessSendsURLKindTagsAndMarksSaved() async {
+        let saver = StubKnowledgeSaver()
+        let viewModel = AddToLibraryViewModel(
+            urlText: "example.com/workout",
+            previewFetcher: StubPreviewFetcher(result: .failure(URLError(.badURL))),
+            saver: saver
+        )
+        viewModel.selectKind(.workout)
+        viewModel.tagDraft = "strength, #mobility"
+
+        await viewModel.save()
+
+        XCTAssertTrue(viewModel.didSave)
+        XCTAssertNil(viewModel.ctaError)
+        XCTAssertEqual(saver.lastURL?.absoluteString, "https://example.com/workout")
+        XCTAssertEqual(saver.lastKind, .workout)
+        XCTAssertEqual(saver.lastTags, ["strength", "mobility"])
+    }
+
+    func testAddToLibrarySaveErrorMatrixMapsCTAErrorAndCanRetry() async {
+        let cases: [(Error, (CTAError) -> Bool, String)] = [
+            (URLError(.timedOut), { if case .network(let code, _) = $0 { return code == .timedOut }; return false }, "network"),
+            (APIError.serverErrorWithBody(503, "{\"detail\":\"ingest unavailable\"}"), { if case .http(let status, let body, _) = $0 { return status == 503 && (body?.contains("ingest unavailable") == true) }; return false }, "http"),
+            (APIError.decodingError(DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "bad card"))), { if case .decoding = $0 { return true }; return false }, "decoding")
+        ]
+
+        for (error, matcher, label) in cases {
+            let saver = StubKnowledgeSaver(result: .failure(error))
+            let viewModel = AddToLibraryViewModel(
+                urlText: "https://example.com/workout",
+                previewFetcher: StubPreviewFetcher(result: .failure(URLError(.badURL))),
+                saver: saver
+            )
+
+            await viewModel.save()
+
+            XCTAssertFalse(viewModel.didSave)
+            guard let ctaError = viewModel.ctaError else {
+                XCTFail("Expected CTAError for \(label)")
+                continue
+            }
+            XCTAssertTrue(matcher(ctaError), "Wrong CTAError for \(label): \(ctaError)")
+            XCTAssertEqual(viewModel.lastFailedAction, .save)
+
+            saver.result = .success(Self.knowledgeCard(id: "retry-ok"))
+            await viewModel.retryLastAction()
+            XCTAssertTrue(viewModel.didSave)
+            XCTAssertNil(viewModel.ctaError)
+        }
+    }
+
+    private final class StubPreviewFetcher: OGPreviewFetching {
+        let result: Result<OGPreview, Error>
+
+        init(result: Result<OGPreview, Error>) {
+            self.result = result
+        }
+
+        func fetchPreview(for url: URL) async throws -> OGPreview {
+            try result.get()
+        }
+    }
+
+    private final class StubKnowledgeSaver: KnowledgeCardSaving {
+        var result: Result<KnowledgeCard, Error>
+        private(set) var lastURL: URL?
+        private(set) var lastKind: Components.Schemas.LibraryKind?
+        private(set) var lastTags: [String]?
+
+        init(result: Result<KnowledgeCard, Error> = .success(LibraryViewModelTests.knowledgeCard(id: "saved"))) {
+            self.result = result
+        }
+
+        func saveLibraryCard(
+            url: URL,
+            kind: Components.Schemas.LibraryKind,
+            tags: [String],
+            preview: OGPreview?
+        ) async throws -> KnowledgeCard {
+            lastURL = url
+            lastKind = kind
+            lastTags = tags
+            return try result.get()
+        }
+    }
+
+    nonisolated private static func knowledgeCard(id: String) -> KnowledgeCard {
+        KnowledgeCard(
+            id: id,
+            title: "Saved idea",
+            summary: nil,
+            microSummary: nil,
+            keyTakeaways: [],
+            sourceType: "url",
+            sourceUrl: "https://example.com/workout",
+            processingStatus: "pending",
+            tags: [],
+            visibility: nil,
+            createdAt: "2026-05-29T12:00:00Z"
+        )
+    }
+
     private func item(
         id: String,
         kind: Components.Schemas.LibraryKind = .workout,

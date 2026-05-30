@@ -226,6 +226,6 @@ final class LibraryViewModel: ObservableObject {
 
 enum LibraryCopy {
     static let emptyTitle = "Save workouts and ideas as you find them"
-    static let emptySubtitle = "Paste a link when Add to Library lands. Until then, saved items from your coach and imports will appear here."
+    static let emptySubtitle = "Paste a link to save workouts, videos, articles, and plans. Saved items from your coach and imports will appear here too."
     static let pasteLink = "Paste a link"
 }
