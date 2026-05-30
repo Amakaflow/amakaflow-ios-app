@@ -63,64 +63,26 @@ struct SettingsView: View {
 
     var body: some View {
         ScrollView {
-                VStack(spacing: Theme.Spacing.xl) {
-                    AFTopBar(title: "Settings") {
-                        EmptyView()
-                    } right: {
-                        EmptyView()
-                    }
-
-                    // Workout Device Section
-                    deviceSection
-
-                    divider
-
-                    // Audio Cues Section
-                    audioCuesSection
-
-                    divider
-
-                    // Voice Transcription Section
-                    voiceTranscriptionSection
-
-                    divider
-
-                    // Training Preferences (AMA-1147)
-                    trainingPreferencesSection
-
-                    divider
-
-                    // Nutrition Settings (AMA-1292)
-                    nutritionSection
-
-                    divider
-
-                    // Fatigue Tracking (AMA-1412)
-                    fatigueSection
-
-                    divider
-
-                    // Analytics (AMA-1147)
-                    analyticsSection
-
-                    divider
-
-                    // Integrations Section
-                    integrationsSection
-
-                    divider
-
-                    // Account Section
-                    accountSection
-
-                    divider
-
-                    // Legal Section
-                    legalSection
+            VStack(spacing: Theme.Spacing.xl) {
+                AFTopBar(title: "Settings") {
+                    EmptyView()
+                } right: {
+                    EmptyView()
                 }
-                .padding(.horizontal, Theme.Spacing.lg)
-                .padding(.vertical, Theme.Spacing.lg)
-                .padding(.bottom, 100)
+
+                settingsHero
+                accountSection
+                preferencesHubSection
+                deviceSection
+                integrationsSection
+                #if DEBUG
+                debugDiagnosticsSection
+                #endif
+                legalSection
+            }
+            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.vertical, Theme.Spacing.lg)
+            .padding(.bottom, 100)
             }
             .background(Theme.Colors.background.ignoresSafeArea())
             .navigationBarHidden(true)
@@ -205,6 +167,364 @@ struct SettingsView: View {
             .navigationDestination(isPresented: $navigateToSyncDashboard) {
                 SyncDashboardView()
             }
+    }
+
+    // MARK: - Refresh Header
+
+    private var settingsHero: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+            HStack(alignment: .top, spacing: Theme.Spacing.md) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text("Control center")
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.Colors.textPrimary)
+
+                    Text("Profile, workout delivery, coach preferences, and app diagnostics in one place.")
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+
+                ZStack {
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
+                        .fill(Theme.Colors.accentBlue.opacity(0.14))
+                        .frame(width: 56, height: 56)
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundColor(Theme.Colors.accentBlue)
+                }
+            }
+
+            HStack(spacing: Theme.Spacing.sm) {
+                SettingsStatusPill(
+                    icon: deviceMode.iconName,
+                    title: deviceMode.title,
+                    tint: deviceMode.accentColor
+                )
+                SettingsStatusPill(
+                    icon: isTelegramLinked ? "paperplane.fill" : "paperplane",
+                    title: isTelegramLinked ? "Telegram on" : "Telegram off",
+                    tint: Color(hex: "29B6F6")
+                )
+                SettingsStatusPill(
+                    icon: voiceCuesEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill",
+                    title: voiceCuesEnabled ? "Voice cues" : "Quiet mode",
+                    tint: Theme.Colors.accentBlue
+                )
+            }
+        }
+        .padding(Theme.Spacing.lg)
+        .background(
+            LinearGradient(
+                colors: [
+                    Theme.Colors.surface,
+                    Theme.Colors.surfaceElevated.opacity(0.92)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
+                .stroke(Theme.Colors.borderLight, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.xl))
+        .accessibilityIdentifier("settings_refresh_header")
+    }
+
+    // MARK: - Preferences Hub
+
+    private var preferencesHubSection: some View {
+        SettingsSectionCard(
+            title: settingsSectionTitle("preferences", fallback: "Preferences"),
+            subtitle: "Keep the existing app settings organized by what they control."
+        ) {
+            VStack(spacing: 0) {
+                let rows = settingsRows(in: "preferences", includeDebug: false)
+                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                    settingsPreferenceRow(row)
+                    if index < rows.count - 1 {
+                        SettingsRowDivider()
+                    }
+                }
+
+                audioCueControls
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func settingsPreferenceRow(_ row: SettingsRefreshRowModel) -> some View {
+        switch row.destination {
+        case .notifications:
+            NavigationLink(destination: NotificationPreferencesView()) {
+                SettingsNavigationRow(
+                    icon: "bell.badge.fill",
+                    tint: Color(hex: "9333EA"),
+                    title: row.title,
+                    subtitle: row.subtitle
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings_row_notifications")
+
+        case .voice:
+            Button {
+                showingVoiceTranscriptionSettings = true
+            } label: {
+                SettingsNavigationRow(
+                    icon: "waveform",
+                    tint: .purple,
+                    title: row.title,
+                    subtitle: row.subtitle
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings_row_voice")
+
+        case .fatigue:
+            NavigationLink(destination: FatigueSettingsView()) {
+                SettingsNavigationRow(
+                    icon: "heart.text.square.fill",
+                    tint: Theme.Colors.accentBlue,
+                    title: row.title,
+                    subtitle: row.subtitle
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings_row_fatigue")
+
+        case .nutrition:
+            NavigationLink(destination: NutritionSettingsView(viewModel: nutritionViewModel)) {
+                SettingsNavigationRow(
+                    icon: "leaf.fill",
+                    tint: Theme.Colors.accentGreen,
+                    title: row.title,
+                    subtitle: row.subtitle
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings_row_nutrition")
+
+        case .social:
+            NavigationLink(destination: SocialSettingsView()) {
+                SettingsNavigationRow(
+                    icon: "person.2.fill",
+                    tint: Theme.Colors.accentOrange,
+                    title: row.title,
+                    subtitle: row.subtitle
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings_row_social")
+
+        case .trainingPreferences:
+            NavigationLink(destination: TrainingPreferencesView()) {
+                SettingsNavigationRow(
+                    icon: "slider.horizontal.3",
+                    tint: Theme.Colors.accentBlue,
+                    title: row.title,
+                    subtitle: row.subtitle
+                )
+            }
+            .buttonStyle(.plain)
+
+        case .equipment:
+            NavigationLink(destination: EquipmentProfileView()) {
+                SettingsNavigationRow(
+                    icon: "dumbbell.fill",
+                    tint: Theme.Colors.readyHigh,
+                    title: row.title,
+                    subtitle: row.subtitle
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings_row_equipment")
+
+        case .activityFeed:
+            NavigationLink(destination: ActivityFeedView()) {
+                SettingsNavigationRow(
+                    icon: "bell.and.waves.left.and.right.fill",
+                    tint: Theme.Colors.accentOrange,
+                    title: row.title,
+                    subtitle: row.subtitle
+                )
+            }
+            .buttonStyle(.plain)
+
+        case .syncDashboard:
+            NavigationLink(destination: SyncDashboardView()) {
+                SettingsNavigationRow(
+                    icon: "arrow.triangle.2.circlepath",
+                    tint: Theme.Colors.accentGreen,
+                    title: row.title,
+                    subtitle: row.subtitle
+                )
+            }
+            .buttonStyle(.plain)
+
+        case .shoeComparison:
+            NavigationLink(destination: ShoeComparisonView()) {
+                SettingsNavigationRow(
+                    icon: "shoe.fill",
+                    tint: Theme.Colors.accentGreen,
+                    title: row.title,
+                    subtitle: row.subtitle
+                )
+            }
+            .buttonStyle(.plain)
+
+        default:
+            EmptyView()
+        }
+    }
+
+    private var audioCueControls: some View {
+        VStack(spacing: 0) {
+            SettingsRowDivider()
+
+            SettingsToggleRow(
+                icon: "speaker.wave.2.fill",
+                iconColor: Theme.Colors.accentBlue,
+                title: "Voice Cues",
+                subtitle: "Announce exercise names and transitions",
+                isOn: $voiceCuesEnabled
+            )
+            .padding(.top, Theme.Spacing.sm)
+
+            if voiceCuesEnabled {
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Text("When music is playing")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+
+                    HStack(spacing: 0) {
+                        ForEach(AudioBehavior.allCases, id: \.self) { behavior in
+                            Button {
+                                audioBehavior = behavior
+                            } label: {
+                                Text(behavior.title)
+                                    .font(Theme.Typography.caption)
+                                    .foregroundColor(audioBehavior == behavior ? .white : Theme.Colors.textSecondary)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, Theme.Spacing.sm)
+                                    .background(audioBehavior == behavior ? Theme.Colors.accentBlue : Color.clear)
+                                    .cornerRadius(Theme.CornerRadius.sm)
+                            }
+                        }
+                    }
+                    .padding(4)
+                    .background(Theme.Colors.surfaceElevated)
+                    .cornerRadius(Theme.CornerRadius.md)
+                }
+                .padding(.top, Theme.Spacing.sm)
+            }
+
+            SettingsToggleRow(
+                icon: "timer",
+                iconColor: Theme.Colors.accentBlue,
+                title: "Countdown Beeps",
+                subtitle: "Audio beeps for the last 5 seconds of timed intervals",
+                isOn: $countdownBeepsEnabled
+            )
+            .padding(.top, Theme.Spacing.sm)
+
+            SettingsToggleRow(
+                icon: "iphone.radiowaves.left.and.right",
+                iconColor: Theme.Colors.accentBlue,
+                title: "Haptic Feedback",
+                subtitle: "Vibrate on exercise transitions for watch and phone",
+                isOn: $hapticFeedbackEnabled
+            )
+            .padding(.top, Theme.Spacing.sm)
+        }
+    }
+
+    // MARK: - Debug Diagnostics
+
+    #if DEBUG
+    private var debugDiagnosticsSection: some View {
+        SettingsSectionCard(
+            title: settingsSectionTitle("debug", fallback: "Debug"),
+            subtitle: "Existing developer-only diagnostics and support tools."
+        ) {
+            VStack(spacing: 0) {
+                let rows = settingsRows(in: "debug", includeDebug: true)
+                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                    settingsDebugRow(row)
+                    if index < rows.count - 1 {
+                        SettingsRowDivider()
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func settingsDebugRow(_ row: SettingsRefreshRowModel) -> some View {
+        switch row.destination {
+        case .debugSettings:
+            Button {
+                showDebugSettings = true
+            } label: {
+                SettingsNavigationRow(
+                    icon: "wrench.and.screwdriver.fill",
+                    tint: Theme.Colors.accentOrange,
+                    title: row.title,
+                    subtitle: row.subtitle
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings_row_debug_settings")
+
+        case .errorLog:
+            Button {
+                showingErrorLogSheet = true
+            } label: {
+                SettingsNavigationRow(
+                    icon: "ladybug.fill",
+                    tint: Theme.Colors.accentOrange,
+                    title: row.title,
+                    subtitle: "\(DebugLogService.shared.entries.count) captured entries"
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings_row_error_log")
+
+        case .workoutDebug:
+            Button {
+                showingWorkoutDebugSheet = true
+            } label: {
+                SettingsNavigationRow(
+                    icon: "ant.fill",
+                    tint: Theme.Colors.accentOrange,
+                    title: row.title,
+                    subtitle: workoutsViewModel.pendingWorkoutsStatus.isEmpty ? row.subtitle : workoutsViewModel.pendingWorkoutsStatus
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings_row_workout_debug")
+
+        default:
+            EmptyView()
+        }
+    }
+    #endif
+
+    private func settingsRows(in sectionID: String, includeDebug: Bool) -> [SettingsRefreshRowModel] {
+        SettingsRefreshSectionModel
+            .v1Sections(includeDebug: includeDebug)
+            .first { $0.id == sectionID }?
+            .rows ?? []
+    }
+
+    private func settingsSectionTitle(_ sectionID: String, fallback: String) -> String {
+        SettingsRefreshSectionModel
+            .v1Sections(includeDebug: true)
+            .first { $0.id == sectionID }?
+            .title ?? fallback
     }
 
     // MARK: - Workout Debug Sheet
@@ -863,14 +1183,6 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Divider
-
-    private var divider: some View {
-        Rectangle()
-            .fill(Theme.Colors.borderLight)
-            .frame(height: 1)
-    }
-
     // MARK: - Device Section
 
     private var deviceSection: some View {
@@ -1098,379 +1410,6 @@ struct SettingsView: View {
             Text(label)
                 .font(Theme.Typography.footnote)
                 .foregroundColor(Theme.Colors.textTertiary)
-        }
-    }
-
-    // MARK: - Audio Cues Section
-
-    private var audioCuesSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            Text("AUDIO CUES")
-                .font(Theme.Typography.footnote)
-                .foregroundColor(Theme.Colors.textSecondary)
-                .tracking(1)
-                .padding(.horizontal, Theme.Spacing.xs)
-
-            VStack(spacing: Theme.Spacing.sm) {
-                // Voice Cues Toggle
-                VStack(spacing: 0) {
-                    HStack(spacing: Theme.Spacing.md) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
-                                .fill(Theme.Colors.accentBlue.opacity(0.1))
-                                .frame(width: 40, height: 40)
-
-                            Image(systemName: "speaker.wave.2.fill")
-                                .font(.system(size: 18))
-                                .foregroundColor(Theme.Colors.accentBlue)
-                        }
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Voice Cues")
-                                .font(Theme.Typography.bodyBold)
-                                .foregroundColor(Theme.Colors.textPrimary)
-
-                            Text("Announce exercise names and transitions")
-                                .font(Theme.Typography.caption)
-                                .foregroundColor(Theme.Colors.textSecondary)
-                        }
-
-                        Spacer()
-
-                        Toggle("", isOn: $voiceCuesEnabled)
-                            .labelsHidden()
-                            .tint(Theme.Colors.accentBlue)
-                    }
-                    .padding(Theme.Spacing.md)
-
-                    // Audio behavior segmented control
-                    if voiceCuesEnabled {
-                        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                            Rectangle()
-                                .fill(Theme.Colors.borderLight)
-                                .frame(height: 1)
-
-                            Text("When music is playing:")
-                                .font(Theme.Typography.caption)
-                                .foregroundColor(Theme.Colors.textSecondary)
-                                .padding(.horizontal, Theme.Spacing.md)
-
-                            HStack(spacing: 0) {
-                                ForEach(AudioBehavior.allCases, id: \.self) { behavior in
-                                    Button {
-                                        audioBehavior = behavior
-                                    } label: {
-                                        Text(behavior.title)
-                                            .font(Theme.Typography.caption)
-                                            .foregroundColor(audioBehavior == behavior ? .white : Theme.Colors.textSecondary)
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, Theme.Spacing.sm)
-                                            .background(audioBehavior == behavior ? Theme.Colors.accentBlue : Color.clear)
-                                            .cornerRadius(Theme.CornerRadius.sm)
-                                    }
-                                }
-                            }
-                            .padding(4)
-                            .background(Theme.Colors.surfaceElevated)
-                            .cornerRadius(Theme.CornerRadius.md)
-                            .padding(.horizontal, Theme.Spacing.md)
-                            .padding(.bottom, Theme.Spacing.md)
-                        }
-                    }
-                }
-                .background(Theme.Colors.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
-                        .stroke(Theme.Colors.borderLight, lineWidth: 1)
-                )
-                .cornerRadius(Theme.CornerRadius.md)
-
-                // Countdown Beeps
-                SettingsToggleRow(
-                    icon: "timer",
-                    iconColor: Theme.Colors.accentBlue,
-                    title: "Countdown Beeps",
-                    subtitle: "Audio beeps for last 5 seconds of timed intervals",
-                    isOn: $countdownBeepsEnabled
-                )
-
-                // Haptic Feedback
-                SettingsToggleRow(
-                    icon: "iphone.radiowaves.left.and.right",
-                    iconColor: Theme.Colors.accentBlue,
-                    title: "Haptic Feedback",
-                    subtitle: "Vibrate on exercise transitions (watch & phone)",
-                    isOn: $hapticFeedbackEnabled
-                )
-
-                // Info card
-                HStack(alignment: .top, spacing: Theme.Spacing.sm) {
-                    Image(systemName: "info.circle")
-                        .font(.system(size: 16))
-                        .foregroundColor(Theme.Colors.textSecondary)
-
-                    Text("Audio cues work with any music app. Your music controls remain accessible via headphones, Control Center, or lock screen.")
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                }
-                .padding(Theme.Spacing.md)
-                .background(Theme.Colors.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
-                        .stroke(Theme.Colors.borderLight, lineWidth: 1)
-                )
-                .cornerRadius(Theme.CornerRadius.md)
-            }
-        }
-    }
-
-    // MARK: - Voice Transcription Section
-
-    private var voiceTranscriptionSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            Text("VOICE TRANSCRIPTION")
-                .font(Theme.Typography.footnote)
-                .foregroundColor(Theme.Colors.textSecondary)
-                .tracking(1)
-                .padding(.horizontal, Theme.Spacing.xs)
-
-            Button {
-                showingVoiceTranscriptionSettings = true
-            } label: {
-                HStack(spacing: Theme.Spacing.md) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
-                            .fill(Color.purple.opacity(0.1))
-                            .frame(width: 48, height: 48)
-
-                        Image(systemName: "waveform")
-                            .font(.system(size: 22))
-                            .foregroundColor(.purple)
-                    }
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Transcription Settings")
-                            .font(Theme.Typography.bodyBold)
-                            .foregroundColor(Theme.Colors.textPrimary)
-
-                        Text("Provider, accent, and personal dictionary")
-                            .font(Theme.Typography.caption)
-                            .foregroundColor(Theme.Colors.textSecondary)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(Theme.Colors.textTertiary)
-                }
-                .padding(Theme.Spacing.md)
-                .background(Theme.Colors.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
-                        .stroke(Theme.Colors.borderLight, lineWidth: 1)
-                )
-                .cornerRadius(Theme.CornerRadius.md)
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    // MARK: - Training Preferences Section (AMA-1147)
-
-    private var trainingPreferencesSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            Text("TRAINING")
-                .font(Theme.Typography.footnote)
-                .foregroundColor(Theme.Colors.textSecondary)
-
-            NavigationLink(destination: TrainingPreferencesView()) {
-                HStack(spacing: Theme.Spacing.md) {
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 16))
-                        .foregroundColor(Theme.Colors.accentBlue)
-                        .frame(width: 28)
-
-                    Text("Training Preferences")
-                        .font(Theme.Typography.body)
-                        .foregroundColor(Theme.Colors.textPrimary)
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(Theme.Colors.textTertiary)
-                }
-            }
-
-            NavigationLink(destination: EquipmentProfileView()) {
-                HStack(spacing: Theme.Spacing.md) {
-                    Image(systemName: "dumbbell.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(Theme.Colors.readyHigh)
-                        .frame(width: 28)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Equipment")
-                            .font(Theme.Typography.body)
-                            .foregroundColor(Theme.Colors.textPrimary)
-                        Text("What you can train with")
-                            .font(Theme.Typography.caption)
-                            .foregroundColor(Theme.Colors.textSecondary)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(Theme.Colors.textTertiary)
-                }
-            }
-            .accessibilityIdentifier("settings_row_equipment")
-
-            NavigationLink(destination: ActivityFeedView()) {
-                HStack(spacing: Theme.Spacing.md) {
-                    Image(systemName: "bell.badge.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(Theme.Colors.accentOrange)
-                        .frame(width: 28)
-
-                    Text("Activity Feed")
-                        .font(Theme.Typography.body)
-                        .foregroundColor(Theme.Colors.textPrimary)
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(Theme.Colors.textTertiary)
-                }
-            }
-
-            NavigationLink(destination: SyncDashboardView()) {
-                HStack(spacing: Theme.Spacing.md) {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .font(.system(size: 16))
-                        .foregroundColor(Theme.Colors.accentGreen)
-                        .frame(width: 28)
-
-                    Text("Sync Dashboard")
-                        .font(Theme.Typography.body)
-                        .foregroundColor(Theme.Colors.textPrimary)
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(Theme.Colors.textTertiary)
-                }
-            }
-
-            NavigationLink(destination: NotificationPreferencesView()) {
-                HStack(spacing: Theme.Spacing.md) {
-                    Image(systemName: "bell.circle.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(Color(hex: "9333EA"))
-                        .frame(width: 28)
-
-                    Text("Notification Preferences")
-                        .font(Theme.Typography.body)
-                        .foregroundColor(Theme.Colors.textPrimary)
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(Theme.Colors.textTertiary)
-                }
-            }
-        }
-    }
-
-    // MARK: - Nutrition Section (AMA-1292)
-
-    private var nutritionSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            Text("NUTRITION")
-                .font(Theme.Typography.footnote)
-                .foregroundColor(Theme.Colors.textSecondary)
-
-            NavigationLink(destination: NutritionSettingsView(viewModel: nutritionViewModel)) {
-                HStack(spacing: Theme.Spacing.md) {
-                    Image(systemName: "leaf.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(Theme.Colors.accentGreen)
-                        .frame(width: 28)
-
-                    Text("Nutrition Settings")
-                        .font(Theme.Typography.body)
-                        .foregroundColor(Theme.Colors.textPrimary)
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(Theme.Colors.textTertiary)
-                }
-            }
-        }
-    }
-
-    // MARK: - Fatigue Section (AMA-1412)
-
-    private var fatigueSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            Text("READINESS")
-                .font(Theme.Typography.footnote)
-                .foregroundColor(Theme.Colors.textSecondary)
-
-            NavigationLink(destination: FatigueSettingsView()) {
-                HStack(spacing: Theme.Spacing.md) {
-                    Image(systemName: "heart.text.square")
-                        .font(.system(size: 16))
-                        .foregroundColor(Theme.Colors.accentBlue)
-                        .frame(width: 28)
-
-                    Text("Fatigue Tracking")
-                        .font(Theme.Typography.body)
-                        .foregroundColor(Theme.Colors.textPrimary)
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(Theme.Colors.textTertiary)
-                }
-            }
-        }
-    }
-
-    // MARK: - Analytics Section (AMA-1147)
-
-    private var analyticsSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            Text("ANALYTICS")
-                .font(Theme.Typography.footnote)
-                .foregroundColor(Theme.Colors.textSecondary)
-
-            NavigationLink(destination: ShoeComparisonView()) {
-                HStack(spacing: Theme.Spacing.md) {
-                    Image(systemName: "shoe.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(Theme.Colors.accentGreen)
-                        .frame(width: 28)
-
-                    Text("Shoe Comparison")
-                        .font(Theme.Typography.body)
-                        .foregroundColor(Theme.Colors.textPrimary)
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(Theme.Colors.textTertiary)
-                }
-            }
         }
     }
 
@@ -2273,6 +2212,207 @@ struct SettingsView: View {
             }
             .buttonStyle(.plain)
         }
+    }
+}
+
+// MARK: - Settings Refresh Row Model
+
+struct SettingsRefreshRowModel: Equatable, Identifiable {
+    enum Destination: String {
+        case editProfile
+        case notifications
+        case fatigue
+        case voice
+        case social
+        case nutrition
+        case trainingPreferences
+        case equipment
+        case activityFeed
+        case syncDashboard
+        case shoeComparison
+        case debugSettings
+        case errorLog
+        case workoutDebug
+        case about
+    }
+
+    let id: String
+    let title: String
+    let subtitle: String
+    let destination: Destination
+}
+
+struct SettingsRefreshSectionModel: Equatable, Identifiable {
+    let id: String
+    let title: String
+    let rows: [SettingsRefreshRowModel]
+
+    static func v1Sections(includeDebug: Bool) -> [SettingsRefreshSectionModel] {
+        var sections = [
+            SettingsRefreshSectionModel(
+                id: "account",
+                title: "Account",
+                rows: [
+                    SettingsRefreshRowModel(id: "edit_profile", title: "Edit Profile", subtitle: "Name, units, and coaching profile", destination: .editProfile)
+                ]
+            ),
+            SettingsRefreshSectionModel(
+                id: "preferences",
+                title: "Preferences",
+                rows: [
+                    SettingsRefreshRowModel(id: "notifications", title: "Notifications", subtitle: "Reminders, nudges, and coach alerts", destination: .notifications),
+                    SettingsRefreshRowModel(id: "voice", title: "Voice", subtitle: "Transcription provider, accent, and dictionary", destination: .voice),
+                    SettingsRefreshRowModel(id: "fatigue", title: "Fatigue", subtitle: "Readiness threshold and fatigue tracking", destination: .fatigue),
+                    SettingsRefreshRowModel(id: "nutrition", title: "Nutrition", subtitle: "Food logging, protein, and hydration settings", destination: .nutrition),
+                    SettingsRefreshRowModel(id: "social", title: "Social", subtitle: "Feed visibility and social defaults", destination: .social),
+                    SettingsRefreshRowModel(id: "training_preferences", title: "Training Preferences", subtitle: "Default workout planning choices", destination: .trainingPreferences),
+                    SettingsRefreshRowModel(id: "equipment", title: "Equipment", subtitle: "What you can train with", destination: .equipment),
+                    SettingsRefreshRowModel(id: "activity_feed", title: "Activity Feed", subtitle: "Review recent training activity", destination: .activityFeed),
+                    SettingsRefreshRowModel(id: "sync_dashboard", title: "Sync Dashboard", subtitle: "Workout delivery and sync health", destination: .syncDashboard),
+                    SettingsRefreshRowModel(id: "shoe_comparison", title: "Shoe Comparison", subtitle: "Compare running shoes from your analytics", destination: .shoeComparison)
+                ]
+            ),
+            SettingsRefreshSectionModel(
+                id: "about",
+                title: "About",
+                rows: [
+                    SettingsRefreshRowModel(id: "about", title: "About", subtitle: "Version and product information", destination: .about)
+                ]
+            )
+        ]
+
+        if includeDebug {
+            sections.insert(
+                SettingsRefreshSectionModel(
+                    id: "debug",
+                    title: "Debug",
+                    rows: [
+                        SettingsRefreshRowModel(id: "debug_settings", title: "Debug Settings", subtitle: "Simulation and fixture controls", destination: .debugSettings),
+                        SettingsRefreshRowModel(id: "error_log", title: "Error Log", subtitle: "Captured app errors", destination: .errorLog),
+                        SettingsRefreshRowModel(id: "workout_debug", title: "Workout Debug", subtitle: "Pending workouts not checked yet", destination: .workoutDebug)
+                    ]
+                ),
+                at: sections.count - 1
+            )
+        }
+
+        return sections
+    }
+}
+
+// MARK: - Settings Refresh Components
+
+private struct SettingsSectionCard<Content: View>: View {
+    let title: String
+    let subtitle: String?
+    @ViewBuilder let content: Content
+
+    init(
+        title: String,
+        subtitle: String? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text(title.uppercased())
+                    .font(Theme.Typography.footnote)
+                    .foregroundColor(Theme.Colors.textSecondary)
+                    .tracking(1)
+
+                if let subtitle {
+                    Text(subtitle)
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.horizontal, Theme.Spacing.xs)
+
+            content
+                .padding(Theme.Spacing.md)
+                .background(Theme.Colors.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
+                        .stroke(Theme.Colors.borderLight, lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.lg))
+        }
+    }
+}
+
+private struct SettingsNavigationRow: View {
+    let icon: String
+    let tint: Color
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.md) {
+            ZStack {
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                    .fill(tint.opacity(0.12))
+                    .frame(width: 44, height: 44)
+
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(tint)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(Theme.Typography.bodyBold)
+                    .foregroundColor(Theme.Colors.textPrimary)
+
+                Text(subtitle)
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: Theme.Spacing.md)
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(Theme.Colors.textTertiary)
+        }
+        .contentShape(Rectangle())
+    }
+}
+
+private struct SettingsRowDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(Theme.Colors.borderLight)
+            .frame(height: 1)
+            .padding(.leading, 56)
+            .padding(.vertical, Theme.Spacing.sm)
+    }
+}
+
+private struct SettingsStatusPill: View {
+    let icon: String
+    let title: String
+    let tint: Color
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+            Text(title)
+                .font(Theme.Typography.footnote)
+                .lineLimit(1)
+        }
+        .foregroundColor(tint)
+        .padding(.horizontal, Theme.Spacing.sm)
+        .padding(.vertical, 6)
+        .background(tint.opacity(0.12))
+        .clipShape(Capsule())
     }
 }
 

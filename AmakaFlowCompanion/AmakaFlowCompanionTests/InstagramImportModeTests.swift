@@ -105,3 +105,41 @@ final class InstagramImportModeTests: XCTestCase {
         XCTAssertNil(response.source)
     }
 }
+
+final class SettingsRefreshSectionModelTests: XCTestCase {
+    func testV1SectionsExposeRequiredSettingsRows() {
+        let sections = SettingsRefreshSectionModel.v1Sections(includeDebug: false)
+        let destinations = sections.flatMap(\.rows).map(\.destination)
+
+        XCTAssertTrue(destinations.contains(.editProfile))
+        XCTAssertTrue(destinations.contains(.notifications))
+        XCTAssertTrue(destinations.contains(.voice))
+        XCTAssertTrue(destinations.contains(.fatigue))
+        XCTAssertTrue(destinations.contains(.nutrition))
+        XCTAssertTrue(destinations.contains(.social))
+        XCTAssertTrue(destinations.contains(.about))
+    }
+
+    func testDebugRowsAreDebugOnly() {
+        let productionDestinations = SettingsRefreshSectionModel
+            .v1Sections(includeDebug: false)
+            .flatMap(\.rows)
+            .map(\.destination)
+        let debugDestinations = SettingsRefreshSectionModel
+            .v1Sections(includeDebug: true)
+            .flatMap(\.rows)
+            .map(\.destination)
+
+        XCTAssertFalse(productionDestinations.contains(.debugSettings))
+        XCTAssertFalse(productionDestinations.contains(.errorLog))
+        XCTAssertFalse(productionDestinations.contains(.workoutDebug))
+        XCTAssertTrue(debugDestinations.contains(.debugSettings))
+        XCTAssertTrue(debugDestinations.contains(.errorLog))
+        XCTAssertTrue(debugDestinations.contains(.workoutDebug))
+    }
+
+    func testSettingsRowIDsAreUnique() {
+        let rows = SettingsRefreshSectionModel.v1Sections(includeDebug: true).flatMap(\.rows)
+        XCTAssertEqual(Set(rows.map(\.id)).count, rows.count)
+    }
+}
