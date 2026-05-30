@@ -37,7 +37,9 @@ class FixtureAPIService: APIServiceProviding {
     var listMessagingChannelsResult: Result<Components.Schemas.MessagingChannelList, Error>?
     var setChannelPrefsResult: Result<Components.Schemas.ChannelPrefsResult, Error>?
     var listLibraryItemsResult: Result<Components.Schemas.LibraryItemList, Error>?
+    var getLibraryItemResult: Result<Components.Schemas.LibraryItemDetail, Error>?
     var libraryItemsEmpty = false
+    var libraryItemDetail404 = false
     private var fixtureMessagingDeliveryLive = false
     private var fixtureMessagingChannels: [Components.Schemas.MessagingChannel] = [
         Components.Schemas.MessagingChannel(
@@ -70,6 +72,7 @@ class FixtureAPIService: APIServiceProviding {
             bookmarked: false,
             id: "fixture-strength-basics",
             kind: .workout,
+            savedAt: "2026-05-29T12:00:00Z",
             sourceDomain: "coach.amakaflow.com",
             sourceUrl: "https://coach.amakaflow.com/library/strength-basics",
             tags: ["strength", "beginner"],
@@ -80,6 +83,7 @@ class FixtureAPIService: APIServiceProviding {
             bookmarked: false,
             id: "fixture-ankle-mobility-video",
             kind: .video,
+            savedAt: "2026-05-29T12:05:00Z",
             sourceDomain: "youtube.com",
             sourceUrl: "https://youtube.com/watch?v=fixture",
             tags: ["mobility", "ankles"],
@@ -90,6 +94,7 @@ class FixtureAPIService: APIServiceProviding {
             bookmarked: false,
             id: "fixture-zone-two-article",
             kind: .article,
+            savedAt: "2026-05-29T12:10:00Z",
             sourceDomain: "trainingpeaks.com",
             sourceUrl: "https://trainingpeaks.com/fixture-zone-two",
             tags: ["endurance", "base"],
@@ -100,8 +105,67 @@ class FixtureAPIService: APIServiceProviding {
             bookmarked: false,
             id: "fixture-hyrox-plan",
             kind: .plan,
+            savedAt: "2026-05-29T12:15:00Z",
             sourceDomain: "amakaflow.com",
             sourceUrl: "https://amakaflow.com/plans/hyrox-fixture",
+            tags: ["hyrox", "strength"],
+            thumbnailUrl: nil,
+            title: "Four-week HYROX tune-up"
+        )
+    ]
+    private var fixtureLibraryItemDetails: [String: Components.Schemas.LibraryItemDetail] = [
+        "fixture-strength-basics": Components.Schemas.LibraryItemDetail(
+            bookmarked: false,
+            id: "fixture-strength-basics",
+            keyTakeaways: ["Two compact strength days fit travel weeks.", "Use RPE instead of fixed loads when equipment changes."],
+            kind: .workout,
+            microSummary: "Travel-friendly strength",
+            savedAt: "2026-05-29T12:00:00Z",
+            sourceDomain: "coach.amakaflow.com",
+            sourceUrl: "https://coach.amakaflow.com/library/strength-basics",
+            summary: "A compact strength template for weeks when travel or equipment limits your normal gym routine.",
+            tags: ["strength", "beginner"],
+            thumbnailUrl: nil,
+            title: "Strength basics for travel weeks"
+        ),
+        "fixture-ankle-mobility-video": Components.Schemas.LibraryItemDetail(
+            bookmarked: false,
+            id: "fixture-ankle-mobility-video",
+            keyTakeaways: ["Spend extra time on the loaded dorsiflexion drill.", "Stop before pinching pain."],
+            kind: .video,
+            microSummary: "Quick ankle reset",
+            savedAt: "2026-05-29T12:05:00Z",
+            sourceDomain: "youtube.com",
+            sourceUrl: "https://youtube.com/watch?v=fixture",
+            summary: "A short mobility sequence to restore ankle range before squats, runs, or HYROX work.",
+            tags: ["mobility", "ankles"],
+            thumbnailUrl: nil,
+            title: "10-minute ankle mobility reset"
+        ),
+        "fixture-zone-two-article": Components.Schemas.LibraryItemDetail(
+            bookmarked: false,
+            id: "fixture-zone-two-article",
+            keyTakeaways: ["Zone two supports aerobic durability.", "Keep it easy enough to repeat alongside strength work."],
+            kind: .article,
+            microSummary: "Aerobic base reminder",
+            savedAt: "2026-05-29T12:10:00Z",
+            sourceDomain: "trainingpeaks.com",
+            sourceUrl: "https://trainingpeaks.com/fixture-zone-two",
+            summary: "An explainer on why steady aerobic base work still matters for hybrid athletes.",
+            tags: ["endurance", "base"],
+            thumbnailUrl: nil,
+            title: "Why zone two still matters"
+        ),
+        "fixture-hyrox-plan": Components.Schemas.LibraryItemDetail(
+            bookmarked: false,
+            id: "fixture-hyrox-plan",
+            keyTakeaways: ["Build compromised running gradually.", "Keep strength maintenance in the plan."],
+            kind: .plan,
+            microSummary: "HYROX tune-up",
+            savedAt: "2026-05-29T12:15:00Z",
+            sourceDomain: "amakaflow.com",
+            sourceUrl: "https://amakaflow.com/plans/hyrox-fixture",
+            summary: "A four-week outline for sharpening HYROX skills without pretending the full week-by-week structure is available yet.",
             tags: ["hyrox", "strength"],
             thumbnailUrl: nil,
             title: "Four-week HYROX tune-up"
@@ -426,6 +490,17 @@ class FixtureAPIService: APIServiceProviding {
             }
         }
         return Components.Schemas.LibraryItemList(items: items, total: items.count)
+    }
+
+    func getLibraryItem(id: String) async throws -> Components.Schemas.LibraryItemDetail {
+        if let getLibraryItemResult {
+            return try getLibraryItemResult.get()
+        }
+        guard !libraryItemDetail404,
+              let item = fixtureLibraryItemDetails[id] else {
+            throw APIError.serverErrorWithBody(404, "{\"detail\":\"Library item not found\"}")
+        }
+        return item
     }
 
     // MARK: - Messaging Channels (AMA-2027)

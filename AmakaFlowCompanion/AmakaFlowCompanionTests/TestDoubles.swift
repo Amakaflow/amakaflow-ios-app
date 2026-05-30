@@ -189,8 +189,10 @@ final class TestDependencies {
         apiService.reportSyncFailedCalled = false
         apiService.fetchProfileCalled = false
         apiService.listLibraryItemsCalled = false
+        apiService.getLibraryItemCalled = false
         apiService.lastListLibraryItemsKind = nil
         apiService.lastListLibraryItemsTag = nil
+        apiService.lastGetLibraryItemId = nil
 
         // Reset pairing service tracking
         pairingService.markAuthInvalidCalled = false

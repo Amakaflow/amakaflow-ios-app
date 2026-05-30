@@ -168,6 +168,8 @@
 		AMA1996DEVVIEW000000B /* DevicesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1996DEVVIEW000000A /* DevicesView.swift */; };
 		AMA2004LIBVM0000000B /* LibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2004LIBVM0000000A /* LibraryViewModel.swift */; };
 		AMA2004LIBVIEW00000B /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2004LIBVIEW00000A /* LibraryView.swift */; };
+		AMA2005LIBDVM000000B /* LibraryDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2005LIBDVM000000A /* LibraryDetailViewModel.swift */; };
+		AMA2005LIBDVIEW0000B /* LibraryDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2005LIBDVIEW0000A /* LibraryDetailView.swift */; };
 		AMA2027MSGVM0000000B /* MessagingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2027MSGVM0000000A /* MessagingViewModel.swift */; };
 		AMA2027MSGVIEW000000B /* MessagingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2027MSGVIEW000000A /* MessagingView.swift */; };
 		AMA12650011 /* SuggestWorkoutViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA12650001 /* SuggestWorkoutViewModel.swift */; };
@@ -605,6 +607,9 @@
 		AMA2004LIBVM0000000A /* LibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryViewModel.swift; path = ../AmakaFlow/ViewModels/LibraryViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA2004LIBVIEW00000A /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryView.swift; path = ../AmakaFlow/Views/LibraryView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2004LIBTST000000A /* LibraryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryViewModelTests.swift; path = AmakaFlowCompanionTests/LibraryViewModelTests.swift; sourceTree = "<group>"; };
+		AMA2005LIBDVM000000A /* LibraryDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryDetailViewModel.swift; path = ../AmakaFlow/ViewModels/LibraryDetailViewModel.swift; sourceTree = SOURCE_ROOT; };
+		AMA2005LIBDVIEW0000A /* LibraryDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryDetailView.swift; path = ../AmakaFlow/Views/LibraryDetailView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2005LIBDTST00000A /* LibraryDetailViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryDetailViewModelTests.swift; path = AmakaFlowCompanionTests/LibraryDetailViewModelTests.swift; sourceTree = "<group>"; };
 		AMA2027MSGVM0000000A /* MessagingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MessagingViewModel.swift; path = ../AmakaFlow/ViewModels/MessagingViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA2027MSGVIEW000000A /* MessagingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MessagingView.swift; path = ../AmakaFlow/Views/MessagingView.swift; sourceTree = SOURCE_ROOT; };
 		AMA12650001 /* SuggestWorkoutViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SuggestWorkoutViewModel.swift; path = ../AmakaFlow/ViewModels/SuggestWorkoutViewModel.swift; sourceTree = SOURCE_ROOT; };
@@ -1034,6 +1039,7 @@
 				AMA1995EQVIEW00000000A /* EquipmentProfileView.swift */,
 				AMA1996DEVVIEW000000A /* DevicesView.swift */,
 				AMA2004LIBVIEW00000A /* LibraryView.swift */,
+				AMA2005LIBDVIEW0000A /* LibraryDetailView.swift */,
 				AMA2027MSGVIEW000000A /* MessagingView.swift */,
 				AMA16080001 /* BiometricConsentView.swift */,
 				AMA12650004 /* CoachingProfileOnboardingView.swift */,
@@ -1107,6 +1113,7 @@
 				AMA1995EQTST000000000A /* EquipmentProfileViewModelTests.swift */,
 				AMA1993HOMETEST0000A /* HomeViewModelTests.swift */,
 				AMA2004LIBTST000000A /* LibraryViewModelTests.swift */,
+				AMA2005LIBDTST00000A /* LibraryDetailViewModelTests.swift */,
 				AMA2007SIGNUPTESTREF /* SignUpViewModelTests.swift */,
 				AK00CHL001A /* ChallengeModels.swift */,
 				AK00CHL002A /* ChallengesViewModel.swift */,
@@ -1267,6 +1274,7 @@
 				AMA1995EQVM000000000A /* EquipmentProfileViewModel.swift */,
 				AMA1996DEVVM00000000A /* DevicesViewModel.swift */,
 				AMA2004LIBVM0000000A /* LibraryViewModel.swift */,
+				AMA2005LIBDVM000000A /* LibraryDetailViewModel.swift */,
 				AMA2027MSGVM0000000A /* MessagingViewModel.swift */,
 				AMA2028WDVM00000000A /* WatchDeliveryViewModel.swift */,
 				V01C300600000000000000 /* VoiceWorkoutView.swift */,
@@ -1821,6 +1829,7 @@
 				AMA1995EQVM000000000B /* EquipmentProfileViewModel.swift in Sources */,
 				AMA1996DEVVM00000000B /* DevicesViewModel.swift in Sources */,
 				AMA2004LIBVM0000000B /* LibraryViewModel.swift in Sources */,
+				AMA2005LIBDVM000000B /* LibraryDetailViewModel.swift in Sources */,
 				AMA2027MSGVM0000000B /* MessagingViewModel.swift in Sources */,
 				AMA2028WDVM00000000B /* WatchDeliveryViewModel.swift in Sources */,
 				AMA12650012 /* SuggestWorkoutButton.swift in Sources */,
@@ -1828,6 +1837,7 @@
 				AMA1995EQVIEW00000000B /* EquipmentProfileView.swift in Sources */,
 				AMA1996DEVVIEW000000B /* DevicesView.swift in Sources */,
 				AMA2004LIBVIEW00000B /* LibraryView.swift in Sources */,
+				AMA2005LIBDVIEW0000B /* LibraryDetailView.swift in Sources */,
 				AMA2027MSGVIEW000000B /* MessagingView.swift in Sources */,
 				AMA16080002 /* BiometricConsentView.swift in Sources */,
 				AMA12650014 /* CoachingProfileOnboardingView.swift in Sources */,

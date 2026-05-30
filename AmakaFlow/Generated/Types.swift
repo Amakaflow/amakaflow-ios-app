@@ -88,6 +88,16 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /v1/library/items`.
     /// - Remark: Generated from `#/paths//v1/library/items/get(listLibraryItems)`.
     func listLibraryItems(_ input: Operations.ListLibraryItems.Input) async throws -> Operations.ListLibraryItems.Output
+    /// V1 Library Item Detail
+    ///
+    /// iOS LibraryDetail → chat-api GET /knowledge/cards/{id} (AMA-2005).
+    ///
+    /// LibraryItem fields + the body we have (summary + key_takeaways). Structured
+    /// workout/plan bodies + notes are deferred (AMA-2046 / v1.1).
+    ///
+    /// - Remark: HTTP `GET /v1/library/items/{item_id}`.
+    /// - Remark: Generated from `#/paths//v1/library/items/{item_id}/get(getLibraryItem)`.
+    func getLibraryItem(_ input: Operations.GetLibraryItem.Input) async throws -> Operations.GetLibraryItem.Output
     /// V1 Messaging Channels
     ///
     /// iOS MessagingScreen → mapper-api GET /api/messaging/channels (AMA-2027).
@@ -313,6 +323,24 @@ extension APIProtocol {
     ) async throws -> Operations.ListLibraryItems.Output {
         try await listLibraryItems(Operations.ListLibraryItems.Input(
             query: query,
+            headers: headers
+        ))
+    }
+    /// V1 Library Item Detail
+    ///
+    /// iOS LibraryDetail → chat-api GET /knowledge/cards/{id} (AMA-2005).
+    ///
+    /// LibraryItem fields + the body we have (summary + key_takeaways). Structured
+    /// workout/plan bodies + notes are deferred (AMA-2046 / v1.1).
+    ///
+    /// - Remark: HTTP `GET /v1/library/items/{item_id}`.
+    /// - Remark: Generated from `#/paths//v1/library/items/{item_id}/get(getLibraryItem)`.
+    public func getLibraryItem(
+        path: Operations.GetLibraryItem.Input.Path,
+        headers: Operations.GetLibraryItem.Input.Headers = .init()
+    ) async throws -> Operations.GetLibraryItem.Output {
+        try await getLibraryItem(Operations.GetLibraryItem.Input(
+            path: path,
             headers: headers
         ))
     }
@@ -1512,6 +1540,95 @@ public enum Components {
                 case savedAt
                 case sourceDomain
                 case sourceUrl
+                case tags
+                case thumbnailUrl
+                case title
+            }
+        }
+        /// Response for GET /v1/library/items/{id} — LibraryItem + the body we have.
+        ///
+        /// No `raw_content`/structured workout/plan/notes from knowledge_cards yet, so the
+        /// body is `summary` + `keyTakeaways`; structured bodies + notes are deferred
+        /// (AMA-2046 / v1.1). No fabricated content.
+        ///
+        /// - Remark: Generated from `#/components/schemas/LibraryItemDetail`.
+        public struct LibraryItemDetail: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/LibraryItemDetail/bookmarked`.
+            public var bookmarked: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/LibraryItemDetail/id`.
+            public var id: Swift.String
+            /// - Remark: Generated from `#/components/schemas/LibraryItemDetail/keyTakeaways`.
+            public var keyTakeaways: [Swift.String]?
+            /// - Remark: Generated from `#/components/schemas/LibraryItemDetail/kind`.
+            public var kind: Components.Schemas.LibraryKind
+            /// - Remark: Generated from `#/components/schemas/LibraryItemDetail/microSummary`.
+            public var microSummary: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/LibraryItemDetail/savedAt`.
+            public var savedAt: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/LibraryItemDetail/sourceDomain`.
+            public var sourceDomain: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/LibraryItemDetail/sourceUrl`.
+            public var sourceUrl: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/LibraryItemDetail/summary`.
+            public var summary: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/LibraryItemDetail/tags`.
+            public var tags: [Swift.String]?
+            /// - Remark: Generated from `#/components/schemas/LibraryItemDetail/thumbnailUrl`.
+            public var thumbnailUrl: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/LibraryItemDetail/title`.
+            public var title: Swift.String
+            /// Creates a new `LibraryItemDetail`.
+            ///
+            /// - Parameters:
+            ///   - bookmarked:
+            ///   - id:
+            ///   - keyTakeaways:
+            ///   - kind:
+            ///   - microSummary:
+            ///   - savedAt:
+            ///   - sourceDomain:
+            ///   - sourceUrl:
+            ///   - summary:
+            ///   - tags:
+            ///   - thumbnailUrl:
+            ///   - title:
+            public init(
+                bookmarked: Swift.Bool? = nil,
+                id: Swift.String,
+                keyTakeaways: [Swift.String]? = nil,
+                kind: Components.Schemas.LibraryKind,
+                microSummary: Swift.String? = nil,
+                savedAt: Swift.String? = nil,
+                sourceDomain: Swift.String? = nil,
+                sourceUrl: Swift.String? = nil,
+                summary: Swift.String? = nil,
+                tags: [Swift.String]? = nil,
+                thumbnailUrl: Swift.String? = nil,
+                title: Swift.String
+            ) {
+                self.bookmarked = bookmarked
+                self.id = id
+                self.keyTakeaways = keyTakeaways
+                self.kind = kind
+                self.microSummary = microSummary
+                self.savedAt = savedAt
+                self.sourceDomain = sourceDomain
+                self.sourceUrl = sourceUrl
+                self.summary = summary
+                self.tags = tags
+                self.thumbnailUrl = thumbnailUrl
+                self.title = title
+            }
+            public enum CodingKeys: String, CodingKey {
+                case bookmarked
+                case id
+                case keyTakeaways
+                case kind
+                case microSummary
+                case savedAt
+                case sourceDomain
+                case sourceUrl
+                case summary
                 case tags
                 case thumbnailUrl
                 case title
@@ -4756,6 +4873,241 @@ public enum Operations {
             /// - Throws: An error if `self` is not `.serviceUnavailable`.
             /// - SeeAlso: `.serviceUnavailable`.
             public var serviceUnavailable: Operations.ListLibraryItems.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// V1 Library Item Detail
+    ///
+    /// iOS LibraryDetail → chat-api GET /knowledge/cards/{id} (AMA-2005).
+    ///
+    /// LibraryItem fields + the body we have (summary + key_takeaways). Structured
+    /// workout/plan bodies + notes are deferred (AMA-2046 / v1.1).
+    ///
+    /// - Remark: HTTP `GET /v1/library/items/{item_id}`.
+    /// - Remark: Generated from `#/paths//v1/library/items/{item_id}/get(getLibraryItem)`.
+    public enum GetLibraryItem {
+        public static let id: Swift.String = "getLibraryItem"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/library/items/{item_id}/GET/path`.
+            public struct Path: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/library/items/{item_id}/GET/path/item_id`.
+                public var itemId: Swift.String
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - itemId:
+                public init(itemId: Swift.String) {
+                    self.itemId = itemId
+                }
+            }
+            public var path: Operations.GetLibraryItem.Input.Path
+            /// - Remark: Generated from `#/paths/v1/library/items/{item_id}/GET/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.GetLibraryItem.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.GetLibraryItem.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.GetLibraryItem.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            public init(
+                path: Operations.GetLibraryItem.Input.Path,
+                headers: Operations.GetLibraryItem.Input.Headers = .init()
+            ) {
+                self.path = path
+                self.headers = headers
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/library/items/{item_id}/GET/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/library/items/{item_id}/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.LibraryItemDetail)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.LibraryItemDetail {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.GetLibraryItem.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.GetLibraryItem.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Successful Response
+            ///
+            /// - Remark: Generated from `#/paths//v1/library/items/{item_id}/get(getLibraryItem)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.GetLibraryItem.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.GetLibraryItem.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/library/items/{item_id}/GET/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/library/items/{item_id}/GET/responses/422/content/application\/json`.
+                    case json(Components.Schemas.HTTPValidationError)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.HTTPValidationError {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.GetLibraryItem.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.GetLibraryItem.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// Validation Error
+            ///
+            /// - Remark: Generated from `#/paths//v1/library/items/{item_id}/get(getLibraryItem)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.GetLibraryItem.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.GetLibraryItem.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/library/items/{item_id}/GET/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/library/items/{item_id}/GET/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.GetLibraryItem.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.GetLibraryItem.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/library/items/{item_id}/get(getLibraryItem)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.GetLibraryItem.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.GetLibraryItem.Output.ServiceUnavailable {
                 get throws {
                     switch self {
                     case let .serviceUnavailable(response):
