@@ -188,6 +188,9 @@ final class TestDependencies {
         apiService.confirmedWorkoutId = nil
         apiService.reportSyncFailedCalled = false
         apiService.fetchProfileCalled = false
+        apiService.listLibraryItemsCalled = false
+        apiService.lastListLibraryItemsKind = nil
+        apiService.lastListLibraryItemsTag = nil
 
         // Reset pairing service tracking
         pairingService.markAuthInvalidCalled = false
