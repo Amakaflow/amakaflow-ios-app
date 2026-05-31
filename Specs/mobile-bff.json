@@ -1630,6 +1630,129 @@
         "title": "ProposedPlan",
         "type": "object"
       },
+      "ReadinessSourcePref": {
+        "description": "One per-metric source choice (AMA-2053 Wedge D). Wire shape: metric, source, deviceId.",
+        "properties": {
+          "deviceId": {
+            "title": "Deviceid",
+            "type": "string"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric",
+          "source"
+        ],
+        "title": "ReadinessSourcePref",
+        "type": "object"
+      },
+      "ReadinessSourcePrefs": {
+        "description": "A user's per-metric source preferences (AMA-2053 Wedge D).",
+        "properties": {
+          "prefs": {
+            "items": {
+              "$ref": "#/components/schemas/ReadinessSourcePref"
+            },
+            "title": "Prefs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "prefs"
+        ],
+        "title": "ReadinessSourcePrefs",
+        "type": "object"
+      },
+      "ReadinessToday": {
+        "description": "Today's raw recovery metrics for the iOS readiness sheet (AMA-2050).\n\nEvery metric is nullable \u2014 honest-null when absent. `hasData` is False when\nthere's no daily_status row today (honest \"no data yet\", never a fabricated\nzero). No composite readiness *score* \u2014 that's AMA-1565.",
+        "properties": {
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "hasData": {
+            "default": false,
+            "title": "Hasdata",
+            "type": "boolean"
+          },
+          "hrv": {
+            "title": "Hrv",
+            "type": "number"
+          },
+          "restingHr": {
+            "title": "Restinghr",
+            "type": "integer"
+          },
+          "sleepHours": {
+            "title": "Sleephours",
+            "type": "number"
+          },
+          "sleepQuality": {
+            "title": "Sleepquality",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date"
+        ],
+        "title": "ReadinessToday",
+        "type": "object"
+      },
+      "ReadinessTrend": {
+        "description": "Passive N-day trend for one readiness metric (AMA-2051 Wedge B).\n\nPoints cover only days with a reading; missing days are absent (honest gaps,\nnever interpolated). No composite score (AMA-1565).",
+        "properties": {
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ReadinessTrendPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          }
+        },
+        "required": [
+          "metric",
+          "days"
+        ],
+        "title": "ReadinessTrend",
+        "type": "object"
+      },
+      "ReadinessTrendPoint": {
+        "description": "One day in a metric's trend; value null = honest gap (AMA-2051 Wedge B).",
+        "properties": {
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "date"
+        ],
+        "title": "ReadinessTrendPoint",
+        "type": "object"
+      },
       "ReportSyncFailedRequest": {
         "description": "Request body for POST /v1/sync/failed.",
         "properties": {
@@ -4050,6 +4173,152 @@
           }
         },
         "summary": "V1 Readiness Sample"
+      }
+    },
+    "/v1/readiness/source-prefs": {
+      "get": {
+        "description": "iOS Readiness source-picker \u2192 chat-api GET /coach/readiness-source-prefs, typed.\nHonest-empty when no prefs set (client falls back to defaults). No fabricated prefs.",
+        "operationId": "getReadinessSourcePrefs",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessSourcePrefs"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Readiness Source Prefs Get"
+      },
+      "put": {
+        "description": "iOS Readiness source-picker write \u2192 chat-api PUT /coach/readiness-source-prefs, typed.\nUpstream validation (422) + DB-down (503) are propagated with their status so the client\nsurfaces a real error (CTAError), not a generic failure.",
+        "operationId": "setReadinessSourcePref",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessSourcePref"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Readiness Source Prefs Put"
+      }
+    },
+    "/v1/readiness/today": {
+      "get": {
+        "description": "iOS readiness sheet \u2192 chat-api GET /coach/readiness-today, projected to\nthe typed camelCase shape. Honest-null per metric; hasData=False when no\nrow today (no fabricated zero). No composite score (AMA-1565).",
+        "operationId": "getReadinessToday",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessToday"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Readiness Today"
+      }
+    },
+    "/v1/readiness/trend": {
+      "get": {
+        "description": "iOS readiness sheet \u2192 chat-api GET /coach/readiness-trend, projected to the\ntyped camelCase shape. Passive trend; null points = honest gaps. No composite\nscore (AMA-1565).",
+        "operationId": "getReadinessTrend",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "metric",
+            "required": false,
+            "schema": {
+              "default": "hrv",
+              "title": "Metric",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessTrend"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Readiness Trend"
       }
     },
     "/v1/sync/confirm": {
