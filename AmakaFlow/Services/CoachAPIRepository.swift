@@ -322,6 +322,82 @@ extension APIService {
         )
     }
 
+    // MARK: - Readiness (AMA-2054)
+
+    private struct ReadinessSourcePrefWriteRequest: Encodable {
+        let metric: String
+        let source: String
+        let deviceId: String?
+
+        enum CodingKeys: String, CodingKey {
+            case metric
+            case source
+            case deviceId = "device_id"
+        }
+    }
+
+    func readinessToday() async throws -> Components.Schemas.ReadinessToday {
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/readiness/today",
+            method: "GET"
+        )
+        return try await self.request(
+            request,
+            decode: Components.Schemas.ReadinessToday.self,
+            decoder: APIService.makeGeneratedDecoder(),
+            successStatusCodes: 200...200
+        )
+    }
+
+    func readinessTrend(metric: String, days: Int) async throws -> Components.Schemas.ReadinessTrend {
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/readiness/trend",
+            queryItems: [
+                URLQueryItem(name: "metric", value: metric),
+                URLQueryItem(name: "days", value: String(days))
+            ],
+            method: "GET"
+        )
+        return try await self.request(
+            request,
+            decode: Components.Schemas.ReadinessTrend.self,
+            decoder: APIService.makeGeneratedDecoder(),
+            successStatusCodes: 200...200
+        )
+    }
+
+    func readinessSourcePrefs() async throws -> Components.Schemas.ReadinessSourcePrefs {
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/readiness/source-prefs",
+            method: "GET"
+        )
+        return try await self.request(
+            request,
+            decode: Components.Schemas.ReadinessSourcePrefs.self,
+            decoder: APIService.makeGeneratedDecoder(),
+            successStatusCodes: 200...200
+        )
+    }
+
+    func setReadinessSourcePref(metric: String, source: String, deviceId: String?) async throws -> Components.Schemas.ReadinessSourcePref {
+        let body = ReadinessSourcePrefWriteRequest(metric: metric, source: source, deviceId: deviceId)
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/readiness/source-prefs",
+            method: "PUT",
+            body: try encodeJSONBody(body)
+        )
+        return try await self.request(
+            request,
+            decode: Components.Schemas.ReadinessSourcePref.self,
+            decoder: APIService.makeGeneratedDecoder(),
+            successStatusCodes: 200...200
+        )
+    }
+
     // MARK: - DayState / Coach / Conflict (AMA-1150)
 
     /// Stable yyyy-MM-dd formatter (DateFormatter init is expensive — build once).

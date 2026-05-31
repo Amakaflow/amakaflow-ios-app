@@ -143,6 +143,41 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `PUT /v1/readiness/sample`.
     /// - Remark: Generated from `#/paths//v1/readiness/sample/put(v1_readiness_sample_v1_readiness_sample_put)`.
     func v1ReadinessSampleV1ReadinessSamplePut(_ input: Operations.V1ReadinessSampleV1ReadinessSamplePut.Input) async throws -> Operations.V1ReadinessSampleV1ReadinessSamplePut.Output
+    /// V1 Readiness Source Prefs Get
+    ///
+    /// iOS Readiness source-picker → chat-api GET /coach/readiness-source-prefs, typed.
+    /// Honest-empty when no prefs set (client falls back to defaults). No fabricated prefs.
+    ///
+    /// - Remark: HTTP `GET /v1/readiness/source-prefs`.
+    /// - Remark: Generated from `#/paths//v1/readiness/source-prefs/get(getReadinessSourcePrefs)`.
+    func getReadinessSourcePrefs(_ input: Operations.GetReadinessSourcePrefs.Input) async throws -> Operations.GetReadinessSourcePrefs.Output
+    /// V1 Readiness Source Prefs Put
+    ///
+    /// iOS Readiness source-picker write → chat-api PUT /coach/readiness-source-prefs, typed.
+    /// Upstream validation (422) + DB-down (503) are propagated with their status so the client
+    /// surfaces a real error (CTAError), not a generic failure.
+    ///
+    /// - Remark: HTTP `PUT /v1/readiness/source-prefs`.
+    /// - Remark: Generated from `#/paths//v1/readiness/source-prefs/put(setReadinessSourcePref)`.
+    func setReadinessSourcePref(_ input: Operations.SetReadinessSourcePref.Input) async throws -> Operations.SetReadinessSourcePref.Output
+    /// V1 Readiness Today
+    ///
+    /// iOS readiness sheet → chat-api GET /coach/readiness-today, projected to
+    /// the typed camelCase shape. Honest-null per metric; hasData=False when no
+    /// row today (no fabricated zero). No composite score (AMA-1565).
+    ///
+    /// - Remark: HTTP `GET /v1/readiness/today`.
+    /// - Remark: Generated from `#/paths//v1/readiness/today/get(getReadinessToday)`.
+    func getReadinessToday(_ input: Operations.GetReadinessToday.Input) async throws -> Operations.GetReadinessToday.Output
+    /// V1 Readiness Trend
+    ///
+    /// iOS readiness sheet → chat-api GET /coach/readiness-trend, projected to the
+    /// typed camelCase shape. Passive trend; null points = honest gaps. No composite
+    /// score (AMA-1565).
+    ///
+    /// - Remark: HTTP `GET /v1/readiness/trend`.
+    /// - Remark: Generated from `#/paths//v1/readiness/trend/get(getReadinessTrend)`.
+    func getReadinessTrend(_ input: Operations.GetReadinessTrend.Input) async throws -> Operations.GetReadinessTrend.Output
     /// V1 Sync Confirm
     ///
     /// SyncEngine confirm-success → mapper-api POST /sync/confirm.
@@ -423,6 +458,55 @@ extension APIProtocol {
     /// - Remark: Generated from `#/paths//v1/readiness/sample/put(v1_readiness_sample_v1_readiness_sample_put)`.
     public func v1ReadinessSampleV1ReadinessSamplePut(headers: Operations.V1ReadinessSampleV1ReadinessSamplePut.Input.Headers = .init()) async throws -> Operations.V1ReadinessSampleV1ReadinessSamplePut.Output {
         try await v1ReadinessSampleV1ReadinessSamplePut(Operations.V1ReadinessSampleV1ReadinessSamplePut.Input(headers: headers))
+    }
+    /// V1 Readiness Source Prefs Get
+    ///
+    /// iOS Readiness source-picker → chat-api GET /coach/readiness-source-prefs, typed.
+    /// Honest-empty when no prefs set (client falls back to defaults). No fabricated prefs.
+    ///
+    /// - Remark: HTTP `GET /v1/readiness/source-prefs`.
+    /// - Remark: Generated from `#/paths//v1/readiness/source-prefs/get(getReadinessSourcePrefs)`.
+    public func getReadinessSourcePrefs(headers: Operations.GetReadinessSourcePrefs.Input.Headers = .init()) async throws -> Operations.GetReadinessSourcePrefs.Output {
+        try await getReadinessSourcePrefs(Operations.GetReadinessSourcePrefs.Input(headers: headers))
+    }
+    /// V1 Readiness Source Prefs Put
+    ///
+    /// iOS Readiness source-picker write → chat-api PUT /coach/readiness-source-prefs, typed.
+    /// Upstream validation (422) + DB-down (503) are propagated with their status so the client
+    /// surfaces a real error (CTAError), not a generic failure.
+    ///
+    /// - Remark: HTTP `PUT /v1/readiness/source-prefs`.
+    /// - Remark: Generated from `#/paths//v1/readiness/source-prefs/put(setReadinessSourcePref)`.
+    public func setReadinessSourcePref(headers: Operations.SetReadinessSourcePref.Input.Headers = .init()) async throws -> Operations.SetReadinessSourcePref.Output {
+        try await setReadinessSourcePref(Operations.SetReadinessSourcePref.Input(headers: headers))
+    }
+    /// V1 Readiness Today
+    ///
+    /// iOS readiness sheet → chat-api GET /coach/readiness-today, projected to
+    /// the typed camelCase shape. Honest-null per metric; hasData=False when no
+    /// row today (no fabricated zero). No composite score (AMA-1565).
+    ///
+    /// - Remark: HTTP `GET /v1/readiness/today`.
+    /// - Remark: Generated from `#/paths//v1/readiness/today/get(getReadinessToday)`.
+    public func getReadinessToday(headers: Operations.GetReadinessToday.Input.Headers = .init()) async throws -> Operations.GetReadinessToday.Output {
+        try await getReadinessToday(Operations.GetReadinessToday.Input(headers: headers))
+    }
+    /// V1 Readiness Trend
+    ///
+    /// iOS readiness sheet → chat-api GET /coach/readiness-trend, projected to the
+    /// typed camelCase shape. Passive trend; null points = honest gaps. No composite
+    /// score (AMA-1565).
+    ///
+    /// - Remark: HTTP `GET /v1/readiness/trend`.
+    /// - Remark: Generated from `#/paths//v1/readiness/trend/get(getReadinessTrend)`.
+    public func getReadinessTrend(
+        query: Operations.GetReadinessTrend.Input.Query = .init(),
+        headers: Operations.GetReadinessTrend.Input.Headers = .init()
+    ) async throws -> Operations.GetReadinessTrend.Output {
+        try await getReadinessTrend(Operations.GetReadinessTrend.Input(
+            query: query,
+            headers: headers
+        ))
     }
     /// V1 Sync Confirm
     ///
@@ -2130,6 +2214,172 @@ public enum Components {
                 case status
                 case title
                 case userId
+            }
+        }
+        /// One per-metric source choice (AMA-2053 Wedge D). Wire shape: metric, source, deviceId.
+        ///
+        /// - Remark: Generated from `#/components/schemas/ReadinessSourcePref`.
+        public struct ReadinessSourcePref: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ReadinessSourcePref/deviceId`.
+            public var deviceId: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/ReadinessSourcePref/metric`.
+            public var metric: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ReadinessSourcePref/source`.
+            public var source: Swift.String
+            /// Creates a new `ReadinessSourcePref`.
+            ///
+            /// - Parameters:
+            ///   - deviceId:
+            ///   - metric:
+            ///   - source:
+            public init(
+                deviceId: Swift.String? = nil,
+                metric: Swift.String,
+                source: Swift.String
+            ) {
+                self.deviceId = deviceId
+                self.metric = metric
+                self.source = source
+            }
+            public enum CodingKeys: String, CodingKey {
+                case deviceId
+                case metric
+                case source
+            }
+        }
+        /// A user's per-metric source preferences (AMA-2053 Wedge D).
+        ///
+        /// - Remark: Generated from `#/components/schemas/ReadinessSourcePrefs`.
+        public struct ReadinessSourcePrefs: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ReadinessSourcePrefs/prefs`.
+            public var prefs: [Components.Schemas.ReadinessSourcePref]
+            /// Creates a new `ReadinessSourcePrefs`.
+            ///
+            /// - Parameters:
+            ///   - prefs:
+            public init(prefs: [Components.Schemas.ReadinessSourcePref]) {
+                self.prefs = prefs
+            }
+            public enum CodingKeys: String, CodingKey {
+                case prefs
+            }
+        }
+        /// Today's raw recovery metrics for the iOS readiness sheet (AMA-2050).
+        ///
+        /// Every metric is nullable — honest-null when absent. `hasData` is False when
+        /// there's no daily_status row today (honest "no data yet", never a fabricated
+        /// zero). No composite readiness *score* — that's AMA-1565.
+        ///
+        /// - Remark: Generated from `#/components/schemas/ReadinessToday`.
+        public struct ReadinessToday: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ReadinessToday/date`.
+            public var date: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ReadinessToday/hasData`.
+            public var hasData: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/ReadinessToday/hrv`.
+            public var hrv: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/ReadinessToday/restingHr`.
+            public var restingHr: Swift.Int?
+            /// - Remark: Generated from `#/components/schemas/ReadinessToday/sleepHours`.
+            public var sleepHours: Swift.Double?
+            /// - Remark: Generated from `#/components/schemas/ReadinessToday/sleepQuality`.
+            public var sleepQuality: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/ReadinessToday/source`.
+            public var source: Swift.String?
+            /// Creates a new `ReadinessToday`.
+            ///
+            /// - Parameters:
+            ///   - date:
+            ///   - hasData:
+            ///   - hrv:
+            ///   - restingHr:
+            ///   - sleepHours:
+            ///   - sleepQuality:
+            ///   - source:
+            public init(
+                date: Swift.String,
+                hasData: Swift.Bool? = nil,
+                hrv: Swift.Double? = nil,
+                restingHr: Swift.Int? = nil,
+                sleepHours: Swift.Double? = nil,
+                sleepQuality: Swift.String? = nil,
+                source: Swift.String? = nil
+            ) {
+                self.date = date
+                self.hasData = hasData
+                self.hrv = hrv
+                self.restingHr = restingHr
+                self.sleepHours = sleepHours
+                self.sleepQuality = sleepQuality
+                self.source = source
+            }
+            public enum CodingKeys: String, CodingKey {
+                case date
+                case hasData
+                case hrv
+                case restingHr
+                case sleepHours
+                case sleepQuality
+                case source
+            }
+        }
+        /// Passive N-day trend for one readiness metric (AMA-2051 Wedge B).
+        ///
+        /// Points cover only days with a reading; missing days are absent (honest gaps,
+        /// never interpolated). No composite score (AMA-1565).
+        ///
+        /// - Remark: Generated from `#/components/schemas/ReadinessTrend`.
+        public struct ReadinessTrend: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ReadinessTrend/days`.
+            public var days: Swift.Int
+            /// - Remark: Generated from `#/components/schemas/ReadinessTrend/metric`.
+            public var metric: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ReadinessTrend/points`.
+            public var points: [Components.Schemas.ReadinessTrendPoint]?
+            /// Creates a new `ReadinessTrend`.
+            ///
+            /// - Parameters:
+            ///   - days:
+            ///   - metric:
+            ///   - points:
+            public init(
+                days: Swift.Int,
+                metric: Swift.String,
+                points: [Components.Schemas.ReadinessTrendPoint]? = nil
+            ) {
+                self.days = days
+                self.metric = metric
+                self.points = points
+            }
+            public enum CodingKeys: String, CodingKey {
+                case days
+                case metric
+                case points
+            }
+        }
+        /// One day in a metric's trend; value null = honest gap (AMA-2051 Wedge B).
+        ///
+        /// - Remark: Generated from `#/components/schemas/ReadinessTrendPoint`.
+        public struct ReadinessTrendPoint: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/ReadinessTrendPoint/date`.
+            public var date: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ReadinessTrendPoint/value`.
+            public var value: Swift.Double?
+            /// Creates a new `ReadinessTrendPoint`.
+            ///
+            /// - Parameters:
+            ///   - date:
+            ///   - value:
+            public init(
+                date: Swift.String,
+                value: Swift.Double? = nil
+            ) {
+                self.date = date
+                self.value = value
+            }
+            public enum CodingKeys: String, CodingKey {
+                case date
+                case value
             }
         }
         /// Request body for POST /v1/sync/failed.
@@ -6104,6 +6354,741 @@ public enum Operations {
             /// - Throws: An error if `self` is not `.serviceUnavailable`.
             /// - SeeAlso: `.serviceUnavailable`.
             public var serviceUnavailable: Operations.V1ReadinessSampleV1ReadinessSamplePut.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// V1 Readiness Source Prefs Get
+    ///
+    /// iOS Readiness source-picker → chat-api GET /coach/readiness-source-prefs, typed.
+    /// Honest-empty when no prefs set (client falls back to defaults). No fabricated prefs.
+    ///
+    /// - Remark: HTTP `GET /v1/readiness/source-prefs`.
+    /// - Remark: Generated from `#/paths//v1/readiness/source-prefs/get(getReadinessSourcePrefs)`.
+    public enum GetReadinessSourcePrefs {
+        public static let id: Swift.String = "getReadinessSourcePrefs"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/readiness/source-prefs/GET/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.GetReadinessSourcePrefs.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.GetReadinessSourcePrefs.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.GetReadinessSourcePrefs.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            public init(headers: Operations.GetReadinessSourcePrefs.Input.Headers = .init()) {
+                self.headers = headers
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/readiness/source-prefs/GET/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/readiness/source-prefs/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.ReadinessSourcePrefs)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.ReadinessSourcePrefs {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.GetReadinessSourcePrefs.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.GetReadinessSourcePrefs.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Successful Response
+            ///
+            /// - Remark: Generated from `#/paths//v1/readiness/source-prefs/get(getReadinessSourcePrefs)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.GetReadinessSourcePrefs.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.GetReadinessSourcePrefs.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/readiness/source-prefs/GET/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/readiness/source-prefs/GET/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.GetReadinessSourcePrefs.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.GetReadinessSourcePrefs.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/readiness/source-prefs/get(getReadinessSourcePrefs)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.GetReadinessSourcePrefs.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.GetReadinessSourcePrefs.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// V1 Readiness Source Prefs Put
+    ///
+    /// iOS Readiness source-picker write → chat-api PUT /coach/readiness-source-prefs, typed.
+    /// Upstream validation (422) + DB-down (503) are propagated with their status so the client
+    /// surfaces a real error (CTAError), not a generic failure.
+    ///
+    /// - Remark: HTTP `PUT /v1/readiness/source-prefs`.
+    /// - Remark: Generated from `#/paths//v1/readiness/source-prefs/put(setReadinessSourcePref)`.
+    public enum SetReadinessSourcePref {
+        public static let id: Swift.String = "setReadinessSourcePref"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/readiness/source-prefs/PUT/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.SetReadinessSourcePref.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.SetReadinessSourcePref.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.SetReadinessSourcePref.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            public init(headers: Operations.SetReadinessSourcePref.Input.Headers = .init()) {
+                self.headers = headers
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/readiness/source-prefs/PUT/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/readiness/source-prefs/PUT/responses/200/content/application\/json`.
+                    case json(Components.Schemas.ReadinessSourcePref)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.ReadinessSourcePref {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.SetReadinessSourcePref.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.SetReadinessSourcePref.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Successful Response
+            ///
+            /// - Remark: Generated from `#/paths//v1/readiness/source-prefs/put(setReadinessSourcePref)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.SetReadinessSourcePref.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.SetReadinessSourcePref.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/readiness/source-prefs/PUT/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/readiness/source-prefs/PUT/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.SetReadinessSourcePref.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.SetReadinessSourcePref.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/readiness/source-prefs/put(setReadinessSourcePref)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.SetReadinessSourcePref.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.SetReadinessSourcePref.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// V1 Readiness Today
+    ///
+    /// iOS readiness sheet → chat-api GET /coach/readiness-today, projected to
+    /// the typed camelCase shape. Honest-null per metric; hasData=False when no
+    /// row today (no fabricated zero). No composite score (AMA-1565).
+    ///
+    /// - Remark: HTTP `GET /v1/readiness/today`.
+    /// - Remark: Generated from `#/paths//v1/readiness/today/get(getReadinessToday)`.
+    public enum GetReadinessToday {
+        public static let id: Swift.String = "getReadinessToday"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/readiness/today/GET/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.GetReadinessToday.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.GetReadinessToday.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.GetReadinessToday.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            public init(headers: Operations.GetReadinessToday.Input.Headers = .init()) {
+                self.headers = headers
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/readiness/today/GET/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/readiness/today/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.ReadinessToday)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.ReadinessToday {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.GetReadinessToday.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.GetReadinessToday.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Successful Response
+            ///
+            /// - Remark: Generated from `#/paths//v1/readiness/today/get(getReadinessToday)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.GetReadinessToday.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.GetReadinessToday.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/readiness/today/GET/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/readiness/today/GET/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.GetReadinessToday.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.GetReadinessToday.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/readiness/today/get(getReadinessToday)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.GetReadinessToday.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.GetReadinessToday.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// V1 Readiness Trend
+    ///
+    /// iOS readiness sheet → chat-api GET /coach/readiness-trend, projected to the
+    /// typed camelCase shape. Passive trend; null points = honest gaps. No composite
+    /// score (AMA-1565).
+    ///
+    /// - Remark: HTTP `GET /v1/readiness/trend`.
+    /// - Remark: Generated from `#/paths//v1/readiness/trend/get(getReadinessTrend)`.
+    public enum GetReadinessTrend {
+        public static let id: Swift.String = "getReadinessTrend"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/readiness/trend/GET/query`.
+            public struct Query: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/readiness/trend/GET/query/metric`.
+                public var metric: Swift.String?
+                /// - Remark: Generated from `#/paths/v1/readiness/trend/GET/query/days`.
+                public var days: Swift.Int?
+                /// Creates a new `Query`.
+                ///
+                /// - Parameters:
+                ///   - metric:
+                ///   - days:
+                public init(
+                    metric: Swift.String? = nil,
+                    days: Swift.Int? = nil
+                ) {
+                    self.metric = metric
+                    self.days = days
+                }
+            }
+            public var query: Operations.GetReadinessTrend.Input.Query
+            /// - Remark: Generated from `#/paths/v1/readiness/trend/GET/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.GetReadinessTrend.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.GetReadinessTrend.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.GetReadinessTrend.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - query:
+            ///   - headers:
+            public init(
+                query: Operations.GetReadinessTrend.Input.Query = .init(),
+                headers: Operations.GetReadinessTrend.Input.Headers = .init()
+            ) {
+                self.query = query
+                self.headers = headers
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/readiness/trend/GET/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/readiness/trend/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.ReadinessTrend)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.ReadinessTrend {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.GetReadinessTrend.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.GetReadinessTrend.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Successful Response
+            ///
+            /// - Remark: Generated from `#/paths//v1/readiness/trend/get(getReadinessTrend)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.GetReadinessTrend.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.GetReadinessTrend.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/readiness/trend/GET/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/readiness/trend/GET/responses/422/content/application\/json`.
+                    case json(Components.Schemas.HTTPValidationError)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.HTTPValidationError {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.GetReadinessTrend.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.GetReadinessTrend.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// Validation Error
+            ///
+            /// - Remark: Generated from `#/paths//v1/readiness/trend/get(getReadinessTrend)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.GetReadinessTrend.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.GetReadinessTrend.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/readiness/trend/GET/responses/503/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/readiness/trend/GET/responses/503/content/application\/json`.
+                    case json(Components.Schemas.DegradedResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.DegradedResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.GetReadinessTrend.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.GetReadinessTrend.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// Service Unavailable
+            ///
+            /// - Remark: Generated from `#/paths//v1/readiness/trend/get(getReadinessTrend)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.GetReadinessTrend.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            public var serviceUnavailable: Operations.GetReadinessTrend.Output.ServiceUnavailable {
                 get throws {
                     switch self {
                     case let .serviceUnavailable(response):

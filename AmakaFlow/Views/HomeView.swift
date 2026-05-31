@@ -44,6 +44,7 @@ struct HomeView: View {
     @State private var showingWeeklyReview = false
     @State private var showingAgentInbox = false
     @State private var showingProgramWizard = false
+    @State private var showingReadinessDetail = false
 
     private var today: Date { Date() }
 
@@ -166,6 +167,9 @@ struct HomeView: View {
             }
             .sheet(isPresented: $showingProgramWizard) {
                 ProgramWizardView()
+            }
+            .sheet(isPresented: $showingReadinessDetail) {
+                ReadinessDetailView()
             }
             .sheet(isPresented: $showingPlanReveal) {
                 PlanRevealView(
@@ -863,37 +867,43 @@ struct HomeView: View {
     private var readinessScore: Int? { nil }
 
     private var readinessCard: some View {
-        AFCard(padding: 16) {
-            HStack(spacing: Theme.Spacing.md) {
-                AFReadinessRing(value: readinessScore ?? 0)
+        Button {
+            showingReadinessDetail = true
+        } label: {
+            AFCard(padding: 16) {
+                HStack(spacing: Theme.Spacing.md) {
+                    AFReadinessRing(value: readinessScore ?? 0)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 8) {
-                        Circle()
-                            .fill(readinessScore.map { Theme.Ready.color(for: $0) } ?? Theme.Colors.borderMedium)
-                            .frame(width: 8, height: 8)
-                            .shadow(color: readinessScore.map { Theme.Ready.color(for: $0).opacity(0.4) } ?? Color.clear, radius: 4)
-                        Text(readinessScore.map { Theme.Ready.label(for: $0) } ?? "No readiness data")
-                            .font(Theme.Typography.title3)
-                            .foregroundColor(Theme.Colors.textPrimary)
-                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(readinessScore.map { Theme.Ready.color(for: $0) } ?? Theme.Colors.borderMedium)
+                                .frame(width: 8, height: 8)
+                                .shadow(color: readinessScore.map { Theme.Ready.color(for: $0).opacity(0.4) } ?? Color.clear, radius: 4)
+                            Text(readinessScore.map { Theme.Ready.label(for: $0) } ?? "No readiness data")
+                                .font(Theme.Typography.title3)
+                                .foregroundColor(Theme.Colors.textPrimary)
+                        }
 
-                    Text(readinessScore == nil ? "Connect a wearable or complete workouts to unlock readiness guidance." : "Readiness guidance is based on your latest wearable and training history.")
-                        .font(Theme.Typography.caption)
+                        Text(readinessScore == nil ? "Connect a wearable or complete workouts to unlock readiness guidance." : "Readiness guidance is based on your latest wearable and training history.")
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(Theme.Colors.textSecondary)
+                            .lineSpacing(2)
+
+                        HStack(spacing: 3) {
+                            Text("Detail")
+                            Image(systemName: "chevron.right")
+                        }
+                        .font(Theme.Typography.footnote.weight(.medium))
                         .foregroundColor(Theme.Colors.textSecondary)
-                        .lineSpacing(2)
-
-                    HStack(spacing: 3) {
-                        Text("Detail")
-                        Image(systemName: "chevron.right")
+                        .padding(.top, 2)
                     }
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(Theme.Colors.textSecondary)
-                    .padding(.top, 2)
+                    Spacer()
                 }
-                Spacer()
             }
         }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("home_readiness_card")
     }
 
     private var todaysWorkoutHero: some View {

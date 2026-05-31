@@ -932,12 +932,53 @@ class MockAPIService: APIServiceProviding {
     )
     var upsertCoachingProfileResult: Result<Components.Schemas.CoachingProfile, Error>?
     var postReadinessSampleResult: Result<ReadinessSampleWriteResult, Error>?
+    var readinessTodayResult: Result<Components.Schemas.ReadinessToday, Error> = .success(
+        Components.Schemas.ReadinessToday(
+            date: "2026-05-30",
+            hasData: true,
+            hrv: 62.4,
+            restingHr: 48,
+            sleepHours: 7.6,
+            sleepQuality: "good",
+            source: "apple_health"
+        )
+    )
+    var readinessTrendResult: Result<Components.Schemas.ReadinessTrend, Error> = .success(
+        Components.Schemas.ReadinessTrend(
+            days: 7,
+            metric: "hrv",
+            points: [
+                Components.Schemas.ReadinessTrendPoint(date: "2026-05-24", value: 57.0),
+                Components.Schemas.ReadinessTrendPoint(date: "2026-05-25", value: nil),
+                Components.Schemas.ReadinessTrendPoint(date: "2026-05-26", value: 59.5),
+                Components.Schemas.ReadinessTrendPoint(date: "2026-05-27", value: 61.0),
+                Components.Schemas.ReadinessTrendPoint(date: "2026-05-28", value: nil),
+                Components.Schemas.ReadinessTrendPoint(date: "2026-05-29", value: 60.2),
+                Components.Schemas.ReadinessTrendPoint(date: "2026-05-30", value: 62.4)
+            ]
+        )
+    )
+    var readinessSourcePrefsResult: Result<Components.Schemas.ReadinessSourcePrefs, Error>?
+    var setReadinessSourcePrefResult: Result<Components.Schemas.ReadinessSourcePref, Error>?
+    var setReadinessSourcePrefDelayNanoseconds: UInt64 = 0
+    var fixtureSourcePrefs: [Components.Schemas.ReadinessSourcePref] = [
+        Components.Schemas.ReadinessSourcePref(metric: "hrv", source: "apple_health"),
+        Components.Schemas.ReadinessSourcePref(metric: "sleep", source: "apple_health"),
+        Components.Schemas.ReadinessSourcePref(metric: "rhr", source: "garmin")
+    ]
     var getCoachingProfileCalled = false
     var upsertCoachingProfileCalled = false
     var postReadinessSampleCalled = false
     var postReadinessSampleCallCount = 0
+    var readinessTodayCalled = false
+    var readinessTrendCalled = false
+    var readinessSourcePrefsCalled = false
+    var setReadinessSourcePrefCalled = false
+    var setReadinessSourcePrefCallCount = 0
     var lastCoachingProfileUpsert: Components.Schemas.CoachingProfileUpsert?
     var lastReadinessSample: (hrv: Double?, restingHr: Int?, sleepHours: Double?, sleepQuality: String?, sampleDate: String?)?
+    var lastReadinessTrendRequest: (metric: String, days: Int)?
+    var lastReadinessSourcePrefRequest: (metric: String, source: String, deviceId: String?)?
 
     func getCoachingProfile() async throws -> Components.Schemas.CoachingProfile {
         getCoachingProfileCalled = true
@@ -986,6 +1027,44 @@ class MockAPIService: APIServiceProviding {
             date: sampleDate ?? "2026-05-30",
             source: "apple_health"
         )
+    }
+
+    func readinessToday() async throws -> Components.Schemas.ReadinessToday {
+        readinessTodayCalled = true
+        return try readinessTodayResult.get()
+    }
+
+    func readinessTrend(metric: String, days: Int) async throws -> Components.Schemas.ReadinessTrend {
+        readinessTrendCalled = true
+        lastReadinessTrendRequest = (metric, days)
+        return try readinessTrendResult.get()
+    }
+
+    func readinessSourcePrefs() async throws -> Components.Schemas.ReadinessSourcePrefs {
+        readinessSourcePrefsCalled = true
+        if let readinessSourcePrefsResult {
+            return try readinessSourcePrefsResult.get()
+        }
+        return Components.Schemas.ReadinessSourcePrefs(prefs: fixtureSourcePrefs)
+    }
+
+    func setReadinessSourcePref(metric: String, source: String, deviceId: String?) async throws -> Components.Schemas.ReadinessSourcePref {
+        setReadinessSourcePrefCalled = true
+        setReadinessSourcePrefCallCount += 1
+        lastReadinessSourcePrefRequest = (metric, source, deviceId)
+        if setReadinessSourcePrefDelayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: setReadinessSourcePrefDelayNanoseconds)
+        }
+        if let setReadinessSourcePrefResult {
+            return try setReadinessSourcePrefResult.get()
+        }
+        let updated = Components.Schemas.ReadinessSourcePref(deviceId: deviceId, metric: metric, source: source)
+        if let index = fixtureSourcePrefs.firstIndex(where: { $0.metric == metric }) {
+            fixtureSourcePrefs[index] = updated
+        } else {
+            fixtureSourcePrefs.append(updated)
+        }
+        return updated
     }
 
     // MARK: - Coach Suggestions (AMA-1412)
