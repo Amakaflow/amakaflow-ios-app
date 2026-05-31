@@ -158,24 +158,58 @@ struct WorkoutsView: View {
     private var rangeContent: some View {
         switch selectedRange {
         case .week:
-            rowsList(planRows)
+            if WorkoutsPlanRows.isWeekEmpty(planRows) {
+                emptyPlanState(
+                    title: "No sessions planned this week",
+                    description: "Generate a week or add a workout to start building this plan."
+                )
+            } else {
+                rowsList(planRows)
+            }
         case .block:
-            rowsList(blockRows)
+            if WorkoutsPlanRows.isWeekEmpty(blockRows) {
+                emptyPlanState(
+                    title: "No sessions in this block",
+                    description: "Generate a week or add a workout to start building this block."
+                )
+            } else {
+                rowsList(blockRows)
+            }
         case .month:
             monthGrid
         }
     }
 
+    private func emptyPlanState(title: String, description: String) -> some View {
+        ContentUnavailableView {
+            Label(title, systemImage: "calendar.badge.exclamationmark")
+        } description: {
+            Text(description)
+        } actions: {
+            Button("Plan this week") { showingCalendar = true }
+                .buttonStyle(AFPrimaryButtonStyle(size: .md))
+        }
+        .padding(.top, Theme.Spacing.xl)
+    }
+
     private func rowsList(_ rows: [PlanRow]) -> some View {
         VStack(spacing: Theme.Spacing.sm) {
             ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                PlanRowView(row: row) {
-                    if let workout = row.workout {
+                let isInteractive = WorkoutsPlanRows.isInteractive(row)
+                if isInteractive, let workout = row.workout {
+                    Button {
                         selectedWorkout = workout
                         showingDetail = true
+                    } label: {
+                        PlanRowView(row: row, isInteractive: isInteractive)
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("workout_card_\(index)")
+                } else {
+                    PlanRowView(row: row, isInteractive: isInteractive)
+                        .accessibilityIdentifier("workout_empty_\(index)")
+                        .accessibilityAddTraits(.isStaticText)
                 }
-                .accessibilityIdentifier("workout_card_\(index)")
             }
         }
     }
@@ -419,7 +453,7 @@ enum WorkoutRange: String, CaseIterable, Identifiable {
     }
 }
 
-private struct PlanRow {
+struct PlanRow {
     let id: String
     let day: String
     let date: String
@@ -435,71 +469,80 @@ private struct PlanRow {
     let workout: Workout?
 }
 
+enum WorkoutsPlanRows {
+    static func isWeekEmpty(_ rows: [PlanRow]) -> Bool {
+        rows.allSatisfy { $0.workout == nil }
+    }
+
+    static func isInteractive(_ row: PlanRow) -> Bool {
+        row.workout != nil
+    }
+}
+
 private struct PlanRowView: View {
     let row: PlanRow
-    let onTap: () -> Void
+    let isInteractive: Bool
 
     var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 12) {
-                VStack(spacing: 2) {
-                    AFLabel(text: row.day)
-                    Text(row.date)
-                        .font(.system(size: 15, weight: .medium, design: .monospaced))
-                        .foregroundColor(Theme.Colors.textPrimary)
-                }
-                .frame(width: 38)
+        HStack(spacing: 12) {
+            VStack(spacing: 2) {
+                AFLabel(text: row.day)
+                Text(row.date)
+                    .font(.system(size: 15, weight: .medium, design: .monospaced))
+                    .foregroundColor(Theme.Colors.textPrimary)
+            }
+            .frame(width: 38)
 
-                RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
-                    .fill(Theme.Colors.accentBackground)
-                    .frame(width: 32, height: 32)
-                    .overlay(
-                        Image(systemName: row.icon)
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(row.rest ? Theme.Colors.textSecondary : Theme.Colors.textPrimary)
-                    )
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
+                .fill(Theme.Colors.accentBackground)
+                .frame(width: 32, height: 32)
+                .overlay(
+                    Image(systemName: row.icon)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(row.rest ? Theme.Colors.textSecondary : Theme.Colors.textPrimary)
+                )
 
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6) {
-                        AFLabel(text: row.type)
-                        if row.today { AFChip(text: "TODAY") }
-                        if row.done {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(Theme.Colors.readyHigh)
-                        }
-                    }
-
-                    Text(row.title)
-                        .font(Theme.Typography.bodyBold)
-                        .foregroundColor(Theme.Colors.textPrimary)
-                        .lineLimit(1)
-
-                    HStack(spacing: Theme.Spacing.xs) {
-                        Text("\(row.duration) · \(row.zone)")
-                            .font(.system(size: 11, weight: .regular, design: .monospaced))
-                            .foregroundColor(Theme.Colors.textSecondary)
-
-                        WorkoutSourceBadge(source: row.source)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    AFLabel(text: row.type)
+                    if row.today { AFChip(text: "TODAY") }
+                    if row.done {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(Theme.Colors.readyHigh)
                     }
                 }
 
-                Spacer()
+                Text(row.title)
+                    .font(Theme.Typography.bodyBold)
+                    .foregroundColor(Theme.Colors.textPrimary)
+                    .lineLimit(1)
+
+                HStack(spacing: Theme.Spacing.xs) {
+                    Text("\(row.duration) · \(row.zone)")
+                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .foregroundColor(Theme.Colors.textSecondary)
+
+                    WorkoutSourceBadge(source: row.source)
+                }
+            }
+
+            Spacer()
+            if isInteractive {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(Theme.Colors.textTertiary)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(Theme.Colors.surface)
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
-                    .stroke(row.today ? Theme.Colors.textPrimary : Theme.Colors.borderLight, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
-            .opacity(row.done ? 0.6 : 1)
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(Theme.Colors.surface)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                .stroke(row.today ? Theme.Colors.textPrimary : Theme.Colors.borderLight, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
+        .opacity(row.done ? 0.6 : 1)
     }
 }
 
