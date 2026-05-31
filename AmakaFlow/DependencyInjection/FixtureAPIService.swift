@@ -39,7 +39,20 @@ class FixtureAPIService: APIServiceProviding {
     var listLibraryItemsResult: Result<Components.Schemas.LibraryItemList, Error>?
     var getLibraryItemResult: Result<Components.Schemas.LibraryItemDetail, Error>?
     var postReadinessSampleResult: Result<ReadinessSampleWriteResult, Error>?
+    var readinessTodayResult: Result<Components.Schemas.ReadinessToday, Error>?
+    var readinessTrendResult: Result<Components.Schemas.ReadinessTrend, Error>?
+    var readinessSourcePrefsResult: Result<Components.Schemas.ReadinessSourcePrefs, Error>?
+    var setReadinessSourcePrefResult: Result<Components.Schemas.ReadinessSourcePref, Error>?
+    var readinessTodayEmpty = false
+    var readinessSourcePrefsEmpty = false
+    var setReadinessSourcePrefDelayNanoseconds: UInt64 = 0
+    private(set) var setReadinessSourcePrefCallCount = 0
     private(set) var fixtureReadinessSamples: [ReadinessSampleWriteResult] = []
+    var fixtureSourcePrefs: [Components.Schemas.ReadinessSourcePref] = [
+        Components.Schemas.ReadinessSourcePref(metric: "hrv", source: "apple_health"),
+        Components.Schemas.ReadinessSourcePref(metric: "sleep", source: "apple_health"),
+        Components.Schemas.ReadinessSourcePref(metric: "rhr", source: "garmin")
+    ]
     var libraryItemsEmpty = false
     var libraryItemDetail404 = false
     private var fixtureMessagingDeliveryLive = false
@@ -592,6 +605,75 @@ class FixtureAPIService: APIServiceProviding {
         fixtureReadinessSamples.append(result)
         print("[FixtureAPIService] Stub: postReadinessSample(date=\(result.date), source=apple_health) -> success")
         return result
+    }
+
+    // MARK: - Readiness (AMA-2054)
+
+    func readinessToday() async throws -> Components.Schemas.ReadinessToday {
+        if let readinessTodayResult {
+            return try readinessTodayResult.get()
+        }
+        if readinessTodayEmpty {
+            return Components.Schemas.ReadinessToday(
+                date: "2026-05-30",
+                hasData: false,
+                hrv: nil,
+                restingHr: nil,
+                sleepHours: nil,
+                sleepQuality: nil,
+                source: nil
+            )
+        }
+        return Components.Schemas.ReadinessToday(
+            date: "2026-05-30",
+            hasData: true,
+            hrv: 62.4,
+            restingHr: 48,
+            sleepHours: 7.6,
+            sleepQuality: "good",
+            source: "apple_health"
+        )
+    }
+
+    func readinessTrend(metric: String, days: Int) async throws -> Components.Schemas.ReadinessTrend {
+        if let readinessTrendResult {
+            return try readinessTrendResult.get()
+        }
+        let points = [
+            Components.Schemas.ReadinessTrendPoint(date: "2026-05-24", value: 57.0),
+            Components.Schemas.ReadinessTrendPoint(date: "2026-05-25", value: nil),
+            Components.Schemas.ReadinessTrendPoint(date: "2026-05-26", value: 59.5),
+            Components.Schemas.ReadinessTrendPoint(date: "2026-05-27", value: 61.0),
+            Components.Schemas.ReadinessTrendPoint(date: "2026-05-28", value: nil),
+            Components.Schemas.ReadinessTrendPoint(date: "2026-05-29", value: 60.2),
+            Components.Schemas.ReadinessTrendPoint(date: "2026-05-30", value: 62.4)
+        ]
+        return Components.Schemas.ReadinessTrend(days: days, metric: metric, points: points)
+    }
+
+    func readinessSourcePrefs() async throws -> Components.Schemas.ReadinessSourcePrefs {
+        if let readinessSourcePrefsResult {
+            return try readinessSourcePrefsResult.get()
+        }
+        return Components.Schemas.ReadinessSourcePrefs(prefs: readinessSourcePrefsEmpty ? [] : fixtureSourcePrefs)
+    }
+
+    func setReadinessSourcePref(metric: String, source: String, deviceId: String?) async throws -> Components.Schemas.ReadinessSourcePref {
+        setReadinessSourcePrefCallCount += 1
+        if setReadinessSourcePrefDelayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: setReadinessSourcePrefDelayNanoseconds)
+        }
+        if let setReadinessSourcePrefResult {
+            return try setReadinessSourcePrefResult.get()
+        }
+        let updated = Components.Schemas.ReadinessSourcePref(deviceId: deviceId, metric: metric, source: source)
+        if let index = fixtureSourcePrefs.firstIndex(where: { $0.metric == metric }) {
+            fixtureSourcePrefs[index] = updated
+        } else {
+            fixtureSourcePrefs.append(updated)
+        }
+        print("[FixtureAPIService] Stub: setReadinessSourcePref(\(metric), \(source)) -> success")
+        return updated
     }
 
     // MARK: - Coach (AMA-1147)

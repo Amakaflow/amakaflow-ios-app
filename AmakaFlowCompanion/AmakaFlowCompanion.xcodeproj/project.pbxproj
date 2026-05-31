@@ -168,6 +168,8 @@
 		AMA1993HOMETEST0000B /* HomeViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1993HOMETEST0000A /* HomeViewModelTests.swift */; };
 		AMA1996DEVVM00000000B /* DevicesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1996DEVVM00000000A /* DevicesViewModel.swift */; };
 		AMA1996DEVVIEW000000B /* DevicesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1996DEVVIEW000000A /* DevicesView.swift */; };
+		AMA2054RDVM00000000B /* ReadinessDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2054RDVM00000000A /* ReadinessDetailViewModel.swift */; };
+		AMA2054RDVIEW000000B /* ReadinessDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2054RDVIEW000000A /* ReadinessDetailView.swift */; };
 		AMA2004LIBVM0000000B /* LibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2004LIBVM0000000A /* LibraryViewModel.swift */; };
 		AMA2004LIBVIEW00000B /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2004LIBVIEW00000A /* LibraryView.swift */; };
 		AMA2005LIBDVM000000B /* LibraryDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2005LIBDVM000000A /* LibraryDetailViewModel.swift */; };
@@ -608,6 +610,8 @@
 		AMA1993HOMETEST0000A /* HomeViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeViewModelTests.swift; path = AmakaFlowCompanionTests/HomeViewModelTests.swift; sourceTree = "<group>"; };
 		AMA1996DEVVM00000000A /* DevicesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DevicesViewModel.swift; path = ../AmakaFlow/ViewModels/DevicesViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA1996DEVVIEW000000A /* DevicesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DevicesView.swift; path = ../AmakaFlow/Views/DevicesView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2054RDVM00000000A /* ReadinessDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReadinessDetailViewModel.swift; path = ../AmakaFlow/ViewModels/ReadinessDetailViewModel.swift; sourceTree = SOURCE_ROOT; };
+		AMA2054RDVIEW000000A /* ReadinessDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReadinessDetailView.swift; path = ../AmakaFlow/Views/ReadinessDetailView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2004LIBVM0000000A /* LibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryViewModel.swift; path = ../AmakaFlow/ViewModels/LibraryViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA2004LIBVIEW00000A /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryView.swift; path = ../AmakaFlow/Views/LibraryView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2004LIBTST000000A /* LibraryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryViewModelTests.swift; path = AmakaFlowCompanionTests/LibraryViewModelTests.swift; sourceTree = "<group>"; };
@@ -1042,6 +1046,7 @@
 				AMA12650003 /* SuggestWorkoutView.swift */,
 				AMA1995EQVIEW00000000A /* EquipmentProfileView.swift */,
 				AMA1996DEVVIEW000000A /* DevicesView.swift */,
+				AMA2054RDVIEW000000A /* ReadinessDetailView.swift */,
 				AMA2004LIBVIEW00000A /* LibraryView.swift */,
 				AMA2005LIBDVIEW0000A /* LibraryDetailView.swift */,
 				AMA2027MSGVIEW000000A /* MessagingView.swift */,
@@ -1279,6 +1284,7 @@
 				AMA12650001 /* SuggestWorkoutViewModel.swift */,
 				AMA1995EQVM000000000A /* EquipmentProfileViewModel.swift */,
 				AMA1996DEVVM00000000A /* DevicesViewModel.swift */,
+				AMA2054RDVM00000000A /* ReadinessDetailViewModel.swift */,
 				AMA2004LIBVM0000000A /* LibraryViewModel.swift */,
 				AMA2005LIBDVM000000A /* LibraryDetailViewModel.swift */,
 				AMA2027MSGVM0000000A /* MessagingViewModel.swift */,
@@ -1834,6 +1840,7 @@
 				AMA12650011 /* SuggestWorkoutViewModel.swift in Sources */,
 				AMA1995EQVM000000000B /* EquipmentProfileViewModel.swift in Sources */,
 				AMA1996DEVVM00000000B /* DevicesViewModel.swift in Sources */,
+				AMA2054RDVM00000000B /* ReadinessDetailViewModel.swift in Sources */,
 				AMA2004LIBVM0000000B /* LibraryViewModel.swift in Sources */,
 				AMA2005LIBDVM000000B /* LibraryDetailViewModel.swift in Sources */,
 				AMA2027MSGVM0000000B /* MessagingViewModel.swift in Sources */,
@@ -1842,6 +1849,7 @@
 				AMA12650013 /* SuggestWorkoutView.swift in Sources */,
 				AMA1995EQVIEW00000000B /* EquipmentProfileView.swift in Sources */,
 				AMA1996DEVVIEW000000B /* DevicesView.swift in Sources */,
+				AMA2054RDVIEW000000B /* ReadinessDetailView.swift in Sources */,
 				AMA2004LIBVIEW00000B /* LibraryView.swift in Sources */,
 				AMA2005LIBDVIEW0000B /* LibraryDetailView.swift in Sources */,
 				AMA2027MSGVIEW000000B /* MessagingView.swift in Sources */,

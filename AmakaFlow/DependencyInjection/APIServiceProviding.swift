@@ -338,6 +338,20 @@ protocol APIServiceProviding: TelegramLinkAPIProviding {
         sampleDate: String?
     ) async throws -> ReadinessSampleWriteResult
 
+    // MARK: - Readiness (AMA-2054)
+
+    /// Fetch today's raw readiness metrics from the mobile BFF.
+    func readinessToday() async throws -> Components.Schemas.ReadinessToday
+
+    /// Fetch a passive readiness metric trend from the mobile BFF.
+    func readinessTrend(metric: String, days: Int) async throws -> Components.Schemas.ReadinessTrend
+
+    /// Fetch per-metric readiness source preferences from the mobile BFF.
+    func readinessSourcePrefs() async throws -> Components.Schemas.ReadinessSourcePrefs
+
+    /// Persist a per-metric readiness source preference through the mobile BFF.
+    func setReadinessSourcePref(metric: String, source: String, deviceId: String?) async throws -> Components.Schemas.ReadinessSourcePref
+
     // MARK: - Coach Suggestions (AMA-1412)
 
     /// Request an AI-generated workout suggestion
