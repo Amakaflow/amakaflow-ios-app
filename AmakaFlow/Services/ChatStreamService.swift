@@ -118,9 +118,37 @@ protocol ChatStreamProviding {
 
 class ChatStreamService: ChatStreamProviding {
     private let session: URLSession
+    private static let sseDelimiters: [Data] = [
+        Data([0x0A, 0x0A]),             // \\n\\n
+        Data([0x0D, 0x0A, 0x0D, 0x0A]), // \\r\\n\\r\\n
+        Data([0x0D, 0x0D])              // \\r\\r
+    ]
 
     init(session: URLSession = .shared) {
         self.session = session
+    }
+
+    private static func nextSSEDelimiter(in buffer: Data) -> Range<Data.Index>? {
+        sseDelimiters
+            .compactMap { buffer.range(of: $0) }
+            .min { lhs, rhs in
+                if lhs.lowerBound == rhs.lowerBound {
+                    return lhs.count > rhs.count
+                }
+                return lhs.lowerBound < rhs.lowerBound
+            }
+    }
+
+    private static func parsedEvents(from blockData: Data) -> [SSEEvent] {
+        guard !blockData.isEmpty,
+              let block = String(data: blockData, encoding: .utf8) else {
+            return []
+        }
+
+        // Reuse the existing SSE buffer splitter so CRLF/CR line endings are
+        // normalized exactly the same way as the tested parser path.
+        let (blocks, _) = SSEParser.splitBuffer(block + "\n\n")
+        return blocks.compactMap { SSEParser.parse(block: $0) }
     }
 
     func stream(request: ChatStreamRequest, token: String) -> AsyncThrowingStream<SSEEvent, Error> {
@@ -154,23 +182,31 @@ class ChatStreamService: ChatStreamProviding {
                         return
                     }
 
-                    var buffer = ""
-                    for try await line in bytes.lines {
-                        buffer += line + "\n"
+                    var buffer = Data()
+                    for try await byte in bytes {
+                        if Task.isCancelled { return }
 
-                        // A blank line from the server means event boundary
-                        if line.isEmpty {
-                            let trimmed = buffer.trimmingCharacters(in: .whitespacesAndNewlines)
-                            if !trimmed.isEmpty, let event = SSEParser.parse(block: trimmed) {
+                        buffer.append(byte)
+
+                        // Frame SSE events on raw ASCII blank-line delimiters.
+                        // Do not depend on AsyncBytes.lines surfacing empty lines,
+                        // and do not require the whole accumulated buffer to be
+                        // valid UTF-8 before yielding earlier complete events.
+                        while let delimiter = Self.nextSSEDelimiter(in: buffer) {
+                            let blockData = Data(buffer[..<delimiter.lowerBound])
+                            buffer.removeSubrange(..<delimiter.upperBound)
+
+                            for event in Self.parsedEvents(from: blockData) {
                                 continuation.yield(event)
                             }
-                            buffer = ""
                         }
                     }
 
-                    // Process any remaining buffer
-                    let trimmed = buffer.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !trimmed.isEmpty, let event = SSEParser.parse(block: trimmed) {
+                    if Task.isCancelled { return }
+
+                    // Process any remaining non-empty block after EOF.
+                    let trimmedRemainder = buffer.trimmingTrailingSSEWhitespace()
+                    for event in Self.parsedEvents(from: trimmedRemainder) {
                         continuation.yield(event)
                     }
 
@@ -185,6 +221,16 @@ class ChatStreamService: ChatStreamProviding {
                 task.cancel()
             }
         }
+    }
+}
+
+private extension Data {
+    func trimmingTrailingSSEWhitespace() -> Data {
+        var copy = self
+        while let last = copy.last, last == 0x0A || last == 0x0D || last == 0x20 || last == 0x09 {
+            copy.removeLast()
+        }
+        return copy
     }
 }
 

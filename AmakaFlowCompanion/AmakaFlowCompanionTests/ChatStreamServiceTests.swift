@@ -10,6 +10,11 @@ import XCTest
 
 final class ChatStreamServiceTests: XCTestCase {
 
+    override func tearDown() {
+        MockURLProtocol.reset()
+        super.tearDown()
+    }
+
     // MARK: - Model Tests
 
     func testChatStageDisplayNames() {
@@ -66,6 +71,42 @@ final class ChatStreamServiceTests: XCTestCase {
         let result = try JSONDecoder().decode(WorkoutSearchResult.self, from: json)
         XCTAssertEqual(result.id, "w1")
         XCTAssertEqual(result.exerciseCount, 8)
+    }
+
+    // MARK: - Real Stream Tests
+
+    func testStreamYieldsContentDeltaEventsFromChunkedSSEBody() async throws {
+        let chunks = [
+            "event: message_start\n",
+            "data: {\"session_id\":\"s1\"}\n\n",
+            "event: content_delta\n",
+            "data: {\"text\":\"Ho",
+            "w \"}\n\n",
+            "event: content_delta\ndata: {\"text\":\"about an ",
+            "easy run?\"}\n\n",
+            "event: message_end\n",
+            "data: {\"session_id\":\"s1\",\"tokens_used\":219}\n\n"
+        ].map { Data($0.utf8) }
+        MockURLProtocol.setChunkedResponse(chunks: chunks)
+
+        let service = ChatStreamService(session: MockURLProtocol.mockSession())
+        let request = ChatStreamRequest(message: "What should I do today?", sessionId: nil, context: nil)
+
+        var events: [SSEEvent] = []
+        for try await event in service.stream(request: request, token: "test-token") {
+            events.append(event)
+        }
+
+        XCTAssertEqual(MockURLProtocol.interceptedRequests.count, 1)
+        XCTAssertEqual(MockURLProtocol.interceptedRequests.first?.httpMethod, "POST")
+        XCTAssertEqual(MockURLProtocol.interceptedRequests.first?.value(forHTTPHeaderField: "Authorization"), "Bearer test-token")
+        XCTAssertEqual(events.first, .messageStart(sessionId: "s1", traceId: nil))
+        XCTAssertEqual(events.compactMap { event -> String? in
+            if case .contentDelta(let text) = event { return text }
+            return nil
+        }.joined(), "How about an easy run?")
+        XCTAssertEqual(events.last, .messageEnd(sessionId: "s1", tokensUsed: 219, latencyMs: nil))
+        XCTAssertEqual(events.count, 4)
     }
 
     // MARK: - SSE Parsing Tests
