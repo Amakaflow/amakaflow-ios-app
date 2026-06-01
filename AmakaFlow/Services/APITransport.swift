@@ -193,6 +193,24 @@ extension APIService {
         }
     }
 
+    /// Like `request(_:decode:...)` but treats certain status codes as a
+    /// first-class "no data" result instead of an error.
+    ///
+    /// Use this (rather than `request`) when an endpoint returns a non-2xx
+    /// status to mean "nothing exists yet" rather than a failure — e.g.
+    /// `GET /coaching/profile` returns 404 when the user has no profile.
+    /// Such an "empty" response is logged with the `.empty` phase (not a
+    /// failure) so it does NOT surface as an `API_ERROR`.
+    ///
+    /// - Parameters:
+    ///   - emptyStatusCodes: status codes treated as "no data" — the method
+    ///     returns `nil` and never attempts to decode the body. These MUST NOT
+    ///     overlap `successStatusCodes`; an overlap would cause a valid 2xx
+    ///     response to be treated as empty.
+    ///   - successStatusCodes: status codes whose body is decoded into `T`.
+    /// - Returns: the decoded value on success, or `nil` for an `emptyStatusCodes` response.
+    /// - Throws: `APIError.decoding` if a success response fails to decode, plus
+    ///   any error from `performRequest` (network failure, non-handled status, auth).
     func requestOptionalOnStatus<T: Decodable>(
         _ request: URLRequest,
         decode type: T.Type,
