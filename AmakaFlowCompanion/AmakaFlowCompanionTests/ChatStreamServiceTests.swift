@@ -109,6 +109,42 @@ final class ChatStreamServiceTests: XCTestCase {
         XCTAssertEqual(events.count, 4)
     }
 
+    func testStreamYieldsErrorAndContinuesPastMalformedChunkedSSEBlock() async throws {
+        let chunks = [
+            "event: message_start\n",
+            "data: {\"session_id\":\"s1\"}\n\n",
+            "event: content_delta\n",
+            "data: {\"text\":\"Before \"}\n\n",
+            "event: error\n",
+            "data: {\"type\":\"feature_dis",
+            "abled\",\"message\":\"Feature unavailable\"}\n\n",
+            "event: content_delta\n",
+            "data: {not ",
+            "json}\n\n",
+            "event: content_delta\ndata: {\"text\":\"After\"}\r\n",
+            "\r\n",
+            "event: message_end\n",
+            "data: {\"session_id\":\"s1\",\"tokens_used\":31}\n\n"
+        ].map { Data($0.utf8) }
+        MockURLProtocol.setChunkedResponse(chunks: chunks)
+
+        let service = ChatStreamService(session: MockURLProtocol.mockSession())
+        let request = ChatStreamRequest(message: "What should I do today?", sessionId: nil, context: nil)
+
+        var events: [SSEEvent] = []
+        for try await event in service.stream(request: request, token: "test-token") {
+            events.append(event)
+        }
+
+        XCTAssertEqual(events, [
+            .messageStart(sessionId: "s1", traceId: nil),
+            .contentDelta(text: "Before "),
+            .error(type: "feature_disabled", message: "Feature unavailable", usage: nil, limit: nil),
+            .contentDelta(text: "After"),
+            .messageEnd(sessionId: "s1", tokensUsed: 31, latencyMs: nil)
+        ])
+    }
+
     // MARK: - SSE Parsing Tests
 
     func testParseContentDeltaEvent() throws {
