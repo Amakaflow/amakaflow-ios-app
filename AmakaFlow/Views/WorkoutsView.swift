@@ -42,6 +42,22 @@ struct WorkoutsView: View {
                         segmentedRange
                             .padding(.horizontal, Theme.Spacing.lg)
 
+                        if let ctaError = viewModel.ctaError {
+                            ErrorToast(
+                                actionTitle: "Couldn't load workouts",
+                                error: ctaError,
+                                onRetry: ctaError.isRetryable ? {
+                                    Task { await viewModel.refreshWorkouts() }
+                                } : nil,
+                                onReport: {
+                                    viewModel.reportLoadError()
+                                },
+                                onDismiss: nil
+                            )
+                            .padding(.horizontal, Theme.Spacing.lg)
+                            .accessibilityIdentifier("workouts_load_error")
+                        }
+
                         rangeContent
                             .padding(.horizontal, Theme.Spacing.lg)
 

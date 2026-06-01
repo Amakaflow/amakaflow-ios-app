@@ -142,7 +142,33 @@ struct ProfileResponse: Codable {
     let profile: UserProfile
 }
 
-// MARK: - Pending Workouts Response
+// MARK: - Workouts List Responses
+
+struct IncomingWorkoutsResponse: Codable {
+    let success: Bool
+    let workouts: [Workout]
+    let count: Int
+}
+
+extension APIService {
+    static func decodeIncomingWorkouts(
+        from data: Data,
+        decoder: JSONDecoder = APIService.makeDecoder()
+    ) throws -> [Workout] {
+        do {
+            return try decoder.decode(IncomingWorkoutsResponse.self, from: data).workouts
+        } catch let wrappedError {
+            do {
+                // Legacy/dev fallback: older fixtures and local mocks used to
+                // return a bare array. Staging/prod mapper-api returns
+                // { success, workouts, count }.
+                return try decoder.decode([Workout].self, from: data)
+            } catch {
+                throw wrappedError
+            }
+        }
+    }
+}
 
 struct PendingWorkoutsResponse: Codable {
     let success: Bool

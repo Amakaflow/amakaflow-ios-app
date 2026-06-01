@@ -513,6 +513,26 @@ final class WorkoutsViewModelTests: XCTestCase {
         )
     }
 
+    func testLoadWorkoutsSurfacesDecodeFailureInsteadOfSilentEmptyState() async throws {
+        let (deps, _, _) = try makeLocalFirstDeps(userId: "user-decode-failure")
+        let underlying = DecodingError.dataCorrupted(.init(
+            codingPath: [],
+            debugDescription: "Expected wrapped incoming workouts response"
+        ))
+        mockAPIService.fetchWorkoutsResult = .failure(APIError.decodingError(underlying))
+        mockAPIService.fetchScheduledWorkoutsResult = .success([])
+
+        let viewModel = WorkoutsViewModel(dependencies: deps)
+        await viewModel.loadWorkouts()
+
+        XCTAssertTrue(viewModel.incomingWorkouts.isEmpty)
+        XCTAssertEqual(viewModel.errorMessage, "Couldn't read the workouts response from the server.")
+        guard let ctaError = viewModel.ctaError, case .decoding = ctaError else {
+            XCTFail("Decode failures must publish CTAError.decoding, got \(String(describing: viewModel.ctaError))")
+            return
+        }
+    }
+
     /// New contract under AMA-1792: completing a workout tombstones both
     /// the accepted_suggestion and workout_event rows so it does not
     /// rehydrate on the next launch. (Replaces the old AMA-1785-era

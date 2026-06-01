@@ -78,31 +78,50 @@ final class APIServiceContractTests: XCTestCase {
     XCTAssertEqual(workout.exercises[0].notes, "82.5 kg")
   }
 
-  func testAPIWorkoutsIncomingResponseDecodesBlockWorkoutShape() throws {
-    let workouts = try decodeFixture("api_workouts_incoming_response", as: [Workout].self)
+  func testAPIWorkoutsIncomingResponseDecodesWrappedMapperPayload() throws {
+    let response = try decodeFixture("api_workouts_incoming_response", as: IncomingWorkoutsResponse.self)
 
-    XCTAssertEqual(workouts.count, 1)
-    let workout = try XCTUnwrap(workouts.first)
+    XCTAssertTrue(response.success)
+    XCTAssertEqual(response.count, 1)
+    let workout = try XCTUnwrap(response.workouts.first)
     XCTAssertEqual(workout.id, "workout-incoming-1")
-    XCTAssertEqual(workout.name, "Incoming Strength Blocks")
+    XCTAssertEqual(workout.name, "Incoming Strength From Mapper")
     XCTAssertEqual(workout.sport, .strength)
-    XCTAssertEqual(workout.source, .coach)
-    XCTAssertEqual(workout.sourceUrl, "https://amakaflow.test/workouts/incoming-1")
+    XCTAssertEqual(workout.duration, 270)
+    XCTAssertEqual(workout.source, .other)
+    XCTAssertNil(workout.sourceUrl)
     XCTAssertEqual(workout.blocks.count, 1)
-    XCTAssertEqual(workout.blocks[0].restBetweenSeconds, 120)
-    XCTAssertEqual(workout.blocks[0].exercises.count, 2)
-    XCTAssertEqual(workout.blocks[0].exercises[0].canonicalName, "barbell bench press")
-    XCTAssertEqual(workout.blocks[0].exercises[0].load, ExerciseLoad(value: 82.5, unit: "kg"))
+    XCTAssertEqual(workout.blocks[0].structure, .circuit)
+    XCTAssertEqual(workout.blocks[0].rounds, 3)
+    XCTAssertEqual(workout.blocks[0].exercises[0].name, "SQUAT")
     XCTAssertEqual(
       workout.intervals.first,
-      .reps(
-        sets: 4,
-        reps: 8,
-        name: "bench press",
-        load: "82.5kg",
-        restSec: 120,
-        followAlongUrl: nil
+      .repeat(
+        reps: 3,
+        intervals: [
+          .reps(sets: nil, reps: 10, name: "SQUAT", load: nil, restSec: 60, followAlongUrl: nil)
+        ]
       ))
+  }
+
+  func testFetchWorkoutsDecodeHelperAcceptsWrappedMapperPayload() throws {
+    let workouts = try APIService.decodeIncomingWorkouts(
+      from: fixtureData("api_workouts_incoming_response"),
+      decoder: decoder
+    )
+
+    XCTAssertEqual(workouts.count, 1)
+    XCTAssertEqual(workouts.first?.id, "workout-incoming-1")
+  }
+
+  func testFetchWorkoutsDecodeHelperAcceptsLegacyBareArrayPayload() throws {
+    let workouts = try APIService.decodeIncomingWorkouts(
+      from: fixtureData("api_workouts_legacy_intervals_response"),
+      decoder: decoder
+    )
+
+    XCTAssertEqual(workouts.count, 1)
+    XCTAssertEqual(workouts.first?.id, "workout-legacy-1")
   }
 
   func testAPIWorkoutsLegacyIntervalsResponseDecodesFallbackIntervalShape() throws {
@@ -165,12 +184,15 @@ final class APIServiceContractTests: XCTestCase {
   }
 
   private func decodeFixture<T: Decodable>(_ name: String, as type: T.Type) throws -> T {
+    try decoder.decode(T.self, from: fixtureData(name))
+  }
+
+  private func fixtureData(_ name: String) throws -> Data {
     let url = try XCTUnwrap(
       Bundle(for: Self.self).url(forResource: name, withExtension: "json"),
       "Missing fixture: \(name).json"
     )
-    let data = try Data(contentsOf: url)
-    return try decoder.decode(T.self, from: data)
+    return try Data(contentsOf: url)
   }
 
   private func assertReps(

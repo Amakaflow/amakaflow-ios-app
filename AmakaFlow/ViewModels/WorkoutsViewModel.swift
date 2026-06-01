@@ -197,6 +197,16 @@ class WorkoutsViewModel: ObservableObject {
             ctaError = mapped
             if case .unauthorized = error {
                 errorMessage = "Session expired. Please reconnect."
+            } else if error.category == .decoding {
+                errorMessage = "Couldn't read the workouts response from the server."
+                // Local repo already populated incomingWorkouts above; leave
+                // it untouched, but surface the decode failure so an empty
+                // local cache does not masquerade as a genuine empty plan.
+                DebugLogService.shared.log(
+                    "Workouts refresh decode failed; showing error",
+                    details: "error=\(error.localizedDescription), localCount=\(incomingWorkouts.count)",
+                    metadata: ["source": "WorkoutsViewModel.loadWorkouts.catch.APIError.decoding"]
+                )
             } else {
                 errorMessage = error.localizedDescription
                 // Local repo already populated incomingWorkouts above; leave
@@ -261,6 +271,18 @@ class WorkoutsViewModel: ObservableObject {
     /// Refresh workouts from API
     func refreshWorkouts() async {
         await loadWorkouts()
+    }
+
+    func reportLoadError() {
+        guard let ctaError else { return }
+        DebugLogService.shared.log(
+            "Workouts load error reported",
+            details: ctaError.userMessage,
+            metadata: [
+                "failureCode": ctaError.sentryFailureCode,
+                "requestId": ctaError.requestId ?? "none"
+            ]
+        )
     }
 
     /// Toggle demo mode

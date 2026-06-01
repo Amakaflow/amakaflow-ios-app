@@ -56,11 +56,9 @@ extension APIService {
 
         switch httpResponse.statusCode {
         case 200:
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
             do {
-                let workouts = try decoder.decode([Workout].self, from: data)
-                print("[APIService] Decoded \(workouts.count) workouts")
+                let workouts = try APIService.decodeIncomingWorkouts(from: data)
+                print("[APIService] Decoded \(workouts.count) incoming workouts")
                 return workouts
             } catch {
                 print("[APIService] Decoding error: \(error)")
