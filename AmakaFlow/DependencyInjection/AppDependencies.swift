@@ -918,7 +918,7 @@ class MockAPIService: APIServiceProviding {
 
     // MARK: - Coaching Profile (AMA-1995)
 
-    var getCoachingProfileResult: Result<Components.Schemas.CoachingProfile, Error> = .success(
+    var getCoachingProfileResult: Result<Components.Schemas.CoachingProfile?, Error> = .success(
         Components.Schemas.CoachingProfile(
             createdAt: "2026-05-28T00:00:00Z",
             equipment: nil,
@@ -980,7 +980,7 @@ class MockAPIService: APIServiceProviding {
     var lastReadinessTrendRequest: (metric: String, days: Int)?
     var lastReadinessSourcePrefRequest: (metric: String, source: String, deviceId: String?)?
 
-    func getCoachingProfile() async throws -> Components.Schemas.CoachingProfile {
+    func getCoachingProfile() async throws -> Components.Schemas.CoachingProfile? {
         getCoachingProfileCalled = true
         return try getCoachingProfileResult.get()
     }

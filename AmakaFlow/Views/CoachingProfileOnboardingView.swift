@@ -131,7 +131,7 @@ final class CoachingProfileOnboardingViewModel: ObservableObject {
         lastFailedAction = nil
 
         do {
-            let fetched = try await apiService.getCoachingProfile()
+            let fetched = try await apiService.getCoachingProfile() ?? Self.emptyProfileDraft()
             profile = fetched
             experience = ExperienceLevel(rawValue: fetched.experienceLevel) ?? .intermediate
             daysPerWeek = clampDaysPerWeek(fetched.sessionsPerWeek)
@@ -154,7 +154,7 @@ final class CoachingProfileOnboardingViewModel: ObservableObject {
         let goals = buildGoals()
 
         do {
-            let latestProfile = try await apiService.getCoachingProfile()
+            let latestProfile = try await apiService.getCoachingProfile() ?? profile ?? Self.emptyProfileDraft()
             profile = latestProfile
 
             let upsert = CoachingProfileUpsert(
@@ -278,6 +278,19 @@ final class CoachingProfileOnboardingViewModel: ObservableObject {
         GoalType.allCases.map(\.removeAccessibilityIdentifier) +
         StrengthSubtype.allCases.map(\.accessibilityIdentifier) +
         ["goal_race_event", "goal_race_date", "coaching_onboarding_continue"]
+    }
+
+    private static func emptyProfileDraft() -> GeneratedCoachingProfile {
+        GeneratedCoachingProfile(
+            createdAt: "",
+            equipment: nil,
+            experienceLevel: "intermediate",
+            goals: nil,
+            primaryGoal: "general_fitness",
+            sessionsPerWeek: 3,
+            updatedAt: "",
+            userId: ""
+        )
     }
 
     private func applyGoals(_ goals: [GoalEntry]) {

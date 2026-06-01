@@ -21,6 +21,7 @@ struct APILogEvent: Equatable {
         case start
         case end
         case fail
+        case empty
     }
 
     let phase: Phase
@@ -76,6 +77,8 @@ final class DefaultAPIObservabilityLogger: APIObservabilityLogging {
                     error: nil,
                     requestID: event.requestId
                 )
+            case .empty:
+                break
             }
         }
     }
@@ -190,6 +193,62 @@ extension APIService {
         }
     }
 
+    func requestOptionalOnStatus<T: Decodable>(
+        _ request: URLRequest,
+        decode type: T.Type,
+        decoder: JSONDecoder = APIService.makeDecoder(),
+        emptyStatusCodes: Set<Int>,
+        successStatusCodes: ClosedRange<Int> = 200...299
+    ) async throws -> T? {
+        let result = try await performRequest(
+            request,
+            successStatusCodes: successStatusCodes,
+            additionalSuccessStatusCodes: emptyStatusCodes
+        )
+
+        if emptyStatusCodes.contains(result.statusCode) {
+            logAPIEvent(
+                phase: .empty,
+                endpoint: result.endpoint,
+                method: result.method,
+                statusCode: result.statusCode,
+                startedAt: result.startedAt,
+                requestId: result.requestId,
+                serverRequestId: result.serverRequestId,
+                error: nil
+            )
+            return nil
+        }
+
+        do {
+            let decoded = try decoder.decode(type, from: result.data)
+            logAPIEvent(
+                phase: .end,
+                endpoint: result.endpoint,
+                method: result.method,
+                statusCode: result.statusCode,
+                startedAt: result.startedAt,
+                requestId: result.requestId,
+                serverRequestId: result.serverRequestId,
+                error: nil
+            )
+            return decoded
+        } catch {
+            let apiError = APIError.decoding(underlying: error)
+            logAPIEvent(
+                phase: .fail,
+                endpoint: result.endpoint,
+                method: result.method,
+                statusCode: result.statusCode,
+                startedAt: result.startedAt,
+                requestId: result.requestId,
+                serverRequestId: result.serverRequestId,
+                error: apiError
+            )
+            throw apiError
+        }
+    }
+
     func requestData(
         _ request: URLRequest,
         successStatusCodes: ClosedRange<Int> = 200...299
@@ -267,7 +326,8 @@ extension APIService {
 
     private func performRequest(
         _ request: URLRequest,
-        successStatusCodes: ClosedRange<Int>
+        successStatusCodes: ClosedRange<Int>,
+        additionalSuccessStatusCodes: Set<Int> = []
     ) async throws -> RequestResult {
         let endpoint = Self.sanitizedEndpoint(from: request.url)
         let method = request.httpMethod ?? "GET"
@@ -308,7 +368,7 @@ extension APIService {
                 ?? httpResponse.value(forHTTPHeaderField: "Rndr-Id")
             let serverRequestId = responseRequestId == generatedRequestId ? nil : responseRequestId
             let statusCode = httpResponse.statusCode
-            guard successStatusCodes.contains(statusCode) else {
+            guard successStatusCodes.contains(statusCode) || additionalSuccessStatusCodes.contains(statusCode) else {
                 let apiError = Self.mapStatusCode(statusCode, data: data)
                 logAPIEvent(
                     phase: .fail,

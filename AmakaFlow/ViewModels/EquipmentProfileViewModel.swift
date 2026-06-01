@@ -159,8 +159,9 @@ final class EquipmentProfileViewModel: ObservableObject {
 
         do {
             let fetched = try await apiService.getCoachingProfile()
-            profile = fetched
-            let loadedInventory = fetched.equipment
+            let activeProfile = fetched ?? Self.emptyProfileDraft()
+            profile = activeProfile
+            let loadedInventory = activeProfile.equipment
             let inventory = loadedInventory ?? Self.defaultInventory()
             applyInventory(inventory)
             originalInventory = buildInventory()
@@ -326,6 +327,19 @@ final class EquipmentProfileViewModel: ObservableObject {
             mobility: .init(additionalProperties: Dictionary(uniqueKeysWithValues: mobilityCategory.items.map { ($0.id, false) })),
             strength: .init(additionalProperties: Dictionary(uniqueKeysWithValues: strengthCategory.items.map { ($0.id, false) })),
             trainingLocation: TrainingLocation.home.rawValue
+        )
+    }
+
+    private static func emptyProfileDraft() -> CoachingProfile {
+        CoachingProfile(
+            createdAt: "",
+            equipment: nil,
+            experienceLevel: "intermediate",
+            goals: nil,
+            primaryGoal: "general_fitness",
+            sessionsPerWeek: 3,
+            updatedAt: "",
+            userId: ""
         )
     }
 
