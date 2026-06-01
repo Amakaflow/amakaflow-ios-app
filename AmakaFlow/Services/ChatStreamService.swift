@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import os
 
 // MARK: - SSE Parser
 
@@ -118,19 +119,26 @@ protocol ChatStreamProviding {
 
 class ChatStreamService: ChatStreamProviding {
     private let session: URLSession
+    private static let logger = Logger(subsystem: "com.amakaflow.app", category: "chat-stream")
     private static let sseDelimiters: [Data] = [
         Data([0x0A, 0x0A]),             // \\n\\n
         Data([0x0D, 0x0A, 0x0D, 0x0A]), // \\r\\n\\r\\n
         Data([0x0D, 0x0D])              // \\r\\r
     ]
+    private static let sseDelimiterScanOverlap = 4
 
     init(session: URLSession = .shared) {
         self.session = session
     }
 
-    private static func nextSSEDelimiter(in buffer: Data) -> Range<Data.Index>? {
-        sseDelimiters
-            .compactMap { buffer.range(of: $0) }
+    private static func nextSSEDelimiter(in buffer: Data, from searchStart: Data.Index) -> Range<Data.Index>? {
+        guard !buffer.isEmpty else { return nil }
+
+        let boundedStart = max(buffer.startIndex, min(searchStart, buffer.endIndex))
+        guard boundedStart < buffer.endIndex else { return nil }
+
+        return sseDelimiters
+            .compactMap { buffer.range(of: $0, options: [], in: boundedStart..<buffer.endIndex) }
             .min { lhs, rhs in
                 if lhs.lowerBound == rhs.lowerBound {
                     return lhs.count > rhs.count
@@ -139,16 +147,60 @@ class ChatStreamService: ChatStreamProviding {
             }
     }
 
+    private static func nextSSEScanStart(in buffer: Data) -> Data.Index {
+        let bufferLength = buffer.distance(from: buffer.startIndex, to: buffer.endIndex)
+        let offset = max(0, bufferLength - sseDelimiterScanOverlap)
+        return buffer.index(buffer.startIndex, offsetBy: offset)
+    }
+
     private static func parsedEvents(from blockData: Data) -> [SSEEvent] {
-        guard !blockData.isEmpty,
-              let block = String(data: blockData, encoding: .utf8) else {
+        guard !blockData.isEmpty else { return [] }
+
+        guard let block = String(data: blockData, encoding: .utf8) else {
+            logUnparseableSSEBlock(eventTypePrefix: "invalid_utf8", byteLength: blockData.count)
             return []
         }
 
         // Reuse the existing SSE buffer splitter so CRLF/CR line endings are
         // normalized exactly the same way as the tested parser path.
         let (blocks, _) = SSEParser.splitBuffer(block + "\n\n")
-        return blocks.compactMap { SSEParser.parse(block: $0) }
+        return blocks.compactMap { parsedBlock in
+            if let event = SSEParser.parse(block: parsedBlock) {
+                return event
+            }
+
+            logUnparseableSSEBlock(
+                eventTypePrefix: eventTypePrefix(from: parsedBlock),
+                byteLength: parsedBlock.utf8.count
+            )
+            return nil
+        }
+    }
+
+    private static func eventTypePrefix(from block: String) -> String {
+        for line in block.split(separator: "\n", omittingEmptySubsequences: false) {
+            let line = String(line)
+            guard line.hasPrefix("event:") else { continue }
+            return String(line.dropFirst(6).trimmingCharacters(in: .whitespaces).prefix(64))
+        }
+        return "missing"
+    }
+
+    private static func logUnparseableSSEBlock(eventTypePrefix: String, byteLength: Int) {
+        logger.warning(
+            "Dropped unparseable SSE block eventTypePrefix=\(eventTypePrefix, privacy: .public) byteLength=\(byteLength, privacy: .public)"
+        )
+
+        Task { @MainActor in
+            DebugLogService.shared.log(
+                "Dropped unparseable SSE block",
+                details: "eventTypePrefix=\(eventTypePrefix) byteLength=\(byteLength)",
+                metadata: [
+                    "eventTypePrefix": eventTypePrefix,
+                    "byteLength": "\(byteLength)"
+                ]
+            )
+        }
     }
 
     func stream(request: ChatStreamRequest, token: String) -> AsyncThrowingStream<SSEEvent, Error> {
@@ -183,6 +235,7 @@ class ChatStreamService: ChatStreamProviding {
                     }
 
                     var buffer = Data()
+                    var scanStart = buffer.startIndex
                     for try await byte in bytes {
                         if Task.isCancelled { return }
 
@@ -192,14 +245,19 @@ class ChatStreamService: ChatStreamProviding {
                         // Do not depend on AsyncBytes.lines surfacing empty lines,
                         // and do not require the whole accumulated buffer to be
                         // valid UTF-8 before yielding earlier complete events.
-                        while let delimiter = Self.nextSSEDelimiter(in: buffer) {
+                        // Bound each search to the newly appended tail plus a
+                        // four-byte overlap so split CRLF delimiters are still
+                        // detected without rescanning the whole block.
+                        while let delimiter = Self.nextSSEDelimiter(in: buffer, from: scanStart) {
                             let blockData = Data(buffer[..<delimiter.lowerBound])
                             buffer.removeSubrange(..<delimiter.upperBound)
+                            scanStart = buffer.startIndex
 
                             for event in Self.parsedEvents(from: blockData) {
                                 continuation.yield(event)
                             }
                         }
+                        scanStart = Self.nextSSEScanStart(in: buffer)
                     }
 
                     if Task.isCancelled { return }
