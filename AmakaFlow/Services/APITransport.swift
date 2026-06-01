@@ -21,6 +21,7 @@ struct APILogEvent: Equatable {
         case start
         case end
         case fail
+        case empty
     }
 
     let phase: Phase
@@ -76,6 +77,8 @@ final class DefaultAPIObservabilityLogger: APIObservabilityLogging {
                     error: nil,
                     requestID: event.requestId
                 )
+            case .empty:
+                break
             }
         }
     }
@@ -190,6 +193,80 @@ extension APIService {
         }
     }
 
+    /// Like `request(_:decode:...)` but treats certain status codes as a
+    /// first-class "no data" result instead of an error.
+    ///
+    /// Use this (rather than `request`) when an endpoint returns a non-2xx
+    /// status to mean "nothing exists yet" rather than a failure — e.g.
+    /// `GET /coaching/profile` returns 404 when the user has no profile.
+    /// Such an "empty" response is logged with the `.empty` phase (not a
+    /// failure) so it does NOT surface as an `API_ERROR`.
+    ///
+    /// - Parameters:
+    ///   - emptyStatusCodes: status codes treated as "no data" — the method
+    ///     returns `nil` and never attempts to decode the body. These MUST NOT
+    ///     overlap `successStatusCodes`; an overlap would cause a valid 2xx
+    ///     response to be treated as empty.
+    ///   - successStatusCodes: status codes whose body is decoded into `T`.
+    /// - Returns: the decoded value on success, or `nil` for an `emptyStatusCodes` response.
+    /// - Throws: `APIError.decoding` if a success response fails to decode, plus
+    ///   any error from `performRequest` (network failure, non-handled status, auth).
+    func requestOptionalOnStatus<T: Decodable>(
+        _ request: URLRequest,
+        decode type: T.Type,
+        decoder: JSONDecoder = APIService.makeDecoder(),
+        emptyStatusCodes: Set<Int>,
+        successStatusCodes: ClosedRange<Int> = 200...299
+    ) async throws -> T? {
+        let result = try await performRequest(
+            request,
+            successStatusCodes: successStatusCodes,
+            additionalSuccessStatusCodes: emptyStatusCodes
+        )
+
+        if emptyStatusCodes.contains(result.statusCode) {
+            logAPIEvent(
+                phase: .empty,
+                endpoint: result.endpoint,
+                method: result.method,
+                statusCode: result.statusCode,
+                startedAt: result.startedAt,
+                requestId: result.requestId,
+                serverRequestId: result.serverRequestId,
+                error: nil
+            )
+            return nil
+        }
+
+        do {
+            let decoded = try decoder.decode(type, from: result.data)
+            logAPIEvent(
+                phase: .end,
+                endpoint: result.endpoint,
+                method: result.method,
+                statusCode: result.statusCode,
+                startedAt: result.startedAt,
+                requestId: result.requestId,
+                serverRequestId: result.serverRequestId,
+                error: nil
+            )
+            return decoded
+        } catch {
+            let apiError = APIError.decoding(underlying: error)
+            logAPIEvent(
+                phase: .fail,
+                endpoint: result.endpoint,
+                method: result.method,
+                statusCode: result.statusCode,
+                startedAt: result.startedAt,
+                requestId: result.requestId,
+                serverRequestId: result.serverRequestId,
+                error: apiError
+            )
+            throw apiError
+        }
+    }
+
     func requestData(
         _ request: URLRequest,
         successStatusCodes: ClosedRange<Int> = 200...299
@@ -267,7 +344,8 @@ extension APIService {
 
     private func performRequest(
         _ request: URLRequest,
-        successStatusCodes: ClosedRange<Int>
+        successStatusCodes: ClosedRange<Int>,
+        additionalSuccessStatusCodes: Set<Int> = []
     ) async throws -> RequestResult {
         let endpoint = Self.sanitizedEndpoint(from: request.url)
         let method = request.httpMethod ?? "GET"
@@ -308,7 +386,7 @@ extension APIService {
                 ?? httpResponse.value(forHTTPHeaderField: "Rndr-Id")
             let serverRequestId = responseRequestId == generatedRequestId ? nil : responseRequestId
             let statusCode = httpResponse.statusCode
-            guard successStatusCodes.contains(statusCode) else {
+            guard successStatusCodes.contains(statusCode) || additionalSuccessStatusCodes.contains(statusCode) else {
                 let apiError = Self.mapStatusCode(statusCode, data: data)
                 logAPIEvent(
                     phase: .fail,

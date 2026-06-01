@@ -71,10 +71,36 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     XCTAssertNil(viewModel.suggestedWorkout)
   }
 
-  func testRequestSuggestion_showsOnboardingWhenNoProfile() {
+  func testRequestSuggestion_showsOnboardingWhenNoBackendProfile() async throws {
+    mockAPI.getCoachingProfileResult = .success(nil)
+
     viewModel.requestSuggestion()
+    try await waitUntil { self.viewModel.state == .needsOnboarding }
+
+    XCTAssertTrue(mockAPI.getCoachingProfileCalled)
     XCTAssertEqual(viewModel.state, .needsOnboarding)
+    XCTAssertNil(viewModel.ctaError)
     XCTAssertFalse(mockAPI.suggestWorkoutCalled)
+  }
+
+  func testRequestSuggestion_profileLoadErrorStaysLoud() async throws {
+    mockAPI.getCoachingProfileResult = .failure(APIError.serverError(500))
+
+    viewModel.requestSuggestion()
+    try await waitUntil {
+      if case .error = self.viewModel.state { return true }
+      return false
+    }
+
+    XCTAssertTrue(mockAPI.getCoachingProfileCalled)
+    XCTAssertFalse(mockAPI.suggestWorkoutCalled)
+    guard case .error(let cta) = viewModel.state else {
+      return XCTFail("Expected error state, got \(viewModel.state)")
+    }
+    guard case .http(let status, _, _) = cta else {
+      return XCTFail("Expected HTTP CTAError, got \(cta)")
+    }
+    XCTAssertEqual(status, 500)
   }
 
   func testSuggestWorkout_setsLoadingWhileRequestIsPending() async throws {

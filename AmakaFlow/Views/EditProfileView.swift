@@ -143,7 +143,7 @@ final class EditProfileViewModel: ObservableObject {
         lastFailedAction = nil
 
         do {
-            let fetched = try await apiService.getCoachingProfile()
+            let fetched = try await apiService.getCoachingProfile() ?? Self.emptyProfileDraft()
             apply(profile: fetched)
             state = selectedGoalTypes.isEmpty ? .empty : .content
         } catch {
@@ -164,7 +164,7 @@ final class EditProfileViewModel: ObservableObject {
             // AMA-1997 pattern: load the latest profile immediately before PUT
             // so editing goals/training hours never clobbers equipment or other
             // fields written by adjacent screens.
-            let latest = try await apiService.getCoachingProfile()
+            let latest = try await apiService.getCoachingProfile() ?? profile ?? Self.emptyProfileDraft()
             profile = latest
             let upsert = CoachingProfileUpsert(
                 equipment: latest.equipment,
@@ -268,6 +268,20 @@ final class EditProfileViewModel: ObservableObject {
             goals: buildGoals(),
             sessionDurationMinutes: sessionDurationMinutes,
             sessionsPerWeek: sessionsPerWeek
+        )
+    }
+
+    private static func emptyProfileDraft() -> CoachingProfile {
+        CoachingProfile(
+            createdAt: "",
+            equipment: nil,
+            experienceLevel: "intermediate",
+            goals: nil,
+            primaryGoal: "general_fitness",
+            sessionDurationMinutes: 45,
+            sessionsPerWeek: 3,
+            updatedAt: "",
+            userId: ""
         )
     }
 

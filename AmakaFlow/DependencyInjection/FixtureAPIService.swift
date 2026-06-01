@@ -562,7 +562,7 @@ class FixtureAPIService: APIServiceProviding {
 
     // MARK: - Coaching Profile (AMA-1995)
 
-    func getCoachingProfile() async throws -> Components.Schemas.CoachingProfile {
+    func getCoachingProfile() async throws -> Components.Schemas.CoachingProfile? {
         fixtureCoachingProfile
     }
 

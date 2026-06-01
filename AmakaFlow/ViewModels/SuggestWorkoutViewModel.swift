@@ -156,12 +156,27 @@ class SuggestWorkoutViewModel: ObservableObject {
 
     /// Check profile and request a suggestion
     func requestSuggestion() {
-        if !hasCoachingProfile {
-            state = .needsOnboarding
-            return
-        }
+        state = .loading
+        suggestedWorkout = nil
+        ctaError = nil
+
         Task {
+            await requestSuggestionAfterProfileCheck()
+        }
+    }
+
+    private func requestSuggestionAfterProfileCheck() async {
+        do {
+            guard try await dependencies.apiService.getCoachingProfile() != nil else {
+                state = .needsOnboarding
+                return
+            }
             await suggestWorkout()
+        } catch {
+            let mapped = CTAError.map(error)
+            suggestedWorkout = nil
+            ctaError = mapped
+            state = .error(mapped)
         }
     }
 

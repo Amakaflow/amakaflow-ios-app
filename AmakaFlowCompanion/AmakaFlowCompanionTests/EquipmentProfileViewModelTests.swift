@@ -40,6 +40,22 @@ final class EquipmentProfileViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.isDirty)
     }
 
+    func testLoad_noCoachingProfileShowsEmptySetupStateWithoutError() async {
+        api.getCoachingProfileResult = .success(nil)
+
+        await viewModel.load()
+
+        XCTAssertTrue(api.getCoachingProfileCalled)
+        XCTAssertEqual(viewModel.state, .empty)
+        XCTAssertNil(viewModel.ctaError)
+        XCTAssertNil(viewModel.lastFailedAction)
+        XCTAssertEqual(viewModel.selectedCount, 3)
+        XCTAssertFalse(viewModel.isDirty)
+
+        viewModel.selectLocation(.gym)
+        XCTAssertTrue(viewModel.saveEnabled, "Draft defaults should allow creating the profile from the setup state")
+    }
+
     func testLoad_existingEquipmentShowsContentAndMapsGeneratedInventory() async {
         let inventory = equipment(
             strength: ["dumbbells": true, "barbell": true],
@@ -211,20 +227,22 @@ final class EquipmentProfileViewModelTests: XCTestCase {
     func testFixtureServiceSaveRoundTripsThroughGeneratedPUTThenGET() async throws {
         let fixture = FixtureAPIService()
         let first = try await fixture.getCoachingProfile()
-        XCTAssertNil(first.equipment)
+        let unwrappedFirst = try XCTUnwrap(first)
+        XCTAssertNil(unwrappedFirst.equipment)
 
         let saved = try await fixture.upsertCoachingProfile(.init(
             equipment: equipment(strength: ["dumbbells": true], dumbbellRangeKg: 24, location: "gym"),
-            experienceLevel: first.experienceLevel,
-            primaryGoal: first.primaryGoal,
-            sessionsPerWeek: first.sessionsPerWeek
+            experienceLevel: unwrappedFirst.experienceLevel,
+            primaryGoal: unwrappedFirst.primaryGoal,
+            sessionsPerWeek: unwrappedFirst.sessionsPerWeek
         ))
         XCTAssertEqual(saved.equipment?.trainingLocation, "gym")
         XCTAssertEqual(saved.equipment?.dumbbellRangeKg, 24)
 
         let fetched = try await fixture.getCoachingProfile()
-        XCTAssertEqual(fetched.equipment?.trainingLocation, "gym")
-        XCTAssertEqual(fetched.equipment?.strength?.additionalProperties["dumbbells"], true)
+        let unwrappedFetched = try XCTUnwrap(fetched)
+        XCTAssertEqual(unwrappedFetched.equipment?.trainingLocation, "gym")
+        XCTAssertEqual(unwrappedFetched.equipment?.strength?.additionalProperties["dumbbells"], true)
     }
 
     func testEditProfileLoadMapsBackendFieldsAndEmptyState() async {
@@ -238,6 +256,21 @@ final class EquipmentProfileViewModelTests: XCTestCase {
         XCTAssertEqual(editViewModel.sessionsPerWeek, 3)
         XCTAssertEqual(editViewModel.sessionDurationMinutes, 45)
         XCTAssertEqual(editViewModel.weeklyHoursLabel, "2.2 hr / week")
+        XCTAssertFalse(editViewModel.canSave)
+    }
+
+    func testEditProfileLoadNoCoachingProfileShowsSetupStateWithoutError() async {
+        let editViewModel = EditProfileViewModel(apiService: api)
+        api.getCoachingProfileResult = .success(nil)
+
+        await editViewModel.load()
+
+        XCTAssertEqual(editViewModel.state, .empty)
+        XCTAssertNil(editViewModel.ctaError)
+        XCTAssertNil(editViewModel.lastFailedAction)
+        XCTAssertEqual(editViewModel.experience, .intermediate)
+        XCTAssertEqual(editViewModel.sessionsPerWeek, 3)
+        XCTAssertEqual(editViewModel.sessionDurationMinutes, 45)
         XCTAssertFalse(editViewModel.canSave)
     }
 

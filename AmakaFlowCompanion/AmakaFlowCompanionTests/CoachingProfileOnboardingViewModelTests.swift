@@ -37,6 +37,22 @@ final class CoachingProfileOnboardingViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.canContinue)
     }
 
+    func testLoad_noCoachingProfileShowsOnboardingSetupStateWithoutError() async {
+        api.getCoachingProfileResult = .success(nil)
+
+        await viewModel.load()
+
+        XCTAssertTrue(api.getCoachingProfileCalled)
+        XCTAssertEqual(viewModel.state, .empty)
+        XCTAssertNil(viewModel.ctaError)
+        XCTAssertNil(viewModel.lastFailedAction)
+        XCTAssertEqual(viewModel.selectedCount, 0)
+        XCTAssertFalse(viewModel.canContinue)
+
+        viewModel.selectGoal(.health)
+        XCTAssertTrue(viewModel.canContinue, "Draft defaults should allow creating the profile from onboarding")
+    }
+
     func testMultiSelectAllowsLayeredGoalsAndNoneIsMutuallyExclusive() async {
         api.getCoachingProfileResult = .success(profile(goals: nil))
         await viewModel.load()
@@ -228,20 +244,22 @@ final class CoachingProfileOnboardingViewModelTests: XCTestCase {
     func testFixtureServiceGoalsRoundTripThroughGeneratedPUTThenGET() async throws {
         let fixture = FixtureAPIService()
         let first = try await fixture.getCoachingProfile()
-        XCTAssertNil(first.goals)
+        let unwrappedFirst = try XCTUnwrap(first)
+        XCTAssertNil(unwrappedFirst.goals)
 
         let saved = try await fixture.upsertCoachingProfile(.init(
-            equipment: first.equipment,
-            experienceLevel: first.experienceLevel,
+            equipment: unwrappedFirst.equipment,
+            experienceLevel: unwrappedFirst.experienceLevel,
             goals: [.init(event: "Hyrox Dallas", _type: "race"), .init(_type: "mobility")],
-            primaryGoal: first.primaryGoal,
-            sessionsPerWeek: first.sessionsPerWeek
+            primaryGoal: unwrappedFirst.primaryGoal,
+            sessionsPerWeek: unwrappedFirst.sessionsPerWeek
         ))
         XCTAssertEqual(saved.goals?.map(\._type), ["race", "mobility"])
 
         let fetched = try await fixture.getCoachingProfile()
-        XCTAssertEqual(fetched.goals?.map(\._type), ["race", "mobility"])
-        XCTAssertEqual(fetched.goals?.first?.event, "Hyrox Dallas")
+        let unwrappedFetched = try XCTUnwrap(fetched)
+        XCTAssertEqual(unwrappedFetched.goals?.map(\._type), ["race", "mobility"])
+        XCTAssertEqual(unwrappedFetched.goals?.first?.event, "Hyrox Dallas")
     }
 
     private func profile(

@@ -244,16 +244,17 @@ extension APIService {
 
     // MARK: - Coaching Profile (AMA-1995)
 
-    func getCoachingProfile() async throws -> Components.Schemas.CoachingProfile {
+    func getCoachingProfile() async throws -> Components.Schemas.CoachingProfile? {
         let request = try await makeAPIRequest(
             baseURL: bffURL,
             path: "/coaching/profile",
             method: "GET"
         )
-        return try await self.request(
+        return try await requestOptionalOnStatus(
             request,
             decode: Components.Schemas.CoachingProfile.self,
             decoder: APIService.makeGeneratedDecoder(),
+            emptyStatusCodes: [404],
             successStatusCodes: 200...200
         )
     }

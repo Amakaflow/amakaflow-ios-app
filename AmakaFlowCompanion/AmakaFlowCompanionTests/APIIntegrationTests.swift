@@ -209,6 +209,56 @@ final class CoachAPIRepositoryEndpointTests: XCTestCase {
         super.tearDown()
     }
 
+    func testGetCoachingProfile404ReturnsNilAndDoesNotEmitFailLog() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.httpMethod, "GET")
+            XCTAssertEqual(request.url?.path, "/v1/coaching/profile")
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 404,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Rndr-Id": "rndr-empty-profile"]
+            )!
+            let body = #"{"message":"No coaching profile found. Use PUT /coach/profile to create one."}"#
+                .data(using: .utf8)!
+            return (response, body)
+        }
+
+        let profile = try await api.getCoachingProfile()
+
+        XCTAssertNil(profile)
+        XCTAssertEqual(MockURLProtocol.interceptedRequests.first?.url?.path, "/v1/coaching/profile")
+        XCTAssertEqual(logger.events.map(\.phase), [.start, .empty])
+        XCTAssertFalse(logger.events.contains { $0.phase == .fail }, "404 no-profile must not emit API_ERROR/fail telemetry")
+        XCTAssertEqual(logger.events.last?.statusCode, 404)
+        XCTAssertNil(logger.events.last?.errorType)
+    }
+
+    func testGetCoachingProfile500StillThrowsAndEmitsFailLog() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.url?.path, "/v1/coaching/profile")
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 500,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Rndr-Id": "rndr-profile-error"]
+            )!
+            return (response, #"{"detail":"profile unavailable"}"#.data(using: .utf8)!)
+        }
+
+        do {
+            _ = try await api.getCoachingProfile()
+            XCTFail("Expected serverErrorWithBody")
+        } catch APIError.serverErrorWithBody(let status, let body) {
+            XCTAssertEqual(status, 500)
+            XCTAssertTrue(body.contains("profile unavailable"))
+            XCTAssertEqual(logger.events.map(\.phase), [.start, .fail])
+            XCTAssertEqual(logger.events.last?.errorType, "server")
+        } catch {
+            XCTFail("Expected serverErrorWithBody, got \(error)")
+        }
+    }
+
     func testSetDeviceRolesPutsEncodedDeviceIDAndRolesToBFF() async throws {
         MockURLProtocol.requestHandler = { request in
             XCTAssertEqual(request.httpMethod, "PUT")
