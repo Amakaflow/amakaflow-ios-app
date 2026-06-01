@@ -49,6 +49,11 @@ final class MockURLProtocol: URLProtocol {
     /// Delay before returning response (simulates network latency)
     static var responseDelay: TimeInterval = 0
 
+    /// Optional chunked body delivery for streaming tests.
+    /// When set, chunks are emitted with separate `didLoad` calls instead of
+    /// delivering the response body in a single load.
+    static var responseChunks: [Data]?
+
     // MARK: - URLProtocol Implementation
 
     override class func canInit(with request: URLRequest) -> Bool {
@@ -88,7 +93,13 @@ final class MockURLProtocol: URLProtocol {
 
             // Return the mock response
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-            client?.urlProtocol(self, didLoad: data)
+            if let chunks = MockURLProtocol.responseChunks {
+                for chunk in chunks {
+                    client?.urlProtocol(self, didLoad: chunk)
+                }
+            } else {
+                client?.urlProtocol(self, didLoad: data)
+            }
             client?.urlProtocolDidFinishLoading(self)
         } catch {
             client?.urlProtocol(self, didFailWithError: error)
@@ -107,6 +118,7 @@ final class MockURLProtocol: URLProtocol {
         interceptedRequests = []
         simulatedError = nil
         responseDelay = 0
+        responseChunks = nil
     }
 
     /// Create a URLSession configured to use this mock protocol
@@ -129,6 +141,21 @@ final class MockURLProtocol: URLProtocol {
                 headerFields: ["Content-Type": "application/json"]
             )!
             return (response, data)
+        }
+    }
+
+    /// Configure a response delivered in multiple URLProtocol `didLoad` chunks.
+    /// Useful for exercising streaming clients over realistic chunk boundaries.
+    static func setChunkedResponse(statusCode: Int = 200, chunks: [Data], contentType: String = "text/event-stream") {
+        responseChunks = chunks
+        requestHandler = { request in
+            let response = HTTPURLResponse(
+                url: request.url ?? URL(string: "https://mock.test")!,
+                statusCode: statusCode,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": contentType]
+            )!
+            return (response, chunks.reduce(Data(), +))
         }
     }
 
