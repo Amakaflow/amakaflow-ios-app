@@ -24,7 +24,7 @@ enum AFTab: String, CaseIterable, Identifiable {
         switch self {
         case .home: return "house.fill"
         case .workouts: return "square.grid.2x2.fill"
-        case .coach: return "bubble.left.and.text.bubble.fill"
+        case .coach: return "bubble.left.and.bubble.right.fill"
         case .library: return "bookmark.fill"
         case .history: return "clock.arrow.circlepath"
         case .profile: return "person.crop.circle.fill"
@@ -35,7 +35,7 @@ enum AFTab: String, CaseIterable, Identifiable {
         switch self {
         case .home: return "house"
         case .workouts: return "square.grid.2x2"
-        case .coach: return "bubble.left.and.text.bubble"
+        case .coach: return "bubble.left.and.bubble.right"
         case .library: return "bookmark"
         case .history: return "clock.arrow.circlepath"
         case .profile: return "person.crop.circle"
@@ -313,17 +313,9 @@ private struct AFTabBarButton: View {
                             .frame(width: 46, height: 30)
                     }
 
-                    ZStack(alignment: .topTrailing) {
-                        Image(systemName: isSelected ? tab.activeIcon : tab.inactiveIcon)
-                            .font(.system(size: 17, weight: isSelected ? .semibold : .medium))
-
-                        if tab == .coach, isSelected {
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 7, weight: .bold))
-                                .offset(x: 8, y: -7)
-                        }
-                    }
-                    .foregroundColor(isSelected ? Theme.Colors.readyHigh : Theme.Colors.textTertiary)
+                    Image(systemName: isSelected ? tab.activeIcon : tab.inactiveIcon)
+                        .font(.system(size: 17, weight: isSelected ? .semibold : .medium))
+                        .foregroundColor(isSelected ? Theme.Colors.readyHigh : Theme.Colors.textTertiary)
                 }
                 .frame(height: 32)
 
