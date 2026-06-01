@@ -13,6 +13,8 @@ struct CoachChatView: View {
     @State private var showNewChatConfirmation = false
     @FocusState private var isInputFocused: Bool
 
+    private let tabBarClearance: CGFloat = 72
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -93,8 +95,17 @@ struct CoachChatView: View {
                     .padding(.vertical, Theme.Spacing.xs)
                 }
 
-                // Input bar
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
                 inputBar
+                    // ContentView owns the custom AFTabBar via a parent
+                    // safeAreaInset. On the Coach NavigationStack, that
+                    // parent inset does not keep bottom-anchored controls
+                    // above the tab bar, so reserve the tab-bar lane locally.
+                    // Keeping this clearance even while focused also covers
+                    // simulator/hardware-keyboard runs where no software
+                    // keyboard notification changes the bottom safe area.
+                    .padding(.bottom, tabBarClearance)
             }
             .background(Theme.Colors.background.ignoresSafeArea())
             .navigationTitle("Coach")
@@ -235,6 +246,7 @@ struct CoachChatView: View {
                 .cornerRadius(Theme.CornerRadius.lg)
                 .focused($isInputFocused)
                 .disabled(viewModel.isStreaming)
+                .accessibilityIdentifier("af_coach_input")
 
             Button {
                 let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -251,6 +263,8 @@ struct CoachChatView: View {
                     )
             }
             .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isStreaming)
+            .accessibilityLabel("Send coach message")
+            .accessibilityIdentifier("af_coach_send")
         }
         .padding(.horizontal, Theme.Spacing.lg)
         .padding(.vertical, Theme.Spacing.sm)
