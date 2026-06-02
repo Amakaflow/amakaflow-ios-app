@@ -26,9 +26,9 @@ struct ActivityHistoryView: View {
                         .padding(.top, Theme.Spacing.xl * 2)
                 } else {
                     VStack(spacing: Theme.Spacing.lg) {
-                        // Weekly Summary Card
-                        if viewModel.weeklySummary.workoutCount > 0 {
-                            WeeklySummaryCard(summary: viewModel.weeklySummary)
+                        // Summary Card: mirrors the same filter window as the visible list.
+                        if viewModel.filterSummary.workoutCount > 0 {
+                            WeeklySummaryCard(title: viewModel.summaryTitle, summary: viewModel.filterSummary)
                                 .padding(.horizontal, Theme.Spacing.lg)
                         }
 
@@ -191,11 +191,11 @@ struct ActivityHistoryView: View {
                     .foregroundColor(Theme.Colors.textSecondary)
             }
 
-            Text("No Activities Yet")
+            Text(emptyStateTitle)
                 .font(Theme.Typography.title3)
                 .foregroundColor(Theme.Colors.textPrimary)
 
-            Text("Complete a workout to see your\nactivity history here.")
+            Text(emptyStateMessage)
                 .font(Theme.Typography.body)
                 .foregroundColor(Theme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -215,6 +215,20 @@ struct ActivityHistoryView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, Theme.Spacing.xl)
+    }
+
+    private var emptyStateTitle: String {
+        if viewModel.completions.isEmpty {
+            return "No Activities Yet"
+        }
+        return "No Activities for \(viewModel.selectedFilter.rawValue)"
+    }
+
+    private var emptyStateMessage: String {
+        if viewModel.completions.isEmpty {
+            return "Complete a workout to see your\nactivity history here."
+        }
+        return "Try another filter to see more\nactivity history."
     }
 }
 
@@ -316,11 +330,12 @@ struct CompletionRowView: View {
 // MARK: - Weekly Summary Card
 
 struct WeeklySummaryCard: View {
+    let title: String
     let summary: WeeklySummary
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text("THIS WEEK")
+            Text(title)
                 .font(Theme.Typography.footnote)
                 .foregroundColor(Theme.Colors.textSecondary)
                 .tracking(1)

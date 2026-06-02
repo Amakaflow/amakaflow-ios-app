@@ -106,19 +106,23 @@ extension WorkoutCompletion {
 extension WorkoutCompletion {
     /// Returns the date category for grouping (Today, Yesterday, or the date)
     var dateCategory: DateCategory {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
+        dateCategory(now: Date(), calendar: .current)
+    }
+
+    func dateCategory(now: Date, calendar: Calendar = .current) -> DateCategory {
+        let today = calendar.startOfDay(for: now)
         let completionDay = calendar.startOfDay(for: startedAt)
 
-        if calendar.isDateInToday(startedAt) {
+        if completionDay == today {
             return .today
-        } else if calendar.isDateInYesterday(startedAt) {
+        } else if let yesterday = calendar.date(byAdding: .day, value: -1, to: today),
+                  completionDay == yesterday {
             return .yesterday
-        } else if let weekAgo = calendar.date(byAdding: .day, value: -7, to: today),
-                  completionDay >= weekAgo {
-            return .thisWeek(startedAt)
+        } else if let weekInterval = calendar.dateInterval(of: .weekOfYear, for: today),
+                  weekInterval.contains(completionDay) {
+            return .thisWeek(completionDay)
         } else {
-            return .older(startedAt)
+            return .older(completionDay)
         }
     }
 
@@ -127,6 +131,19 @@ extension WorkoutCompletion {
         case yesterday
         case thisWeek(Date)
         case older(Date)
+
+        var id: String {
+            switch self {
+            case .today:
+                return "today"
+            case .yesterday:
+                return "yesterday"
+            case .thisWeek(let date):
+                return "this-week-\(Int(date.timeIntervalSince1970))"
+            case .older(let date):
+                return "older-\(Int(date.timeIntervalSince1970))"
+            }
+        }
 
         var title: String {
             switch self {
