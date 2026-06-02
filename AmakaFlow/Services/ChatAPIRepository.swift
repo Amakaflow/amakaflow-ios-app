@@ -26,67 +26,163 @@
 //
 
 import Foundation
+import HTTPTypes
+import OpenAPIRuntime
+import OpenAPIURLSession
+
+private struct GeneratedBFFTransport: ClientTransport {
+    let base: URLSessionTransport
+    let headers: [String: String]
+
+    nonisolated func send(
+        _ request: HTTPRequest,
+        body: HTTPBody?,
+        baseURL: URL,
+        operationID: String
+    ) async throws -> (HTTPResponse, HTTPBody?) {
+        var request = request
+        for (key, value) in headers {
+            guard let name = HTTPField.Name(key) else { continue }
+            request.headerFields[name] = value
+        }
+        return try await base.send(request, body: body, baseURL: baseURL, operationID: operationID)
+    }
+}
 
 extension APIService {
+
+    private func generatedBFFClient() async throws -> Client {
+        guard let serverURL = URL(string: AppEnvironment.current.mobileBFFURL) else {
+            throw APIError.invalidURL
+        }
+        let urlSession = (session as? URLSession) ?? .shared
+        let baseTransport = URLSessionTransport(
+            configuration: .init(session: urlSession, httpBodyProcessingMode: .buffered)
+        )
+        return Client(
+            serverURL: serverURL,
+            transport: GeneratedBFFTransport(base: baseTransport, headers: await makeAuthHeaders())
+        )
+    }
+
+    private static func generatedError(statusCode: Int) -> APIError {
+        if statusCode == 401 { return .unauthorized }
+        return .serverError(statusCode)
+    }
+
+    private static func generatedError<T: Encodable>(statusCode: Int, body: T) -> APIError {
+        if statusCode == 401 { return .unauthorized }
+        if let data = try? JSONEncoder().encode(body), let string = String(data: data, encoding: .utf8) {
+            return .serverErrorWithBody(statusCode, string)
+        }
+        return .serverError(statusCode)
+    }
+
+    private static func coachTrainingContext(from context: CoachContext?) -> Components.Schemas.CoachTrainingContext? {
+        guard
+            let context,
+            let recentWorkouts = context.recentWorkouts,
+            !recentWorkouts.isEmpty,
+            let currentDate = context.currentDate
+        else { return nil }
+
+        // recentWorkouts carries no per-workout dates (CoachContext.recentWorkouts is [String]); currentDate used as a placeholder session date.
+        let completedSessions = recentWorkouts.map { workout in
+            Components.Schemas.CoachCompletedSession(
+                date: currentDate,
+                notes: workout,
+                title: workout,
+                _type: "workout"
+            )
+        }
+
+        return Components.Schemas.CoachTrainingContext(completedSessions: completedSessions)
+    }
 
     // MARK: - Coach API (AMA-1147 / AMA-1133)
 
     func sendCoachMessage(message: String, context: CoachContext? = nil) async throws -> CoachResponse {
-        let chatURL = bffURL
-        let url = URL(string: "\(chatURL)/coach/message")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(CoachMessageRequest(message: message, context: context))
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200: return try Self.makeDecoder().decode(CoachResponse.self, from: data)
-        case 401: throw APIError.unauthorized
-        case 429:
-            let body = String(data: data, encoding: .utf8) ?? ""
-            throw APIError.serverErrorWithBody(429, body)
-        default: throw APIError.serverError(httpResponse.statusCode)
+        let output = try await (try await generatedBFFClient()).v1CoachMessageV1CoachMessagePost(
+            body: .json(.init(context: Self.coachTrainingContext(from: context), message: message))
+        )
+        switch output {
+        case .ok(let response):
+            let body = try response.body.json
+            return CoachResponse(id: nil, message: body.message, suggestions: nil, actionItems: nil)
+        case .unprocessableContent(let response):
+            throw Self.generatedError(statusCode: 422, body: try response.body.json)
+        case .serviceUnavailable(let response):
+            throw Self.generatedError(statusCode: 503, body: try response.body.json)
+        case .undocumented(let statusCode, _):
+            throw Self.generatedError(statusCode: statusCode)
         }
     }
 
     func getFatigueAdvice(fatigueScore: Double? = nil, loadHistory: [DailyLoad]? = nil) async throws -> FatigueAdvice {
-        let chatURL = bffURL
-        let url = URL(string: "\(chatURL)/coach/fatigue-advice")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(FatigueAdviceRequest(currentFatigueScore: fatigueScore, recentLoadHistory: loadHistory))
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200: return try Self.makeDecoder().decode(FatigueAdvice.self, from: data)
-        case 401: throw APIError.unauthorized
-        default: throw APIError.serverError(httpResponse.statusCode)
+        let output = try await (try await generatedBFFClient()).v1CoachFatigueAdviceV1CoachFatigueAdvicePost(
+            body: .json(.init(question: Self.fatigueQuestion(fatigueScore: fatigueScore, loadHistory: loadHistory)))
+        )
+        switch output {
+        case .ok(let response):
+            return Self.fatigueAdvice(from: try response.body.json)
+        case .unprocessableContent(let response):
+            throw Self.generatedError(statusCode: 422, body: try response.body.json)
+        case .serviceUnavailable(let response):
+            throw Self.generatedError(statusCode: 503, body: try response.body.json)
+        case .undocumented(let statusCode, _):
+            throw Self.generatedError(statusCode: statusCode)
         }
     }
 
     func fetchCoachMemories() async throws -> [CoachMemory] {
-        let chatURL = bffURL
-        let url = URL(string: "\(chatURL)/coach/memories")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-
-        switch httpResponse.statusCode {
-        case 200: return try Self.makeDecoder().decode([CoachMemory].self, from: data)
-        case 401: throw APIError.unauthorized
-        default: throw APIError.serverError(httpResponse.statusCode)
+        let output = try await (try await generatedBFFClient()).v1CoachMemoriesV1CoachMemoriesGet()
+        switch output {
+        case .ok(let response):
+            return try response.body.json.map(CoachMemory.init(generated:))
+        case .unprocessableContent(let response):
+            throw Self.generatedError(statusCode: 422, body: try response.body.json)
+        case .serviceUnavailable(let response):
+            throw Self.generatedError(statusCode: 503, body: try response.body.json)
+        case .undocumented(let statusCode, _):
+            throw Self.generatedError(statusCode: statusCode)
         }
+    }
+
+    private static func fatigueQuestion(fatigueScore: Double?, loadHistory: [DailyLoad]?) -> String {
+        var parts = ["Assess my current training fatigue and recommend how I should adjust today's workout."]
+        if let fatigueScore {
+            parts.append("Current fatigue score: \(fatigueScore).")
+        }
+        if let loadHistory, !loadHistory.isEmpty {
+            let history = loadHistory
+                .map { "\($0.date): \($0.loadScore)" }
+                .joined(separator: ", ")
+            parts.append("Recent load history: \(history).")
+        }
+        return parts.joined(separator: " ")
+    }
+
+    private static func fatigueAdvice(from generated: Components.Schemas.FatigueAdviceResponse) -> FatigueAdvice {
+        let combined = ([generated.likelyCause, generated.restRecommendation] + generated.immediateRecovery + generated.programmingSuggestions)
+            .joined(separator: " ")
+            .lowercased()
+        let level: FatigueLevel
+        if combined.contains("critical") || combined.contains("stop") || combined.contains("medical") {
+            level = .critical
+        } else if combined.contains("rest") || combined.contains("deload") || combined.contains("reduce") {
+            level = .high
+        } else if combined.contains("easy") || combined.contains("light") || combined.contains("moderate") {
+            level = .moderate
+        } else {
+            level = .low
+        }
+        return FatigueAdvice(
+            level: level,
+            message: generated.restRecommendation,
+            recommendations: generated.programmingSuggestions,
+            suggestedRestDays: level == .high || level == .critical ? 1 : nil,
+            recoveryActivities: generated.immediateRecovery
+        )
     }
 
     // MARK: - XP + Level (AMA-1285)
@@ -232,48 +328,46 @@ extension APIService {
     // MARK: - Coach Suggestions (AMA-1412)
 
     func suggestWorkout(request: SuggestWorkoutRequest) async throws -> SuggestWorkoutResponse {
-        let chatURL = bffURL
-        guard let url = URL(string: "\(chatURL)/coach/suggest-workout") else { throw APIError.invalidURL }
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
-        let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
-        req.httpBody = try encoder.encode(request)
-        let (data, response) = try await session.data(for: req)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-        switch httpResponse.statusCode {
-        case 200:
-            return try APIService.makeDecoder().decode(SuggestWorkoutResponse.self, from: data)
-        case 401: throw APIError.unauthorized
-        default:
-            let body = String(data: data, encoding: .utf8) ?? "empty"
-            logError(endpoint: "/coach/suggest-workout", method: "POST",
-                     statusCode: httpResponse.statusCode, response: body, error: nil)
-            throw APIError.serverError(httpResponse.statusCode)
+        let output = try await (try await generatedBFFClient()).v1CoachSuggestWorkoutV1CoachSuggestWorkoutPost(
+            body: .json(request)
+        )
+        switch output {
+        case .ok(let response):
+            return try response.body.json
+        case .unprocessableContent(let response):
+            throw Self.generatedError(statusCode: 422, body: try response.body.json)
+        case .serviceUnavailable(let response):
+            throw Self.generatedError(statusCode: 503, body: try response.body.json)
+        case .undocumented(let statusCode, _):
+            throw Self.generatedError(statusCode: statusCode)
         }
     }
 
     func postRPEFeedback(_ feedback: RPEFeedbackRequest) async throws -> RPEFeedbackResponse {
-        let chatURL = bffURL
-        guard let url = URL(string: "\(chatURL)/coach/rpe-feedback") else { throw APIError.invalidURL }
-        let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
-        req.httpBody = try encoder.encode(feedback)
-        let (data, response) = try await session.data(for: req)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-        switch httpResponse.statusCode {
-        case 200:
-            return try APIService.makeDecoder().decode(RPEFeedbackResponse.self, from: data)
-        case 401: throw APIError.unauthorized
-        default:
-            let body = String(data: data, encoding: .utf8) ?? "empty"
-            logError(endpoint: "/coach/rpe-feedback", method: "POST",
-                     statusCode: httpResponse.statusCode, response: body, error: nil)
-            throw APIError.serverError(httpResponse.statusCode)
+        let output = try await (try await generatedBFFClient()).v1CoachRpeFeedbackV1CoachRpeFeedbackPost(
+            body: .json(feedback)
+        )
+        switch output {
+        case .ok(let response):
+            return RPEFeedbackResponse(try response.body.json)
+        case .unprocessableContent(let response):
+            throw Self.generatedError(statusCode: 422, body: try response.body.json)
+        case .serviceUnavailable(let response):
+            throw Self.generatedError(statusCode: 503, body: try response.body.json)
+        case .undocumented(let statusCode, _):
+            throw Self.generatedError(statusCode: statusCode)
         }
+    }
+}
+
+private extension CoachMemory {
+    init(generated: Components.Schemas.CoachMemoryResponse) {
+        self.init(
+            id: generated.id,
+            content: generated.content,
+            category: generated.category.rawValue,
+            createdAt: generated.createdAt,
+            relevance: generated.confidence
+        )
     }
 }

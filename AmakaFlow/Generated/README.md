@@ -3,13 +3,39 @@
 These files are **auto-generated** by `swift-openapi-generator` from
 `Specs/mobile-bff.json`, filtered to the first-wave mobile-facing BFF
 endpoints (per [AMA-1824 mobile-domains
-doc](../../docs/architecture/mobile-domains.md)):
+doc](../../docs/architecture/mobile-domains.md)). Current generated routes:
 
-- `POST /workouts/complete`
-- `GET /workouts/planned`
-- `GET /sync/pending`
-- `POST /sync/confirm`
-- `POST /sync/failed`
+- `POST /v1/chat/stream` (typed request model only; SSE stays in `ChatStreamService`)
+- `POST /v1/coach/message`
+- `POST /v1/coach/fatigue-advice`
+- `GET /v1/coach/memories`
+- `POST /v1/coach/suggest-workout`
+- `POST /v1/coach/rpe-feedback`
+- `GET /v1/coaching/profile`
+- `PUT /v1/coaching/profile`
+- `GET /v1/devices`
+- `POST /v1/devices/pair`
+- `DELETE /v1/devices/{device_id}`
+- `PUT /v1/devices/{device_id}/roles`
+- `GET /v1/devices/watch-delivery/{workout_id}`
+- `POST /v1/devices/watch-delivery/{workout_id}/resend`
+- `GET /v1/library/items`
+- `GET /v1/library/items/{item_id}`
+- `GET /v1/messaging/channels`
+- `PUT /v1/messaging/channels/{channel_id}/prefs`
+- `POST /v1/messaging/telegram/setup`
+- `GET /v1/messaging/telegram/status`
+- `PUT /v1/readiness/sample`
+- `GET /v1/readiness/source-prefs`
+- `PUT /v1/readiness/source-prefs`
+- `GET /v1/readiness/today`
+- `GET /v1/readiness/trend`
+- `GET /v1/sync/pending`
+- `POST /v1/sync/confirm`
+- `POST /v1/sync/failed`
+- `POST /v1/workouts/complete`
+- `GET /v1/workouts/planned`
+- `GET /v1/workouts/{workout_id}/follow-along`
 
 ## DO NOT EDIT
 

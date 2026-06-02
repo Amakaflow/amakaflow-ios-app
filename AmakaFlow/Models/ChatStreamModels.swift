@@ -117,27 +117,26 @@ struct WorkoutSearchResult: Codable, Identifiable, Equatable {
 
 // MARK: - Stream Request
 
-struct ChatStreamRequest: Codable {
-    let message: String
-    let sessionId: String?
-    let context: ChatStreamContext?
+// AMA-2086: keep ChatStreamService's tested SSE transport, but make the
+// request body itself the generated BFF ChatStreamRequest schema so any
+// BFF-side request validation changes break iOS at compile/test time.
+typealias ChatStreamRequest = Components.Schemas.ChatStreamRequest
+typealias ChatStreamContext = Components.Schemas.ChatStreamContext
 
-    enum CodingKeys: String, CodingKey {
-        case message
-        case sessionId = "session_id"
-        case context
+extension Components.Schemas.ChatStreamRequest {
+    init(message: String, sessionId: String?, context: Components.Schemas.ChatStreamContext?) {
+        self.init(context: context, message: message, sessionId: sessionId)
     }
 }
 
-struct ChatStreamContext: Codable {
-    let currentPage: String?
-    let selectedWorkoutId: String?
-    let selectedDate: String?
-
-    enum CodingKeys: String, CodingKey {
-        case currentPage = "current_page"
-        case selectedWorkoutId = "selected_workout_id"
-        case selectedDate = "selected_date"
+extension Components.Schemas.ChatStreamContext {
+    init(currentPage: String?, selectedWorkoutId: String?, selectedDate: String?) {
+        self.init(
+            currentPage: currentPage,
+            pendingImports: nil,
+            selectedDate: selectedDate,
+            selectedWorkoutId: selectedWorkoutId
+        )
     }
 }
 

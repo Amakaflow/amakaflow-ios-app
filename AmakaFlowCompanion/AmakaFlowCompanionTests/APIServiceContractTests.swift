@@ -21,7 +21,7 @@ final class APIServiceContractTests: XCTestCase {
     )
 
     XCTAssertEqual(response.name, "Upper Body Push - Hypertrophy Focus")
-    XCTAssertEqual(response.sport, .strength)
+    XCTAssertEqual(response.sport, WorkoutSport.strength.rawValue)
     XCTAssertEqual(response.durationSeconds, 3300)
     XCTAssertEqual(response.blocks.count, 5)
     XCTAssertEqual(response.warmUp?.seconds, 600)
@@ -39,7 +39,7 @@ final class APIServiceContractTests: XCTestCase {
 
     for (index, expected) in expectedBlocks.enumerated() {
       assertReps(
-        response.blocks[index],
+        try XCTUnwrap(response.blocks[index].workoutInterval),
         sets: expected.sets,
         reps: expected.reps,
         name: expected.name,

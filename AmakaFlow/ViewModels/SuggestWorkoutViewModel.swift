@@ -8,28 +8,127 @@
 
 import Foundation
 import Combine
+import os
 
 // MARK: - Suggest Workout Request/Response Models
 
-struct SuggestWorkoutRequest: Codable {
-    let durationMinutes: Int?
-    let focusMuscleGroups: [String]?
-    let notes: String?
+// AMA-2086: use the generated BFF contract at the API/ViewModel boundary.
+typealias SuggestWorkoutRequest = Components.Schemas.SuggestWorkoutRequest
+typealias SuggestWorkoutResponse = Components.Schemas.SuggestWorkoutResponse
+typealias WarmUpCooldown = Components.Schemas.SuggestWarmUpCooldown
+
+extension Components.Schemas.SuggestWorkoutRequest {
+    init(durationMinutes: Int?, focusMuscleGroups: [String]?, notes: String?) {
+        self.init(
+            durationMinutes: durationMinutes,
+            excludeExercises: nil,
+            focusMuscleGroups: focusMuscleGroups,
+            notes: notes
+        )
+    }
 }
 
-struct SuggestWorkoutResponse: Codable {
-    let blocks: [WorkoutInterval]
-    let warmUp: WarmUpCooldown?
-    let cooldown: WarmUpCooldown?
-    let name: String?
-    let sport: WorkoutSport?
-    let durationSeconds: Int?
-    let description: String?
+extension Components.Schemas.SuggestWorkoutResponse {
+    init(
+        blocks: [WorkoutInterval],
+        warmUp: Components.Schemas.SuggestWarmUpCooldown?,
+        cooldown: Components.Schemas.SuggestWarmUpCooldown?,
+        name: String?,
+        sport: WorkoutSport?,
+        durationSeconds: Int?,
+        description: String?
+    ) {
+        self.init(
+            blocks: blocks.map(Components.Schemas.SuggestWorkoutInterval.init(workoutInterval:)),
+            cooldown: cooldown,
+            description: description,
+            durationSeconds: durationSeconds,
+            name: name,
+            sport: sport?.rawValue,
+            suggestionId: nil,
+            warmUp: warmUp
+        )
+    }
 }
 
-struct WarmUpCooldown: Codable {
-    let seconds: Int
-    let target: String?
+extension Components.Schemas.SuggestWorkoutInterval {
+    private static let logger = Logger(subsystem: "com.amakaflow.app", category: "suggest-workout")
+    private static let repeatPayloadPrefix = "__amakaflow_repeat_v1:"
+
+    init(workoutInterval: WorkoutInterval) {
+        switch workoutInterval {
+        case .warmup(let seconds, let target):
+            self.init(kind: "warmup", seconds: seconds, target: target)
+        case .cooldown(let seconds, let target):
+            self.init(kind: "cooldown", seconds: seconds, target: target)
+        case .time(let seconds, let target):
+            self.init(kind: "time", seconds: seconds, target: target)
+        case .reps(let sets, let reps, let name, let load, let restSec, let followAlongUrl):
+            self.init(followAlongUrl: followAlongUrl, kind: "reps", load: load, name: name, reps: reps, restSec: restSec, sets: sets)
+        case .distance(let meters, let target):
+            self.init(kind: "distance", meters: meters, target: target)
+        case .repeat(let reps, let intervals):
+            self.init(
+                kind: "repeat",
+                reps: reps,
+                target: Self.encodeRepeatChildren(
+                    intervals.map(Components.Schemas.SuggestWorkoutInterval.init(workoutInterval:))
+                )
+            )
+        case .rest(let seconds):
+            self.init(kind: "rest", seconds: seconds)
+        }
+    }
+
+    var workoutInterval: WorkoutInterval? {
+        switch kind {
+        case "warmup":
+            guard let seconds else { return nil }
+            return .warmup(seconds: seconds, target: target)
+        case "cooldown":
+            guard let seconds else { return nil }
+            return .cooldown(seconds: seconds, target: target)
+        case "time":
+            guard let seconds else { return nil }
+            return .time(seconds: seconds, target: target)
+        case "reps":
+            guard let reps, let name else { return nil }
+            return .reps(sets: sets, reps: reps, name: name, load: load, restSec: restSec, followAlongUrl: followAlongUrl)
+        case "distance":
+            guard let meters else { return nil }
+            return .distance(meters: meters, target: target)
+        case "repeat":
+            guard let reps else { return nil }
+            return .repeat(reps: reps, intervals: Self.decodeRepeatChildren(from: target))
+        case "rest":
+            return .rest(seconds: seconds)
+        default:
+            return nil
+        }
+    }
+
+    private static func encodeRepeatChildren(_ intervals: [Components.Schemas.SuggestWorkoutInterval]) -> String? {
+        guard !intervals.isEmpty, let data = try? JSONEncoder().encode(intervals) else { return nil }
+        return repeatPayloadPrefix + data.base64EncodedString()
+    }
+
+    private static func decodeRepeatChildren(from target: String?) -> [WorkoutInterval] {
+        guard let target, target.hasPrefix(repeatPayloadPrefix) else { return [] }
+
+        let encodedPayload = String(target.dropFirst(repeatPayloadPrefix.count))
+        guard let data = Data(base64Encoded: encodedPayload) else {
+            logger.warning("Failed to decode repeat children target=\(target, privacy: .public) error=invalid-base64")
+            return []
+        }
+
+        do {
+            let intervals = try JSONDecoder().decode([Components.Schemas.SuggestWorkoutInterval].self, from: data)
+            return intervals.compactMap(\.workoutInterval)
+        } catch {
+            logger.warning("Failed to decode repeat children target=\(target, privacy: .public) error=\(error.localizedDescription, privacy: .public)")
+            return []
+        }
+    }
 }
 
 // MARK: - Coaching Profile
@@ -253,8 +352,8 @@ class SuggestWorkoutViewModel: ObservableObject {
             intervals.append(.warmup(seconds: warmUp.seconds, target: warmUp.target))
         }
 
-        // Add main blocks
-        intervals.append(contentsOf: response.blocks)
+        // Add main blocks from the generated DTO shape.
+        intervals.append(contentsOf: response.blocks.compactMap(\.workoutInterval))
 
         // Add cooldown if present
         if let cooldown = response.cooldown {
@@ -263,7 +362,7 @@ class SuggestWorkoutViewModel: ObservableObject {
 
         return Workout(
             name: response.name ?? "AI Suggested Workout",
-            sport: response.sport ?? .strength,
+            sport: response.sport.flatMap(WorkoutSport.init(rawValue:)) ?? .strength,
             duration: response.durationSeconds ?? intervals.reduce(0) { total, interval in
                 switch interval {
                 case .warmup(let seconds, _), .cooldown(let seconds, _), .time(let seconds, _):
