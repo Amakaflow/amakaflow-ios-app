@@ -19,16 +19,34 @@ enum ActivityHistoryFilter: String, CaseIterable {
     case thisMonth = "This Month"
 
     var dateThreshold: Date? {
-        let calendar = Calendar.current
-        let now = Date()
+        dateThreshold(now: Date())
+    }
 
+    func dateThreshold(now: Date, calendar: Calendar = .current) -> Date? {
         switch self {
         case .all:
             return nil
         case .thisWeek:
-            return calendar.date(byAdding: .day, value: -7, to: now)
+            return calendar.dateInterval(of: .weekOfYear, for: now)?.start
         case .thisMonth:
             return calendar.date(byAdding: .month, value: -1, to: now)
+        }
+    }
+
+    func includes(_ date: Date, now: Date, calendar: Calendar = .current) -> Bool {
+        switch self {
+        case .all:
+            return true
+        case .thisWeek:
+            guard let weekInterval = calendar.dateInterval(of: .weekOfYear, for: now) else {
+                return false
+            }
+            return weekInterval.contains(date)
+        case .thisMonth:
+            guard let threshold = dateThreshold(now: now, calendar: calendar) else {
+                return true
+            }
+            return date >= threshold
         }
     }
 }
@@ -41,7 +59,7 @@ struct CompletionGroup: Identifiable {
     let completions: [WorkoutCompletion]
 
     init(category: WorkoutCompletion.DateCategory, completions: [WorkoutCompletion]) {
-        self.id = category.title
+        self.id = category.id
         self.title = category.title
         self.completions = completions.sorted { $0.startedAt > $1.startedAt }
     }
@@ -69,27 +87,36 @@ class ActivityHistoryViewModel: ObservableObject {
     // MARK: - Dependencies
 
     private let dependencies: AppDependencies
+    private let nowProvider: () -> Date
+    private let calendar: Calendar
 
     // MARK: - Initialization
 
     @MainActor
-    init(dependencies: AppDependencies = .live) {
+    init(
+        dependencies: AppDependencies = .live,
+        nowProvider: @escaping () -> Date = Date.init,
+        calendar: Calendar = .current
+    ) {
         self.dependencies = dependencies
+        self.nowProvider = nowProvider
+        self.calendar = calendar
     }
 
     // MARK: - Computed Properties
 
     /// Completions filtered by the selected filter
     var filteredCompletions: [WorkoutCompletion] {
-        guard let threshold = selectedFilter.dateThreshold else {
-            return completions
-        }
-        return completions.filter { $0.startedAt >= threshold }
+        let now = nowProvider()
+        return completions.filter { selectedFilter.includes($0.startedAt, now: now, calendar: calendar) }
     }
 
     /// Completions grouped by date category
     var groupedCompletions: [CompletionGroup] {
-        let grouped = Dictionary(grouping: filteredCompletions) { $0.dateCategory }
+        let now = nowProvider()
+        let grouped = Dictionary(grouping: filteredCompletions) {
+            $0.dateCategory(now: now, calendar: calendar)
+        }
 
         return grouped.map { category, completions in
             CompletionGroup(category: category, completions: completions)
@@ -97,12 +124,25 @@ class ActivityHistoryViewModel: ObservableObject {
         .sorted { $0.completions.first?.startedAt ?? Date() > $1.completions.first?.startedAt ?? Date() }
     }
 
-    /// Weekly summary for the current week's completions
+    /// Weekly summary for the current calendar week's completions
     var weeklySummary: WeeklySummary {
-        let calendar = Calendar.current
-        let weekAgo = calendar.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-        let thisWeekCompletions = completions.filter { $0.startedAt >= weekAgo }
+        let now = nowProvider()
+        let thisWeekCompletions = completions.filter {
+            ActivityHistoryFilter.thisWeek.includes($0.startedAt, now: now, calendar: calendar)
+        }
         return WeeklySummary(completions: thisWeekCompletions)
+    }
+
+    /// Summary for the same completion set currently rendered by the list.
+    /// AMA-2075 decision: the headline follows the selected filter so the card
+    /// and visible list describe one set, instead of always showing a fixed
+    /// "This Week" summary above a possibly different list.
+    var filterSummary: WeeklySummary {
+        WeeklySummary(completions: filteredCompletions)
+    }
+
+    var summaryTitle: String {
+        selectedFilter.rawValue.uppercased()
     }
 
     /// Whether there are any completions to display

@@ -16,6 +16,7 @@ final class ActivityHistoryViewModelTests: XCTestCase {
     var mockAPIService: MockAPIService!
     var mockPairingService: MockPairingService!
     var dependencies: AppDependencies!
+    var testNow: Date!
 
     override func setUp() async throws {
         mockAPIService = MockAPIService()
@@ -33,7 +34,8 @@ final class ActivityHistoryViewModelTests: XCTestCase {
             chatStreamService: MockChatStreamService()
         )
 
-        viewModel = ActivityHistoryViewModel(dependencies: dependencies)
+        testNow = Date()
+        viewModel = ActivityHistoryViewModel(dependencies: dependencies, nowProvider: { [weak self] in self?.testNow ?? Date() })
     }
 
     override func tearDown() async throws {
@@ -41,6 +43,7 @@ final class ActivityHistoryViewModelTests: XCTestCase {
         mockAPIService = nil
         mockPairingService = nil
         dependencies = nil
+        testNow = nil
     }
 
     // MARK: - Load Completions
@@ -117,6 +120,77 @@ final class ActivityHistoryViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.filteredCompletions.count, viewModel.completions.count)
     }
 
+    func testThisWeekUsesCurrentCalendarWeekExcludingPreviousWeek() {
+        let calendar = Calendar.current
+        testNow = makeDate(year: 2026, month: 6, day: 2, hour: 12, calendar: calendar)
+        viewModel.completions = [
+            makeCompletion(id: "current-week", startedAt: makeDate(year: 2026, month: 6, day: 1, hour: 9, calendar: calendar)),
+            makeCompletion(id: "previous-week", startedAt: makeDate(year: 2026, month: 5, day: 27, hour: 9, calendar: calendar))
+        ]
+
+        viewModel.selectedFilter = .thisWeek
+
+        XCTAssertEqual(viewModel.filteredCompletions.map(\.id), ["current-week"])
+        XCTAssertEqual(viewModel.weeklySummary.workoutCount, 1)
+        XCTAssertEqual(viewModel.filterSummary.workoutCount, 1)
+    }
+
+    func testSelectedFilterSummaryMatchesRenderedCompletionCount() {
+        let calendar = Calendar.current
+        testNow = makeDate(year: 2026, month: 6, day: 2, hour: 12, calendar: calendar)
+        viewModel.completions = [
+            makeCompletion(id: "monday", startedAt: makeDate(year: 2026, month: 6, day: 1, hour: 8, calendar: calendar), durationSeconds: 1_800, calories: 200),
+            makeCompletion(id: "tuesday", startedAt: makeDate(year: 2026, month: 6, day: 2, hour: 9, calendar: calendar), durationSeconds: 2_400, calories: 300),
+            makeCompletion(id: "previous-week", startedAt: makeDate(year: 2026, month: 5, day: 27, hour: 9, calendar: calendar), durationSeconds: 1_200, calories: 150)
+        ]
+
+        viewModel.selectedFilter = .thisWeek
+        let renderedCompletions = viewModel.groupedCompletions.flatMap { $0.completions }
+
+        XCTAssertEqual(renderedCompletions.count, 2)
+        XCTAssertEqual(viewModel.filterSummary.workoutCount, renderedCompletions.count)
+        XCTAssertEqual(viewModel.filterSummary.totalDurationSeconds, 4_200)
+        XCTAssertEqual(viewModel.filterSummary.totalCalories, 500)
+        XCTAssertFalse(renderedCompletions.contains { $0.id == "previous-week" })
+    }
+
+    func testAllFilterSummaryMatchesAllRenderedCompletions() {
+        let calendar = Calendar.current
+        testNow = makeDate(year: 2026, month: 6, day: 2, hour: 12, calendar: calendar)
+        viewModel.completions = [
+            makeCompletion(id: "current-week", startedAt: makeDate(year: 2026, month: 6, day: 1, hour: 9, calendar: calendar)),
+            makeCompletion(id: "previous-week", startedAt: makeDate(year: 2026, month: 5, day: 27, hour: 9, calendar: calendar))
+        ]
+
+        viewModel.selectedFilter = .all
+        let renderedCompletions = viewModel.groupedCompletions.flatMap { $0.completions }
+
+        XCTAssertEqual(viewModel.summaryTitle, "ALL")
+        XCTAssertEqual(viewModel.filterSummary.workoutCount, renderedCompletions.count)
+        XCTAssertEqual(renderedCompletions.count, 2)
+    }
+
+    func testThisWeekRendersAllNineInWindowCompletions() {
+        let calendar = Calendar.current
+        testNow = makeDate(year: 2026, month: 6, day: 2, hour: 12, calendar: calendar)
+        viewModel.completions = (0..<9).map { index in
+            makeCompletion(
+                id: "in-week-\(index)",
+                startedAt: makeDate(year: 2026, month: 6, day: 1, hour: index + 1, calendar: calendar)
+            )
+        } + [
+            makeCompletion(id: "previous-week", startedAt: makeDate(year: 2026, month: 5, day: 27, hour: 9, calendar: calendar))
+        ]
+
+        viewModel.selectedFilter = .thisWeek
+        let renderedCompletions = viewModel.groupedCompletions.flatMap { $0.completions }
+
+        XCTAssertEqual(viewModel.filterSummary.workoutCount, 9)
+        XCTAssertEqual(viewModel.groupedCompletions.count, 1)
+        XCTAssertEqual(renderedCompletions.count, 9)
+        XCTAssertEqual(Set(renderedCompletions.map(\.id)), Set((0..<9).map { "in-week-\($0)" }))
+    }
+
     // MARK: - Demo Mode
 
     func testDemoModeSkipsAPICall() async {
@@ -126,5 +200,45 @@ final class ActivityHistoryViewModelTests: XCTestCase {
 
         XCTAssertFalse(mockAPIService.fetchCompletionsCalled)
         XCTAssertFalse(viewModel.completions.isEmpty) // Demo loads mock data
+    }
+
+    // MARK: - Test Helpers
+
+    private func makeDate(
+        year: Int,
+        month: Int,
+        day: Int,
+        hour: Int,
+        calendar: Calendar
+    ) -> Date {
+        calendar.date(from: DateComponents(
+            year: year,
+            month: month,
+            day: day,
+            hour: hour
+        ))!
+    }
+
+    private func makeCompletion(
+        id: String,
+        startedAt: Date,
+        durationSeconds: Int = 600,
+        calories: Int? = 100
+    ) -> WorkoutCompletion {
+        WorkoutCompletion(
+            id: id,
+            workoutName: "Workout \(id)",
+            startedAt: startedAt,
+            endedAt: startedAt.addingTimeInterval(TimeInterval(durationSeconds)),
+            durationSeconds: durationSeconds,
+            avgHeartRate: nil,
+            maxHeartRate: nil,
+            activeCalories: calories,
+            source: .phone,
+            syncedToStrava: false,
+            workoutId: nil,
+            originalWorkout: nil,
+            isSimulated: false
+        )
     }
 }

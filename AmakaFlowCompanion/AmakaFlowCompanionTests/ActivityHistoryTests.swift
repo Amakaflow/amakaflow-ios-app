@@ -128,8 +128,12 @@ final class ActivityHistoryTests: XCTestCase {
     }
 
     func testDateCategoryThisWeek() {
-        let threeDaysAgo = Calendar.current.date(byAdding: .day, value: -3, to: Date())!
-        let category = calculateDateCategory(for: threeDaysAgo)
+        let calendar = Calendar.current
+        let weekStart = calendar.dateInterval(of: .weekOfYear, for: Date())!.start
+        let currentWeekDate = (0..<7)
+            .compactMap { calendar.date(byAdding: .day, value: $0, to: weekStart) }
+            .first { !calendar.isDateInToday($0) && !calendar.isDateInYesterday($0) }!
+        let category = calculateDateCategory(for: currentWeekDate)
 
         XCTAssertEqual(category.sortOrder, 2)
         XCTAssertTrue(category.title.count > 0)
@@ -165,13 +169,13 @@ final class ActivityHistoryTests: XCTestCase {
         XCTAssertNil(threshold)
     }
 
-    func testFilterThisWeekReturnsCorrectThreshold() {
+    func testFilterThisWeekReturnsCurrentCalendarWeekStart() {
         let threshold = filterDateThreshold(for: "thisWeek")
         XCTAssertNotNil(threshold)
 
         let calendar = Calendar.current
-        let daysDiff = calendar.dateComponents([.day], from: threshold!, to: Date()).day!
-        XCTAssertEqual(daysDiff, 7)
+        let expectedWeekStart = calendar.dateInterval(of: .weekOfYear, for: Date())!.start
+        XCTAssertEqual(threshold!, expectedWeekStart)
     }
 
     func testFilterThisMonthReturnsCorrectThreshold() {
@@ -327,8 +331,8 @@ final class ActivityHistoryTests: XCTestCase {
             return TestDateCategory(title: "Today", sortOrder: 0)
         } else if calendar.isDateInYesterday(date) {
             return TestDateCategory(title: "Yesterday", sortOrder: 1)
-        } else if let weekAgo = calendar.date(byAdding: .day, value: -7, to: today),
-                  dateDay >= weekAgo {
+        } else if let weekInterval = calendar.dateInterval(of: .weekOfYear, for: today),
+                  weekInterval.contains(dateDay) {
             return TestDateCategory(
                 title: date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()),
                 sortOrder: 2
@@ -349,7 +353,7 @@ final class ActivityHistoryTests: XCTestCase {
         case "all":
             return nil
         case "thisWeek":
-            return calendar.date(byAdding: .day, value: -7, to: now)
+            return calendar.dateInterval(of: .weekOfYear, for: now)?.start
         case "thisMonth":
             return calendar.date(byAdding: .month, value: -1, to: now)
         default:
