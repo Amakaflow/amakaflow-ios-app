@@ -109,6 +109,42 @@ final class ChatStreamServiceTests: XCTestCase {
         XCTAssertEqual(events.count, 4)
     }
 
+    func testStreamRequestBodyMatchesGeneratedChatStreamRequestShape() async throws {
+        let chunks = [
+            "event: message_start\ndata: {\"session_id\":\"s1\"}\n\n",
+            "event: message_end\ndata: {\"session_id\":\"s1\"}\n\n"
+        ].map { Data($0.utf8) }
+        MockURLProtocol.setChunkedResponse(chunks: chunks)
+
+        let service = ChatStreamService(session: MockURLProtocol.mockSession())
+        let context = ChatStreamContext(
+            currentPage: "coach",
+            selectedWorkoutId: "workout-1",
+            selectedDate: "2026-06-02"
+        )
+        let request = ChatStreamRequest(message: "What should I do today?", sessionId: "session-1", context: context)
+
+        var events: [SSEEvent] = []
+        for try await event in service.stream(request: request, token: "test-token") {
+            events.append(event)
+        }
+
+        let intercepted = try XCTUnwrap(MockURLProtocol.interceptedRequests.first)
+        XCTAssertEqual(intercepted.url?.path, "/v1/chat/stream")
+        let body = try Self.httpBodyData(from: intercepted)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        XCTAssertEqual(json["message"] as? String, "What should I do today?")
+        XCTAssertEqual(json["session_id"] as? String, "session-1")
+        XCTAssertNil(json["sessionId"])
+        let contextJSON = try XCTUnwrap(json["context"] as? [String: Any])
+        XCTAssertEqual(contextJSON["current_page"] as? String, "coach")
+        XCTAssertEqual(contextJSON["selected_workout_id"] as? String, "workout-1")
+        XCTAssertEqual(contextJSON["selected_date"] as? String, "2026-06-02")
+        XCTAssertNil(contextJSON["currentPage"])
+        XCTAssertNil(contextJSON["selectedWorkoutId"])
+        XCTAssertEqual(events.first, .messageStart(sessionId: "s1", traceId: nil))
+    }
+
     func testStreamYieldsErrorAndContinuesPastMalformedChunkedSSEBlock() async throws {
         let chunks = [
             "event: message_start\n",
@@ -218,5 +254,32 @@ final class ChatStreamServiceTests: XCTestCase {
         let (blocks, remainder) = SSEParser.splitBuffer(buffer)
         XCTAssertEqual(blocks.count, 1)
         XCTAssertEqual(remainder, "event: content_del")
+    }
+
+    private static func httpBodyData(from request: URLRequest) throws -> Data {
+        if let body = request.httpBody {
+            return body
+        }
+
+        guard let stream = request.httpBodyStream else {
+            return Data()
+        }
+
+        stream.open()
+        defer { stream.close() }
+
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 1024)
+        while stream.hasBytesAvailable {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            if count < 0 {
+                throw stream.streamError ?? URLError(.cannotDecodeContentData)
+            }
+            if count == 0 {
+                break
+            }
+            data.append(buffer, count: count)
+        }
+        return data
     }
 }

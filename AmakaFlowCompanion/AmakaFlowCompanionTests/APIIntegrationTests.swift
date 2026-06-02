@@ -318,6 +318,203 @@ final class CoachAPIRepositoryEndpointTests: XCTestCase {
         }
     }
 
+    func testGeneratedCoachMessageSendsTypedShapeAndDecodesSuccess() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.url?.path, "/v1/coach/message")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
+            let json = try Self.jsonObject(from: request)
+            XCTAssertEqual(json["message"] as? String, "How should I train today?")
+            XCTAssertNil(json["current_fatigue_score"])
+            XCTAssertNil(json["sessionId"])
+            let context = try XCTUnwrap(json["context"] as? [String: Any])
+            let completedSessions = try XCTUnwrap(context["completed_sessions"] as? [[String: Any]])
+            XCTAssertEqual(completedSessions.first?["date"] as? String, "2026-06-02")
+            XCTAssertEqual(completedSessions.first?["title"] as? String, "Easy run 30 min")
+            XCTAssertEqual(completedSessions.first?["notes"] as? String, "Easy run 30 min")
+            XCTAssertEqual(completedSessions.first?["type"] as? String, "workout")
+
+            let response = Self.jsonResponse(for: request, statusCode: 200)
+            return (response, #"{"message":"Take an easy aerobic day."}"#.data(using: .utf8)!)
+        }
+
+        let result = try await api.sendCoachMessage(
+            message: "How should I train today?",
+            context: CoachContext(currentDate: "2026-06-02", recentWorkouts: ["Easy run 30 min"])
+        )
+
+        XCTAssertEqual(result.message, "Take an easy aerobic day.")
+    }
+
+    func testGeneratedFatigueAdviceSendsTypedQuestionAndDecodesSuccess() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.url?.path, "/v1/coach/fatigue-advice")
+            let json = try Self.jsonObject(from: request)
+            let question = try XCTUnwrap(json["question"] as? String)
+            XCTAssertTrue(question.contains("Assess my current training fatigue"))
+            XCTAssertTrue(question.contains("Current fatigue score: 0.72"))
+            XCTAssertTrue(question.contains("2026-06-01: 42.5"))
+            XCTAssertNil(json["current_fatigue_score"])
+            XCTAssertNil(json["recent_load_history"])
+
+            let data = """
+            {
+              "likely_cause": "Recent load is elevated.",
+              "immediate_recovery": ["Sleep 8 hours", "Walk easy"],
+              "programming_suggestions": ["Reduce intensity today"],
+              "related_exercises": ["back squat"],
+              "rest_recommendation": "Take an easy day."
+            }
+            """.data(using: .utf8)!
+            return (Self.jsonResponse(for: request, statusCode: 200), data)
+        }
+
+        let result = try await api.getFatigueAdvice(
+            fatigueScore: 0.72,
+            loadHistory: [DailyLoad(date: "2026-06-01", loadScore: 42.5)]
+        )
+
+        XCTAssertEqual(result.message, "Take an easy day.")
+        XCTAssertEqual(result.recommendations, ["Reduce intensity today"])
+        XCTAssertEqual(result.recoveryActivities, ["Sleep 8 hours", "Walk easy"])
+    }
+
+    func testGeneratedCoachMemoriesUsesGetAndDecodesSuccess() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.httpMethod, "GET")
+            XCTAssertEqual(request.url?.path, "/v1/coach/memories")
+            XCTAssertEqual(try Self.httpBodyData(from: request), Data())
+
+            let data = """
+            [
+              {
+                "id": "mem-1",
+                "category": "preference",
+                "content": "Prefers low-volume strength work.",
+                "confidence": 0.88,
+                "created_at": "2026-06-01T12:00:00Z",
+                "updated_at": "2026-06-01T12:00:00Z"
+              }
+            ]
+            """.data(using: .utf8)!
+            return (Self.jsonResponse(for: request, statusCode: 200), data)
+        }
+
+        let result = try await api.fetchCoachMemories()
+
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result.first?.id, "mem-1")
+        XCTAssertEqual(result.first?.category, "preference")
+        XCTAssertEqual(result.first?.relevance, 0.88)
+    }
+
+    func testGeneratedSuggestWorkoutSendsTypedShapeAndDecodesSuccess() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.url?.path, "/v1/coach/suggest-workout")
+            let json = try Self.jsonObject(from: request)
+            XCTAssertEqual(json["duration_minutes"] as? Int, 30)
+            XCTAssertEqual(json["focus_muscle_groups"] as? [String], ["quads", "glutes"])
+            XCTAssertEqual(json["notes"] as? String, "easy")
+            XCTAssertNil(json["durationMinutes"])
+            XCTAssertNil(json["focusMuscleGroups"])
+
+            let data = """
+            {
+              "blocks": [
+                {"kind": "time", "seconds": 300, "target": "zone 2"}
+              ],
+              "warmUp": {"seconds": 60, "target": "easy"},
+              "cooldown": null,
+              "name": "Easy aerobic primer",
+              "sport": "running",
+              "durationSeconds": 300,
+              "description": "Keep it easy.",
+              "suggestionId": "sg-1"
+            }
+            """.data(using: .utf8)!
+            return (Self.jsonResponse(for: request, statusCode: 200), data)
+        }
+
+        let result = try await api.suggestWorkout(
+            request: SuggestWorkoutRequest(durationMinutes: 30, focusMuscleGroups: ["quads", "glutes"], notes: "easy")
+        )
+
+        XCTAssertEqual(result.name, "Easy aerobic primer")
+        XCTAssertEqual(result.blocks.first?.kind, "time")
+        XCTAssertEqual(result.blocks.first?.seconds, 300)
+    }
+
+    func testGeneratedRPEFeedbackSendsTypedShapeAndDecodesSuccess() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.url?.path, "/v1/coach/rpe-feedback")
+            let json = try Self.jsonObject(from: request)
+            XCTAssertEqual(json["workout_id"] as? String, "workout-1")
+            XCTAssertEqual(json["rpe"] as? Int, 8)
+            XCTAssertEqual(json["muscle_soreness"] as? [String], ["legs"])
+            XCTAssertEqual(json["notes"] as? String, "Felt heavy")
+            XCTAssertNil(json["workoutId"])
+            XCTAssertNil(json["muscleSoreness"])
+
+            let data = """
+            {
+              "success": true,
+              "message": "Feedback recorded",
+              "advice": {"deload_recommended": true, "suggestion": "Deload tomorrow"}
+            }
+            """.data(using: .utf8)!
+            return (Self.jsonResponse(for: request, statusCode: 200), data)
+        }
+
+        let result = try await api.postRPEFeedback(
+            RPEFeedbackRequest(workoutId: "workout-1", rpe: 8, muscleSoreness: ["legs"], notes: "Felt heavy")
+        )
+
+        XCTAssertTrue(result.success)
+        XCTAssertEqual(result.message, "Feedback recorded")
+        XCTAssertEqual(result.deloadRecommended, true)
+    }
+
+    func testGeneratedCoachRoutesSurface422And503AsErrors() async throws {
+        let routes: [(name: String, path: String, invoke: () async throws -> Void)] = [
+            ("message", "/v1/coach/message", { _ = try await self.api.sendCoachMessage(message: "hi", context: nil) }),
+            ("fatigue", "/v1/coach/fatigue-advice", { _ = try await self.api.getFatigueAdvice(fatigueScore: nil, loadHistory: nil) }),
+            ("memories", "/v1/coach/memories", { _ = try await self.api.fetchCoachMemories() }),
+            ("suggest", "/v1/coach/suggest-workout", { _ = try await self.api.suggestWorkout(request: SuggestWorkoutRequest(durationMinutes: nil, focusMuscleGroups: nil, notes: nil)) }),
+            ("rpe", "/v1/coach/rpe-feedback", { _ = try await self.api.postRPEFeedback(RPEFeedbackRequest(workoutId: "workout-1", rpe: 7, muscleSoreness: nil, notes: nil)) })
+        ]
+
+        for status in [422, 503] {
+            for route in routes {
+                MockURLProtocol.reset()
+                logger = RecordingAPIObservabilityLogger()
+                api = APIService(session: MockURLProtocol.mockSession(), observabilityLogger: logger)
+                MockURLProtocol.requestHandler = { request in
+                    XCTAssertEqual(request.url?.path, route.path, route.name)
+                    let response = Self.jsonResponse(for: request, statusCode: status)
+                    let data = status == 422 ? #"{"detail":[]}"#.data(using: .utf8)! : Self.degradedJSON
+                    return (response, data)
+                }
+
+                do {
+                    try await route.invoke()
+                    XCTFail("Expected \(route.name) to throw for \(status)")
+                } catch APIError.serverErrorWithBody(let receivedStatus, let body) {
+                    XCTAssertEqual(receivedStatus, status, route.name)
+                    if status == 422 {
+                        XCTAssertTrue(body.contains("detail"), route.name)
+                    } else {
+                        XCTAssertTrue(body.contains("Capability unavailable"), route.name)
+                    }
+                } catch {
+                    XCTFail("Expected serverErrorWithBody(\(status)) for \(route.name), got \(error)")
+                }
+            }
+        }
+    }
+
     func testFetchDayStatesHitsBFFPlanningDaysAndDecodesCamelCaseDayState() async throws {
         MockURLProtocol.requestHandler = { request in
             XCTAssertEqual(request.httpMethod, "GET")
@@ -851,6 +1048,24 @@ final class CoachAPIRepositoryEndpointTests: XCTestCase {
                 XCTAssertEqual(MockURLProtocol.interceptedRequests.first?.url?.path, "/v1/readiness/sample")
             }
         }
+    }
+
+    private static var degradedJSON: Data {
+        #"{"errorCode":"UNAVAILABLE","userMessage":"Capability unavailable"}"#.data(using: .utf8)!
+    }
+
+    private static func jsonObject(from request: URLRequest) throws -> [String: Any] {
+        let body = try httpBodyData(from: request)
+        return try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+    }
+
+    private static func jsonResponse(for request: URLRequest, statusCode: Int) -> HTTPURLResponse {
+        HTTPURLResponse(
+            url: request.url!,
+            statusCode: statusCode,
+            httpVersion: "HTTP/1.1",
+            headerFields: ["Content-Type": "application/json"]
+        )!
     }
 
     private static func httpBodyData(from request: URLRequest) throws -> Data {

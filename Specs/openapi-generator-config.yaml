@@ -38,6 +38,12 @@ filter:
     - /v1/devices/watch-delivery/{workout_id}/resend  # AMA-2028 Wedge F — watch delivery resend
     - /v1/library/items  # AMA-2004 Library
     - /v1/library/items/{item_id}  # AMA-2005 LibraryDetail
+    - /v1/coach/message  # AMA-2086 — typed coach message request/response
+    - /v1/coach/fatigue-advice  # AMA-2086 — typed fatigue advice request/response
+    - /v1/coach/memories  # AMA-2086 — typed coach memories
+    - /v1/coach/suggest-workout  # AMA-2086 — typed workout suggestion request/response
+    - /v1/coach/rpe-feedback  # AMA-2086 — typed RPE feedback request/response
+    - /v1/chat/stream  # AMA-2086 — typed ChatStreamRequest only; SSE stays in ChatStreamService
 
 accessModifier: public
 

@@ -80,6 +80,31 @@
         "title": "AgentActionStatus",
         "type": "string"
       },
+      "AutoRegulationAdvice": {
+        "description": "Auto-regulation recommendation from chat-api.",
+        "properties": {
+          "avg_rpe": {
+            "title": "Avg Rpe",
+            "type": "number"
+          },
+          "deload_recommended": {
+            "default": false,
+            "title": "Deload Recommended",
+            "type": "boolean"
+          },
+          "session_count": {
+            "default": 0,
+            "title": "Session Count",
+            "type": "integer"
+          },
+          "suggestion": {
+            "title": "Suggestion",
+            "type": "string"
+          }
+        },
+        "title": "AutoRegulationAdvice",
+        "type": "object"
+      },
       "ChannelPrefs": {
         "description": "Coaching-delivery prefs for a messaging channel. Delivery isn't wired yet\n(see MessagingChannelList.deliveryLive) \u2014 these persist intent only.",
         "properties": {
@@ -161,6 +186,563 @@
           "channelId"
         ],
         "title": "ChannelPrefsResult",
+        "type": "object"
+      },
+      "ChatContentDeltaEvent": {
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "ChatContentDeltaEvent",
+        "type": "object"
+      },
+      "ChatErrorEvent": {
+        "properties": {
+          "limit": {
+            "default": null,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "usage": {
+            "default": null,
+            "title": "Usage",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "type",
+          "message"
+        ],
+        "title": "ChatErrorEvent",
+        "type": "object"
+      },
+      "ChatFunctionCallEvent": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ChatFunctionCallEvent",
+        "type": "object"
+      },
+      "ChatFunctionResultEvent": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "result": {
+            "description": "Tool result payload as a string. Some tools return plain text; save_and_push_workout returns a JSON string whose object includes result_case and a nested AMA-2078 typed result union.",
+            "title": "Result",
+            "type": "string"
+          },
+          "tool_use_id": {
+            "title": "Tool Use Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_use_id",
+          "name",
+          "result"
+        ],
+        "title": "ChatFunctionResultEvent",
+        "type": "object"
+      },
+      "ChatHeartbeatEvent": {
+        "properties": {
+          "elapsed_seconds": {
+            "default": null,
+            "title": "Elapsed Seconds",
+            "type": "number"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tool_name": {
+            "default": null,
+            "title": "Tool Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ChatHeartbeatEvent",
+        "type": "object"
+      },
+      "ChatMessageEndEvent": {
+        "properties": {
+          "latency_ms": {
+            "default": null,
+            "title": "Latency Ms",
+            "type": "integer"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "tokens_used": {
+            "default": null,
+            "title": "Tokens Used",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "title": "ChatMessageEndEvent",
+        "type": "object"
+      },
+      "ChatMessageStartEvent": {
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "trace_id": {
+            "default": null,
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "title": "ChatMessageStartEvent",
+        "type": "object"
+      },
+      "ChatStageEvent": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "stage": {
+            "enum": [
+              "analyzing",
+              "researching",
+              "searching",
+              "creating",
+              "complete"
+            ],
+            "title": "Stage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage",
+          "message"
+        ],
+        "title": "ChatStageEvent",
+        "type": "object"
+      },
+      "ChatStreamContext": {
+        "description": "Context about what the user is viewing in the app.",
+        "properties": {
+          "current_page": {
+            "maxLength": 50,
+            "title": "Current Page",
+            "type": "string"
+          },
+          "pending_imports": {
+            "items": {
+              "$ref": "#/components/schemas/ChatStreamPendingImport"
+            },
+            "title": "Pending Imports",
+            "type": "array"
+          },
+          "selected_date": {
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "title": "Selected Date",
+            "type": "string"
+          },
+          "selected_workout_id": {
+            "maxLength": 100,
+            "pattern": "^[\\w-]+$",
+            "title": "Selected Workout Id",
+            "type": "string"
+          }
+        },
+        "title": "ChatStreamContext",
+        "type": "object"
+      },
+      "ChatStreamEventEnvelope": {
+        "description": "Documentation model for one Server-Sent Event from /v1/chat/stream.\n\nThe wire format is SSE text frames (`event: <type>`, `data: <JSON>`), not a\nJSON array. `data` is one of the per-event payloads documented above.",
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          },
+          "event": {
+            "enum": [
+              "message_start",
+              "content_delta",
+              "function_call",
+              "function_result",
+              "stage",
+              "heartbeat",
+              "message_end",
+              "error"
+            ],
+            "title": "Event",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event",
+          "data"
+        ],
+        "title": "ChatStreamEventEnvelope",
+        "type": "object"
+      },
+      "ChatStreamPendingImport": {
+        "description": "Pending imported workout context for POST /v1/chat/stream.",
+        "properties": {
+          "exercise_count": {
+            "title": "Exercise Count",
+            "type": "integer"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_url"
+        ],
+        "title": "ChatStreamPendingImport",
+        "type": "object"
+      },
+      "ChatStreamRequest": {
+        "description": "Request body for POST /v1/chat/stream.",
+        "properties": {
+          "context": {
+            "$ref": "#/components/schemas/ChatStreamContext"
+          },
+          "message": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ChatStreamRequest",
+        "type": "object"
+      },
+      "CoachCompletedSession": {
+        "description": "A completed training session from the last 14 days.",
+        "properties": {
+          "avg_heart_rate": {
+            "title": "Avg Heart Rate",
+            "type": "integer"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "distance_km": {
+            "title": "Distance Km",
+            "type": "number"
+          },
+          "duration_minutes": {
+            "title": "Duration Minutes",
+            "type": "integer"
+          },
+          "notes": {
+            "maxLength": 500,
+            "title": "Notes",
+            "type": "string"
+          },
+          "rpe": {
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Rpe",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "type",
+          "title"
+        ],
+        "title": "CoachCompletedSession",
+        "type": "object"
+      },
+      "CoachConversationMessage": {
+        "description": "One prior coach conversation message.",
+        "properties": {
+          "content": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "role": {
+            "minLength": 1,
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "CoachConversationMessage",
+        "type": "object"
+      },
+      "CoachMemoryResponse": {
+        "description": "One coach memory returned by GET /v1/coach/memories.",
+        "properties": {
+          "category": {
+            "enum": [
+              "focus_area",
+              "progress",
+              "improvement",
+              "preference",
+              "injury"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "source_sessions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Source Sessions",
+            "type": "array"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "category",
+          "content",
+          "confidence",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CoachMemoryResponse",
+        "type": "object"
+      },
+      "CoachMessageRequest": {
+        "description": "Request body for POST /v1/coach/message.",
+        "properties": {
+          "context": {
+            "$ref": "#/components/schemas/CoachTrainingContext"
+          },
+          "conversation_history": {
+            "items": {
+              "$ref": "#/components/schemas/CoachConversationMessage"
+            },
+            "title": "Conversation History",
+            "type": "array"
+          },
+          "message": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "CoachMessageRequest",
+        "type": "object"
+      },
+      "CoachMessageResponse": {
+        "description": "Response for POST /v1/coach/message.",
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/CoachSourceReference"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "usage": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Usage",
+            "type": "object"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "CoachMessageResponse",
+        "type": "object"
+      },
+      "CoachPlannedSession": {
+        "description": "An upcoming planned session for the next 7 days.",
+        "properties": {
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "target_distance_km": {
+            "title": "Target Distance Km",
+            "type": "number"
+          },
+          "target_duration_minutes": {
+            "title": "Target Duration Minutes",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "type",
+          "title"
+        ],
+        "title": "CoachPlannedSession",
+        "type": "object"
+      },
+      "CoachSourceReference": {
+        "description": "A reference to a workout the coach cited.",
+        "properties": {
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "title",
+          "type"
+        ],
+        "title": "CoachSourceReference",
+        "type": "object"
+      },
+      "CoachTrainingContext": {
+        "description": "Training memory context injected into every coach message.",
+        "properties": {
+          "completed_sessions": {
+            "items": {
+              "$ref": "#/components/schemas/CoachCompletedSession"
+            },
+            "title": "Completed Sessions",
+            "type": "array"
+          },
+          "goal_phase": {
+            "title": "Goal Phase",
+            "type": "string"
+          },
+          "planned_sessions": {
+            "items": {
+              "$ref": "#/components/schemas/CoachPlannedSession"
+            },
+            "title": "Planned Sessions",
+            "type": "array"
+          },
+          "race_date": {
+            "title": "Race Date",
+            "type": "string"
+          },
+          "race_name": {
+            "title": "Race Name",
+            "type": "string"
+          },
+          "readiness_score": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Readiness Score",
+            "type": "integer"
+          }
+        },
+        "title": "CoachTrainingContext",
         "type": "object"
       },
       "CoachingProfile": {
@@ -825,6 +1407,73 @@
           "name"
         ],
         "title": "ExerciseFollowAlongStep",
+        "type": "object"
+      },
+      "FatigueAdviceRequest": {
+        "description": "Request body for POST /v1/coach/fatigue-advice.",
+        "properties": {
+          "question": {
+            "maxLength": 2000,
+            "minLength": 5,
+            "title": "Question",
+            "type": "string"
+          },
+          "recent_workouts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Recent Workouts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "title": "FatigueAdviceRequest",
+        "type": "object"
+      },
+      "FatigueAdviceResponse": {
+        "description": "Response for POST /v1/coach/fatigue-advice.",
+        "properties": {
+          "immediate_recovery": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Immediate Recovery",
+            "type": "array"
+          },
+          "likely_cause": {
+            "title": "Likely Cause",
+            "type": "string"
+          },
+          "programming_suggestions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Programming Suggestions",
+            "type": "array"
+          },
+          "related_exercises": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Related Exercises",
+            "type": "array"
+          },
+          "rest_recommendation": {
+            "title": "Rest Recommendation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "likely_cause",
+          "immediate_recovery",
+          "programming_suggestions",
+          "related_exercises",
+          "rest_recommendation"
+        ],
+        "title": "FatigueAdviceResponse",
         "type": "object"
       },
       "FollowAlongResponse": {
@@ -1630,6 +2279,59 @@
         "title": "ProposedPlan",
         "type": "object"
       },
+      "RPEFeedbackRequest": {
+        "description": "Request body for POST /v1/coach/rpe-feedback.",
+        "properties": {
+          "muscle_soreness": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Muscle Soreness",
+            "type": "array"
+          },
+          "notes": {
+            "maxLength": 500,
+            "title": "Notes",
+            "type": "string"
+          },
+          "rpe": {
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Rpe",
+            "type": "integer"
+          },
+          "workout_id": {
+            "title": "Workout Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workout_id",
+          "rpe"
+        ],
+        "title": "RPEFeedbackRequest",
+        "type": "object"
+      },
+      "RPEFeedbackResponse": {
+        "description": "Response for POST /v1/coach/rpe-feedback.",
+        "properties": {
+          "advice": {
+            "$ref": "#/components/schemas/AutoRegulationAdvice"
+          },
+          "message": {
+            "default": "Feedback recorded",
+            "title": "Message",
+            "type": "string"
+          },
+          "success": {
+            "default": true,
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "title": "RPEFeedbackResponse",
+        "type": "object"
+      },
       "ReadinessSourcePref": {
         "description": "One per-metric source choice (AMA-2053 Wedge D). Wire shape: metric, source, deviceId.",
         "properties": {
@@ -1943,6 +2645,150 @@
           }
         },
         "title": "SimulationConfig",
+        "type": "object"
+      },
+      "SuggestWarmUpCooldown": {
+        "description": "Warm-up/cooldown DTO returned by suggest-workout.",
+        "properties": {
+          "seconds": {
+            "title": "Seconds",
+            "type": "integer"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seconds"
+        ],
+        "title": "SuggestWarmUpCooldown",
+        "type": "object"
+      },
+      "SuggestWorkoutInterval": {
+        "description": "Tagged workout interval returned by suggest-workout.",
+        "properties": {
+          "followAlongUrl": {
+            "title": "Followalongurl",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "load": {
+            "title": "Load",
+            "type": "string"
+          },
+          "meters": {
+            "title": "Meters",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reps": {
+            "title": "Reps",
+            "type": "integer"
+          },
+          "restSec": {
+            "title": "Restsec",
+            "type": "integer"
+          },
+          "seconds": {
+            "title": "Seconds",
+            "type": "integer"
+          },
+          "sets": {
+            "title": "Sets",
+            "type": "integer"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "SuggestWorkoutInterval",
+        "type": "object"
+      },
+      "SuggestWorkoutRequest": {
+        "description": "Request body for POST /v1/coach/suggest-workout.",
+        "properties": {
+          "duration_minutes": {
+            "maximum": 120.0,
+            "minimum": 15.0,
+            "title": "Duration Minutes",
+            "type": "integer"
+          },
+          "exclude_exercises": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Exclude Exercises",
+            "type": "array"
+          },
+          "focus_muscle_groups": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Focus Muscle Groups",
+            "type": "array"
+          },
+          "notes": {
+            "maxLength": 1000,
+            "title": "Notes",
+            "type": "string"
+          }
+        },
+        "title": "SuggestWorkoutRequest",
+        "type": "object"
+      },
+      "SuggestWorkoutResponse": {
+        "description": "Response for POST /v1/coach/suggest-workout.",
+        "properties": {
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/SuggestWorkoutInterval"
+            },
+            "title": "Blocks",
+            "type": "array"
+          },
+          "cooldown": {
+            "$ref": "#/components/schemas/SuggestWarmUpCooldown"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "durationSeconds": {
+            "title": "Durationseconds",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sport": {
+            "title": "Sport",
+            "type": "string"
+          },
+          "suggestionId": {
+            "format": "uuid",
+            "title": "Suggestionid",
+            "type": "string"
+          },
+          "warmUp": {
+            "$ref": "#/components/schemas/SuggestWarmUpCooldown"
+          }
+        },
+        "required": [
+          "blocks"
+        ],
+        "title": "SuggestWorkoutResponse",
         "type": "object"
       },
       "TelegramSetupResponse": {
@@ -2724,14 +3570,47 @@
       "post": {
         "description": "iOS ChatStreamService \u2192 chat-api POST /chat/stream (SSE).\n\nUses `_proxy_stream` so chunks reach iOS as the LLM produces them;\nthe standard buffered proxy would defeat SSE.",
         "operationId": "v1_chat_stream_v1_chat_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatStreamRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
+              "text/event-stream": {
+                "examples": {
+                  "content_delta": {
+                    "summary": "Text delta frame",
+                    "value": "event: content_delta\\ndata: {\"text\":\"Hello\"}\\n\\n"
+                  },
+                  "message_end": {
+                    "summary": "Final stats frame",
+                    "value": "event: message_end\\ndata: {\"session_id\":\"s1\",\"tokens_used\":12,\"latency_ms\":250}\\n\\n"
+                  }
+                },
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
               }
             },
-            "description": "Successful Response"
+            "description": "Server-Sent Events stream. Each frame carries event: <type> and data: <JSON payload>."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           },
           "503": {
             "content": {
@@ -2744,21 +3623,72 @@
             "description": "Service Unavailable"
           }
         },
-        "summary": "V1 Chat Stream"
+        "summary": "V1 Chat Stream",
+        "x-sse-event-envelope-schema": {
+          "$ref": "#/components/schemas/ChatStreamEventEnvelope"
+        },
+        "x-sse-event-payload-schemas": {
+          "content_delta": {
+            "$ref": "#/components/schemas/ChatContentDeltaEvent"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ChatErrorEvent"
+          },
+          "function_call": {
+            "$ref": "#/components/schemas/ChatFunctionCallEvent"
+          },
+          "function_result": {
+            "$ref": "#/components/schemas/ChatFunctionResultEvent"
+          },
+          "heartbeat": {
+            "$ref": "#/components/schemas/ChatHeartbeatEvent"
+          },
+          "message_end": {
+            "$ref": "#/components/schemas/ChatMessageEndEvent"
+          },
+          "message_start": {
+            "$ref": "#/components/schemas/ChatMessageStartEvent"
+          },
+          "stage": {
+            "$ref": "#/components/schemas/ChatStageEvent"
+          }
+        }
       }
     },
     "/v1/coach/fatigue-advice": {
       "post": {
         "description": "iOS getFatigueAdvice \u2192 chat-api POST /coach/fatigue-advice.",
         "operationId": "v1_coach_fatigue_advice_v1_coach_fatigue_advice_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FatigueAdviceRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/FatigueAdviceResponse"
+                }
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           },
           "503": {
             "content": {
@@ -2778,14 +3708,48 @@
       "get": {
         "description": "iOS fetchCoachMemories \u2192 chat-api GET /coach/memories.",
         "operationId": "v1_coach_memories_v1_coach_memories_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "enum": [
+                "focus_area",
+                "progress",
+                "improvement",
+                "preference",
+                "injury"
+              ],
+              "title": "Category",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CoachMemoryResponse"
+                  },
+                  "title": "Response V1 Coach Memories V1 Coach Memories Get",
+                  "type": "array"
+                }
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           },
           "503": {
             "content": {
@@ -2805,14 +3769,36 @@
       "post": {
         "description": "iOS sendCoachMessage \u2192 chat-api POST /coach/message.",
         "operationId": "v1_coach_message_v1_coach_message_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoachMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CoachMessageResponse"
+                }
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           },
           "503": {
             "content": {
@@ -2832,14 +3818,36 @@
       "post": {
         "description": "iOS postRPEFeedback \u2192 chat-api POST /coach/rpe-feedback.",
         "operationId": "v1_coach_rpe_feedback_v1_coach_rpe_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RPEFeedbackRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/RPEFeedbackResponse"
+                }
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           },
           "503": {
             "content": {
@@ -2859,14 +3867,36 @@
       "post": {
         "description": "iOS suggestWorkout \u2192 chat-api POST /coach/suggest-workout.",
         "operationId": "v1_coach_suggest_workout_v1_coach_suggest_workout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestWorkoutRequest",
+                "default": {}
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestWorkoutResponse"
+                }
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           },
           "503": {
             "content": {
@@ -3373,7 +4403,7 @@
     },
     "/v1/knowledge/cards": {
       "get": {
-        "description": "iOS KnowledgeService.listCards \u2192 chat-api GET /knowledge/cards.",
+        "description": "iOS KnowledgeService.listCards \u2192 chat-api GET /api/knowledge/cards.",
         "operationId": "v1_knowledge_cards_list_v1_knowledge_cards_get",
         "responses": {
           "200": {
@@ -3398,7 +4428,7 @@
         "summary": "V1 Knowledge Cards List"
       },
       "post": {
-        "description": "iOS KnowledgeService.ingest \u2192 chat-api POST /knowledge/cards.",
+        "description": "iOS KnowledgeService.ingest \u2192 chat-api POST /api/knowledge/ingest.",
         "operationId": "v1_knowledge_cards_create_v1_knowledge_cards_post",
         "responses": {
           "200": {
@@ -3425,7 +4455,7 @@
     },
     "/v1/knowledge/cards/search": {
       "get": {
-        "description": "iOS KnowledgeService.searchCards \u2192 chat-api GET /knowledge/cards/search.",
+        "description": "iOS KnowledgeService.searchCards \u2192 chat-api GET /api/knowledge/cards/search.",
         "operationId": "v1_knowledge_cards_search_v1_knowledge_cards_search_get",
         "responses": {
           "200": {
@@ -3452,7 +4482,7 @@
     },
     "/v1/knowledge/cards/{card_id}": {
       "delete": {
-        "description": "iOS KnowledgeService.deleteCard \u2192 chat-api DELETE /knowledge/cards/{id}.",
+        "description": "iOS KnowledgeService.deleteCard \u2192 chat-api DELETE /api/knowledge/cards/{id}.",
         "operationId": "v1_knowledge_cards_delete_v1_knowledge_cards__card_id__delete",
         "parameters": [
           {

@@ -60,26 +60,37 @@ enum MuscleGroup: String, CaseIterable, Identifiable {
     var displayName: String { rawValue.capitalized }
 }
 
-/// Request body for RPE feedback API
-struct RPEFeedbackRequest: Codable {
-    let workoutId: String
-    let rpe: Int
-    let muscleSoreness: [String]?
-    let notes: String?
+/// Request body for RPE feedback API.
+/// AMA-2086: generated BFF schema so iOS can only send fields accepted by
+/// POST /v1/coach/rpe-feedback after mobile-bff request validation deploys.
+typealias RPEFeedbackRequest = Components.Schemas.RPEFeedbackRequest
 
-    enum CodingKeys: String, CodingKey {
-        case workoutId = "workout_id"
-        case rpe
-        case muscleSoreness = "muscle_soreness"
-        case notes
+extension Components.Schemas.RPEFeedbackRequest {
+    init(workoutId: String, rpe: Int, muscleSoreness: [String]?, notes: String?) {
+        self.init(muscleSoreness: muscleSoreness, notes: notes, rpe: rpe, workoutId: workoutId)
     }
 }
 
-/// Response from RPE feedback API
+/// Response from RPE feedback API.
+/// Kept as a UI-facing projection because the typed BFF nests deload advice
+/// under `advice.deload_recommended` while the existing sheet only needs this
+/// convenience flag.
 struct RPEFeedbackResponse: Codable {
     let success: Bool
     let message: String
     let deloadRecommended: Bool?
+
+    init(success: Bool, message: String, deloadRecommended: Bool?) {
+        self.success = success
+        self.message = message
+        self.deloadRecommended = deloadRecommended
+    }
+
+    init(_ generated: Components.Schemas.RPEFeedbackResponse) {
+        self.success = generated.success ?? true
+        self.message = generated.message ?? "Feedback recorded"
+        self.deloadRecommended = generated.advice?.deloadRecommended
+    }
 
     enum CodingKeys: String, CodingKey {
         case success
