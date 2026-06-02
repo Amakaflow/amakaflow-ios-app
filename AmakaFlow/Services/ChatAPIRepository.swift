@@ -79,10 +79,16 @@ extension APIService {
     }
 
     private static func coachTrainingContext(from context: CoachContext?) -> Components.Schemas.CoachTrainingContext? {
-        guard let context else { return nil }
-        let completedSessions: [Components.Schemas.CoachCompletedSession]? = context.recentWorkouts?.compactMap { workout -> Components.Schemas.CoachCompletedSession? in
-            guard let currentDate = context.currentDate else { return nil }
-            return Components.Schemas.CoachCompletedSession(
+        guard
+            let context,
+            let recentWorkouts = context.recentWorkouts,
+            !recentWorkouts.isEmpty,
+            let currentDate = context.currentDate
+        else { return nil }
+
+        // recentWorkouts carries no per-workout dates (CoachContext.recentWorkouts is [String]); currentDate used as a placeholder session date.
+        let completedSessions = recentWorkouts.map { workout in
+            Components.Schemas.CoachCompletedSession(
                 date: currentDate,
                 notes: workout,
                 title: workout,
@@ -90,7 +96,6 @@ extension APIService {
             )
         }
 
-        guard let completedSessions, !completedSessions.isEmpty else { return nil }
         return Components.Schemas.CoachTrainingContext(completedSessions: completedSessions)
     }
 

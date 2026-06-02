@@ -8,6 +8,7 @@
 
 import Foundation
 import Combine
+import os
 
 // MARK: - Suggest Workout Request/Response Models
 
@@ -51,6 +52,7 @@ extension Components.Schemas.SuggestWorkoutResponse {
 }
 
 extension Components.Schemas.SuggestWorkoutInterval {
+    private static let logger = Logger(subsystem: "com.amakaflow.app", category: "suggest-workout")
     private static let repeatPayloadPrefix = "__amakaflow_repeat_v1:"
 
     init(workoutInterval: WorkoutInterval) {
@@ -70,10 +72,7 @@ extension Components.Schemas.SuggestWorkoutInterval {
                 kind: "repeat",
                 reps: reps,
                 target: Self.encodeRepeatChildren(
-                    intervals.compactMap { interval in
-                        if case .rest = interval { return nil }
-                        return Components.Schemas.SuggestWorkoutInterval(workoutInterval: interval)
-                    }
+                    intervals.map(Components.Schemas.SuggestWorkoutInterval.init(workoutInterval:))
                 )
             )
         case .rest(let seconds):
@@ -114,14 +113,21 @@ extension Components.Schemas.SuggestWorkoutInterval {
     }
 
     private static func decodeRepeatChildren(from target: String?) -> [WorkoutInterval] {
-        guard
-            let target,
-            target.hasPrefix(repeatPayloadPrefix),
-            let data = Data(base64Encoded: String(target.dropFirst(repeatPayloadPrefix.count))),
-            let intervals = try? JSONDecoder().decode([Components.Schemas.SuggestWorkoutInterval].self, from: data)
-        else { return [] }
+        guard let target, target.hasPrefix(repeatPayloadPrefix) else { return [] }
 
-        return intervals.compactMap(\.workoutInterval)
+        let encodedPayload = String(target.dropFirst(repeatPayloadPrefix.count))
+        guard let data = Data(base64Encoded: encodedPayload) else {
+            logger.warning("Failed to decode repeat children target=\(target, privacy: .public) error=invalid-base64")
+            return []
+        }
+
+        do {
+            let intervals = try JSONDecoder().decode([Components.Schemas.SuggestWorkoutInterval].self, from: data)
+            return intervals.compactMap(\.workoutInterval)
+        } catch {
+            logger.warning("Failed to decode repeat children target=\(target, privacy: .public) error=\(error.localizedDescription, privacy: .public)")
+            return []
+        }
     }
 }
 

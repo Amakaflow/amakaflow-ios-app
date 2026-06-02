@@ -423,6 +423,20 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     XCTAssertEqual(workout.duration, 60)
   }
 
+  func testGeneratedSuggestWorkoutRepeatRoundTripPreservesNestedRest() {
+    let repeatInterval = WorkoutInterval.repeat(
+      reps: 3,
+      intervals: [
+        .time(seconds: 45, target: "hard"),
+        .rest(seconds: 30),
+      ]
+    )
+
+    let generated = Components.Schemas.SuggestWorkoutInterval(workoutInterval: repeatInterval)
+
+    XCTAssertEqual(generated.workoutInterval, repeatInterval)
+  }
+
   func testBuildWorkout_translatesRestIntervalKind() async throws {
     let workout = try await buildWorkout(.single(kind: .rest(seconds: 75)))
     XCTAssertEqual(workout.intervals, [])
