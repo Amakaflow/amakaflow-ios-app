@@ -27,12 +27,15 @@ struct ProgramsListView: View {
             .navigationTitle("Programs")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink {
-                        ProgramWizardView()
-                    } label: {
-                        Image(systemName: "plus")
-                            .foregroundColor(Theme.Colors.accentBlue)
+                if FeatureFlags.programWizardEnabled {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        NavigationLink {
+                            ProgramWizardView()
+                        } label: {
+                            Image(systemName: "plus")
+                                .foregroundColor(Theme.Colors.accentBlue)
+                        }
+                        .accessibilityIdentifier("programs_add_program")
                     }
                 }
             }

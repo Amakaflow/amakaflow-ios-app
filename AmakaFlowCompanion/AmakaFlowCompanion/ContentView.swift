@@ -187,6 +187,19 @@ struct ContentView: View {
 
     @ViewBuilder
     private var activeDestination: some View {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["UITEST_START_SCREEN"] == "programs" {
+            ProgramsListView()
+        } else {
+            activeTabDestination
+        }
+        #else
+        activeTabDestination
+        #endif
+    }
+
+    @ViewBuilder
+    private var activeTabDestination: some View {
         switch selectedTab {
         case .home:
             tabRoot(.home) {

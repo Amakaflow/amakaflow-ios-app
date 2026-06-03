@@ -166,7 +166,9 @@ struct HomeView: View {
                 VoiceWorkoutView()
             }
             .sheet(isPresented: $showingProgramWizard) {
-                ProgramWizardView()
+                if FeatureFlags.programWizardEnabled {
+                    ProgramWizardView()
+                }
             }
             .sheet(isPresented: $showingReadinessDetail) {
                 ReadinessDetailView()
@@ -402,6 +404,7 @@ struct HomeView: View {
                 Text("Start with a path")
                     .font(Theme.Typography.largeTitle)
                     .foregroundColor(Theme.Colors.textPrimary)
+                    .accessibilityIdentifier("af_home_empty_state")
                 Text("No active plan or workout is scheduled for today. Choose how AmakaFlow should get you moving.")
                     .font(Theme.Typography.body)
                     .foregroundColor(Theme.Colors.textSecondary)
@@ -409,18 +412,22 @@ struct HomeView: View {
             }
 
             VStack(spacing: Theme.Spacing.sm) {
-                Button {
-                    showingProgramWizard = true
-                } label: {
-                    emptyStateOptionLabel(
-                        icon: "sparkles",
-                        title: "Build me a plan",
-                        subtitle: "Create a structured block around your goals.",
-                        isPrimary: true
-                    )
+                if FeatureFlags.programWizardEnabled {
+                    Button {
+                        showingProgramWizard = true
+                    } label: {
+                        emptyStateOptionLabel(
+                            icon: "sparkles",
+                            title: "Build me a plan",
+                            subtitle: "Create a structured block around your goals.",
+                            isPrimary: true
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Build me a plan")
+                    .accessibilityIdentifier("af_home_empty_build_plan")
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("af_home_empty_build_plan")
 
                 Button {
                     suggestWorkoutViewModel.requestSuggestion()
@@ -434,6 +441,8 @@ struct HomeView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Just today’s workout")
                 .accessibilityIdentifier("af_home_empty_just_today")
 
                 Button {
@@ -447,6 +456,8 @@ struct HomeView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Coach picks for me")
                 .accessibilityIdentifier("af_home_empty_coach_picks")
             }
         }
@@ -458,7 +469,6 @@ struct HomeView: View {
                 .stroke(Theme.Colors.borderLight, lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.lg, style: .continuous))
-        .accessibilityIdentifier("af_home_empty_state")
     }
 
     private func emptyStateOptionLabel(icon: String, title: String, subtitle: String, isPrimary: Bool) -> some View {
