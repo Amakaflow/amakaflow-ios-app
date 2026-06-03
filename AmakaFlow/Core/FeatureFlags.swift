@@ -34,6 +34,14 @@ import Foundation
 /// To re-hide during local development (e.g., to test the MVP cut), set
 /// `AMAKAFLOW_NON_MVP=0` in the launch environment.
 enum FeatureFlags {
+    /// Controls the multi-week Program Wizard entry points.
+    ///
+    /// Default: `false` for v1 because the wizard still posts to the retired
+    /// mapper `/programs/generate` endpoint and always fails with 405. Keep the
+    /// wizard implementation in place so AMA-2096 Phase 2 can re-enable this
+    /// with a one-line flip after it is wired to the chat-api SSE pipeline.
+    static let programWizardEnabled = false
+
     /// Controls visibility of non-core feature surfaces.
     ///
     /// Default: `true` (all surfaces visible) per the 2026-05-22 v1 plan.
