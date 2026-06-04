@@ -26,7 +26,10 @@ final class ProgramWizardEntryPointUITests: XCTestCase {
             "UITEST_SKIP_APPLE_WATCH": "true",
             "UITEST_USE_FIXTURES": "true",
             "UITEST_FIXTURE_STATE": "empty",
-            "UITEST_MODE": "true"
+            "UITEST_MODE": "true",
+            // Wizard ships OFF by default (gated until the mobile-bff
+            // /v1/programs/*/stream routes deploy); enable it for this test.
+            "AMAKAFLOW_PROGRAM_WIZARD": "1"
         ]
         if name.contains("ProgramsList") {
             launchEnvironment["UITEST_START_SCREEN"] = "programs"

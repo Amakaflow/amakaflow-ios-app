@@ -36,10 +36,19 @@ import Foundation
 enum FeatureFlags {
     /// Controls the multi-week Program Wizard entry points.
     ///
-    /// Default: `true` after AMA-2096 Phase 2 repointed the wizard to the
-    /// mobile-bff SSE program pipeline: design → generate for review, then an
-    /// explicit save/schedule action.
-    static let programWizardEnabled = true
+    /// Default: `false`. AMA-2096 Phase 2 repointed the wizard to the mobile-bff
+    /// SSE program pipeline (design → generate for review, then explicit
+    /// save/schedule), but those `/v1/programs/*/stream` routes are not deployed
+    /// to staging yet — shipping the wizard ON before then would re-expose a
+    /// broken CTA (the 405 dead-button Phase 1 fixed). Keep OFF until the
+    /// mobile-bff deploy is live + the flow is verified, then flip the default
+    /// to `true`. Set env `AMAKAFLOW_PROGRAM_WIZARD=1` to enable for local/QA.
+    static let programWizardEnabled: Bool = {
+        if let override = ProcessInfo.processInfo.environment["AMAKAFLOW_PROGRAM_WIZARD"] {
+            return override == "1" || override.lowercased() == "true"
+        }
+        return false
+    }()
 
     /// Controls visibility of non-core feature surfaces.
     ///
