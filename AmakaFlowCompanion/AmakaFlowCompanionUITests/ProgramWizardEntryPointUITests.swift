@@ -2,8 +2,8 @@
 //  ProgramWizardEntryPointUITests.swift
 //  AmakaFlowCompanionUITests
 //
-//  AMA-2096 Phase 1: hide v1 entry points into the disconnected multi-week
-//  Program Wizard while keeping the wizard implementation behind a flag.
+//  AMA-2096 Phase 2: the Program Wizard is wired to the SSE pipeline, so
+//  entry points are enabled again.
 //
 
 import XCTest
@@ -41,7 +41,7 @@ final class ProgramWizardEntryPointUITests: XCTestCase {
         app = nil
     }
 
-    func testHomeEmptyStateHidesBuildPlanButKeepsOtherOptions() throws {
+    func testHomeEmptyStateShowsBuildPlanAndKeepsOtherOptions() throws {
         XCTAssertTrue(
             TestAuthHelper.waitForMainContent(app, timeout: 20),
             "App should reach authenticated tab chrome with mock Clerk session"
@@ -50,10 +50,9 @@ final class ProgramWizardEntryPointUITests: XCTestCase {
         let emptyState = app.descendants(matching: .any)["af_home_empty_state"]
         XCTAssertTrue(emptyState.waitForExistence(timeout: 10), "Home should render the empty state with empty fixtures")
 
-        XCTAssertFalse(
-            element("af_home_empty_build_plan").exists,
-            "Program Wizard entry should be absent while FeatureFlags.programWizardEnabled is false"
-        )
+        let buildPlan = element("af_home_empty_build_plan")
+        XCTAssertTrue(buildPlan.exists, "Program Wizard entry should be present while FeatureFlags.programWizardEnabled is true")
+        XCTAssertTrue(buildPlan.isHittable, "Program Wizard entry should be tappable")
 
         let justToday = element("af_home_empty_just_today")
         XCTAssertTrue(justToday.exists, "Single-workout option should remain visible")
@@ -64,7 +63,7 @@ final class ProgramWizardEntryPointUITests: XCTestCase {
         XCTAssertTrue(coachPicks.isHittable, "Coach option should remain tappable")
     }
 
-    func testProgramsListHidesWizardAddButton() throws {
+    func testProgramsListShowsWizardAddButton() throws {
         XCTAssertTrue(
             TestAuthHelper.waitForMainContent(app, timeout: 20),
             "App should reach authenticated tab chrome with mock Clerk session"
@@ -72,10 +71,9 @@ final class ProgramWizardEntryPointUITests: XCTestCase {
 
         let programsScreen = element("programs_screen")
         XCTAssertTrue(programsScreen.waitForExistence(timeout: 5), "Programs list should open")
-        XCTAssertFalse(
-            element("programs_add_program").exists,
-            "Program Wizard '+' entry should be absent while FeatureFlags.programWizardEnabled is false"
-        )
+        let addProgram = element("programs_add_program")
+        XCTAssertTrue(addProgram.exists, "Program Wizard '+' entry should be present while FeatureFlags.programWizardEnabled is true")
+        XCTAssertTrue(addProgram.isHittable, "Program Wizard '+' entry should be tappable")
     }
 
     private func element(_ identifier: String) -> XCUIElement {

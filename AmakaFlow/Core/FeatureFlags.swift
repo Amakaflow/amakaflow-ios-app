@@ -36,11 +36,10 @@ import Foundation
 enum FeatureFlags {
     /// Controls the multi-week Program Wizard entry points.
     ///
-    /// Default: `false` for v1 because the wizard still posts to the retired
-    /// mapper `/programs/generate` endpoint and always fails with 405. Keep the
-    /// wizard implementation in place so AMA-2096 Phase 2 can re-enable this
-    /// with a one-line flip after it is wired to the chat-api SSE pipeline.
-    static let programWizardEnabled = false
+    /// Default: `true` after AMA-2096 Phase 2 repointed the wizard to the
+    /// mobile-bff SSE program pipeline: design → generate for review, then an
+    /// explicit save/schedule action.
+    static let programWizardEnabled = true
 
     /// Controls visibility of non-core feature surfaces.
     ///

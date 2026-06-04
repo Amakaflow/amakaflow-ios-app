@@ -2,7 +2,7 @@
 //  ProgramWizardViewModelTests.swift
 //  AmakaFlowCompanionTests
 //
-//  Tests for ProgramWizardViewModel (AMA-1413)
+//  Tests for ProgramWizardViewModel (AMA-1413 / AMA-2096)
 //
 
 import XCTest
@@ -13,17 +13,23 @@ final class ProgramWizardViewModelTests: XCTestCase {
 
     private var viewModel: ProgramWizardViewModel!
     private var mockAPIService: MockAPIService!
+    private var mockPairingService: MockPairingService!
+    private var mockProgramStreamService: MockProgramStreamService!
 
     override func setUp() async throws {
         try await super.setUp()
         mockAPIService = MockAPIService()
+        mockPairingService = MockPairingService()
+        mockPairingService.storedToken = "test-token"
+        mockProgramStreamService = MockProgramStreamService()
         let deps = AppDependencies(
             apiService: mockAPIService,
-            pairingService: MockPairingService(),
+            pairingService: mockPairingService,
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
             watchSession: MockWatchSession(),
-            chatStreamService: MockChatStreamService()
+            chatStreamService: MockChatStreamService(),
+            programStreamService: mockProgramStreamService
         )
         viewModel = ProgramWizardViewModel(dependencies: deps)
     }
@@ -31,6 +37,8 @@ final class ProgramWizardViewModelTests: XCTestCase {
     override func tearDown() async throws {
         viewModel = nil
         mockAPIService = nil
+        mockPairingService = nil
+        mockProgramStreamService = nil
         try await super.tearDown()
     }
 
@@ -137,56 +145,137 @@ final class ProgramWizardViewModelTests: XCTestCase {
         XCTAssertEqual(resolved, ["dumbbells"])
     }
 
+    // MARK: - Request Contract
+
+    func testDesignProgramRequestEncodesDocumentedSnakeCaseSchema() throws {
+        configureValidWizardFields()
+        viewModel.preferredDays = [1, 3, 5]
+
+        let request = try viewModel.makeDesignProgramRequest()
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        let data = try encoder.encode(request)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+
+        XCTAssertEqual(json["goal"] as? String, "strength")
+        XCTAssertEqual(json["experience_level"] as? String, "intermediate")
+        XCTAssertEqual(json["duration_weeks"] as? Int, 8)
+        XCTAssertEqual(json["sessions_per_week"] as? Int, 3)
+        XCTAssertEqual(json["time_per_session"] as? Int, 60)
+        XCTAssertEqual(json["preferred_days"] as? [String], ["Monday", "Wednesday", "Friday"])
+        XCTAssertNotNil(json["equipment"] as? [String])
+        XCTAssertNil(json["experienceLevel"])
+        XCTAssertNil(json["durationWeeks"])
+    }
+
     // MARK: - Generation: Success
 
-    func testGenerateProgramSuccess_setsGeneratedProgramId() async {
-        // Configure mock: start job then immediately complete
-        mockAPIService.generateProgramResult = .success(
-            ProgramGenerationResponse(jobId: "job-001", status: "queued", programId: nil, error: nil)
-        )
-        mockAPIService.fetchGenerationStatusResult = .success(
-            ProgramGenerationStatus(jobId: "job-001", status: "completed", progress: 100, programId: "prog-abc", error: nil)
-        )
-
-        viewModel.goal = "strength"
-        viewModel.experienceLevel = "intermediate"
-        viewModel.equipmentPreset = "full_gym"
+    func testGenerateProgramRunsDesignThenGenerateAndStopsAtReview() async {
+        configureValidWizardFields()
+        mockProgramStreamService.designEvents = [
+            .stage(stage: "designing", message: "Designing your 8-week program...", subProgress: nil),
+            .preview(previewId: "outline-preview", payload: ProgramPreviewPayload(previewId: "outline-preview", program: nil, unmatched: nil))
+        ]
+        mockProgramStreamService.generateEvents = [
+            .stage(stage: "generating", message: "Creating Week 1 workouts...", subProgress: ProgramSubProgress(current: 1, total: 8)),
+            .preview(previewId: "full-preview", payload: ProgramPreviewPayload(previewId: "full-preview", program: Self.sampleProgram, unmatched: nil))
+        ]
 
         await viewModel.generateProgram()
 
-        XCTAssertTrue(mockAPIService.generateProgramCalled)
-        XCTAssertEqual(viewModel.generatedProgramId, "prog-abc")
+        XCTAssertTrue(mockProgramStreamService.designProgramCalled)
+        XCTAssertTrue(mockProgramStreamService.generateProgramCalled)
+        XCTAssertEqual(mockProgramStreamService.lastGeneratePreviewId, "outline-preview")
+        XCTAssertFalse(mockProgramStreamService.saveProgramCalled, "Generate must not auto-save")
+        XCTAssertEqual(viewModel.designPreviewId, "outline-preview")
+        XCTAssertEqual(viewModel.generatePreviewId, "full-preview")
+        XCTAssertEqual(viewModel.proposedProgram?.name, "8-Week Strength Program")
+        XCTAssertNil(viewModel.generatedProgramId)
+        XCTAssertEqual(viewModel.currentStep, .review)
         XCTAssertFalse(viewModel.isGenerating)
         XCTAssertNil(viewModel.errorMessage)
     }
 
-    // MARK: - Generation: Error on start
-
-    func testGenerateProgramError_setsErrorMessage() async {
-        mockAPIService.generateProgramResult = .failure(APIError.serverError(500))
+    func testGenerateProgramErrorEventSurfacesRealMessage() async {
+        configureValidWizardFields()
+        mockProgramStreamService.designEvents = [
+            .error(message: "Too many active pipelines. Please wait for one to finish.", recoverable: true)
+        ]
 
         await viewModel.generateProgram()
 
-        XCTAssertTrue(mockAPIService.generateProgramCalled)
-        XCTAssertNil(viewModel.generatedProgramId)
+        XCTAssertEqual(viewModel.errorMessage, "Too many active pipelines. Please wait for one to finish.")
+        XCTAssertTrue(viewModel.isErrorRecoverable)
+        XCTAssertNil(viewModel.proposedProgram)
         XCTAssertFalse(viewModel.isGenerating)
-        XCTAssertNotNil(viewModel.errorMessage)
     }
 
-    // MARK: - Generation: Failed status from poll
+    // MARK: - Save
 
-    func testGenerateProgramFailedStatus_setsErrorMessage() async {
-        mockAPIService.generateProgramResult = .success(
-            ProgramGenerationResponse(jobId: "job-002", status: "queued", programId: nil, error: nil)
+    func testSaveProgramPostsPickedDateAndSetsGeneratedProgramIdOnComplete() async throws {
+        viewModel.generatePreviewId = "full-preview"
+        viewModel.proposedProgram = Self.sampleProgram
+        mockProgramStreamService.saveEvents = [
+            .stage(stage: "saving", message: "Saving program to library...", subProgress: nil),
+            .stage(stage: "scheduling", message: "Adding sessions to calendar...", subProgress: nil),
+            .complete(workoutIds: ["workout-1", "workout-2"], scheduledCount: 2, workoutCount: 2)
+        ]
+
+        let startDate = try XCTUnwrap(Self.localDate(year: 2026, month: 6, day: 8))
+        await viewModel.saveProgram(startDate: startDate)
+
+        XCTAssertTrue(mockProgramStreamService.saveProgramCalled)
+        XCTAssertEqual(mockProgramStreamService.lastSavePreviewId, "full-preview")
+        XCTAssertEqual(mockProgramStreamService.lastScheduleStartDate, "2026-06-08")
+        XCTAssertEqual(viewModel.generatedProgramId, "workout-1")
+        XCTAssertEqual(viewModel.scheduledCount, 2)
+        XCTAssertFalse(viewModel.isSaving)
+        XCTAssertNil(viewModel.errorMessage)
+    }
+
+    // MARK: - Helpers
+
+    private func configureValidWizardFields() {
+        viewModel.goal = "strength"
+        viewModel.experienceLevel = "intermediate"
+        viewModel.durationWeeks = 8
+        viewModel.sessionsPerWeek = 3
+        viewModel.timePerSession = 60
+        viewModel.equipmentPreset = "full_gym"
+    }
+
+    private static var sampleProgram: ProposedProgram {
+        ProposedProgram(
+            id: nil,
+            name: "8-Week Strength Program",
+            goal: "strength",
+            durationWeeks: 8,
+            sessionsPerWeek: 3,
+            periodizationModel: "linear",
+            weeks: [
+                ProposedProgramWeek(
+                    weekNumber: 1,
+                    focus: "Base strength",
+                    intensityPercentage: 70,
+                    volumeModifier: 1.0,
+                    isDeload: false,
+                    workouts: [
+                        ProposedProgramWorkout(
+                            name: "Lower Strength",
+                            dayOfWeek: 0,
+                            workoutType: "strength",
+                            targetDurationMinutes: 60,
+                            exercises: [
+                                ProposedProgramExercise(name: "Back Squat", sets: 4, reps: "5", restSeconds: 180, notes: nil, tempo: nil, rpe: 8)
+                            ]
+                        )
+                    ]
+                )
+            ]
         )
-        mockAPIService.fetchGenerationStatusResult = .success(
-            ProgramGenerationStatus(jobId: "job-002", status: "failed", progress: 0, programId: nil, error: "AI overloaded")
-        )
+    }
 
-        await viewModel.generateProgram()
-
-        XCTAssertNil(viewModel.generatedProgramId)
-        XCTAssertFalse(viewModel.isGenerating)
-        XCTAssertEqual(viewModel.errorMessage, "AI overloaded")
+    private static func localDate(year: Int, month: Int, day: Int) -> Date? {
+        Calendar.current.date(from: DateComponents(year: year, month: month, day: day))
     }
 }
