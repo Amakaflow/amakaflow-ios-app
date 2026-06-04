@@ -104,6 +104,8 @@ class RPEFeedbackViewModel: ObservableObject {
     // MARK: - State
 
     @Published var selectedOption: RPEOption?
+    @Published var selectedRPE: Int?
+    @Published var injuryNotes: String = ""
     @Published var selectedMuscles: Set<MuscleGroup> = []
     @Published var isSubmitting = false
     @Published var isSubmitted = false
@@ -131,6 +133,7 @@ class RPEFeedbackViewModel: ObservableObject {
 
     func selectOption(_ option: RPEOption) {
         selectedOption = option
+        selectedRPE = option.rpeValue
     }
 
     func toggleMuscle(_ muscle: MuscleGroup) {
@@ -142,16 +145,18 @@ class RPEFeedbackViewModel: ObservableObject {
     }
 
     func submit() async {
-        guard let option = selectedOption else { return }
+        let rpe = selectedRPE ?? selectedOption?.rpeValue
+        guard let rpe else { return }
 
         isSubmitting = true
         errorMessage = nil
 
+        let trimmedNotes = injuryNotes.trimmingCharacters(in: .whitespacesAndNewlines)
         let request = RPEFeedbackRequest(
             workoutId: workoutId ?? "unknown",
-            rpe: option.rpeValue,
+            rpe: rpe,
             muscleSoreness: selectedMuscles.isEmpty ? nil : selectedMuscles.map { $0.rawValue },
-            notes: nil
+            notes: trimmedNotes.isEmpty ? nil : trimmedNotes
         )
 
         do {

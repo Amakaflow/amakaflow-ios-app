@@ -18,6 +18,7 @@ struct WorkoutPlayerView: View {
     @State private var deviceMode: DevicePreference = .phoneOnly
     @State private var shouldDismissImmediately = false  // Track if workout was discarded or saved for later
     @State private var showRPEFeedback = false  // AMA-1266: Show RPE prompt after completion
+    @State private var showSwapSheet = false
 
     var body: some View {
         ZStack {
@@ -153,6 +154,14 @@ struct WorkoutPlayerView: View {
         .sheet(isPresented: $showStepList) {
             stepListSheet
         }
+        .sheet(isPresented: $showSwapSheet) {
+            WorkoutSwapSheet { swappedWorkout in
+                if engine.phase == .running {
+                    engine.pause()
+                }
+                engine.start(workout: swappedWorkout)
+            }
+        }
         .onChange(of: engine.phase) { oldPhase, newPhase in
             if newPhase == .idle {
                 watchManager.clearHealthMetrics()
@@ -221,6 +230,25 @@ struct WorkoutPlayerView: View {
             }
 
             Spacer()
+
+            // SWAP — design refresh player header (screens-main.jsx)
+            if engine.phase == .running || engine.phase == .paused || engine.phase == .resting {
+                Button {
+                    if engine.phase == .running {
+                        engine.pause()
+                    }
+                    showSwapSheet = true
+                } label: {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(Theme.Colors.textSecondary)
+                        .frame(width: 32, height: 32)
+                        .background(Theme.Colors.surfaceElevated)
+                        .clipShape(Circle())
+                }
+                .accessibilityLabel("Swap workout")
+                .accessibilityIdentifier("af_player_swap")
+            }
 
             // Step list button
             Button {

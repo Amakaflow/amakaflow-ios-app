@@ -2,8 +2,7 @@
 //  RPEFeedbackView.swift
 //  AmakaFlow
 //
-//  Post-workout RPE feedback prompt (AMA-1266)
-//  Designed for <10 second interaction — tap emoji, optionally check muscles, submit
+//  Post-workout RPE feedback (AMA-1266, design refresh completion screen).
 //
 
 import SwiftUI
@@ -24,113 +23,80 @@ struct RPEFeedbackView: View {
         .accessibilityIdentifier("rpe_feedback_screen")
     }
 
-    // MARK: - Feedback Form
-
     private var feedbackForm: some View {
-        VStack(spacing: Theme.Spacing.lg) {
-            Spacer(minLength: Theme.Spacing.xl)
-
-            // Title
-            Text("How was that?")
-                .font(Theme.Typography.title2)
-                .foregroundColor(Theme.Colors.textPrimary)
-
-            Text("Rate your effort")
-                .font(Theme.Typography.body)
-                .foregroundColor(Theme.Colors.textSecondary)
-
-            // RPE emoji buttons
-            HStack(spacing: Theme.Spacing.md) {
-                ForEach(RPEOption.allCases) { option in
-                    RPEOptionButton(
-                        option: option,
-                        isSelected: viewModel.selectedOption == option,
-                        onTap: { viewModel.selectOption(option) }
-                    )
-                }
-            }
-            .padding(.horizontal, Theme.Spacing.md)
-
-            // Muscle soreness (shown after RPE selection)
-            if viewModel.selectedOption != nil {
+        ScrollView {
+            VStack(spacing: Theme.Spacing.lg) {
                 VStack(spacing: Theme.Spacing.sm) {
-                    Text("Any soreness?")
-                        .font(Theme.Typography.captionBold)
+                    Text("How hard did it feel?")
+                        .font(Theme.Typography.title2)
+                        .foregroundColor(Theme.Colors.textPrimary)
+
+                    Text("Rate perceived exertion from 1 (easy) to 10 (max effort).")
+                        .font(Theme.Typography.body)
                         .foregroundColor(Theme.Colors.textSecondary)
-
-                    muscleGrid
+                        .multilineTextAlignment(.center)
                 }
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
-                .animation(.easeOut(duration: 0.2), value: viewModel.selectedOption)
-            }
+                .padding(.top, Theme.Spacing.xl)
 
-            Spacer()
+                AFLabel(text: "RPE (1–10)")
+                AFRPEGrid(selection: $viewModel.selectedRPE)
+                    .padding(.horizontal, Theme.Spacing.md)
+                    .accessibilityIdentifier("rpe_grid")
 
-            // Action buttons
-            VStack(spacing: Theme.Spacing.sm) {
-                if viewModel.selectedOption != nil {
-                    Button(action: {
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    AFLabel(text: "Injury or soreness (optional)")
+                    TextField("e.g. tight left calf, sore quads", text: $viewModel.injuryNotes, axis: .vertical)
+                        .lineLimit(2...4)
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                        .padding(Theme.Spacing.md)
+                        .background(Theme.Colors.inputBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous)
+                                .stroke(Theme.Colors.borderLight, lineWidth: 1)
+                        )
+                        .accessibilityIdentifier("rpe_injury_notes")
+                }
+                .padding(.horizontal, Theme.Spacing.lg)
+
+                VStack(spacing: Theme.Spacing.sm) {
+                    Button {
                         Task { await viewModel.submit() }
-                    }) {
+                    } label: {
                         Group {
                             if viewModel.isSubmitting {
                                 ProgressView()
-                                    .tint(.white)
+                                    .tint(Theme.Colors.primaryForeground)
                             } else {
-                                Text("Submit")
+                                Text("Save workout")
                                     .font(Theme.Typography.bodyBold)
                             }
                         }
-                        .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, Theme.Spacing.md)
-                        .background(Theme.Colors.accentBlue)
-                        .cornerRadius(Theme.CornerRadius.md)
                     }
-                    .disabled(viewModel.isSubmitting)
+                    .buttonStyle(AFPrimaryButtonStyle(size: .lg))
+                    .disabled(viewModel.selectedRPE == nil || viewModel.isSubmitting)
                     .accessibilityIdentifier("rpe_submit_button")
+
+                    Button(action: viewModel.skip) {
+                        Text("Skip")
+                            .font(Theme.Typography.body)
+                            .foregroundColor(Theme.Colors.textSecondary)
+                    }
+                    .accessibilityIdentifier("rpe_skip_button")
                 }
-
-                Button(action: viewModel.skip) {
-                    Text("Skip")
-                        .font(Theme.Typography.body)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                }
-                .accessibilityIdentifier("rpe_skip_button")
-            }
-            .padding(.horizontal, Theme.Spacing.lg)
-            .padding(.bottom, Theme.Spacing.xl)
-        }
-    }
-
-    // MARK: - Muscle Grid
-
-    private var muscleGrid: some View {
-        let columns = [
-            GridItem(.flexible(), spacing: Theme.Spacing.xs),
-            GridItem(.flexible(), spacing: Theme.Spacing.xs),
-            GridItem(.flexible(), spacing: Theme.Spacing.xs)
-        ]
-
-        return LazyVGrid(columns: columns, spacing: Theme.Spacing.xs) {
-            ForEach(MuscleGroup.allCases) { muscle in
-                MuscleChip(
-                    muscle: muscle,
-                    isSelected: viewModel.selectedMuscles.contains(muscle),
-                    onTap: { viewModel.toggleMuscle(muscle) }
-                )
+                .padding(.horizontal, Theme.Spacing.lg)
+                .padding(.bottom, Theme.Spacing.xl)
             }
         }
-        .padding(.horizontal, Theme.Spacing.lg)
     }
-
-    // MARK: - Submitted View
 
     private var submittedView: some View {
         VStack(spacing: Theme.Spacing.md) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 48))
-                .foregroundColor(Theme.Colors.accentGreen)
+                .foregroundColor(Theme.Colors.readyHigh)
 
             Text("Thanks!")
                 .font(Theme.Typography.title2)
@@ -139,71 +105,13 @@ struct RPEFeedbackView: View {
             if viewModel.deloadRecommended {
                 Text("Consider a lighter session next time")
                     .font(Theme.Typography.body)
-                    .foregroundColor(Theme.Colors.accentOrange)
+                    .foregroundColor(Theme.Colors.readyModerate)
             }
         }
         .transition(.opacity)
         .animation(.easeIn(duration: 0.3), value: viewModel.isSubmitted)
     }
 }
-
-// MARK: - RPE Option Button
-
-private struct RPEOptionButton: View {
-    let option: RPEOption
-    let isSelected: Bool
-    let onTap: () -> Void
-
-    var body: some View {
-        Button(action: onTap) {
-            VStack(spacing: Theme.Spacing.xs) {
-                Text(option.emoji)
-                    .font(.system(size: 36))
-
-                Text(option.label)
-                    .font(Theme.Typography.caption)
-                    .foregroundColor(isSelected ? Theme.Colors.textPrimary : Theme.Colors.textSecondary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Theme.Spacing.md)
-            .background(isSelected ? Theme.Colors.accentBlue.opacity(0.2) : Theme.Colors.surface)
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
-                    .stroke(isSelected ? Theme.Colors.accentBlue : Theme.Colors.borderLight, lineWidth: isSelected ? 2 : 1)
-            )
-            .cornerRadius(Theme.CornerRadius.md)
-        }
-        .accessibilityIdentifier("rpe_option_\(option.label.lowercased())")
-    }
-}
-
-// MARK: - Muscle Chip
-
-private struct MuscleChip: View {
-    let muscle: MuscleGroup
-    let isSelected: Bool
-    let onTap: () -> Void
-
-    var body: some View {
-        Button(action: onTap) {
-            Text(muscle.displayName)
-                .font(Theme.Typography.caption)
-                .foregroundColor(isSelected ? .white : Theme.Colors.textSecondary)
-                .padding(.horizontal, Theme.Spacing.sm)
-                .padding(.vertical, Theme.Spacing.xs)
-                .frame(maxWidth: .infinity)
-                .background(isSelected ? Theme.Colors.accentBlue : Theme.Colors.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
-                        .stroke(isSelected ? Theme.Colors.accentBlue : Theme.Colors.borderLight, lineWidth: 1)
-                )
-                .cornerRadius(Theme.CornerRadius.sm)
-        }
-        .accessibilityIdentifier("muscle_\(muscle.rawValue)")
-    }
-}
-
-// MARK: - Preview
 
 #Preview {
     RPEFeedbackView(

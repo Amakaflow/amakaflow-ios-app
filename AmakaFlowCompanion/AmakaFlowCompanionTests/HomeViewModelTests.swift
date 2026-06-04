@@ -76,6 +76,57 @@ final class HomeViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.state, .content)
     }
 
+    func testLoadReadinessSetsScoreFromTodayDayState() async {
+        let mockAPI = MockAPIService()
+        mockAPI.fetchDayStatesResult = .success([
+            DayState(
+                date: "2026-05-28",
+                readiness: .green,
+                plannedWorkouts: [],
+                completedWorkouts: [],
+                fatigueScore: nil,
+                notes: nil,
+                readinessScore: 82
+            )
+        ])
+        viewModel = HomeViewModel(calendar: calendar, now: { self.fixedNow }, apiService: mockAPI)
+
+        await viewModel.loadReadiness()
+
+        XCTAssertTrue(mockAPI.fetchDayStatesCalled)
+        XCTAssertEqual(viewModel.readinessScore, 82)
+    }
+
+    func testLoadReadinessLeavesNilWhenDayStateHasNoScore() async {
+        let mockAPI = MockAPIService()
+        mockAPI.fetchDayStatesResult = .success([
+            DayState(
+                date: "2026-05-28",
+                readiness: .yellow,
+                plannedWorkouts: [],
+                completedWorkouts: [],
+                fatigueScore: nil,
+                notes: nil,
+                readinessScore: nil
+            )
+        ])
+        viewModel = HomeViewModel(calendar: calendar, now: { self.fixedNow }, apiService: mockAPI)
+
+        await viewModel.loadReadiness()
+
+        XCTAssertNil(viewModel.readinessScore)
+    }
+
+    func testLoadReadinessLeavesNilOnAPIFailure() async {
+        let mockAPI = MockAPIService()
+        mockAPI.fetchDayStatesResult = .failure(APIError.serverError(503))
+        viewModel = HomeViewModel(calendar: calendar, now: { self.fixedNow }, apiService: mockAPI)
+
+        await viewModel.loadReadiness()
+
+        XCTAssertNil(viewModel.readinessScore)
+    }
+
     func testContentStateWinsWhileBackgroundLoadIsInFlight() {
         viewModel.update(
             isLoading: true,

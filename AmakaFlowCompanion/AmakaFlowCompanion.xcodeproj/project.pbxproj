@@ -310,6 +310,7 @@
 		F84E227E2ED0D5BF00459747 /* IntervalRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E227B2ED0D5BF00459747 /* IntervalRow.swift */; };
 		F84E227F2ED0D5BF00459747 /* ScheduleCalendarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E227C2ED0D5BF00459747 /* ScheduleCalendarSheet.swift */; };
 		F84E22802ED0D5BF00459747 /* WorkoutCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E227D2ED0D5BF00459747 /* WorkoutCard.swift */; };
+		AMA2104SWAP00000002 /* WorkoutSwapSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2104SWAP00000001 /* WorkoutSwapSheet.swift */; };
 		F84E22862ED0D5D100459747 /* WorkoutKitConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22852ED0D5D100459747 /* WorkoutKitConverter.swift */; };
 		F84E22872ED0D5D100459747 /* CalendarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22832ED0D5D100459747 /* CalendarManager.swift */; };
 		F84E22882ED0D5D100459747 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22842ED0D5D100459747 /* WatchConnectivityManager.swift */; };
@@ -757,6 +758,7 @@
 		F84E227B2ED0D5BF00459747 /* IntervalRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = IntervalRow.swift; path = ../AmakaFlow/Views/Components/IntervalRow.swift; sourceTree = SOURCE_ROOT; };
 		F84E227C2ED0D5BF00459747 /* ScheduleCalendarSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ScheduleCalendarSheet.swift; path = ../AmakaFlow/Views/Components/ScheduleCalendarSheet.swift; sourceTree = SOURCE_ROOT; };
 		F84E227D2ED0D5BF00459747 /* WorkoutCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCard.swift; path = ../AmakaFlow/Views/Components/WorkoutCard.swift; sourceTree = SOURCE_ROOT; };
+		AMA2104SWAP00000001 /* WorkoutSwapSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSwapSheet.swift; path = ../AmakaFlow/Views/Components/WorkoutSwapSheet.swift; sourceTree = SOURCE_ROOT; };
 		F84E22812ED0D5D100459747 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIService.swift; path = ../AmakaFlow/Services/APIService.swift; sourceTree = SOURCE_ROOT; };
 		F84E22822ED0D5D100459747 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AuthService.swift; path = ../AmakaFlow/Services/AuthService.swift; sourceTree = SOURCE_ROOT; };
 		F84E22832ED0D5D100459747 /* CalendarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarManager.swift; path = ../AmakaFlow/Services/CalendarManager.swift; sourceTree = SOURCE_ROOT; };
@@ -1021,6 +1023,7 @@
 				F84E227B2ED0D5BF00459747 /* IntervalRow.swift */,
 				F84E227C2ED0D5BF00459747 /* ScheduleCalendarSheet.swift */,
 				F84E227D2ED0D5BF00459747 /* WorkoutCard.swift */,
+				AMA2104SWAP00000001 /* WorkoutSwapSheet.swift */,
 				AMA14090000000001000002 /* ExerciseRowView.swift */,
 				AMA14090000000002000002 /* BlockSectionView.swift */,
 				AMA14100003FILEREF /* ToolCallCard.swift */,
@@ -1822,6 +1825,7 @@
 				F84E227E2ED0D5BF00459747 /* IntervalRow.swift in Sources */,
 				F84E227F2ED0D5BF00459747 /* ScheduleCalendarSheet.swift in Sources */,
 				F84E22802ED0D5BF00459747 /* WorkoutCard.swift in Sources */,
+				AMA2104SWAP00000002 /* WorkoutSwapSheet.swift in Sources */,
 				AMA14090000000001000001 /* ExerciseRowView.swift in Sources */,
 				AMA14090000000002000001 /* BlockSectionView.swift in Sources */,
 				AMA14100003BLDFILE /* ToolCallCard.swift in Sources */,

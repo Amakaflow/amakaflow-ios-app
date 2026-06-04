@@ -208,4 +208,20 @@ final class RPEFeedbackViewModelTests: XCTestCase {
         XCTAssertFalse(response.success)
         XCTAssertEqual(response.message, "User not found")
     }
+
+    func testRPEFeedbackRequestWithGridValueAndInjuryNotes() throws {
+        let request = RPEFeedbackRequest(
+            workoutId: "workout-1",
+            rpe: 7,
+            muscleSoreness: nil,
+            notes: "Tight left calf"
+        )
+
+        let data = try JSONEncoder().encode(request)
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+
+        XCTAssertEqual(json?["rpe"] as? Int, 7)
+        XCTAssertEqual(json?["notes"] as? String, "Tight left calf")
+        XCTAssertEqual(json?["workout_id"] as? String, "workout-1")
+    }
 }

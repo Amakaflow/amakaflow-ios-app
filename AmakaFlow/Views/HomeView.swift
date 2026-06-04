@@ -245,6 +245,7 @@ struct HomeView: View {
             }
             .onAppear {
                 refreshHomeScreenState()
+                Task { await homeViewModel.loadReadiness() }
                 // Load saved workout progress on background to avoid blocking main thread (AMA-1075)
                 Task {
                     let progress = await Task.detached(priority: .utility) {
@@ -874,28 +875,26 @@ struct HomeView: View {
         .padding(.bottom, Theme.Spacing.xs)
     }
 
-    private var readinessScore: Int? { nil }
-
     private var readinessCard: some View {
         Button {
             showingReadinessDetail = true
         } label: {
             AFCard(padding: 16) {
                 HStack(spacing: Theme.Spacing.md) {
-                    AFReadinessRing(value: readinessScore ?? 0)
+                    AFReadinessRing(value: homeViewModel.readinessScore ?? 0)
 
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 8) {
                             Circle()
-                                .fill(readinessScore.map { Theme.Ready.color(for: $0) } ?? Theme.Colors.borderMedium)
+                                .fill(homeViewModel.readinessScore.map { Theme.Ready.color(for: $0) } ?? Theme.Colors.borderMedium)
                                 .frame(width: 8, height: 8)
-                                .shadow(color: readinessScore.map { Theme.Ready.color(for: $0).opacity(0.4) } ?? Color.clear, radius: 4)
-                            Text(readinessScore.map { Theme.Ready.label(for: $0) } ?? "No readiness data")
+                                .shadow(color: homeViewModel.readinessScore.map { Theme.Ready.color(for: $0).opacity(0.4) } ?? Color.clear, radius: 4)
+                            Text(homeViewModel.readinessScore.map { Theme.Ready.label(for: $0) } ?? "No readiness data")
                                 .font(Theme.Typography.title3)
                                 .foregroundColor(Theme.Colors.textPrimary)
                         }
 
-                        Text(readinessScore == nil ? "Connect a wearable or complete workouts to unlock readiness guidance." : "Readiness guidance is based on your latest wearable and training history.")
+                        Text(homeViewModel.readinessScore == nil ? "Connect a wearable or complete workouts to unlock readiness guidance." : "Readiness guidance is based on your latest wearable and training history.")
                             .font(Theme.Typography.caption)
                             .foregroundColor(Theme.Colors.textSecondary)
                             .lineSpacing(2)
