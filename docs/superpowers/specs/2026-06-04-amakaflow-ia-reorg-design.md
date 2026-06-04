@@ -26,10 +26,10 @@ Validated against real feature-dense apps (Mobbin): **IKEA Home smart** (Setting
 - **Home setup-nudges (Option C):** deferred — not in this pass; can layer later.
 
 ## Design system (match, don't reinvent)
-Recreate using the existing hi-fi tokens from the Claude Design bundle (`amakaflow-mvp-design-refresh`): **Geist / Geist Mono**, `--radius` 10/6/14, oklch dark/light surfaces, readiness scale (lime/amber/coral), pill `.af-btn`, `.af-label` mono eyebrows. The bundle already contains a Devices/Pairing screen + settings flow in this language — the new Profile/Connections screens extend it.
+Recreate using the existing hi-fi tokens from the Claude Design bundle (`amakaflow-mvp-design-refresh`, canonical copy in **`amakaflow-docs/design/`**): **Geist / Geist Mono**, `--radius` 10/6/14, oklch dark/light surfaces, readiness scale (lime/amber/coral), pill `.af-btn`, `.af-label` mono eyebrows. The bundle already contains a Devices/Pairing screen + settings flow in this language — the new Profile/Connections screens extend it.
 
 ## "Keep a copy we validate against" — design artifact
-Produce an **updated hi-fi design artifact** for the new screens (Profile grouped + Connections hub + per-connection detail), matching `tokens.css`/`ui.jsx`, added to the design package (`amakaflow-mvp-design-refresh/project/hifi/screens-connections.jsx` + wired into `AmakaFlow Hi-fi.html`) and committed to the repo (e.g. `amakaflow-docs/design/` or `docs/design/`). This is the visual source-of-truth the implemented Settings is validated against. (We can't push back to claude.ai/design; the in-repo hi-fi is the canonical copy.)
+Produce an **updated hi-fi design artifact** for the new screens (Profile grouped + Connections hub + per-connection detail), matching `tokens.css`/`ui.jsx`, added to the design package (`amakaflow-mvp-design-refresh/project/hifi/screens-connections.jsx` + wired into `AmakaFlow Hi-fi.html`) and committed to **`amakaflow-docs/design/amakaflow-mvp-design-refresh/`** (the cross-service doc home — relocated there out of the iOS repo). This is the visual source-of-truth the implemented Settings is validated against. (We can't push back to claude.ai/design; the in-repo hi-fi is the canonical copy.)
 
 ## Implementation outline (iOS) — for the plan/prompt after approval
 - Restructure `SettingsView` from section-cards-of-everything into the 5 named groups above; add a **`ConnectionsHubView`** (status rows) as the top entry.
