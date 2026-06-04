@@ -123,6 +123,8 @@ struct SettingsView: View {
     @State private var showingVoiceTranscriptionSettings = false
     @StateObject private var nutritionViewModel = NutritionViewModel()
     @StateObject private var calendarSyncViewModel = CalendarSyncViewModel()
+    @ObservedObject private var watchConnectivity = WatchConnectivityManager.shared
+    @State private var syncQueueSummary = SyncQueueSummary.healthy
     @State private var showingNutritionSettings = false
     @State private var showingErrorLogSheet = false
     @State private var showDebugSettings = false
@@ -137,21 +139,18 @@ struct SettingsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: Theme.Spacing.xl) {
-                AFTopBar(title: "Settings") {
+                AFTopBar(title: "Profile") {
                     EmptyView()
                 } right: {
                     EmptyView()
                 }
 
                 settingsHero
-                accountSection
-                preferencesHubSection
-                deviceSection
-                integrationsSection
-                #if DEBUG
-                debugDiagnosticsSection
-                #endif
-                legalSection
+                connectionsSection
+                profileTrainingSection
+                coachingSection
+                nutritionActivitySection
+                appSection
             }
             .padding(.horizontal, Theme.Spacing.lg)
             .padding(.vertical, Theme.Spacing.lg)
@@ -176,6 +175,14 @@ struct SettingsView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(privacyErrorMessage ?? "Something went wrong. Please try again.")
+            }
+            .confirmationDialog("Delete account?", isPresented: $showingDeleteAccountAlert, titleVisibility: .visible) {
+                Button("Delete permanently", role: .destructive) {
+                    Task { await deleteAccount() }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This permanently deletes all your workouts, programs, profile, and connected data. This cannot be undone.")
             }
             .sheet(isPresented: $showingPrivacyShareSheet) {
                 if let privacyExportFileURL {
@@ -238,7 +245,13 @@ struct SettingsView: View {
                     .accessibilityIdentifier("settings_screen")
             }
             .navigationDestination(isPresented: $navigateToSyncDashboard) {
-                SyncDashboardView()
+                ConnectionDetailView(item: connectionsItem(.sync)) {
+                    SyncDashboardView()
+                }
+            }
+            .task(id: pairingService.userProfile?.id) {
+                await refreshTelegramConnectionState()
+                await refreshConnectionSummaries()
             }
     }
 
@@ -248,11 +261,11 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
             HStack(alignment: .top, spacing: Theme.Spacing.md) {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                    Text("Control center")
+                    Text("Profile")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundColor(Theme.Colors.textPrimary)
 
-                    Text("Profile, workout delivery, coach preferences, and app diagnostics in one place.")
+                    Text("Profile, training, coaching, and app controls grouped for quick scanning.")
                         .font(Theme.Typography.body)
                         .foregroundColor(Theme.Colors.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -307,6 +320,179 @@ struct SettingsView: View {
         .accessibilityIdentifier("settings_refresh_header")
     }
 
+    // MARK: - Grouped Profile Sections
+
+    private var connectionsStatusSnapshot: ConnectionsHubStatusSnapshot {
+        ConnectionsHubStatusSnapshot(
+            appleWatchReachable: watchConnectivity.isWatchReachable,
+            appleWatchInstalled: watchConnectivity.isWatchAppInstalled,
+            devicePreference: deviceMode,
+            garminConnected: garminConnectivity.isConnected,
+            garminDeviceName: garminConnectivity.connectedDeviceName,
+            telegramLinked: isTelegramLinked,
+            telegramIdentifier: connectedTelegramId.map(String.init),
+            syncSummary: syncQueueSummary,
+            connectedCalendars: calendarSyncViewModel.calendars
+        )
+    }
+
+    private func connectionsItem(_ kind: ConnectionKind) -> ConnectionItem {
+        ConnectionsHubViewModel
+            .makeItems(from: connectionsStatusSnapshot)
+            .first { $0.kind == kind } ?? ConnectionItem(kind: kind, status: .off, meta: [])
+    }
+
+    private var connectionsHub: ConnectionsHubView {
+        ConnectionsHubView(
+            viewModel: ConnectionsHubViewModel(statusProvider: connectionsStatusSnapshot),
+            statusProvider: { connectionsStatusSnapshot },
+            telegramInitialID: connectedTelegramId,
+            telegramInitiallyConnected: isTelegramLinked
+        ) { telegramId in
+            connectedTelegramId = telegramId
+            TelegramLinkCache.markLinked(
+                telegramId: telegramId,
+                userID: pairingService.userProfile?.id
+            )
+        }
+    }
+
+    private var connectionsSection: some View {
+        SettingsSectionCard(
+            title: settingsSectionTitle("connections", fallback: "Connections"),
+            subtitle: "Watches, messaging, delivery, and calendar in one status hub."
+        ) {
+            NavigationLink(destination: connectionsHub) {
+                HStack(spacing: Theme.Spacing.md) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                            .fill(Theme.Colors.readyHigh.opacity(0.14))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "link")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(Theme.Colors.readyHigh)
+                    }
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Connections")
+                            .font(Theme.Typography.bodyBold)
+                            .foregroundColor(Theme.Colors.textPrimary)
+                        Text(ConnectionsHubViewModel(statusProvider: connectionsStatusSnapshot).summaryText)
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(Theme.Colors.textSecondary)
+                    }
+
+                    Spacer(minLength: Theme.Spacing.md)
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings_row_connections")
+        }
+    }
+
+    private var profileTrainingSection: some View {
+        groupedSettingsSection(
+            id: "profile_training",
+            fallbackTitle: "Profile & Training",
+            subtitle: "Goals, training defaults, and equipment."
+        )
+    }
+
+    private var coachingSection: some View {
+        SettingsSectionCard(
+            title: settingsSectionTitle("coaching", fallback: "Coaching"),
+            subtitle: "Readiness signals and how your coach reaches you."
+        ) {
+            VStack(spacing: 0) {
+                let rows = settingsRows(in: "coaching", includeDebug: false)
+                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                    settingsPreferenceRow(row)
+                    if index < rows.count - 1 {
+                        SettingsRowDivider()
+                    }
+                }
+
+                audioCueControls
+            }
+        }
+    }
+
+    private var nutritionActivitySection: some View {
+        groupedSettingsSection(
+            id: "nutrition_activity",
+            fallbackTitle: "Nutrition & Activity",
+            subtitle: "Fueling, social activity, and comparison tools."
+        )
+    }
+
+    private var appSection: some View {
+        SettingsSectionCard(
+            title: settingsSectionTitle("app", fallback: "App"),
+            subtitle: "Diagnostics, privacy, export, and account actions."
+        ) {
+            VStack(spacing: 0) {
+                #if DEBUG
+                let debugRows = settingsRows(in: "debug", includeDebug: true)
+                ForEach(Array(debugRows.enumerated()), id: \.element.id) { index, row in
+                    settingsDebugRow(row)
+                    SettingsRowDivider()
+                }
+                #endif
+
+                let rows = settingsRows(in: "app", includeDebug: false)
+                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                    settingsPreferenceRow(row)
+                    if index < rows.count - 1 {
+                        SettingsRowDivider()
+                    }
+                }
+            }
+        }
+    }
+
+    private func groupedSettingsSection(
+        id: String,
+        fallbackTitle: String,
+        subtitle: String
+    ) -> some View {
+        SettingsSectionCard(
+            title: settingsSectionTitle(id, fallback: fallbackTitle),
+            subtitle: subtitle
+        ) {
+            VStack(spacing: 0) {
+                let rows = settingsRows(in: id, includeDebug: false)
+                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                    settingsPreferenceRow(row)
+                    if index < rows.count - 1 {
+                        SettingsRowDivider()
+                    }
+                }
+            }
+        }
+    }
+
+    private func refreshConnectionSummaries() async {
+        await calendarSyncViewModel.fetchCalendars()
+        do {
+            syncQueueSummary = try SyncQueueRepository().summary()
+        } catch {
+            DebugLogService.shared.log("Connections hub sync summary failed", details: error.localizedDescription)
+            syncQueueSummary = SyncQueueSummary(
+                pendingCount: 0,
+                inFlightCount: 0,
+                failedCount: 1,
+                poisonCount: 0,
+                lastAttemptedAt: nil,
+                latestError: error.localizedDescription
+            )
+        }
+    }
+
     // MARK: - Preferences Hub
 
     private var preferencesHubSection: some View {
@@ -331,6 +517,42 @@ struct SettingsView: View {
     @ViewBuilder
     private func settingsPreferenceRow(_ row: SettingsRefreshRowModel) -> some View {
         switch row.destination {
+        case .editProfile:
+            NavigationLink(destination: EditProfileView(initialNameFallback: pairingService.userProfile?.name)) {
+                SettingsNavigationRow(
+                    icon: "person.crop.circle.fill",
+                    tint: Theme.Colors.accentBlue,
+                    title: row.title,
+                    subtitle: row.subtitle
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings_row_edit_profile")
+
+        case .connections:
+            NavigationLink(destination: connectionsHub) {
+                SettingsNavigationRow(
+                    icon: "link",
+                    tint: Theme.Colors.readyHigh,
+                    title: row.title,
+                    subtitle: row.subtitle
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings_row_connections")
+
+        case .readinessSources:
+            NavigationLink(destination: SourcesView()) {
+                SettingsNavigationRow(
+                    icon: "heart.text.square.fill",
+                    tint: Theme.Colors.readyHigh,
+                    title: row.title,
+                    subtitle: row.subtitle
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings_row_readiness_sources")
+
         case .notifications:
             NavigationLink(destination: NotificationPreferencesView()) {
                 SettingsNavigationRow(
@@ -448,6 +670,52 @@ struct SettingsView: View {
                 )
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("settings_row_shoe_comparison")
+
+        case .accountPrivacyData:
+            Menu {
+                Button {
+                    Task { await exportUserData() }
+                } label: {
+                    Label("Export my data", systemImage: "square.and.arrow.up")
+                }
+
+                Link(destination: URL(string: "https://app.amakaflow.com/privacy")!) {
+                    Label("Privacy notice", systemImage: "doc.text")
+                }
+
+                Button(role: .destructive) {
+                    showingSignOutAlert = true
+                } label: {
+                    Label("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
+                }
+
+                Button(role: .destructive) {
+                    showingDeleteAccountAlert = true
+                } label: {
+                    Label("Delete account", systemImage: "trash")
+                }
+            } label: {
+                SettingsNavigationRow(
+                    icon: "person.crop.circle.badge.checkmark",
+                    tint: Theme.Colors.accentBlue,
+                    title: row.title,
+                    subtitle: row.subtitle
+                )
+            }
+            .accessibilityIdentifier("settings_row_account_privacy")
+
+        case .about:
+            Button { } label: {
+                SettingsNavigationRow(
+                    icon: "info.circle.fill",
+                    tint: Theme.Colors.accentBlue,
+                    title: row.title,
+                    subtitle: row.subtitle
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings_row_about")
 
         default:
             EmptyView()
@@ -2381,10 +2649,12 @@ struct SettingsView: View {
 
 struct SettingsRefreshRowModel: Equatable, Identifiable {
     enum Destination: String {
+        case connections
         case editProfile
         case notifications
         case fatigue
         case voice
+        case readinessSources
         case social
         case nutrition
         case trainingPreferences
@@ -2392,6 +2662,7 @@ struct SettingsRefreshRowModel: Equatable, Identifiable {
         case activityFeed
         case syncDashboard
         case shoeComparison
+        case accountPrivacyData
         case debugSettings
         case errorLog
         case workoutDebug
@@ -2412,32 +2683,46 @@ struct SettingsRefreshSectionModel: Equatable, Identifiable {
     static func v1Sections(includeDebug: Bool) -> [SettingsRefreshSectionModel] {
         var sections = [
             SettingsRefreshSectionModel(
-                id: "account",
-                title: "Account",
+                id: "connections",
+                title: "Connections",
                 rows: [
-                    SettingsRefreshRowModel(id: "edit_profile", title: "Edit Profile", subtitle: "Name, units, and coaching profile", destination: .editProfile)
+                    SettingsRefreshRowModel(id: "connections_hub", title: "Connections", subtitle: "Watches, messaging, delivery, and calendar", destination: .connections)
                 ]
             ),
             SettingsRefreshSectionModel(
-                id: "preferences",
-                title: "Preferences",
+                id: "profile_training",
+                title: "Profile & Training",
                 rows: [
-                    SettingsRefreshRowModel(id: "notifications", title: "Notifications", subtitle: "Reminders, nudges, and coach alerts", destination: .notifications),
-                    SettingsRefreshRowModel(id: "voice", title: "Voice", subtitle: "Transcription provider, accent, and dictionary", destination: .voice),
+                    SettingsRefreshRowModel(id: "edit_profile", title: "Edit Profile", subtitle: "Goals, experience, and sessions per week", destination: .editProfile),
+                    SettingsRefreshRowModel(id: "training_preferences", title: "Training Preferences", subtitle: "Disciplines, auto-swap, and rest days", destination: .trainingPreferences),
+                    SettingsRefreshRowModel(id: "equipment", title: "Equipment", subtitle: "Dumbbells, pull-up bar, foam roller, and more", destination: .equipment)
+                ]
+            ),
+            SettingsRefreshSectionModel(
+                id: "coaching",
+                title: "Coaching",
+                rows: [
+                    SettingsRefreshRowModel(id: "readiness_sources", title: "Readiness Sources", subtitle: "HRV, sleep, resting HR, and source badges", destination: .readinessSources),
                     SettingsRefreshRowModel(id: "fatigue", title: "Fatigue", subtitle: "Readiness threshold and fatigue tracking", destination: .fatigue),
-                    SettingsRefreshRowModel(id: "nutrition", title: "Nutrition", subtitle: "Food logging, protein, and hydration settings", destination: .nutrition),
-                    SettingsRefreshRowModel(id: "social", title: "Social", subtitle: "Feed visibility and social defaults", destination: .social),
-                    SettingsRefreshRowModel(id: "training_preferences", title: "Training Preferences", subtitle: "Default workout planning choices", destination: .trainingPreferences),
-                    SettingsRefreshRowModel(id: "equipment", title: "Equipment", subtitle: "What you can train with", destination: .equipment),
+                    SettingsRefreshRowModel(id: "notifications", title: "Notifications", subtitle: "Reminders, nudges, and coach alerts", destination: .notifications),
+                    SettingsRefreshRowModel(id: "voice", title: "Voice Transcription", subtitle: "Provider, accent, and dictionary", destination: .voice)
+                ]
+            ),
+            SettingsRefreshSectionModel(
+                id: "nutrition_activity",
+                title: "Nutrition & Activity",
+                rows: [
+                    SettingsRefreshRowModel(id: "nutrition", title: "Nutrition", subtitle: "Targets and fueling reminders", destination: .nutrition),
                     SettingsRefreshRowModel(id: "activity_feed", title: "Activity Feed", subtitle: "Review recent training activity", destination: .activityFeed),
-                    SettingsRefreshRowModel(id: "sync_dashboard", title: "Sync Dashboard", subtitle: "Workout delivery and sync health", destination: .syncDashboard),
+                    SettingsRefreshRowModel(id: "social", title: "Activity / Social", subtitle: "Feed visibility, friends, and sharing", destination: .social),
                     SettingsRefreshRowModel(id: "shoe_comparison", title: "Shoe Comparison", subtitle: "Compare running shoes from your analytics", destination: .shoeComparison)
                 ]
             ),
             SettingsRefreshSectionModel(
-                id: "about",
-                title: "About",
+                id: "app",
+                title: "App",
                 rows: [
+                    SettingsRefreshRowModel(id: "account_privacy_data", title: "Account, privacy & data", subtitle: "Export, privacy notice, sign out, and account deletion", destination: .accountPrivacyData),
                     SettingsRefreshRowModel(id: "about", title: "About", subtitle: "Version and product information", destination: .about)
                 ]
             )
@@ -2449,7 +2734,7 @@ struct SettingsRefreshSectionModel: Equatable, Identifiable {
                     id: "debug",
                     title: "Debug",
                     rows: [
-                        SettingsRefreshRowModel(id: "debug_settings", title: "Debug Settings", subtitle: "Simulation and fixture controls", destination: .debugSettings),
+                        SettingsRefreshRowModel(id: "debug_settings", title: "Debug & Diagnostics", subtitle: "Simulation and fixture controls", destination: .debugSettings),
                         SettingsRefreshRowModel(id: "error_log", title: "Error Log", subtitle: "Captured app errors", destination: .errorLog),
                         SettingsRefreshRowModel(id: "workout_debug", title: "Workout Debug", subtitle: "Pending workouts not checked yet", destination: .workoutDebug)
                     ]
@@ -2464,7 +2749,7 @@ struct SettingsRefreshSectionModel: Equatable, Identifiable {
 
 // MARK: - Settings Refresh Components
 
-private struct SettingsSectionCard<Content: View>: View {
+struct SettingsSectionCard<Content: View>: View {
     let title: String
     let subtitle: String?
     @ViewBuilder let content: Content
@@ -2508,7 +2793,7 @@ private struct SettingsSectionCard<Content: View>: View {
     }
 }
 
-private struct SettingsNavigationRow: View {
+struct SettingsNavigationRow: View {
     let icon: String
     let tint: Color
     let title: String
@@ -2547,7 +2832,7 @@ private struct SettingsNavigationRow: View {
     }
 }
 
-private struct SettingsRowDivider: View {
+struct SettingsRowDivider: View {
     var body: some View {
         Rectangle()
             .fill(Theme.Colors.borderLight)

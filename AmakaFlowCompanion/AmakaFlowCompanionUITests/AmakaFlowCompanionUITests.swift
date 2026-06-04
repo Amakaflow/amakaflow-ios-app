@@ -118,6 +118,78 @@ final class NavigationE2ETests: BaseE2ETestCase {
     }
 }
 
+// MARK: - Profile IA Tests
+
+final class ProfileIAReorgE2ETests: BaseE2ETestCase {
+    func testProfileShowsGroupedSectionsAndNoLegacyConnectedAppsCard() throws {
+        try openProfile()
+
+        assertTextVisible("CONNECTIONS")
+        assertTextVisible("PROFILE & TRAINING")
+        assertTextVisible("COACHING")
+        assertTextVisible("NUTRITION & ACTIVITY")
+        assertTextVisible("APP")
+        XCTAssertFalse(app.staticTexts["Connected apps"].exists)
+
+        scrollToDebugIfNeeded()
+        XCTAssertTrue(app.buttons["settings_row_debug_settings"].exists || app.staticTexts["Debug & Diagnostics"].exists)
+    }
+
+    func testConnectionsHubAndKeyRowsAreReachableFromProfile() throws {
+        try openProfile()
+
+        let connections = app.buttons["settings_row_connections"]
+        XCTAssertTrue(connections.waitForExistence(timeout: 5))
+        connections.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["af_connections_hub"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["af_connection_row_telegram"].exists)
+        XCTAssertTrue(app.buttons["af_connection_row_applewatch"].exists || app.buttons["af_connection_row_garmin"].exists)
+        XCTAssertTrue(app.buttons["af_connection_row_sync"].exists)
+        XCTAssertTrue(app.buttons["af_connection_row_calendar"].exists)
+    }
+
+    func testTelegramDevicesAndSyncDetailsOpenFromHub() throws {
+        try openProfile()
+        app.buttons["settings_row_connections"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["af_connections_hub"].waitForExistence(timeout: 5))
+
+        assertHubDetailReachable(rowID: "af_connection_row_telegram", detailID: "af_connection_detail_telegram")
+        assertHubDetailReachable(rowID: "af_connection_row_applewatch", detailID: "af_connection_detail_applewatch")
+        assertHubDetailReachable(rowID: "af_connection_row_sync", detailID: "af_connection_detail_sync")
+    }
+
+    private func openProfile() throws {
+        XCTAssertTrue(TestAuthHelper.waitForMainContent(app, timeout: 15), "App should load main content")
+        let profileTab = TestAuthHelper.tab(app, "profile_tab", label: "Profile")
+        XCTAssertTrue(profileTab.waitForExistence(timeout: 5), "Profile tab should exist")
+        profileTab.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["settings_screen"].waitForExistence(timeout: 5))
+    }
+
+    private func assertHubDetailReachable(rowID: String, detailID: String) {
+        let row = app.buttons[rowID]
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "\(rowID) should be reachable from the hub")
+        row.tap()
+        XCTAssertTrue(app.descendants(matching: .any)[detailID].waitForExistence(timeout: 5), "\(detailID) should open")
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["af_connections_hub"].waitForExistence(timeout: 5))
+    }
+
+    private func assertTextVisible(_ text: String) {
+        let element = app.staticTexts[text]
+        if element.waitForExistence(timeout: 2) { return }
+        app.swipeUp()
+        XCTAssertTrue(element.waitForExistence(timeout: 2), "\(text) should render in grouped Profile")
+    }
+
+    private func scrollToDebugIfNeeded() {
+        guard !app.buttons["settings_row_debug_settings"].exists else { return }
+        app.swipeUp()
+        app.swipeUp()
+    }
+}
+
 // MARK: - Workout Flow Tests
 
 final class WorkoutFlowE2ETests: BaseE2ETestCase {
