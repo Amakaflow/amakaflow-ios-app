@@ -117,7 +117,7 @@ final class SettingsRefreshSectionModelTests: XCTestCase {
         XCTAssertEqual(sections.first?.rows.map(\.destination), [.connections])
         XCTAssertEqual(
             sections.first { $0.id == "profile_training" }?.rows.map(\.destination),
-            [.editProfile, .trainingPreferences, .equipment]
+            [.editProfile, .trainingPreferences, .equipment, .paywall]
         )
     }
 
@@ -129,6 +129,7 @@ final class SettingsRefreshSectionModelTests: XCTestCase {
 
         XCTAssertFalse(destinations.contains(.syncDashboard))
         XCTAssertTrue(destinations.contains(.connections))
+        XCTAssertTrue(destinations.contains(.paywall))
         XCTAssertTrue(destinations.contains(.readinessSources))
         XCTAssertTrue(destinations.contains(.accountPrivacyData))
     }
