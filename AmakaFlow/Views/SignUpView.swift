@@ -12,6 +12,7 @@ import SwiftUI
 struct SignUpView: View {
     @StateObject private var viewModel: SignUpViewModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var showingLanding = false
 
     @MainActor
     init(viewModel: SignUpViewModel? = nil) {
@@ -57,6 +58,9 @@ struct SignUpView: View {
         .sheet(isPresented: $viewModel.isEmailAuthPresented) {
             AuthView(mode: .signInOrUp, isDismissable: true)
                 .environment(Clerk.shared)
+        }
+        .fullScreenCover(isPresented: $showingLanding) {
+            LandingView()
         }
         .accessibilityIdentifier("signup_screen")
     }
@@ -115,6 +119,16 @@ struct SignUpView: View {
                 .foregroundColor(Theme.Colors.textTertiary)
                 .padding(.horizontal, 10)
                 .accessibilityIdentifier("signup_legal_text")
+
+            Button {
+                showingLanding = true
+            } label: {
+                Text("How AmakaFlow works")
+                    .font(Theme.Typography.captionBold)
+                    .foregroundColor(Theme.Colors.textSecondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("signup_landing_link")
         }
     }
 

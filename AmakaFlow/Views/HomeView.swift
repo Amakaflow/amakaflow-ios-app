@@ -969,7 +969,7 @@ struct HomeView: View {
         let summary = historyViewModel.weeklySummary
         return HStack(spacing: 0) {
             homeSummaryMetric(label: "STRESS", value: summary.totalCalories > 0 ? summary.formattedCalories : "—")
-            homeSummaryMetric(label: "DIST", value: "—")
+            homeSummaryMetric(label: "DIST", value: summary.totalDistanceMeters > 0 ? summary.formattedDistance : "—")
             homeSummaryMetric(label: "DUR", value: summary.workoutCount > 0 ? summary.formattedDuration : "—")
             homeSummaryMetric(label: "ELEV", value: "—")
         }

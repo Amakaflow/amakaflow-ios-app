@@ -18,6 +18,7 @@ struct WorkoutCompletion: Identifiable, Codable, Hashable {
     let avgHeartRate: Int?
     let maxHeartRate: Int?
     let activeCalories: Int?
+    let distanceMeters: Int?
     let source: CompletionSource
     let syncedToStrava: Bool?    // Optional - backend may not return this
     let workoutId: String?       // Link to original workout (AMA-237)
@@ -175,6 +176,7 @@ struct WeeklySummary {
     let workoutCount: Int
     let totalDurationSeconds: Int
     let totalCalories: Int
+    let totalDistanceMeters: Int
 
     var formattedDuration: String {
         let hours = totalDurationSeconds / 3600
@@ -193,10 +195,16 @@ struct WeeklySummary {
         return "\(totalCalories)"
     }
 
+    var formattedDistance: String {
+        let km = Double(totalDistanceMeters) / 1000.0
+        return String(format: "%.1f", km)
+    }
+
     init(completions: [WorkoutCompletion]) {
         self.workoutCount = completions.count
         self.totalDurationSeconds = completions.reduce(0) { $0 + $1.durationSeconds }
         self.totalCalories = completions.reduce(0) { $0 + ($1.activeCalories ?? 0) }
+        self.totalDistanceMeters = completions.reduce(0) { $0 + ($1.distanceMeters ?? 0) }
     }
 }
 
@@ -215,6 +223,7 @@ extension WorkoutCompletion {
                 avgHeartRate: 142,
                 maxHeartRate: 178,
                 activeCalories: 320,
+                distanceMeters: nil,
                 source: .appleWatch,
                 syncedToStrava: true,
                 workoutId: "workout-1",
@@ -230,6 +239,7 @@ extension WorkoutCompletion {
                 avgHeartRate: 118,
                 maxHeartRate: 145,
                 activeCalories: 245,
+                distanceMeters: nil,
                 source: .appleWatch,
                 syncedToStrava: false,
                 workoutId: "workout-2",
@@ -245,6 +255,7 @@ extension WorkoutCompletion {
                 avgHeartRate: 95,
                 maxHeartRate: 110,
                 activeCalories: 120,
+                distanceMeters: nil,
                 source: .appleWatch,
                 syncedToStrava: false,
                 workoutId: nil,
@@ -260,6 +271,7 @@ extension WorkoutCompletion {
                 avgHeartRate: 155,
                 maxHeartRate: 172,
                 activeCalories: 280,
+                distanceMeters: 5200,
                 source: .garmin,
                 syncedToStrava: true,
                 workoutId: "workout-4",
@@ -275,6 +287,7 @@ extension WorkoutCompletion {
                 avgHeartRate: 110,
                 maxHeartRate: 130,
                 activeCalories: 150,
+                distanceMeters: nil,
                 source: .phone,
                 syncedToStrava: false,
                 workoutId: nil,

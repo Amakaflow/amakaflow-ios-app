@@ -131,6 +131,7 @@ struct SettingsView: View {
     @State private var debugTapCount = 0
     @State private var debugTapResetTask: DispatchWorkItem?
     @State private var showingTelegramSetup = false
+    @State private var showingPaywall = false
     @State private var connectedTelegramId: Int?
     @EnvironmentObject private var garminConnectivity: GarminConnectManager
     @EnvironmentObject private var pairingService: PairingService
@@ -236,6 +237,9 @@ struct SettingsView: View {
                 }
             }
             #endif
+            .fullScreenCover(isPresented: $showingPaywall) {
+                PaywallView()
+            }
             .overlay(alignment: .top) {
                 // Invisible marker for Maestro E2E tests (container views
                 // don't expose accessibilityIdentifier on iOS 26)
@@ -637,6 +641,20 @@ struct SettingsView: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("settings_row_equipment")
+
+        case .paywall:
+            Button {
+                showingPaywall = true
+            } label: {
+                SettingsNavigationRow(
+                    icon: "sparkles",
+                    tint: Theme.Colors.readyHigh,
+                    title: row.title,
+                    subtitle: row.subtitle
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings_row_paywall")
 
         case .activityFeed:
             NavigationLink(destination: ActivityFeedView()) {
@@ -2647,6 +2665,7 @@ struct SettingsRefreshRowModel: Equatable, Identifiable {
         case nutrition
         case trainingPreferences
         case equipment
+        case paywall
         case activityFeed
         case syncDashboard
         case shoeComparison
@@ -2683,7 +2702,8 @@ struct SettingsRefreshSectionModel: Equatable, Identifiable {
                 rows: [
                     SettingsRefreshRowModel(id: "edit_profile", title: "Edit Profile", subtitle: "Goals, experience, and sessions per week", destination: .editProfile),
                     SettingsRefreshRowModel(id: "training_preferences", title: "Training Preferences", subtitle: "Disciplines, auto-swap, and rest days", destination: .trainingPreferences),
-                    SettingsRefreshRowModel(id: "equipment", title: "Equipment", subtitle: "Dumbbells, pull-up bar, foam roller, and more", destination: .equipment)
+                    SettingsRefreshRowModel(id: "equipment", title: "Equipment", subtitle: "Dumbbells, pull-up bar, foam roller, and more", destination: .equipment),
+                    SettingsRefreshRowModel(id: "upgrade_pro", title: "AmakaFlow Pro", subtitle: "Adaptive coaching, swaps, and readiness insights", destination: .paywall)
                 ]
             ),
             SettingsRefreshSectionModel(
