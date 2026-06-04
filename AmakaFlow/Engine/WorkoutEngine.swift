@@ -22,6 +22,9 @@ class WorkoutEngine: ObservableObject {
     /// Clock abstraction for timing - can be accelerated in simulation mode
     private var clock: WorkoutClock
 
+    /// When true, `configureForSimulation()` must not replace an injected test clock.
+    private let preservesInjectedClock: Bool
+
     /// Audio cue playback service
     private let audioService: AudioProviding
 
@@ -171,6 +174,7 @@ class WorkoutEngine: ObservableObject {
         pairingService: PairingServiceProviding? = nil,
         completionService: WorkoutCompletionServiceProviding = WorkoutCompletionService.shared
     ) {
+        self.preservesInjectedClock = clock != nil
         self.clock = clock ?? RealClock()
         self.audioService = audioService ?? AudioCueManager()
         self.progressStore = progressStore
@@ -186,6 +190,8 @@ class WorkoutEngine: ObservableObject {
     /// Configure for simulation mode based on current settings (AMA-271)
     /// Called automatically when starting a workout if simulation is enabled
     private func configureForSimulation() {
+        guard !preservesInjectedClock else { return }
+
         let settings = SimulationSettings.shared
         if settings.isEnabled {
             self.clock = settings.createClock()
@@ -250,6 +256,49 @@ class WorkoutEngine: ObservableObject {
         // Start Live Activity
         startLiveActivity()
 
+        beginBackgroundTask()
+    }
+
+    /// Replace the in-progress workout without recording the prior session as ended.
+    func swapActiveWorkout(with workout: Workout) {
+        guard isActive else {
+            start(workout: workout)
+            return
+        }
+
+        clock.invalidateTimer()
+        endBackgroundTask()
+        Task {
+            await LiveActivityManager.shared.endActivity()
+        }
+
+        configureForSimulation()
+        progressStore.clear()
+
+        self.workout = workout
+        self.flattenedSteps = flattenIntervals(workout.intervals)
+        self.currentStepIndex = 0
+        self.remainingSeconds = 0
+        self.elapsedSeconds = 0
+        self.restRemainingSeconds = 0
+        self.isManualRest = false
+        self.phase = .running
+        self.stateVersion += 1
+        self.workoutStartTime = Date()
+        clearSetTracking()
+        executionLogBuilder.reset()
+        self.cachedDevicePreference = devicePreference
+
+        SentryService.shared.trackWorkoutAction(
+            "Swapped workout",
+            workoutId: workout.id,
+            workoutName: workout.name
+        )
+
+        setupCurrentStep()
+        broadcastState()
+        audioService.announceWorkoutStart(workout.name)
+        startLiveActivity()
         beginBackgroundTask()
     }
 

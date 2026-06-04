@@ -103,8 +103,8 @@ struct RPEFeedbackResponse: Codable {
 class RPEFeedbackViewModel: ObservableObject {
     // MARK: - State
 
-    @Published var selectedOption: RPEOption?
-    @Published var selectedMuscles: Set<MuscleGroup> = []
+    @Published var selectedRPE: Int?
+    @Published var injuryNotes: String = ""
     @Published var isSubmitting = false
     @Published var isSubmitted = false
     @Published var deloadRecommended = false
@@ -129,29 +129,18 @@ class RPEFeedbackViewModel: ObservableObject {
 
     // MARK: - Actions
 
-    func selectOption(_ option: RPEOption) {
-        selectedOption = option
-    }
-
-    func toggleMuscle(_ muscle: MuscleGroup) {
-        if selectedMuscles.contains(muscle) {
-            selectedMuscles.remove(muscle)
-        } else {
-            selectedMuscles.insert(muscle)
-        }
-    }
-
     func submit() async {
-        guard let option = selectedOption else { return }
+        guard let rpe = selectedRPE else { return }
 
         isSubmitting = true
         errorMessage = nil
 
+        let trimmedNotes = injuryNotes.trimmingCharacters(in: .whitespacesAndNewlines)
         let request = RPEFeedbackRequest(
             workoutId: workoutId ?? "unknown",
-            rpe: option.rpeValue,
-            muscleSoreness: selectedMuscles.isEmpty ? nil : selectedMuscles.map { $0.rawValue },
-            notes: nil
+            rpe: rpe,
+            muscleSoreness: nil,
+            notes: trimmedNotes.isEmpty ? nil : trimmedNotes
         )
 
         do {

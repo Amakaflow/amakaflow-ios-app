@@ -104,6 +104,29 @@ final class WorkoutEngineTests: XCTestCase {
         XCTAssertEqual(engine.remainingSeconds, 0)
     }
 
+    func testSwapActiveWorkoutWhenIdleStartsWorkout() {
+        let workout = createTestWorkout()
+        engine.swapActiveWorkout(with: workout)
+        XCTAssertEqual(engine.phase, .running)
+        XCTAssertEqual(engine.workout?.id, workout.id)
+    }
+
+    func testSwapActiveWorkoutReplacesSessionWithoutEnding() {
+        let first = createTestWorkout()
+        let second = TestFixtures.workout(id: "second", name: "Second")
+
+        engine.start(workout: first)
+        XCTAssertTrue(engine.isActive)
+        XCTAssertNotEqual(engine.workout?.id, "second")
+
+        engine.swapActiveWorkout(with: second)
+
+        XCTAssertEqual(engine.phase, .running)
+        XCTAssertEqual(engine.workout?.id, "second")
+        XCTAssertTrue(engine.isActive, "Swap should keep the session active without calling end()")
+        XCTAssertEqual(engine.elapsedSeconds, 0)
+    }
+
     // MARK: - Pause/Resume Tests
 
     func testPauseFromRunning() {
@@ -508,6 +531,20 @@ final class WorkoutEngineCompletionTests: XCTestCase {
         pairingService = nil
         completionService = nil
         try await super.tearDown()
+    }
+
+    func testSwapActiveWorkoutDoesNotPostCompletion() {
+        let repsOnly: [WorkoutInterval] = [
+            .reps(sets: nil, reps: 10, name: "Squats", load: nil, restSec: nil, followAlongUrl: nil)
+        ]
+        let first = TestFixtures.workout(id: "first", name: "First", intervals: repsOnly)
+        let second = TestFixtures.workout(id: "second", name: "Second", intervals: repsOnly)
+
+        engine.start(workout: first)
+        engine.swapActiveWorkout(with: second)
+
+        XCTAssertEqual(engine.workout?.id, "second")
+        XCTAssertFalse(completionService.postPhoneWorkoutCompletionCalled)
     }
 
     func testPostWorkoutCompletionSuccessClearsSaveErrorAndMarksSucceeded() async {

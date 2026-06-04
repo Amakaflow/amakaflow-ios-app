@@ -32,10 +32,6 @@ struct HomeView: View {
     @State private var showingProteinTracker = false
     @State private var showingWaterTracker = false
     @State private var savedProgress: SavedWorkoutProgress?
-    @State private var xpData: XPData?
-    @State private var showLevelUp = false
-    @State private var levelUpLevel: Int = 0
-    @State private var levelUpName: String = ""
     @State private var homeBannerKind: HomeBannerKind?
     @State private var showingPlanReveal = false
     @State private var planRevealReady = false
@@ -47,14 +43,6 @@ struct HomeView: View {
     @State private var showingReadinessDetail = false
 
     private var today: Date { Date() }
-
-    private var dayName: String {
-        today.formatted(.dateTime.weekday(.wide))
-    }
-
-    private var dateString: String {
-        today.formatted(.dateTime.month(.wide).day())
-    }
 
     var body: some View {
         NavigationStack {
@@ -90,6 +78,11 @@ struct HomeView: View {
             }
             .background(Theme.Colors.background.ignoresSafeArea())
             .navigationBarHidden(true)
+            .task {
+                if homeViewModel.state == .content {
+                    await historyViewModel.loadCompletions()
+                }
+            }
             .sheet(item: $selectedWorkout) { workout in
                 WorkoutDetailView(workout: workout)
             }
@@ -245,6 +238,7 @@ struct HomeView: View {
             }
             .onAppear {
                 refreshHomeScreenState()
+                Task { await homeViewModel.loadReadiness() }
                 // Load saved workout progress on background to avoid blocking main thread (AMA-1075)
                 Task {
                     let progress = await Task.detached(priority: .utility) {
@@ -264,14 +258,6 @@ struct HomeView: View {
                         await nutritionViewModel.refreshNutrition()
                     }
                 }
-                // Fetch XP data (AMA-1285)
-                Task {
-                    do {
-                        xpData = try await APIService.shared.fetchXP()
-                    } catch {
-                        print("[HomeView] Failed to fetch XP: \(error)")
-                    }
-                }
             }
             .onChange(of: viewModel.isLoading) { _, _ in refreshHomeScreenState() }
             .onChange(of: viewModel.hasLoadedWorkouts) { _, _ in refreshHomeScreenState() }
@@ -279,16 +265,6 @@ struct HomeView: View {
             .onChange(of: viewModel.incomingWorkouts) { _, _ in refreshHomeScreenState() }
             .onChange(of: viewModel.upcomingWorkouts) { _, _ in refreshHomeScreenState() }
             .onChange(of: viewModel.activeBlock) { _, _ in refreshHomeScreenState() }
-            .overlay {
-                // Level-up celebration overlay (AMA-1285)
-                if showLevelUp {
-                    LevelUpCelebrationView(
-                        newLevel: levelUpLevel,
-                        levelName: levelUpName,
-                        onDismiss: { showLevelUp = false }
-                    )
-                }
-            }
             .overlay(alignment: .top) {
                 // Invisible marker for Maestro E2E tests (container views
                 // don't expose accessibilityIdentifier on iOS 26)
@@ -319,59 +295,35 @@ struct HomeView: View {
 
     @ViewBuilder
     private var populatedHomeContent: some View {
-        // Resume Workout banner (if saved progress exists)
         if let progress = savedProgress {
             resumeWorkoutBanner(progress: progress)
         }
-
-        readinessCard
 
         if let homeBannerKind {
             homeBanner(homeBannerKind)
         }
 
-        todaysWorkoutHero
+        homeMetricsGrid
+        homeProgramCard
 
-        coachVisibilitySection
-
-        // Nutrition Dashboard Card (AMA-1290)
-        if nutritionViewModel.settings.isEnabled {
-            NutritionDashboardCard(viewModel: nutritionViewModel)
-                .onTapGesture {
-                    showingProteinTracker = true
+        if let workout = primaryWorkout {
+            Button {
+                startWorkoutWithDeviceCheck(workout)
+            } label: {
+                HStack(spacing: 6) {
+                    Text("Start workout")
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
                 }
+            }
+            .buttonStyle(AFPrimaryButtonStyle(size: .lg))
+            .padding(.top, Theme.Spacing.sm)
+            .accessibilityIdentifier("ama1842.start.button")
         }
 
-        // Suggest Workout button (AMA-1265)
-        SuggestWorkoutButton {
-            suggestWorkoutViewModel.requestSuggestion()
-            showingSuggestWorkout = true
-        }
-
-        // XP progress bar (AMA-1285)
-        if let xp = xpData {
-            XPBarView(
-                xpTotal: xp.xpTotal,
-                currentLevel: xp.currentLevel,
-                levelName: xp.levelName,
-                xpToNextLevel: xp.xpToNextLevel,
-                xpToday: xp.xpToday,
-                dailyCap: xp.dailyCap
-            )
-        }
-
-        // Quick action buttons
-        HStack(spacing: Theme.Spacing.md) {
-            quickStartButton
-            voiceWorkoutButton
-        }
-
-        // Rest Day Button (AMA-1286)
-        RestDayButton {
-            // TODO: call POST /gamification/rest-day
-        }
-
-        weekGlanceCard
+        homeWeekStripSection
+        homeSummaryMetricsRow
+        homeRecoveryCard
 
         #if DEBUG
         homeBannerDebugControls
@@ -527,72 +479,6 @@ struct HomeView: View {
         homeViewModel.update(from: viewModel)
     }
 
-
-    // MARK: - Coach Visibility
-
-    private var coachVisibilitySection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            AFLabel(text: "Coach")
-            AFCard(padding: Theme.Spacing.md) {
-                VStack(spacing: Theme.Spacing.sm) {
-                    coachVisibilityButton(
-                        icon: "sparkles",
-                        title: "Plan reveal",
-                        subtitle: "See how the next block is built"
-                    ) {
-                        showingPlanReveal = true
-                    }
-
-                    Divider().overlay(Theme.Colors.borderLight)
-
-                    HStack(spacing: Theme.Spacing.sm) {
-                        coachVisibilityButton(
-                            icon: "tray.full",
-                            title: "Activity",
-                            subtitle: "Agent decisions"
-                        ) {
-                            showingAgentInbox = true
-                        }
-
-                        coachVisibilityButton(
-                            icon: "chart.bar.doc.horizontal",
-                            title: "Review",
-                            subtitle: "Sunday summary"
-                        ) {
-                            showingWeeklyReview = true
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func coachVisibilityButton(icon: String, title: String, subtitle: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: Theme.Spacing.sm) {
-                Image(systemName: icon)
-                    .font(Theme.Typography.title3)
-                    .foregroundColor(Theme.Colors.textPrimary)
-                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                    Text(title)
-                        .font(Theme.Typography.captionBold)
-                        .foregroundColor(Theme.Colors.textPrimary)
-                    Text(subtitle)
-                        .font(Theme.Typography.footnote)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(Theme.Typography.footnote)
-                    .foregroundColor(Theme.Colors.textTertiary)
-            }
-            .padding(Theme.Spacing.sm)
-            .background(Theme.Colors.backgroundSubtle)
-            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
-        }
-        .buttonStyle(.plain)
-    }
-
     // MARK: - Agent Visibility Banners
 
     private func homeBanner(_ kind: HomeBannerKind) -> some View {
@@ -701,23 +587,6 @@ struct HomeView: View {
         }
     }
     #endif
-
-    // MARK: - Weekly Progress Helper
-
-    private var weeklyMotivationalText: String {
-        let completed = historyViewModel.weeklySummary.workoutCount
-        let target = max(1, completed + 1) // TODO: use actual weekly_target from API
-        let remaining = max(0, target - completed)
-        if completed >= target {
-            return "Target hit! \(completed) of \(target) \u{2014} crushing it!"
-        } else if remaining == 1 {
-            return "\(completed) of \(target) \u{2014} one more to go!"
-        } else if completed == 0 {
-            return "0 of \(target) \u{2014} let\u{2019}s get started this week!"
-        } else {
-            return "\(completed) of \(target) \u{2014} \(remaining) more to go!"
-        }
-    }
 
     // MARK: - Resume Workout Banner
 
@@ -860,164 +729,363 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Header
+    // MARK: - Design refresh populated Home (screens-main.jsx)
 
-    private var header: some View {
-        HStack {
-            AFLabel(text: today.formatted(.dateTime.weekday(.abbreviated)).uppercased() + " · " + today.formatted(.dateTime.month(.abbreviated).day()).uppercased())
-            Spacer()
-            Image(systemName: "bolt.fill")
-                .font(.system(size: 18))
-                .foregroundColor(Theme.Colors.textPrimary)
+    private var homeMetricsGrid: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Button {
+                showingReadinessDetail = true
+            } label: {
+                homeMetricCard(
+                    label: "READINESS",
+                    value: homeViewModel.readinessScore.map { "\($0)" } ?? "—",
+                    unit: homeViewModel.readinessScore == nil ? nil : "%",
+                    footer: homeViewModel.readinessScore.map { Theme.Ready.label(for: $0) } ?? "No data",
+                    readinessDot: homeViewModel.readinessScore
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("home_readiness_card")
+
+            homeMetricCard(
+                label: "TODAY'S LOAD",
+                value: homeViewModel.todayAcuteLoad.map { String(format: "%.0f", $0) } ?? "—",
+                unit: homeViewModel.todayAcuteLoad == nil ? nil : "tss",
+                footer: nil,
+                readinessDot: nil,
+                loadMarkerPosition: homeViewModel.todayAcuteLoad.map { min(max($0 / 100.0, 0.08), 0.92) }
+            )
         }
-        .padding(.top, Theme.Spacing.sm)
-        .padding(.bottom, Theme.Spacing.xs)
     }
 
-    private var readinessScore: Int? { nil }
+    private func homeMetricCard(
+        label: String,
+        value: String,
+        unit: String?,
+        footer: String?,
+        readinessDot: Int?,
+        loadMarkerPosition: Double? = nil
+    ) -> some View {
+        AFCard(padding: 14) {
+            VStack(alignment: .leading, spacing: 0) {
+                AFLabel(text: label)
+                    .font(Theme.Typography.label)
 
-    private var readinessCard: some View {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(value)
+                        .font(.system(size: 30, weight: .medium, design: .monospaced))
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    if let unit {
+                        Text(unit)
+                            .font(Theme.Typography.mono)
+                            .foregroundColor(Theme.Colors.textSecondary)
+                    }
+                }
+                .padding(.top, 6)
+
+                if let footer {
+                    HStack(spacing: 5) {
+                        Circle()
+                            .fill(readinessDot.map { Theme.Ready.color(for: $0) } ?? Theme.Colors.borderMedium)
+                            .frame(width: 6, height: 6)
+                        Text(footer)
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(Theme.Colors.textSecondary)
+                    }
+                    .padding(.top, 8)
+                }
+
+                if let loadMarkerPosition {
+                    GeometryReader { proxy in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Theme.Colors.readyHigh, Theme.Colors.readyModerate, Theme.Colors.readyLow],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .frame(height: 6)
+                            Rectangle()
+                                .fill(Theme.Colors.textPrimary)
+                                .frame(width: 2, height: 6)
+                                .offset(x: loadMarkerPosition * max(proxy.size.width - 2, 0))
+                        }
+                    }
+                    .frame(height: 6)
+                    .padding(.top, 12)
+
+                    HStack {
+                        Text("EASY")
+                        Spacer()
+                        Text("HARD")
+                    }
+                    .font(Theme.Typography.label)
+                    .foregroundColor(Theme.Colors.textTertiary)
+                    .padding(.top, 5)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var homeProgramCard: some View {
+        Button {
+            NotificationCenter.default.post(name: .deepLinkToWorkout, object: nil)
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 6) {
+                    AFLabel(text: programCardEyebrow)
+                    Text(programCardTitle)
+                        .font(Theme.Typography.title2)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                        .multilineTextAlignment(.leading)
+                    Text(programCardSubtitle)
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Theme.Colors.textSecondary)
+            }
+            .padding(Theme.Spacing.lg)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                LinearGradient(
+                    colors: [
+                        Theme.Colors.readyHigh.opacity(0.35),
+                        Theme.Colors.readyHigh.opacity(0.12)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.lg, style: .continuous)
+                    .stroke(Theme.Colors.readyHigh.opacity(0.45), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.lg, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("af_home_program_card")
+        .padding(.top, Theme.Spacing.sm)
+    }
+
+    private var programCardEyebrow: String {
+        if viewModel.activeBlock != nil { return "CURRENT PROGRAM" }
+        if primaryWorkout != nil { return "TODAY'S SESSION" }
+        return "TRAINING PLAN"
+    }
+
+    private var programCardTitle: String {
+        if let block = viewModel.activeBlock {
+            return block.name
+        }
+        if let workout = primaryWorkout {
+            return workout.name
+        }
+        return "No active plan"
+    }
+
+    private var programCardSubtitle: String {
+        if let block = viewModel.activeBlock {
+            return "Block \(block.index) of \(block.total) · \(block.scheduledWorkouts.count) sessions scheduled"
+        }
+        if let workout = primaryWorkout {
+            return "\(workout.formattedDuration) · \(workout.sport.rawValue.capitalized) · \(workout.intervalCount) steps"
+        }
+        return "Open Workouts to view your schedule."
+    }
+
+    private var homeWeekStripSection: some View {
+        VStack(spacing: Theme.Spacing.sm) {
+            HStack {
+                AFLabel(text: "THIS WEEK")
+                Spacer()
+                Button("See all") {
+                    NotificationCenter.default.post(name: .deepLinkToWorkout, object: nil)
+                }
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.textSecondary)
+                .accessibilityIdentifier("af_home_week_see_all")
+            }
+
+            HStack(spacing: 4) {
+                ForEach(homeWeekDays) { day in
+                    homeWeekStripCell(day)
+                }
+            }
+        }
+        .padding(.top, Theme.Spacing.sm)
+    }
+
+    private func homeWeekStripCell(_ day: HomeWeekDayItem) -> some View {
+        Button {
+            if day.isToday, let workout = day.workout {
+                selectedWorkout = workout
+            }
+        } label: {
+            VStack(spacing: 4) {
+                AFLabel(text: day.weekdayLabel)
+                    .font(Theme.Typography.label)
+                Text("\(day.dayNumber)")
+                    .font(Theme.Typography.mono)
+                    .foregroundColor(Theme.Colors.textPrimary)
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
+                    .fill(day.isToday ? Color.clear : Theme.Colors.chipBackground)
+                    .frame(width: 22, height: 22)
+                    .overlay {
+                        Image(systemName: day.systemIcon)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(day.isToday ? Theme.Colors.textPrimary : Theme.Colors.textSecondary)
+                    }
+                Text(day.valueLabel)
+                    .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                    .foregroundColor(day.isToday ? Theme.Colors.textPrimary : Theme.Colors.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 2)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous)
+                    .fill(day.isToday ? Theme.Colors.readyHigh.opacity(0.40) : Theme.Colors.surfaceElevated)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous)
+                    .stroke(day.isToday ? Theme.Colors.readyHigh : Theme.Colors.borderLight, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(!day.isToday || day.workout == nil)
+        .accessibilityIdentifier(day.isToday ? "af_home_week_today" : "af_home_week_\(day.weekdayLabel.lowercased())")
+    }
+
+    private var homeSummaryMetricsRow: some View {
+        let summary = historyViewModel.weeklySummary
+        return HStack(spacing: 0) {
+            homeSummaryMetric(label: "STRESS", value: summary.totalCalories > 0 ? summary.formattedCalories : "—")
+            homeSummaryMetric(label: "DIST", value: "—")
+            homeSummaryMetric(label: "DUR", value: summary.workoutCount > 0 ? summary.formattedDuration : "—")
+            homeSummaryMetric(label: "ELEV", value: "—")
+        }
+        .padding(.vertical, Theme.Spacing.md)
+        .padding(.horizontal, Theme.Spacing.sm)
+        .background(Theme.Colors.backgroundSubtle)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous)
+                .stroke(Theme.Colors.borderLight, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous))
+        .padding(.top, Theme.Spacing.md)
+        .accessibilityIdentifier("af_home_summary_metrics")
+    }
+
+    private func homeSummaryMetric(label: String, value: String) -> some View {
+        VStack(spacing: 4) {
+            AFLabel(text: label)
+            Text(value)
+                .font(.system(size: 15, weight: .medium, design: .monospaced))
+                .foregroundColor(Theme.Colors.textPrimary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var homeRecoveryCard: some View {
         Button {
             showingReadinessDetail = true
         } label: {
-            AFCard(padding: 16) {
+            AFCard(padding: 12) {
                 HStack(spacing: Theme.Spacing.md) {
-                    AFReadinessRing(value: readinessScore ?? 0)
+                    AFReadinessRing(value: homeViewModel.readinessScore ?? 0, size: 42, stroke: 4)
 
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 8) {
-                            Circle()
-                                .fill(readinessScore.map { Theme.Ready.color(for: $0) } ?? Theme.Colors.borderMedium)
-                                .frame(width: 8, height: 8)
-                                .shadow(color: readinessScore.map { Theme.Ready.color(for: $0).opacity(0.4) } ?? Color.clear, radius: 4)
-                            Text(readinessScore.map { Theme.Ready.label(for: $0) } ?? "No readiness data")
-                                .font(Theme.Typography.title3)
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 6) {
+                            AFLabel(text: "RECOVERY")
+                            Text("·")
+                                .foregroundColor(Theme.Colors.textSecondary)
+                            Text(homeViewModel.readinessScore.map { Theme.Ready.label(for: $0) } ?? "No data")
+                                .font(Theme.Typography.captionBold)
                                 .foregroundColor(Theme.Colors.textPrimary)
                         }
-
-                        Text(readinessScore == nil ? "Connect a wearable or complete workouts to unlock readiness guidance." : "Readiness guidance is based on your latest wearable and training history.")
+                        Text(recoveryDetailLine)
                             .font(Theme.Typography.caption)
                             .foregroundColor(Theme.Colors.textSecondary)
-                            .lineSpacing(2)
-
-                        HStack(spacing: 3) {
-                            Text("Detail")
-                            Image(systemName: "chevron.right")
-                        }
-                        .font(Theme.Typography.footnote.weight(.medium))
-                        .foregroundColor(Theme.Colors.textSecondary)
-                        .padding(.top, 2)
+                            .lineLimit(2)
                     }
-                    Spacer()
+
+                    Spacer(minLength: 0)
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(Theme.Colors.textTertiary)
                 }
             }
         }
         .buttonStyle(.plain)
-        .accessibilityIdentifier("home_readiness_card")
+        .padding(.top, Theme.Spacing.md)
+        .accessibilityIdentifier("af_home_recovery_card")
     }
 
-    private var todaysWorkoutHero: some View {
-        return VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            AFLabel(text: "Today")
+    private var recoveryDetailLine: String {
+        if homeViewModel.readinessScore != nil {
+            return "Tap for HRV, sleep, and training-load detail."
+        }
+        return "Connect a wearable or complete workouts to unlock recovery guidance."
+    }
 
-            AFCard(padding: 0) {
-                VStack(spacing: 0) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack(alignment: .top, spacing: Theme.Spacing.md) {
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: primaryWorkoutIcon)
-                                        .font(.system(size: 16))
-                                    AFLabel(text: primaryWorkoutType)
-                                }
-                                .foregroundColor(Theme.Colors.textPrimary)
+    private var homeWeekDays: [HomeWeekDayItem] {
+        var calendar = Calendar.current
+        calendar.firstWeekday = 1
+        guard let weekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: today)) else {
+            return []
+        }
 
-                                Text(primaryWorkout?.name ?? "No workout scheduled")
-                                    .font(Theme.Typography.title2)
-                                    .foregroundColor(Theme.Colors.textPrimary)
+        return (0..<7).map { offset in
+            let date = calendar.date(byAdding: .day, value: offset, to: weekStart) ?? today
+            let isToday = calendar.isDate(date, inSameDayAs: today)
+            let dayNumber = calendar.component(.day, from: date)
+            let weekdayLabel = date.formatted(.dateTime.weekday(.narrow)).uppercased()
 
-                                WorkoutSourceBadge(source: primaryWorkout?.source.rawValue)
-
-                                Text(primaryWorkoutSubtitle)
-                                    .font(Theme.Typography.caption)
-                                    .foregroundColor(Theme.Colors.textSecondary)
-                            }
-
-                            Spacer()
-                            AFChip(text: primaryWorkoutZone)
-                        }
-
-                        HStack(spacing: 0) {
-                            heroStat(label: "Duration", value: primaryWorkout?.formattedDuration ?? "—")
-                            heroStat(label: "Steps", value: primaryWorkout.map { "\($0.intervalCount)" } ?? "—")
-                            heroStat(label: "Type", value: primaryWorkout?.sport.rawValue.capitalized ?? "—")
-                        }
-                        .padding(.top, 10)
-                        .overlay(alignment: .top) {
-                            Rectangle().fill(Theme.Colors.borderLight).frame(height: 1)
-                        }
-                    }
-                    .padding(16)
-
-                    HStack(spacing: Theme.Spacing.sm) {
-                        // AMA-1630: Only show Details when there's an actual workout
-                        // to drill into. On rest days (primaryWorkout == nil) the
-                        // button had no destination, so tapping it was a silent
-                        // no-op.
-                        if let workout = primaryWorkout {
-                            Button {
-                                selectedWorkout = workout
-                            } label: {
-                                Text("Details")
-                            }
-                            .buttonStyle(AFGhostButtonStyle())
-                            .accessibilityIdentifier("home_workout_details")
-                        }
-
-                        Button {
-                            if let workout = primaryWorkout {
-                                startWorkoutWithDeviceCheck(workout)
-                            } else {
-                                showingQuickStart = true
-                            }
-                        } label: {
-                            HStack(spacing: 6) {
-                                Text("Start workout")
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 12, weight: .semibold))
-                            }
-                        }
-                        .buttonStyle(AFPrimaryButtonStyle())
-                        // AMA-1842: stable a11y identifier for CJ-01 L3.
-                        // Legacy ID: "home_start_workout".
-                        .accessibilityIdentifier("ama1842.start.button")
-                    }
-                    .padding(12)
-                    .background(Theme.Colors.backgroundSubtle)
-                    .overlay(alignment: .top) {
-                        Rectangle().fill(Theme.Colors.borderLight).frame(height: 1)
-                    }
-                }
+            let dayCompletions = historyViewModel.completions.filter { calendar.isDate($0.startedAt, inSameDayAs: date) }
+            let scheduled = viewModel.upcomingWorkouts.first { scheduled in
+                guard let scheduledDate = scheduled.scheduledDate else { return false }
+                return calendar.isDate(scheduledDate, inSameDayAs: date)
             }
+
+            let workout = isToday ? (primaryWorkout ?? scheduled?.workout) : scheduled?.workout
+
+            let valueLabel: String
+            if let completion = dayCompletions.first {
+                let minutes = completion.durationSeconds / 60
+                valueLabel = minutes >= 60 ? "\(minutes / 60)h\(minutes % 60)" : "\(minutes)m"
+            } else if scheduled != nil {
+                valueLabel = "plan"
+            } else if dayCompletions.isEmpty && calendar.compare(date, to: today, toGranularity: .day) == .orderedAscending {
+                valueLabel = "rest"
+            } else {
+                valueLabel = isToday && primaryWorkout != nil ? "today" : "—"
+            }
+
+            return HomeWeekDayItem(
+                id: offset,
+                weekdayLabel: weekdayLabel,
+                dayNumber: dayNumber,
+                isToday: isToday,
+                systemIcon: iconForWeekDay(completion: dayCompletions.first, workout: workout ?? scheduled?.workout),
+                valueLabel: valueLabel,
+                workout: isToday ? primaryWorkout : scheduled?.workout
+            )
         }
     }
 
-    private func heroStat(label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            AFLabel(text: label)
-            Text(value)
-                .font(.system(size: 16, weight: .medium, design: .monospaced))
-                .foregroundColor(Theme.Colors.textPrimary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var primaryWorkout: Workout? {
-        todaysWorkouts.first ?? viewModel.upcomingWorkouts.first?.workout
-    }
-
-    private var primaryWorkoutIcon: String {
-        guard let sport = primaryWorkout?.sport else { return "calendar.badge.clock" }
+    private func iconForWeekDay(completion: WorkoutCompletion?, workout: Workout?) -> String {
+        if completion != nil { return "checkmark" }
+        guard let sport = workout?.sport else { return "heart" }
         switch sport {
         case .running: return "figure.run"
         case .cycling: return "bicycle"
@@ -1029,253 +1097,45 @@ struct HomeView: View {
         }
     }
 
-    private var primaryWorkoutType: String {
-        primaryWorkout?.sport.rawValue.uppercased() ?? "REST DAY"
-    }
+    // MARK: - Header
 
-    private var primaryWorkoutSubtitle: String {
-        guard let workout = primaryWorkout else { return "Rest, mobility, or log a manual session." }
-        let steps = workout.intervalCount == 1 ? "1 step" : "\(workout.intervalCount) steps"
-        return "\(workout.formattedDuration) · \(workout.sport.rawValue.capitalized) · \(steps)"
-    }
+    private var header: some View {
+        HStack {
+            Color.clear.frame(width: 28, height: 28)
 
-    private var primaryWorkoutZone: String {
-        guard let sport = primaryWorkout?.sport else { return "—" }
-        return sport == .running ? "Zone 3–4" : "Ready"
-    }
+            Spacer()
 
-    private var weekGlanceCard: some View {
-        let completedCount = min(historyViewModel.weeklySummary.workoutCount, 7)
-        let weeklyTarget = max(1, completedCount + 2)
-        let progress = min(1, Double(completedCount) / Double(weeklyTarget))
-        let percent = Int(progress * 100)
-        let calendar = Calendar.current
-        let weekday = calendar.component(.weekday, from: today)
-        let todayIndex = (weekday + 5) % 7 // Calendar: Sun=1; design index: Mon=0
-
-        return VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            AFLabel(text: "This Week")
-            AFCard(padding: 14) {
-                VStack(spacing: 12) {
-                    HStack {
-                        Text(weeklyMotivationalText)
-                            .font(Theme.Typography.caption)
-                            .foregroundColor(Theme.Colors.textSecondary)
-                        Spacer()
-                        Text("\(percent)%")
-                            .font(Theme.Typography.mono)
-                            .foregroundColor(Theme.Colors.textPrimary)
-                    }
-
-                    GeometryReader { proxy in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(Theme.Colors.inputBackground)
-                            Capsule()
-                                .fill(Theme.Colors.textPrimary)
-                                .frame(width: proxy.size.width * progress)
-                        }
-                    }
-                    .frame(height: 3)
-
-                    HStack {
-                        ForEach(Array(["M", "T", "W", "T", "F", "S", "S"].enumerated()), id: \.offset) { index, day in
-                            VStack(spacing: 5) {
-                                AFLabel(text: day)
-                                RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
-                                    .fill(index == todayIndex ? Theme.Colors.textPrimary : (index < completedCount ? Theme.Colors.accentBackground : Color.clear))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
-                                            .stroke(Theme.Colors.borderLight, lineWidth: (index != todayIndex && index >= completedCount) ? 1 : 0)
-                                    )
-                                    .frame(width: 24, height: 24)
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                    }
-                }
-            }
-            .task {
-                await historyViewModel.loadCompletions()
-            }
-        }
-    }
-
-    // MARK: - Quick Start Button
-
-    private var quickStartButton: some View {
-        Button {
-            showingQuickStart = true
-        } label: {
-            VStack(spacing: Theme.Spacing.sm) {
-                Image(systemName: "play.fill")
-                    .font(.system(size: 20))
-                Text("Quick Start")
-                    .font(Theme.Typography.caption)
-            }
-            .foregroundColor(Theme.Colors.surface)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Theme.Spacing.lg)
-            .background(Theme.Colors.textPrimary)
-            .clipShape(Capsule())
-        }
-    }
-
-    // MARK: - Voice Workout Button (AMA-5)
-
-    private var voiceWorkoutButton: some View {
-        Button {
-            showingVoiceWorkout = true
-        } label: {
-            VStack(spacing: Theme.Spacing.sm) {
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 20))
-                Text("Log Workout")
-                    .font(Theme.Typography.caption)
-            }
-            .foregroundColor(Theme.Colors.textPrimary)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Theme.Spacing.lg)
-            .background(Color.clear)
-            .overlay(Capsule().stroke(Theme.Colors.borderMedium, lineWidth: 1))
-        }
-        .accessibilityIdentifier("voice_workout_button")
-    }
-
-    // MARK: - Today's Workouts Section
-
-    private var todaysWorkoutsSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            // Section header
-            HStack {
-                Text("Today's Workouts")
+            VStack(spacing: 2) {
+                Text("Today")
                     .font(Theme.Typography.title2)
                     .foregroundColor(Theme.Colors.textPrimary)
+                AFLabel(text: today.formatted(.dateTime.weekday(.abbreviated)).uppercased() + " · " + today.formatted(.dateTime.month(.abbreviated).day()).uppercased())
+            }
 
-                Spacer()
+            Spacer()
 
-                Text("\(todaysWorkouts.count) \(todaysWorkouts.count == 1 ? "workout" : "workouts")")
-                    .font(Theme.Typography.caption)
+            Button {
+                NotificationCenter.default.post(name: .deepLinkToSync, object: nil)
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 18, weight: .medium))
                     .foregroundColor(Theme.Colors.textSecondary)
-                    .padding(.horizontal, Theme.Spacing.sm)
-                    .padding(.vertical, Theme.Spacing.xs)
-                    .background(Theme.Colors.surface)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.CornerRadius.sm)
-                            .stroke(Theme.Colors.borderLight, lineWidth: 1)
-                    )
-                    .cornerRadius(Theme.CornerRadius.sm)
+                    .frame(width: 28, height: 28)
             }
-
-            // Workouts list or empty state
-            if todaysWorkouts.isEmpty {
-                emptyWorkoutsState
-            } else {
-                VStack(spacing: Theme.Spacing.sm) {
-                    ForEach(todaysWorkouts) { workout in
-                        TodayWorkoutCard(
-                            workout: workout,
-                            onTap: { selectedWorkout = workout }
-                        )
-                    }
-                }
-            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Settings")
+            .accessibilityIdentifier("af_home_settings")
         }
+        .padding(.top, Theme.Spacing.sm)
+        .padding(.bottom, Theme.Spacing.xs)
+    }
+
+    private var primaryWorkout: Workout? {
+        todaysWorkouts.first ?? viewModel.upcomingWorkouts.first?.workout
     }
 
     private var todaysWorkouts: [Workout] {
-        // Filter workouts scheduled for today
-        // For now, show all incoming workouts as we don't have scheduling yet
         viewModel.incomingWorkouts
-    }
-
-    private var emptyWorkoutsState: some View {
-        VStack(spacing: Theme.Spacing.md) {
-            ZStack {
-                Circle()
-                    .fill(Theme.Colors.surfaceElevated)
-                    .frame(width: 64, height: 64)
-
-                Image(systemName: "calendar")
-                    .font(.system(size: 28))
-                    .foregroundColor(Theme.Colors.textSecondary)
-            }
-
-            Text("No workouts scheduled")
-                .font(Theme.Typography.bodyBold)
-                .foregroundColor(Theme.Colors.textPrimary)
-
-            Text("Add a workout from the web, or log one you've completed")
-                .font(Theme.Typography.caption)
-                .foregroundColor(Theme.Colors.textSecondary)
-                .multilineTextAlignment(.center)
-
-            // Voice log button (AMA-5)
-            Button {
-                showingVoiceWorkout = true
-            } label: {
-                HStack(spacing: Theme.Spacing.sm) {
-                    Image(systemName: "mic.fill")
-                    Text("Log with Voice")
-                }
-                .font(Theme.Typography.caption)
-                .fontWeight(.medium)
-                .foregroundColor(Theme.Colors.accentGreen)
-            }
-            .padding(.top, Theme.Spacing.sm)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Theme.Spacing.xl)
-        .background(Theme.Colors.surface)
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
-                .stroke(Theme.Colors.borderLight, lineWidth: 1)
-        )
-        .cornerRadius(Theme.CornerRadius.lg)
-    }
-
-    // MARK: - Weekly Stats Card
-
-    private var weeklyStatsCard: some View {
-        let summary = historyViewModel.weeklySummary
-
-        return VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            HStack(spacing: Theme.Spacing.sm) {
-                Image(systemName: "chart.line.uptrend.xyaxis")
-                    .font(.system(size: 16))
-                    .foregroundColor(Theme.Colors.accentGreen)
-
-                Text("This Week")
-                    .font(Theme.Typography.bodyBold)
-                    .foregroundColor(Theme.Colors.textPrimary)
-            }
-
-            if historyViewModel.isLoading {
-                HStack {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                    Text("Loading...")
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                HStack(spacing: Theme.Spacing.md) {
-                    StatItem(value: "\(summary.workoutCount)", label: "Workouts")
-                    StatItem(value: summary.formattedDuration, label: "Time")
-                    StatItem(value: summary.formattedCalories, label: "Calories")
-                }
-            }
-        }
-        .padding(Theme.Spacing.lg)
-        .background(Theme.Colors.surface)
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
-                .stroke(Theme.Colors.borderLight, lineWidth: 1)
-        )
-        .cornerRadius(Theme.CornerRadius.lg)
-        .task {
-            await historyViewModel.loadCompletions()
-        }
     }
 
     // MARK: - Quick Start Sheet
@@ -1361,106 +1221,16 @@ struct HomeView: View {
     }
 }
 
-// MARK: - Today Workout Card
+// MARK: - Home Week Strip
 
-private struct TodayWorkoutCard: View {
-    let workout: Workout
-    let onTap: () -> Void
-
-    var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: Theme.Spacing.md) {
-                // Time column
-                VStack(spacing: Theme.Spacing.xs) {
-                    Text("9:00")
-                        .font(Theme.Typography.bodyBold)
-                        .foregroundColor(Theme.Colors.textPrimary)
-
-                    Text(workout.formattedDuration)
-                        .font(Theme.Typography.footnote)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                }
-                .frame(width: 50)
-
-                // Divider
-                Rectangle()
-                    .fill(Theme.Colors.borderLight)
-                    .frame(width: 1)
-
-                // Workout info
-                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                    HStack(spacing: Theme.Spacing.sm) {
-                        Circle()
-                            .fill(sportColor)
-                            .frame(width: 8, height: 8)
-
-                        Text(workout.name)
-                            .font(Theme.Typography.bodyBold)
-                            .foregroundColor(Theme.Colors.textPrimary)
-                            .lineLimit(1)
-                    }
-
-                    if let description = workout.description {
-                        Text(description)
-                            .font(Theme.Typography.caption)
-                            .foregroundColor(Theme.Colors.textSecondary)
-                            .lineLimit(1)
-                    }
-
-                    HStack(spacing: Theme.Spacing.sm) {
-                        Text(workout.sport.rawValue.capitalized)
-                            .font(Theme.Typography.footnote)
-                            .foregroundColor(Theme.Colors.textSecondary)
-                            .padding(.horizontal, Theme.Spacing.sm)
-                            .padding(.vertical, 2)
-                            .background(Theme.Colors.surfaceElevated)
-                            .cornerRadius(Theme.CornerRadius.sm)
-
-                        WorkoutSourceBadge(source: workout.source.rawValue)
-                    }
-                }
-
-                Spacer()
-            }
-            .padding(Theme.Spacing.md)
-            .background(Theme.Colors.surface)
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
-                    .stroke(Theme.Colors.borderLight, lineWidth: 1)
-            )
-            .cornerRadius(Theme.CornerRadius.lg)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var sportColor: Color {
-        switch workout.sport {
-        case .running: return Theme.Colors.accentGreen
-        case .strength: return Theme.Colors.accentBlue
-        case .mobility: return Color(hex: "9333EA")
-        default: return Theme.Colors.accentBlue
-        }
-    }
-}
-
-// MARK: - Stat Item
-
-private struct StatItem: View {
-    let value: String
-    let label: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            Text(value)
-                .font(Theme.Typography.title2)
-                .foregroundColor(Theme.Colors.textPrimary)
-
-            Text(label)
-                .font(Theme.Typography.footnote)
-                .foregroundColor(Theme.Colors.textSecondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
+private struct HomeWeekDayItem: Identifiable {
+    let id: Int
+    let weekdayLabel: String
+    let dayNumber: Int
+    let isToday: Bool
+    let systemIcon: String
+    let valueLabel: String
+    let workout: Workout?
 }
 
 // MARK: - Preview
