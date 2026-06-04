@@ -161,7 +161,7 @@ struct SettingsView: View {
             .alert("Sign Out", isPresented: $showingSignOutAlert) {
                 Button("Cancel", role: .cancel) {}
                 Button("Sign Out", role: .destructive) {
-                    print("User signed out")
+                    Task { await AuthViewModel.shared.signOut() }
                 }
             } message: {
                 Text("Are you sure you want to sign out?")
@@ -438,7 +438,7 @@ struct SettingsView: View {
             VStack(spacing: 0) {
                 #if DEBUG
                 let debugRows = settingsRows(in: "debug", includeDebug: true)
-                ForEach(Array(debugRows.enumerated()), id: \.element.id) { index, row in
+                ForEach(Array(debugRows.enumerated()), id: \.element.id) { _, row in
                     settingsDebugRow(row)
                     SettingsRowDivider()
                 }
@@ -704,18 +704,6 @@ struct SettingsView: View {
                 )
             }
             .accessibilityIdentifier("settings_row_account_privacy")
-
-        case .about:
-            Button { } label: {
-                SettingsNavigationRow(
-                    icon: "info.circle.fill",
-                    tint: Theme.Colors.accentBlue,
-                    title: row.title,
-                    subtitle: row.subtitle
-                )
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("settings_row_about")
 
         default:
             EmptyView()
@@ -2722,8 +2710,7 @@ struct SettingsRefreshSectionModel: Equatable, Identifiable {
                 id: "app",
                 title: "App",
                 rows: [
-                    SettingsRefreshRowModel(id: "account_privacy_data", title: "Account, privacy & data", subtitle: "Export, privacy notice, sign out, and account deletion", destination: .accountPrivacyData),
-                    SettingsRefreshRowModel(id: "about", title: "About", subtitle: "Version and product information", destination: .about)
+                    SettingsRefreshRowModel(id: "account_privacy_data", title: "Account, privacy & data", subtitle: "Export, privacy notice, sign out, and account deletion", destination: .accountPrivacyData)
                 ]
             )
         ]

@@ -172,7 +172,9 @@ final class ProfileIAReorgE2ETests: BaseE2ETestCase {
         XCTAssertTrue(row.waitForExistence(timeout: 5), "\(rowID) should be reachable from the hub")
         row.tap()
         XCTAssertTrue(app.descendants(matching: .any)[detailID].waitForExistence(timeout: 5), "\(detailID) should open")
-        app.navigationBars.buttons.firstMatch.tap()
+        let backButton = app.navigationBars.buttons.firstMatch
+        XCTAssertTrue(backButton.waitForExistence(timeout: 5), "Back button should exist")
+        backButton.tap()
         XCTAssertTrue(app.descendants(matching: .any)["af_connections_hub"].waitForExistence(timeout: 5))
     }
 
