@@ -2,8 +2,8 @@
 //  PaywallView.swift
 //  AmakaFlow
 //
-//  Hi-fi paywall shell (`screens-marketing.jsx` → PaywallMobile). StoreKit /
-//  Clerk billing integration is deferred — this is the design-aligned surface.
+//  Hi-fi paywall aligned with design refresh. Purchases flow through
+//  RevenueCat when configured (AMA-1851).
 //
 
 import SwiftUI
@@ -15,6 +15,13 @@ struct PaywallView: View {
 
         var id: String { rawValue }
 
+        var billingPlan: SubscriptionBillingPlan {
+            switch self {
+            case .annual: return .annual
+            case .monthly: return .monthly
+            }
+        }
+
         var title: String {
             switch self {
             case .annual: return "Annual"
@@ -22,24 +29,36 @@ struct PaywallView: View {
             }
         }
 
-        var price: String {
+        func price(from pricing: SubscriptionPlanPricing?) -> String {
             switch self {
-            case .annual: return "$89.99"
-            case .monthly: return "$12.99"
+            case .annual:
+                return pricing?.annualPrice ?? "$89.99"
+            case .monthly:
+                return pricing?.monthlyPrice ?? "$12.99"
             }
         }
 
-        var subtitle: String {
+        func subtitle(from pricing: SubscriptionPlanPricing?) -> String {
             switch self {
-            case .annual: return "$89.99/yr · $7.50/mo"
-            case .monthly: return "$12.99/mo · 7-day trial"
+            case .annual:
+                if let price = pricing?.annualPrice {
+                    return "\(price)/yr"
+                }
+                return "$89.99/yr · $7.50/mo"
+            case .monthly:
+                if let price = pricing?.monthlyPrice {
+                    return "\(price)/mo · 7-day trial"
+                }
+                return "$12.99/mo · 7-day trial"
             }
         }
 
-        var badge: String? {
+        func badge(from pricing: SubscriptionPlanPricing?) -> String? {
             switch self {
-            case .annual: return "SAVE 42%"
-            case .monthly: return nil
+            case .annual:
+                return pricing?.annualBadge ?? "SAVE 42%"
+            case .monthly:
+                return nil
             }
         }
     }
@@ -51,11 +70,10 @@ struct PaywallView: View {
     }
 
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var subscriptionAccess: SubscriptionAccessViewModel
     @State private var selectedPlan: Plan = .annual
 
     var allowsDismiss = true
-    var onStartTrial: (() -> Void)?
-    var onRestore: (() -> Void)?
 
     private let features: [Feature] = [
         Feature(title: "Daily adaptive plan", subtitle: "Re-optimizes every 6am from biometrics"),
@@ -73,6 +91,13 @@ struct PaywallView: View {
                     hero
                     featureList
                     planPicker
+                    if let purchaseError = subscriptionAccess.purchaseError {
+                        Text(purchaseError)
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(Theme.Colors.destructive)
+                            .padding(.top, Theme.Spacing.sm)
+                            .accessibilityIdentifier("paywall_error")
+                    }
                 }
                 .padding(.horizontal, Theme.Spacing.lg)
                 .padding(.bottom, Theme.Spacing.md)
@@ -81,6 +106,9 @@ struct PaywallView: View {
         }
         .background(Theme.Colors.background.ignoresSafeArea())
         .accessibilityIdentifier("paywall_screen")
+        .task {
+            await subscriptionAccess.refresh()
+        }
     }
 
     private var header: some View {
@@ -104,10 +132,11 @@ struct PaywallView: View {
             Spacer()
 
             Button("Restore") {
-                onRestore?()
+                Task { await subscriptionAccess.restorePurchases() }
             }
             .font(Theme.Typography.label)
             .foregroundColor(Theme.Colors.textSecondary)
+            .disabled(subscriptionAccess.isPurchasing)
             .accessibilityIdentifier("paywall_restore")
         }
         .padding(.horizontal, Theme.Spacing.lg)
@@ -172,6 +201,7 @@ struct PaywallView: View {
 
     private func planOption(_ plan: Plan) -> some View {
         let isSelected = selectedPlan == plan
+        let pricing = subscriptionAccess.planPricing
         return Button {
             selectedPlan = plan
         } label: {
@@ -192,7 +222,7 @@ struct PaywallView: View {
                         Text(plan.title)
                             .font(Theme.Typography.bodyBold)
                             .foregroundColor(Theme.Colors.textPrimary)
-                        if let badge = plan.badge {
+                        if let badge = plan.badge(from: pricing) {
                             Text(badge)
                                 .font(.system(size: 9, weight: .semibold))
                                 .foregroundColor(Theme.Colors.background)
@@ -202,14 +232,14 @@ struct PaywallView: View {
                                 .clipShape(Capsule())
                         }
                     }
-                    Text(plan.subtitle)
+                    Text(plan.subtitle(from: pricing))
                         .font(Theme.Typography.mono)
                         .foregroundColor(Theme.Colors.textSecondary)
                 }
 
                 Spacer(minLength: 0)
 
-                Text(plan.price)
+                Text(plan.price(from: pricing))
                     .font(.system(size: 15, weight: .medium, design: .monospaced))
                     .foregroundColor(Theme.Colors.textPrimary)
             }
@@ -228,14 +258,22 @@ struct PaywallView: View {
     private var footer: some View {
         VStack(spacing: Theme.Spacing.sm) {
             Button {
-                onStartTrial?()
-                if allowsDismiss {
-                    dismiss()
+                Task {
+                    await subscriptionAccess.purchase(plan: selectedPlan.billingPlan)
+                    if subscriptionAccess.hasProAccess, allowsDismiss {
+                        dismiss()
+                    }
                 }
             } label: {
-                Text("Start 7-day free trial")
+                if subscriptionAccess.isPurchasing {
+                    ProgressView()
+                        .tint(Theme.Colors.background)
+                } else {
+                    Text("Start 7-day free trial")
+                }
             }
             .buttonStyle(AFPrimaryButtonStyle(size: .lg))
+            .disabled(subscriptionAccess.isPurchasing)
             .accessibilityIdentifier("paywall_start_trial")
 
             Text("CANCEL ANYTIME · NO CHARGE TODAY")
@@ -254,4 +292,5 @@ struct PaywallView: View {
 
 #Preview {
     PaywallView()
+        .environmentObject(SubscriptionAccessViewModel())
 }
