@@ -10,13 +10,21 @@ final class MockSubscriptionBillingClient: SubscriptionBillingProviding {
     var pricing: SubscriptionPlanPricing?
     var configuredUserID: String?
     var purchaseCalls: [SubscriptionBillingPlan] = []
+    var clearIdentityCalls = 0
+    var syncError: Error?
 
     func configure(appUserID: String?) {
         configuredUserID = appUserID
     }
 
-    func syncAppUserID(_ appUserID: String?) async {
+    func syncAppUserID(_ appUserID: String?) async throws {
+        if let syncError { throw syncError }
         configuredUserID = appUserID
+    }
+
+    func clearAppUserIdentity() async throws {
+        clearIdentityCalls += 1
+        configuredUserID = nil
     }
 
     func customerHasProAccess() async throws -> Bool { hasPro }
@@ -90,5 +98,28 @@ final class SubscriptionAccessViewModelTests: XCTestCase {
 
         XCTAssertTrue(SubscriptionAccessViewModel.isProSubscription(activePro))
         XCTAssertFalse(SubscriptionAccessViewModel.isProSubscription(activeStarter))
+    }
+
+    func testPurchaseSurfacesIdentitySyncFailure() async {
+        let billing = MockSubscriptionBillingClient()
+        billing.syncError = SubscriptionBillingError.identitySyncFailed
+        let viewModel = SubscriptionAccessViewModel(billingClient: billing)
+
+        await viewModel.purchase(plan: .monthly)
+
+        XCTAssertEqual(viewModel.purchaseError, SubscriptionBillingError.identitySyncFailed.localizedDescription)
+        XCTAssertTrue(billing.purchaseCalls.isEmpty)
+    }
+
+    func testResetOnSignOutClearsBillingIdentity() async {
+        let billing = MockSubscriptionBillingClient()
+        billing.hasPro = true
+        let viewModel = SubscriptionAccessViewModel(billingClient: billing)
+
+        await viewModel.refresh()
+        await viewModel.resetOnSignOut()
+
+        XCTAssertEqual(billing.clearIdentityCalls, 1)
+        XCTAssertNil(viewModel.planPricing)
     }
 }

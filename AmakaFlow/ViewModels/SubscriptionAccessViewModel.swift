@@ -47,9 +47,11 @@ final class SubscriptionAccessViewModel: ObservableObject {
             isAccessResolved = true
         }
 
-        let userId = resolvedUserId()
-        billingClient.configure(appUserID: userId)
-        await billingClient.syncAppUserID(userId)
+        do {
+            try await syncBillingIdentity()
+        } catch {
+            // Continue with cached RevenueCat state and backend lookup.
+        }
 
         if billingClient.isConfigured {
             do {
@@ -78,10 +80,8 @@ final class SubscriptionAccessViewModel: ObservableObject {
         isPurchasing = true
         defer { isPurchasing = false }
 
-        billingClient.configure(appUserID: resolvedUserId())
-        await billingClient.syncAppUserID(resolvedUserId())
-
         do {
+            try await syncBillingIdentity()
             let granted = try await billingClient.purchase(plan: plan)
             hasProAccess = granted
             isAccessResolved = true
@@ -100,10 +100,8 @@ final class SubscriptionAccessViewModel: ObservableObject {
         isPurchasing = true
         defer { isPurchasing = false }
 
-        billingClient.configure(appUserID: resolvedUserId())
-        await billingClient.syncAppUserID(resolvedUserId())
-
         do {
+            try await syncBillingIdentity()
             let restored = try await billingClient.restorePurchases()
             hasProAccess = restored
             isAccessResolved = true
@@ -113,6 +111,32 @@ final class SubscriptionAccessViewModel: ObservableObject {
         } catch {
             purchaseError = error.localizedDescription
         }
+    }
+
+    func resetOnSignOut() async {
+        purchaseError = nil
+        planPricing = nil
+        subscription = nil
+
+        if FeatureFlags.paywallGateEnabled {
+            hasProAccess = false
+            isAccessResolved = false
+        } else {
+            hasProAccess = true
+            isAccessResolved = true
+        }
+
+        do {
+            try await billingClient.clearAppUserIdentity()
+        } catch {
+            // Sign-out should still complete even if RevenueCat reset fails.
+        }
+    }
+
+    private func syncBillingIdentity() async throws {
+        let userId = resolvedUserId()
+        billingClient.configure(appUserID: userId)
+        try await billingClient.syncAppUserID(userId)
     }
 
     private func resolveProAccessFromBilling() async -> Bool {

@@ -32,10 +32,7 @@ final class RevenueCatSubscriptionBillingClient: SubscriptionBillingProviding {
             return
         }
 
-        if configured {
-            Task { await syncAppUserID(appUserID) }
-            return
-        }
+        guard !configured else { return }
 
         #if DEBUG
         Purchases.logLevel = .debug
@@ -45,9 +42,25 @@ final class RevenueCatSubscriptionBillingClient: SubscriptionBillingProviding {
         configured = true
     }
 
-    func syncAppUserID(_ appUserID: String?) async {
-        guard configured, let appUserID, !appUserID.isEmpty else { return }
-        _ = try? await Purchases.shared.logIn(appUserID)
+    func syncAppUserID(_ appUserID: String?) async throws {
+        guard configured else { return }
+        guard let appUserID, !appUserID.isEmpty else { return }
+
+        do {
+            _ = try await Purchases.shared.logIn(appUserID)
+        } catch {
+            throw SubscriptionBillingError.identitySyncFailed
+        }
+    }
+
+    func clearAppUserIdentity() async throws {
+        guard configured else { return }
+
+        do {
+            _ = try await Purchases.shared.logOut()
+        } catch {
+            throw SubscriptionBillingError.identitySyncFailed
+        }
     }
 
     func customerHasProAccess() async throws -> Bool {
@@ -69,7 +82,7 @@ final class RevenueCatSubscriptionBillingClient: SubscriptionBillingProviding {
             monthlySubtitle: monthly?.storeProduct.localizedDescription,
             annualPrice: annual?.storeProduct.localizedPriceString,
             annualSubtitle: annual?.storeProduct.localizedDescription,
-            annualBadge: annual != nil ? "SAVE 42%" : nil
+            annualBadge: Self.annualSavingsBadge(monthly: monthly, annual: annual)
         )
     }
 
@@ -104,6 +117,21 @@ final class RevenueCatSubscriptionBillingClient: SubscriptionBillingProviding {
         guard configured else { throw SubscriptionBillingError.notConfigured }
         let info = try await Purchases.shared.restorePurchases()
         return Self.hasActiveProEntitlement(info)
+    }
+
+    static func annualSavingsBadge(monthly: Package?, annual: Package?) -> String? {
+        guard let monthly, let annual else { return nil }
+
+        let monthlyAnnualized = monthly.storeProduct.price * 12
+        let annualPrice = annual.storeProduct.price
+        guard monthlyAnnualized > 0, annualPrice > 0, annualPrice < monthlyAnnualized else { return nil }
+
+        let savingsPercent = (
+            (monthlyAnnualized - annualPrice) / monthlyAnnualized * 100 as NSDecimalNumber
+        ).doubleValue
+        let rounded = Int(savingsPercent.rounded())
+        guard rounded > 0 else { return nil }
+        return "SAVE \(rounded)%"
     }
 
     private static func hasActiveProEntitlement(_ info: CustomerInfo) -> Bool {

@@ -187,6 +187,13 @@ struct AmakaFlowCompanionApp: App {
             }
             .environment(Clerk.shared)
             .environmentObject(authViewModel)
+            .onChange(of: authViewModel.isAuthenticated) { _, isAuthenticated in
+                if !isAuthenticated {
+                    Task {
+                        await subscriptionAccess.resetOnSignOut()
+                    }
+                }
+            }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active && authViewModel.isAuthenticated {
                     Task {
