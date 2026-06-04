@@ -12,19 +12,42 @@ import Foundation
 
 @MainActor
 final class SubscriptionAccessViewModel: ObservableObject {
-    @Published private(set) var hasProAccess = true
+    @Published private(set) var hasProAccess: Bool
+    @Published private(set) var isAccessResolved: Bool
     @Published private(set) var isLoading = false
     @Published private(set) var subscription: Subscription?
 
     private let apiService: APIServiceProviding
+    private let userIdProvider: (() -> String?)?
 
-    init(apiService: APIServiceProviding = AppDependencies.live.apiService) {
+    init(
+        apiService: APIServiceProviding = AppDependencies.live.apiService,
+        userIdProvider: (() -> String?)? = nil
+    ) {
         self.apiService = apiService
+        self.userIdProvider = userIdProvider
+        if FeatureFlags.paywallGateEnabled {
+            hasProAccess = false
+            isAccessResolved = false
+        } else {
+            hasProAccess = true
+            isAccessResolved = true
+        }
     }
 
     func refresh() async {
+        let userId = resolvedUserId()
+        if hasStartedTrial(for: userId) {
+            hasProAccess = true
+            isAccessResolved = true
+            return
+        }
+
         isLoading = true
-        defer { isLoading = false }
+        defer {
+            isLoading = false
+            isAccessResolved = true
+        }
 
         do {
             let sub = try await apiService.fetchSubscription()
@@ -39,20 +62,28 @@ final class SubscriptionAccessViewModel: ObservableObject {
 
     /// Marks the user as having started a trial from the paywall shell (StoreKit TBD).
     func markTrialStarted() {
-        UserDefaults.standard.set(true, forKey: Self.trialStartedKey)
+        let userId = resolvedUserId()
+        UserDefaults.standard.set(true, forKey: Self.trialStartedKey(for: userId))
         hasProAccess = true
+        isAccessResolved = true
     }
 
-    var hasStartedTrial: Bool {
-        UserDefaults.standard.bool(forKey: Self.trialStartedKey)
+    func hasStartedTrial(for userId: String? = nil) -> Bool {
+        UserDefaults.standard.bool(forKey: Self.trialStartedKey(for: userId ?? resolvedUserId()))
     }
 
-    private static let trialStartedKey = "amakaflow_paywall_trial_started"
+    private func resolvedUserId() -> String? {
+        userIdProvider?() ?? PairingService.shared.userProfile?.id
+    }
 
-    private static func isProSubscription(_ sub: Subscription) -> Bool {
+    private static func trialStartedKey(for userId: String?) -> String {
+        "amakaflow_paywall_trial_started_\(userId ?? "anonymous")"
+    }
+
+    static func isProSubscription(_ sub: Subscription) -> Bool {
         switch sub.status {
         case .active, .trialing:
-            return sub.plan.lowercased().contains("pro") || sub.plan != "free"
+            return sub.plan.lowercased().contains("pro")
         case .pastDue, .canceled, .inactive:
             return false
         }

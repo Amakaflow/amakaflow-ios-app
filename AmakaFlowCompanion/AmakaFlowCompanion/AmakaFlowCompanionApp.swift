@@ -167,15 +167,17 @@ struct AmakaFlowCompanionApp: App {
                     // Wait for Clerk session hydration to avoid auth flash on startup
                     Color.black.ignoresSafeArea()
                 } else if authViewModel.isAuthenticated {
-                    if FeatureFlags.paywallGateEnabled
+                    if FeatureFlags.paywallGateEnabled && !subscriptionAccess.isAccessResolved {
+                        Color.black.ignoresSafeArea()
+                            .task {
+                                await subscriptionAccess.refresh()
+                            }
+                    } else if FeatureFlags.paywallGateEnabled
                         && !subscriptionAccess.hasProAccess
-                        && !subscriptionAccess.hasStartedTrial {
+                        && !subscriptionAccess.hasStartedTrial() {
                         PaywallView(allowsDismiss: false, onStartTrial: {
                             subscriptionAccess.markTrialStarted()
                         })
-                        .task {
-                            await subscriptionAccess.refresh()
-                        }
                     } else {
                         authenticatedAppRoot
                     }
