@@ -256,6 +256,153 @@ final class ChatStreamServiceTests: XCTestCase {
         XCTAssertEqual(remainder, "event: content_del")
     }
 
+
+    // MARK: - Program Stream Tests
+
+    func testProgramStreamDesignThenGenerateThreadsPreviewIdFromChunkedSSEBody() async throws {
+        MockURLProtocol.setChunkedResponse(chunks: [
+            "event: stage\n",
+            "data: {\"stage\":\"designing\",\"message\":\"Designing your 8-week program...\"}\n\n",
+            "event: preview\n",
+            "data: {\"preview_id\":\"outline-1\",\"program\":{\"name\":\"Outline\",\"goal\":\"strength\",\"duration_weeks\":8,\"sessions_per_week\":3,\"periodization_model\":\"linear\",\"weeks\":[]}}\n\n"
+        ].map { Data($0.utf8) })
+
+        let service = ProgramStreamService(session: MockURLProtocol.mockSession())
+        let designRequest = DesignProgramRequest(
+            goal: "strength",
+            experienceLevel: "intermediate",
+            durationWeeks: 8,
+            sessionsPerWeek: 3,
+            equipment: ["barbell"],
+            timePerSession: 60,
+            preferredDays: ["Monday", "Wednesday", "Friday"],
+            injuries: nil,
+            focusAreas: nil,
+            avoidExercises: nil
+        )
+
+        var designEvents: [ProgramStreamEvent] = []
+        for try await event in service.designProgram(request: designRequest, token: "test-token") {
+            designEvents.append(event)
+        }
+
+        let designRequestURL = try XCTUnwrap(MockURLProtocol.interceptedRequests.first)
+        XCTAssertEqual(designRequestURL.url?.path, "/v1/programs/design/stream")
+        XCTAssertEqual(designRequestURL.value(forHTTPHeaderField: "Authorization"), "Bearer test-token")
+        let designBody = try Self.httpBodyData(from: designRequestURL)
+        let designJSON = try XCTUnwrap(JSONSerialization.jsonObject(with: designBody) as? [String: Any])
+        XCTAssertEqual(designJSON["experience_level"] as? String, "intermediate")
+        XCTAssertNil(designJSON["experienceLevel"])
+
+        let outlinePreviewId = try XCTUnwrap(designEvents.compactMap { event -> String? in
+            if case .preview(let previewId, _) = event { return previewId }
+            return nil
+        }.last)
+        XCTAssertEqual(outlinePreviewId, "outline-1")
+
+        MockURLProtocol.reset()
+        MockURLProtocol.setChunkedResponse(chunks: [
+            "event: stage\n",
+            "data: {\"stage\":\"generating\",\"message\":\"Creating Week 1 workouts...\",\"sub_progress\":{\"current\":1,\"total\":8}}\n\n",
+            "event: preview\n",
+            "data: {\"preview_id\":\"full-1\",\"program\":{\"name\":\"Full Program\",\"goal\":\"strength\",\"duration_weeks\":8,\"sessions_per_week\":3,\"periodization_model\":\"linear\",\"weeks\":[{\"week_number\":1,\"focus\":\"Base\",\"intensity_percentage\":70,\"volume_modifier\":1.0,\"is_deload\":false,\"workouts\":[{\"name\":\"Lower Strength\",\"day_of_week\":0,\"workout_type\":\"strength\",\"target_duration_minutes\":60,\"exercises\":[{\"name\":\"Back Squat\",\"sets\":4,\"reps\":\"5\",\"rest_seconds\":180}]}]}]}}\n\n"
+        ].map { Data($0.utf8) })
+
+        var generateEvents: [ProgramStreamEvent] = []
+        for try await event in service.generateProgram(previewId: outlinePreviewId, token: "test-token") {
+            generateEvents.append(event)
+        }
+
+        let generateRequest = try XCTUnwrap(MockURLProtocol.interceptedRequests.first)
+        XCTAssertEqual(generateRequest.url?.path, "/v1/programs/generate/stream")
+        let generateBody = try Self.httpBodyData(from: generateRequest)
+        let generateJSON = try XCTUnwrap(JSONSerialization.jsonObject(with: generateBody) as? [String: Any])
+        XCTAssertEqual(generateJSON["preview_id"] as? String, "outline-1")
+        XCTAssertNil(generateJSON["previewId"])
+
+        XCTAssertEqual(generateEvents.compactMap { event -> String? in
+            if case .preview(let previewId, _) = event { return previewId }
+            return nil
+        }.last, "full-1")
+        XCTAssertEqual(generateEvents.compactMap { event -> ProposedProgram? in
+            if case .preview(_, let payload) = event { return payload.program }
+            return nil
+        }.last?.weeks.first?.workouts.first?.exercises.first?.name, "Back Squat")
+    }
+
+    func testProgramStreamErrorEventSurfacesRecoverableMessage() async throws {
+        MockURLProtocol.setChunkedResponse(chunks: [
+            "event: stage\ndata: {\"stage\":\"designing\",\"message\":\"Designing...\"}\n\n",
+            "event: error\n",
+            "data: {\"stage\":\"designing\",\"message\":\"Too many active pipelines. Please wait for one to finish.\",\"recoverable\":true}\n\n"
+        ].map { Data($0.utf8) })
+
+        let service = ProgramStreamService(session: MockURLProtocol.mockSession())
+        let request = DesignProgramRequest(
+            goal: "strength",
+            experienceLevel: "intermediate",
+            durationWeeks: 8,
+            sessionsPerWeek: 3,
+            equipment: ["barbell"],
+            timePerSession: nil,
+            preferredDays: nil,
+            injuries: nil,
+            focusAreas: nil,
+            avoidExercises: nil
+        )
+
+        var events: [ProgramStreamEvent] = []
+        for try await event in service.designProgram(request: request, token: "test-token") {
+            events.append(event)
+        }
+
+        XCTAssertEqual(events.last, .error(message: "Too many active pipelines. Please wait for one to finish.", recoverable: true))
+    }
+
+    func testProgramStreamParserHandlesCRLFFramedEvents() throws {
+        let buffer = """
+        event: stage\r
+        data: {\"stage\":\"designing\",\"message\":\"Designing...\"}\r
+        \r
+        event: preview\r
+        data: {\"preview_id\":\"outline-crlf\",\"program\":{\"name\":\"Outline\",\"goal\":\"strength\",\"duration_weeks\":8,\"sessions_per_week\":3,\"periodization_model\":\"linear\",\"weeks\":[]}}\r
+        \r
+        """
+
+        let split = SSEParser.splitBuffer(buffer)
+        XCTAssertEqual(split.blocks.count, 2)
+        XCTAssertEqual(split.remainder, "")
+
+        let events = split.blocks.compactMap { ProgramStreamService.parseEvent(block: $0, decoder: JSONDecoder()) }
+        XCTAssertEqual(events.first, .stage(stage: "designing", message: "Designing...", subProgress: nil))
+        XCTAssertEqual(events.compactMap { event -> String? in
+            if case .preview(let previewId, _) = event { return previewId }
+            return nil
+        }.last, "outline-crlf")
+    }
+
+    func testProgramStreamParsesSaveCompleteEvent() async throws {
+        MockURLProtocol.setChunkedResponse(chunks: [
+            "event: stage\ndata: {\"stage\":\"saving\",\"message\":\"Saving program to library...\"}\n\n",
+            "event: complete\n",
+            "data: {\"program_name\":\"Full Program\",\"workout_count\":2,\"workout_ids\":[\"w1\",\"w2\"],\"scheduled_count\":2}\n\n"
+        ].map { Data($0.utf8) })
+
+        let service = ProgramStreamService(session: MockURLProtocol.mockSession())
+        var events: [ProgramStreamEvent] = []
+        for try await event in service.saveProgram(previewId: "full-1", scheduleStartDate: "2026-06-08", token: "test-token") {
+            events.append(event)
+        }
+
+        let request = try XCTUnwrap(MockURLProtocol.interceptedRequests.first)
+        XCTAssertEqual(request.url?.path, "/v1/programs/save/stream")
+        let body = try Self.httpBodyData(from: request)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        XCTAssertEqual(json["preview_id"] as? String, "full-1")
+        XCTAssertEqual(json["schedule_start_date"] as? String, "2026-06-08")
+        XCTAssertEqual(events.last, .complete(workoutIds: ["w1", "w2"], scheduledCount: 2, workoutCount: 2))
+    }
+
     private static func httpBodyData(from request: URLRequest) throws -> Data {
         if let body = request.httpBody {
             return body

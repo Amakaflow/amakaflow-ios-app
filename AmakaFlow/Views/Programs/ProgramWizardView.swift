@@ -98,7 +98,7 @@ struct ProgramWizardView: View {
     private var navigationButtons: some View {
         VStack(spacing: Theme.Spacing.sm) {
             // Primary action button
-            if viewModel.currentStep == .review && viewModel.generatedProgramId == nil && !viewModel.isGenerating {
+            if viewModel.currentStep == .review && viewModel.generatedProgramId == nil && viewModel.proposedProgram == nil && !viewModel.isGenerating && !viewModel.isSaving {
                 Button {
                     Task {
                         await viewModel.generateProgram()
@@ -115,7 +115,7 @@ struct ProgramWizardView: View {
                     .background(Theme.Colors.accentBlue)
                     .cornerRadius(Theme.CornerRadius.md)
                 }
-            } else if viewModel.currentStep != .review || viewModel.generatedProgramId == nil {
+            } else if viewModel.currentStep != .review {
                 Button {
                     viewModel.nextStep()
                 } label: {
@@ -131,7 +131,7 @@ struct ProgramWizardView: View {
             }
 
             // Back button
-            if viewModel.currentStep.rawValue > 0 && !viewModel.isGenerating {
+            if viewModel.currentStep.rawValue > 0 && !viewModel.isGenerating && !viewModel.isSaving {
                 Button {
                     viewModel.previousStep()
                 } label: {

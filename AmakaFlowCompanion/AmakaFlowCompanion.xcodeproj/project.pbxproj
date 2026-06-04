@@ -191,6 +191,7 @@
 		AMA14090000000002000001 /* BlockSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14090000000002000002 /* BlockSectionView.swift */; };
 		AMA14100001BLDFILE /* ChatStreamModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100001FILEREF /* ChatStreamModels.swift */; };
 		AMA14100002BLDFILE /* ChatStreamService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100002FILEREF /* ChatStreamService.swift */; };
+		AMA2096PRGSTRB /* ProgramStreamService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2096PRGSTRA /* ProgramStreamService.swift */; };
 		AMA14100003BLDFILE /* ToolCallCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100003FILEREF /* ToolCallCard.swift */; };
 		AMA14100004BLDFILE /* WorkoutPreviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100004FILEREF /* WorkoutPreviewCard.swift */; };
 		AMA14100005BLDFILE /* StageIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA14100005FILEREF /* StageIndicator.swift */; };
@@ -635,6 +636,7 @@
 		AMA14090000000002000002 /* BlockSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BlockSectionView.swift; path = ../AmakaFlow/Views/Components/BlockSectionView.swift; sourceTree = SOURCE_ROOT; };
 		AMA14100001FILEREF /* ChatStreamModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ChatStreamModels.swift; path = ../AmakaFlow/Models/ChatStreamModels.swift; sourceTree = "<group>"; };
 		AMA14100002FILEREF /* ChatStreamService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ChatStreamService.swift; path = ../AmakaFlow/Services/ChatStreamService.swift; sourceTree = "<group>"; };
+		AMA2096PRGSTRA /* ProgramStreamService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProgramStreamService.swift; path = ../AmakaFlow/Services/ProgramStreamService.swift; sourceTree = "<group>"; };
 		AMA14100003FILEREF /* ToolCallCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ToolCallCard.swift; path = ../AmakaFlow/Views/Components/ToolCallCard.swift; sourceTree = SOURCE_ROOT; };
 		AMA14100004FILEREF /* WorkoutPreviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutPreviewCard.swift; path = ../AmakaFlow/Views/Components/WorkoutPreviewCard.swift; sourceTree = SOURCE_ROOT; };
 		AMA14100005FILEREF /* StageIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StageIndicator.swift; path = ../AmakaFlow/Views/Components/StageIndicator.swift; sourceTree = SOURCE_ROOT; };
@@ -986,6 +988,7 @@
 				AMA1828SOCIA00A /* SocialAPIRepository.swift */,
 				AMA1828PROGR00A /* ProgramsAPIRepository.swift */,
 				AMA14100002FILEREF /* ChatStreamService.swift */,
+				AMA2096PRGSTRA /* ProgramStreamService.swift */,
 				KBSVC00000000000 /* KnowledgeService.swift */,
 				F84E22822ED0D5D100459747 /* AuthService.swift */,
 				F84E22832ED0D5D100459747 /* CalendarManager.swift */,
@@ -1885,6 +1888,7 @@
 				AMA14100001BLDFILE /* ChatStreamModels.swift in Sources */,
 				AMA14120001BLDFILE /* NutritionModels.swift in Sources */,
 				AMA14100002BLDFILE /* ChatStreamService.swift in Sources */,
+				AMA2096PRGSTRB /* ProgramStreamService.swift in Sources */,
 				63D97E9B43FEB4A771D87EE8 /* ActionModels.swift in Sources */,
 				AF50AD9DC3B0E509ED0ED715 /* AnalyticsModels.swift in Sources */,
 				BAB97A941DC233141997CA05 /* CalendarViewModel.swift in Sources */,
@@ -2354,7 +2358,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CLERK_PUBLISHABLE_KEY_DEV = "";
 				CLERK_PUBLISHABLE_KEY_PRODUCTION = "";
-				CLERK_PUBLISHABLE_KEY_STAGING = "";
+				CLERK_PUBLISHABLE_KEY_STAGING = "pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA==";
 				CODE_SIGN_ENTITLEMENTS = AmakaFlowCompanion/AmakaFlowCompanion.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 17;
