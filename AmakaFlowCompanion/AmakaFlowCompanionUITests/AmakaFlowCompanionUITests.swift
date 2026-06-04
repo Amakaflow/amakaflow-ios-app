@@ -118,6 +118,80 @@ final class NavigationE2ETests: BaseE2ETestCase {
     }
 }
 
+// MARK: - Profile IA Tests
+
+final class ProfileIAReorgE2ETests: BaseE2ETestCase {
+    func testProfileShowsGroupedSectionsAndNoLegacyConnectedAppsCard() throws {
+        try openProfile()
+
+        assertTextVisible("CONNECTIONS")
+        assertTextVisible("PROFILE & TRAINING")
+        assertTextVisible("COACHING")
+        assertTextVisible("NUTRITION & ACTIVITY")
+        assertTextVisible("APP")
+        XCTAssertFalse(app.staticTexts["Connected apps"].exists)
+
+        scrollToDebugIfNeeded()
+        XCTAssertTrue(app.buttons["settings_row_debug_settings"].exists || app.staticTexts["Debug & Diagnostics"].exists)
+    }
+
+    func testConnectionsHubAndKeyRowsAreReachableFromProfile() throws {
+        try openProfile()
+
+        let connections = app.buttons["settings_row_connections"]
+        XCTAssertTrue(connections.waitForExistence(timeout: 5))
+        connections.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["af_connections_hub"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["af_connection_row_telegram"].exists)
+        XCTAssertTrue(app.buttons["af_connection_row_applewatch"].exists || app.buttons["af_connection_row_garmin"].exists)
+        XCTAssertTrue(app.buttons["af_connection_row_sync"].exists)
+        XCTAssertTrue(app.buttons["af_connection_row_calendar"].exists)
+    }
+
+    func testTelegramDevicesAndSyncDetailsOpenFromHub() throws {
+        try openProfile()
+        app.buttons["settings_row_connections"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["af_connections_hub"].waitForExistence(timeout: 5))
+
+        assertHubDetailReachable(rowID: "af_connection_row_telegram", detailID: "af_connection_detail_telegram")
+        assertHubDetailReachable(rowID: "af_connection_row_applewatch", detailID: "af_connection_detail_applewatch")
+        assertHubDetailReachable(rowID: "af_connection_row_sync", detailID: "af_connection_detail_sync")
+    }
+
+    private func openProfile() throws {
+        XCTAssertTrue(TestAuthHelper.waitForMainContent(app, timeout: 15), "App should load main content")
+        let profileTab = TestAuthHelper.tab(app, "profile_tab", label: "Profile")
+        XCTAssertTrue(profileTab.waitForExistence(timeout: 5), "Profile tab should exist")
+        profileTab.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["settings_screen"].waitForExistence(timeout: 5))
+    }
+
+    private func assertHubDetailReachable(rowID: String, detailID: String) {
+        let row = app.buttons[rowID]
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "\(rowID) should be reachable from the hub")
+        row.tap()
+        XCTAssertTrue(app.descendants(matching: .any)[detailID].waitForExistence(timeout: 5), "\(detailID) should open")
+        let backButton = app.navigationBars.buttons.firstMatch
+        XCTAssertTrue(backButton.waitForExistence(timeout: 5), "Back button should exist")
+        backButton.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["af_connections_hub"].waitForExistence(timeout: 5))
+    }
+
+    private func assertTextVisible(_ text: String) {
+        let element = app.staticTexts[text]
+        if element.waitForExistence(timeout: 2) { return }
+        app.swipeUp()
+        XCTAssertTrue(element.waitForExistence(timeout: 2), "\(text) should render in grouped Profile")
+    }
+
+    private func scrollToDebugIfNeeded() {
+        guard !app.buttons["settings_row_debug_settings"].exists else { return }
+        app.swipeUp()
+        app.swipeUp()
+    }
+}
+
 // MARK: - Workout Flow Tests
 
 final class WorkoutFlowE2ETests: BaseE2ETestCase {
@@ -467,5 +541,133 @@ final class RefreshE2ETests: BaseE2ETestCase {
 
             XCTAssertTrue(true, "Pull to refresh completed without crash")
         }
+    }
+}
+
+// MARK: - AMA-2103 Connections Hub Visual / Flow Evidence
+//
+// Mock-session (no live Clerk/API) flow test that drives
+// Profile -> Connections hub -> per-connection detail, asserts each screen
+// renders, and captures a screenshot of each for visual validation against
+// the Claude design (docs/design/amakaflow-mvp-design-refresh). Unlike the
+// BaseE2ETestCase flow tests, this runs without Clerk credentials, so it also
+// closes the CI coverage gap for the IA reorg screens.
+
+final class ConnectionsHubVisualE2ETests: XCTestCase {
+    private var app: XCUIApplication!
+
+    override func setUpWithError() throws {
+        continueAfterFailure = true
+        XCUIDevice.shared.orientation = .portrait
+
+        app = XCUIApplication()
+        app.launchArguments = ["--uitesting"]
+        app.launchEnvironment = [
+            "UITEST_CLERK_TEST_SESSION": "user_id=user_ama2103,email=ama2103@example.test,name=AMA2103",
+            "UITEST_CLERK_EMAIL": "ama2103@example.test",
+            "UITEST_CLERK_PASSWORD": "unused-mock-session",
+            "UITEST_CLERK_PUBLISHABLE_KEY": ProcessInfo.processInfo.environment["UITEST_CLERK_PUBLISHABLE_KEY"]
+                ?? "pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA==",
+            "UITEST_SKIP_ONBOARDING": "true",
+            "UITEST_SKIP_APPLE_WATCH": "true",
+            "UITEST_USE_FIXTURES": "true",
+            "UITEST_FIXTURE_STATE": "empty",
+            "UITEST_MODE": "true"
+        ]
+        app.launch()
+    }
+
+    override func tearDownWithError() throws {
+        app?.terminate()
+        app = nil
+    }
+
+    func testProfileConnectionsHubAndDetailsRenderWithScreenshots() throws {
+        XCTAssertTrue(
+            TestAuthHelper.waitForMainContent(app, timeout: 25),
+            "App should reach authenticated tab chrome via mock session"
+        )
+
+        // Profile tab. The AMA-1992 custom tab bar exposes duplicate
+        // "Profile"-labelled nodes, so disambiguate with firstMatch.
+        let profileTabByID = app.buttons["profile_tab"].firstMatch
+        if profileTabByID.waitForExistence(timeout: 5) {
+            profileTabByID.tap()
+        } else {
+            let profileSlot = app.buttons.matching(NSPredicate(format: "label == %@", "Profile")).firstMatch
+            XCTAssertTrue(profileSlot.waitForExistence(timeout: 5), "Profile tab should exist")
+            profileSlot.tap()
+        }
+        XCTAssertTrue(
+            app.descendants(matching: .any)["settings_screen"].waitForExistence(timeout: 8),
+            "Profile screen should render"
+        )
+        attach("AMA2103-01-profile")
+
+        // Grouped section headers present (scroll-tolerant)
+        for header in ["CONNECTIONS", "PROFILE & TRAINING", "COACHING", "NUTRITION & ACTIVITY", "APP"] {
+            assertTextEventuallyVisible(header)
+        }
+        XCTAssertFalse(app.staticTexts["Connected apps"].exists, "Legacy connected-apps card should be gone")
+
+        // Open the Connections hub
+        let connectionsRow = app.buttons["settings_row_connections"]
+        XCTAssertTrue(connectionsRow.waitForExistence(timeout: 8), "Connections row should exist")
+        connectionsRow.tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["af_connections_hub"].waitForExistence(timeout: 8),
+            "Connections hub should open"
+        )
+        attach("AMA2103-02-connections-hub")
+
+        // All five connection rows present
+        XCTAssertTrue(app.buttons["af_connection_row_telegram"].exists, "Telegram row")
+        XCTAssertTrue(
+            app.buttons["af_connection_row_applewatch"].exists || app.buttons["af_connection_row_garmin"].exists,
+            "Watch/Garmin row"
+        )
+        XCTAssertTrue(app.buttons["af_connection_row_sync"].exists, "Sync row")
+        XCTAssertTrue(app.buttons["af_connection_row_calendar"].exists, "Calendar row")
+
+        // Drill into a couple of per-connection details and screenshot each
+        captureDetail(rowID: "af_connection_row_telegram", detailID: "af_connection_detail_telegram", shot: "AMA2103-03-detail-telegram")
+        captureDetail(rowID: "af_connection_row_sync", detailID: "af_connection_detail_sync", shot: "AMA2103-04-detail-sync")
+        captureDetail(rowID: "af_connection_row_calendar", detailID: "af_connection_detail_calendar", shot: "AMA2103-05-detail-calendar")
+    }
+
+    // MARK: - Helpers
+
+    private func captureDetail(rowID: String, detailID: String, shot: String) {
+        let row = app.buttons[rowID]
+        guard row.waitForExistence(timeout: 6) else {
+            XCTFail("\(rowID) should be reachable from the hub")
+            return
+        }
+        row.tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)[detailID].waitForExistence(timeout: 8),
+            "\(detailID) should open"
+        )
+        attach(shot)
+        let back = app.navigationBars.buttons.firstMatch
+        if back.waitForExistence(timeout: 5) {
+            back.tap()
+        }
+        _ = app.descendants(matching: .any)["af_connections_hub"].waitForExistence(timeout: 6)
+    }
+
+    private func assertTextEventuallyVisible(_ text: String) {
+        if app.staticTexts[text].waitForExistence(timeout: 2) { return }
+        app.swipeUp()
+        XCTAssertTrue(app.staticTexts[text].waitForExistence(timeout: 2), "\(text) header should render in grouped Profile")
+        app.swipeDown()
+    }
+
+    private func attach(_ name: String) {
+        let shot = XCUIScreen.main.screenshot()
+        let attachment = XCTAttachment(screenshot: shot)
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
     }
 }

@@ -107,29 +107,40 @@ final class InstagramImportModeTests: XCTestCase {
 }
 
 final class SettingsRefreshSectionModelTests: XCTestCase {
-    func testV1SectionsExposeRequiredSettingsRows() {
+    func testV1SectionsExposeGroupedSettingsInOrder() {
         let sections = SettingsRefreshSectionModel.v1Sections(includeDebug: false)
-        let destinations = sections.flatMap(\.rows).map(\.destination)
 
-        XCTAssertTrue(destinations.contains(.editProfile))
-        XCTAssertTrue(destinations.contains(.notifications))
-        XCTAssertTrue(destinations.contains(.voice))
-        XCTAssertTrue(destinations.contains(.fatigue))
-        XCTAssertTrue(destinations.contains(.nutrition))
-        XCTAssertTrue(destinations.contains(.social))
-        XCTAssertTrue(destinations.contains(.about))
+        XCTAssertEqual(
+            sections.map(\.id),
+            ["connections", "profile_training", "coaching", "nutrition_activity", "app"]
+        )
+        XCTAssertEqual(sections.first?.rows.map(\.destination), [.connections])
+        XCTAssertEqual(
+            sections.first { $0.id == "profile_training" }?.rows.map(\.destination),
+            [.editProfile, .trainingPreferences, .equipment]
+        )
     }
 
-    func testDebugRowsAreDebugOnly() {
-        let productionDestinations = SettingsRefreshSectionModel
+    func testV1SectionsRemoveLegacyWebSyncRow() {
+        let destinations = SettingsRefreshSectionModel
             .v1Sections(includeDebug: false)
             .flatMap(\.rows)
             .map(\.destination)
-        let debugDestinations = SettingsRefreshSectionModel
-            .v1Sections(includeDebug: true)
-            .flatMap(\.rows)
-            .map(\.destination)
 
+        XCTAssertFalse(destinations.contains(.syncDashboard))
+        XCTAssertTrue(destinations.contains(.connections))
+        XCTAssertTrue(destinations.contains(.readinessSources))
+        XCTAssertTrue(destinations.contains(.accountPrivacyData))
+    }
+
+    func testDebugRowsAreDebugOnly() {
+        let productionSections = SettingsRefreshSectionModel.v1Sections(includeDebug: false)
+        let debugSections = SettingsRefreshSectionModel.v1Sections(includeDebug: true)
+        let productionDestinations = productionSections.flatMap(\.rows).map(\.destination)
+        let debugDestinations = debugSections.flatMap(\.rows).map(\.destination)
+
+        XCTAssertFalse(productionSections.map(\.id).contains("debug"))
+        XCTAssertTrue(debugSections.map(\.id).contains("debug"))
         XCTAssertFalse(productionDestinations.contains(.debugSettings))
         XCTAssertFalse(productionDestinations.contains(.errorLog))
         XCTAssertFalse(productionDestinations.contains(.workoutDebug))
@@ -142,4 +153,98 @@ final class SettingsRefreshSectionModelTests: XCTestCase {
         let rows = SettingsRefreshSectionModel.v1Sections(includeDebug: true).flatMap(\.rows)
         XCTAssertEqual(Set(rows.map(\.id)).count, rows.count)
     }
+}
+
+final class ConnectionsHubViewModelTests: XCTestCase {
+    func testConnectionsDeriveConnectedStatusesFromProvider() {
+        let provider = FakeConnectionsHubStatusProvider(
+            appleWatchReachable: true,
+            appleWatchInstalled: true,
+            devicePreference: .appleWatchPhone,
+            garminConnected: true,
+            garminDeviceName: "Forerunner 955",
+            telegramLinked: true,
+            telegramIdentifier: "12345",
+            syncSummary: .healthy,
+            connectedCalendars: [
+                ConnectedCalendar(id: "cal-1", name: "Google", provider: "google", status: "active", email: "ada@example.com", lastSyncAt: nil)
+            ]
+        )
+
+        let items = ConnectionsHubViewModel.makeItems(from: provider)
+        let statuses = Dictionary(uniqueKeysWithValues: items.map { ($0.kind, $0.status) })
+
+        XCTAssertEqual(statuses[.appleWatch], .connected)
+        XCTAssertEqual(statuses[.garmin], .connected)
+        XCTAssertEqual(statuses[.telegram], .connected)
+        XCTAssertEqual(statuses[.sync], .healthy)
+        XCTAssertEqual(statuses[.calendar], .connected)
+        XCTAssertEqual(items.filter { $0.status.isOn }.count, 5)
+        XCTAssertEqual(items.filter { !$0.status.isOn }.count, 0)
+    }
+
+    func testAppleWatchPreferenceAloneDoesNotCountAsConnected() {
+        let provider = FakeConnectionsHubStatusProvider(
+            appleWatchReachable: false,
+            appleWatchInstalled: false,
+            devicePreference: .appleWatchPhone,
+            garminConnected: false,
+            garminDeviceName: nil,
+            telegramLinked: false,
+            telegramIdentifier: nil,
+            syncSummary: .healthy,
+            connectedCalendars: []
+        )
+
+        let items = ConnectionsHubViewModel.makeItems(from: provider)
+        let appleWatch = items.first { $0.kind == .appleWatch }
+
+        XCTAssertEqual(appleWatch?.status, .off)
+    }
+
+    func testConnectionsDeriveOffStatusesFromProvider() {
+        let provider = FakeConnectionsHubStatusProvider(
+            appleWatchReachable: false,
+            appleWatchInstalled: false,
+            devicePreference: .phoneOnly,
+            garminConnected: false,
+            garminDeviceName: nil,
+            telegramLinked: false,
+            telegramIdentifier: nil,
+            syncSummary: SyncQueueSummary(
+                pendingCount: 0,
+                inFlightCount: 0,
+                failedCount: 1,
+                poisonCount: 0,
+                lastAttemptedAt: nil,
+                latestError: "failed"
+            ),
+            connectedCalendars: [
+                ConnectedCalendar(id: "cal-error", name: "Expired", provider: "google", status: "error", email: nil, lastSyncAt: nil)
+            ]
+        )
+
+        let items = ConnectionsHubViewModel.makeItems(from: provider)
+        let statuses = Dictionary(uniqueKeysWithValues: items.map { ($0.kind, $0.status) })
+
+        XCTAssertEqual(statuses[.appleWatch], .off)
+        XCTAssertEqual(statuses[.garmin], .off)
+        XCTAssertEqual(statuses[.telegram], .off)
+        XCTAssertEqual(statuses[.sync], .off)
+        XCTAssertEqual(statuses[.calendar], .off)
+        XCTAssertEqual(items.filter { $0.status.isOn }.count, 0)
+        XCTAssertEqual(items.filter { !$0.status.isOn }.count, 5)
+    }
+}
+
+private struct FakeConnectionsHubStatusProvider: ConnectionsHubStatusProviding {
+    let appleWatchReachable: Bool
+    let appleWatchInstalled: Bool
+    let devicePreference: DevicePreference
+    let garminConnected: Bool
+    let garminDeviceName: String?
+    let telegramLinked: Bool
+    let telegramIdentifier: String?
+    let syncSummary: SyncQueueSummary
+    let connectedCalendars: [ConnectedCalendar]
 }
