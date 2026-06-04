@@ -191,6 +191,66 @@ final class ActivityHistoryViewModelTests: XCTestCase {
         XCTAssertEqual(Set(renderedCompletions.map(\.id)), Set((0..<9).map { "in-week-\($0)" }))
     }
 
+    // MARK: - Weekly Summary Distance
+
+    func testWeeklySummaryAggregatesDistanceMeters() {
+        let calendar = Calendar.current
+        testNow = makeDate(year: 2026, month: 6, day: 2, hour: 12, calendar: calendar)
+        viewModel.completions = [
+            makeCompletion(
+                id: "run-a",
+                startedAt: makeDate(year: 2026, month: 6, day: 1, hour: 8, calendar: calendar),
+                distanceMeters: 6200
+            ),
+            makeCompletion(
+                id: "run-b",
+                startedAt: makeDate(year: 2026, month: 6, day: 2, hour: 9, calendar: calendar),
+                distanceMeters: 3840
+            ),
+            makeCompletion(
+                id: "strength",
+                startedAt: makeDate(year: 2026, month: 6, day: 2, hour: 10, calendar: calendar),
+                distanceMeters: nil
+            )
+        ]
+
+        viewModel.selectedFilter = .thisWeek
+
+        XCTAssertEqual(viewModel.filterSummary.totalDistanceMeters, 10_040)
+        XCTAssertEqual(viewModel.filterSummary.formattedDistance, "10.0")
+    }
+
+    func testWeeklySummaryFormattedDistanceUsesOneDecimalKm() {
+        let summary = WeeklySummary(completions: [
+            makeCompletion(
+                id: "run",
+                startedAt: Date(),
+                distanceMeters: 38_400
+            )
+        ])
+
+        XCTAssertEqual(summary.formattedDistance, "38.4")
+    }
+
+    func testWorkoutCompletionDecodesDistanceMetersFromAPIPayload() throws {
+        let json = """
+        {
+          "id": "completion-1",
+          "workout_name": "Morning Run",
+          "started_at": "2026-06-01T10:00:00Z",
+          "duration_seconds": 1800,
+          "source": "apple_watch",
+          "distance_meters": 6200
+        }
+        """
+        let completion = try APIService.makeDecoder().decode(
+            WorkoutCompletion.self,
+            from: Data(json.utf8)
+        )
+
+        XCTAssertEqual(completion.distanceMeters, 6200)
+    }
+
     // MARK: - Demo Mode
 
     func testDemoModeSkipsAPICall() async {
@@ -223,7 +283,8 @@ final class ActivityHistoryViewModelTests: XCTestCase {
         id: String,
         startedAt: Date,
         durationSeconds: Int = 600,
-        calories: Int? = 100
+        calories: Int? = 100,
+        distanceMeters: Int? = nil
     ) -> WorkoutCompletion {
         WorkoutCompletion(
             id: id,
@@ -234,6 +295,7 @@ final class ActivityHistoryViewModelTests: XCTestCase {
             avgHeartRate: nil,
             maxHeartRate: nil,
             activeCalories: calories,
+            distanceMeters: distanceMeters,
             source: .phone,
             syncedToStrava: false,
             workoutId: nil,

@@ -13,6 +13,7 @@ import ClerkKit
 struct AmakaFlowCompanionApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var authViewModel = AuthViewModel.shared
+    @StateObject private var subscriptionAccess = SubscriptionAccessViewModel()
 
     @StateObject private var pairingService = PairingService.shared
     @StateObject private var workoutsViewModel: WorkoutsViewModel
@@ -166,93 +167,20 @@ struct AmakaFlowCompanionApp: App {
                     // Wait for Clerk session hydration to avoid auth flash on startup
                     Color.black.ignoresSafeArea()
                 } else if authViewModel.isAuthenticated {
-                    ContentView()
-                        .environmentObject(workoutsViewModel)
-                        .environmentObject(watchConnectivity)
-                        .environmentObject(garminConnectivity)
-                        .environmentObject(pairingService)
-                        .environmentObject(authViewModel)
-                        .environmentObject(deepLinkManager)
-                        .task {
-                            // Wire up ViewModel for AppDelegate silent push handler (AMA-567)
-                            appDelegate.workoutsViewModel = workoutsViewModel
-
-                            // Load workouts from API
-                            await workoutsViewModel.loadWorkouts()
-
-                            // Initialize WatchConnectivity asynchronously (non-blocking)
-                            // Skip when UITEST_SKIP_APPLE_WATCH=true to avoid system permission modal (AMA-549)
-                            #if DEBUG
-                            if !UITestEnvironment.shared.skipAppleWatch {
-                                watchConnectivity.activate()
+                    if FeatureFlags.paywallGateEnabled && !subscriptionAccess.isAccessResolved {
+                        Color.black.ignoresSafeArea()
+                            .task {
+                                await subscriptionAccess.refresh()
                             }
-                            #else
-                            watchConnectivity.activate()
-                            #endif
-
-                            // Auto-reconnect to saved Garmin device if available
-                            if garminConnectivity.savedDeviceInfo != nil && !garminConnectivity.isConnected {
-                                garminConnectivity.connectToSavedDevice()
-                            }
-                        }
-                        .refreshable {
-                            await workoutsViewModel.refreshWorkouts()
-                        }
-                        .onOpenURL { url in
-                            // AMA-1259: Handle Universal Links and custom scheme deep links for import
-                            if deepLinkManager.handleIncomingURL(url) {
-                                return
-                            }
-
-                            // Handle Garmin Connect IQ callbacks (existing behavior)
-                            print("[APP] onOpenURL received: \(url.absoluteString)")
-                            if garminConnectivity.handleURL(url) {
-                                print("[APP] URL handled by Garmin")
-                                return
-                            }
-
-                            // AMA-1640: route in-app surface deep links + universal links.
-                            // Returns false for non-routable paths (e.g. https://amakaflow.com/pricing).
-                            if routeAppSurfaceDeepLink(url) { return }
-
-                            // AMA-1809 (CR): only after every handler declines,
-                            // surface the alert + Sentry breadcrumb. Earlier
-                            // version fired this from inside the importer's
-                            // `.unknown` branch, which preempted Garmin and
-                            // app-surface routing.
-                            deepLinkManager.reportUnrecognizedLink(url)
-                        }
-                        .sheet(isPresented: $deepLinkManager.showImportSheet) {
-                            if let importURL = deepLinkManager.pendingImportURL {
-                                DeepLinkImportView(urlString: importURL) {
-                                    deepLinkManager.clearPendingImport()
-                                    // Refresh workouts after import
-                                    Task { await workoutsViewModel.refreshWorkouts() }
-                                }
-                            }
-                        }
-                        // AMA-1811: alert when a deep link doesn't match
-                        // any route. Earlier behaviour was a silent
-                        // debug-only print — TestFlight users saw
-                        // their tap do nothing. Sentry breadcrumb is
-                        // dropped from the manager itself; this
-                        // surface is purely the user-facing message.
-                        .alert(
-                            "Couldn't open that link",
-                            isPresented: Binding(
-                                get: { deepLinkManager.unrecognizedLink != nil },
-                                set: { if !$0 { deepLinkManager.clearUnrecognizedLink() } }
-                            ),
-                            presenting: deepLinkManager.unrecognizedLink
-                        ) { _ in
-                            Button("OK") { deepLinkManager.clearUnrecognizedLink() }
-                        } message: { url in
-                            // AMA-1809 (CR): redact query/fragment so a deep
-                            // link that happens to carry tokens or emails
-                            // doesn't surface verbatim in the alert.
-                            let safeURL = "\(url.scheme ?? "")://\(url.host ?? "")\(url.path)"
-                            Text("AmakaFlow doesn't know how to open \(safeURL). The link may be outdated or for a different app.")
-                        }
+                    } else if FeatureFlags.paywallGateEnabled
+                        && !subscriptionAccess.hasProAccess
+                        && !subscriptionAccess.hasStartedTrial() {
+                        PaywallView(allowsDismiss: false, onStartTrial: {
+                            subscriptionAccess.markTrialStarted()
+                        })
+                    } else {
+                        authenticatedAppRoot
+                    }
                 } else {
                     unauthenticatedRoot
                 }
@@ -296,6 +224,98 @@ struct AmakaFlowCompanionApp: App {
     private func markMentalModelSeen(_ key: String) {
         UserDefaults.standard.set(true, forKey: key)
         mentalModelGateRefresh.toggle()
+    }
+
+    @ViewBuilder
+    private var authenticatedAppRoot: some View {
+        ContentView()
+            .environmentObject(workoutsViewModel)
+            .environmentObject(watchConnectivity)
+            .environmentObject(garminConnectivity)
+            .environmentObject(pairingService)
+            .environmentObject(authViewModel)
+            .environmentObject(deepLinkManager)
+            .task {
+                await subscriptionAccess.refresh()
+                // Wire up ViewModel for AppDelegate silent push handler (AMA-567)
+                appDelegate.workoutsViewModel = workoutsViewModel
+
+                // Load workouts from API
+                await workoutsViewModel.loadWorkouts()
+
+                // Initialize WatchConnectivity asynchronously (non-blocking)
+                // Skip when UITEST_SKIP_APPLE_WATCH=true to avoid system permission modal (AMA-549)
+                #if DEBUG
+                if !UITestEnvironment.shared.skipAppleWatch {
+                    watchConnectivity.activate()
+                }
+                #else
+                watchConnectivity.activate()
+                #endif
+
+                // Auto-reconnect to saved Garmin device if available
+                if garminConnectivity.savedDeviceInfo != nil && !garminConnectivity.isConnected {
+                    garminConnectivity.connectToSavedDevice()
+                }
+            }
+            .refreshable {
+                await workoutsViewModel.refreshWorkouts()
+            }
+            .onOpenURL { url in
+                // AMA-1259: Handle Universal Links and custom scheme deep links for import
+                if deepLinkManager.handleIncomingURL(url) {
+                    return
+                }
+
+                // Handle Garmin Connect IQ callbacks (existing behavior)
+                print("[APP] onOpenURL received: \(url.absoluteString)")
+                if garminConnectivity.handleURL(url) {
+                    print("[APP] URL handled by Garmin")
+                    return
+                }
+
+                // AMA-1640: route in-app surface deep links + universal links.
+                // Returns false for non-routable paths (e.g. https://amakaflow.com/pricing).
+                if routeAppSurfaceDeepLink(url) { return }
+
+                // AMA-1809 (CR): only after every handler declines,
+                // surface the alert + Sentry breadcrumb. Earlier
+                // version fired this from inside the importer's
+                // `.unknown` branch, which preempted Garmin and
+                // app-surface routing.
+                deepLinkManager.reportUnrecognizedLink(url)
+            }
+            .sheet(isPresented: $deepLinkManager.showImportSheet) {
+                if let importURL = deepLinkManager.pendingImportURL {
+                    DeepLinkImportView(urlString: importURL) {
+                        deepLinkManager.clearPendingImport()
+                        // Refresh workouts after import
+                        Task { await workoutsViewModel.refreshWorkouts() }
+                    }
+                }
+            }
+            // AMA-1811: alert when a deep link doesn't match
+            // any route. Earlier behaviour was a silent
+            // debug-only print — TestFlight users saw
+            // their tap do nothing. Sentry breadcrumb is
+            // dropped from the manager itself; this
+            // surface is purely the user-facing message.
+            .alert(
+                "Couldn't open that link",
+                isPresented: Binding(
+                    get: { deepLinkManager.unrecognizedLink != nil },
+                    set: { if !$0 { deepLinkManager.clearUnrecognizedLink() } }
+                ),
+                presenting: deepLinkManager.unrecognizedLink
+            ) { _ in
+                Button("OK") { deepLinkManager.clearUnrecognizedLink() }
+            } message: { url in
+                // AMA-1809 (CR): redact query/fragment so a deep
+                // link that happens to carry tokens or emails
+                // doesn't surface verbatim in the alert.
+                let safeURL = "\(url.scheme ?? "")://\(url.host ?? "")\(url.path)"
+                Text("AmakaFlow doesn't know how to open \(safeURL). The link may be outdated or for a different app.")
+            }
     }
 
 }

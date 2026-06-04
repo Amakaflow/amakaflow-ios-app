@@ -239,6 +239,9 @@
 		AMA1620UITEST01B /* UITestEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620UITEST01A /* UITestEnvironment.swift */; };
 		AMA2007SIGNUPVMBLD /* SignUpViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2007SIGNUPVMREF /* SignUpViewModel.swift */; };
 		AMA2007SIGNUPVIEWBLD /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2007SIGNUPVIEWREF /* SignUpView.swift */; };
+		AMA2910SUBVMBLD /* SubscriptionAccessViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2910SUBVMREF /* SubscriptionAccessViewModel.swift */; };
+		AMA2910LANDBLD /* LandingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2910LANDINGREF /* LandingView.swift */; };
+		AMA2910PAYWALLBLD /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2910PAYWALLREF /* PaywallView.swift */; };
 		AMA2007SIGNUPDEMBLD /* SignUpDemoHeroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2007SIGNUPDEMREF /* SignUpDemoHeroView.swift */; };
 		AMA1791ACCEPTREPOBLD /* AcceptedSuggestionsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791ACCEPTREPOREF /* AcceptedSuggestionsRepository.swift */; };
 		AMA1791APPDBBLD /* AppDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791APPDBREF /* AppDatabase.swift */; };
@@ -685,6 +688,9 @@
 		AMA1620UITEST01A /* UITestEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UITestEnvironment.swift; path = ../AmakaFlow/Services/UITestEnvironment.swift; sourceTree = SOURCE_ROOT; };
 		AMA2007SIGNUPVMREF /* SignUpViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SignUpViewModel.swift; path = ../AmakaFlow/ViewModels/SignUpViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA2007SIGNUPVIEWREF /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SignUpView.swift; path = ../AmakaFlow/Views/SignUpView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2910SUBVMREF /* SubscriptionAccessViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SubscriptionAccessViewModel.swift; path = ../AmakaFlow/ViewModels/SubscriptionAccessViewModel.swift; sourceTree = SOURCE_ROOT; };
+		AMA2910LANDINGREF /* LandingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LandingView.swift; path = ../AmakaFlow/Views/Marketing/LandingView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2910PAYWALLREF /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PaywallView.swift; path = ../AmakaFlow/Views/Marketing/PaywallView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2007SIGNUPDEMREF /* SignUpDemoHeroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SignUpDemoHeroView.swift; path = ../AmakaFlow/Views/SignUpDemoHeroView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2007SIGNUPTESTREF /* SignUpViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SignUpViewModelTests.swift; path = AmakaFlowCompanionTests/SignUpViewModelTests.swift; sourceTree = "<group>"; };
 		AMA1791ACCEPTREPOREF /* AcceptedSuggestionsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AcceptedSuggestionsRepository.swift; path = ../AmakaFlow/Storage/Repositories/AcceptedSuggestionsRepository.swift; sourceTree = SOURCE_ROOT; };
@@ -1207,6 +1213,9 @@
 				C2C967F7EB5505FDB36864F9 /* FeatureFlags.swift */,
 				D0C1640626E3952B7DBBBF33 /* MentalModelView.swift */,
 				AMA2007SIGNUPVIEWREF /* SignUpView.swift */,
+				AMA2910SUBVMREF /* SubscriptionAccessViewModel.swift */,
+				AMA2910LANDINGREF /* LandingView.swift */,
+				AMA2910PAYWALLREF /* PaywallView.swift */,
 				AMA2007SIGNUPDEMREF /* SignUpDemoHeroView.swift */,
 				BAC6A807F5A4820B05339B99 /* PlanRevealView.swift */,
 				F3CF9663A6818FA77C6C02B0 /* WeeklyReviewView.swift */,
@@ -2005,6 +2014,9 @@
 				141CFD120F8C663BD0F2C3BC /* MentalModelView.swift in Sources */,
 				AMA2007SIGNUPVMBLD /* SignUpViewModel.swift in Sources */,
 				AMA2007SIGNUPVIEWBLD /* SignUpView.swift in Sources */,
+				AMA2910SUBVMBLD /* SubscriptionAccessViewModel.swift in Sources */,
+				AMA2910LANDBLD /* LandingView.swift in Sources */,
+				AMA2910PAYWALLBLD /* PaywallView.swift in Sources */,
 				AMA2007SIGNUPDEMBLD /* SignUpDemoHeroView.swift in Sources */,
 				52BE28AB8A3D773F016F14E5 /* PlanRevealView.swift in Sources */,
 				D37C6098D3FACBE84D8D261D /* WeeklyReviewView.swift in Sources */,

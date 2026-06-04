@@ -46,6 +46,16 @@ enum FeatureFlags {
         return false
     }()
 
+    /// When true, authenticated users without Pro see `PaywallView` before tabs.
+    /// Default off — billing route is stubbed and v1 ships free. Enable with
+    /// `AMAKAFLOW_PAYWALL_GATE=1` for QA of the paywall shell.
+    static let paywallGateEnabled: Bool = {
+        if let override = ProcessInfo.processInfo.environment["AMAKAFLOW_PAYWALL_GATE"] {
+            return override == "1" || override.lowercased() == "true"
+        }
+        return false
+    }()
+
     /// Controls visibility of non-core feature surfaces.
     ///
     /// Default: `true` (all surfaces visible) per the 2026-05-22 v1 plan.
