@@ -97,6 +97,27 @@ final class HomeViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.readinessScore, 82)
     }
 
+    func testLoadReadinessSetsAcuteLoadFromDayState() async {
+        let mockAPI = MockAPIService()
+        mockAPI.fetchDayStatesResult = .success([
+            DayState(
+                date: "2026-05-28",
+                readiness: .green,
+                plannedWorkouts: [],
+                completedWorkouts: [],
+                fatigueScore: nil,
+                notes: nil,
+                readinessScore: 70,
+                acuteLoad: 78.5
+            )
+        ])
+        viewModel = HomeViewModel(calendar: calendar, now: { self.fixedNow }, apiService: mockAPI)
+
+        await viewModel.loadReadiness()
+
+        XCTAssertEqual(viewModel.todayAcuteLoad, 78.5)
+    }
+
     func testLoadReadinessLeavesNilWhenDayStateHasNoScore() async {
         let mockAPI = MockAPIService()
         mockAPI.fetchDayStatesResult = .success([

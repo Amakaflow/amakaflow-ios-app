@@ -36,14 +36,14 @@ import Foundation
 enum FeatureFlags {
     /// Controls the multi-week Program Wizard entry points.
     ///
-    /// Default: `true`. mobile-bff ships `/v1/programs/design|generate|save/stream`
-    /// (see amakaflow-backend mobile-bff tests). Set env `AMAKAFLOW_PROGRAM_WIZARD=0`
-    /// to hide locally if staging is unavailable.
+    /// Default: `false` until `/v1/programs/design|generate|save/stream` is deployed
+    /// and verified end-to-end. Set `AMAKAFLOW_PROGRAM_WIZARD=1` in controlled
+    /// environments/tests to enable.
     static let programWizardEnabled: Bool = {
         if let override = ProcessInfo.processInfo.environment["AMAKAFLOW_PROGRAM_WIZARD"] {
             return override == "1" || override.lowercased() == "true"
         }
-        return true
+        return false
     }()
 
     /// Controls visibility of non-core feature surfaces.

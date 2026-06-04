@@ -21,6 +21,8 @@ final class HomeViewModel: ObservableObject {
     @Published private(set) var ctaError: CTAError?
     /// Composite readiness from today's DayState (`GET /v1/planning/days`). Nil when absent — never fabricated.
     @Published private(set) var readinessScore: Int?
+    /// Today's acute training load (TSS) when returned by day-state. Nil when absent.
+    @Published private(set) var todayAcuteLoad: Double?
 
     private let calendar: Calendar
     private let now: () -> Date
@@ -37,22 +39,16 @@ final class HomeViewModel: ObservableObject {
     }
 
     func loadReadiness() async {
-        let todayKey = Self.dayKeyFormatter.string(from: now())
+        let todayKey = APIService.dayKeyFormatter.string(from: now())
         do {
             let states = try await apiService.fetchDayStates(from: todayKey, to: todayKey)
             readinessScore = states.first?.readinessScore
+            todayAcuteLoad = states.first?.acuteLoad
         } catch {
             readinessScore = nil
+            todayAcuteLoad = nil
         }
     }
-
-    private static let dayKeyFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter
-    }()
 
     func update(from workoutsViewModel: WorkoutsViewModel) {
         update(

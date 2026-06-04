@@ -159,7 +159,7 @@ struct WorkoutPlayerView: View {
                 if engine.phase == .running {
                     engine.pause()
                 }
-                engine.start(workout: swappedWorkout)
+                engine.swapActiveWorkout(with: swappedWorkout)
             }
         }
         .onChange(of: engine.phase) { oldPhase, newPhase in
