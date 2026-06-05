@@ -136,6 +136,7 @@ struct SettingsView: View {
     @EnvironmentObject private var garminConnectivity: GarminConnectManager
     @EnvironmentObject private var pairingService: PairingService
     @EnvironmentObject private var workoutsViewModel: WorkoutsViewModel
+    @EnvironmentObject private var subscriptionAccess: SubscriptionAccessViewModel
 
     var body: some View {
         ScrollView {
@@ -239,6 +240,7 @@ struct SettingsView: View {
             #endif
             .fullScreenCover(isPresented: $showingPaywall) {
                 PaywallView()
+                    .environmentObject(subscriptionAccess)
             }
             .overlay(alignment: .top) {
                 // Invisible marker for Maestro E2E tests (container views

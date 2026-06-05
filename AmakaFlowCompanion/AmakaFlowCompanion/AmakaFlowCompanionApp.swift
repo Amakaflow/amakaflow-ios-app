@@ -13,7 +13,9 @@ import ClerkKit
 struct AmakaFlowCompanionApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var authViewModel = AuthViewModel.shared
-    @StateObject private var subscriptionAccess = SubscriptionAccessViewModel()
+    @StateObject private var subscriptionAccess = SubscriptionAccessViewModel(
+        billingClient: RevenueCatSubscriptionBillingClient.shared
+    )
 
     @StateObject private var pairingService = PairingService.shared
     @StateObject private var workoutsViewModel: WorkoutsViewModel
@@ -173,11 +175,9 @@ struct AmakaFlowCompanionApp: App {
                                 await subscriptionAccess.refresh()
                             }
                     } else if FeatureFlags.paywallGateEnabled
-                        && !subscriptionAccess.hasProAccess
-                        && !subscriptionAccess.hasStartedTrial() {
-                        PaywallView(allowsDismiss: false, onStartTrial: {
-                            subscriptionAccess.markTrialStarted()
-                        })
+                        && !subscriptionAccess.hasProAccess {
+                        PaywallView(allowsDismiss: false)
+                            .environmentObject(subscriptionAccess)
                     } else {
                         authenticatedAppRoot
                     }
@@ -187,6 +187,13 @@ struct AmakaFlowCompanionApp: App {
             }
             .environment(Clerk.shared)
             .environmentObject(authViewModel)
+            .onChange(of: authViewModel.isAuthenticated) { _, isAuthenticated in
+                if !isAuthenticated {
+                    Task {
+                        await subscriptionAccess.resetOnSignOut()
+                    }
+                }
+            }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active && authViewModel.isAuthenticated {
                     Task {
@@ -235,6 +242,7 @@ struct AmakaFlowCompanionApp: App {
             .environmentObject(pairingService)
             .environmentObject(authViewModel)
             .environmentObject(deepLinkManager)
+            .environmentObject(subscriptionAccess)
             .task {
                 await subscriptionAccess.refresh()
                 // Wire up ViewModel for AppDelegate silent push handler (AMA-567)

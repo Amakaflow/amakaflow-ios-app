@@ -2,9 +2,8 @@
 //  SubscriptionAccessViewModel.swift
 //  AmakaFlow
 //
-//  Resolves whether the signed-in user has Pro access. Billing is not live
-//  yet (`fetchSubscription` → notImplemented), so failures default to allowing
-//  access unless the paywall preview gate is enabled for QA.
+//  Resolves whether the signed-in user has Pro access via RevenueCat
+//  entitlements and, when available, the backend subscription API.
 //
 
 import Combine
@@ -12,19 +11,30 @@ import Foundation
 
 @MainActor
 final class SubscriptionAccessViewModel: ObservableObject {
+    enum ErrorMessages {
+        static let purchaseNotActivated = "Purchase did not activate AmakaFlow Pro."
+        static let noActiveSubscription = "No active AmakaFlow Pro subscription was found for this Apple ID."
+    }
+
     @Published private(set) var hasProAccess: Bool
     @Published private(set) var isAccessResolved: Bool
     @Published private(set) var isLoading = false
+    @Published private(set) var isPurchasing = false
+    @Published private(set) var purchaseError: String?
+    @Published private(set) var planPricing: SubscriptionPlanPricing?
     @Published private(set) var subscription: Subscription?
 
     private let apiService: APIServiceProviding
+    private let billingClient: SubscriptionBillingProviding
     private let userIdProvider: (() -> String?)?
 
     init(
         apiService: APIServiceProviding = AppDependencies.live.apiService,
+        billingClient: SubscriptionBillingProviding? = nil,
         userIdProvider: (() -> String?)? = nil
     ) {
         self.apiService = apiService
+        self.billingClient = billingClient ?? NoOpSubscriptionBillingClient()
         self.userIdProvider = userIdProvider
         if FeatureFlags.paywallGateEnabled {
             hasProAccess = false
@@ -36,17 +46,30 @@ final class SubscriptionAccessViewModel: ObservableObject {
     }
 
     func refresh() async {
-        let userId = resolvedUserId()
-        if hasStartedTrial(for: userId) {
-            hasProAccess = true
-            isAccessResolved = true
-            return
-        }
-
         isLoading = true
         defer {
             isLoading = false
             isAccessResolved = true
+        }
+
+        var identitySynced = false
+        do {
+            try await syncBillingIdentity()
+            identitySynced = true
+        } catch {
+            // Skip RevenueCat entitlement reads — cached customer may belong to a prior user.
+        }
+
+        if billingClient.isConfigured {
+            do {
+                planPricing = try await billingClient.loadPlanPricing()
+            } catch {
+                planPricing = nil
+            }
+        }
+
+        if identitySynced, try await resolveProAccessFromBilling() {
+            return
         }
 
         do {
@@ -55,29 +78,89 @@ final class SubscriptionAccessViewModel: ObservableObject {
             hasProAccess = Self.isProSubscription(sub)
         } catch {
             subscription = nil
-            // Billing route is stubbed — keep MVP users unblocked unless QA gate is on.
             hasProAccess = !FeatureFlags.paywallGateEnabled
         }
     }
 
-    /// Marks the user as having started a trial from the paywall shell (StoreKit TBD).
-    func markTrialStarted() {
-        let userId = resolvedUserId()
-        UserDefaults.standard.set(true, forKey: Self.trialStartedKey(for: userId))
-        hasProAccess = true
-        isAccessResolved = true
+    func purchase(plan: SubscriptionBillingPlan) async {
+        purchaseError = nil
+        isPurchasing = true
+        defer { isPurchasing = false }
+
+        do {
+            try await syncBillingIdentity()
+            let granted = try await billingClient.purchase(plan: plan)
+            hasProAccess = granted
+            isAccessResolved = true
+            if !granted {
+                purchaseError = ErrorMessages.purchaseNotActivated
+            }
+        } catch let error as SubscriptionBillingError where error == .purchaseCancelled {
+            purchaseError = nil
+        } catch {
+            purchaseError = error.localizedDescription
+        }
     }
 
-    func hasStartedTrial(for userId: String? = nil) -> Bool {
-        UserDefaults.standard.bool(forKey: Self.trialStartedKey(for: userId ?? resolvedUserId()))
+    func restorePurchases() async {
+        purchaseError = nil
+        isPurchasing = true
+        defer { isPurchasing = false }
+
+        do {
+            try await syncBillingIdentity()
+            let restored = try await billingClient.restorePurchases()
+            hasProAccess = restored
+            isAccessResolved = true
+            if !restored {
+                purchaseError = ErrorMessages.noActiveSubscription
+            }
+        } catch {
+            purchaseError = error.localizedDescription
+        }
+    }
+
+    func resetOnSignOut() async {
+        purchaseError = nil
+        planPricing = nil
+        subscription = nil
+
+        if FeatureFlags.paywallGateEnabled {
+            hasProAccess = false
+            isAccessResolved = false
+        } else {
+            hasProAccess = true
+            isAccessResolved = true
+        }
+
+        do {
+            try await billingClient.clearAppUserIdentity()
+        } catch {
+            // Sign-out should still complete even if RevenueCat reset fails.
+        }
+    }
+
+    private func syncBillingIdentity() async throws {
+        let userId = resolvedUserId()
+        billingClient.configure(appUserID: userId)
+        try await billingClient.syncAppUserID(userId)
+    }
+
+    private func resolveProAccessFromBilling() async -> Bool {
+        guard billingClient.isConfigured else { return false }
+        do {
+            if try await billingClient.customerHasProAccess() {
+                hasProAccess = true
+                return true
+            }
+        } catch {
+            // Fall through to backend subscription lookup.
+        }
+        return false
     }
 
     private func resolvedUserId() -> String? {
         userIdProvider?() ?? PairingService.shared.userProfile?.id
-    }
-
-    private static func trialStartedKey(for userId: String?) -> String {
-        "amakaflow_paywall_trial_started_\(userId ?? "anonymous")"
     }
 
     static func isProSubscription(_ sub: Subscription) -> Bool {

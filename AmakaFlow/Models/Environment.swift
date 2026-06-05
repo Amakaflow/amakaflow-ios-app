@@ -165,6 +165,35 @@ enum AppEnvironment: String, CaseIterable {
         preconditionFailure("Missing \(keyName). Provide the Clerk publishable key via build configuration or environment.")
     }
 
+    /// RevenueCat public SDK key for the current environment.
+    /// Optional — when absent, subscription purchase flows stay disabled.
+    var revenueCatAPIKey: String? {
+        #if DEBUG
+        if let override = ProcessInfo.processInfo.environment["REVENUECAT_API_KEY"], !override.isEmpty {
+            return override
+        }
+        #endif
+
+        let keyName: String
+        switch self {
+        case .development, .staging:
+            keyName = "REVENUECAT_API_KEY_STAGING"
+        case .production:
+            keyName = "REVENUECAT_API_KEY_PRODUCTION"
+        }
+
+        if let value = Bundle.main.object(forInfoDictionaryKey: keyName) as? String,
+           !value.isEmpty, !value.hasPrefix("$(") {
+            return value
+        }
+
+        if let value = ProcessInfo.processInfo.environment[keyName], !value.isEmpty {
+            return value
+        }
+
+        return nil
+    }
+
 
     var stravaAPIURL: String {
         switch self {

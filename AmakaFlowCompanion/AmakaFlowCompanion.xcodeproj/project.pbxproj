@@ -140,6 +140,7 @@
 		AK00SHARE00EB /* AmakaFlowShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AK00SHARE00EA /* AmakaFlowShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		AK00TST001B /* ActivityHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST001A /* ActivityHistoryTests.swift */; };
 		AK00TST002B /* ActivityHistoryViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST002A /* ActivityHistoryViewModelTests.swift */; };
+		AMA291RC004BLD /* SubscriptionAccessViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA291RC004REF /* SubscriptionAccessViewModelTests.swift */; };
 		AK00TST003B /* AmakaFlowCompanionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST003A /* AmakaFlowCompanionTests.swift */; };
 		AK00TST004B /* APIIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST004A /* APIIntegrationTests.swift */; };
 		AK00TST005B /* CompletionDetailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST005A /* CompletionDetailTests.swift */; };
@@ -242,6 +243,8 @@
 		AMA2910SUBVMBLD /* SubscriptionAccessViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2910SUBVMREF /* SubscriptionAccessViewModel.swift */; };
 		AMA2910LANDBLD /* LandingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2910LANDINGREF /* LandingView.swift */; };
 		AMA2910PAYWALLBLD /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2910PAYWALLREF /* PaywallView.swift */; };
+		AMA291RC002BLD /* SubscriptionBilling.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA291RC002REF /* SubscriptionBilling.swift */; };
+		AMA291RC003BLD /* RevenueCatSubscriptionBillingClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA291RC003REF /* RevenueCatSubscriptionBillingClient.swift */; };
 		AMA2007SIGNUPDEMBLD /* SignUpDemoHeroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2007SIGNUPDEMREF /* SignUpDemoHeroView.swift */; };
 		AMA1791ACCEPTREPOBLD /* AcceptedSuggestionsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791ACCEPTREPOREF /* AcceptedSuggestionsRepository.swift */; };
 		AMA1791APPDBBLD /* AppDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791APPDBREF /* AppDatabase.swift */; };
@@ -589,6 +592,7 @@
 		AK00SHARE00EA /* AmakaFlowShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AmakaFlowShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		AK00TST001A /* ActivityHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivityHistoryTests.swift; path = AmakaFlowCompanionTests/ActivityHistoryTests.swift; sourceTree = "<group>"; };
 		AK00TST002A /* ActivityHistoryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivityHistoryViewModelTests.swift; path = AmakaFlowCompanionTests/ActivityHistoryViewModelTests.swift; sourceTree = "<group>"; };
+		AMA291RC004REF /* SubscriptionAccessViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SubscriptionAccessViewModelTests.swift; path = AmakaFlowCompanionTests/SubscriptionAccessViewModelTests.swift; sourceTree = "<group>"; };
 		AK00TST003A /* AmakaFlowCompanionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AmakaFlowCompanionTests.swift; path = AmakaFlowCompanionTests/AmakaFlowCompanionTests.swift; sourceTree = "<group>"; };
 		AK00TST004A /* APIIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIIntegrationTests.swift; path = AmakaFlowCompanionTests/APIIntegrationTests.swift; sourceTree = "<group>"; };
 		AK00TST005A /* CompletionDetailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CompletionDetailTests.swift; path = AmakaFlowCompanionTests/CompletionDetailTests.swift; sourceTree = "<group>"; };
@@ -691,6 +695,8 @@
 		AMA2910SUBVMREF /* SubscriptionAccessViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SubscriptionAccessViewModel.swift; path = ../AmakaFlow/ViewModels/SubscriptionAccessViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA2910LANDINGREF /* LandingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LandingView.swift; path = ../AmakaFlow/Views/Marketing/LandingView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2910PAYWALLREF /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PaywallView.swift; path = ../AmakaFlow/Views/Marketing/PaywallView.swift; sourceTree = SOURCE_ROOT; };
+		AMA291RC002REF /* SubscriptionBilling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SubscriptionBilling.swift; path = ../AmakaFlow/Services/SubscriptionBilling.swift; sourceTree = SOURCE_ROOT; };
+		AMA291RC003REF /* RevenueCatSubscriptionBillingClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RevenueCatSubscriptionBillingClient.swift; path = ../AmakaFlow/Services/RevenueCatSubscriptionBillingClient.swift; sourceTree = SOURCE_ROOT; };
 		AMA2007SIGNUPDEMREF /* SignUpDemoHeroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SignUpDemoHeroView.swift; path = ../AmakaFlow/Views/SignUpDemoHeroView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2007SIGNUPTESTREF /* SignUpViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SignUpViewModelTests.swift; path = AmakaFlowCompanionTests/SignUpViewModelTests.swift; sourceTree = "<group>"; };
 		AMA1791ACCEPTREPOREF /* AcceptedSuggestionsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AcceptedSuggestionsRepository.swift; path = ../AmakaFlow/Storage/Repositories/AcceptedSuggestionsRepository.swift; sourceTree = SOURCE_ROOT; };
@@ -1216,6 +1222,8 @@
 				AMA2910SUBVMREF /* SubscriptionAccessViewModel.swift */,
 				AMA2910LANDINGREF /* LandingView.swift */,
 				AMA2910PAYWALLREF /* PaywallView.swift */,
+				AMA291RC002REF /* SubscriptionBilling.swift */,
+				AMA291RC003REF /* RevenueCatSubscriptionBillingClient.swift */,
 				AMA2007SIGNUPDEMREF /* SignUpDemoHeroView.swift */,
 				BAC6A807F5A4820B05339B99 /* PlanRevealView.swift */,
 				F3CF9663A6818FA77C6C02B0 /* WeeklyReviewView.swift */,
@@ -1352,6 +1360,7 @@
 				AK00FIX025A /* WorkoutEditorView.swift */,
 				AK00TST001A /* ActivityHistoryTests.swift */,
 				AK00TST002A /* ActivityHistoryViewModelTests.swift */,
+				AMA291RC004REF /* SubscriptionAccessViewModelTests.swift */,
 				AK00TST003A /* AmakaFlowCompanionTests.swift */,
 				AK00TST004A /* APIIntegrationTests.swift */,
 				AK00TST005A /* CompletionDetailTests.swift */,
@@ -1428,6 +1437,7 @@
 				AMA1620CLKKIT01P /* ClerkKit */,
 				AMA1620CLKUI001P /* ClerkKitUI */,
 				AMA1791GRDBPROD /* GRDB */,
+				AMA291RC001PROD /* RevenueCat */,
 				5428DFDDAABA4C78929FAD58 /* OpenAPIRuntime */,
 				3D2A2E0648804CD7A88CF287 /* OpenAPIURLSession */,
 			);
@@ -1620,6 +1630,7 @@
 				XCT4H34LTH00000003 /* XCRemoteSwiftPackageReference "XCTHealthKit" */,
 				AMA1620CLERKPKG /* XCRemoteSwiftPackageReference "clerk-ios" */,
 				AMA1791GRDBPKG /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				AMA291RC001PKG /* XCRemoteSwiftPackageReference "purchases-ios" */,
 				09208E7C85544D5D93929812 /* XCRemoteSwiftPackageReference "swift-openapi-runtime" */,
 				02CC5FB9C29845DF83B3F0CB /* XCRemoteSwiftPackageReference "swift-openapi-urlsession" */,
 			);
@@ -2017,6 +2028,8 @@
 				AMA2910SUBVMBLD /* SubscriptionAccessViewModel.swift in Sources */,
 				AMA2910LANDBLD /* LandingView.swift in Sources */,
 				AMA2910PAYWALLBLD /* PaywallView.swift in Sources */,
+				AMA291RC002BLD /* SubscriptionBilling.swift in Sources */,
+				AMA291RC003BLD /* RevenueCatSubscriptionBillingClient.swift in Sources */,
 				AMA2007SIGNUPDEMBLD /* SignUpDemoHeroView.swift in Sources */,
 				52BE28AB8A3D773F016F14E5 /* PlanRevealView.swift in Sources */,
 				D37C6098D3FACBE84D8D261D /* WeeklyReviewView.swift in Sources */,
@@ -2042,6 +2055,7 @@
 				AMA2028WDTST0000000B /* WatchDeliveryViewModelTests.swift in Sources */,
 				AK00TST001B /* ActivityHistoryTests.swift in Sources */,
 				AK00TST002B /* ActivityHistoryViewModelTests.swift in Sources */,
+				AMA291RC004BLD /* SubscriptionAccessViewModelTests.swift in Sources */,
 				AK00TST003B /* AmakaFlowCompanionTests.swift in Sources */,
 				AK00TST004B /* APIIntegrationTests.swift in Sources */,
 				AK00TST005B /* CompletionDetailTests.swift in Sources */,
@@ -2868,6 +2882,14 @@
 				minimumVersion = 7.0.0;
 			};
 		};
+		AMA291RC001PKG /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
 		F84E225F2ED0B84300459747 /* XCRemoteSwiftPackageReference "workoutkit-sync" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Amakaflow/workoutkit-sync";
@@ -2916,6 +2938,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AMA1791GRDBPKG /* XCRemoteSwiftPackageReference "GRDB.swift" */;
 			productName = GRDB;
+		};
+		AMA291RC001PROD /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AMA291RC001PKG /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
 		};
 		F84E22982ED0DA1F00459747 /* WorkoutKitSync */ = {
 			isa = XCSwiftPackageProductDependency;
