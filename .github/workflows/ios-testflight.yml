@@ -26,6 +26,7 @@ on:
     paths:
       - 'AmakaFlow/**'
       - 'AmakaFlowCompanion/**'
+      - 'e2e/maestro/**'
       - '.github/workflows/ios-testflight.yml'
   workflow_dispatch:  # allow manual re-runs from the Actions tab
 

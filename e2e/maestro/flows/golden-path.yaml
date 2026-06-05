@@ -30,10 +30,26 @@ appId: com.myamaka.AmakaFlowCompanion
 - takeScreenshot: golden-01-signed-in
 
 # --- Step 2: Suggest a workout from Home ---
-- tapOn:
-    id: "ama1842.suggest.button"
-- waitForAnimationToEnd:
-    timeout: 3000
+# Home redesign: empty state entry is af_home_empty_just_today; legacy
+# ama1842.suggest.button removed from populated home.
+- runFlow:
+    when:
+      visible:
+        id: "af_home_empty_just_today"
+    commands:
+      - tapOn:
+          id: "af_home_empty_just_today"
+      - waitForAnimationToEnd:
+          timeout: 3000
+- runFlow:
+    when:
+      visible:
+        id: "ama1842.suggest.button"
+    commands:
+      - tapOn:
+          id: "ama1842.suggest.button"
+      - waitForAnimationToEnd:
+          timeout: 3000
 - takeScreenshot: golden-02-suggest-tapped
 
 # Optional one-time biometric-consent gate ("...agree...continue").

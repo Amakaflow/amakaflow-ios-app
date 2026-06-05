@@ -100,16 +100,15 @@ appId: com.myamaka.AmakaFlowCompanion
             - waitForAnimationToEnd:
                 timeout: 2500
 
-# Fast path: already signed in. The Home "Suggest" button
-# (ama1842.suggest.button) is an unambiguous authenticated-Home sentinel —
-# unlike bare text "Coach", which collides with onboarding/intro copy.
+# Fast path: already signed in. `home_screen` is the authenticated-Home
+# sentinel (overlay marker on HomeView — stable across empty/content states).
 - runFlow:
     when:
       visible:
-        id: "ama1842.suggest.button"
+        id: "home_screen"
     commands:
       - assertVisible:
-          id: "ama1842.suggest.button"
+          id: "home_screen"
       # Already signed in — nothing else to do.
 
 # Sign-in path: only runs if Home is NOT yet visible AND the email input
@@ -118,7 +117,7 @@ appId: com.myamaka.AmakaFlowCompanion
 - runFlow:
     when:
       notVisible:
-        id: "ama1842.suggest.button"
+        id: "home_screen"
       visible:
         text: "Enter your email"
     commands:
@@ -204,11 +203,10 @@ appId: com.myamaka.AmakaFlowCompanion
             - waitForAnimationToEnd:
                 timeout: 3000
 
-# Final assertion: the authenticated Home (Suggest button) must be visible
-# within 30s. If not, this fails loudly and aborts the calling flow.
+# Final assertion: authenticated Home must be visible within 30s.
 - extendedWaitUntil:
     visible:
-      id: "ama1842.suggest.button"
+      id: "home_screen"
     timeout: 30000
 - assertVisible:
-    id: "ama1842.suggest.button"
+    id: "home_screen"
