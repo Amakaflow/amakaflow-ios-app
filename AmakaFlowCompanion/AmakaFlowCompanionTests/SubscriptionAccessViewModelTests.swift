@@ -76,7 +76,7 @@ final class SubscriptionAccessViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.hasProAccess)
         XCTAssertEqual(
             viewModel.purchaseError,
-            "No active AmakaFlow Pro subscription was found for this Apple ID."
+            SubscriptionAccessViewModel.ErrorMessages.noActiveSubscription
         )
     }
 

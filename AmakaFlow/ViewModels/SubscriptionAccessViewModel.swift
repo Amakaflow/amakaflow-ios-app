@@ -11,6 +11,11 @@ import Foundation
 
 @MainActor
 final class SubscriptionAccessViewModel: ObservableObject {
+    enum ErrorMessages {
+        static let purchaseNotActivated = "Purchase did not activate AmakaFlow Pro."
+        static let noActiveSubscription = "No active AmakaFlow Pro subscription was found for this Apple ID."
+    }
+
     @Published private(set) var hasProAccess: Bool
     @Published private(set) var isAccessResolved: Bool
     @Published private(set) var isLoading = false
@@ -86,7 +91,7 @@ final class SubscriptionAccessViewModel: ObservableObject {
             hasProAccess = granted
             isAccessResolved = true
             if !granted {
-                purchaseError = "Purchase did not activate AmakaFlow Pro."
+                purchaseError = ErrorMessages.purchaseNotActivated
             }
         } catch let error as SubscriptionBillingError where error == .purchaseCancelled {
             purchaseError = nil
@@ -106,7 +111,7 @@ final class SubscriptionAccessViewModel: ObservableObject {
             hasProAccess = restored
             isAccessResolved = true
             if !restored {
-                purchaseError = "No active AmakaFlow Pro subscription was found for this Apple ID."
+                purchaseError = ErrorMessages.noActiveSubscription
             }
         } catch {
             purchaseError = error.localizedDescription

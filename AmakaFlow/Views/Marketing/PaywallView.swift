@@ -41,22 +41,16 @@ struct PaywallView: View {
         func subtitle(from pricing: SubscriptionPlanPricing?) -> String {
             switch self {
             case .annual:
-                if let price = pricing?.annualPrice {
-                    return "\(price)/yr"
-                }
-                return "$89.99/yr · $7.50/mo"
+                return pricing?.annualSubtitle ?? "$89.99/yr · $7.50/mo"
             case .monthly:
-                if let price = pricing?.monthlyPrice {
-                    return "\(price)/mo · 7-day trial"
-                }
-                return "$12.99/mo · 7-day trial"
+                return pricing?.monthlySubtitle ?? "$12.99/mo · 7-day trial"
             }
         }
 
         func badge(from pricing: SubscriptionPlanPricing?) -> String? {
             switch self {
             case .annual:
-                return pricing?.annualBadge ?? "SAVE 42%"
+                return pricing?.annualBadge
             case .monthly:
                 return nil
             }

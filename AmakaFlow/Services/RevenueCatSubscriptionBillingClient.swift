@@ -79,9 +79,9 @@ final class RevenueCatSubscriptionBillingClient: SubscriptionBillingProviding {
 
         return SubscriptionPlanPricing(
             monthlyPrice: monthly?.storeProduct.localizedPriceString,
-            monthlySubtitle: monthly?.storeProduct.localizedDescription,
+            monthlySubtitle: monthly.map { "\($0.storeProduct.localizedPriceString)/mo · 7-day trial" },
             annualPrice: annual?.storeProduct.localizedPriceString,
-            annualSubtitle: annual?.storeProduct.localizedDescription,
+            annualSubtitle: Self.annualDisplaySubtitle(annual: annual),
             annualBadge: Self.annualSavingsBadge(monthly: monthly, annual: annual)
         )
     }
@@ -117,6 +117,24 @@ final class RevenueCatSubscriptionBillingClient: SubscriptionBillingProviding {
         guard configured else { throw SubscriptionBillingError.notConfigured }
         let info = try await Purchases.shared.restorePurchases()
         return Self.hasActiveProEntitlement(info)
+    }
+
+    static func annualDisplaySubtitle(annual: Package?) -> String? {
+        guard let annual else { return nil }
+        let yearly = annual.storeProduct.localizedPriceString
+        guard let monthlyEquivalent = formattedMonthlyEquivalent(for: annual) else {
+            return "\(yearly)/yr"
+        }
+        return "\(yearly)/yr · \(monthlyEquivalent)/mo"
+    }
+
+    static func formattedMonthlyEquivalent(for annual: Package) -> String? {
+        let monthlyPrice = annual.storeProduct.price / 12
+        guard monthlyPrice > 0 else { return nil }
+        let formatter = annual.storeProduct.priceFormatter ?? NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = annual.storeProduct.priceFormatter?.locale ?? Locale.current
+        return formatter.string(from: monthlyPrice as NSDecimalNumber)
     }
 
     static func annualSavingsBadge(monthly: Package?, annual: Package?) -> String? {
