@@ -38,7 +38,7 @@
 //    POST /v1/agent/actions/{id}/respond       (respondToAction)
 //    POST /v1/agent/actions/{id}/undo          (undoAction)
 //    STUB /analytics/shoes                      (fetchShoeComparison; no backend route)
-//    STUB /billing/subscription                 (fetchSubscription; no backend route)
+//    GET  /v1/billing/subscription              (fetchSubscription)
 //    STUB /preferences/notifications            (fetch/updateNotificationPreferences; no backend route)
 //    GET  /progression/volume                   (fetchVolumeAnalytics)
 //
@@ -527,8 +527,16 @@ extension APIService {
     // MARK: - Billing API (AMA-1147 / AMA-1133)
 
     func fetchSubscription() async throws -> Subscription {
-        // NOT IMPLEMENTED (AMA-1932): no backend route
-        throw APIError.notImplemented
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/billing/subscription",
+            method: "GET"
+        )
+        return try await self.request(
+            request,
+            decode: Subscription.self,
+            successStatusCodes: 200...200
+        )
     }
 
     // MARK: - Notification Preferences API (AMA-1147 / AMA-1133)
