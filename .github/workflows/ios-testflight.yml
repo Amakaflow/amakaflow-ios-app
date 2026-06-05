@@ -442,13 +442,15 @@ jobs:
       - name: Restore DerivedData cache
         uses: actions/cache@v4
         with:
-          path: AmakaFlowCompanion/DerivedData
-          key: dd-smoke-${{ runner.os }}-${{ github.sha }}
+          path: AmakaFlowCompanion/DerivedData-smoke
+          key: dd-smoke-${{ runner.os }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj', 'AmakaFlow/**/*.swift', 'AmakaFlowCompanion/**/*.swift') }}
           restore-keys: dd-smoke-${{ runner.os }}-
 
       # Debug sim build with the staging Clerk key baked in. Per
       # Environment.swift, DEBUG builds default to `.staging`, so the
       # journey hits the staging backend (same as scripts/sim-build.sh).
+      # Use DerivedData-smoke (not DerivedData) so we never restore the
+      # Release archive cache from the testflight job into a Debug sim build.
       - name: Build Debug app for simulator (staging)
         working-directory: AmakaFlowCompanion
         env:
@@ -464,7 +466,7 @@ jobs:
             -project AmakaFlowCompanion.xcodeproj \
             -configuration Debug \
             -destination "platform=iOS Simulator,id=${SIM_UDID}" \
-            -derivedDataPath DerivedData \
+            -derivedDataPath DerivedData-smoke \
             -clonedSourcePackagesDirPath .spm \
             -parallelizeTargets -jobs $(sysctl -n hw.ncpu) \
             CLERK_PUBLISHABLE_KEY_STAGING="$CLERK_PUBLISHABLE_KEY_STAGING" \
@@ -478,12 +480,24 @@ jobs:
             echo "::error::Debug simulator build failed (exit $BUILD_EXIT)."
             exit "$BUILD_EXIT"
           fi
+          APP=$(find DerivedData-smoke/Build/Products/Debug-iphonesimulator -maxdepth 2 -name "AmakaFlowCompanion.app" -type d | head -1)
+          if [ -z "$APP" ]; then
+            echo "::error::Debug simulator build succeeded but AmakaFlowCompanion.app not found under DerivedData-smoke/Build/Products/Debug-iphonesimulator"
+            find DerivedData-smoke -name "*.app" -type d 2>/dev/null || true
+            exit 1
+          fi
+          echo "Built app: $APP"
 
       - name: Install app on simulator
         working-directory: AmakaFlowCompanion
         run: |
-          APP=$(find DerivedData/Build/Products -maxdepth 4 -name "AmakaFlowCompanion.app" -type d | head -1)
-          if [ -z "$APP" ]; then echo "No .app built" >&2; exit 1; fi
+          APP=$(find DerivedData-smoke/Build/Products/Debug-iphonesimulator -maxdepth 2 -name "AmakaFlowCompanion.app" -type d | head -1)
+          if [ -z "$APP" ]; then
+            echo "No .app built under DerivedData-smoke/Build/Products/Debug-iphonesimulator" >&2
+            find DerivedData-smoke -name "*.app" -type d 2>/dev/null || true
+            exit 1
+          fi
+          echo "Installing $APP on ${{ steps.simulator.outputs.udid }}"
           xcrun simctl install "${{ steps.simulator.outputs.udid }}" "$APP"
           xcrun simctl bootstatus "${{ steps.simulator.outputs.udid }}" -b
 
