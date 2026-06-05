@@ -68,11 +68,13 @@ Legend: ✅ Done · 🟡 In progress · ⏳ Waiting on external · 🔲 Not star
 
 ### Gap 3 — AMA-1852: CI → TestFlight auto-deploy on `main` merge
 
-- [ ] `.github/workflows/ios-testflight.yml` merged
-- [ ] App Store Connect API key wired as GHA secret (issuer id + key id + .p8)
-- [ ] Build number auto-bump via `agvtool` working
-- [ ] Smoke-test verified end-to-end on at least 2 `main` merges
-- [ ] Sentry debug symbols upload still firing post-archive
+- [x] `.github/workflows/ios-testflight.yml` merged
+- [x] App Store Connect API key wired as GHA secret (issuer id + key id + .p8)
+- [x] Clerk publishable keys wired (`CLERK_PUBLISHABLE_KEY_STAGING` + `CLERK_PUBLISHABLE_KEY_DEV`)
+- [x] Secrets preflight job + setup guide (`docs/ci/TESTFLIGHT_SECRETS.md`)
+- [x] Build number auto-bump via `100 + github.run_number` in workflow (no `agvtool` / pbxproj commits)
+- [ ] Archive + altool upload green on 2 consecutive `main` merges — **blocked 2026-06-05:** Apple Developer certificate limit (`Choose a certificate to revoke`); see TESTFLIGHT_SECRETS.md troubleshooting
+- [ ] Sentry debug symbols upload confirmed on a promoted build (`SENTRY_AUTH_TOKEN` secret present; verify in Sentry UI post-green upload)
 
 ### Gap 4 — AMA-1853: Release-readiness checklist + per-PR "Verify by"
 
