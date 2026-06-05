@@ -150,17 +150,11 @@ appId: com.myamaka.AmakaFlowCompanion
     text: ".*${TODAY}.*"
 
 # --- Step 7: relaunch, assert persistence (catches save-not-persisted) ---
+# Reuse clerk-signin (idempotent) so cold relaunch dismisses onboarding and
+# restores the authenticated tab shell — bare launchApp often stalls before
+# af_tabbar on a fresh sim session (CI run 27027839705).
 - stopApp
-- launchApp:
-    appId: com.myamaka.AmakaFlowCompanion
-    permissions:
-      notifications: deny
-- waitForAnimationToEnd:
-    timeout: 5000
-- extendedWaitUntil:
-    visible:
-      id: "af_tabbar"
-    timeout: 30000
+- runFlow: ../_lib/clerk-signin.yaml
 - tapOn:
     id: "history_tab"
 - extendedWaitUntil:
