@@ -29,21 +29,41 @@ struct PaywallView: View {
             }
         }
 
-        func price(from pricing: SubscriptionPlanPricing?) -> String {
+        func isAvailable(in pricing: SubscriptionPlanPricing?) -> Bool {
+            guard let pricing else { return true }
             switch self {
-            case .annual:
-                return pricing?.annualPrice ?? "$89.99"
-            case .monthly:
-                return pricing?.monthlyPrice ?? "$12.99"
+            case .annual: return pricing.annualPrice != nil
+            case .monthly: return pricing.monthlyPrice != nil
             }
         }
 
-        func subtitle(from pricing: SubscriptionPlanPricing?) -> String {
+        static func availablePlans(from pricing: SubscriptionPlanPricing?) -> [Plan] {
+            allCases.filter { $0.isAvailable(in: pricing) }
+        }
+
+        func price(from pricing: SubscriptionPlanPricing?) -> String? {
+            guard let pricing else {
+                switch self {
+                case .annual: return "$89.99"
+                case .monthly: return "$12.99"
+                }
+            }
             switch self {
-            case .annual:
-                return pricing?.annualSubtitle ?? "$89.99/yr · $7.50/mo"
-            case .monthly:
-                return pricing?.monthlySubtitle ?? "$12.99/mo · 7-day trial"
+            case .annual: return pricing.annualPrice
+            case .monthly: return pricing.monthlyPrice
+            }
+        }
+
+        func subtitle(from pricing: SubscriptionPlanPricing?) -> String? {
+            guard let pricing else {
+                switch self {
+                case .annual: return "$89.99/yr · $7.50/mo"
+                case .monthly: return "$12.99/mo · 7-day trial"
+                }
+            }
+            switch self {
+            case .annual: return pricing.annualSubtitle
+            case .monthly: return pricing.monthlySubtitle
             }
         }
 
@@ -103,6 +123,16 @@ struct PaywallView: View {
         .task {
             await subscriptionAccess.refresh()
         }
+        .onChange(of: subscriptionAccess.planPricing) { _, pricing in
+            let available = Plan.availablePlans(from: pricing)
+            if !available.contains(selectedPlan), let first = available.first {
+                selectedPlan = first
+            }
+        }
+    }
+
+    private var availablePlans: [Plan] {
+        Plan.availablePlans(from: subscriptionAccess.planPricing)
     }
 
     private var header: some View {
@@ -187,18 +217,21 @@ struct PaywallView: View {
             AFLabel(text: "CHOOSE PLAN")
                 .padding(.top, Theme.Spacing.md)
 
-            ForEach(Plan.allCases) { plan in
+            ForEach(availablePlans) { plan in
                 planOption(plan)
             }
         }
     }
 
+    @ViewBuilder
     private func planOption(_ plan: Plan) -> some View {
         let isSelected = selectedPlan == plan
         let pricing = subscriptionAccess.planPricing
-        return Button {
-            selectedPlan = plan
-        } label: {
+        if let price = plan.price(from: pricing),
+           let subtitle = plan.subtitle(from: pricing) {
+            Button {
+                selectedPlan = plan
+            } label: {
             HStack(spacing: Theme.Spacing.sm) {
                 ZStack {
                     Circle()
@@ -226,14 +259,14 @@ struct PaywallView: View {
                                 .clipShape(Capsule())
                         }
                     }
-                    Text(plan.subtitle(from: pricing))
+                    Text(subtitle)
                         .font(Theme.Typography.mono)
                         .foregroundColor(Theme.Colors.textSecondary)
                 }
 
                 Spacer(minLength: 0)
 
-                Text(plan.price(from: pricing))
+                Text(price)
                     .font(.system(size: 15, weight: .medium, design: .monospaced))
                     .foregroundColor(Theme.Colors.textPrimary)
             }
@@ -245,8 +278,9 @@ struct PaywallView: View {
             )
             .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous))
         }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("paywall_plan_\(plan.rawValue)")
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("paywall_plan_\(plan.rawValue)")
+        }
     }
 
     private var footer: some View {
@@ -267,7 +301,7 @@ struct PaywallView: View {
                 }
             }
             .buttonStyle(AFPrimaryButtonStyle(size: .lg))
-            .disabled(subscriptionAccess.isPurchasing)
+            .disabled(subscriptionAccess.isPurchasing || availablePlans.isEmpty)
             .accessibilityIdentifier("paywall_start_trial")
 
             Text("CANCEL ANYTIME · NO CHARGE TODAY")

@@ -52,10 +52,12 @@ final class SubscriptionAccessViewModel: ObservableObject {
             isAccessResolved = true
         }
 
+        var identitySynced = false
         do {
             try await syncBillingIdentity()
+            identitySynced = true
         } catch {
-            // Continue with cached RevenueCat state and backend lookup.
+            // Skip RevenueCat entitlement reads — cached customer may belong to a prior user.
         }
 
         if billingClient.isConfigured {
@@ -66,7 +68,7 @@ final class SubscriptionAccessViewModel: ObservableObject {
             }
         }
 
-        if try await resolveProAccessFromBilling() {
+        if identitySynced, try await resolveProAccessFromBilling() {
             return
         }
 

@@ -12,6 +12,7 @@ final class MockSubscriptionBillingClient: SubscriptionBillingProviding {
     var purchaseCalls: [SubscriptionBillingPlan] = []
     var clearIdentityCalls = 0
     var syncError: Error?
+    var customerHasProAccessCalls = 0
 
     func configure(appUserID: String?) {
         configuredUserID = appUserID
@@ -27,7 +28,10 @@ final class MockSubscriptionBillingClient: SubscriptionBillingProviding {
         configuredUserID = nil
     }
 
-    func customerHasProAccess() async throws -> Bool { hasPro }
+    func customerHasProAccess() async throws -> Bool {
+        customerHasProAccessCalls += 1
+        return hasPro
+    }
 
     func loadPlanPricing() async throws -> SubscriptionPlanPricing? { pricing }
 
@@ -121,5 +125,23 @@ final class SubscriptionAccessViewModelTests: XCTestCase {
 
         XCTAssertEqual(billing.clearIdentityCalls, 1)
         XCTAssertNil(viewModel.planPricing)
+    }
+
+    func testRefreshSkipsBillingEntitlementWhenIdentitySyncFails() async {
+        let billing = MockSubscriptionBillingClient()
+        billing.hasPro = true
+        billing.syncError = SubscriptionBillingError.identitySyncFailed
+        let api = MockAPIService()
+        api.fetchSubscriptionResult = .failure(APIError.notImplemented)
+
+        let viewModel = SubscriptionAccessViewModel(
+            apiService: api,
+            billingClient: billing,
+            userIdProvider: { "user-123" }
+        )
+
+        await viewModel.refresh()
+
+        XCTAssertEqual(billing.customerHasProAccessCalls, 0)
     }
 }
