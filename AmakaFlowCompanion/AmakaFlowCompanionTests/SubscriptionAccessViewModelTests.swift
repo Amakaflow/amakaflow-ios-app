@@ -127,6 +127,29 @@ final class SubscriptionAccessViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.planPricing)
     }
 
+    func testRefreshPreservesOpenAccessWhenBackendReturnsFreeAndPaywallGateOff() async {
+        let billing = MockSubscriptionBillingClient()
+        billing.hasPro = false
+        let api = MockAPIService()
+        api.fetchSubscriptionResult = .success(
+            Subscription(
+                plan: "free",
+                status: .inactive,
+                currentPeriodEnd: nil,
+                cancelAtPeriodEnd: nil,
+                features: []
+            )
+        )
+
+        let viewModel = SubscriptionAccessViewModel(apiService: api, billingClient: billing)
+
+        await viewModel.refresh()
+
+        XCTAssertTrue(viewModel.hasProAccess)
+        XCTAssertEqual(viewModel.subscription?.plan, "free")
+        XCTAssertTrue(api.fetchSubscriptionCalled)
+    }
+
     func testRefreshUsesBackendSubscriptionWhenRevenueCatHasNoPro() async {
         let billing = MockSubscriptionBillingClient()
         billing.hasPro = false
