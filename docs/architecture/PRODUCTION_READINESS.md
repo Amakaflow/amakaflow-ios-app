@@ -14,7 +14,7 @@
 |---|---|---|---|---|
 | 1 | AMA-1847/1848 fixes deployed + verified on staging | [AMA-1850](https://linear.app/amakaflow/issue/AMA-1850) | ✅ Done (2026-05-20). Deploy: mapper-api commit 1eee286 + mobile-bff f86672b. L4 evidence captured 22:27 CT — Activity History shows the saved row end-to-end. Bug chain found + fixed mid-verification: [AMA-1867](https://linear.app/amakaflow/issue/AMA-1867) (workout_name persistence), [AMA-1868](https://linear.app/amakaflow/issue/AMA-1868) (Maestro flow nav resync), [AMA-1870](https://linear.app/amakaflow/issue/AMA-1870)/[AMA-1871](https://linear.app/amakaflow/issue/AMA-1871) (placeholder profile missing `name`), [AMA-1872](https://linear.app/amakaflow/issue/AMA-1872) (cgid wiring + server-side fallback). | n/a — done |
 | 2 | Subscription / IAP (RevenueCat + backend billing) | [AMA-1851](https://linear.app/amakaflow/issue/AMA-1851) | 🟡 **Infra merged** (2026-06-05): iOS #291–293, backend #493–494. v1 **still ships FREE** — `AMAKAFLOW_PAYWALL_GATE` off. Activation (ASC products, RC dashboard, staging deploy, L2–L4 harness) deferred until post-launch monetization decision. **Canonical doc:** `amakaflow-backend/docs/architecture/billing-revenuecat-ama-1851.md` | None for v1 while gate off |
-| 3 | CI → TestFlight on `main` merge | [AMA-1852](https://linear.app/amakaflow/issue/AMA-1852) | 🔲 Not started | Manual + skippable today |
+| 3 | CI → TestFlight on `main` merge | [AMA-1852](https://linear.app/amakaflow/issue/AMA-1852) | 🟡 **Infra merged** — secrets preflight + setup guide (PR #294). **Blocked:** Apple Distribution certificate limit on archive; revoke unused certs then re-run. See `docs/ci/TESTFLIGHT_SECRETS.md` | Manual TestFlight until green CI upload |
 | 4 | Release-readiness checklist + per-PR "Verify by" footer | [AMA-1853](https://linear.app/amakaflow/issue/AMA-1853) | ✅ Done. PRs #215 + #216 shipped this doc + the PR-template "Verify by" section + the daily Telegram digest. | n/a — done |
 | 5 | CJ-01 L3 sign-in real-session bypass | [AMA-1849](https://linear.app/amakaflow/issue/AMA-1849) | ✅ Done. PR #219 merged; real workout_completions row test passes via the 2026-05-20 22:27 CT E2E Maestro run (gap #1 evidence is the same run). | n/a — done |
 | 6 | Crash-free startup gate | [AMA-1854](https://linear.app/amakaflow/issue/AMA-1854) | ✅ Done. PR #218 merged; iOS 26.2 cold-launch matrix gate is required on app-entrypoint PR changes (verified live on PR #222 which triggered the matrix). | n/a — done |
@@ -68,11 +68,13 @@ Legend: ✅ Done · 🟡 In progress · ⏳ Waiting on external · 🔲 Not star
 
 ### Gap 3 — AMA-1852: CI → TestFlight auto-deploy on `main` merge
 
-- [ ] `.github/workflows/ios-testflight.yml` merged
-- [ ] App Store Connect API key wired as GHA secret (issuer id + key id + .p8)
-- [ ] Build number auto-bump via `agvtool` working
-- [ ] Smoke-test verified end-to-end on at least 2 `main` merges
-- [ ] Sentry debug symbols upload still firing post-archive
+- [x] `.github/workflows/ios-testflight.yml` merged
+- [x] App Store Connect API key wired as GHA secret (issuer id + key id + .p8)
+- [x] Clerk publishable keys wired (`CLERK_PUBLISHABLE_KEY_STAGING` + `CLERK_PUBLISHABLE_KEY_DEV`)
+- [x] Secrets preflight job + setup guide (`docs/ci/TESTFLIGHT_SECRETS.md`)
+- [x] Build number auto-bump via `100 + github.run_number` in workflow (no `agvtool` / pbxproj commits)
+- [ ] Archive + altool upload green on 2 consecutive `main` merges — **blocked 2026-06-05:** Apple Developer certificate limit (`Choose a certificate to revoke`); see TESTFLIGHT_SECRETS.md troubleshooting
+- [ ] Sentry debug symbols upload confirmed on a promoted build (`SENTRY_AUTH_TOKEN` secret present; verify in Sentry UI post-green upload)
 
 ### Gap 4 — AMA-1853: Release-readiness checklist + per-PR "Verify by"
 
