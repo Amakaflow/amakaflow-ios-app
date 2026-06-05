@@ -100,24 +100,25 @@ appId: com.myamaka.AmakaFlowCompanion
             - waitForAnimationToEnd:
                 timeout: 2500
 
-# Fast path: already signed in. Settings gear in the Home header is a
-# stable authenticated-Home sentinel across empty/content/loading states.
+# Fast path: already signed in. AMA-1992 custom tab bar is the stable
+# post-auth sentinel (Home content ids may not exist while loading).
 - runFlow:
     when:
       visible:
-        id: "af_home_settings"
+        id: "af_tabbar"
     commands:
+      - tapOn:
+          id: "home_tab"
       - assertVisible:
-          id: "af_home_settings"
-      # Already signed in — nothing else to do.
+          id: "home_tab"
 
-# Sign-in path: only runs if Home is NOT yet visible AND the email input
-# is visible. (If neither is visible, a session persisted and we just walk
-# onboarding — the post-signin loop below handles that.)
+# Sign-in path: only runs if the tab bar is NOT yet visible AND the email
+# input is visible. (If neither is visible, a session persisted and we just
+# walk onboarding — the post-signin loop below handles that.)
 - runFlow:
     when:
       notVisible:
-        id: "af_home_settings"
+        id: "af_tabbar"
       visible:
         text: "Enter your email"
     commands:
@@ -203,10 +204,12 @@ appId: com.myamaka.AmakaFlowCompanion
             - waitForAnimationToEnd:
                 timeout: 3000
 
-# Final assertion: authenticated Home must be visible within 30s.
+# Final assertion: authenticated shell (AMA-1992 tab bar) within 30s.
 - extendedWaitUntil:
     visible:
-      id: "af_home_settings"
+      id: "af_tabbar"
     timeout: 30000
+- tapOn:
+    id: "home_tab"
 - assertVisible:
-    id: "af_home_settings"
+    id: "home_tab"
