@@ -13,7 +13,7 @@
 | # | Gap | Linear | State | Risk if unlaunched |
 |---|---|---|---|---|
 | 1 | AMA-1847/1848 fixes deployed + verified on staging | [AMA-1850](https://linear.app/amakaflow/issue/AMA-1850) | ✅ Done (2026-05-20). Deploy: mapper-api commit 1eee286 + mobile-bff f86672b. L4 evidence captured 22:27 CT — Activity History shows the saved row end-to-end. Bug chain found + fixed mid-verification: [AMA-1867](https://linear.app/amakaflow/issue/AMA-1867) (workout_name persistence), [AMA-1868](https://linear.app/amakaflow/issue/AMA-1868) (Maestro flow nav resync), [AMA-1870](https://linear.app/amakaflow/issue/AMA-1870)/[AMA-1871](https://linear.app/amakaflow/issue/AMA-1871) (placeholder profile missing `name`), [AMA-1872](https://linear.app/amakaflow/issue/AMA-1872) (cgid wiring + server-side fallback). | n/a — done |
-| 2 | Subscription / IAP testing harness (RevenueCat Test Store) | [AMA-1851](https://linear.app/amakaflow/issue/AMA-1851) | ⏳ Deferred to v1.1 (decision 2026-05-22). v1 ships free; paid tier added post-launch once retention signal lands. Rationale: pricing wasn't validated at $9.99, paywall design + Apple subscription review adds 1-3 days to App Review SLA, and "does the product work" is a different validation run from "will users pay." | None for v1 — paid tier deferred |
+| 2 | Subscription / IAP (RevenueCat + backend billing) | [AMA-1851](https://linear.app/amakaflow/issue/AMA-1851) | 🟡 **Infra merged** (2026-06-05): iOS #291–293, backend #493–494. v1 **still ships FREE** — `AMAKAFLOW_PAYWALL_GATE` off. Activation (ASC products, RC dashboard, staging deploy, L2–L4 harness) deferred until post-launch monetization decision. **Canonical doc:** `amakaflow-backend/docs/architecture/billing-revenuecat-ama-1851.md` | None for v1 while gate off |
 | 3 | CI → TestFlight on `main` merge | [AMA-1852](https://linear.app/amakaflow/issue/AMA-1852) | 🔲 Not started | Manual + skippable today |
 | 4 | Release-readiness checklist + per-PR "Verify by" footer | [AMA-1853](https://linear.app/amakaflow/issue/AMA-1853) | ✅ Done. PRs #215 + #216 shipped this doc + the PR-template "Verify by" section + the daily Telegram digest. | n/a — done |
 | 5 | CJ-01 L3 sign-in real-session bypass | [AMA-1849](https://linear.app/amakaflow/issue/AMA-1849) | ✅ Done. PR #219 merged; real workout_completions row test passes via the 2026-05-20 22:27 CT E2E Maestro run (gap #1 evidence is the same run). | n/a — done |
@@ -33,31 +33,38 @@ Legend: ✅ Done · 🟡 In progress · ⏳ Waiting on external · 🔲 Not star
 - [x] Supabase staging shows the resulting `workout_completions` row — Activity History shows "iOS Workout • 0:12 • Phone" for the test user
 - [x] AMA-1834 + AMA-1847 + AMA-1848 + AMA-1850 + AMA-1849 all Done
 
-### Gap 2 — AMA-1851: Subscription / IAP testing harness (⏳ deferred to v1.1)
+### Gap 2 — AMA-1851: Subscription / IAP (infra merged; activation deferred)
 
-**Decision 2026-05-22:** v1 ships FREE. Monetization deferred to v1.1.
+**Launch posture (unchanged):** v1 ships **FREE**. `AMAKAFLOW_PAYWALL_GATE` defaults off — no production paywall until explicit QA + pricing decision.
 
-**Why:** Pricing wasn't validated at $9.99 (felt too expensive). Paywall design + Apple subscription review adds 1-3 days to App Review SLA. "Does the product work" is a different validation run from "will users pay." Solo-founder pattern: ship free first, watch retention, then layer in the paywall with a strategy informed by actual usage.
+**Canonical architecture doc:** `amakaflow-backend/docs/architecture/billing-revenuecat-ama-1851.md` (PRs, secrets, cache, next steps).
 
-**Setup done so far (for when we come back):**
+**Merged code (2026-06-05):**
 
-- [x] RevenueCat account created (`Amakaflow` org)
-- [x] iOS app added in RevenueCat dashboard with bundle ID `com.myamaka.AmakaFlowCompanion`
-- [x] In-App Purchase key (`SubscriptionKey_2HR6TQ2QXF.p8`) uploaded to RevenueCat — credentials validated
+| Layer | PRs | Notes |
+|-------|-----|-------|
+| iOS | #291, #292, #293 | Paywall shell, RevenueCat purchase/restore, BFF `fetchSubscription` |
+| Backend | #493, #494 | Subscription route, webhook, BFF proxy, in-process RC cache |
 
-**Deferred to v1.1 (don't tick these for v1 launch):**
+**Done — code & L1 tests:**
 
-- [ ] Subscription products created in App Store Connect (tier structure TBD — trial + lower price than $9.99 leaning candidate per 2026-05-22 discussion)
-- [ ] Products imported into RevenueCat Product Catalog
-- [ ] Entitlements defined (e.g., `premium`)
-- [ ] Offerings configured
-- [ ] iOS SDK `Purchases.configure(...)` wired in `AmakaFlowCompanionApp`
-- [ ] Paywall view + entitlement gating in iOS
-- [ ] L1 backend test for the subscription webhook handler
-- [ ] L2 iOS XCTest for purchase happy-path + restore + refund
-- [ ] L3 XCUITest for paywall → entitlement-gated screen
-- [ ] L4 Maestro evidence screenshots committed
-- [ ] Release-mode IPA inspection confirms no Test Store config leaked
+- [x] RevenueCat account + iOS app + IAP key in dashboard
+- [x] RevenueCat SDK `Purchases.configure` + billing client (iOS #292)
+- [x] Paywall view + `SubscriptionAccessViewModel` (gate-off safe)
+- [x] `GET /billing/subscription` + BFF `GET /v1/billing/subscription`
+- [x] `POST /webhooks/revenuecat` + in-process cache (backend #494)
+- [x] L1 backend pytest (billing router, webhook, RevenueCat helpers)
+- [x] iOS unit tests (`SubscriptionAccessViewModel`, `fetchSubscription` integration)
+
+**Still open — activation (don't block v1 launch):**
+
+- [ ] Deploy `develop` billing commits to staging + set `REVENUECAT_SECRET_API_KEY` / `REVENUECAT_WEBHOOK_AUTHORIZATION`
+- [ ] App Store Connect sandbox subscription products (pricing TBD — below $9.99 candidate)
+- [ ] RevenueCat product catalog, `pro` entitlement, offerings, webhook URL
+- [ ] Staging E2E: sandbox purchase → webhook → subscription API returns `pro`
+- [ ] L2 iOS XCTest purchase + restore; L3 XCUITest paywall; L4 Maestro evidence
+- [ ] Phase 3.1 persistent cache (Redis / Supabase) for multi-instance mapper-api
+- [ ] Release IPA inspection: no Test Store config in production archive
 
 ### Gap 3 — AMA-1852: CI → TestFlight auto-deploy on `main` merge
 
