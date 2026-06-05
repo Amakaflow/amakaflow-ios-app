@@ -100,15 +100,15 @@ appId: com.myamaka.AmakaFlowCompanion
             - waitForAnimationToEnd:
                 timeout: 2500
 
-# Fast path: already signed in. `home_screen` is the authenticated-Home
-# sentinel (overlay marker on HomeView — stable across empty/content states).
+# Fast path: already signed in. Settings gear in the Home header is a
+# stable authenticated-Home sentinel across empty/content/loading states.
 - runFlow:
     when:
       visible:
-        id: "home_screen"
+        id: "af_home_settings"
     commands:
       - assertVisible:
-          id: "home_screen"
+          id: "af_home_settings"
       # Already signed in — nothing else to do.
 
 # Sign-in path: only runs if Home is NOT yet visible AND the email input
@@ -117,7 +117,7 @@ appId: com.myamaka.AmakaFlowCompanion
 - runFlow:
     when:
       notVisible:
-        id: "home_screen"
+        id: "af_home_settings"
       visible:
         text: "Enter your email"
     commands:
@@ -206,7 +206,7 @@ appId: com.myamaka.AmakaFlowCompanion
 # Final assertion: authenticated Home must be visible within 30s.
 - extendedWaitUntil:
     visible:
-      id: "home_screen"
+      id: "af_home_settings"
     timeout: 30000
 - assertVisible:
-    id: "home_screen"
+    id: "af_home_settings"

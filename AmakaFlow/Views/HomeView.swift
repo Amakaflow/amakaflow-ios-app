@@ -1109,6 +1109,7 @@ struct HomeView: View {
                 Text("Today")
                     .font(Theme.Typography.title2)
                     .foregroundColor(Theme.Colors.textPrimary)
+                    .accessibilityIdentifier("af_home_today_title")
                 AFLabel(text: today.formatted(.dateTime.weekday(.abbreviated)).uppercased() + " · " + today.formatted(.dateTime.month(.abbreviated).day()).uppercased())
             }
 
