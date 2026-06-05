@@ -390,18 +390,40 @@ jobs:
       - name: Determine + boot simulator
         id: simulator
         run: |
-          NAME=$(xcrun simctl list devices available | grep -oE 'iPhone 16[^(]*' | head -1 | sed 's/ *$//')
-          [ -z "$NAME" ] && NAME=$(xcrun simctl list devices available | grep -oE 'iPhone [^(]*' | head -1 | sed 's/ *$//')
-          if [ -z "$NAME" ]; then echo "No iPhone simulator available" >&2; xcrun simctl list devices available; exit 1; fi
-          UDID=$(xcrun simctl list devices available | grep "$NAME (" | head -1 | sed -n 's/.*(\([0-9A-F-]\{36\}\)).*/\1/p')
-          if [ -z "$UDID" ]; then echo "Could not resolve UDID for $NAME" >&2; xcrun simctl list devices available; exit 1; fi
-          echo "Using simulator: $NAME ($UDID)"
-          echo "name=$NAME" >> "$GITHUB_OUTPUT"
-          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          set -e
+          MIN_IOS="18.6"
+          CURRENT_IOS=""
+          BEST_IOS=""
+          BEST_NAME=""
+          BEST_UDID=""
+          while IFS= read -r line; do
+            if [[ "$line" =~ ^--\ iOS\ ([0-9]+\.[0-9]+)\ --$ ]]; then
+              CURRENT_IOS="${BASH_REMATCH[1]}"
+              continue
+            fi
+            if [[ -n "$CURRENT_IOS" && "$line" =~ iPhone && "$line" =~ \(([0-9A-F-]{36})\) ]]; then
+              if [ "$(printf '%s\n' "$MIN_IOS" "$CURRENT_IOS" | sort -V | tail -1)" = "$CURRENT_IOS" ]; then
+                if [ -z "$BEST_IOS" ] || [ "$(printf '%s\n' "$BEST_IOS" "$CURRENT_IOS" | sort -V | tail -1)" = "$CURRENT_IOS" ]; then
+                  BEST_IOS="$CURRENT_IOS"
+                  BEST_UDID=$(echo "$line" | sed -n 's/.*(\([0-9A-F-]\{36\}\)).*/\1/p')
+                  BEST_NAME=$(echo "$line" | sed -E 's/^[[:space:]]+(iPhone[^(]+)\(.*/\1/' | sed 's/[[:space:]]*$//')
+                fi
+              fi
+            fi
+          done < <(xcrun simctl list devices available)
+          if [ -z "$BEST_UDID" ]; then
+            echo "No iPhone simulator on iOS >= $MIN_IOS" >&2
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Using simulator: $BEST_NAME ($BEST_UDID) on iOS $BEST_IOS"
+          echo "name=$BEST_NAME" >> "$GITHUB_OUTPUT"
+          echo "udid=$BEST_UDID" >> "$GITHUB_OUTPUT"
+          echo "ios=$BEST_IOS" >> "$GITHUB_OUTPUT"
           xcrun simctl shutdown all || true
-          xcrun simctl erase "$UDID" || true
-          xcrun simctl boot "$UDID"
-          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl erase "$BEST_UDID" || true
+          xcrun simctl boot "$BEST_UDID"
+          xcrun simctl bootstatus "$BEST_UDID" -b
           open -a Simulator
           sleep 5
 
