@@ -75,7 +75,7 @@ final class SubscriptionAccessViewModel: ObservableObject {
         do {
             let sub = try await apiService.fetchSubscription()
             subscription = sub
-            hasProAccess = Self.isProSubscription(sub)
+            hasProAccess = Self.hasProAccess(for: sub)
         } catch {
             subscription = nil
             hasProAccess = !FeatureFlags.paywallGateEnabled
@@ -170,5 +170,11 @@ final class SubscriptionAccessViewModel: ObservableObject {
         case .pastDue, .canceled, .inactive:
             return false
         }
+    }
+
+    /// Gate-off builds stay open; only enforce backend denial when paywall QA is enabled.
+    static func hasProAccess(for sub: Subscription) -> Bool {
+        guard FeatureFlags.paywallGateEnabled else { return true }
+        return isProSubscription(sub)
     }
 }

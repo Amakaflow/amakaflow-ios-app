@@ -882,6 +882,64 @@ final class CoachAPIRepositoryEndpointTests: XCTestCase {
         XCTAssertEqual(MockURLProtocol.interceptedRequests.first?.url?.path, "/v1/agent/actions/act-1/undo")
     }
 
+    func testFetchSubscriptionGetsBFFBillingRoute() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.httpMethod, "GET")
+            XCTAssertEqual(request.url?.path, "/v1/billing/subscription")
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Rndr-Id": "rndr-billing-sub"]
+            )!
+            let data = """
+            {
+              "plan": "pro",
+              "status": "active",
+              "current_period_end": "2099-01-01T00:00:00Z",
+              "cancel_at_period_end": false,
+              "features": ["pro"]
+            }
+            """.data(using: .utf8)!
+            return (response, data)
+        }
+
+        let subscription = try await api.fetchSubscription()
+
+        XCTAssertEqual(subscription.plan, "pro")
+        XCTAssertEqual(subscription.status, .active)
+        XCTAssertEqual(subscription.currentPeriodEnd, "2099-01-01T00:00:00Z")
+        XCTAssertEqual(subscription.cancelAtPeriodEnd, false)
+        XCTAssertEqual(subscription.features, ["pro"])
+        XCTAssertEqual(MockURLProtocol.interceptedRequests.first?.url?.path, "/v1/billing/subscription")
+        XCTAssertEqual(logger.events.map(\.phase), [.start, .end])
+    }
+
+    func testFetchSubscriptionDecodesFreeTier() async throws {
+        MockURLProtocol.requestHandler = { request in
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!
+            let data = """
+            {
+              "plan": "free",
+              "status": "inactive",
+              "current_period_end": null,
+              "cancel_at_period_end": null,
+              "features": []
+            }
+            """.data(using: .utf8)!
+            return (response, data)
+        }
+
+        let subscription = try await api.fetchSubscription()
+
+        XCTAssertEqual(subscription.plan, "free")
+        XCTAssertEqual(subscription.status, .inactive)
+        XCTAssertNil(subscription.currentPeriodEnd)
+        XCTAssertNil(subscription.cancelAtPeriodEnd)
+        XCTAssertEqual(subscription.features, [])
+    }
+
     func testTelegramSetupAndStatusUseMobileBFFRoutesAndGeneratedCamelCase() async throws {
         MockURLProtocol.requestHandler = { request in
             let response = HTTPURLResponse(
