@@ -189,6 +189,7 @@ jobs:
           # because the CI runner has no Apple Developer account
           # configured. Failure 2026-05-22 was exactly this:
           # "No Accounts: Add a new account in Accounts settings".
+          set +e
           xcodebuild archive \
             -scheme AmakaFlowCompanion \
             -project AmakaFlowCompanion.xcodeproj \
@@ -205,7 +206,16 @@ jobs:
             CLERK_PUBLISHABLE_KEY_DEV="$CLERK_PUBLISHABLE_KEY_DEV" \
             CLERK_PUBLISHABLE_KEY_STAGING="$CLERK_PUBLISHABLE_KEY_STAGING" \
             CLERK_PUBLISHABLE_KEY_PRODUCTION="$CLERK_PUBLISHABLE_KEY_PRODUCTION" \
-            2>&1 | tee archive.log | tail -50
+            2>&1 | tee archive.log
+          ARCHIVE_EXIT=${PIPESTATUS[0]}
+          set -e
+          tail -50 archive.log
+          if [ "$ARCHIVE_EXIT" -ne 0 ]; then
+            if grep -qE "maximum number of certificates|Choose a certificate to revoke" archive.log; then
+              echo "::error::Apple Developer certificate limit reached. Revoke unused Apple Distribution certificates at https://developer.apple.com/account/resources/certificates/list then re-run (workflow_dispatch or push to main). Setup: docs/ci/TESTFLIGHT_SECRETS.md"
+            fi
+            exit "$ARCHIVE_EXIT"
+          fi
           # Sanity: the .xcarchive must exist + contain the .app
           test -d build/AmakaFlowCompanion.xcarchive/Products/Applications/AmakaFlowCompanion.app
 
