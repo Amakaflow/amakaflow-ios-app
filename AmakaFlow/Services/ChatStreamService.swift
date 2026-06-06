@@ -372,7 +372,7 @@ class CoachSessionClient: CoachSessionProviding {
 
         switch httpResponse.statusCode {
         case 200:
-            let decoder = APIService.makeDecoder()
+            let decoder = APIService.makeGeneratedDecoder()
             let payload = try decoder.decode(SessionMessagesResponse.self, from: data)
             return payload.messages.compactMap { $0.toRestoredMessage() }
         case 401:

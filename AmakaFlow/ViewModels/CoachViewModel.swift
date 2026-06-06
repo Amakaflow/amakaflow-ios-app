@@ -46,18 +46,41 @@ class CoachViewModel: ObservableObject {
 
     private let dependencies: AppDependencies
     private var streamTask: Task<Void, Never>?
+    private var profileSubscription: AnyCancellable?
+    private var boundSessionUserId: String?
+
+    private func sessionStorageKey(for userId: String) -> String {
+        "coach_chat_session_id_\(userId)"
+    }
 
     private var sessionIdKey: String {
-        let userId = dependencies.pairingService.userProfile?.id ?? "unknown"
-        return "coach_chat_session_id_\(userId)"
+        sessionStorageKey(for: boundSessionUserId ?? "unknown")
     }
 
     // MARK: - Init
 
     init(dependencies: AppDependencies = .live) {
         self.dependencies = dependencies
-        let userId = dependencies.pairingService.userProfile?.id ?? "unknown"
-        self.sessionId = UserDefaults.standard.string(forKey: "coach_chat_session_id_\(userId)")
+        let initialUserId = dependencies.pairingService.userProfile?.id ?? "unknown"
+        boundSessionUserId = initialUserId
+        self.sessionId = UserDefaults.standard.string(forKey: sessionStorageKey(for: initialUserId))
+
+        profileSubscription = dependencies.pairingService.userProfilePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] profile in
+                self?.syncSessionIdForUserProfile(profile?.id)
+            }
+    }
+
+    /// When Clerk hydrates after `App.init`, reload the per-user session id from storage.
+    private func syncSessionIdForUserProfile(_ userId: String?) {
+        let resolved = userId ?? "unknown"
+        guard resolved != boundSessionUserId else { return }
+        boundSessionUserId = resolved
+
+        guard messages.isEmpty, !isStreaming else { return }
+
+        sessionId = UserDefaults.standard.string(forKey: sessionStorageKey(for: resolved))
     }
 
     // MARK: - Session Restore (AMA-2123)

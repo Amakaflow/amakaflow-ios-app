@@ -294,4 +294,43 @@ final class CoachViewModelStreamingTests: XCTestCase {
 
         XCTAssertFalse(mockSessionClient.fetchCalled)
     }
+
+    func testSessionIdReloadsWhenUserProfileArrivesAfterInit() async {
+        let userId = "user_ama2123_cold_start"
+        let storageKey = "coach_chat_session_id_\(userId)"
+        let unknownKey = "coach_chat_session_id_unknown"
+        UserDefaults.standard.set("sess-after-profile", forKey: storageKey)
+        UserDefaults.standard.removeObject(forKey: unknownKey)
+        defer {
+            UserDefaults.standard.removeObject(forKey: storageKey)
+            UserDefaults.standard.removeObject(forKey: unknownKey)
+        }
+
+        let pairingService = MockPairingService()
+        pairingService.storedToken = "test-jwt-token"
+        pairingService.isPaired = true
+        pairingService.userProfile = nil
+        let dependencies = AppDependencies(
+            apiService: MockAPIService(),
+            pairingService: pairingService,
+            audioService: MockAudioService(),
+            progressStore: MockProgressStore(),
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService(),
+            coachSessionClient: MockCoachSessionClient()
+        )
+
+        let lateProfileViewModel = CoachViewModel(dependencies: dependencies)
+        XCTAssertNil(lateProfileViewModel.sessionId)
+
+        pairingService.userProfile = UserProfile(
+            id: userId,
+            email: "ama2123@example.test",
+            name: "AMA2123",
+            avatarUrl: nil
+        )
+
+        await Task.yield()
+        XCTAssertEqual(lateProfileViewModel.sessionId, "sess-after-profile")
+    }
 }
