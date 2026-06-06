@@ -8,6 +8,9 @@
 import Foundation
 import Combine
 
+/// AMA-2123: session-scoped coach store hoisted above tab shell.
+typealias CoachSessionStore = CoachViewModel
+
 @MainActor
 class CoachViewModel: ObservableObject {
     // MARK: - Published State
@@ -28,6 +31,9 @@ class CoachViewModel: ObservableObject {
     /// can re-send without the user having to type again.
     private var lastSentMessageText: String? = nil
     @Published var scrollTrigger = UUID()
+    @Published var isLoadingMessages = false
+    @Published var didRestoreConversation = false
+    @Published var restoreError: CoachSessionError? = nil
     @Published var sessionId: String? {
         didSet { persistSessionId() }
     }
@@ -40,18 +46,76 @@ class CoachViewModel: ObservableObject {
 
     private let dependencies: AppDependencies
     private var streamTask: Task<Void, Never>?
+    private var profileSubscription: AnyCancellable?
+    private var boundSessionUserId: String?
+
+    private func sessionStorageKey(for userId: String) -> String {
+        "coach_chat_session_id_\(userId)"
+    }
 
     private var sessionIdKey: String {
-        let userId = dependencies.pairingService.userProfile?.id ?? "unknown"
-        return "coach_chat_session_id_\(userId)"
+        sessionStorageKey(for: boundSessionUserId ?? "unknown")
     }
 
     // MARK: - Init
 
     init(dependencies: AppDependencies = .live) {
         self.dependencies = dependencies
-        let userId = dependencies.pairingService.userProfile?.id ?? "unknown"
-        self.sessionId = UserDefaults.standard.string(forKey: "coach_chat_session_id_\(userId)")
+        let initialUserId = dependencies.pairingService.userProfile?.id ?? "unknown"
+        boundSessionUserId = initialUserId
+        self.sessionId = UserDefaults.standard.string(forKey: sessionStorageKey(for: initialUserId))
+
+        profileSubscription = dependencies.pairingService.userProfilePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] profile in
+                self?.syncSessionIdForUserProfile(profile?.id)
+            }
+    }
+
+    /// When Clerk hydrates after `App.init`, reload the per-user session id from storage.
+    private func syncSessionIdForUserProfile(_ userId: String?) {
+        let resolved = userId ?? "unknown"
+        guard resolved != boundSessionUserId else { return }
+        boundSessionUserId = resolved
+
+        guard messages.isEmpty, !isStreaming else { return }
+
+        sessionId = UserDefaults.standard.string(forKey: sessionStorageKey(for: resolved))
+    }
+
+    // MARK: - Session Restore (AMA-2123)
+
+    func loadMessagesIfNeeded() async {
+        guard messages.isEmpty, let sessionId, !isLoadingMessages else { return }
+        guard let token = dependencies.pairingService.getToken() else { return }
+
+        isLoadingMessages = true
+        restoreError = nil
+        defer { isLoadingMessages = false }
+
+        do {
+            let restored = try await dependencies.coachSessionClient.fetchMessages(
+                sessionId: sessionId,
+                limit: 50,
+                token: token
+            )
+            guard !restored.isEmpty else { return }
+            messages = restored.map {
+                ChatMessage(role: $0.role, content: $0.content, timestamp: $0.timestamp)
+            }
+            didRestoreConversation = true
+        } catch CoachSessionError.sessionNotFound {
+            self.sessionId = nil
+        } catch let error as CoachSessionError {
+            restoreError = error
+        } catch {
+            restoreError = .httpError(statusCode: 0, body: error.localizedDescription)
+        }
+    }
+
+    func retryLoadMessages() async {
+        restoreError = nil
+        await loadMessagesIfNeeded()
     }
 
     // MARK: - Send Message (Streaming)
@@ -235,6 +299,8 @@ class CoachViewModel: ObservableObject {
         messages.removeAll()
         sessionId = nil
         error = nil
+        restoreError = nil
+        didRestoreConversation = false
         lastSentMessageText = nil
         currentStage = nil
         completedStages = []
@@ -313,12 +379,13 @@ class ChatMessage: Identifiable, ObservableObject {
         content: String,
         suggestions: [CoachSuggestion]? = nil,
         actionItems: [CoachActionItem]? = nil,
-        isStreaming: Bool = false
+        isStreaming: Bool = false,
+        timestamp: Date = Date()
     ) {
         self.id = UUID()
         self.role = role
         self.content = content
-        self.timestamp = Date()
+        self.timestamp = timestamp
         self.toolCalls = []
         self.completedStages = []
         self.currentStage = nil

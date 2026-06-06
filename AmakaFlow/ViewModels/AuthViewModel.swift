@@ -90,11 +90,11 @@ final class AuthViewModel: ObservableObject {
   /// Anything non-empty enables the bypass — payload fields are
   /// optional and fall back to a synthetic test identity.
   static func uiTestBypassRequested() -> Bool {
-    !(ProcessInfo.processInfo.environment["UITEST_CLERK_TEST_SESSION"] ?? "").isEmpty
+    !(UITestEnvironment.value(for: "UITEST_CLERK_TEST_SESSION") ?? "").isEmpty
   }
 
   private func applyUITestBypass() {
-    let raw = ProcessInfo.processInfo.environment["UITEST_CLERK_TEST_SESSION"] ?? ""
+    let raw = UITestEnvironment.value(for: "UITEST_CLERK_TEST_SESSION") ?? ""
     var fields: [String: String] = [:]
     for pair in raw.split(separator: ",") {
       let kv = pair.split(separator: "=", maxSplits: 1).map(String.init)
@@ -124,7 +124,7 @@ final class AuthViewModel: ObservableObject {
   /// (the `+clerk_test` subaddress is how Clerk routes to its universal
   /// test code 424242 on dev/staging instances.)
   static func uiTestRealSessionRequested() -> Bool {
-    !(ProcessInfo.processInfo.environment["UITEST_CLERK_REAL_SESSION_EMAIL"] ?? "").isEmpty
+    !(UITestEnvironment.value(for: "UITEST_CLERK_REAL_SESSION_EMAIL") ?? "").isEmpty
   }
 
   /// AMA-1849: bypass that creates a REAL Clerk session via the
@@ -142,8 +142,8 @@ final class AuthViewModel: ObservableObject {
   /// (matches Clerk SDK's own `extractFrontendApiUrl` logic — the
   /// part after `pk_test_` / `pk_live_` is base64-encoded host).
   private func applyUITestRealSessionBypass() async {
-    let email = ProcessInfo.processInfo.environment["UITEST_CLERK_REAL_SESSION_EMAIL"] ?? ""
-    let code = ProcessInfo.processInfo.environment["UITEST_CLERK_REAL_SESSION_CODE"] ?? "424242"
+    let email = UITestEnvironment.value(for: "UITEST_CLERK_REAL_SESSION_EMAIL") ?? ""
+    let code = UITestEnvironment.value(for: "UITEST_CLERK_REAL_SESSION_CODE") ?? "424242"
 
     guard let host = AuthViewModel.deriveClerkFrontendHost(from: Clerk.shared.publishableKey) else {
       print("[AuthViewModel] AMA-1849 bypass FAILED: could not derive frontend API host from publishable key")

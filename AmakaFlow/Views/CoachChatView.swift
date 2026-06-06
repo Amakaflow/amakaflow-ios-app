@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct CoachChatView: View {
-    @StateObject private var viewModel = CoachViewModel()
+    @EnvironmentObject private var viewModel: CoachSessionStore
     @State private var inputText = ""
     @State private var showNewChatConfirmation = false
     @FocusState private var isInputFocused: Bool
@@ -23,78 +23,12 @@ struct CoachChatView: View {
                     fatigueBanner(advice)
                 }
 
-                // Messages
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: Theme.Spacing.md) {
-                            if viewModel.messages.isEmpty {
-                                coachWelcome
-                            }
-
-                            ForEach(viewModel.messages) { message in
-                                MessageBubbleView(message: message) { text in
-                                    Task { await viewModel.sendMessage(text) }
-                                }
-                                .id(message.id)
-                            }
-                        }
-                        .padding(.vertical, Theme.Spacing.md)
-                    }
-                    .onChange(of: viewModel.messages.count) { _ in
-                        scrollToBottom(proxy)
-                    }
-                    .onChange(of: viewModel.isStreaming) { streaming in
-                        if !streaming { scrollToBottom(proxy) }
-                    }
-                    .onChange(of: viewModel.scrollTrigger) { _ in
-                        scrollToBottom(proxy, animated: false)
-                    }
+                if viewModel.isLoadingMessages {
+                    ProgressView("Loading conversation…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    messagesSection
                 }
-
-                // Stage indicator (visible during streaming)
-                if viewModel.isStreaming, viewModel.currentStage != nil || !viewModel.completedStages.isEmpty {
-                    StageIndicator(
-                        completedStages: viewModel.completedStages,
-                        currentStage: viewModel.currentStage
-                    )
-                }
-
-                // Rate limit banner
-                if let info = viewModel.rateLimitInfo {
-                    rateLimitBanner(info)
-                }
-
-                // AMA-1803 P2: typed error banner. The earlier
-                // implementation rendered a flat one-line red string
-                // with no Retry, no Report, and no error_code surface
-                // — same dishonest pattern P0 closed for Save & End.
-                // Now it's the shared ErrorToast component (used as an
-                // inline banner here since Coach is full-screen) with
-                // the same Retry / Report / Dismiss controls keyed on
-                // CTAError.isRetryable.
-                if let ctaError = viewModel.error, viewModel.rateLimitInfo == nil {
-                    ErrorToast(
-                        actionTitle: "Couldn't reach the coach",
-                        error: ctaError,
-                        onRetry: ctaError.isRetryable ? {
-                            Task { await viewModel.retryLastMessage() }
-                        } : nil,
-                        onReport: {
-                            ErrorReporter.shared.report(
-                                action: "coach_send_message",
-                                error: ctaError,
-                                endpoint: "/coach/chat/stream",
-                                userId: PairingService.shared.userProfile?.id
-                            )
-                        },
-                        onDismiss: {
-                            viewModel.acknowledgeError()
-                        }
-                    )
-                    .padding(.horizontal, Theme.Spacing.lg)
-                    .padding(.vertical, Theme.Spacing.xs)
-                }
-
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 inputBar
@@ -144,7 +78,84 @@ struct CoachChatView: View {
                 Text("This will clear your current conversation.")
             }
             .task {
+                await viewModel.loadMessagesIfNeeded()
                 await viewModel.loadFatigueAdvice()
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("coach-chat-root")
+            .onChange(of: viewModel.didRestoreConversation) { _, restored in
+                guard restored else { return }
+                UIAccessibility.post(notification: .announcement, argument: "Conversation restored")
+            }
+        }
+    }
+
+    private var messagesSection: some View {
+        VStack(spacing: 0) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing: Theme.Spacing.md) {
+                        if viewModel.messages.isEmpty {
+                            coachWelcome
+                        }
+
+                        ForEach(viewModel.messages) { message in
+                            MessageBubbleView(message: message) { text in
+                                Task { await viewModel.sendMessage(text) }
+                            }
+                            .id(message.id)
+                        }
+                    }
+                    .padding(.vertical, Theme.Spacing.md)
+                }
+                .accessibilityIdentifier("coach-message-list")
+                .onChange(of: viewModel.messages.count) { _ in
+                    scrollToBottom(proxy)
+                }
+                .onChange(of: viewModel.isStreaming) { streaming in
+                    if !streaming { scrollToBottom(proxy) }
+                }
+                .onChange(of: viewModel.scrollTrigger) { _ in
+                    scrollToBottom(proxy, animated: false)
+                }
+            }
+
+            if viewModel.isStreaming, viewModel.currentStage != nil || !viewModel.completedStages.isEmpty {
+                StageIndicator(
+                    completedStages: viewModel.completedStages,
+                    currentStage: viewModel.currentStage
+                )
+            }
+
+            if let info = viewModel.rateLimitInfo {
+                rateLimitBanner(info)
+            }
+
+            if let restoreError = viewModel.restoreError {
+                restoreErrorBanner(restoreError)
+            }
+
+            if let ctaError = viewModel.error, viewModel.rateLimitInfo == nil {
+                ErrorToast(
+                    actionTitle: "Couldn't reach the coach",
+                    error: ctaError,
+                    onRetry: ctaError.isRetryable ? {
+                        Task { await viewModel.retryLastMessage() }
+                    } : nil,
+                    onReport: {
+                        ErrorReporter.shared.report(
+                            action: "coach_send_message",
+                            error: ctaError,
+                            endpoint: "/coach/chat/stream",
+                            userId: PairingService.shared.userProfile?.id
+                        )
+                    },
+                    onDismiss: {
+                        viewModel.acknowledgeError()
+                    }
+                )
+                .padding(.horizontal, Theme.Spacing.lg)
+                .padding(.vertical, Theme.Spacing.xs)
             }
         }
     }
@@ -232,6 +243,25 @@ struct CoachChatView: View {
         }
         .padding(Theme.Spacing.sm)
         .background(Theme.Colors.accentRed.opacity(0.1))
+    }
+
+    private func restoreErrorBanner(_ error: CoachSessionError) -> some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(Theme.Colors.accentRed)
+            Text(error.localizedDescription)
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.textPrimary)
+            Spacer()
+            if error.isRetryable {
+                Button("Retry") {
+                    Task { await viewModel.retryLoadMessages() }
+                }
+                .font(Theme.Typography.caption)
+            }
+        }
+        .padding(Theme.Spacing.sm)
+        .background(Theme.Colors.surface)
     }
 
     // MARK: - Input Bar
@@ -536,5 +566,6 @@ struct FatigueAdvisorView: View {
 
 #Preview {
     CoachChatView()
+        .environmentObject(CoachSessionStore())
         .preferredColorScheme(.dark)
 }

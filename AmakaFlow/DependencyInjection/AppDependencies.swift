@@ -19,6 +19,7 @@ struct AppDependencies {
     let progressStore: ProgressStoreProviding
     let watchSession: WatchSessionProviding
     let chatStreamService: ChatStreamProviding
+    let coachSessionClient: CoachSessionProviding
     let programStreamService: ProgramStreamProviding
     let acceptedSuggestionsRepository: AcceptedSuggestionsRepository
     let workoutEventsRepository: WorkoutEventsRepository
@@ -32,6 +33,7 @@ struct AppDependencies {
         progressStore: ProgressStoreProviding,
         watchSession: WatchSessionProviding,
         chatStreamService: ChatStreamProviding,
+        coachSessionClient: CoachSessionProviding = CoachSessionClient(),
         programStreamService: ProgramStreamProviding = ProgramStreamService(),
         acceptedSuggestionsRepository: AcceptedSuggestionsRepository = AcceptedSuggestionsRepository(),
         workoutEventsRepository: WorkoutEventsRepository = WorkoutEventsRepository(),
@@ -44,6 +46,7 @@ struct AppDependencies {
         self.progressStore = progressStore
         self.watchSession = watchSession
         self.chatStreamService = chatStreamService
+        self.coachSessionClient = coachSessionClient
         self.programStreamService = programStreamService
         self.acceptedSuggestionsRepository = acceptedSuggestionsRepository
         self.workoutEventsRepository = workoutEventsRepository
@@ -60,6 +63,7 @@ struct AppDependencies {
         progressStore: LiveProgressStore.shared,
         watchSession: LiveWatchSession.shared,
         chatStreamService: ChatStreamService(),
+        coachSessionClient: CoachSessionClient(),
         programStreamService: ProgramStreamService(),
         acceptedSuggestionsRepository: AcceptedSuggestionsRepository(),
         workoutEventsRepository: WorkoutEventsRepository(),
@@ -76,6 +80,7 @@ struct AppDependencies {
         progressStore: MockProgressStore(),
         watchSession: MockWatchSession(),
         chatStreamService: MockChatStreamService(),
+        coachSessionClient: MockCoachSessionClient(),
         programStreamService: MockProgramStreamService(),
         acceptedSuggestionsRepository: AcceptedSuggestionsRepository(),
         workoutEventsRepository: WorkoutEventsRepository(),
@@ -95,6 +100,7 @@ struct AppDependencies {
         progressStore: LiveProgressStore.shared,
         watchSession: MockWatchSession(),
         chatStreamService: MockChatStreamService(),
+        coachSessionClient: MockCoachSessionClient(),
         programStreamService: MockProgramStreamService(),
         acceptedSuggestionsRepository: AcceptedSuggestionsRepository(),
         workoutEventsRepository: WorkoutEventsRepository(),

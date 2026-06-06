@@ -19,6 +19,7 @@ struct AmakaFlowCompanionApp: App {
 
     @StateObject private var pairingService = PairingService.shared
     @StateObject private var workoutsViewModel: WorkoutsViewModel
+    @StateObject private var coachSessionStore: CoachSessionStore
     @StateObject private var watchConnectivity = WatchConnectivityManager.shared
     @StateObject private var garminConnectivity = GarminConnectManager.shared
     @StateObject private var deepLinkManager = DeepLinkManager.shared
@@ -32,6 +33,7 @@ struct AmakaFlowCompanionApp: App {
         if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
             Clerk.configure(publishableKey: "pk_test_ZXhhbXBsZS5jb20k")
             _workoutsViewModel = StateObject(wrappedValue: WorkoutsViewModel())
+            _coachSessionStore = StateObject(wrappedValue: CoachSessionStore(dependencies: .mock))
             return
         }
         #endif
@@ -43,9 +45,11 @@ struct AmakaFlowCompanionApp: App {
         #if DEBUG
         if UITestEnvironment.shared.useFixtures {
             _workoutsViewModel = StateObject(wrappedValue: WorkoutsViewModel(dependencies: .fixture))
+            _coachSessionStore = StateObject(wrappedValue: CoachSessionStore(dependencies: .fixture))
             print("[AmakaFlowCompanionApp] Fixture mode: using FixtureAPIService")
         } else {
             _workoutsViewModel = StateObject(wrappedValue: WorkoutsViewModel())
+            _coachSessionStore = StateObject(wrappedValue: CoachSessionStore(dependencies: .current))
         }
 
         if UITestEnvironment.shared.hasClerkTestUser {
@@ -54,6 +58,7 @@ struct AmakaFlowCompanionApp: App {
         }
         #else
         _workoutsViewModel = StateObject(wrappedValue: WorkoutsViewModel())
+        _coachSessionStore = StateObject(wrappedValue: CoachSessionStore())
         #endif
 
         // Initialize Sentry error tracking (AMA-225)
@@ -237,6 +242,7 @@ struct AmakaFlowCompanionApp: App {
     private var authenticatedAppRoot: some View {
         ContentView()
             .environmentObject(workoutsViewModel)
+            .environmentObject(coachSessionStore)
             .environmentObject(watchConnectivity)
             .environmentObject(garminConnectivity)
             .environmentObject(pairingService)

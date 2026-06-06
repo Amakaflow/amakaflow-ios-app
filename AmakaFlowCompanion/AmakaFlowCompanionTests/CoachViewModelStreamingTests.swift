@@ -13,10 +13,12 @@ final class CoachViewModelStreamingTests: XCTestCase {
 
     var viewModel: CoachViewModel!
     var mockStreamService: MockChatStreamService!
+    var mockSessionClient: MockCoachSessionClient!
     var mockPairingService: MockPairingService!
 
     override func setUp() async throws {
         mockStreamService = MockChatStreamService()
+        mockSessionClient = MockCoachSessionClient()
         mockPairingService = MockPairingService()
         mockPairingService.storedToken = "test-jwt-token"
         mockPairingService.isPaired = true
@@ -27,7 +29,8 @@ final class CoachViewModelStreamingTests: XCTestCase {
             audioService: MockAudioService(),
             progressStore: MockProgressStore(),
             watchSession: MockWatchSession(),
-            chatStreamService: mockStreamService
+            chatStreamService: mockStreamService,
+            coachSessionClient: mockSessionClient
         )
 
         viewModel = CoachViewModel(dependencies: dependencies)
@@ -247,5 +250,87 @@ final class CoachViewModelStreamingTests: XCTestCase {
         await viewModel.sendMessage("Hi")
 
         XCTAssertTrue(mockStreamService.streamCalled)
+    }
+
+    func testLoadMessagesPopulatesHistoryWhenSessionIdPresent() async {
+        viewModel.sessionId = "sess-restore"
+        mockSessionClient.messagesToReturn = [
+            RestoredSessionMessage(
+                role: .user,
+                content: "Remember this test message for restore",
+                timestamp: Date(timeIntervalSince1970: 1_718_000_000)
+            ),
+            RestoredSessionMessage(
+                role: .assistant,
+                content: "Got it — I'll remember that.",
+                timestamp: Date(timeIntervalSince1970: 1_718_000_030)
+            )
+        ]
+
+        await viewModel.loadMessagesIfNeeded()
+
+        XCTAssertTrue(mockSessionClient.fetchCalled)
+        XCTAssertEqual(mockSessionClient.lastSessionId, "sess-restore")
+        XCTAssertEqual(viewModel.messages.count, 2)
+        XCTAssertEqual(viewModel.messages[0].content, "Remember this test message for restore")
+        XCTAssertTrue(viewModel.didRestoreConversation)
+    }
+
+    func testLoadMessagesClearsStaleSessionOn404() async {
+        viewModel.sessionId = "stale-session"
+        mockSessionClient.errorToThrow = CoachSessionError.sessionNotFound
+
+        await viewModel.loadMessagesIfNeeded()
+
+        XCTAssertNil(viewModel.sessionId)
+        XCTAssertTrue(viewModel.messages.isEmpty)
+    }
+
+    func testLoadMessagesSkipsWhenMessagesAlreadyPresent() async {
+        viewModel.sessionId = "sess-restore"
+        viewModel.messages = [ChatMessage(role: .user, content: "Already here")]
+
+        await viewModel.loadMessagesIfNeeded()
+
+        XCTAssertFalse(mockSessionClient.fetchCalled)
+    }
+
+    func testSessionIdReloadsWhenUserProfileArrivesAfterInit() async {
+        let userId = "user_ama2123_cold_start"
+        let storageKey = "coach_chat_session_id_\(userId)"
+        let unknownKey = "coach_chat_session_id_unknown"
+        UserDefaults.standard.set("sess-after-profile", forKey: storageKey)
+        UserDefaults.standard.removeObject(forKey: unknownKey)
+        defer {
+            UserDefaults.standard.removeObject(forKey: storageKey)
+            UserDefaults.standard.removeObject(forKey: unknownKey)
+        }
+
+        let pairingService = MockPairingService()
+        pairingService.storedToken = "test-jwt-token"
+        pairingService.isPaired = true
+        pairingService.userProfile = nil
+        let dependencies = AppDependencies(
+            apiService: MockAPIService(),
+            pairingService: pairingService,
+            audioService: MockAudioService(),
+            progressStore: MockProgressStore(),
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService(),
+            coachSessionClient: MockCoachSessionClient()
+        )
+
+        let lateProfileViewModel = CoachViewModel(dependencies: dependencies)
+        XCTAssertNil(lateProfileViewModel.sessionId)
+
+        pairingService.userProfile = UserProfile(
+            id: userId,
+            email: "ama2123@example.test",
+            name: "AMA2123",
+            avatarUrl: nil
+        )
+
+        await Task.yield()
+        XCTAssertEqual(lateProfileViewModel.sessionId, "sess-after-profile")
     }
 }
