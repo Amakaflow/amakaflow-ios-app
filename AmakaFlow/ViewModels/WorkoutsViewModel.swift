@@ -407,6 +407,7 @@ class WorkoutsViewModel: ObservableObject {
                 // Skip in test mode to avoid WorkoutKit authorization system dialog
                 #if DEBUG
                 let skipWorkoutKit = UITestEnvironment.shared.hasClerkTestUser
+                    || UITestEnvironment.shared.useFixtures
                 #else
                 let skipWorkoutKit = false
                 #endif

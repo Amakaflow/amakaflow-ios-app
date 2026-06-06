@@ -292,6 +292,138 @@ private extension Data {
     }
 }
 
+// MARK: - Session Messages (AMA-2123)
+
+struct RestoredSessionMessage: Equatable {
+    let role: ChatRole
+    let content: String
+    let timestamp: Date
+}
+
+protocol CoachSessionProviding {
+    func fetchMessages(sessionId: String, limit: Int, token: String) async throws -> [RestoredSessionMessage]
+}
+
+enum CoachSessionError: LocalizedError, Equatable {
+    case sessionNotFound
+    case unauthorized
+    case httpError(statusCode: Int, body: String)
+
+    var errorDescription: String? {
+        switch self {
+        case .sessionNotFound:
+            return "Chat session not found."
+        case .unauthorized:
+            return "Not authenticated."
+        case .httpError(let code, _):
+            return "Could not load conversation (\(code))."
+        }
+    }
+
+    var isRetryable: Bool {
+        switch self {
+        case .httpError(let code, _):
+            return code == 502 || code == 503
+        default:
+            return false
+        }
+    }
+}
+
+class CoachSessionClient: CoachSessionProviding {
+    private let session: URLSession
+    private static let requestTimeout: TimeInterval = 30
+
+    init(session: URLSession = .shared) {
+        self.session = session
+    }
+
+    func fetchMessages(sessionId: String, limit: Int = 50, token: String) async throws -> [RestoredSessionMessage] {
+        try await fetchMessages(sessionId: sessionId, limit: limit, token: token, retryOnTransient: true)
+    }
+
+    private func fetchMessages(
+        sessionId: String,
+        limit: Int,
+        token: String,
+        retryOnTransient: Bool
+    ) async throws -> [RestoredSessionMessage] {
+        let encodedSessionId = sessionId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? sessionId
+        let bffURL = "\(AppEnvironment.current.mobileBFFURL)/v1"
+        guard var components = URLComponents(string: "\(bffURL)/chat/sessions/\(encodedSessionId)/messages") else {
+            throw URLError(.badURL)
+        }
+        components.queryItems = [URLQueryItem(name: "limit", value: String(limit))]
+
+        guard let url = components.url else {
+            throw URLError(.badURL)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.timeoutInterval = Self.requestTimeout
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+
+        switch httpResponse.statusCode {
+        case 200:
+            let decoder = APIService.makeDecoder()
+            let payload = try decoder.decode(SessionMessagesResponse.self, from: data)
+            return payload.messages.compactMap { $0.toRestoredMessage() }
+        case 401:
+            throw CoachSessionError.unauthorized
+        case 404:
+            throw CoachSessionError.sessionNotFound
+        case 502, 503 where retryOnTransient:
+            try await Task.sleep(nanoseconds: 300_000_000)
+            return try await fetchMessages(
+                sessionId: sessionId,
+                limit: limit,
+                token: token,
+                retryOnTransient: false
+            )
+        default:
+            let body = String(data: data, encoding: .utf8) ?? ""
+            throw CoachSessionError.httpError(statusCode: httpResponse.statusCode, body: body)
+        }
+    }
+}
+
+private struct SessionMessagesResponse: Decodable {
+    let messages: [SessionMessageDTO]
+}
+
+private struct SessionMessageDTO: Decodable {
+    let role: String
+    let content: String?
+    let createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case role
+        case content
+        case createdAt = "created_at"
+    }
+
+    func toRestoredMessage() -> RestoredSessionMessage? {
+        guard let content, !content.isEmpty else { return nil }
+        let chatRole: ChatRole
+        switch role.lowercased() {
+        case "user":
+            chatRole = .user
+        case "assistant":
+            chatRole = .assistant
+        default:
+            return nil
+        }
+        return RestoredSessionMessage(role: chatRole, content: content, timestamp: createdAt)
+    }
+}
+
 enum ChatStreamError: LocalizedError {
     case httpError(statusCode: Int, body: String)
 
@@ -304,6 +436,24 @@ enum ChatStreamError: LocalizedError {
 }
 
 // MARK: - Mock for Testing
+
+class MockCoachSessionClient: CoachSessionProviding {
+    var messagesToReturn: [RestoredSessionMessage] = []
+    var errorToThrow: Error?
+    var fetchCalled = false
+    var lastSessionId: String?
+    var lastLimit: Int?
+
+    func fetchMessages(sessionId: String, limit: Int, token: String) async throws -> [RestoredSessionMessage] {
+        fetchCalled = true
+        lastSessionId = sessionId
+        lastLimit = limit
+        if let errorToThrow {
+            throw errorToThrow
+        }
+        return messagesToReturn
+    }
+}
 
 class MockChatStreamService: ChatStreamProviding {
     var eventsToYield: [SSEEvent] = []

@@ -8,6 +8,9 @@
 import Foundation
 import Combine
 
+/// AMA-2123: session-scoped coach store hoisted above tab shell.
+typealias CoachSessionStore = CoachViewModel
+
 @MainActor
 class CoachViewModel: ObservableObject {
     // MARK: - Published State
@@ -28,6 +31,9 @@ class CoachViewModel: ObservableObject {
     /// can re-send without the user having to type again.
     private var lastSentMessageText: String? = nil
     @Published var scrollTrigger = UUID()
+    @Published var isLoadingMessages = false
+    @Published var didRestoreConversation = false
+    @Published var restoreError: CoachSessionError? = nil
     @Published var sessionId: String? {
         didSet { persistSessionId() }
     }
@@ -52,6 +58,41 @@ class CoachViewModel: ObservableObject {
         self.dependencies = dependencies
         let userId = dependencies.pairingService.userProfile?.id ?? "unknown"
         self.sessionId = UserDefaults.standard.string(forKey: "coach_chat_session_id_\(userId)")
+    }
+
+    // MARK: - Session Restore (AMA-2123)
+
+    func loadMessagesIfNeeded() async {
+        guard messages.isEmpty, let sessionId, !isLoadingMessages else { return }
+        guard let token = dependencies.pairingService.getToken() else { return }
+
+        isLoadingMessages = true
+        restoreError = nil
+        defer { isLoadingMessages = false }
+
+        do {
+            let restored = try await dependencies.coachSessionClient.fetchMessages(
+                sessionId: sessionId,
+                limit: 50,
+                token: token
+            )
+            guard !restored.isEmpty else { return }
+            messages = restored.map {
+                ChatMessage(role: $0.role, content: $0.content, timestamp: $0.timestamp)
+            }
+            didRestoreConversation = true
+        } catch CoachSessionError.sessionNotFound {
+            self.sessionId = nil
+        } catch let error as CoachSessionError {
+            restoreError = error
+        } catch {
+            restoreError = .httpError(statusCode: 0, body: error.localizedDescription)
+        }
+    }
+
+    func retryLoadMessages() async {
+        restoreError = nil
+        await loadMessagesIfNeeded()
     }
 
     // MARK: - Send Message (Streaming)
@@ -235,6 +276,8 @@ class CoachViewModel: ObservableObject {
         messages.removeAll()
         sessionId = nil
         error = nil
+        restoreError = nil
+        didRestoreConversation = false
         lastSentMessageText = nil
         currentStage = nil
         completedStages = []
@@ -313,12 +356,13 @@ class ChatMessage: Identifiable, ObservableObject {
         content: String,
         suggestions: [CoachSuggestion]? = nil,
         actionItems: [CoachActionItem]? = nil,
-        isStreaming: Bool = false
+        isStreaming: Bool = false,
+        timestamp: Date = Date()
     ) {
         self.id = UUID()
         self.role = role
         self.content = content
-        self.timestamp = Date()
+        self.timestamp = timestamp
         self.toolCalls = []
         self.completedStages = []
         self.currentStage = nil
