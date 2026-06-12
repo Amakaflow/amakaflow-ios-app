@@ -1,28 +1,58 @@
-name: PR iOS & watchOS Tests (Impacted)
+# iOS PR Pipeline — unified "build once, consume thrice" pipeline (#321).
+#
+# This single workflow merges three previously-separate iOS PR workflows
+# (pr-ios-tests, ios-cold-launch-matrix, maestro-flows) into one DAG that
+# does ONE `build-for-testing` and feeds the resulting .app + test products
+# to every downstream consumer:
+#
+#   build (Debug-sim, build-for-testing, generic destination)
+#     ├─▶ ios-tests      — ALWAYS (when affected != NONE); runs test-without-building
+#     ├─▶ cold-launch    — when app/entrypoint/workflow paths changed (or dispatch)
+#     └─▶ maestro         — only when the PR carries the `maestro` label (or dispatch)
+#
+# The build emits two artifacts:
+#   - `cold-launch-app`  : tarred AmakaFlowCompanion.app (cold-launch + maestro install)
+#   - `test-products`    : tarred DerivedData/Build (test-without-building xctestrun + bins)
+#
+# Why: the old layout rebuilt the app up to three times per PR. Building once
+# and sharing the products primarily SAVES RUNNER-MINUTES while keeping every
+# downstream check identical to its previous behavior. CI check names are
+# preserved verbatim so branch-protection required-checks keep matching.
+
+name: iOS PR Pipeline
 
 on:
   pull_request:
     branches: [main]
+    # `labeled` is required so the maestro label gate re-evaluates when the
+    # `maestro` label is added to an already-open PR.
+    types: [opened, synchronize, reopened, labeled]
     paths-ignore:
       - "**/*.md"
       - "docs/**"
       - ".github/ISSUE_TEMPLATE/**"
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 # Rapid pushes to the same PR cancel the prior in-progress run instead of
-# stacking full ~9-min macOS runs (#326). head_ref is the PR source branch.
+# stacking full macOS runs (#326).
 concurrency:
-  group: pr-ios-tests-${{ github.head_ref }}
+  group: ios-pr-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
   detect-changes:
     name: Detect Changed Files
-    # Pure git diff + grep — runs on cheap/fast ubuntu, not a 10x macOS runner (#323).
+    # Pure git diff + grep + the affected-tests script (all ubuntu-safe) —
+    # runs on a cheap/fast ubuntu runner, not a 10x macOS runner (#323).
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      watch_changed: ${{ steps.changes.outputs.watch_changed }}
+      affected: ${{ steps.affected.outputs.result }}
+      app_changed: ${{ steps.app.outputs.app_changed }}
+      # should_build ORs the shell-computed `code_build` (affected != NONE OR
+      # app paths changed) with the GitHub context for the maestro label and
+      # the workflow_dispatch event.
+      should_build: ${{ steps.code.outputs.code_build == 'true' || contains(github.event.pull_request.labels.*.name, 'maestro') || github.event_name == 'workflow_dispatch' }}
 
     steps:
       - name: Checkout
@@ -30,23 +60,166 @@ jobs:
         with:
           fetch-depth: 0  # needed for diff base...head
 
-      - name: Detect watch file changes
-        id: changes
+      - name: Determine affected tests
+        id: affected
+        run: |
+          chmod +x .github/scripts/affected-tests-ios.sh
+          RESULT=$(.github/scripts/affected-tests-ios.sh)
+          echo "result=$RESULT" >> "$GITHUB_OUTPUT"
+          echo "Affected iOS result: $RESULT"
+
+      - name: Detect app/entrypoint changes
+        id: app
         run: |
           CHANGED=$(git diff --name-only "origin/${GITHUB_BASE_REF:-main}...HEAD" || true)
-          WATCH_CHANGED="false"
-          if echo "$CHANGED" | grep -qE '(AmakaFlowWatch Watch App/|AmakaFlowWatch Watch AppTests/|AmakaFlowWatch Watch AppUITests/)'; then
-            WATCH_CHANGED="true"
+          APP_CHANGED="false"
+          if echo "$CHANGED" | grep -qE '^(AmakaFlow/|AmakaFlowCompanion/AmakaFlowCompanion/|AmakaFlowCompanion/AmakaFlowCompanion\.xcodeproj/|AmakaFlowCompanion/AmakaFlowCompanionApp/|scripts/cold-launch-check\.sh|\.github/workflows/)'; then
+            APP_CHANGED="true"
           fi
-          echo "watch_changed=$WATCH_CHANGED" >> "$GITHUB_OUTPUT"
-          echo "Watch files changed: $WATCH_CHANGED"
+          echo "app_changed=$APP_CHANGED" >> "$GITHUB_OUTPUT"
+          echo "App/entrypoint changed: $APP_CHANGED"
+
+      - name: Compute code-driven build trigger
+        id: code
+        run: |
+          CODE_BUILD="false"
+          if [ "${{ steps.affected.outputs.result }}" != "NONE" ] || [ "${{ steps.app.outputs.app_changed }}" == "true" ]; then
+            CODE_BUILD="true"
+          fi
+          echo "code_build=$CODE_BUILD" >> "$GITHUB_OUTPUT"
+          echo "Code-driven build: $CODE_BUILD"
+
+  build:
+    name: Build Debug-sim .app
+    runs-on: macos-15
+    needs: detect-changes
+    if: needs.detect-changes.outputs.should_build == 'true'
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode (latest available)
+        id: xcode
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          echo "Using Xcode: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
+          XCODE_VER=$(xcodebuild -version | head -1 | tr ' ' '-')
+          echo "version=$XCODE_VER" >> $GITHUB_OUTPUT
+
+      - name: Create stub TestCredentials for compilation
+        working-directory: AmakaFlowCompanion
+        run: |
+          cat > AmakaFlowCompanionUITests/TestCredentials.swift << 'EOF'
+          import Foundation
+          enum TestCredentials {
+              static let testAuthSecret = "ci-stub-not-for-testing"
+              static let userId = "ci_stub_user"
+              static let userEmail = "ci@stub.local"
+              static let userName = "CI Stub"
+              static let apiBaseURL = "http://localhost:8001"
+          }
+          EOF
+
+      - name: Restore SwiftPM cache
+        uses: actions/cache@v4
+        with:
+          path: AmakaFlowCompanion/.spm
+          key: spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('**/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
+          restore-keys: |
+            spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
+
+      - name: Restore DerivedData cache
+        uses: actions/cache@v4
+        with:
+          path: AmakaFlowCompanion/DerivedData
+          key: deriveddata-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj', 'AmakaFlow/**/*.swift', 'AmakaFlowCompanion/**/*.swift') }}
+          restore-keys: |
+            deriveddata-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
+
+      - name: Resolve SwiftPM dependencies
+        working-directory: AmakaFlowCompanion
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project AmakaFlowCompanion.xcodeproj \
+            -scheme AmakaFlowCompanion \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm
+
+      # The ONE shared build. `build-for-testing` against a GENERIC simulator
+      # destination yields both:
+      #   - a Debug-iphonesimulator AmakaFlowCompanion.app portable to any sim
+      #     (consumed by cold-launch + maestro), and
+      #   - the test products / xctestrun (consumed by ios-tests via
+      #     test-without-building).
+      # Clerk keys + the exact fallback literals are injected the same way
+      # ios-cold-launch-matrix.yml's build did — without them the
+      # Environment.swift readers crash the app at launch.
+      - name: Build for testing (shared)
+        working-directory: AmakaFlowCompanion
+        env:
+          CLERK_PUBLISHABLE_KEY_DEV: ${{ secrets.CLERK_PUBLISHABLE_KEY_DEV }}
+          CLERK_PUBLISHABLE_KEY_STAGING: ${{ secrets.CLERK_PUBLISHABLE_KEY_STAGING }}
+          CLERK_PUBLISHABLE_KEY_PRODUCTION: ${{ secrets.CLERK_PUBLISHABLE_KEY_PRODUCTION }}
+        run: |
+          set -e
+          xcodebuild build-for-testing \
+            -project AmakaFlowCompanion.xcodeproj \
+            -scheme AmakaFlowCompanion \
+            -configuration Debug \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath .spm \
+            -parallelizeTargets \
+            -jobs $(sysctl -n hw.ncpu) \
+            CLERK_PUBLISHABLE_KEY_DEV="${CLERK_PUBLISHABLE_KEY_DEV:-pk_test_c29saWQtY2hpY2tlbi01MC5jbGVyay5hY2NvdW50cy5kZXYk}" \
+            CLERK_PUBLISHABLE_KEY_STAGING="${CLERK_PUBLISHABLE_KEY_STAGING:-pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA}" \
+            CLERK_PUBLISHABLE_KEY_PRODUCTION="${CLERK_PUBLISHABLE_KEY_PRODUCTION:-pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA}"
+          APP_PATH=$(find DerivedData/Build/Products/Debug-iphonesimulator -maxdepth 1 -name "AmakaFlowCompanion.app" | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::Could not find built .app under DerivedData"
+            exit 1
+          fi
+          echo "APP_PATH=$APP_PATH"
+          # Verify Clerk keys substituted in the resulting Info.plist
+          /usr/libexec/PlistBuddy -c "Print :CLERK_PUBLISHABLE_KEY_STAGING" "$APP_PATH/Info.plist" | head -c 30 || true
+
+      # Tar the .app before upload — actions/upload-artifact@v4 strips the
+      # parent directory of an uploaded `.app` bundle, so on download the
+      # `.app/` wrapper is gone. Tarring from inside the products dir keeps
+      # the directory structure round-trip-safe.
+      - name: Tar the .app for round-trip-safe artifact transfer
+        working-directory: AmakaFlowCompanion/DerivedData/Build/Products/Debug-iphonesimulator
+        run: tar -cf /tmp/built-app.tar AmakaFlowCompanion.app
+
+      - name: Upload .app tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: cold-launch-app
+          path: /tmp/built-app.tar
+          retention-days: 3
+
+      # Tar the test products (xctestrun + built test bundles) so ios-tests
+      # can `test-without-building` against the exact same build. Tarred from
+      # the AmakaFlowCompanion dir so it untars back to the same relative path.
+      - name: Tar test products for round-trip-safe artifact transfer
+        working-directory: AmakaFlowCompanion
+        run: tar -cf /tmp/test-products.tar DerivedData/Build
+
+      - name: Upload test products
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-products
+          path: /tmp/test-products.tar
+          retention-days: 3
 
   ios-tests:
     name: iOS Tests (PR - Impacted)
     runs-on: macos-15
-    needs: detect-changes
-    timeout-minutes: 30  # Reduced from 60 for PR runs
-
+    needs: [detect-changes, build]
+    if: needs.detect-changes.outputs.affected != 'NONE'
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -96,63 +269,28 @@ jobs:
           }
           EOF
 
-      - name: Restore SwiftPM cache
-        uses: actions/cache@v4
+      # Consume the shared build instead of rebuilding. Download the
+      # test-products tarball to a temp path and untar it back into
+      # AmakaFlowCompanion so DerivedData/Build sits at
+      # AmakaFlowCompanion/DerivedData/Build — the path test-without-building
+      # + -derivedDataPath DerivedData expects.
+      - name: Download test products
+        uses: actions/download-artifact@v4
         with:
-          path: AmakaFlowCompanion/.spm
-          key: spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('**/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
-          restore-keys: |
-            spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
+          name: test-products
+          path: /tmp/test-products
 
-      - name: Restore DerivedData cache
-        uses: actions/cache@v4
-        with:
-          path: AmakaFlowCompanion/DerivedData
-          key: deriveddata-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj', 'AmakaFlow/**/*.swift', 'AmakaFlowCompanion/**/*.swift') }}
-          restore-keys: |
-            deriveddata-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
-
-      - name: Resolve SwiftPM dependencies
-        working-directory: AmakaFlowCompanion
+      - name: Untar test products into place
         run: |
-          xcodebuild -resolvePackageDependencies \
-            -project AmakaFlowCompanion.xcodeproj \
-            -scheme AmakaFlowCompanion \
-            -derivedDataPath DerivedData \
-            -clonedSourcePackagesDirPath .spm
-
-      - name: Determine affected tests
-        id: affected
-        run: |
-          chmod +x .github/scripts/affected-tests-ios.sh
-          RESULT=$(.github/scripts/affected-tests-ios.sh)
-          echo "result=$RESULT" >> "$GITHUB_OUTPUT"
-          echo "Affected iOS result: $RESULT"
-
-      - name: Build for testing
-        if: steps.affected.outputs.result != 'NONE'
-        working-directory: AmakaFlowCompanion
-        env:
-          CLERK_PUBLISHABLE_KEY_STAGING: ${{ secrets.CLERK_PUBLISHABLE_KEY_STAGING }}
-          CLERK_PUBLISHABLE_KEY_PRODUCTION: ${{ secrets.CLERK_PUBLISHABLE_KEY_PRODUCTION }}
-        run: |
-          xcodebuild build-for-testing \
-            -project AmakaFlowCompanion.xcodeproj \
-            -scheme AmakaFlowCompanion \
-            -destination "platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}" \
-            -derivedDataPath DerivedData \
-            -clonedSourcePackagesDirPath .spm \
-            -parallelizeTargets \
-            -jobs $(sysctl -n hw.ncpu) \
-            CLERK_PUBLISHABLE_KEY_STAGING="${CLERK_PUBLISHABLE_KEY_STAGING}" \
-            CLERK_PUBLISHABLE_KEY_PRODUCTION="${CLERK_PUBLISHABLE_KEY_PRODUCTION}"
+          tar -xf /tmp/test-products/test-products.tar -C AmakaFlowCompanion
+          test -d AmakaFlowCompanion/DerivedData/Build  # products must be present
 
       - name: Run impacted tests
-        if: steps.affected.outputs.result != 'NONE' && steps.affected.outputs.result != 'FULL'
+        if: needs.detect-changes.outputs.affected != 'NONE' && needs.detect-changes.outputs.affected != 'FULL'
         working-directory: AmakaFlowCompanion
         run: |
           ONLY_TESTING=""
-          for test in ${{ steps.affected.outputs.result }}; do
+          for test in ${{ needs.detect-changes.outputs.affected }}; do
             ONLY_TESTING="$ONLY_TESTING -only-testing:$test"
           done
           echo "Running: xcodebuild test-without-building $ONLY_TESTING"
@@ -178,7 +316,7 @@ jobs:
           exit $XCODE_EXIT
 
       - name: Run full tests (fallback)
-        if: steps.affected.outputs.result == 'FULL'
+        if: needs.detect-changes.outputs.affected == 'FULL'
         working-directory: AmakaFlowCompanion
         run: |
           set +e
@@ -208,3 +346,250 @@ jobs:
           name: ios-test-results
           path: AmakaFlowCompanion/TestResults
           retention-days: 7
+
+  cold-launch:
+    name: Cold-launch on ${{ matrix.runtime }} / ${{ matrix.device }}
+    needs: [detect-changes, build]
+    if: needs.detect-changes.outputs.app_changed == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: macos-15
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # AmakaFlow's main app sets IPHONEOS_DEPLOYMENT_TARGET = 26.1
+        # in pbxproj, so iOS < 26 sims reject `simctl install` with
+        # exit 16. The matrix stays iOS 26+ only until we lower the
+        # deployment target (filed as a follow-up — "broaden supported
+        # iOS range" ticket).
+        include:
+          - runtime: "iOS 26.2"
+            device: "iPhone 16 Pro Max"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode (latest)
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE_PATH"
+
+      - name: Download .app tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: cold-launch-app
+          path: built-app
+
+      - name: Untar the .app bundle
+        working-directory: built-app
+        run: |
+          tar -xf built-app.tar
+          ls -la
+          test -d AmakaFlowCompanion.app  # bundle must be present after extraction
+
+      # Locate a sim runtime matching the matrix entry; if missing, skip
+      # this combo rather than fail the whole gate (older runtimes can
+      # vanish between Xcode releases).
+      - name: Create sim for ${{ matrix.runtime }} / ${{ matrix.device }}
+        id: create-sim
+        run: |
+          set -e
+          runtime_id=$(xcrun simctl list runtimes -j 2>/dev/null | \
+            jq -r --arg name "${{ matrix.runtime }}" \
+              '.runtimes[] | select(.isAvailable and (.name == $name)) | .identifier' | head -1)
+          if [ -z "$runtime_id" ]; then
+            echo "::warning::runtime ${{ matrix.runtime }} not available on this runner — skipping"
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          devtype=$(xcrun simctl list devicetypes -j | \
+            jq -r --arg n "${{ matrix.device }}" \
+              '.devicetypes[] | select(.name == $n) | .identifier' | head -1)
+          if [ -z "$devtype" ]; then
+            echo "::warning::device ${{ matrix.device }} not available — skipping"
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          sim_name="cold-launch-${{ github.run_id }}-${{ strategy.job-index }}"
+          udid=$(xcrun simctl create "$sim_name" "$devtype" "$runtime_id")
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+          echo "skipped=false" >> "$GITHUB_OUTPUT"
+          echo "Created sim $udid for $sim_name"
+
+      - name: Run cold-launch gate
+        if: steps.create-sim.outputs.skipped != 'true'
+        env:
+          UDID: ${{ steps.create-sim.outputs.udid }}
+        run: |
+          set -e
+          chmod +x scripts/cold-launch-check.sh
+          scripts/cold-launch-check.sh \
+            --sim-udid "$UDID" \
+            --app-path built-app/AmakaFlowCompanion.app \
+            --grace-seconds 60 \
+            --screenshot-path /tmp/cold-launch-${{ strategy.job-index }}.png
+
+      - name: Upload evidence screenshot
+        if: always() && steps.create-sim.outputs.skipped != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cold-launch-evidence-${{ strategy.job-index }}
+          path: /tmp/cold-launch-${{ strategy.job-index }}.png
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Tear down sim
+        if: always() && steps.create-sim.outputs.skipped != 'true'
+        env:
+          UDID: ${{ steps.create-sim.outputs.udid }}
+        run: |
+          xcrun simctl shutdown "$UDID" 2>/dev/null || true
+          xcrun simctl delete "$UDID" 2>/dev/null || true
+
+  maestro-flow-tests:
+    name: Maestro Flow Tests
+    needs: build
+    # Run only on manual dispatch, or on a PR explicitly labeled `maestro`
+    # (the labeled trigger above re-evaluates this when the label is added).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'maestro')
+    runs-on: macos-15
+    timeout-minutes: 75
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode (latest available)
+        id: xcode
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          echo "Using Xcode: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
+          echo "version=$(xcodebuild -version | head -1 | tr ' ' '-')" >> $GITHUB_OUTPUT
+
+      - name: Determine simulator
+        id: simulator
+        run: |
+          NAME=$(xcrun simctl list devices available | grep -o 'iPhone [^(]*' | head -1 | sed 's/ *$//')
+          if [ -z "$NAME" ]; then
+            echo "No iPhone simulator available" >&2
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Using simulator: $NAME"
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+
+      - name: Boot simulator
+        run: |
+          # Drop `erase all` (wiped every sim on the runner, ~1-2 min) — we
+          # boot only the chosen sim below; the runner is already fresh (#324).
+          xcrun simctl shutdown all || true
+          xcrun simctl boot "${{ steps.simulator.outputs.name }}" || true
+
+      - name: Install Maestro
+        run: |
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+
+      - name: Verify Maestro install
+        run: |
+          maestro --version
+
+      # Consume the shared build instead of rebuilding. Download the tarred
+      # .app, untar it, and install on the booted sim.
+      - name: Download .app tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: cold-launch-app
+          path: built-app
+
+      - name: Untar and install the built app on simulator
+        run: |
+          cd built-app
+          tar -xf built-app.tar
+          test -d AmakaFlowCompanion.app  # bundle must be present after extraction
+          echo "Installing $(pwd)/AmakaFlowCompanion.app"
+          xcrun simctl install booted "$(pwd)/AmakaFlowCompanion.app"
+
+      - name: Run Maestro flows
+        id: maestro
+        run: |
+          set +e
+          mkdir -p maestro-output
+          OVERALL=0
+
+          # AMA-1821: ALL flows are warn-only on initial rollout. The
+          # original gating intent (save-and-end + history-check) requires
+          # sim seeding (auth + queued workouts) that the fresh CI sim
+          # lacks. Demoted to warn-only so the workflow scaffold runs on
+          # every PR without permanently blocking iOS merges. Tightening
+          # tracked in AMA-1821-bis (file follow-up).
+          for flow in save-and-end history-check coach-message; do
+            echo "::group::maestro test e2e/maestro/${flow}.yaml (warn-only)"
+            maestro test "e2e/maestro/${flow}.yaml" \
+              --format junit \
+              --output "maestro-output/${flow}.xml" 2>&1 | tee "maestro-output/${flow}.log" || true
+            STATUS=${PIPESTATUS[0]}
+            echo "::endgroup::"
+            if [ "$STATUS" != "0" ]; then
+              echo "::warning::Maestro scaffold flow ${flow} failed (warn-only)."
+            fi
+          done
+
+          exit $OVERALL
+
+      # AMA-1839 — CJ-01 L4 evidence flow. Per docs/testing/blueprint.md,
+      # L4 is EVIDENCE not a validator: failure does NOT gate merge. We
+      # run it in its own step with continue-on-error and emit a dedicated
+      # JUnit + screenshot artifact pair so reviewers can inspect evidence
+      # independently of the legacy smoke flows above.
+      - name: Run CJ-01 L4 evidence flow (warn-only)
+        id: cj01-l4
+        continue-on-error: true
+        run: |
+          set +e
+          mkdir -p maestro-output/cj01-l4
+          FLOW="e2e/maestro/flows/workout-lifecycle/ama1839-cj01-signin-generate-saveend-evidence.yaml"
+          echo "::group::maestro test ${FLOW} (evidence-only)"
+          maestro test "${FLOW}" \
+            --format junit \
+            --output "maestro-output/cj01-l4/cj01-l4-junit.xml" 2>&1 \
+            | tee "maestro-output/cj01-l4/cj01-l4.log"
+          STATUS=${PIPESTATUS[0]}
+          echo "::endgroup::"
+          if [ "$STATUS" != "0" ]; then
+            echo "::warning::CJ-01 L4 evidence flow did not complete cleanly (evidence-only, not gating)."
+          fi
+          # Always exit 0 — evidence step never blocks the workflow.
+          exit 0
+
+      - name: Upload Maestro output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-output
+          path: |
+            maestro-output/
+            ~/.maestro/tests/**/screenshots/**
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload CJ-01 L4 evidence screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj01-l4-evidence
+          path: |
+            ~/.maestro/tests/**/screenshots/**
+            maestro-output/cj01-l4/cj01-l4.log
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Upload CJ-01 L4 JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj01-l4-junit
+          path: maestro-output/cj01-l4/cj01-l4-junit.xml
+          retention-days: 14
+          if-no-files-found: ignore
