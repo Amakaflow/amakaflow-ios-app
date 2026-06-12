@@ -36,6 +36,10 @@ concurrency:
   group: testflight-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  XCODE_VERSION: "26.2"
+  MAESTRO_VERSION: "2.6.1"
+
 jobs:
   # AMA-1852 — fail in seconds if required GitHub secrets are missing or
   # malformed, before we spend ~10min on archive + export.
@@ -106,23 +110,24 @@ jobs:
     needs: [secrets-preflight, completion-contract]
     runs-on: macos-15
     timeout-minutes: 45
+    outputs:
+      build_number: ${{ steps.build-number.outputs.build_number }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode (latest available)
-        run: |
-          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
-          echo "Using Xcode: $XCODE_PATH"
-          sudo xcode-select -s "$XCODE_PATH"
-          xcodebuild -version
+      - name: Select pinned Xcode
+        id: xcode
+        run: .github/scripts/ci/select-xcode.sh
 
       - name: Restore SPM cache
         uses: actions/cache@v4
         with:
           path: AmakaFlowCompanion/.spm
-          key: spm-tf-${{ runner.os }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          key: spm-tf-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
+          restore-keys: |
+            spm-tf-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
 
       - name: Restore DerivedData cache
         uses: actions/cache@v4
@@ -381,12 +386,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode (latest available)
+      - name: Select pinned Xcode
         id: xcode
-        run: |
-          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
-          sudo xcode-select -s "$XCODE_PATH"
-          echo "version=$(xcodebuild -version | head -1 | tr ' ' '-')" >> "$GITHUB_OUTPUT"
+        run: .github/scripts/ci/select-xcode.sh
 
       - name: Determine + boot simulator
         id: simulator
@@ -428,17 +430,21 @@ jobs:
           open -a Simulator
           sleep 5
 
+      - name: Restore Maestro cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.maestro
+          key: maestro-${{ runner.os }}-${{ env.MAESTRO_VERSION }}
+
       - name: Install Maestro
-        run: |
-          curl -Ls https://get.maestro.mobile.dev | bash
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+        run: .github/scripts/ci/install-maestro.sh
 
       - name: Restore SPM cache
         uses: actions/cache@v4
         with:
           path: AmakaFlowCompanion/.spm
-          key: spm-tf-${{ runner.os }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
-          restore-keys: spm-tf-${{ runner.os }}-
+          key: spm-tf-smoke-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
+          restore-keys: spm-tf-smoke-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
 
       - name: Restore DerivedData cache
         uses: actions/cache@v4

@@ -39,6 +39,10 @@ concurrency:
   group: ios-pr-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
+env:
+  XCODE_VERSION: "26.2"
+  MAESTRO_VERSION: "2.6.1"
+
 jobs:
   detect-changes:
     name: Detect Changed Files
@@ -99,34 +103,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode (latest available)
+      - name: Select pinned Xcode
         id: xcode
-        run: |
-          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
-          echo "Using Xcode: $XCODE_PATH"
-          sudo xcode-select -s "$XCODE_PATH"
-          XCODE_VER=$(xcodebuild -version | head -1 | tr ' ' '-')
-          echo "version=$XCODE_VER" >> $GITHUB_OUTPUT
+        run: .github/scripts/ci/select-xcode.sh
 
       - name: Create stub TestCredentials for compilation
-        working-directory: AmakaFlowCompanion
-        run: |
-          cat > AmakaFlowCompanionUITests/TestCredentials.swift << 'EOF'
-          import Foundation
-          enum TestCredentials {
-              static let testAuthSecret = "ci-stub-not-for-testing"
-              static let userId = "ci_stub_user"
-              static let userEmail = "ci@stub.local"
-              static let userName = "CI Stub"
-              static let apiBaseURL = "http://localhost:8001"
-          }
-          EOF
+        run: .github/scripts/ci/create-test-credentials-stub.sh
 
       - name: Restore SwiftPM cache
         uses: actions/cache@v4
         with:
           path: AmakaFlowCompanion/.spm
-          key: spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('**/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
+          key: spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
           restore-keys: |
             spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
 
@@ -226,26 +214,13 @@ jobs:
         with:
           fetch-depth: 0  # needed for diff base...head
 
-      - name: Select Xcode (latest available)
+      - name: Select pinned Xcode
         id: xcode
-        run: |
-          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
-          echo "Using Xcode: $XCODE_PATH"
-          sudo xcode-select -s "$XCODE_PATH"
-          XCODE_VER=$(xcodebuild -version | head -1 | tr ' ' '-')
-          echo "version=$XCODE_VER" >> $GITHUB_OUTPUT
+        run: .github/scripts/ci/select-xcode.sh
 
       - name: Determine simulator (first available iPhone)
         id: simulator
-        run: |
-          NAME=$(xcrun simctl list devices available | grep -o 'iPhone [^(]*' | head -1 | sed 's/ *$//')
-          if [ -z "$NAME" ]; then
-            echo "No available iPhone simulator found" >&2
-            xcrun simctl list devices available
-            exit 1
-          fi
-          echo "Using simulator: $NAME"
-          echo "name=$NAME" >> $GITHUB_OUTPUT
+        run: .github/scripts/ci/pick-iphone-simulator.sh
 
       - name: Boot simulator
         run: |
@@ -256,18 +231,7 @@ jobs:
           xcrun simctl boot "${{ steps.simulator.outputs.name }}" || true
 
       - name: Create stub TestCredentials for compilation
-        working-directory: AmakaFlowCompanion
-        run: |
-          cat > AmakaFlowCompanionUITests/TestCredentials.swift << 'EOF'
-          import Foundation
-          enum TestCredentials {
-              static let testAuthSecret = "ci-stub-not-for-testing"
-              static let userId = "ci_stub_user"
-              static let userEmail = "ci@stub.local"
-              static let userName = "CI Stub"
-              static let apiBaseURL = "http://localhost:8001"
-          }
-          EOF
+        run: .github/scripts/ci/create-test-credentials-stub.sh
 
       # Consume the shared build instead of rebuilding. Download the
       # test-products tarball to a temp path and untar it back into
@@ -368,10 +332,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode (latest)
-        run: |
-          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
-          sudo xcode-select -s "$XCODE_PATH"
+      - name: Select pinned Xcode
+        run: .github/scripts/ci/select-xcode.sh
 
       - name: Download .app tarball
         uses: actions/download-artifact@v4
@@ -459,25 +421,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode (latest available)
+      - name: Select pinned Xcode
         id: xcode
-        run: |
-          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
-          echo "Using Xcode: $XCODE_PATH"
-          sudo xcode-select -s "$XCODE_PATH"
-          echo "version=$(xcodebuild -version | head -1 | tr ' ' '-')" >> $GITHUB_OUTPUT
+        run: .github/scripts/ci/select-xcode.sh
 
       - name: Determine simulator
         id: simulator
-        run: |
-          NAME=$(xcrun simctl list devices available | grep -o 'iPhone [^(]*' | head -1 | sed 's/ *$//')
-          if [ -z "$NAME" ]; then
-            echo "No iPhone simulator available" >&2
-            xcrun simctl list devices available
-            exit 1
-          fi
-          echo "Using simulator: $NAME"
-          echo "name=$NAME" >> $GITHUB_OUTPUT
+        run: .github/scripts/ci/pick-iphone-simulator.sh
 
       - name: Boot simulator
         run: |
@@ -486,10 +436,14 @@ jobs:
           xcrun simctl shutdown all || true
           xcrun simctl boot "${{ steps.simulator.outputs.name }}" || true
 
+      - name: Restore Maestro cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.maestro
+          key: maestro-${{ runner.os }}-${{ env.MAESTRO_VERSION }}
+
       - name: Install Maestro
-        run: |
-          curl -Ls https://get.maestro.mobile.dev | bash
-          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+        run: .github/scripts/ci/install-maestro.sh
 
       - name: Verify Maestro install
         run: |
