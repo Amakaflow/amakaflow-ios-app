@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:  # Manual trigger option
 
+env:
+  XCODE_VERSION: "26.2"
+
 jobs:
   ios-tests:
     name: iOS Tests (Faster + Stable)
@@ -16,29 +19,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode (latest available)
+      - name: Select pinned Xcode
         id: xcode
-        run: |
-          # Use latest Xcode - project requires iOS 18.6+/watchOS 11.6 which needs Xcode 26.x
-          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
-          echo "Using Xcode: $XCODE_PATH"
-          sudo xcode-select -s "$XCODE_PATH"
-          XCODE_VER=$(xcodebuild -version | head -1 | tr ' ' '-')
-          echo "version=$XCODE_VER" >> $GITHUB_OUTPUT
+        run: .github/scripts/ci/select-xcode.sh
 
       - name: Determine simulator (first available iPhone)
         id: simulator
-        run: |
-          # Extract first iPhone device name from available simulators
-          # Format: "    iPhone 17 Pro (UUID) (Shutdown)"
-          NAME=$(xcrun simctl list devices available | grep -o 'iPhone [^(]*' | head -1 | sed 's/ *$//')
-          if [ -z "$NAME" ]; then
-            echo "No available iPhone simulator found" >&2
-            xcrun simctl list devices available
-            exit 1
-          fi
-          echo "Using simulator: $NAME"
-          echo "name=$NAME" >> $GITHUB_OUTPUT
+        run: .github/scripts/ci/pick-iphone-simulator.sh
 
       - name: Reset simulators (avoid instruments lockdown timeouts)
         run: |
@@ -46,18 +33,7 @@ jobs:
           xcrun simctl erase all || true
 
       - name: Create stub TestCredentials for compilation
-        working-directory: AmakaFlowCompanion
-        run: |
-          cat > AmakaFlowCompanionUITests/TestCredentials.swift << 'EOF'
-          import Foundation
-          enum TestCredentials {
-              static let testAuthSecret = "ci-stub-not-for-testing"
-              static let userId = "ci_stub_user"
-              static let userEmail = "ci@stub.local"
-              static let userName = "CI Stub"
-              static let apiBaseURL = "http://localhost:8001"
-          }
-          EOF
+        run: .github/scripts/ci/create-test-credentials-stub.sh
 
       # -----------------------------
       # Cache RESTORE (must happen BEFORE resolve/build)
@@ -66,7 +42,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: AmakaFlowCompanion/.spm
-          key: spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('**/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
+          key: spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
           restore-keys: |
             spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
 
@@ -319,14 +295,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode (latest available)
+      - name: Select pinned Xcode
         id: xcode
-        run: |
-          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
-          echo "Using Xcode: $XCODE_PATH"
-          sudo xcode-select -s "$XCODE_PATH"
-          XCODE_VER=$(xcodebuild -version | head -1 | tr ' ' '-')
-          echo "version=$XCODE_VER" >> $GITHUB_OUTPUT
+        run: .github/scripts/ci/select-xcode.sh
 
       - name: Determine watch simulator (first available Apple Watch)
         id: watch-simulator
@@ -348,18 +319,7 @@ jobs:
           xcrun simctl erase all || true
 
       - name: Create stub TestCredentials for compilation
-        working-directory: AmakaFlowCompanion
-        run: |
-          cat > AmakaFlowCompanionUITests/TestCredentials.swift << 'EOF'
-          import Foundation
-          enum TestCredentials {
-              static let testAuthSecret = "ci-stub-not-for-testing"
-              static let userId = "ci_stub_user"
-              static let userEmail = "ci@stub.local"
-              static let userName = "CI Stub"
-              static let apiBaseURL = "http://localhost:8001"
-          }
-          EOF
+        run: .github/scripts/ci/create-test-credentials-stub.sh
 
       # -----------------------------
       # Cache RESTORE
@@ -368,7 +328,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: AmakaFlowCompanion/.spm
-          key: spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('**/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
+          key: spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
           restore-keys: |
             spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
 
