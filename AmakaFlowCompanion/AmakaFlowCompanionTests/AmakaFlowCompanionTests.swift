@@ -4,6 +4,9 @@
 //
 //  Created by DAVID ANDREWS on 11/21/25.
 //
+// Note: trivial touch on the #321 build-once PR to make affected-tests-ios.sh
+// flag iOS sources, so the ios-tests job runs and validates that it can
+// consume the shared build's products (test-without-building). Safe to remove.
 
 import Testing
 @testable import AmakaFlowCompanion
