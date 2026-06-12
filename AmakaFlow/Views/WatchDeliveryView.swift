@@ -367,7 +367,7 @@ private enum Visuals {
         WatchDeliveryView(
             workoutId: "fixture-watch-failed",
             workoutName: "Friday Strength",
-            viewModel: WatchDeliveryViewModel(apiService: MockAPIService())
+            viewModel: WatchDeliveryViewModel(apiService: FixtureAPIService())
         )
     }
 }

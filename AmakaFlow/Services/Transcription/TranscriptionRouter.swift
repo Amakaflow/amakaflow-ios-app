@@ -49,7 +49,7 @@ final class TranscriptionRouter: ObservableObject {
     /// Confidence threshold for triggering cloud fallback in smart mode
     private let confidenceThreshold: Double = 0.80
 
-    private let settingsKey = "transcription_settings"
+    private let settingsKey = DefaultsKey.transcriptionSettings.rawValue
 
     // MARK: - Singleton
 
@@ -252,7 +252,7 @@ final class TranscriptionRouter: ObservableObject {
     }
 
     private static func loadSettings() -> SavedSettings {
-        guard let data = UserDefaults.standard.data(forKey: "transcription_settings"),
+        guard let data = UserDefaults.standard.data(forKey: DefaultsKey.transcriptionSettings.rawValue),
               let settings = try? JSONDecoder().decode(SavedSettings.self, from: data) else {
             // Return defaults
             return SavedSettings(

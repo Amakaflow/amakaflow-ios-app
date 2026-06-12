@@ -461,5 +461,5 @@ private struct HRVSparkline: View {
 }
 
 #Preview("Readiness Detail") {
-    ReadinessDetailView(viewModel: ReadinessDetailViewModel(apiService: MockAPIService()))
+    ReadinessDetailView(viewModel: ReadinessDetailViewModel(apiService: FixtureAPIService()))
 }

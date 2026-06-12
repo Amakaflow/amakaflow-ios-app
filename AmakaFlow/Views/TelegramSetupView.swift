@@ -28,11 +28,11 @@ struct SystemURLOpener: URLOpener {
 
 enum TelegramLinkCache {
     static func linkedKey(userID: String?) -> String {
-        "telegram_linked_\(userID ?? "anon")"
+        DefaultsKey.telegramLinked(userID: userID ?? "anon")
     }
 
     static func idKey(userID: String?) -> String {
-        "telegram_id_\(userID ?? "anon")"
+        DefaultsKey.telegramID(userID: userID ?? "anon")
     }
 
     static func markLinked(telegramId: Int?, userID: String?) {

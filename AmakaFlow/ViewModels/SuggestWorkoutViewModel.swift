@@ -228,7 +228,7 @@ class SuggestWorkoutViewModel: ObservableObject {
     @Published private(set) var didChooseRestToday = false
 
     private let dependencies: AppDependencies
-    private static let profileKey = "coaching_profile"
+    private static let profileKey = DefaultsKey.suggestedWorkoutCoachingProfile.rawValue
 
     init(dependencies: AppDependencies = .live) {
         self.dependencies = dependencies

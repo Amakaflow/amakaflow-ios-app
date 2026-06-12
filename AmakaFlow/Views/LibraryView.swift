@@ -415,5 +415,5 @@ private struct LibraryEmptyStateView: View {
 }
 
 #Preview("Library") {
-    LibraryView(viewModel: LibraryViewModel(apiService: MockAPIService()))
+    LibraryView(viewModel: LibraryViewModel(apiService: FixtureAPIService()))
 }

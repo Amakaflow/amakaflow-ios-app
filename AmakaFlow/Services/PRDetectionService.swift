@@ -79,7 +79,7 @@ struct ExerciseSetData {
 
 class PRDetectionService {
 
-    private let storageKey = "amakaflow_personal_records"
+    private let storageKey = DefaultsKey.personalRecords.rawValue
 
     // MARK: - Public API
 

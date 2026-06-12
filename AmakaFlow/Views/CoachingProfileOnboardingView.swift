@@ -357,7 +357,7 @@ struct CoachingProfileOnboardingView: View {
     @ObservedObject var viewModel: SuggestWorkoutViewModel
     @StateObject private var onboardingViewModel: CoachingProfileOnboardingViewModel
 
-    @State private var consentAccepted = UserDefaults.standard.bool(forKey: "biometric_consent_v1")
+    @State private var consentAccepted = UserDefaults.standard.bool(forKey: DefaultsKey.biometricConsent.rawValue)
     @State private var didLoad = false
 
     init(
@@ -372,11 +372,11 @@ struct CoachingProfileOnboardingView: View {
         if !consentAccepted {
             BiometricConsentView(
                 onAccept: {
-                    UserDefaults.standard.set(true, forKey: "biometric_consent_v1")
+                    UserDefaults.standard.set(true, forKey: DefaultsKey.biometricConsent.rawValue)
                     consentAccepted = true
                 },
                 onDecline: {
-                    UserDefaults.standard.set(false, forKey: "biometric_consent_v1")
+                    UserDefaults.standard.set(false, forKey: DefaultsKey.biometricConsent.rawValue)
                 }
             )
         } else {

@@ -9,7 +9,7 @@ import SwiftUI
 
 struct SourcesView: View {
     @EnvironmentObject var viewModel: WorkoutsViewModel
-    @AppStorage("instagramImportMode") private var instagramImportMode: InstagramImportMode = .manual
+    @AppStorage(DefaultsKey.instagramImportMode.rawValue) private var instagramImportMode: InstagramImportMode = .manual
     @State private var showingAppleWorkouts = false
     @State private var showingAIImport = false
     @State private var showingImageImport = false

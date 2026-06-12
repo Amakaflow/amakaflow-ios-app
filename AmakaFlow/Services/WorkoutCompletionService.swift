@@ -240,7 +240,7 @@ class WorkoutCompletionService: ObservableObject, WorkoutCompletionServiceProvid
     @Published private(set) var lastError: Error?
     @Published private(set) var isProcessingQueue: Bool = false
 
-    private let pendingQueueKey = "WorkoutCompletionPendingQueue"
+    private let pendingQueueKey = DefaultsKey.pendingWorkoutCompletionQueue.rawValue
     private let maxRetries = 3
     private let networkMonitor = NWPathMonitor()
     private var isNetworkAvailable = true

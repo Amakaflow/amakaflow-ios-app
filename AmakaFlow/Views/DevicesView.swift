@@ -459,6 +459,6 @@ private struct PairDeviceSheet: View {
 
 #Preview("Devices") {
     NavigationStack {
-        DevicesView(viewModel: DevicesViewModel(apiService: MockAPIService()))
+        DevicesView(viewModel: DevicesViewModel(apiService: FixtureAPIService()))
     }
 }

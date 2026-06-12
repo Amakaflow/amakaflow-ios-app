@@ -95,12 +95,12 @@ struct ConnectedAppsResolver {
 
 struct SettingsView: View {
     @Binding var navigateToSyncDashboard: Bool
-    @AppStorage("devicePreference") private var deviceMode: DevicePreference = .appleWatchPhone
-    @AppStorage("instagramImportMode") private var instagramImportMode: InstagramImportMode = .manual
+    @AppStorage(DefaultsKey.devicePreference.rawValue) private var deviceMode: DevicePreference = .appleWatchPhone
+    @AppStorage(DefaultsKey.instagramImportMode.rawValue) private var instagramImportMode: InstagramImportMode = .manual
     // AMA-1649: prefer the local user.displayName override (set in
     // EditProfileView) over the Clerk profile name when rendering the
     // account summary card.
-    @AppStorage("user.displayName") private var displayNameOverride: String = ""
+    @AppStorage(DefaultsKey.userDisplayName.rawValue) private var displayNameOverride: String = ""
     @State private var voiceCuesEnabled = true
     @State private var audioBehavior: AudioBehavior = .duck
     @State private var countdownBeepsEnabled = true
@@ -2594,7 +2594,7 @@ struct SettingsView: View {
             try await APIService.shared.deleteAccount()
             clearTelegramLinked()
             pairingService.unpair()
-            UserDefaults.standard.set(false, forKey: "biometric_consent_v1")
+            UserDefaults.standard.set(false, forKey: DefaultsKey.biometricConsent.rawValue)
         } catch {
             privacyErrorMessage = "Account deletion failed: \(error.localizedDescription)"
             showingPrivacyErrorAlert = true

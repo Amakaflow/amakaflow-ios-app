@@ -390,6 +390,6 @@ private struct DetailTagPills: View {
 
 #Preview("Library detail") {
     NavigationStack {
-        LibraryDetailView(itemID: "mock-strength-basics", viewModel: LibraryDetailViewModel(apiService: MockAPIService()))
+        LibraryDetailView(itemID: "mock-strength-basics", viewModel: LibraryDetailViewModel(apiService: FixtureAPIService()))
     }
 }
