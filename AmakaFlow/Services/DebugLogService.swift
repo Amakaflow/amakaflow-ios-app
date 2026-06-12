@@ -65,7 +65,7 @@ struct DebugLogEntry: Identifiable, Codable {
 class DebugLogService: ObservableObject {
     static let shared = DebugLogService()
 
-    private let storageKey = "DebugLogEntries"
+    private let storageKey = DefaultsKey.debugLogEntries.rawValue
     private let maxEntries = 100
 
     @Published private(set) var entries: [DebugLogEntry] = []

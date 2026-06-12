@@ -11,7 +11,7 @@ struct WorkoutsView: View {
     @EnvironmentObject var viewModel: WorkoutsViewModel
     @State private var selectedWorkout: Workout?
     @State private var showingDetail = false
-    @AppStorage("workouts.selectedRange") private var selectedRange: WorkoutRange = .week
+    @AppStorage(DefaultsKey.workoutsSelectedRange.rawValue) private var selectedRange: WorkoutRange = .week
     @State private var showingCalendar = false
     @State private var monthOffset: Int = 0           // 0 = current month, -1 = prev, +1 = next
     @State private var selectedMonthDay: Date? = nil  // user-tapped day in Month view (filters Week list)

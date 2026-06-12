@@ -50,7 +50,7 @@ class CoachViewModel: ObservableObject {
     private var boundSessionUserId: String?
 
     private func sessionStorageKey(for userId: String) -> String {
-        "coach_chat_session_id_\(userId)"
+        DefaultsKey.coachSessionID(userID: userId)
     }
 
     private var sessionIdKey: String {

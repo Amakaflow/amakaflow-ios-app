@@ -71,7 +71,7 @@ struct WorkoutSourceDetailBanner: View {
 struct WorkoutDetailView: View {
     @EnvironmentObject var viewModel: WorkoutsViewModel
     @Environment(\.dismiss) var dismiss
-    @AppStorage("devicePreference") private var devicePreference: DevicePreference = .appleWatchPhone
+    @AppStorage(DefaultsKey.devicePreference.rawValue) private var devicePreference: DevicePreference = .appleWatchPhone
 
     let workout: Workout
 

@@ -33,7 +33,7 @@ struct AmakaFlowCompanionApp: App {
         if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
             Clerk.configure(publishableKey: "pk_test_ZXhhbXBsZS5jb20k")
             _workoutsViewModel = StateObject(wrappedValue: WorkoutsViewModel())
-            _coachSessionStore = StateObject(wrappedValue: CoachSessionStore(dependencies: .mock))
+            _coachSessionStore = StateObject(wrappedValue: CoachSessionStore())
             return
         }
         #endif
@@ -213,7 +213,7 @@ struct AmakaFlowCompanionApp: App {
     private var unauthenticatedRoot: some View {
         let _ = mentalModelGateRefresh
         let userId = pairingService.userProfile?.id ?? UIDevice.current.identifierForVendor?.uuidString ?? "device"
-        let seenKey = "mental_model_seen_\(userId)"
+        let seenKey = DefaultsKey.mentalModelSeen(userID: userId)
 
         if UserDefaults.standard.bool(forKey: seenKey) {
             SignUpView()

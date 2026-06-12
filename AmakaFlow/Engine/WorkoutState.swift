@@ -41,7 +41,7 @@ struct SavedWorkoutProgress: Codable {
     let elapsedSeconds: Int
     let savedAt: Date
 
-    private static let storageKey = "savedWorkoutProgress"
+    private static let storageKey = DefaultsKey.savedWorkoutProgress.rawValue
 
     /// Save workout progress to UserDefaults
     func save() {

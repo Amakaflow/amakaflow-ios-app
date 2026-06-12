@@ -389,7 +389,7 @@ class WorkoutsViewModel: ObservableObject {
             print("[WorkoutsViewModel] Found \(pendingWorkouts.count) pending workouts, syncing...")
 
             // Get device preference to determine if we should sync to Apple Watch
-            let devicePref = UserDefaults.standard.string(forKey: "devicePreference").flatMap { DevicePreference(rawValue: $0) } ?? .appleWatchPhone
+            let devicePref = UserDefaults.standard.string(forKey: DefaultsKey.devicePreference.rawValue).flatMap { DevicePreference(rawValue: $0) } ?? .appleWatchPhone
 
             for workout in pendingWorkouts {
                 var syncSuccessful = true

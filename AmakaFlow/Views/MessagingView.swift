@@ -430,6 +430,6 @@ private struct MessagingChannelCard: View {
 
 #Preview("Messaging") {
     NavigationStack {
-        MessagingView(viewModel: MessagingViewModel(apiService: MockAPIService()))
+        MessagingView(viewModel: MessagingViewModel(apiService: FixtureAPIService()))
     }
 }

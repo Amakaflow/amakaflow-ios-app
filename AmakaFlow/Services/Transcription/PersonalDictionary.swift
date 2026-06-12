@@ -32,7 +32,7 @@ final class PersonalDictionary: ObservableObject {
 
     // MARK: - Properties
 
-    private let storageKey = "personal_dictionary"
+    private let storageKey = DefaultsKey.personalDictionary.rawValue
     private let apiService = APIService.shared
 
     // Background serial queue for debounced saves (AMA-1075)

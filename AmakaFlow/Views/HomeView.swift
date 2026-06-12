@@ -18,7 +18,7 @@ struct HomeView: View {
     @StateObject private var homeViewModel = HomeViewModel()
     @StateObject private var historyViewModel = ActivityHistoryViewModel()
     @ObservedObject private var simulationSettings = SimulationSettings.shared
-    @AppStorage("devicePreference") private var devicePreference: DevicePreference = .appleWatchPhone
+    @AppStorage(DefaultsKey.devicePreference.rawValue) private var devicePreference: DevicePreference = .appleWatchPhone
     @State private var showingQuickStart = false
     @State private var selectedWorkout: Workout?
     @State private var showingWorkoutPlayer = false

@@ -79,7 +79,7 @@ class GarminConnectManager: NSObject, ObservableObject {
         let friendlyName: String
     }
 
-    private let savedDeviceKey = "GarminSavedDevice"
+    private let savedDeviceKey = DefaultsKey.garminSavedDevice.rawValue
 
     #if CONNECTIQ_ENABLED
     // MARK: - Connect IQ References

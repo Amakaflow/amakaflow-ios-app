@@ -1227,7 +1227,7 @@ class WorkoutEngine: ObservableObject {
 
     /// Returns the current device preference from UserDefaults
     private var devicePreference: DevicePreference {
-        guard let rawValue = UserDefaults.standard.string(forKey: "devicePreference"),
+        guard let rawValue = UserDefaults.standard.string(forKey: DefaultsKey.devicePreference.rawValue),
               let preference = DevicePreference(rawValue: rawValue) else {
             return .appleWatchPhone // Default
         }

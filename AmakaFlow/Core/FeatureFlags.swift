@@ -70,3 +70,55 @@ enum FeatureFlags {
         return true
     }()
 }
+
+/// Centralized UserDefaults keys.
+///
+/// Keep raw values stable: these strings are persisted on user devices and some
+/// are also used by UI-test launch arguments.
+enum DefaultsKey: String {
+    case appEnvironment = "app_environment"
+    case biometricConsent = "biometric_consent_v1"
+    case debugLogEntries = "DebugLogEntries"
+    case devicePreference
+    case fatigueReadinessThreshold = "fatigue_readiness_threshold"
+    case fatigueRecoveryReminder = "fatigue_recovery_reminder"
+    case fatigueShowInCalendar = "fatigue_show_in_calendar"
+    case fatigueTrackingEnabled = "fatigue_tracking_enabled"
+    case garminSavedDevice = "GarminSavedDevice"
+    case instagramImportMode
+    case nutritionSettings = "nutrition_settings"
+    case pendingWorkoutCompletionQueue = "WorkoutCompletionPendingQueue"
+    case personalDictionary = "personal_dictionary"
+    case personalRecords = "amakaflow_personal_records"
+    case savedWorkoutProgress
+    case simulationEnabled
+    case simulationGenerateHealth
+    case simulationMaxHR
+    case simulationProfile
+    case simulationRestingHR
+    case simulationSimulateWeight
+    case simulationSpeed
+    case simulationWeightProfile
+    case suggestedWorkoutCoachingProfile = "coaching_profile"
+    case transcriptionSettings = "transcription_settings"
+    case userDisplayName = "user.displayName"
+    case userDistanceUnit = "user.distanceUnit"
+    case userWeightUnit = "user.weightUnit"
+    case workoutsSelectedRange = "workouts.selectedRange"
+
+    static func coachSessionID(userID: String) -> String {
+        "coach_chat_session_id_\(userID)"
+    }
+
+    static func mentalModelSeen(userID: String) -> String {
+        "mental_model_seen_\(userID)"
+    }
+
+    static func telegramID(userID: String) -> String {
+        "telegram_id_\(userID)"
+    }
+
+    static func telegramLinked(userID: String) -> String {
+        "telegram_linked_\(userID)"
+    }
+}

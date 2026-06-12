@@ -5,7 +5,7 @@ enum AppEnvironment: String, CaseIterable {
     case staging
     case production
 
-    private static let environmentKey = "app_environment"
+    private static let environmentKey = DefaultsKey.appEnvironment.rawValue
 
     /// Get or set the current environment. Defaults to `.staging` for all build
     /// configurations until production DNS records are live (see comment near

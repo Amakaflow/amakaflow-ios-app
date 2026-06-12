@@ -20,29 +20,29 @@ final class SimulationSettings: ObservableObject {
     // MARK: - Stored Settings
 
     /// Whether simulation mode is enabled
-    @AppStorage("simulationEnabled") var isEnabled: Bool = false
+    @AppStorage(DefaultsKey.simulationEnabled.rawValue) var isEnabled: Bool = false
 
     /// Speed multiplier (1.0 = real-time, 10.0 = 10x speed)
-    @AppStorage("simulationSpeed") var speed: Double = 10.0
+    @AppStorage(DefaultsKey.simulationSpeed.rawValue) var speed: Double = 10.0
 
     /// Behavior profile name
-    @AppStorage("simulationProfile") var profileName: String = "casual"
+    @AppStorage(DefaultsKey.simulationProfile.rawValue) var profileName: String = "casual"
 
     /// Whether to generate fake health data
-    @AppStorage("simulationGenerateHealth") var generateHealthData: Bool = true
+    @AppStorage(DefaultsKey.simulationGenerateHealth.rawValue) var generateHealthData: Bool = true
 
     /// Custom resting heart rate
-    @AppStorage("simulationRestingHR") var restingHR: Int = 70
+    @AppStorage(DefaultsKey.simulationRestingHR.rawValue) var restingHR: Int = 70
 
     /// Custom max heart rate
-    @AppStorage("simulationMaxHR") var maxHR: Int = 175
+    @AppStorage(DefaultsKey.simulationMaxHR.rawValue) var maxHR: Int = 175
 
     // AMA-308: Weight simulation settings
     /// Whether to automatically select weights for strength exercises
-    @AppStorage("simulationSimulateWeight") var simulateWeight: Bool = true
+    @AppStorage(DefaultsKey.simulationSimulateWeight.rawValue) var simulateWeight: Bool = true
 
     /// Weight profile for simulated weights (beginner, intermediate, advanced)
-    @AppStorage("simulationWeightProfile") var weightProfileName: String = "intermediate"
+    @AppStorage(DefaultsKey.simulationWeightProfile.rawValue) var weightProfileName: String = "intermediate"
 
     // MARK: - Computed Properties
 

@@ -8,10 +8,10 @@
 import SwiftUI
 
 struct FatigueSettingsView: View {
-    @AppStorage("fatigue_tracking_enabled") private var isEnabled = true
-    @AppStorage("fatigue_readiness_threshold") private var readinessThreshold = 40.0
-    @AppStorage("fatigue_show_in_calendar") private var showInCalendar = true
-    @AppStorage("fatigue_recovery_reminder") private var recoveryReminder = false
+    @AppStorage(DefaultsKey.fatigueTrackingEnabled.rawValue) private var isEnabled = true
+    @AppStorage(DefaultsKey.fatigueReadinessThreshold.rawValue) private var readinessThreshold = 40.0
+    @AppStorage(DefaultsKey.fatigueShowInCalendar.rawValue) private var showInCalendar = true
+    @AppStorage(DefaultsKey.fatigueRecoveryReminder.rawValue) private var recoveryReminder = false
 
     var body: some View {
         List {

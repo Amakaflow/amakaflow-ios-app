@@ -73,7 +73,7 @@ final class NutritionViewModel: ObservableObject {
     @Published var showOnboarding = false
 
     private let healthKitService: NutritionHealthKitService
-    private let settingsKey = "nutrition_settings"
+    private let settingsKey = DefaultsKey.nutritionSettings.rawValue
     private var settingsLoaded = false
 
     // MARK: - Init

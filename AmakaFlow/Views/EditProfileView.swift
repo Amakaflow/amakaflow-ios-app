@@ -374,9 +374,9 @@ final class EditProfileViewModel: ObservableObject {
 struct EditProfileView: View {
     @Environment(\.dismiss) private var dismiss
 
-    @AppStorage("user.displayName") private var displayName: String = ""
-    @AppStorage("user.weightUnit") private var weightUnit: WeightUnit = .lbs
-    @AppStorage("user.distanceUnit") private var distanceUnit: DistanceUnit = .mi
+    @AppStorage(DefaultsKey.userDisplayName.rawValue) private var displayName: String = ""
+    @AppStorage(DefaultsKey.userWeightUnit.rawValue) private var weightUnit: WeightUnit = .lbs
+    @AppStorage(DefaultsKey.userDistanceUnit.rawValue) private var distanceUnit: DistanceUnit = .mi
 
     /// Read-only fallback shown as the field's placeholder when the user
     /// hasn't set a local display name. Never written back to displayName
