@@ -63,10 +63,11 @@ jobs:
           echo "Using simulator: $NAME"
           echo "name=$NAME" >> $GITHUB_OUTPUT
 
-      - name: Reset & boot simulator
+      - name: Boot simulator
         run: |
+          # Drop `erase all` (wiped every sim on the runner, ~1-2 min) — we
+          # boot only the chosen sim below; the runner is already fresh (#324).
           xcrun simctl shutdown all || true
-          xcrun simctl erase all || true
           xcrun simctl boot "${{ steps.simulator.outputs.name }}" || true
 
       - name: Install Maestro
