@@ -48,21 +48,26 @@ jobs:
                   --repo "$GITHUB_REPOSITORY" \
                   --json headRefName \
                   --jq '.headRefName')
+                # Body via a stdin heredoc indented INTO the run block; the
+                # old inline --body had column-0 lines that terminated the
+                # YAML literal scalar and startup-failed the workflow (#319).
                 gh pr comment "$PR_NUM" \
                   --repo "$GITHUB_REPOSITORY" \
-                  --body "⚠️ **Merge conflict detected**
+                  --body-file - <<EOF
+          ⚠️ **Merge conflict detected**
 
-This PR (\`$BRANCH\`) has a conflict with \`main\` — likely caused by a recent merge to \`main\`.
+          This PR (\`$BRANCH\`) has a conflict with \`main\` — likely caused by a recent merge to \`main\`.
 
-**To fix:**
-\`\`\`bash
-git fetch origin
-git rebase origin/main
-# resolve any conflicts, then:
-git push --force-with-lease
-\`\`\`
+          **To fix:**
+          \`\`\`bash
+          git fetch origin
+          git rebase origin/main
+          # resolve any conflicts, then:
+          git push --force-with-lease
+          \`\`\`
 
-_Posted automatically by conflict-detection workflow._"
+          _Posted automatically by conflict-detection workflow._
+          EOF
               fi
             fi
           done

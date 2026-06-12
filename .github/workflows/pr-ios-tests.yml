@@ -9,6 +9,12 @@ on:
       - ".github/ISSUE_TEMPLATE/**"
   workflow_dispatch:
 
+# Rapid pushes to the same PR cancel the prior in-progress run instead of
+# stacking full ~9-min macOS runs (#326). head_ref is the PR source branch.
+concurrency:
+  group: pr-ios-tests-${{ github.head_ref }}
+  cancel-in-progress: true
+
 jobs:
   detect-changes:
     name: Detect Changed Files
@@ -67,10 +73,13 @@ jobs:
           echo "Using simulator: $NAME"
           echo "name=$NAME" >> $GITHUB_OUTPUT
 
-      - name: Reset simulators
+      - name: Boot simulator
         run: |
+          # Boot only the chosen sim. `erase all` wiped every sim on the
+          # runner image (dozens, ~1-2 min) for no benefit — the runner is
+          # already fresh (#324).
           xcrun simctl shutdown all || true
-          xcrun simctl erase all || true
+          xcrun simctl boot "${{ steps.simulator.outputs.name }}" || true
 
       - name: Create stub TestCredentials for compilation
         working-directory: AmakaFlowCompanion
