@@ -17,13 +17,14 @@ name: Maestro Flow Tests
 #   user-journey regressions.
 
 on:
+  # Opt-in, not every-PR (#320). Maestro flows are ~12 min and warn-only, so
+  # running them on every PR gave no signal. They now run ONLY when a PR is
+  # labeled `maestro` (use it when a change touches significant functionality
+  # that could break app flows) or when triggered manually from the Actions
+  # tab. The job-level `if` below enforces the label gate.
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     branches: [main]
-    paths:
-      - "AmakaFlow/**"
-      - "AmakaFlowCompanion/**"
-      - "e2e/maestro/**"
-      - ".github/workflows/maestro-flows.yml"
   workflow_dispatch: {}
 
 permissions:
@@ -36,6 +37,11 @@ concurrency:
 jobs:
   maestro-flow-tests:
     name: Maestro Flow Tests
+    # Run only on manual dispatch, or on a PR explicitly labeled `maestro`
+    # (the labeled trigger above re-evaluates this when the label is added).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'maestro')
     runs-on: macos-15
     timeout-minutes: 75
 
