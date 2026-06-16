@@ -295,6 +295,80 @@ final class CoachViewModelStreamingTests: XCTestCase {
         XCTAssertFalse(mockSessionClient.fetchCalled)
     }
 
+    // MARK: - Issue 307: auth token error as CTAError, not chat bubble
+
+    func testMissingTokenSetsUnauthenticatedCTAErrorNotChatBubble() async {
+        mockPairingService.storedToken = nil
+
+        await viewModel.sendMessage("Hello coach")
+
+        guard case .unauthenticated = viewModel.error else {
+            return XCTFail("expected .unauthenticated CTAError when token is missing, got \(String(describing: viewModel.error))")
+        }
+        XCTAssertTrue(viewModel.messages.isEmpty, "auth failure must not leave chat bubbles")
+        XCTAssertFalse(viewModel.isStreaming, "streaming must be reset after auth failure")
+    }
+
+    // MARK: - Issue 307: session ID re-keyed on auth resolve
+
+    func testSessionIdRekeyedToRealUserWhenAuthResolvesWithActiveSession() async {
+        let userId = "user_rekey_307"
+        let realKey = "coach_chat_session_id_\(userId)"
+        let unknownKey = "coach_chat_session_id_unknown"
+        defer {
+            UserDefaults.standard.removeObject(forKey: realKey)
+            UserDefaults.standard.removeObject(forKey: unknownKey)
+        }
+
+        let pairingService = MockPairingService()
+        pairingService.storedToken = "test-token"
+        pairingService.isPaired = true
+        pairingService.userProfile = nil
+
+        let streamService = MockChatStreamService()
+        streamService.eventsToYield = [
+            .messageStart(sessionId: "sess-rekey-307", traceId: nil),
+            .contentDelta(text: "Hello!"),
+            .messageEnd(sessionId: "sess-rekey-307", tokensUsed: 5, latencyMs: 50)
+        ]
+
+        let dependencies = AppDependencies(
+            apiService: MockAPIService(),
+            pairingService: pairingService,
+            audioService: MockAudioService(),
+            progressStore: MockProgressStore(),
+            watchSession: MockWatchSession(),
+            chatStreamService: streamService,
+            coachSessionClient: MockCoachSessionClient()
+        )
+
+        let vm = CoachViewModel(dependencies: dependencies)
+
+        // Send message before auth resolves — session ID lands in "unknown" key
+        await vm.sendMessage("Hi")
+        XCTAssertEqual(vm.sessionId, "sess-rekey-307")
+
+        // Auth resolves with real user ID while messages exist
+        pairingService.userProfile = UserProfile(
+            id: userId,
+            email: "rekey307@example.test",
+            name: "Rekey307",
+            avatarUrl: nil
+        )
+        await Task.yield()
+
+        // Session ID must be migrated to the real user key and old key cleared
+        XCTAssertEqual(
+            UserDefaults.standard.string(forKey: realKey),
+            "sess-rekey-307",
+            "session ID must be re-keyed to the real user's storage key"
+        )
+        XCTAssertNil(
+            UserDefaults.standard.string(forKey: unknownKey),
+            "unknown key must be cleared after re-keying"
+        )
+    }
+
     func testSessionIdReloadsWhenUserProfileArrivesAfterInit() async {
         let userId = "user_ama2123_cold_start"
         let storageKey = "coach_chat_session_id_\(userId)"
