@@ -388,6 +388,23 @@ final class FollowAlongPlayerViewModelTests: XCTestCase {
         XCTAssertEqual(sut.phase, .ready)
     }
 
+    // MARK: - Swift-6 Actor-Deinit Safety (#306)
+
+    // Regression: deinit accessed actor-isolated timerCancellable / playerObserver, which can crash
+    // when ARC drops the last reference off the MainActor executor (swift_task_deinitOnExecutorImpl).
+    // Fix: mark those properties nonisolated(unsafe). This test exercises the deinit path with an
+    // active timer; reaching the assertion without aborting proves the fix holds.
+    func testDeinitWithActiveTimerDoesNotCrash() {
+        var local: FollowAlongPlayerViewModel? = FollowAlongPlayerViewModel()
+        let workout = TestFixtures.workout(intervals: [
+            .time(seconds: 60, target: "Hold")
+        ])
+        local?.loadWorkout(workout)
+        local?.play()
+        XCTAssertEqual(local?.phase, .playing)
+        local = nil  // triggers deinit → timerCancellable?.cancel() + removeObserver
+    }
+
     // MARK: - Helpers
 
     private func loadSampleWorkout() {

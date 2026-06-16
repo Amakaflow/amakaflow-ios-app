@@ -233,6 +233,36 @@ final class ProgramWizardViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.errorMessage)
     }
 
+    // MARK: - Swift-6 Actor-Deinit Safety (#306)
+
+    // Regression: deinit accessed actor-isolated streamTask, which can crash when ARC drops the
+    // last reference off the MainActor executor (swift_task_deinitOnExecutorImpl). Fix: mark
+    // streamTask nonisolated(unsafe). This test starts a generation stream that never completes,
+    // then cancels it and releases the VM; completing without aborting proves the deinit path is safe.
+    func testDeinitWithActiveStreamTaskDoesNotCrash() async throws {
+        let deps = AppDependencies(
+            apiService: mockAPIService,
+            pairingService: mockPairingService,
+            audioService: MockAudioService(),
+            progressStore: MockProgressStore(),
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService(),
+            programStreamService: HangingProgramStreamService()
+        )
+        var local: ProgramWizardViewModel? = ProgramWizardViewModel(dependencies: deps)
+        local?.equipmentPreset = "full_gym"
+
+        let genTask = Task { @MainActor [local] in
+            await local?.generateProgram()
+        }
+        try await Task.sleep(nanoseconds: 50_000_000)
+        XCTAssertEqual(local?.isGenerating, true)
+
+        genTask.cancel()
+        try await Task.sleep(nanoseconds: 50_000_000)
+        local = nil
+    }
+
     // MARK: - Helpers
 
     private func configureValidWizardFields() {
@@ -277,5 +307,17 @@ final class ProgramWizardViewModelTests: XCTestCase {
 
     private static func localDate(year: Int, month: Int, day: Int) -> Date? {
         Calendar.current.date(from: DateComponents(year: year, month: month, day: day))
+    }
+
+    private final class HangingProgramStreamService: ProgramStreamProviding {
+        func designProgram(request: DesignProgramRequest, token: String) -> AsyncThrowingStream<ProgramStreamEvent, Error> {
+            AsyncThrowingStream { _ in }
+        }
+        func generateProgram(previewId: String, token: String) -> AsyncThrowingStream<ProgramStreamEvent, Error> {
+            AsyncThrowingStream { _ in }
+        }
+        func saveProgram(previewId: String, scheduleStartDate: String?, token: String) -> AsyncThrowingStream<ProgramStreamEvent, Error> {
+            AsyncThrowingStream { _ in }
+        }
     }
 }

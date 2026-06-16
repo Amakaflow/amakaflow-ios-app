@@ -68,7 +68,8 @@ final class ConnectTelegramViewModel: ObservableObject {
     private let timeoutSeconds: TimeInterval
     private let now: @Sendable () -> Date
     private let onConnected: (Int?) -> Void
-    private var pollingTask: Task<Void, Never>?
+    // nonisolated(unsafe): accessed in deinit, which can run off MainActor (Swift-6 actor-deinit crash class, #306).
+    nonisolated(unsafe) private var pollingTask: Task<Void, Never>?
 
     init(
         apiService: TelegramLinkAPIProviding = APIService.shared,

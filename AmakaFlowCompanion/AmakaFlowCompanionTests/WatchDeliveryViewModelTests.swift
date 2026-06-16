@@ -256,6 +256,28 @@ final class WatchDeliveryViewModelTests: XCTestCase {
         }
     }
 
+    // MARK: - Swift-6 Actor-Deinit Safety (#306)
+
+    // Regression: deinit accessed actor-isolated pollingTask, which can crash when ARC releases the
+    // last reference off the MainActor executor (swift_task_deinitOnExecutorImpl). Fix: mark
+    // pollingTask nonisolated(unsafe). This test starts polling then releases the VM without calling
+    // cancelPolling(); reaching the assertion without aborting proves the deinit path is safe.
+    func testDeinitWithActivePollingTaskDoesNotCrash() async throws {
+        api.watchDeliveryStatusResults = Array(
+            repeating: .success(status(.generated)),
+            count: 20
+        )
+        var local: WatchDeliveryViewModel? = WatchDeliveryViewModel(
+            apiService: api,
+            pollIntervalNanoseconds: 10_000_000,
+            now: { self.fixedNow }
+        )
+        await local?.load(workoutId: "deinit-test")
+        XCTAssertEqual(local?.state, .content)
+        local = nil  // triggers deinit → pollingTask?.cancel() without going through cancelPolling()
+        try await Task.sleep(nanoseconds: 50_000_000)
+    }
+
     private func subtitle(for state: Components.Schemas.WatchDeliveryState) -> String {
         switch state {
         case .generated: return "Queued for delivery."
