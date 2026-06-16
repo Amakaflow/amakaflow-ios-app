@@ -66,31 +66,18 @@ final class ProgramStreamService: ProgramStreamProviding {
                         return
                     }
 
-                    var buffer = ""
-                    var pendingBytes = Data()
+                    var framer = SSEFramer()
                     for try await byte in bytes {
                         if Task.isCancelled { return }
-                        pendingBytes.append(byte)
-
-                        // Reassemble UTF-8 before using the shared, tested SSE blank-line splitter.
-                        guard let decoded = String(data: pendingBytes, encoding: .utf8) else { continue }
-                        buffer = decoded
-
-                        let split = SSEParser.splitBuffer(buffer)
-                        for block in split.blocks {
-                            if let event = Self.parseEvent(block: block, decoder: decoder) {
+                        for blockData in framer.feed(byte) {
+                            if let event = Self.processBlock(blockData, decoder: decoder) {
                                 continuation.yield(event)
-                            } else {
-                                Self.logUnparseableSSEBlock(block)
                             }
                         }
-
-                        buffer = split.remainder
-                        pendingBytes = Data(buffer.utf8)
                     }
 
-                    if !buffer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                       let event = Self.parseEvent(block: buffer, decoder: decoder) {
+                    let remainderData = framer.flush()
+                    if let event = Self.processBlock(remainderData, decoder: decoder) {
                         continuation.yield(event)
                     }
                     continuation.finish()
@@ -102,6 +89,21 @@ final class ProgramStreamService: ProgramStreamProviding {
 
             continuation.onTermination = { _ in task.cancel() }
         }
+    }
+
+    private static func processBlock(_ blockData: Data, decoder: JSONDecoder) -> ProgramStreamEvent? {
+        guard !blockData.isEmpty else { return nil }
+        guard let block = String(data: blockData, encoding: .utf8) else {
+            logger.warning("Dropped invalid-UTF-8 program SSE block byteLength=\(blockData.count, privacy: .public)")
+            return nil
+        }
+        let trimmed = block.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        if let event = parseEvent(block: trimmed, decoder: decoder) {
+            return event
+        }
+        logUnparseableSSEBlock(trimmed)
+        return nil
     }
 
     static func parseEvent(block: String, decoder: JSONDecoder) -> ProgramStreamEvent? {

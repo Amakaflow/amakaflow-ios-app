@@ -111,6 +111,61 @@ enum SSEParser {
     }
 }
 
+// MARK: - SSE Framer
+
+/// Stateful byte-level SSE framer. Accumulates raw bytes and yields complete
+/// SSE event blocks (Data) whenever a blank-line delimiter is detected.
+/// Handles \n\n, \r\n\r\n, and \r\r per RFC 8895.
+struct SSEFramer {
+    private var buffer = Data()
+    private var scanStart = Data.Index()
+
+    private static let delimiters: [Data] = [
+        Data([0x0A, 0x0A]),             // \n\n
+        Data([0x0D, 0x0A, 0x0D, 0x0A]), // \r\n\r\n
+        Data([0x0D, 0x0D])              // \r\r
+    ]
+    private static let scanOverlap = 4
+
+    /// Append one byte and return any complete SSE event blocks now delimited.
+    mutating func feed(_ byte: UInt8) -> [Data] {
+        buffer.append(byte)
+        var completed: [Data] = []
+        while let delimiter = Self.nextDelimiter(in: buffer, from: scanStart) {
+            completed.append(Data(buffer[..<delimiter.lowerBound]))
+            buffer.removeSubrange(..<delimiter.upperBound)
+            scanStart = buffer.startIndex
+        }
+        scanStart = Self.nextScanStart(in: buffer)
+        return completed
+    }
+
+    /// Drain and return any buffered tail after EOF, trimming trailing SSE whitespace.
+    mutating func flush() -> Data {
+        let trimmed = buffer.trimmingTrailingSSEWhitespace()
+        buffer = Data()
+        scanStart = Data.Index()
+        return trimmed
+    }
+
+    private static func nextDelimiter(in buffer: Data, from searchStart: Data.Index) -> Range<Data.Index>? {
+        guard !buffer.isEmpty else { return nil }
+        let boundedStart = max(buffer.startIndex, min(searchStart, buffer.endIndex))
+        guard boundedStart < buffer.endIndex else { return nil }
+        return delimiters
+            .compactMap { buffer.range(of: $0, options: [], in: boundedStart..<buffer.endIndex) }
+            .min {
+                if $0.lowerBound == $1.lowerBound { return $0.count > $1.count }
+                return $0.lowerBound < $1.lowerBound
+            }
+    }
+
+    private static func nextScanStart(in buffer: Data) -> Data.Index {
+        let len = buffer.distance(from: buffer.startIndex, to: buffer.endIndex)
+        return buffer.index(buffer.startIndex, offsetBy: max(0, len - scanOverlap))
+    }
+}
+
 // MARK: - Chat Stream Service
 
 protocol ChatStreamProviding {
@@ -120,37 +175,9 @@ protocol ChatStreamProviding {
 class ChatStreamService: ChatStreamProviding {
     private let session: URLSession
     private static let logger = Logger(subsystem: "com.amakaflow.app", category: "chat-stream")
-    private static let sseDelimiters: [Data] = [
-        Data([0x0A, 0x0A]),             // \\n\\n
-        Data([0x0D, 0x0A, 0x0D, 0x0A]), // \\r\\n\\r\\n
-        Data([0x0D, 0x0D])              // \\r\\r
-    ]
-    private static let sseDelimiterScanOverlap = 4
 
     init(session: URLSession = .shared) {
         self.session = session
-    }
-
-    private static func nextSSEDelimiter(in buffer: Data, from searchStart: Data.Index) -> Range<Data.Index>? {
-        guard !buffer.isEmpty else { return nil }
-
-        let boundedStart = max(buffer.startIndex, min(searchStart, buffer.endIndex))
-        guard boundedStart < buffer.endIndex else { return nil }
-
-        return sseDelimiters
-            .compactMap { buffer.range(of: $0, options: [], in: boundedStart..<buffer.endIndex) }
-            .min { lhs, rhs in
-                if lhs.lowerBound == rhs.lowerBound {
-                    return lhs.count > rhs.count
-                }
-                return lhs.lowerBound < rhs.lowerBound
-            }
-    }
-
-    private static func nextSSEScanStart(in buffer: Data) -> Data.Index {
-        let bufferLength = buffer.distance(from: buffer.startIndex, to: buffer.endIndex)
-        let offset = max(0, bufferLength - sseDelimiterScanOverlap)
-        return buffer.index(buffer.startIndex, offsetBy: offset)
     }
 
     private static func parsedEvents(from blockData: Data) -> [SSEEvent] {
@@ -234,37 +261,19 @@ class ChatStreamService: ChatStreamProviding {
                         return
                     }
 
-                    var buffer = Data()
-                    var scanStart = buffer.startIndex
+                    var framer = SSEFramer()
                     for try await byte in bytes {
                         if Task.isCancelled { return }
-
-                        buffer.append(byte)
-
-                        // Frame SSE events on raw ASCII blank-line delimiters.
-                        // Do not depend on AsyncBytes.lines surfacing empty lines,
-                        // and do not require the whole accumulated buffer to be
-                        // valid UTF-8 before yielding earlier complete events.
-                        // Bound each search to the newly appended tail plus a
-                        // four-byte overlap so split CRLF delimiters are still
-                        // detected without rescanning the whole block.
-                        while let delimiter = Self.nextSSEDelimiter(in: buffer, from: scanStart) {
-                            let blockData = Data(buffer[..<delimiter.lowerBound])
-                            buffer.removeSubrange(..<delimiter.upperBound)
-                            scanStart = buffer.startIndex
-
+                        for blockData in framer.feed(byte) {
                             for event in Self.parsedEvents(from: blockData) {
                                 continuation.yield(event)
                             }
                         }
-                        scanStart = Self.nextSSEScanStart(in: buffer)
                     }
 
                     if Task.isCancelled { return }
 
-                    // Process any remaining non-empty block after EOF.
-                    let trimmedRemainder = buffer.trimmingTrailingSSEWhitespace()
-                    for event in Self.parsedEvents(from: trimmedRemainder) {
+                    for event in Self.parsedEvents(from: framer.flush()) {
                         continuation.yield(event)
                     }
 
