@@ -76,11 +76,17 @@ class CoachViewModel: ObservableObject {
     private func syncSessionIdForUserProfile(_ userId: String?) {
         let resolved = userId ?? "unknown"
         guard resolved != boundSessionUserId else { return }
+        let oldKey = sessionIdKey
         boundSessionUserId = resolved
 
-        guard messages.isEmpty, !isStreaming else { return }
-
-        sessionId = UserDefaults.standard.string(forKey: sessionStorageKey(for: resolved))
+        if messages.isEmpty, !isStreaming {
+            sessionId = UserDefaults.standard.string(forKey: sessionIdKey)
+        } else if let currentSessionId = sessionId, resolved != "unknown" {
+            // VM was built before auth resolved; migrate the in-memory session ID
+            // to the real user's storage key so it survives the next app launch.
+            UserDefaults.standard.removeObject(forKey: oldKey)
+            UserDefaults.standard.set(currentSessionId, forKey: sessionIdKey)
+        }
     }
 
     // MARK: - Session Restore (AMA-2123)
@@ -141,9 +147,10 @@ class CoachViewModel: ObservableObject {
 
         // Get auth token
         guard let token = dependencies.pairingService.getToken() else {
-            assistantMessage.content = "Not authenticated. Please pair your device first."
+            messages.removeAll { $0.id == userMessage.id || $0.id == assistantMessage.id }
             assistantMessage.isStreaming = false
             isStreaming = false
+            error = .unauthenticated()
             return
         }
 
