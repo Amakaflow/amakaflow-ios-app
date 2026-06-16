@@ -76,12 +76,15 @@ class CoachViewModel: ObservableObject {
     private func syncSessionIdForUserProfile(_ userId: String?) {
         let resolved = userId ?? "unknown"
         guard resolved != boundSessionUserId else { return }
-        let oldKey = sessionIdKey
+        let previousUserId = boundSessionUserId ?? "unknown"
+        let oldKey = sessionStorageKey(for: previousUserId)
         boundSessionUserId = resolved
 
         if messages.isEmpty, !isStreaming {
             sessionId = UserDefaults.standard.string(forKey: sessionIdKey)
-        } else if let currentSessionId = sessionId, resolved != "unknown" {
+        } else if previousUserId == "unknown",
+                  let currentSessionId = sessionId,
+                  resolved != "unknown" {
             // VM was built before auth resolved; migrate the in-memory session ID
             // to the real user's storage key so it survives the next app launch.
             UserDefaults.standard.removeObject(forKey: oldKey)
