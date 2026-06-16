@@ -73,6 +73,36 @@ final class ChatStreamServiceTests: XCTestCase {
         XCTAssertEqual(result.exerciseCount, 8)
     }
 
+    // MARK: - SSE Framer Unit Tests
+
+    func testSSEFramerFeedsCompletedBlocksAndFlushesRemainder() {
+        var framer = SSEFramer()
+        let input = "event: foo\ndata: {\"x\":1}\n\nevent: bar\ndata: {\"x\":2}"
+        var blocks: [Data] = []
+        for byte in input.utf8 {
+            blocks.append(contentsOf: framer.feed(byte))
+        }
+        let remainder = framer.flush()
+
+        XCTAssertEqual(blocks.count, 1)
+        XCTAssertEqual(String(data: blocks[0], encoding: .utf8), "event: foo\ndata: {\"x\":1}")
+        XCTAssertEqual(String(data: remainder, encoding: .utf8), "event: bar\ndata: {\"x\":2}")
+    }
+
+    func testSSEFramerHandlesCRLFDelimiter() {
+        var framer = SSEFramer()
+        let input = "event: foo\r\ndata: {}\r\n\r\nevent: bar\r\ndata: {}"
+        var blocks: [Data] = []
+        for byte in input.utf8 {
+            blocks.append(contentsOf: framer.feed(byte))
+        }
+        let remainder = framer.flush()
+
+        XCTAssertEqual(blocks.count, 1)
+        XCTAssertEqual(String(data: blocks[0], encoding: .utf8), "event: foo\r\ndata: {}")
+        XCTAssertEqual(String(data: remainder, encoding: .utf8), "event: bar\r\ndata: {}")
+    }
+
     // MARK: - Real Stream Tests
 
     func testStreamYieldsContentDeltaEventsFromChunkedSSEBody() async throws {
@@ -379,6 +409,25 @@ final class ChatStreamServiceTests: XCTestCase {
             if case .preview(let previewId, _) = event { return previewId }
             return nil
         }.last, "outline-crlf")
+    }
+
+    // RED: O(n²) per-byte normaliser converts lone \r → \n before the following
+    // \n arrives, making \r\n look like \n\n and prematurely splitting blocks.
+    // This test catches that regression.
+    func testProgramStreamCRLFDelimitedStreamFramedCorrectly() async throws {
+        let body = "event: stage\r\ndata: {\"stage\":\"saving\",\"message\":\"Saving...\"}\r\n\r\n" +
+                   "event: complete\r\ndata: {\"program_name\":\"P\",\"workout_count\":1,\"workout_ids\":[\"w1\"],\"scheduled_count\":1}\r\n\r\n"
+        MockURLProtocol.setChunkedResponse(chunks: [Data(body.utf8)])
+
+        let service = ProgramStreamService(session: MockURLProtocol.mockSession())
+        var events: [ProgramStreamEvent] = []
+        for try await event in service.saveProgram(previewId: "p1", scheduleStartDate: nil, token: "test-token") {
+            events.append(event)
+        }
+
+        XCTAssertEqual(events.count, 2)
+        XCTAssertEqual(events.first, .stage(stage: "saving", message: "Saving...", subProgress: nil))
+        XCTAssertEqual(events.last, .complete(workoutIds: ["w1"], scheduledCount: 1, workoutCount: 1))
     }
 
     func testProgramStreamParsesSaveCompleteEvent() async throws {

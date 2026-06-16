@@ -66,32 +66,35 @@ final class ProgramStreamService: ProgramStreamProviding {
                         return
                     }
 
-                    var buffer = ""
-                    var pendingBytes = Data()
+                    var framer = SSEFramer()
                     for try await byte in bytes {
                         if Task.isCancelled { return }
-                        pendingBytes.append(byte)
-
-                        // Reassemble UTF-8 before using the shared, tested SSE blank-line splitter.
-                        guard let decoded = String(data: pendingBytes, encoding: .utf8) else { continue }
-                        buffer = decoded
-
-                        let split = SSEParser.splitBuffer(buffer)
-                        for block in split.blocks {
-                            if let event = Self.parseEvent(block: block, decoder: decoder) {
+                        for blockData in framer.feed(byte) {
+                            guard let block = String(data: blockData, encoding: .utf8) else {
+                                Self.logger.warning("Dropped invalid-UTF-8 program SSE block byteLength=\(blockData.count, privacy: .public)")
+                                continue
+                            }
+                            let trimmed = block.trimmingCharacters(in: .whitespacesAndNewlines)
+                            guard !trimmed.isEmpty else { continue }
+                            if let event = Self.parseEvent(block: trimmed, decoder: decoder) {
                                 continuation.yield(event)
                             } else {
-                                Self.logUnparseableSSEBlock(block)
+                                Self.logUnparseableSSEBlock(trimmed)
                             }
                         }
-
-                        buffer = split.remainder
-                        pendingBytes = Data(buffer.utf8)
                     }
 
-                    if !buffer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                       let event = Self.parseEvent(block: buffer, decoder: decoder) {
-                        continuation.yield(event)
+                    let remainderData = framer.flush()
+                    if !remainderData.isEmpty,
+                       let block = String(data: remainderData, encoding: .utf8) {
+                        let trimmed = block.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !trimmed.isEmpty {
+                            if let event = Self.parseEvent(block: trimmed, decoder: decoder) {
+                                continuation.yield(event)
+                            } else {
+                                Self.logUnparseableSSEBlock(trimmed)
+                            }
+                        }
                     }
                     continuation.finish()
                 } catch {
