@@ -311,13 +311,23 @@ final class ProgramWizardViewModelTests: XCTestCase {
 
     private final class HangingProgramStreamService: ProgramStreamProviding {
         func designProgram(request: DesignProgramRequest, token: String) -> AsyncThrowingStream<ProgramStreamEvent, Error> {
-            AsyncThrowingStream { _ in }
+            AsyncThrowingStream { continuation in
+                continuation.onTermination = { _ in }
+            }
         }
         func generateProgram(previewId: String, token: String) -> AsyncThrowingStream<ProgramStreamEvent, Error> {
-            AsyncThrowingStream { _ in }
+            AsyncThrowingStream { continuation in
+                continuation.onTermination = { _ in
+                    continuation.finish(throwing: CancellationError())
+                }
+            }
         }
         func saveProgram(previewId: String, scheduleStartDate: String?, token: String) -> AsyncThrowingStream<ProgramStreamEvent, Error> {
-            AsyncThrowingStream { _ in }
+            AsyncThrowingStream { continuation in
+                continuation.onTermination = { _ in
+                    continuation.finish(throwing: CancellationError())
+                }
+            }
         }
     }
 }
