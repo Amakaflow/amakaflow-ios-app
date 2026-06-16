@@ -103,6 +103,20 @@ final class ChatStreamServiceTests: XCTestCase {
         XCTAssertEqual(String(data: remainder, encoding: .utf8), "event: bar\r\ndata: {}")
     }
 
+    func testSSEFramerHandlesCRDelimiter() {
+        var framer = SSEFramer()
+        let input = "event: foo\rdata: {}\r\revent: bar\rdata: {}"
+        var blocks: [Data] = []
+        for byte in input.utf8 {
+            blocks.append(contentsOf: framer.feed(byte))
+        }
+        let remainder = framer.flush()
+
+        XCTAssertEqual(blocks.count, 1)
+        XCTAssertEqual(String(data: blocks[0], encoding: .utf8), "event: foo\rdata: {}")
+        XCTAssertEqual(String(data: remainder, encoding: .utf8), "event: bar\rdata: {}")
+    }
+
     // MARK: - Real Stream Tests
 
     func testStreamYieldsContentDeltaEventsFromChunkedSSEBody() async throws {
