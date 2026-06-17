@@ -405,6 +405,14 @@ protocol APIServiceProviding: TelegramLinkAPIProviding {
 
     /// Cancel an in-progress import job
     func cancelImport(jobId: String, profileId: String) async throws
+
+    // MARK: - Privacy (AMA-315)
+
+    /// Export the authenticated user's full account data as JSON.
+    func exportUserData() async throws -> Data
+
+    /// Delete the authenticated account and all associated backend data.
+    func deleteAccount() async throws
 }
 
 // MARK: - Default Parameter Extensions
