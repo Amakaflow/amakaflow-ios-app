@@ -36,6 +36,10 @@ final class WeeklyProgressRingTests: XCTestCase {
         XCTAssertEqual(WeeklyProgressRing.ringPercentage(completed: 0, target: 5), 0.0, accuracy: 0.001)
     }
 
+    func testRingPercentageIsZeroWhenCompletedIsNegative() {
+        XCTAssertEqual(WeeklyProgressRing.ringPercentage(completed: -1, target: 5), 0.0, accuracy: 0.001)
+    }
+
     // MARK: - motivationalText
 
     func testMotivationalTextWhenTargetHit() {

@@ -20,7 +20,7 @@ struct WeeklyProgressRing: View {
     // Single source of truth — callers cannot supply an inconsistent ringPercentage.
     static func ringPercentage(completed: Int, target: Int) -> Double {
         guard target > 0 else { return 0 }
-        return min(1.0, Double(completed) / Double(target))
+        return min(1.0, max(0.0, Double(completed) / Double(target)))
     }
 
     static func motivationalText(completed: Int, target: Int) -> String {
