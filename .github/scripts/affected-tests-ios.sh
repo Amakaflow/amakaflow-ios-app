@@ -24,8 +24,12 @@ set -euo pipefail
 BASE_REF="${1:-origin/${GITHUB_BASE_REF:-main}}"
 HEAD_REF="${2:-HEAD}"
 
-# Fetch remote refs for comparison
-git fetch --no-tags origin "+refs/heads/*:refs/remotes/origin/*" >/dev/null 2>&1 || true
+# Fetch only the base branch tip — a targeted shallow fetch avoids pulling
+# full history (and the ~10k deleted design-bundle blobs from AMA-2103).
+# In CI the workflow already ran `git fetch --depth=1 origin $GITHUB_BASE_REF`
+# before invoking this script; the fetch here is a no-op in that case and a
+# safety net for standalone local runs.
+git fetch --no-tags --depth=1 origin "${GITHUB_BASE_REF:-main}" >/dev/null 2>&1 || true
 CHANGED=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" || true)
 
 # If Xcode project or Swift package config changes, safest is full test run
