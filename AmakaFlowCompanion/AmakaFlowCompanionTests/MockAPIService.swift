@@ -1118,4 +1118,22 @@ class MockAPIService: APIServiceProviding {
         cancelImportCalled = true
         lastCancelImportJobId = jobId
     }
+
+    // MARK: - Privacy (AMA-315)
+
+    var exportUserDataResult: Result<Data, Error> = .success(Data("{}".utf8))
+    var exportUserDataCalled = false
+
+    var deleteAccountResult: Result<Void, Error> = .success(())
+    var deleteAccountCalled = false
+
+    func exportUserData() async throws -> Data {
+        exportUserDataCalled = true
+        return try exportUserDataResult.get()
+    }
+
+    func deleteAccount() async throws {
+        deleteAccountCalled = true
+        try deleteAccountResult.get()
+    }
 }

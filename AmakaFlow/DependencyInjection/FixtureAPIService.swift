@@ -960,5 +960,13 @@ class FixtureAPIService: APIServiceProviding {
     func cancelImport(jobId: String, profileId: String) async throws {
         print("[FixtureAPIService] Stub: cancelImport(\(jobId)) -> success")
     }
+
+    func exportUserData() async throws -> Data {
+        Data("{}".utf8)
+    }
+
+    func deleteAccount() async throws {
+        print("[FixtureAPIService] Stub: deleteAccount -> success")
+    }
 }
 #endif

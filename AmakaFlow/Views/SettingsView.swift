@@ -105,20 +105,14 @@ struct SettingsView: View {
     @State private var audioBehavior: AudioBehavior = .duck
     @State private var countdownBeepsEnabled = true
     @State private var hapticFeedbackEnabled = true
-    @State private var showingSignOutAlert = false
+    @StateObject private var accountViewModel = AccountSectionViewModel()
+    @State private var showingDisconnectAlert = false
     @State private var showingGarminDebugAlert = false
     @State private var garminDebugMessage = ""
     @State private var showingManualUUIDSheet = false
     @State private var manualUUID = ""
     @State private var manualDeviceName = ""
     @State private var showingDebugLog = false
-    @State private var showingDisconnectAlert = false
-    @State private var showingDeleteAccountAlert = false
-    @State private var isExportingPrivacyData = false
-    @State private var privacyErrorMessage: String?
-    @State private var showingPrivacyErrorAlert = false
-    @State private var privacyExportFileURL: URL?
-    @State private var showingPrivacyShareSheet = false
     @State private var showingWorkoutDebugSheet = false
     @State private var showingVoiceTranscriptionSettings = false
     @StateObject private var nutritionViewModel = NutritionViewModel()
@@ -160,7 +154,7 @@ struct SettingsView: View {
             }
             .background(Theme.Colors.background.ignoresSafeArea())
             .navigationBarHidden(true)
-            .alert("Sign Out", isPresented: $showingSignOutAlert) {
+            .alert("Sign Out", isPresented: $accountViewModel.showSignOutAlert) {
                 Button("Cancel", role: .cancel) {}
                 Button("Sign Out", role: .destructive) {
                     Task { await AuthViewModel.shared.signOut() }
@@ -173,22 +167,22 @@ struct SettingsView: View {
             } message: {
                 Text(garminDebugMessage)
             }
-            .alert("Privacy", isPresented: $showingPrivacyErrorAlert) {
+            .alert("Privacy", isPresented: $accountViewModel.showError) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text(privacyErrorMessage ?? "Something went wrong. Please try again.")
+                Text(accountViewModel.errorMessage ?? "Something went wrong. Please try again.")
             }
-            .confirmationDialog("Delete account?", isPresented: $showingDeleteAccountAlert, titleVisibility: .visible) {
+            .confirmationDialog("Delete account?", isPresented: $accountViewModel.showDeleteConfirm, titleVisibility: .visible) {
                 Button("Delete permanently", role: .destructive) {
-                    Task { await deleteAccount() }
+                    Task { await accountViewModel.deleteAccount { clearTelegramLinked() } }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("This permanently deletes all your workouts, programs, profile, and connected data. This cannot be undone.")
             }
-            .sheet(isPresented: $showingPrivacyShareSheet) {
-                if let privacyExportFileURL {
-                    ShareSheet(activityItems: [privacyExportFileURL])
+            .sheet(isPresented: $accountViewModel.showShareSheet) {
+                if let url = accountViewModel.exportedFileURL {
+                    ShareSheet(activityItems: [url])
                 }
             }
             .sheet(isPresented: $showingManualUUIDSheet) {
@@ -695,7 +689,7 @@ struct SettingsView: View {
         case .accountPrivacyData:
             Menu {
                 Button {
-                    Task { await exportUserData() }
+                    Task { await accountViewModel.exportData() }
                 } label: {
                     Label("Export my data", systemImage: "square.and.arrow.up")
                 }
@@ -705,13 +699,13 @@ struct SettingsView: View {
                 }
 
                 Button(role: .destructive) {
-                    showingSignOutAlert = true
+                    accountViewModel.showSignOutAlert = true
                 } label: {
                     Label("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
                 }
 
                 Button(role: .destructive) {
-                    showingDeleteAccountAlert = true
+                    accountViewModel.showDeleteConfirm = true
                 } label: {
                     Label("Delete account", systemImage: "trash")
                 }
@@ -2097,13 +2091,13 @@ struct SettingsView: View {
 
             VStack(spacing: 0) {
                 Button {
-                    Task { await exportUserData() }
+                    Task { await accountViewModel.exportData() }
                 } label: {
                     HStack {
                         Label("Export my data", systemImage: "square.and.arrow.up")
                             .foregroundColor(Theme.Colors.textPrimary)
                         Spacer()
-                        if isExportingPrivacyData {
+                        if accountViewModel.isExporting {
                             ProgressView().scaleEffect(0.8)
                         } else {
                             Image(systemName: "chevron.right")
@@ -2112,7 +2106,7 @@ struct SettingsView: View {
                     }
                     .padding(Theme.Spacing.md)
                 }
-                .disabled(isExportingPrivacyData)
+                .disabled(accountViewModel.isExporting)
                 .buttonStyle(.plain)
 
                 Divider().padding(.leading, Theme.Spacing.lg)
@@ -2131,7 +2125,7 @@ struct SettingsView: View {
                 Divider().padding(.leading, Theme.Spacing.lg)
 
                 Button {
-                    showingDeleteAccountAlert = true
+                    accountViewModel.showDeleteConfirm = true
                 } label: {
                     HStack {
                         Label("Delete my account", systemImage: "trash")
@@ -2148,14 +2142,6 @@ struct SettingsView: View {
                     .stroke(Theme.Colors.borderLight, lineWidth: 1)
             )
             .cornerRadius(Theme.CornerRadius.md)
-        }
-        .confirmationDialog("Delete account?", isPresented: $showingDeleteAccountAlert, titleVisibility: .visible) {
-            Button("Delete permanently", role: .destructive) {
-                Task { await deleteAccount() }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This permanently deletes all your workouts, programs, profile, and connected data. This cannot be undone.")
         }
     }
 
@@ -2538,23 +2524,6 @@ struct SettingsView: View {
         }
     }
 
-    private func exportUserData() async {
-        isExportingPrivacyData = true
-        defer { isExportingPrivacyData = false }
-
-        do {
-            let data = try await APIService.shared.exportUserData()
-            let tempURL = FileManager.default.temporaryDirectory
-                .appendingPathComponent("amakaflow-data-export.json")
-            try data.write(to: tempURL, options: .atomic)
-            privacyExportFileURL = tempURL
-            showingPrivacyShareSheet = true
-        } catch {
-            privacyErrorMessage = "Export failed: \(error.localizedDescription)"
-            showingPrivacyErrorAlert = true
-        }
-    }
-
     private var telegramLinkedKey: String {
         TelegramLinkCache.linkedKey(userID: pairingService.userProfile?.id)
     }
@@ -2589,17 +2558,7 @@ struct SettingsView: View {
         connectedTelegramId = nil
     }
 
-    private func deleteAccount() async {
-        do {
-            try await APIService.shared.deleteAccount()
-            clearTelegramLinked()
-            pairingService.unpair()
-            UserDefaults.standard.set(false, forKey: DefaultsKey.biometricConsent.rawValue)
-        } catch {
-            privacyErrorMessage = "Account deletion failed: \(error.localizedDescription)"
-            showingPrivacyErrorAlert = true
-        }
-    }
+
 
     private var profilePlaceholder: some View {
         ZStack {

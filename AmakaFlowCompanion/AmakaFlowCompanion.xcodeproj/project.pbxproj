@@ -92,6 +92,7 @@
 		AK00FIX006B /* CalendarSyncViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX006A /* CalendarSyncViewModel.swift */; };
 		AK00FIX007B /* FeedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX007A /* FeedViewModel.swift */; };
 		AMA2103CONNHUBVM_B /* ConnectionsHubViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2103CONNHUBVM_A /* ConnectionsHubViewModel.swift */; };
+		AMA315ACCSVMBLD /* AccountSectionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA315ACCSVMREF /* AccountSectionViewModel.swift */; };
 		AMA2103CONNHUBVW_B /* ConnectionsHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2103CONNHUBVW_A /* ConnectionsHubView.swift */; };
 		AK00FIX008B /* ProgramsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX008A /* ProgramsViewModel.swift */; };
 		AK00FIX009B /* StravaViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX009A /* StravaViewModel.swift */; };
@@ -545,6 +546,7 @@
 		AK00FIX006A /* CalendarSyncViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarSyncViewModel.swift; path = ../AmakaFlow/ViewModels/CalendarSyncViewModel.swift; sourceTree = "<group>"; };
 		AK00FIX007A /* FeedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FeedViewModel.swift; path = ../AmakaFlow/ViewModels/FeedViewModel.swift; sourceTree = "<group>"; };
 		AMA2103CONNHUBVM_A /* ConnectionsHubViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ConnectionsHubViewModel.swift; path = ../AmakaFlow/ViewModels/ConnectionsHubViewModel.swift; sourceTree = SOURCE_ROOT; };
+		AMA315ACCSVMREF /* AccountSectionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AccountSectionViewModel.swift; path = ../AmakaFlow/ViewModels/AccountSectionViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA2103CONNHUBVW_A /* ConnectionsHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ConnectionsHubView.swift; path = ../AmakaFlow/Views/ConnectionsHubView.swift; sourceTree = SOURCE_ROOT; };
 		AK00FIX008A /* ProgramsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProgramsViewModel.swift; path = ../AmakaFlow/ViewModels/ProgramsViewModel.swift; sourceTree = "<group>"; };
 		AK00FIX009A /* StravaViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StravaViewModel.swift; path = ../AmakaFlow/ViewModels/StravaViewModel.swift; sourceTree = "<group>"; };
@@ -1343,6 +1345,7 @@
 				AK00FIX006A /* CalendarSyncViewModel.swift */,
 				AK00FIX007A /* FeedViewModel.swift */,
 				AMA2103CONNHUBVM_A /* ConnectionsHubViewModel.swift */,
+				AMA315ACCSVMREF /* AccountSectionViewModel.swift */,
 				AMA2103CONNHUBVW_A /* ConnectionsHubView.swift */,
 				AK00FIX008A /* ProgramsViewModel.swift */,
 				AK00FIX009A /* StravaViewModel.swift */,
@@ -1948,6 +1951,7 @@
 				AK00FIX006B /* CalendarSyncViewModel.swift in Sources */,
 				AK00FIX007B /* FeedViewModel.swift in Sources */,
 				AMA2103CONNHUBVM_B /* ConnectionsHubViewModel.swift in Sources */,
+				AMA315ACCSVMBLD /* AccountSectionViewModel.swift in Sources */,
 				AMA2103CONNHUBVW_B /* ConnectionsHubView.swift in Sources */,
 				AK00FIX008B /* ProgramsViewModel.swift in Sources */,
 				AK00FIX009B /* StravaViewModel.swift in Sources */,
