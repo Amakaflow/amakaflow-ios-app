@@ -194,6 +194,11 @@ struct WorkoutCompletionResponse: Codable {
     var resolvedCompletionId: String {
         completionId ?? id ?? "unknown"
     }
+
+    /// True when the backend actually returned an ID.
+    var hasResolvedCompletionId: Bool {
+        completionId != nil || id != nil
+    }
 }
 
 // MARK: - Pending Completion (for offline queue)
