@@ -211,14 +211,19 @@ final class DeepLinkManagerTests: XCTestCase {
     func testAllowsAllKnownPlatformDomains() {
         let allowedURLs: [(String, String)] = [
             ("https://www.youtube.com/watch?v=abc", "youtube.com"),
+            ("https://m.youtube.com/watch?v=abc", "m.youtube.com"),
             ("https://youtu.be/abc123", "youtu.be"),
             ("https://www.instagram.com/reel/abc", "instagram.com"),
+            ("https://m.instagram.com/reel/abc", "m.instagram.com"),
             ("https://www.tiktok.com/@user/video/123", "tiktok.com"),
+            ("https://m.tiktok.com/@user/video/123", "m.tiktok.com"),
             ("https://www.pinterest.com/pin/123", "pinterest.com"),
             ("https://pin.it/abc", "pin.it"),
             ("https://twitter.com/user/status/123", "twitter.com"),
+            ("https://mobile.twitter.com/user/status/123", "mobile.twitter.com"),
             ("https://x.com/user/status/123", "x.com"),
             ("https://www.facebook.com/video/123", "facebook.com"),
+            ("https://m.facebook.com/video/123", "m.facebook.com"),
             ("https://fb.watch/abc", "fb.watch"),
             ("https://www.reddit.com/r/fitness/post/123", "reddit.com"),
             ("https://redd.it/abc", "redd.it"),
@@ -232,12 +237,14 @@ final class DeepLinkManagerTests: XCTestCase {
     }
 
     @MainActor
-    func testAllowedImportDomainsSetIsNonEmpty() {
-        XCTAssertFalse(DeepLinkManager.allowedImportDomains.isEmpty)
-        XCTAssertTrue(DeepLinkManager.allowedImportDomains.contains("youtu.be"))
-        XCTAssertTrue(DeepLinkManager.allowedImportDomains.contains("www.youtube.com"))
-        XCTAssertTrue(DeepLinkManager.allowedImportDomains.contains("www.instagram.com"))
-        XCTAssertTrue(DeepLinkManager.allowedImportDomains.contains("www.tiktok.com"))
+    func testAllAllowedDomainsAreAccepted() {
+        for domain in DeepLinkManager.allowedImportDomains {
+            let importURL = "https://\(domain)/workout"
+            let encoded = importURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+            let url = URL(string: "https://amakaflow.com/import?url=\(encoded)")!
+            let action = sut.parseURL(url)
+            XCTAssertEqual(action, .importURL(importURL), "Expected allowlisted domain \(domain) to be accepted")
+        }
     }
 
     @MainActor

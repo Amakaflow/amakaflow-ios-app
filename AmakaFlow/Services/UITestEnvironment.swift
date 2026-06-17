@@ -104,7 +104,6 @@ class UITestEnvironment {
     func printConfiguration() {
         #if DEBUG
         print("[UITestEnvironment] Configuration:")
-        print("  - Login Bypass: \(isLoginBypassEnabled)")
         print("  - Simulation Speed: \(simulationSpeed)x")
         print("  - Fake Watch: \(useFakeWatchConnectivity)")
         print("  - Fixtures: \(useFixtures)")

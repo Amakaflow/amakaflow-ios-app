@@ -162,12 +162,12 @@ final class DeepLinkManager: ObservableObject {
     /// Known platform domains accepted as import URLs.
     /// Must be kept in sync with DeepLinkImportViewModel.detectPlatform.
     static let allowedImportDomains: Set<String> = [
-        "youtube.com", "www.youtube.com", "youtu.be",
-        "instagram.com", "www.instagram.com", "instagr.am",
-        "tiktok.com", "www.tiktok.com",
+        "youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be",
+        "instagram.com", "www.instagram.com", "m.instagram.com", "instagr.am",
+        "tiktok.com", "www.tiktok.com", "m.tiktok.com",
         "pinterest.com", "www.pinterest.com", "pin.it",
-        "twitter.com", "www.twitter.com", "x.com", "www.x.com", "t.co",
-        "facebook.com", "www.facebook.com", "fb.watch", "fb.com",
+        "twitter.com", "www.twitter.com", "mobile.twitter.com", "x.com", "www.x.com", "t.co",
+        "facebook.com", "www.facebook.com", "m.facebook.com", "fb.watch", "fb.com",
         "reddit.com", "www.reddit.com", "redd.it",
     ]
 
