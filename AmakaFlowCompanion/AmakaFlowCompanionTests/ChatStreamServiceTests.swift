@@ -225,6 +225,33 @@ final class ChatStreamServiceTests: XCTestCase {
         ])
     }
 
+    // AMA-302: multi-line HTTP error body must preserve newlines between lines.
+    func testStreamHTTPErrorBodyPreservesMultiLineNewlines() async throws {
+        let errorBody = "First line\nSecond line\nThird line"
+        MockURLProtocol.requestHandler = { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 503,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": "text/plain"]
+            )!
+            return (response, Data(errorBody.utf8))
+        }
+
+        let service = ChatStreamService(session: MockURLProtocol.mockSession())
+        let req = ChatStreamRequest(message: "test", sessionId: nil, context: nil)
+
+        do {
+            for try await _ in service.stream(request: req, token: "test-token") {}
+            XCTFail("Expected ChatStreamError.httpError")
+        } catch ChatStreamError.httpError(let statusCode, let body) {
+            XCTAssertEqual(statusCode, 503)
+            XCTAssertTrue(body.contains("First line\nSecond line"), "Expected '\\n' separator between error body lines, got: \(body)")
+        } catch {
+            XCTFail("Expected ChatStreamError.httpError, got \(error)")
+        }
+    }
+
     // MARK: - SSE Parsing Tests
 
     func testParseContentDeltaEvent() throws {

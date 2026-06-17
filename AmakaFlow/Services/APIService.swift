@@ -72,22 +72,25 @@ class APIService {
         return headers
     }
 
-    func makeAuthHeaders() async -> [String: String] {
+    func makeAuthHeaders() async throws -> [String: String] {
         var headers = ["Content-Type": "application/json"]
         guard AuthViewModel.shared.hasActiveSession else {
             return headers
         }
 
+        let token: String?
         do {
-            if let token = try await AuthViewModel.shared.token() {
-                headers["Authorization"] = "Bearer \(token)"
-            } else {
-                PairingService.shared.markAuthInvalid()
-                print("[APIService] Clerk session did not return a token")
-            }
+            token = try await AuthViewModel.shared.token()
         } catch {
             PairingService.shared.markAuthInvalid()
-            print("[APIService] Failed to get Clerk token: \(error.localizedDescription)")
+            throw APIError.unauthorized
+        }
+
+        if let token {
+            headers["Authorization"] = "Bearer \(token)"
+        } else {
+            PairingService.shared.markAuthInvalid()
+            throw APIError.unauthorized
         }
         return headers
     }

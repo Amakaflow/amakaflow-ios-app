@@ -17,7 +17,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/programs?status=\(status)") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard httpResponse.statusCode == 200 else {
@@ -31,7 +31,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/programs/\(id)") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard httpResponse.statusCode == 200 else {
@@ -47,7 +47,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/programs/generate") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         req.httpBody = try encoder.encode(request)
@@ -67,7 +67,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/programs/generate/\(jobId)/status") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard httpResponse.statusCode == 200 else {
@@ -84,7 +84,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/training-programs/\(id)/status") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "PATCH"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         req.httpBody = try JSONSerialization.data(withJSONObject: ["status": status])
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
@@ -101,7 +101,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/training-programs/\(id)/progress") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "PATCH"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         req.httpBody = try JSONSerialization.data(withJSONObject: ["current_week": currentWeek])
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
@@ -118,7 +118,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/training-programs/\(id)") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "DELETE"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard (200...299).contains(httpResponse.statusCode) else {
@@ -134,7 +134,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/training-programs/workouts/\(workoutId)/complete") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "PATCH"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard (200...299).contains(httpResponse.statusCode) else {
@@ -153,7 +153,7 @@ extension APIService {
         guard let url = URL(string: "\(calURL)/calendars/connected") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -166,7 +166,7 @@ extension APIService {
         guard let url = URL(string: "\(calURL)/calendars/connect") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         let body = ["provider": provider]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (data, response) = try await session.data(for: request)
@@ -183,7 +183,7 @@ extension APIService {
         guard let url = URL(string: "\(calURL)/calendars/\(calendarId)/sync") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -198,7 +198,7 @@ extension APIService {
         guard let url = URL(string: "\(calURL)/calendars/\(calendarId)/disconnect") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         let (_, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)

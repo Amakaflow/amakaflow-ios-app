@@ -28,7 +28,7 @@ extension APIService {
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
 
         let (_, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -57,7 +57,7 @@ extension APIService {
         let url = URL(string: "\(baseURL)/mobile/devices/register-push-token")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
 
         let body: [String: Any] = [
             "apns_token": apnsToken,
@@ -98,7 +98,7 @@ extension APIService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
 
         let (data, response) = try await session.data(for: request)
 
@@ -141,7 +141,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/api/privacy/export") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard (200...299).contains(httpResponse.statusCode) else {
@@ -156,7 +156,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/account") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard (200...299).contains(httpResponse.statusCode) else {
