@@ -67,7 +67,7 @@ jobs:
   # malformed, before we spend ~10min on archive + export.
   secrets-preflight:
     name: Secrets preflight (AMA-1852)
-    if: "!contains(github.event.head_commit.message, '[skip-testflight]')"
+    if: "github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]')"
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -110,7 +110,7 @@ jobs:
   # completion-contract-nightly.yml.)
   completion-contract:
     name: Completion contract (offline schema gate)
-    if: "!contains(github.event.head_commit.message, '[skip-testflight]')"
+    if: "github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]')"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -132,6 +132,7 @@ jobs:
   testflight:
     name: Archive + Upload to TestFlight
     needs: [secrets-preflight, completion-contract]
+    if: "github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]')"
     runs-on: macos-15
     timeout-minutes: 45
     outputs:
@@ -401,6 +402,7 @@ jobs:
   golden-path-smoke:
     name: Golden-path smoke (post-upload)
     needs: testflight
+    if: "github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]')"
     runs-on: macos-15
     timeout-minutes: 60
     permissions:
