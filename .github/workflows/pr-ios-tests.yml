@@ -44,6 +44,33 @@ env:
   MAESTRO_VERSION: "2.6.1"
 
 jobs:
+  # SwiftLint on ubuntu (cheap, fast) — gates all macOS jobs so style/obvious
+  # failures never reach a 10x-billed runner (#327).
+  lint:
+    name: SwiftLint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SWIFTLINT_VERSION: "0.57.1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install SwiftLint ${{ env.SWIFTLINT_VERSION }}
+        run: |
+          curl -sSL \
+            "https://github.com/realm/SwiftLint/releases/download/${SWIFTLINT_VERSION}/swiftlint_linux.zip" \
+            -o /tmp/swiftlint.zip
+          unzip -q /tmp/swiftlint.zip -d /tmp/swiftlint-bin
+          sudo mv /tmp/swiftlint-bin/swiftlint /usr/local/bin/swiftlint
+          swiftlint version
+
+      # --reporter github-actions-logging emits ::warning/::error annotations
+      # visible inline on the PR diff.  No --strict yet — start warn-clean and
+      # flip to --strict once the baseline is green (follow-up task).
+      - name: Run SwiftLint
+        run: swiftlint lint --reporter github-actions-logging
+
   detect-changes:
     name: Detect Changed Files
     # Pure git diff + grep + the affected-tests script (all ubuntu-safe) —
@@ -96,7 +123,7 @@ jobs:
   build:
     name: Build Debug-sim .app
     runs-on: macos-15
-    needs: detect-changes
+    needs: [detect-changes, lint]
     if: needs.detect-changes.outputs.should_build == 'true'
     timeout-minutes: 30
     steps:
