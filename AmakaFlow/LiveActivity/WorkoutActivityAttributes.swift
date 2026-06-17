@@ -15,9 +15,10 @@ struct WorkoutActivityAttributes: ActivityAttributes {
         var stepName: String           // "Squat", "Rest", "Warm Up"
         var stepIndex: Int             // Current step (1-based for display)
         var stepCount: Int             // Total steps
-        var remainingSeconds: Int      // Countdown (0 if reps-based)
+        var remainingSeconds: Int      // Countdown (0 if reps-based); used for paused/reps display
         var stepType: String           // "timed", "reps", "distance"
         var roundInfo: String?         // "Round 2/4" if in repeat block
+        var stepDeadline: Date?        // Absolute Date when countdown reaches 0; drives Text(timerInterval:)
     }
 
     // Fixed for lifetime of activity
@@ -46,6 +47,14 @@ extension WorkoutActivityAttributes.ContentState {
     var isPaused: Bool {
         phase == "paused"
     }
+
+    /// The date after which ActivityKit should dim the Live Activity as stale.
+    /// Only set for timed, running steps with a known deadline; nil otherwise keeps the activity fresh.
+    var activityStaleDate: Date? {
+        guard isTimedStep, !isPaused, let deadline = stepDeadline else { return nil }
+        // 30s buffer: gives the app time to push the next step update before the OS dims the widget.
+        return deadline.addingTimeInterval(30)
+    }
 }
 
 // MARK: - Live Activity Manager
@@ -55,6 +64,7 @@ final class LiveActivityManager {
     static let shared = LiveActivityManager()
 
     private var currentActivity: Activity<WorkoutActivityAttributes>?
+    private var startTask: Task<Void, Never>?
 
     private init() {}
 
@@ -65,7 +75,6 @@ final class LiveActivityManager {
         workoutName: String,
         initialState: WorkoutActivityAttributes.ContentState
     ) {
-        // Check if Live Activities are enabled
         let authInfo = ActivityAuthorizationInfo()
         print("🔵 Live Activities authorization:")
         print("   - areActivitiesEnabled: \(authInfo.areActivitiesEnabled)")
@@ -76,39 +85,41 @@ final class LiveActivityManager {
             return
         }
 
-        // List all existing activities for debugging
-        let existingActivities = Activity<WorkoutActivityAttributes>.activities
-        print("🔵 Existing activities count: \(existingActivities.count)")
-        for activity in existingActivities {
+        // Capture current state before clearing; includes orphans from previous processes.
+        let trackedActivity = currentActivity
+        let allExisting = Array(Activity<WorkoutActivityAttributes>.activities)
+        print("🔵 Existing activities count: \(allExisting.count)")
+        for activity in allExisting {
             print("   - Activity ID: \(activity.id), state: \(activity.activityState)")
         }
+        currentActivity = nil
 
-        // End any existing activity synchronously before starting new one
-        if let existing = currentActivity {
-            print("🔵 Ending existing activity: \(existing.id)")
-            Task {
-                await existing.end(nil, dismissalPolicy: .immediate)
-            }
-            currentActivity = nil
-        }
-
-        let attributes = WorkoutActivityAttributes(
-            workoutId: workoutId,
-            workoutName: workoutName
-        )
-
-        let content = ActivityContent(
-            state: initialState,
-            staleDate: nil
-        )
+        let attributes = WorkoutActivityAttributes(workoutId: workoutId, workoutName: workoutName)
 
         print("🔵 Requesting new Live Activity for workout: \(workoutName)")
         print("🔵 Initial state: step=\(initialState.stepName), phase=\(initialState.phase)")
 
-        // AMA-1324: Activity.request() makes a synchronous XPC call that can block
-        // the main thread for 2000ms+, triggering Sentry app-hang detection and
-        // potential SIGABRTs. Dispatch to a background thread to avoid blocking.
-        Task.detached {
+        // AMA-1324: Activity.request() can block the main thread for 2000ms+ via synchronous XPC.
+        // Dispatch to background. Teardown and creation run in a SINGLE task to prevent the
+        // old-end/new-request race that produced zombie lock-screen activities (issue #308).
+        let previousStartTask = startTask
+        startTask = Task.detached {
+            await previousStartTask?.value
+            // 1. End the previously tracked activity (serialized — must complete before request).
+            if let tracked = trackedActivity {
+                print("🔵 Ending tracked activity: \(tracked.id)")
+                await tracked.end(nil, dismissalPolicy: .immediate)
+            }
+            // 2. End any orphaned activities from previous process launches.
+            for activity in allExisting where activity.id != trackedActivity?.id {
+                print("🔵 Ending orphaned activity: \(activity.id)")
+                await activity.end(nil, dismissalPolicy: .immediate)
+            }
+            // 3. All teardown complete — safe to request new activity.
+            let content = ActivityContent(
+                state: initialState,
+                staleDate: initialState.activityStaleDate
+            )
             do {
                 let activity = try Activity.request(
                     attributes: attributes,
@@ -117,18 +128,11 @@ final class LiveActivityManager {
                 )
                 await MainActor.run {
                     self.currentActivity = activity
-                    print("🟢 Live Activity started successfully!")
-                    print("   - Activity ID: \(activity.id)")
-                    print("   - Activity state: \(activity.activityState)")
-
-                    // Verify it's in the activities list
-                    let allActivities = Activity<WorkoutActivityAttributes>.activities
-                    print("🔵 Total activities after start: \(allActivities.count)")
+                    print("🟢 Live Activity started successfully! ID: \(activity.id)")
                 }
             } catch {
                 await MainActor.run {
                     print("🔴 Failed to start Live Activity: \(error)")
-                    print("🔴 Error details: \(String(describing: error))")
                 }
             }
         }
@@ -141,7 +145,7 @@ final class LiveActivityManager {
 
         let content = ActivityContent(
             state: state,
-            staleDate: nil
+            staleDate: state.activityStaleDate
         )
 
         Task {
@@ -161,7 +165,8 @@ final class LiveActivityManager {
             stepCount: 0,
             remainingSeconds: 0,
             stepType: "reps",
-            roundInfo: nil
+            roundInfo: nil,
+            stepDeadline: nil
         )
 
         let content = ActivityContent(
