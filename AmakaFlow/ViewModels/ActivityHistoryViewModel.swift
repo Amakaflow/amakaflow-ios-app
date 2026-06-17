@@ -159,6 +159,9 @@ class ActivityHistoryViewModel: ObservableObject {
 
     /// Initial load of completions
     func loadCompletions() async {
+        let hadContent = !completions.isEmpty
+        let previousOffset = currentOffset
+        let previousHasMoreData = hasMoreData
         isLoading = true
         errorMessage = nil
         currentOffset = 0
@@ -202,7 +205,11 @@ class ActivityHistoryViewModel: ObservableObject {
             // URL request was cancelled - ignore silently
             logger.debug("loadCompletions URL request cancelled")
         } catch let error as APIError {
-            handleAPIError(error)
+            handleAPIError(error, preserveContent: hadContent)
+            if hadContent {
+                currentOffset = previousOffset
+                hasMoreData = previousHasMoreData
+            }
             logger.error("loadCompletions: API error \(error.localizedDescription)")
             DebugLogService.shared.log(
                 "History: ERROR",
@@ -211,7 +218,12 @@ class ActivityHistoryViewModel: ObservableObject {
             )
         } catch {
             errorMessage = "Failed to load activities: \(error.localizedDescription)"
-            completions = []
+            if hadContent {
+                currentOffset = previousOffset
+                hasMoreData = previousHasMoreData
+            } else {
+                completions = []
+            }
             logger.error("loadCompletions: Error \(error.localizedDescription)")
             DebugLogService.shared.log(
                 "History: ERROR",
@@ -273,7 +285,7 @@ class ActivityHistoryViewModel: ObservableObject {
 
     // MARK: - Error Handling
 
-    private func handleAPIError(_ error: APIError) {
+    private func handleAPIError(_ error: APIError, preserveContent: Bool = false) {
         switch error {
         case .unauthorized:
             errorMessage = "Session expired. Please reconnect."
@@ -282,7 +294,7 @@ class ActivityHistoryViewModel: ObservableObject {
         default:
             errorMessage = error.localizedDescription
         }
-        completions = []
+        if !preserveContent { completions = [] }
     }
 
     // MARK: - Mock Data

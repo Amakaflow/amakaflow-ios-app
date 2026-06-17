@@ -251,6 +251,39 @@ final class ActivityHistoryViewModelTests: XCTestCase {
         XCTAssertEqual(completion.distanceMeters, 6200)
     }
 
+    func testRefreshCompletionsOnNetworkFailurePreservesExistingContent() async {
+        // Load initial content successfully
+        mockAPIService.fetchCompletionsResult = .success(WorkoutCompletion.sampleData)
+        await viewModel.loadCompletions()
+        let preRefreshCount = viewModel.completions.count
+        XCTAssertGreaterThan(preRefreshCount, 0)
+
+        // Refresh fails with a network error
+        mockAPIService.fetchCompletionsResult = .failure(APIError.networkError(URLError(.notConnectedToInternet)))
+        await viewModel.refreshCompletions()
+
+        // Existing content must be preserved; inline error affordance shown
+        XCTAssertEqual(viewModel.completions.count, preRefreshCount, "Refresh failure must not wipe existing history")
+        XCTAssertNotNil(viewModel.errorMessage, "Inline error must appear on refresh failure")
+        XCTAssertFalse(viewModel.isLoading)
+    }
+
+    func testRefreshCompletionsOnAPIErrorPreservesExistingContent() async {
+        // Load initial content successfully
+        mockAPIService.fetchCompletionsResult = .success(WorkoutCompletion.sampleData)
+        await viewModel.loadCompletions()
+        let preRefreshCount = viewModel.completions.count
+        XCTAssertGreaterThan(preRefreshCount, 0)
+
+        // Refresh fails with a server error
+        mockAPIService.fetchCompletionsResult = .failure(APIError.serverError(500))
+        await viewModel.refreshCompletions()
+
+        // Existing content must be preserved
+        XCTAssertEqual(viewModel.completions.count, preRefreshCount, "Server error on refresh must not wipe existing history")
+        XCTAssertNotNil(viewModel.errorMessage)
+    }
+
     // MARK: - Demo Mode
 
     func testDemoModeSkipsAPICall() async {

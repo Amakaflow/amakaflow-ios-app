@@ -9,7 +9,6 @@ import SwiftUI
 
 struct LibraryView: View {
     @StateObject private var viewModel: LibraryViewModel
-    @State private var didLoad = false
     @State private var showingAddToLibrary = false
 
     init(viewModel: LibraryViewModel? = nil) {
@@ -58,8 +57,6 @@ struct LibraryView: View {
             }
         }
         .task {
-            guard !didLoad else { return }
-            didLoad = true
             await viewModel.load()
         }
         .accessibilityIdentifier("library_screen")
@@ -141,6 +138,9 @@ struct LibraryView: View {
             }
             .padding(.horizontal, Theme.Spacing.lg)
             .padding(.bottom, 100)
+        }
+        .refreshable {
+            await viewModel.load()
         }
     }
 
