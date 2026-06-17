@@ -90,7 +90,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # needed for diff base...head
+          fetch-depth: 1
+
+      # Fetch only the target branch tip so the base...head diff works without
+      # pulling the full history (which carries ~10k deleted design-bundle blobs
+      # from AMA-2103 and makes every clone slow — see issue #323).
+      - name: Fetch PR base for diff
+        run: git fetch --depth=1 origin "${GITHUB_BASE_REF:-main}"
 
       - name: Determine affected tests
         id: affected
@@ -239,8 +245,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # needed for diff base...head
 
       - name: Select pinned Xcode
         id: xcode
