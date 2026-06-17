@@ -62,7 +62,8 @@ final class LibraryViewModel: ObservableObject {
     }
 
     func load() async {
-        state = .loading
+        let hadContent = !allItems.isEmpty
+        if !hadContent { state = .loading }
         ctaError = nil
         lastFailedAction = nil
 
@@ -75,7 +76,9 @@ final class LibraryViewModel: ObservableObject {
         } catch {
             let mapped = CTAError.map(error)
             ctaError = mapped
-            state = .error(mapped)
+            // Only replace content with full-screen error on initial load (no cached items).
+            // When refreshing over existing content, the toast overlay handles the error.
+            if !hadContent { state = .error(mapped) }
             lastFailedAction = .load
         }
     }
@@ -132,7 +135,7 @@ final class LibraryViewModel: ObservableObject {
         let currentError = ctaError
         ctaError = nil
 
-        if lastFailedAction == .load, let currentError {
+        if lastFailedAction == .load, let currentError, allItems.isEmpty {
             state = .error(currentError)
         }
     }

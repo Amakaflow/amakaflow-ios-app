@@ -171,6 +171,27 @@ final class LibraryViewModelTests: XCTestCase {
         }
     }
 
+    func testLoadRefreshFailurePreservesExistingItemsAndUsesToast() async {
+        // Initial successful load
+        api.listLibraryItemsResult = .success(Components.Schemas.LibraryItemList(
+            items: [item(id: "item-1"), item(id: "item-2")],
+            total: 2
+        ))
+        await viewModel.load()
+        XCTAssertEqual(viewModel.state, .content)
+        XCTAssertEqual(viewModel.items.count, 2)
+
+        // Refresh fails
+        api.listLibraryItemsResult = .failure(URLError(.notConnectedToInternet))
+        await viewModel.load()
+
+        // Content preserved; toast error shown instead of full-screen error
+        XCTAssertEqual(viewModel.state, .content, "Refresh failure must not replace content with full-screen error")
+        XCTAssertEqual(viewModel.items.count, 2, "Existing items must be preserved on refresh failure")
+        XCTAssertNotNil(viewModel.ctaError, "Toast error must be shown on refresh failure")
+        XCTAssertEqual(viewModel.lastFailedAction, .load)
+    }
+
     func testDismissLoadErrorKeepsErrorStateInsteadOfFakeEmptyLibrary() async {
         api.listLibraryItemsResult = .failure(URLError(.notConnectedToInternet))
 
