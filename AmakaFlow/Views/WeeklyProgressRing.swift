@@ -10,14 +10,38 @@ import SwiftUI
 struct WeeklyProgressRing: View {
     let workoutsCompleted: Int
     let weeklyTarget: Int
-    let ringPercentage: Double
-    let motivationalText: String
 
     @State private var animatedProgress: Double = 0
 
     private let ringColor = Color(hex: "6C5CE7") // AmakaFlow purple
     private let trackColor = Color.gray.opacity(0.3)
     private let lineWidth: CGFloat = 14
+
+    // Single source of truth — callers cannot supply an inconsistent ringPercentage.
+    static func ringPercentage(completed: Int, target: Int) -> Double {
+        guard target > 0 else { return 0 }
+        return min(1.0, Double(completed) / Double(target))
+    }
+
+    static func motivationalText(completed: Int, target: Int) -> String {
+        guard target > 0 else { return "Set a weekly target to track progress." }
+        if completed >= target {
+            return "Target hit! \(completed) of \(target) — crushing it!"
+        }
+        let remaining = target - completed
+        if remaining == 1 {
+            return "\(completed) of \(target) — one more to go!"
+        }
+        return "\(completed) of \(target) — \(remaining) more to go!"
+    }
+
+    private var ringPercentage: Double {
+        Self.ringPercentage(completed: workoutsCompleted, target: weeklyTarget)
+    }
+
+    private var motivationalText: String {
+        Self.motivationalText(completed: workoutsCompleted, target: weeklyTarget)
+    }
 
     var body: some View {
         VStack(spacing: Theme.Spacing.md) {
@@ -81,18 +105,8 @@ struct WeeklyProgressRing: View {
 
 #Preview {
     VStack(spacing: 20) {
-        WeeklyProgressRing(
-            workoutsCompleted: 2,
-            weeklyTarget: 3,
-            ringPercentage: 0.67,
-            motivationalText: "2 of 3 — one more to go!"
-        )
-        WeeklyProgressRing(
-            workoutsCompleted: 3,
-            weeklyTarget: 3,
-            ringPercentage: 1.0,
-            motivationalText: "Target hit! 3 of 3 — crushing it!"
-        )
+        WeeklyProgressRing(workoutsCompleted: 2, weeklyTarget: 3)
+        WeeklyProgressRing(workoutsCompleted: 3, weeklyTarget: 3)
     }
     .padding()
     .preferredColorScheme(.dark)

@@ -299,9 +299,11 @@ struct HomeView: View {
             resumeWorkoutBanner(progress: progress)
         }
 
+        #if DEBUG
         if let homeBannerKind {
             homeBanner(homeBannerKind)
         }
+        #endif
 
         homeMetricsGrid
         homeProgramCard
@@ -504,13 +506,9 @@ struct HomeView: View {
                         .lineSpacing(Theme.Spacing.xs)
 
                     if case .replan = kind {
-                        HStack(spacing: Theme.Spacing.sm) {
-                            Button("Approve") { homeBannerKind = nil }
-                                .buttonStyle(AFPrimaryButtonStyle())
-                            Button("Edit") { }
-                                .buttonStyle(AFGhostButtonStyle())
-                        }
-                        .padding(.top, Theme.Spacing.sm)
+                        Button("Approve") { homeBannerKind = nil }
+                            .buttonStyle(AFPrimaryButtonStyle())
+                            .padding(.top, Theme.Spacing.sm)
                     }
 
                     if case .redFlag = kind {

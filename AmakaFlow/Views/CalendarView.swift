@@ -67,7 +67,7 @@ struct CalendarView: View {
                             emptyState
                         } else {
                             ForEach(upcomingWorkouts) { workout in
-                                CalendarWorkoutRow(workout: workout) {
+                                CalendarWorkoutRow(workout: workout, scheduledTime: nil) {
                                     selectedWorkout = workout
                                 }
                             }
@@ -520,7 +520,7 @@ struct CalendarView: View {
                     ScrollView {
                         VStack(spacing: Theme.Spacing.sm) {
                             ForEach(workoutsForDay) { workout in
-                                CalendarWorkoutRow(workout: workout) {
+                                CalendarWorkoutRow(workout: workout, scheduledTime: nil) {
                                     selectedDate = nil
                                     selectedWorkout = workout
                                 }
@@ -817,6 +817,7 @@ private struct DayStateCard: View {
 
 private struct CalendarWorkoutRow: View {
     let workout: Workout
+    let scheduledTime: String?
     let onTap: () -> Void
 
     var body: some View {
@@ -828,7 +829,7 @@ private struct CalendarWorkoutRow: View {
                         .font(Theme.Typography.footnote)
                         .foregroundColor(Theme.Colors.textSecondary)
 
-                    Text("9:00")
+                    Text(scheduledTime ?? "—")
                         .font(Theme.Typography.bodyBold)
                         .foregroundColor(Theme.Colors.textPrimary)
                 }

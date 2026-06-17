@@ -132,7 +132,6 @@
 		AK00NUT008B /* NutritionViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT008A /* NutritionViewModelTests.swift */; };
 		AMA2052HRVTSTB /* HealthKitHRVServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2052HRVTSTA /* HealthKitHRVServiceTests.swift */; };
 		AK00RD001B /* WeeklyProgressRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00RD001A /* WeeklyProgressRing.swift */; };
-		AK00RD002B /* RestDayButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00RD002A /* RestDayButton.swift */; };
 		AK00SHARE001B /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SHARE001A /* ShareViewController.swift */; };
 		AK00SHARE003B /* PlatformDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SHARE003A /* PlatformDetector.swift */; };
 		AK00SHARE004B /* SharedContainerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00SHARE004A /* SharedContainerManager.swift */; };
@@ -172,6 +171,7 @@
 		AMA1995EQVIEW00000000B /* EquipmentProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1995EQVIEW00000000A /* EquipmentProfileView.swift */; };
 		AMA1995EQTST000000000B /* EquipmentProfileViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1995EQTST000000000A /* EquipmentProfileViewModelTests.swift */; };
 		AMA1993HOMETEST0000B /* HomeViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1993HOMETEST0000A /* HomeViewModelTests.swift */; };
+		AK304WKRNGTEST000B /* WeeklyProgressRingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK304WKRNGTEST000A /* WeeklyProgressRingTests.swift */; };
 		AMA1996DEVVM00000000B /* DevicesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1996DEVVM00000000A /* DevicesViewModel.swift */; };
 		AMA1996DEVVIEW000000B /* DevicesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1996DEVVIEW000000A /* DevicesView.swift */; };
 		AMA2054RDVM00000000B /* ReadinessDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2054RDVM00000000A /* ReadinessDetailViewModel.swift */; };
@@ -587,7 +587,6 @@
 		AK00NUT008A /* NutritionViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionViewModelTests.swift; path = AmakaFlowCompanionTests/NutritionViewModelTests.swift; sourceTree = "<group>"; };
 		AMA2052HRVTSTA /* HealthKitHRVServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HealthKitHRVServiceTests.swift; path = AmakaFlowCompanionTests/HealthKitHRVServiceTests.swift; sourceTree = "<group>"; };
 		AK00RD001A /* WeeklyProgressRing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WeeklyProgressRing.swift; path = ../AmakaFlow/Views/WeeklyProgressRing.swift; sourceTree = "<group>"; };
-		AK00RD002A /* RestDayButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RestDayButton.swift; path = ../AmakaFlow/Views/RestDayButton.swift; sourceTree = "<group>"; };
 		AK00SHARE001A /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		AK00SHARE002A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AK00SHARE003A /* PlatformDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformDetector.swift; sourceTree = "<group>"; };
@@ -628,6 +627,7 @@
 		AMA1995EQVIEW00000000A /* EquipmentProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EquipmentProfileView.swift; path = ../AmakaFlow/Views/EquipmentProfileView.swift; sourceTree = SOURCE_ROOT; };
 		AMA1995EQTST000000000A /* EquipmentProfileViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EquipmentProfileViewModelTests.swift; path = AmakaFlowCompanionTests/EquipmentProfileViewModelTests.swift; sourceTree = "<group>"; };
 		AMA1993HOMETEST0000A /* HomeViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeViewModelTests.swift; path = AmakaFlowCompanionTests/HomeViewModelTests.swift; sourceTree = "<group>"; };
+		AK304WKRNGTEST000A /* WeeklyProgressRingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WeeklyProgressRingTests.swift; path = AmakaFlowCompanionTests/WeeklyProgressRingTests.swift; sourceTree = "<group>"; };
 		AMA1996DEVVM00000000A /* DevicesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DevicesViewModel.swift; path = ../AmakaFlow/ViewModels/DevicesViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA1996DEVVIEW000000A /* DevicesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DevicesView.swift; path = ../AmakaFlow/Views/DevicesView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2054RDVM00000000A /* ReadinessDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReadinessDetailViewModel.swift; path = ../AmakaFlow/ViewModels/ReadinessDetailViewModel.swift; sourceTree = SOURCE_ROOT; };
@@ -1151,6 +1151,7 @@
 				AMA12650021 /* SuggestWorkoutViewModelTests.swift */,
 				AMA1995EQTST000000000A /* EquipmentProfileViewModelTests.swift */,
 				AMA1993HOMETEST0000A /* HomeViewModelTests.swift */,
+				AK304WKRNGTEST000A /* WeeklyProgressRingTests.swift */,
 				AMA2004LIBTST000000A /* LibraryViewModelTests.swift */,
 				AMA2005LIBDTST00000A /* LibraryDetailViewModelTests.swift */,
 				AMA2007SIGNUPTESTREF /* SignUpViewModelTests.swift */,
@@ -1338,7 +1339,6 @@
 				AK00XP001A /* XPBarView.swift */,
 				AK00XP002A /* LevelUpCelebrationView.swift */,
 				AK00RD001A /* WeeklyProgressRing.swift */,
-				AK00RD002A /* RestDayButton.swift */,
 				AK00FIX001A /* SocialModels.swift */,
 				AK00FIX002A /* TrainingProgram.swift */,
 				AK00FIX003A /* WorkoutSaveRequest.swift */,
@@ -1771,7 +1771,6 @@
 				AK00XP001B /* XPBarView.swift in Sources */,
 				AK00XP002B /* LevelUpCelebrationView.swift in Sources */,
 				AK00RD001B /* WeeklyProgressRing.swift in Sources */,
-				AK00RD002B /* RestDayButton.swift in Sources */,
 				D33PL1NK1MP0RTV0002 /* DeepLinkImportView.swift in Sources */,
 				CA268753E918494FAD7CCD56 /* PairingService.swift in Sources */,
 				AMA1620AUTHVM001B /* AuthViewModel.swift in Sources */,
@@ -2064,6 +2063,7 @@
 				AMA12650022 /* SuggestWorkoutViewModelTests.swift in Sources */,
 				AMA1995EQTST000000000B /* EquipmentProfileViewModelTests.swift in Sources */,
 				AMA1993HOMETEST0000B /* HomeViewModelTests.swift in Sources */,
+				AK304WKRNGTEST000B /* WeeklyProgressRingTests.swift in Sources */,
 				AMA2028WDTST0000000B /* WatchDeliveryViewModelTests.swift in Sources */,
 				AK00TST001B /* ActivityHistoryTests.swift in Sources */,
 				AK00TST002B /* ActivityHistoryViewModelTests.swift in Sources */,
