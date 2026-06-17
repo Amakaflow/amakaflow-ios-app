@@ -61,7 +61,7 @@ extension APIService {
         )
         return Client(
             serverURL: serverURL,
-            transport: GeneratedBFFTransport(base: baseTransport, headers: await makeAuthHeaders())
+            transport: GeneratedBFFTransport(base: baseTransport, headers: try await makeAuthHeaders())
         )
     }
 
@@ -114,7 +114,9 @@ extension APIService {
         case .serviceUnavailable(let response):
             throw Self.generatedError(statusCode: 503, body: try response.body.json)
         case .undocumented(let statusCode, _):
-            throw Self.generatedError(statusCode: statusCode)
+            let err = Self.generatedError(statusCode: statusCode)
+            logError(endpoint: "/v1/coach/message", method: "POST", statusCode: statusCode, response: nil, error: err)
+            throw err
         }
     }
 
@@ -130,7 +132,9 @@ extension APIService {
         case .serviceUnavailable(let response):
             throw Self.generatedError(statusCode: 503, body: try response.body.json)
         case .undocumented(let statusCode, _):
-            throw Self.generatedError(statusCode: statusCode)
+            let err = Self.generatedError(statusCode: statusCode)
+            logError(endpoint: "/v1/coach/fatigue-advice", method: "POST", statusCode: statusCode, response: nil, error: err)
+            throw err
         }
     }
 
@@ -144,7 +148,9 @@ extension APIService {
         case .serviceUnavailable(let response):
             throw Self.generatedError(statusCode: 503, body: try response.body.json)
         case .undocumented(let statusCode, _):
-            throw Self.generatedError(statusCode: statusCode)
+            let err = Self.generatedError(statusCode: statusCode)
+            logError(endpoint: "/v1/coach/memories", method: "GET", statusCode: statusCode, response: nil, error: err)
+            throw err
         }
     }
 
@@ -191,7 +197,7 @@ extension APIService {
         let url = URL(string: "\(bffURL)/gamification/xp")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        for (key, value) in await makeAuthHeaders() {
+        for (key, value) in try await makeAuthHeaders() {
             request.setValue(value, forHTTPHeaderField: key)
         }
 
@@ -217,7 +223,7 @@ extension APIService {
         guard let url = URL(string: "\(chatURL)/nutrition/analyze-photo") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         req.httpBody = try JSONEncoder().encode(["image_base64": imageBase64])
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
@@ -241,7 +247,7 @@ extension APIService {
         guard let url = URL(string: "\(chatURL)/nutrition/barcode/\(encoded)") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         switch httpResponse.statusCode {
@@ -263,7 +269,7 @@ extension APIService {
         guard let url = URL(string: "\(chatURL)/nutrition/parse-text") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         req.httpBody = try JSONEncoder().encode(["text": text])
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
@@ -286,7 +292,7 @@ extension APIService {
         guard let url = URL(string: "\(chatURL)/nutrition/fueling-status") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         switch httpResponse.statusCode {
@@ -308,7 +314,7 @@ extension APIService {
         guard let url = URL(string: "\(chatURL)/nutrition/protein-nudge/check") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         switch httpResponse.statusCode {
@@ -339,7 +345,9 @@ extension APIService {
         case .serviceUnavailable(let response):
             throw Self.generatedError(statusCode: 503, body: try response.body.json)
         case .undocumented(let statusCode, _):
-            throw Self.generatedError(statusCode: statusCode)
+            let err = Self.generatedError(statusCode: statusCode)
+            logError(endpoint: "/v1/coach/suggest-workout", method: "POST", statusCode: statusCode, response: nil, error: err)
+            throw err
         }
     }
 
@@ -355,7 +363,9 @@ extension APIService {
         case .serviceUnavailable(let response):
             throw Self.generatedError(statusCode: 503, body: try response.body.json)
         case .undocumented(let statusCode, _):
-            throw Self.generatedError(statusCode: statusCode)
+            let err = Self.generatedError(statusCode: statusCode)
+            logError(endpoint: "/v1/coach/rpe-feedback", method: "POST", statusCode: statusCode, response: nil, error: err)
+            throw err
         }
     }
 }

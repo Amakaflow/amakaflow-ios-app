@@ -27,7 +27,7 @@ extension APIService {
         let url = URL(string: "\(ingestorURL)/workouts/parse-voice")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
 
         var body: [String: Any] = ["transcription": transcription]
         if let hint = sportHint {
@@ -90,7 +90,7 @@ extension APIService {
         let requestURL = URL(string: "\(ingestorURL)/ingest/instagram_reel")!
         var request = URLRequest(url: requestURL)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
 
         let body: [String: Any] = ["url": url]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -151,7 +151,7 @@ extension APIService {
         var request = URLRequest(url: requestURL)
         request.httpMethod = "POST"
 
-        var headers = await makeAuthHeaders()
+        var headers = try await makeAuthHeaders()
         headers["Content-Type"] = "multipart/form-data; boundary=\(boundary)"
         request.allHTTPHeaderFields = headers
 
@@ -229,7 +229,7 @@ extension APIService {
         let url = URL(string: "\(ingestorURL)/voice/transcribe")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
 
         let body: [String: Any] = [
             "audio": audioData,
@@ -283,7 +283,7 @@ extension APIService {
         let url = URL(string: "\(ingestorURL)/voice/dictionary")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
 
         let body: [String: Any] = [
             "corrections": corrections,
@@ -319,7 +319,7 @@ extension APIService {
         let url = URL(string: "\(ingestorURL)/voice/dictionary")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
 
         let (data, response) = try await session.data(for: request)
 
@@ -346,7 +346,7 @@ extension APIService {
         guard let url = URL(string: "\(ingestorURL)/import/detect") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         req.httpBody = try encoder.encode(request)
@@ -371,7 +371,7 @@ extension APIService {
         guard let url = URL(string: "\(ingestorURL)/import/match") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         req.httpBody = try encoder.encode(request)
@@ -396,7 +396,7 @@ extension APIService {
         guard let url = URL(string: "\(ingestorURL)/import/preview") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         req.httpBody = try encoder.encode(request)
@@ -421,7 +421,7 @@ extension APIService {
         guard let url = URL(string: "\(ingestorURL)/import/execute") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         req.httpBody = try encoder.encode(request)
@@ -449,7 +449,7 @@ extension APIService {
         }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         print("[APIService] fetchImportStatus - URL: \(url.absoluteString)")
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
@@ -475,7 +475,7 @@ extension APIService {
         }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         print("[APIService] cancelImport - URL: \(url.absoluteString)")
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }

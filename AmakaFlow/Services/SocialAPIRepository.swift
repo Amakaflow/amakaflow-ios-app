@@ -22,7 +22,7 @@ extension APIService {
         guard let url = URL(string: urlString) else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -34,7 +34,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/posts/\(postId)/react") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         request.httpBody = try JSONEncoder().encode(["emoji": emoji])
         let (_, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
@@ -46,7 +46,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/posts/\(postId)/react/\(emoji)") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         let (_, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -57,7 +57,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/posts/\(postId)/comments") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -69,7 +69,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/posts/\(postId)/comment") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         request.httpBody = try JSONEncoder().encode(["text": text])
         let (_, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
@@ -81,7 +81,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/settings") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -93,7 +93,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/settings") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "PUT"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         request.httpBody = try encoder.encode(settings)
@@ -107,7 +107,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/users/\(userId)/profile") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -119,7 +119,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/users/\(userId)/follow") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         let (_, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         switch httpResponse.statusCode {
@@ -133,7 +133,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/users/\(userId)/unfollow") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         let (_, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         switch httpResponse.statusCode {
@@ -149,7 +149,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/challenges") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -161,7 +161,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/challenges/\(id)") else { throw APIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -173,7 +173,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/challenges") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONEncoder().encode(request)
         let (_, response) = try await session.data(for: req)
@@ -186,7 +186,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/challenges/\(id)/join") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let (_, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -199,7 +199,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/crews") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -211,7 +211,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/crews/\(id)") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -223,7 +223,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/crews/\(crewId)/feed") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -235,7 +235,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/crews") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         req.httpBody = try encoder.encode(request)
@@ -249,7 +249,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/crews/\(crewId)/join") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         req.httpBody = try encoder.encode(request)
@@ -263,7 +263,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/crews/\(crewId)/leave") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "DELETE"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let (_, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -276,7 +276,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/leaderboards/friends?dimension=\(dimension)&period=\(period)") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -288,7 +288,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/social/leaderboards/crew/\(crewId)?dimension=\(dimension)&period=\(period)") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)

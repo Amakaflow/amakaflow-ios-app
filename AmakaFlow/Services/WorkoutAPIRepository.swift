@@ -43,7 +43,7 @@ extension APIService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
 
         let (data, response) = try await session.data(for: request)
 
@@ -194,7 +194,7 @@ extension APIService {
         let url = URL(string: "\(baseURL)/workouts")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
 
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
@@ -267,7 +267,7 @@ extension APIService {
         let url = URL(string: "\(baseURL)/workouts/completions")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
 
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -426,7 +426,7 @@ extension APIService {
         let url = URL(string: "\(bffURL)/sync/confirm")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         if let requestID = requestID {
             request.setValue(requestID, forHTTPHeaderField: "X-Request-ID")
         }
@@ -482,7 +482,7 @@ extension APIService {
         let url = URL(string: "\(bffURL)/sync/failed")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        request.allHTTPHeaderFields = try await makeAuthHeaders()
         if let requestID = requestID {
             request.setValue(requestID, forHTTPHeaderField: "X-Request-ID")
         }
@@ -571,7 +571,7 @@ extension APIService {
         guard let url = URL(string: "\(baseURL)/workouts/save") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.allHTTPHeaderFields = await makeAuthHeaders()
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         req.httpBody = try encoder.encode(request)

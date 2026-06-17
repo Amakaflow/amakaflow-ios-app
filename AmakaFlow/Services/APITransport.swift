@@ -314,7 +314,7 @@ extension APIService {
         if let headers {
             request.allHTTPHeaderFields = headers
         } else {
-            request.allHTTPHeaderFields = await makeAuthHeaders()
+            request.allHTTPHeaderFields = try await makeAuthHeaders()
         }
         request.httpBody = body
         return request
@@ -460,6 +460,11 @@ extension APIService {
         if statusCode == 401 {
             return .unauthorized
         }
+        // 404 maps to .notFound regardless of whether the server included a body,
+        // so AMA-2061-style quiet-empty handling can't be masked by diagnostic bodies.
+        if statusCode == 404 {
+            return .notFound
+        }
 
         if let data,
            let body = String(data: data, encoding: .utf8),
@@ -467,14 +472,7 @@ extension APIService {
             return .serverErrorWithBody(statusCode, body)
         }
 
-        switch statusCode {
-        case 401:
-            return .unauthorized
-        case 404:
-            return .notFound
-        default:
-            return .server(status: statusCode)
-        }
+        return .server(status: statusCode)
     }
 
     // MARK: - Error Logging Helper

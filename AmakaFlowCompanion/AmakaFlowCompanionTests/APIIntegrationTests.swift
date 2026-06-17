@@ -72,6 +72,16 @@ final class APITransportObservabilityTests: XCTestCase {
         }
     }
 
+    // AMA-302: 404 with a non-empty body must map to .notFound, not .serverErrorWithBody.
+    func test404WithBodyMapsToNotFound() {
+        let body = #"{"detail":"resource not found"}"#.data(using: .utf8)!
+        let error = APIService.mapStatusCode(404, data: body)
+        guard case .notFound = error else {
+            XCTFail("Expected .notFound for 404-with-body, got \(error)")
+            return
+        }
+    }
+
     func test500MapsToServerStatus() async throws {
         var outgoingRequestId: String?
         MockURLProtocol.requestHandler = { request in

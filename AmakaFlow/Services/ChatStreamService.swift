@@ -251,12 +251,12 @@ class ChatStreamService: ChatStreamProviding {
                     let (bytes, response) = try await session.bytes(for: urlRequest)
 
                     if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
-                        var body = ""
+                        var bodyLines: [String] = []
                         for try await line in bytes.lines {
-                            body += line
+                            bodyLines.append(line)
                         }
                         continuation.finish(throwing: ChatStreamError.httpError(
-                            statusCode: httpResponse.statusCode, body: body
+                            statusCode: httpResponse.statusCode, body: bodyLines.joined(separator: "\n")
                         ))
                         return
                     }
