@@ -495,4 +495,62 @@ final class WatchConnectivityTests: XCTestCase {
         XCTAssertNil(decoded.averageHeartRate)
         XCTAssertEqual(decoded.durationSeconds, 3600)
     }
+
+    // MARK: - Workout Delivery Routing Tests (AMA-297)
+
+    /// Proves that a workout payload sent by the phone's sendWorkout() can be decoded
+    /// by the watch-side bridge routing logic via decodeFromReceiveWorkoutMessage.
+    func testReceiveWorkoutPayloadDecodesCorrectly() throws {
+        let workout = Workout(
+            id: "test-297-abc",
+            name: "Strength A",
+            sport: .strength,
+            duration: 2700,
+            source: .manual
+        )
+        let workoutData = try JSONEncoder().encode(workout)
+        let workoutDict = try XCTUnwrap(try JSONSerialization.jsonObject(with: workoutData) as? [String: Any])
+        let message: [String: Any] = ["action": "receiveWorkout", "workout": workoutDict]
+
+        let decoded = Workout.decodeFromReceiveWorkoutMessage(message)
+
+        XCTAssertNotNil(decoded, "receiveWorkout payload must decode to a Workout")
+        XCTAssertEqual(decoded?.id, "test-297-abc")
+        XCTAssertEqual(decoded?.name, "Strength A")
+        XCTAssertEqual(decoded?.sport, .strength)
+    }
+
+    func testReceiveWorkoutPayloadMissingWorkoutKeyReturnsNil() {
+        let message: [String: Any] = ["action": "receiveWorkout"]
+        XCTAssertNil(Workout.decodeFromReceiveWorkoutMessage(message),
+                     "Missing 'workout' key must return nil, not crash")
+    }
+
+    func testReceiveWorkoutPayloadMalformedWorkoutReturnsNil() {
+        let message: [String: Any] = ["action": "receiveWorkout", "workout": "not-a-dict"]
+        XCTAssertNil(Workout.decodeFromReceiveWorkoutMessage(message),
+                     "Non-dict 'workout' value must return nil, not crash")
+    }
+
+    func testSyncWorkoutsUserInfoDecodesMultipleWorkouts() throws {
+        let workouts = [
+            Workout(id: "w1", name: "Run", sport: .running, duration: 1800, source: .manual),
+            Workout(id: "w2", name: "Lift", sport: .strength, duration: 3600, source: .manual)
+        ]
+        let workoutsData = try JSONEncoder().encode(workouts)
+        let workoutsArray = try XCTUnwrap(try JSONSerialization.jsonObject(with: workoutsData) as? [[String: Any]])
+        let userInfo: [String: Any] = ["action": "syncWorkouts", "workouts": workoutsArray]
+
+        let decoded = Workout.decodeFromSyncWorkoutsUserInfo(userInfo)
+
+        XCTAssertEqual(decoded?.count, 2)
+        XCTAssertEqual(decoded?[0].id, "w1")
+        XCTAssertEqual(decoded?[1].id, "w2")
+    }
+
+    func testSyncWorkoutsUserInfoMissingKeyReturnsNil() {
+        let userInfo: [String: Any] = ["action": "syncWorkouts"]
+        XCTAssertNil(Workout.decodeFromSyncWorkoutsUserInfo(userInfo),
+                     "Missing 'workouts' key must return nil, not crash")
+    }
 }

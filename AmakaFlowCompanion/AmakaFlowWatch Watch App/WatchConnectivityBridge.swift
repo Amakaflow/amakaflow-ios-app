@@ -29,6 +29,11 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
     // AMA-1150: DayState ViewModel for routing push messages
     weak var dayStateViewModel: DayStateViewModel?
 
+    // AMA-297: WorkoutManager for routing phone→watch workout deliveries.
+    // Weak to avoid a retain cycle: WatchConnectivityBridge holds WatchWorkoutManager;
+    // WatchWorkoutManager does NOT hold the bridge.
+    weak var workoutManager: WatchWorkoutManager?
+
     private(set) var session: WCSession?
     private var pendingCommandId: String?
     private var healthManager = HealthKitWorkoutManager.shared
@@ -448,6 +453,18 @@ extension WatchConnectivityBridge: WCSessionDelegate {
         }
     }
 
+    // AMA-297: Receive background-queued workout syncs sent via transferUserInfo.
+    nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
+        guard (userInfo["action"] as? String) == "syncWorkouts" else { return }
+        if let workouts = Workout.decodeFromSyncWorkoutsUserInfo(userInfo) {
+            Task { @MainActor in
+                self.workoutManager?.setWorkouts(workouts)
+            }
+        } else {
+            print("⌚️ syncWorkouts userInfo: failed to decode workouts payload")
+        }
+    }
+
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
         Task { @MainActor in
             let reachable = session.isReachable
@@ -475,9 +492,28 @@ extension WatchConnectivityBridge: WCSessionDelegate {
         didReceiveMessage message: [String: Any],
         replyHandler: @escaping ([String: Any]) -> Void
     ) {
+        // AMA-297: Route known actions explicitly; never blanket-ack unknown actions.
+        // The only phone→watch message that arrives with a replyHandler is "receiveWorkout".
         Task { @MainActor in
-            handleMessage(message)
-            replyHandler(["status": "received"])
+            guard let action = message["action"] as? String else {
+                replyHandler(["status": "error", "message": "missing_action"])
+                return
+            }
+            switch action {
+            case "receiveWorkout":
+                if let workout = Workout.decodeFromReceiveWorkoutMessage(message) {
+                    workoutManager?.addWorkout(workout)
+                    replyHandler(["status": "received"])
+                } else {
+                    print("⌚️ receiveWorkout (reply path): failed to decode workout payload")
+                    replyHandler(["status": "error", "message": "decode_failed"])
+                }
+            default:
+                // Route through normal message handling for any other known action
+                handleMessage(message)
+                // Surface unrecognised actions as errors so the phone can detect silent drops.
+                replyHandler(["status": "error", "message": "unknown_action"])
+            }
         }
     }
 
@@ -496,6 +532,14 @@ extension WatchConnectivityBridge: WCSessionDelegate {
             // applicationContext was cleared (workout is running, state sent via message only)
             // No action needed - this prevents phantom "Open on iPhone" card
             print("⌚️ Received cleared applicationContext (workout running)")
+
+        // AMA-297: Workout delivery from phone (no-reply path)
+        case "receiveWorkout":
+            if let workout = Workout.decodeFromReceiveWorkoutMessage(message) {
+                workoutManager?.addWorkout(workout)
+            } else {
+                print("⌚️ receiveWorkout: failed to decode workout payload")
+            }
 
         // AMA-1150: DayState push messages from phone
         case DayStateAction.dayStateResponse.rawValue:
