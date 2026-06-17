@@ -11,6 +11,28 @@
 # was the last hand-driven upload per WORKING.md — base 100 puts CI
 # safely past that).
 #
+# Trigger design decision (issue #328, 2026-06-17):
+# Evaluated two options:
+#   Option A (chosen): keep every-merge TestFlight builds; add a
+#     [skip-testflight] commit-message guard as the escape hatch.
+#     Rationale: solo-dev v1 sprint benefits from every merge being
+#     testable on device without a separate tagging ceremony.
+#   Option B (deferred): main → archive artifact only; tag v* → upload.
+#     Revisit post-v1 if build-minute costs become a concern.
+#
+# To skip a TestFlight upload, include [skip-testflight] anywhere in
+# the commit message for the push to main.  workflow_dispatch runs
+# are never skipped by this guard.
+#
+# Code signing evaluation (issue #328, 2026-06-17):
+# Evaluated fastlane match vs current xcodebuild + ASC API key approach.
+#   Decision: defer match.  The current xcodebuild automatic-signing path
+#   with -authenticationKey* flags works reliably (no failures since the
+#   2026-05-22 "No Accounts" fix in #228).  match adds a certs repo and
+#   a new MATCH_PASSWORD secret; the marginal reproducibility gain is not
+#   worth the maintenance overhead while this is a solo-dev project.
+#   Revisit if the team grows or certificate-limit errors recur.
+#
 # v1 posture decision (2026-05-22): CLERK_PUBLISHABLE_KEY_PRODUCTION is
 # the STAGING Clerk key. Per AMA-1796 the iOS Release config defaults to
 # .staging, and per the 2026-05-22 plan "staging IS production for v1."
@@ -45,6 +67,7 @@ jobs:
   # malformed, before we spend ~10min on archive + export.
   secrets-preflight:
     name: Secrets preflight (AMA-1852)
+    if: "github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]')"
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -87,6 +110,7 @@ jobs:
   # completion-contract-nightly.yml.)
   completion-contract:
     name: Completion contract (offline schema gate)
+    if: "github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]')"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -108,6 +132,7 @@ jobs:
   testflight:
     name: Archive + Upload to TestFlight
     needs: [secrets-preflight, completion-contract]
+    if: "github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]')"
     runs-on: macos-15
     timeout-minutes: 45
     outputs:
@@ -377,6 +402,7 @@ jobs:
   golden-path-smoke:
     name: Golden-path smoke (post-upload)
     needs: testflight
+    if: "github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]')"
     runs-on: macos-15
     timeout-minutes: 60
     permissions:
