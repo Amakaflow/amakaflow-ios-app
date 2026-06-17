@@ -116,6 +116,30 @@ public enum CommandStatus: String, Codable {
     case error
 }
 
+// MARK: - Workout Delivery Parsing (Phone → Watch)
+
+public extension Workout {
+    /// Decodes a Workout from a "receiveWorkout" WCSession message dict sent by the phone.
+    /// Returns nil if the "workout" key is absent or the payload is malformed — never crashes.
+    static func decodeFromReceiveWorkoutMessage(_ message: [String: Any]) -> Workout? {
+        guard let workoutDict = message["workout"] as? [String: Any],
+              let data = try? JSONSerialization.data(withJSONObject: workoutDict) else {
+            return nil
+        }
+        return try? JSONDecoder().decode(Workout.self, from: data)
+    }
+
+    /// Decodes a [Workout] from a "syncWorkouts" WCSession userInfo dict sent by the phone.
+    /// Returns nil if the "workouts" key is absent or the payload is malformed — never crashes.
+    static func decodeFromSyncWorkoutsUserInfo(_ userInfo: [String: Any]) -> [Workout]? {
+        guard let workoutsArray = userInfo["workouts"] as? [[String: Any]],
+              let data = try? JSONSerialization.data(withJSONObject: workoutsArray) else {
+            return nil
+        }
+        return try? JSONDecoder().decode([Workout].self, from: data)
+    }
+}
+
 // MARK: - Standalone Workout Summary (Watch → Phone)
 
 /// Summary sent from Watch to Phone after a standalone workout (no phone control).

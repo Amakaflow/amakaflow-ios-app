@@ -7,28 +7,18 @@
 
 import Foundation
 import Combine
-import WatchConnectivity
 import HealthKit
 import WorkoutKitSync
 
 @MainActor
-class WatchWorkoutManager: NSObject, ObservableObject {
+class WatchWorkoutManager: ObservableObject {
     @Published var workouts: [Workout] = []
     @Published var currentWorkout: Workout?
     @Published var isWorkoutActive = false
-    
-    private var session: WCSession?
-    private let healthStore = HKHealthStore()
-    
-    override init() {
-        super.init()
-        
-        if WCSession.isSupported() {
-            session = WCSession.default
-            session?.delegate = self
-            session?.activate()
-        }
 
+    private let healthStore = HKHealthStore()
+
+    init() {
         // AMA-1797: skip auto-request on simulator so the system HealthKit
         // sheet doesn't block automated end-to-end test runs. Real-device
         // builds still request on launch as before. Auth is also re-checked
@@ -36,6 +26,20 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         #if !targetEnvironment(simulator)
         requestHealthKitPermissions()
         #endif
+    }
+
+    // MARK: - Workout Delivery (AMA-297)
+    // Called by WatchConnectivityBridge — the single WCSessionDelegate — when a
+    // "receiveWorkout" message arrives from the phone.
+
+    func addWorkout(_ workout: Workout) {
+        workouts.append(workout)
+        print("⌚️ Received workout: \(workout.name)")
+    }
+
+    func setWorkouts(_ workouts: [Workout]) {
+        self.workouts = workouts
+        print("⌚️ Synced \(workouts.count) workouts")
     }
     
     // MARK: - HealthKit Permissions
@@ -127,69 +131,4 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
     
-}
-
-// MARK: - WCSessionDelegate
-extension WatchWorkoutManager: WCSessionDelegate {
-    nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
-        if let error = error {
-            print("⌚️ WCSession activation failed: \(error.localizedDescription)")
-        } else {
-            print("⌚️ WCSession activated on watch")
-        }
-    }
-    
-    nonisolated func session(_ session: WCSession, didReceiveMessage message: [String : Any], replyHandler: @escaping ([String : Any]) -> Void) {
-        print("⌚️ Received message: \(message)")
-        
-        if let action = message["action"] as? String {
-            switch action {
-            case "receiveWorkout":
-                // Decode workout from message
-                if let workoutDict = message["workout"] as? [String: Any] {
-                    // Decode in MainActor context to avoid isolation issues
-                    Task { @MainActor in
-                        do {
-                            let workoutData = try JSONSerialization.data(withJSONObject: workoutDict)
-                            let decoder = JSONDecoder()
-                            let workout = try decoder.decode(Workout.self, from: workoutData)
-                            
-                            self.workouts.append(workout)
-                            print("⌚️ Received workout: \(workout.name)")
-                            
-                            replyHandler(["status": "received"])
-                        } catch {
-                            print("⌚️ Failed to decode workout: \(error.localizedDescription)")
-                            replyHandler(["status": "error", "message": error.localizedDescription])
-                        }
-                    }
-                    return
-                }
-                
-            default:
-                replyHandler(["status": "unknown_action"])
-            }
-        }
-    }
-    
-    nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String : Any] = [:]) {
-        // Handle background transfer of workouts
-        if let action = userInfo["action"] as? String, action == "syncWorkouts" {
-            if let workoutsArray = userInfo["workouts"] as? [[String: Any]] {
-                // Decode in MainActor context to avoid isolation issues
-                Task { @MainActor in
-                    do {
-                        let workoutsData = try JSONSerialization.data(withJSONObject: workoutsArray)
-                        let decoder = JSONDecoder()
-                        let workouts = try decoder.decode([Workout].self, from: workoutsData)
-                        
-                        self.workouts = workouts
-                        print("⌚️ Synced \(workouts.count) workouts")
-                    } catch {
-                        print("⌚️ Failed to sync workouts: \(error.localizedDescription)")
-                    }
-                }
-            }
-        }
-    }
 }

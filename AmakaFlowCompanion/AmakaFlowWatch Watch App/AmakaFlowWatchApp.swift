@@ -22,8 +22,9 @@ struct AmakaFlowWatchApp: App {
             .environmentObject(workoutManager)
             .environmentObject(connectivityBridge)
             .onAppear {
-                // Wire up the bridge to route DayState push messages to the view model
+                // Wire up the bridge to route phone push messages to watch state.
                 connectivityBridge.dayStateViewModel = dayStateViewModel
+                connectivityBridge.workoutManager = workoutManager
             }
         }
     }
