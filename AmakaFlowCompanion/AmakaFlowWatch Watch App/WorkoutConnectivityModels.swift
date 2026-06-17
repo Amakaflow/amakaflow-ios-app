@@ -115,3 +115,41 @@ public enum CommandStatus: String, Codable {
     case success
     case error
 }
+
+// MARK: - Standalone Workout Summary (Watch → Phone)
+
+/// Summary sent from Watch to Phone after a standalone workout (no phone control).
+/// Defined here once; compiled into both the AmakaFlowCompanion and AmakaFlowWatch targets.
+public struct StandaloneWorkoutSummary: Codable {
+    public let workoutId: String
+    public let workoutName: String
+    public let startDate: Date
+    public let endDate: Date
+    public let durationSeconds: Int
+    public let totalCalories: Double
+    public let averageHeartRate: Double?
+    public let completedSteps: Int
+    public let totalSteps: Int
+
+    public init(
+        workoutId: String,
+        workoutName: String,
+        startDate: Date,
+        endDate: Date,
+        durationSeconds: Int,
+        totalCalories: Double,
+        averageHeartRate: Double?,
+        completedSteps: Int,
+        totalSteps: Int
+    ) {
+        self.workoutId = workoutId
+        self.workoutName = workoutName
+        self.startDate = startDate
+        self.endDate = endDate
+        self.durationSeconds = durationSeconds
+        self.totalCalories = totalCalories
+        self.averageHeartRate = averageHeartRate
+        self.completedSteps = completedSteps
+        self.totalSteps = totalSteps
+    }
+}

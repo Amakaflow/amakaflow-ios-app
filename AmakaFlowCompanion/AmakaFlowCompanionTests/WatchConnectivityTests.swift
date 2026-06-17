@@ -105,7 +105,7 @@ final class WatchConnectivityTests: XCTestCase {
     // MARK: - WorkoutPhase Tests
 
     func testAllWorkoutPhasesEncodeDecode() throws {
-        let phases: [WorkoutPhase] = [.idle, .running, .paused, .ended]
+        let phases: [WorkoutPhase] = [.idle, .running, .paused, .resting, .ended]
 
         for phase in phases {
             let data = try encoder.encode(phase)
@@ -118,6 +118,7 @@ final class WatchConnectivityTests: XCTestCase {
         XCTAssertEqual(WorkoutPhase.idle.rawValue, "idle")
         XCTAssertEqual(WorkoutPhase.running.rawValue, "running")
         XCTAssertEqual(WorkoutPhase.paused.rawValue, "paused")
+        XCTAssertEqual(WorkoutPhase.resting.rawValue, "resting")
         XCTAssertEqual(WorkoutPhase.ended.rawValue, "ended")
     }
 
@@ -204,7 +205,7 @@ final class WatchConnectivityTests: XCTestCase {
     // MARK: - RemoteCommand Tests
 
     func testAllRemoteCommandsEncodeDecode() throws {
-        let commands: [RemoteCommand] = [.pause, .resume, .nextStep, .previousStep, .end]
+        let commands: [RemoteCommand] = [.pause, .resume, .nextStep, .previousStep, .skipRest, .end]
 
         for command in commands {
             let data = try encoder.encode(command)
@@ -218,6 +219,7 @@ final class WatchConnectivityTests: XCTestCase {
         XCTAssertEqual(RemoteCommand.resume.rawValue, "RESUME")
         XCTAssertEqual(RemoteCommand.nextStep.rawValue, "NEXT_STEP")
         XCTAssertEqual(RemoteCommand.previousStep.rawValue, "PREV_STEP")
+        XCTAssertEqual(RemoteCommand.skipRest.rawValue, "SKIP_REST")
         XCTAssertEqual(RemoteCommand.end.rawValue, "END")
     }
 
@@ -226,6 +228,7 @@ final class WatchConnectivityTests: XCTestCase {
         XCTAssertEqual(RemoteCommand(rawValue: "RESUME"), .resume)
         XCTAssertEqual(RemoteCommand(rawValue: "NEXT_STEP"), .nextStep)
         XCTAssertEqual(RemoteCommand(rawValue: "PREV_STEP"), .previousStep)
+        XCTAssertEqual(RemoteCommand(rawValue: "SKIP_REST"), .skipRest)
         XCTAssertEqual(RemoteCommand(rawValue: "END"), .end)
         XCTAssertNil(RemoteCommand(rawValue: "INVALID"))
     }
@@ -372,5 +375,124 @@ final class WatchConnectivityTests: XCTestCase {
         XCTAssertEqual(decoded.stateVersion, Int.max)
         XCTAssertEqual(decoded.stepIndex, 999)
         XCTAssertEqual(decoded.remainingMs, 3600000)
+    }
+
+    // MARK: - StandaloneWorkoutSummary Round-Trip Tests (JSON-pinning)
+
+    func testStandaloneWorkoutSummaryRoundTrip() throws {
+        let iso8601Encoder = JSONEncoder()
+        iso8601Encoder.dateEncodingStrategy = .iso8601
+        let iso8601Decoder = JSONDecoder()
+        iso8601Decoder.dateDecodingStrategy = .iso8601
+
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let end = Date(timeIntervalSince1970: 1_700_003_600)
+        let summary = StandaloneWorkoutSummary(
+            workoutId: "standalone-abc",
+            workoutName: "Morning Run",
+            startDate: start,
+            endDate: end,
+            durationSeconds: 3600,
+            totalCalories: 420.5,
+            averageHeartRate: 145.0,
+            completedSteps: 5,
+            totalSteps: 6
+        )
+
+        let data = try iso8601Encoder.encode(summary)
+        let decoded = try iso8601Decoder.decode(StandaloneWorkoutSummary.self, from: data)
+
+        XCTAssertEqual(decoded.workoutId, "standalone-abc")
+        XCTAssertEqual(decoded.workoutName, "Morning Run")
+        XCTAssertEqual(decoded.startDate.timeIntervalSince1970, start.timeIntervalSince1970, accuracy: 1)
+        XCTAssertEqual(decoded.endDate.timeIntervalSince1970, end.timeIntervalSince1970, accuracy: 1)
+        XCTAssertEqual(decoded.durationSeconds, 3600)
+        XCTAssertEqual(decoded.totalCalories, 420.5, accuracy: 0.001)
+        XCTAssertEqual(decoded.averageHeartRate, 145.0)
+        XCTAssertEqual(decoded.completedSteps, 5)
+        XCTAssertEqual(decoded.totalSteps, 6)
+    }
+
+    func testStandaloneWorkoutSummaryNilHeartRate() throws {
+        let iso8601Encoder = JSONEncoder()
+        iso8601Encoder.dateEncodingStrategy = .iso8601
+        let iso8601Decoder = JSONDecoder()
+        iso8601Decoder.dateDecodingStrategy = .iso8601
+
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let summary = StandaloneWorkoutSummary(
+            workoutId: "w-no-hr",
+            workoutName: "Strength",
+            startDate: now,
+            endDate: now,
+            durationSeconds: 1800,
+            totalCalories: 200.0,
+            averageHeartRate: nil,
+            completedSteps: 3,
+            totalSteps: 3
+        )
+
+        let data = try iso8601Encoder.encode(summary)
+        let decoded = try iso8601Decoder.decode(StandaloneWorkoutSummary.self, from: data)
+
+        XCTAssertNil(decoded.averageHeartRate)
+        XCTAssertEqual(decoded.completedSteps, 3)
+        XCTAssertEqual(decoded.totalSteps, 3)
+    }
+
+    /// Pins the exact JSON keys the watch encodes — any rename breaks this test,
+    /// making key drift a compile-time-equivalent failure rather than a silent mismatch.
+    func testStandaloneWorkoutSummaryJSONKeysArePinned() throws {
+        let iso8601Encoder = JSONEncoder()
+        iso8601Encoder.dateEncodingStrategy = .iso8601
+
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let summary = StandaloneWorkoutSummary(
+            workoutId: "key-test",
+            workoutName: "Key Test",
+            startDate: now,
+            endDate: now,
+            durationSeconds: 60,
+            totalCalories: 10.0,
+            averageHeartRate: 130.0,
+            completedSteps: 1,
+            totalSteps: 1
+        )
+
+        let data = try iso8601Encoder.encode(summary)
+        let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+        let expectedKeys: Set<String> = [
+            "workoutId", "workoutName", "startDate", "endDate",
+            "durationSeconds", "totalCalories", "averageHeartRate",
+            "completedSteps", "totalSteps"
+        ]
+        XCTAssertEqual(Set(json.keys), expectedKeys, "JSON key set changed — update watch/phone decoders together")
+    }
+
+    /// Legacy compatibility: JSON arriving from an older watch build that omits averageHeartRate
+    /// must decode without error (field is optional).
+    func testStandaloneWorkoutSummaryLegacyPayloadMissingHeartRate() throws {
+        let iso8601Decoder = JSONDecoder()
+        iso8601Decoder.dateDecodingStrategy = .iso8601
+
+        let json = """
+        {
+            "workoutId": "legacy-001",
+            "workoutName": "Legacy Workout",
+            "startDate": "2023-11-14T22:13:20Z",
+            "endDate": "2023-11-14T23:13:20Z",
+            "durationSeconds": 3600,
+            "totalCalories": 350.0,
+            "completedSteps": 4,
+            "totalSteps": 5
+        }
+        """
+
+        let decoded = try iso8601Decoder.decode(StandaloneWorkoutSummary.self, from: json.data(using: .utf8)!)
+
+        XCTAssertEqual(decoded.workoutId, "legacy-001")
+        XCTAssertNil(decoded.averageHeartRate)
+        XCTAssertEqual(decoded.durationSeconds, 3600)
     }
 }

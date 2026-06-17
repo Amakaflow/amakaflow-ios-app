@@ -2,27 +2,13 @@
 //  WorkoutState.swift
 //  AmakaFlow
 //
-//  State models for the workout engine
+//  Phone-only workout engine state: persistence and end reasons.
+//  Wire-contract types (WorkoutState, WorkoutPhase, StepType, RemoteCommand,
+//  CommandAck, CommandStatus, StandaloneWorkoutSummary) live in
+//  WorkoutConnectivityModels.swift which is compiled into both targets.
 //
 
 import Foundation
-
-// MARK: - Workout Phase
-enum WorkoutPhase: String, Codable {
-    case idle
-    case running
-    case paused
-    case resting    // Rest period between steps (manual or timed)
-    case ended
-}
-
-// MARK: - Step Type
-enum StepType: String, Codable {
-    case timed      // Has countdown timer
-    case reps       // Manual completion
-    case distance   // Distance-based
-    case rest       // Rest interval (timed or manual)
-}
 
 // MARK: - End Reason
 enum EndReason: String, Codable {
@@ -67,82 +53,3 @@ struct SavedWorkoutProgress: Codable {
     }
 }
 
-// MARK: - Workout State (for broadcasting)
-struct WorkoutState: Codable {
-    let stateVersion: Int
-    let workoutId: String
-    let workoutName: String
-    let phase: WorkoutPhase
-    let stepIndex: Int
-    let stepCount: Int
-    let stepName: String
-    let stepType: StepType
-    let remainingMs: Int?
-    let roundInfo: String?
-    let targetReps: Int?
-    let lastCommandAck: CommandAck?
-
-    // AMA-286: Weight capture support
-    let setNumber: Int?          // Current set number (1-based)
-    let totalSets: Int?          // Total sets for this exercise
-    let suggestedWeight: Double? // Pre-fill from last logged weight
-    let weightUnit: String?      // "lbs" or "kg"
-
-    init(
-        stateVersion: Int,
-        workoutId: String,
-        workoutName: String,
-        phase: WorkoutPhase,
-        stepIndex: Int,
-        stepCount: Int,
-        stepName: String,
-        stepType: StepType,
-        remainingMs: Int?,
-        roundInfo: String?,
-        targetReps: Int? = nil,
-        lastCommandAck: CommandAck?,
-        setNumber: Int? = nil,
-        totalSets: Int? = nil,
-        suggestedWeight: Double? = nil,
-        weightUnit: String? = nil
-    ) {
-        self.stateVersion = stateVersion
-        self.workoutId = workoutId
-        self.workoutName = workoutName
-        self.phase = phase
-        self.stepIndex = stepIndex
-        self.stepCount = stepCount
-        self.stepName = stepName
-        self.stepType = stepType
-        self.remainingMs = remainingMs
-        self.roundInfo = roundInfo
-        self.targetReps = targetReps
-        self.lastCommandAck = lastCommandAck
-        self.setNumber = setNumber
-        self.totalSets = totalSets
-        self.suggestedWeight = suggestedWeight
-        self.weightUnit = weightUnit
-    }
-}
-
-// MARK: - Command Acknowledgment
-struct CommandAck: Codable {
-    let commandId: String
-    let status: CommandStatus
-    let errorCode: String?
-}
-
-enum CommandStatus: String, Codable {
-    case success
-    case error
-}
-
-// MARK: - Remote Command
-enum RemoteCommand: String, Codable {
-    case pause = "PAUSE"
-    case resume = "RESUME"
-    case nextStep = "NEXT_STEP"
-    case previousStep = "PREV_STEP"
-    case skipRest = "SKIP_REST"
-    case end = "END"
-}
