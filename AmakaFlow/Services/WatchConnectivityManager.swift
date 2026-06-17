@@ -467,10 +467,15 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 sendDayStateToWatch(watchPayload, requestId: requestId)
             } catch {
                 print("⌚️ Failed to fetch day state for watch: \(error)")
-                sendMessageToWatch(
-                    ["action": "dayStateResponse", "status": "error",
-                     "message": error.localizedDescription, "requestId": requestId as Any]
-                )
+                var errorPayload: [String: Any] = [
+                    "action": "dayStateResponse",
+                    "status": "error",
+                    "message": error.localizedDescription
+                ]
+                if let requestId {
+                    errorPayload["requestId"] = requestId
+                }
+                sendMessageToWatch(errorPayload)
             }
         }
     }
@@ -484,10 +489,15 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 sendCoachResponseToWatch(answer: answer, question: question, requestId: requestId)
             } catch {
                 print("⌚️ Failed to get coach answer for watch: \(error)")
-                sendMessageToWatch(
-                    ["action": "coachResponse", "status": "error",
-                     "message": error.localizedDescription, "requestId": requestId as Any]
-                )
+                var errorPayload: [String: Any] = [
+                    "action": "coachResponse",
+                    "status": "error",
+                    "message": error.localizedDescription
+                ]
+                if let requestId {
+                    errorPayload["requestId"] = requestId
+                }
+                sendMessageToWatch(errorPayload)
             }
         }
     }
@@ -503,7 +513,11 @@ extension WatchConnectivityManager: WCSessionDelegate {
     }
 
     private func sendMessageToWatch(_ message: [String: Any]) {
-        guard let session = session, session.isReachable else { return }
+        guard let session = session, session.isReachable else {
+            let action = message["action"] as? String ?? "unknown"
+            print("⌚️ Dropping watch message (\(action)): session unavailable or not reachable")
+            return
+        }
         session.sendMessage(message, replyHandler: nil, errorHandler: { error in
             print("⌚️ Failed to send watch message: \(error)")
         })

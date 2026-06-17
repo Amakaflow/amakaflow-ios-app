@@ -42,8 +42,11 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
 
     // AMA-1150: Per-request callbacks keyed by requestId — prevents a second request
     // from clobbering the first caller's completion (the single-slot bug).
-    private var pendingDayStateCallbacks: [String: (Result<DayState, Error>) -> Void] = [:]
-    private var pendingCoachCallbacks: [String: (Result<CoachResponse, Error>) -> Void] = [:]
+    private typealias DayStatePendingRequest = (callback: (Result<DayState, Error>) -> Void, createdAt: Date)
+    private typealias CoachPendingRequest = (callback: (Result<CoachResponse, Error>) -> Void, createdAt: Date)
+    private var pendingDayStateCallbacks: [String: DayStatePendingRequest] = [:]
+    private var pendingCoachCallbacks: [String: CoachPendingRequest] = [:]
+    private static let requestTimeoutSeconds: TimeInterval = 30
 
     private override init() {
         super.init()
@@ -281,7 +284,8 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
         }
 
         let requestId = UUID().uuidString
-        pendingDayStateCallbacks[requestId] = completion
+        pendingDayStateCallbacks[requestId] = (completion, Date())
+        scheduleDayStateTimeout(for: requestId)
 
         session.sendMessage(
             ["action": DayStateAction.requestDayState.rawValue, "requestId": requestId],
@@ -291,7 +295,7 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
             errorHandler: { [weak self] error in
                 Task { @MainActor in
                     print("⌚️ Failed to request day state: \(error)")
-                    self?.pendingDayStateCallbacks[requestId]?(.failure(error))
+                    self?.pendingDayStateCallbacks[requestId]?.callback(.failure(error))
                     self?.pendingDayStateCallbacks.removeValue(forKey: requestId)
                 }
             }
@@ -310,7 +314,8 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
         }
 
         let requestId = UUID().uuidString
-        pendingCoachCallbacks[requestId] = completion
+        pendingCoachCallbacks[requestId] = (completion, Date())
+        scheduleCoachTimeout(for: requestId)
 
         session.sendMessage(
             [
@@ -324,13 +329,37 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
             errorHandler: { [weak self] error in
                 Task { @MainActor in
                     print("⌚️ Failed to send coach request: \(error)")
-                    self?.pendingCoachCallbacks[requestId]?(.failure(error))
+                    self?.pendingCoachCallbacks[requestId]?.callback(.failure(error))
                     self?.pendingCoachCallbacks.removeValue(forKey: requestId)
                 }
             }
         )
 
         print("⌚️ Sent coach question: \(question) (id=\(requestId))")
+    }
+
+    private func scheduleDayStateTimeout(for requestId: String) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.requestTimeoutSeconds) { [weak self] in
+            Task { @MainActor in
+                guard let self, let pendingRequest = self.pendingDayStateCallbacks[requestId] else { return }
+                let timeoutError = WatchConnectivityBridgeError.commandFailed("Day state request timed out")
+                print("⌚️ Day state request timed out (id=\(requestId), age=\(Date().timeIntervalSince(pendingRequest.createdAt))s)")
+                pendingRequest.callback(.failure(timeoutError))
+                self.pendingDayStateCallbacks.removeValue(forKey: requestId)
+            }
+        }
+    }
+
+    private func scheduleCoachTimeout(for requestId: String) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.requestTimeoutSeconds) { [weak self] in
+            Task { @MainActor in
+                guard let self, let pendingRequest = self.pendingCoachCallbacks[requestId] else { return }
+                let timeoutError = WatchConnectivityBridgeError.commandFailed("Coach request timed out")
+                print("⌚️ Coach request timed out (id=\(requestId), age=\(Date().timeIntervalSince(pendingRequest.createdAt))s)")
+                pendingRequest.callback(.failure(timeoutError))
+                self.pendingCoachCallbacks.removeValue(forKey: requestId)
+            }
+        }
     }
 
     /// Send conflict action (adjust/keep) to the phone
@@ -371,7 +400,7 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
             let error = WatchConnectivityBridgeError.commandFailed(errorMsg)
             print("⌚️ Day state error from phone: \(errorMsg)")
             if let requestId {
-                pendingDayStateCallbacks[requestId]?(.failure(error))
+                pendingDayStateCallbacks[requestId]?.callback(.failure(error))
                 pendingDayStateCallbacks.removeValue(forKey: requestId)
             }
             return
@@ -381,7 +410,7 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
             print("⌚️ Invalid day state push: missing dayState key")
             let error = WatchConnectivityBridgeError.commandFailed("Invalid response")
             if let requestId {
-                pendingDayStateCallbacks[requestId]?(.failure(error))
+                pendingDayStateCallbacks[requestId]?.callback(.failure(error))
                 pendingDayStateCallbacks.removeValue(forKey: requestId)
             }
             return
@@ -393,7 +422,7 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             let dayState = try decoder.decode(DayState.self, from: data)
             if let requestId {
-                pendingDayStateCallbacks[requestId]?(.success(dayState))
+                pendingDayStateCallbacks[requestId]?.callback(.success(dayState))
                 pendingDayStateCallbacks.removeValue(forKey: requestId)
             }
             dayStateViewModel?.handleDayStateUpdate(dayState)
@@ -401,7 +430,7 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
         } catch {
             print("⌚️ Failed to decode day state push: \(error)")
             if let requestId {
-                pendingDayStateCallbacks[requestId]?(.failure(error))
+                pendingDayStateCallbacks[requestId]?.callback(.failure(error))
                 pendingDayStateCallbacks.removeValue(forKey: requestId)
             }
         }
@@ -417,7 +446,7 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
             let error = WatchConnectivityBridgeError.commandFailed(errorMsg)
             print("⌚️ Coach error from phone: \(errorMsg)")
             if let requestId {
-                pendingCoachCallbacks[requestId]?(.failure(error))
+                pendingCoachCallbacks[requestId]?.callback(.failure(error))
                 pendingCoachCallbacks.removeValue(forKey: requestId)
             }
             return
@@ -428,7 +457,7 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
             print("⌚️ Invalid coach response: missing answer or question key")
             let error = WatchConnectivityBridgeError.commandFailed("Invalid response")
             if let requestId {
-                pendingCoachCallbacks[requestId]?(.failure(error))
+                pendingCoachCallbacks[requestId]?.callback(.failure(error))
                 pendingCoachCallbacks.removeValue(forKey: requestId)
             }
             return
@@ -436,7 +465,7 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
 
         let response = CoachResponse(answer: answer, question: question)
         if let requestId {
-            pendingCoachCallbacks[requestId]?(.success(response))
+            pendingCoachCallbacks[requestId]?.callback(.success(response))
             pendingCoachCallbacks.removeValue(forKey: requestId)
         }
         dayStateViewModel?.handleCoachResponse(response)

@@ -27,10 +27,17 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
     private var builder: HKLiveWorkoutBuilder?
 
     // Multicast callbacks for HR updates (supports multiple consumers without clobbering)
-    private var heartRateHandlers: [(Double, Double) -> Void] = []
+    private var heartRateHandlers: [UUID: (Double, Double) -> Void] = [:]
 
-    func addHeartRateHandler(_ handler: @escaping (Double, Double) -> Void) {
-        heartRateHandlers.append(handler)
+    @discardableResult
+    func addHeartRateHandler(_ handler: @escaping (Double, Double) -> Void) -> UUID {
+        let token = UUID()
+        heartRateHandlers[token] = handler
+        return token
+    }
+
+    func removeHeartRateHandler(_ token: UUID) {
+        heartRateHandlers.removeValue(forKey: token)
     }
 
     private override init() {
@@ -136,6 +143,7 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
         isSessionActive = false
         heartRate = 0
         activeCalories = 0
+        heartRateHandlers.removeAll()
     }
 
     func pauseSession() {
@@ -159,7 +167,7 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
             if let value = statistics.mostRecentQuantity()?.doubleValue(for: unit) {
                 heartRate = value
                 print("❤️ HR: \(Int(value)) bpm")
-                heartRateHandlers.forEach { $0(heartRate, activeCalories) }
+                heartRateHandlers.values.forEach { $0(heartRate, activeCalories) }
             }
 
         case HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned):
@@ -167,7 +175,7 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
             if let value = statistics.sumQuantity()?.doubleValue(for: unit) {
                 activeCalories = value
                 print("❤️ Calories: \(Int(value)) kcal")
-                heartRateHandlers.forEach { $0(heartRate, activeCalories) }
+                heartRateHandlers.values.forEach { $0(heartRate, activeCalories) }
             }
 
         default:
