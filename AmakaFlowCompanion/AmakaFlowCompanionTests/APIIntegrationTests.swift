@@ -525,6 +525,43 @@ final class CoachAPIRepositoryEndpointTests: XCTestCase {
         }
     }
 
+    func testGeneratedCoachRoutesUndocumentedStatusLogsAndThrowsServerError() async throws {
+        let routes: [(name: String, path: String, method: String, invoke: () async throws -> Void)] = [
+            ("message", "/v1/coach/message", "POST", { _ = try await self.api.sendCoachMessage(message: "hi", context: nil) }),
+            ("fatigue", "/v1/coach/fatigue-advice", "POST", { _ = try await self.api.getFatigueAdvice(fatigueScore: nil, loadHistory: nil) }),
+            ("memories", "/v1/coach/memories", "GET", { _ = try await self.api.fetchCoachMemories() }),
+            ("suggest", "/v1/coach/suggest-workout", "POST", { _ = try await self.api.suggestWorkout(request: SuggestWorkoutRequest(durationMinutes: nil, focusMuscleGroups: nil, notes: nil)) }),
+            ("rpe", "/v1/coach/rpe-feedback", "POST", { _ = try await self.api.postRPEFeedback(RPEFeedbackRequest(workoutId: "workout-1", rpe: 7, muscleSoreness: nil, notes: nil)) })
+        ]
+
+        for route in routes {
+            await MainActor.run { DebugLogService.shared.clearLog() }
+            MockURLProtocol.reset()
+            logger = RecordingAPIObservabilityLogger()
+            api = APIService(session: MockURLProtocol.mockSession(), observabilityLogger: logger)
+
+            let undocumentedStatus = 418
+            MockURLProtocol.requestHandler = { request in
+                XCTAssertEqual(request.url?.path, route.path, route.name)
+                return (Self.jsonResponse(for: request, statusCode: undocumentedStatus), Data())
+            }
+
+            do {
+                try await route.invoke()
+                XCTFail("Expected \(route.name) route to throw serverError for undocumented status")
+            } catch APIError.serverError(let status) {
+                XCTAssertEqual(status, undocumentedStatus, route.name)
+            } catch {
+                XCTFail("Expected serverError(\(undocumentedStatus)) for \(route.name), got \(error)")
+            }
+
+            let entry = await waitForDebugLogEntry(title: "\(route.method) \(route.path) failed")
+            XCTAssertNotNil(entry, "Expected debug log entry for \(route.name)")
+            XCTAssertEqual(entry?.type, .apiError)
+            XCTAssertEqual(entry?.metadata?["Status"], "\(undocumentedStatus)")
+        }
+    }
+
     func testFetchDayStatesHitsBFFPlanningDaysAndDecodesCamelCaseDayState() async throws {
         MockURLProtocol.requestHandler = { request in
             XCTAssertEqual(request.httpMethod, "GET")
@@ -1161,6 +1198,22 @@ final class CoachAPIRepositoryEndpointTests: XCTestCase {
             data.append(buffer, count: count)
         }
         return data
+    }
+
+    private func waitForDebugLogEntry(
+        title: String,
+        attempts: Int = 20,
+        sleepNanos: UInt64 = 50_000_000
+    ) async -> DebugLogEntry? {
+        for _ in 0..<attempts {
+            if let entry = await MainActor.run(body: {
+                DebugLogService.shared.entries.first(where: { $0.title == title })
+            }) {
+                return entry
+            }
+            try? await Task.sleep(nanoseconds: sleepNanos)
+        }
+        return nil
     }
 
     private static func agentActionJSON(status: String) -> Data {
