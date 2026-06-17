@@ -77,7 +77,7 @@ class ProgramWizardViewModel: ObservableObject {
 
     static let timeOptions = [30, 45, 60, 90]
 
-    init(dependencies: AppDependencies = .live) {
+    init(dependencies: AppDependencies = .current) {
         self.dependencies = dependencies
     }
 

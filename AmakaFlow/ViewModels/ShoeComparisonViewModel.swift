@@ -18,7 +18,7 @@ class ShoeComparisonViewModel: ObservableObject {
     private let apiErrorState = APIErrorState()
     private let dependencies: AppDependencies
 
-    init(dependencies: AppDependencies = .live) {
+    init(dependencies: AppDependencies = .current) {
         self.dependencies = dependencies
     }
 

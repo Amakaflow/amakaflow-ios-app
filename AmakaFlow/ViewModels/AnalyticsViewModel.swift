@@ -69,7 +69,7 @@ class AnalyticsViewModel: ObservableObject {
 
     // MARK: - Initialization
 
-    init(dependencies: AppDependencies = .live) {
+    init(dependencies: AppDependencies = .current) {
         self.dependencies = dependencies
     }
 

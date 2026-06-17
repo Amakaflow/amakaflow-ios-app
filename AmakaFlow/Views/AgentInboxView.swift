@@ -12,7 +12,7 @@ final class AgentInboxViewModel: ObservableObject {
     private let apiErrorState = APIErrorState()
     private let dependencies: AppDependencies
 
-    init(dependencies: AppDependencies = .live) {
+    init(dependencies: AppDependencies = .current) {
         self.dependencies = dependencies
     }
 
@@ -91,7 +91,7 @@ struct AgentInboxView: View {
     let onDismiss: () -> Void
     @StateObject private var viewModel: AgentInboxViewModel
 
-    init(dependencies: AppDependencies = .live, onDismiss: @escaping () -> Void) {
+    init(dependencies: AppDependencies = .current, onDismiss: @escaping () -> Void) {
         self.onDismiss = onDismiss
         _viewModel = StateObject(wrappedValue: AgentInboxViewModel(dependencies: dependencies))
     }

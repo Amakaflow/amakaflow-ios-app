@@ -88,13 +88,14 @@ struct AppDependencies {
         acceptedSuggestionsRepository: AcceptedSuggestionsRepository(),
         workoutEventsRepository: WorkoutEventsRepository(),
         syncQueueRepository: SyncQueueRepository(),
-        syncEngine: SyncEngine.shared
+        syncEngine: SyncEngine()
     )
 
     /// Returns the appropriate dependencies based on environment:
     /// - `.fixture` when UITEST_USE_FIXTURES=true
     /// - `.live` otherwise
-    @MainActor
+    /// nonisolated so it can be used as a default parameter value in
+    /// @MainActor ViewModel inits without requiring a concurrent call site.
     static var current: AppDependencies {
         if UITestEnvironment.shared.useFixtures {
             return .fixture
@@ -102,7 +103,6 @@ struct AppDependencies {
         return .live
     }
     #else
-    @MainActor
     static var current: AppDependencies { .live }
     #endif
 }

@@ -73,7 +73,7 @@ class WorkoutsViewModel: ObservableObject {
     /// Initialize with dependencies for dependency injection
     /// - Parameter dependencies: App dependencies container (defaults to .live for production)
     init(
-        dependencies: AppDependencies = .live
+        dependencies: AppDependencies = .current
     ) {
         self.dependencies = dependencies
 

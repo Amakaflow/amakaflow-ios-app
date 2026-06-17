@@ -67,7 +67,7 @@ class BulkImportViewModel: ObservableObject {
 
     // MARK: - Init
 
-    init(dependencies: AppDependencies = .live) {
+    init(dependencies: AppDependencies = .current) {
         self.dependencies = dependencies
     }
 

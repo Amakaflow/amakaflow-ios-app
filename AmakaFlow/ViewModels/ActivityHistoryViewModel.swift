@@ -94,7 +94,7 @@ class ActivityHistoryViewModel: ObservableObject {
 
     @MainActor
     init(
-        dependencies: AppDependencies = .live,
+        dependencies: AppDependencies = .current,
         nowProvider: @escaping () -> Date = Date.init,
         calendar: Calendar = .current
     ) {
