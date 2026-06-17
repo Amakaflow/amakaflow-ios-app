@@ -118,7 +118,7 @@ public enum CommandStatus: String, Codable {
 
 // MARK: - Workout Delivery Parsing (Phone → Watch)
 
-extension Workout {
+public extension Workout {
     /// Decodes a Workout from a "receiveWorkout" WCSession message dict sent by the phone.
     /// Returns nil if the "workout" key is absent or the payload is malformed — never crashes.
     static func decodeFromReceiveWorkoutMessage(_ message: [String: Any]) -> Workout? {
