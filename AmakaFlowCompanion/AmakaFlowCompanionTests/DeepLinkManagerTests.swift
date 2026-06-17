@@ -178,6 +178,75 @@ final class DeepLinkManagerTests: XCTestCase {
         XCTAssertEqual(action, .unknown)
     }
 
+    // MARK: - Security: https-only + domain allowlist (issue #309)
+
+    @MainActor
+    func testRejectsHTTPSchemeURL() {
+        // http:// must be rejected — only https:// is permitted
+        let encoded = "http://www.youtube.com/watch?v=abc".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+        let url = URL(string: "https://amakaflow.com/import?url=\(encoded)")!
+        let action = sut.parseURL(url)
+        XCTAssertEqual(action, .unknown, "http:// import URLs must be rejected")
+    }
+
+    @MainActor
+    func testRejectsArbitraryHTTPSDomain() {
+        // A valid https:// URL to an unknown domain must be rejected (SSRF surface)
+        let encoded = "https://malicious.example.com/steal".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+        let url = URL(string: "https://amakaflow.com/import?url=\(encoded)")!
+        let action = sut.parseURL(url)
+        XCTAssertEqual(action, .unknown, "Non-allowlisted domain must be rejected")
+    }
+
+    @MainActor
+    func testRejectsGenericWebURL() {
+        // Generic web domains not in the platform allowlist must be rejected
+        let encoded = "https://example.com/workout".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+        let url = URL(string: "https://amakaflow.com/import?url=\(encoded)")!
+        let action = sut.parseURL(url)
+        XCTAssertEqual(action, .unknown, "Generic https:// domain not in allowlist must be rejected")
+    }
+
+    @MainActor
+    func testAllowsAllKnownPlatformDomains() {
+        let allowedURLs: [(String, String)] = [
+            ("https://www.youtube.com/watch?v=abc", "youtube.com"),
+            ("https://m.youtube.com/watch?v=abc", "m.youtube.com"),
+            ("https://youtu.be/abc123", "youtu.be"),
+            ("https://www.instagram.com/reel/abc", "instagram.com"),
+            ("https://m.instagram.com/reel/abc", "m.instagram.com"),
+            ("https://www.tiktok.com/@user/video/123", "tiktok.com"),
+            ("https://m.tiktok.com/@user/video/123", "m.tiktok.com"),
+            ("https://www.pinterest.com/pin/123", "pinterest.com"),
+            ("https://pin.it/abc", "pin.it"),
+            ("https://twitter.com/user/status/123", "twitter.com"),
+            ("https://mobile.twitter.com/user/status/123", "mobile.twitter.com"),
+            ("https://x.com/user/status/123", "x.com"),
+            ("https://www.facebook.com/video/123", "facebook.com"),
+            ("https://m.facebook.com/video/123", "m.facebook.com"),
+            ("https://fb.watch/abc", "fb.watch"),
+            ("https://www.reddit.com/r/fitness/post/123", "reddit.com"),
+            ("https://redd.it/abc", "redd.it"),
+        ]
+        for (importURL, domain) in allowedURLs {
+            let encoded = importURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+            let url = URL(string: "https://amakaflow.com/import?url=\(encoded)")!
+            let action = sut.parseURL(url)
+            XCTAssertEqual(action, .importURL(importURL), "Expected \(domain) to be in the allowlist")
+        }
+    }
+
+    @MainActor
+    func testAllAllowedDomainsAreAccepted() {
+        for domain in DeepLinkManager.allowedImportDomains {
+            let importURL = "https://\(domain)/workout"
+            let encoded = importURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+            let url = URL(string: "https://amakaflow.com/import?url=\(encoded)")!
+            let action = sut.parseURL(url)
+            XCTAssertEqual(action, .importURL(importURL), "Expected allowlisted domain \(domain) to be accepted")
+        }
+    }
+
     @MainActor
     func testRejectsUnknownCustomScheme() {
         let url = URL(string: "otherscheme://import?url=https%3A%2F%2Fyoutu.be%2Fabc")!

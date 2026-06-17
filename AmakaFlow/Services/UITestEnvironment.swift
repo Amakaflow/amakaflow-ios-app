@@ -30,12 +30,7 @@ class UITestEnvironment {
     }
     
     // MARK: - Environment Variable Access
-    
-    /// Check if login bypass is enabled
-    var isLoginBypassEnabled: Bool {
-        Self.isTruthy("UITEST_LOGIN_BYPASS")
-    }
-    
+
     /// Get simulation speed multiplier (1.0 = normal, 2.0 = 2x speed, etc.)
     var simulationSpeed: Double {
         if let speedStr = Self.value(for: "UITEST_SIM_SPEED"),
@@ -109,7 +104,6 @@ class UITestEnvironment {
     func printConfiguration() {
         #if DEBUG
         print("[UITestEnvironment] Configuration:")
-        print("  - Login Bypass: \(isLoginBypassEnabled)")
         print("  - Simulation Speed: \(simulationSpeed)x")
         print("  - Fake Watch: \(useFakeWatchConnectivity)")
         print("  - Fixtures: \(useFixtures)")

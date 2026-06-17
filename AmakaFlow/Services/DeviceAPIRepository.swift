@@ -115,7 +115,6 @@ extension APIService {
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             do {
                 let profileResponse = try decoder.decode(ProfileResponse.self, from: data)
-                print("[APIService] Fetched profile for: \(profileResponse.profile.name ?? profileResponse.profile.email ?? "unknown")")
                 return profileResponse.profile
             } catch {
                 print("[APIService] Profile decoding error: \(error)")

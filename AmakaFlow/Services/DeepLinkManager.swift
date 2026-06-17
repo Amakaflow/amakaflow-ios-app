@@ -148,8 +148,9 @@ final class DeepLinkManager: ObservableObject {
             return .unknown
         }
 
-        // Validate the extracted URL is a valid HTTP(S) URL
-        guard urlParam.lowercased().hasPrefix("http://") || urlParam.lowercased().hasPrefix("https://") else {
+        // Validate the extracted URL: https-only and known platform domain.
+        // Rejects http:// (plaintext), non-allowlisted hosts (SSRF surface).
+        guard isAllowedImportURL(urlParam) else {
             return .unknown
         }
 
@@ -157,6 +158,28 @@ final class DeepLinkManager: ObservableObject {
     }
 
     // MARK: - Helpers
+
+    /// Known platform domains accepted as import URLs.
+    /// Must be kept in sync with DeepLinkImportViewModel.detectPlatform.
+    static let allowedImportDomains: Set<String> = [
+        "youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be",
+        "instagram.com", "www.instagram.com", "m.instagram.com", "instagr.am",
+        "tiktok.com", "www.tiktok.com", "m.tiktok.com",
+        "pinterest.com", "www.pinterest.com", "pin.it",
+        "twitter.com", "www.twitter.com", "mobile.twitter.com", "x.com", "www.x.com", "t.co",
+        "facebook.com", "www.facebook.com", "m.facebook.com", "fb.watch", "fb.com",
+        "reddit.com", "www.reddit.com", "redd.it",
+    ]
+
+    /// Returns true only for https:// URLs whose host is in the allowlist.
+    private func isAllowedImportURL(_ urlString: String) -> Bool {
+        guard let parsed = URL(string: urlString),
+              parsed.scheme?.lowercased() == "https",
+              let host = parsed.host?.lowercased() else {
+            return false
+        }
+        return Self.allowedImportDomains.contains(host)
+    }
 
     /// Check if the URL is a Universal Link from our domains
     private func isAmakaFlowUniversalLink(_ url: URL) -> Bool {
