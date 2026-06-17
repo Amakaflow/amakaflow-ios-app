@@ -54,7 +54,8 @@ class ProgramWizardViewModel: ObservableObject {
     @Published var isErrorRecoverable: Bool = false
 
     private let dependencies: AppDependencies
-    private var streamTask: Task<Void, Never>?
+    // nonisolated(unsafe): accessed in deinit, which can run off MainActor (Swift-6 actor-deinit crash class, #306).
+    nonisolated(unsafe) private var streamTask: Task<Void, Never>?
 
     static let availableEquipment = [
         "barbell", "dumbbells", "kettlebells", "cable machine", "leg press",

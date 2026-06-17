@@ -34,7 +34,8 @@ final class WatchDeliveryViewModel: ObservableObject {
     private let apiService: APIServiceProviding
     private let pollIntervalNanoseconds: UInt64
     private let now: () -> Date
-    private var pollingTask: Task<Void, Never>?
+    // nonisolated(unsafe): accessed in deinit, which can run off MainActor (Swift-6 actor-deinit crash class, #306).
+    nonisolated(unsafe) private var pollingTask: Task<Void, Never>?
     private var currentWorkoutId: String?
 
     init(

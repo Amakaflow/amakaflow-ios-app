@@ -180,6 +180,25 @@ final class ConnectTelegramViewModelTests: XCTestCase {
     XCTAssertEqual(api.mintCallCount, 0)
   }
 
+  // MARK: - Swift-6 Actor-Deinit Safety (#306)
+
+  // Regression: deinit accessed actor-isolated pollingTask, which can crash when ARC releases the
+  // last reference off the MainActor executor (swift_task_deinitOnExecutorImpl). Fix: mark
+  // pollingTask nonisolated(unsafe). This test starts the polling loop then releases the VM without
+  // calling cancel(); reaching the sleep without aborting proves the deinit path is safe.
+  func testDeinitWithActivePollingTaskDoesNotCrash() async throws {
+    api.tokenResponse = tokenResponse()
+    api.statusResponses = Array(
+      repeating: TelegramLinkStatusResponse(linked: false, telegramId: nil, usedAt: nil),
+      count: 20
+    )
+    var viewModel: ConnectTelegramViewModel? = makeViewModel(pollIntervalNanoseconds: 10_000_000)
+    viewModel?.connectTapped()
+    try await waitUntil { viewModel?.state == .connecting }
+    viewModel = nil  // triggers deinit → pollingTask?.cancel() without going through cancel()
+    try await Task.sleep(nanoseconds: 50_000_000)
+  }
+
   private func makeViewModel(
     initialTelegramId: Int? = nil,
     initiallyConnected: Bool = false,

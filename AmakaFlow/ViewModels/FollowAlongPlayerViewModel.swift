@@ -82,8 +82,10 @@ class FollowAlongPlayerViewModel: ObservableObject {
 
     // MARK: - Private
 
-    private var timerCancellable: AnyCancellable?
-    private var playerObserver: Any?
+    // nonisolated(unsafe): accessed in deinit, which can run off MainActor (Swift-6 actor-deinit crash class, #306).
+    // Task.cancel() and NotificationCenter.removeObserver(_:) are both thread-safe at the call site.
+    nonisolated(unsafe) private var timerCancellable: AnyCancellable?
+    nonisolated(unsafe) private var playerObserver: Any?
 
     // MARK: - Init
 
