@@ -324,6 +324,80 @@ final class ClerkTokenRefreshTests: XCTestCase {
                  "clear must defensively wipe legacy storage too")
   }
 
+  // MARK: - AMA-298: shared container mirroring
+
+  func testKeychainPersistenceSaveTokenMirrorsToSharedContainer() {
+    let suiteName = "ClerkTokenRefreshTests.SharedContainer.\(UUID().uuidString)"
+    let sharedDefaults = UserDefaults(suiteName: suiteName)!
+    defer { sharedDefaults.removePersistentDomain(forName: suiteName) }
+
+    let service = "ClerkTokenRefreshTests.\(UUID().uuidString)"
+    let persistence = KeychainClerkTokenPersistence(
+      service: service,
+      account: "clerk_auth_token",
+      legacyDefaults: nil,
+      legacyKey: nil,
+      sharedDefaults: sharedDefaults,
+      sharedDefaultsTokenKey: "auth_token"
+    )
+    defer { persistence.clearClerkToken() }
+
+    let saved = ClerkAuthToken(value: "share-ext-bearer", expiresAt: now.addingTimeInterval(600))
+    persistence.saveClerkToken(saved)
+
+    XCTAssertEqual(sharedDefaults.string(forKey: "auth_token"), "share-ext-bearer",
+                   "raw JWT value must be mirrored to shared container for share extension")
+  }
+
+  func testKeychainPersistenceClearTokenRemovesSharedContainerEntry() {
+    let suiteName = "ClerkTokenRefreshTests.SharedContainer.\(UUID().uuidString)"
+    let sharedDefaults = UserDefaults(suiteName: suiteName)!
+    defer { sharedDefaults.removePersistentDomain(forName: suiteName) }
+
+    let service = "ClerkTokenRefreshTests.\(UUID().uuidString)"
+    let persistence = KeychainClerkTokenPersistence(
+      service: service,
+      account: "clerk_auth_token",
+      legacyDefaults: nil,
+      legacyKey: nil,
+      sharedDefaults: sharedDefaults,
+      sharedDefaultsTokenKey: "auth_token"
+    )
+    persistence.saveClerkToken(
+      ClerkAuthToken(value: "token-to-clear", expiresAt: now.addingTimeInterval(600)))
+    XCTAssertNotNil(sharedDefaults.string(forKey: "auth_token"), "token must be present before clear")
+
+    persistence.clearClerkToken()
+
+    XCTAssertNil(sharedDefaults.string(forKey: "auth_token"),
+                 "shared container auth_token must be removed on clear")
+  }
+
+  func testKeychainPersistenceOverwriteUpdatesSharedContainer() {
+    let suiteName = "ClerkTokenRefreshTests.SharedContainer.\(UUID().uuidString)"
+    let sharedDefaults = UserDefaults(suiteName: suiteName)!
+    defer { sharedDefaults.removePersistentDomain(forName: suiteName) }
+
+    let service = "ClerkTokenRefreshTests.\(UUID().uuidString)"
+    let persistence = KeychainClerkTokenPersistence(
+      service: service,
+      account: "clerk_auth_token",
+      legacyDefaults: nil,
+      legacyKey: nil,
+      sharedDefaults: sharedDefaults,
+      sharedDefaultsTokenKey: "auth_token"
+    )
+    defer { persistence.clearClerkToken() }
+
+    persistence.saveClerkToken(
+      ClerkAuthToken(value: "first-token", expiresAt: now.addingTimeInterval(60)))
+    persistence.saveClerkToken(
+      ClerkAuthToken(value: "second-token", expiresAt: now.addingTimeInterval(600)))
+
+    XCTAssertEqual(sharedDefaults.string(forKey: "auth_token"), "second-token",
+                   "shared container must reflect the most-recently saved token")
+  }
+
   func testUserDefaultsPersistenceRoundTripsToken() {
     let suiteName = "ClerkTokenRefreshTests.\(UUID().uuidString)"
     let defaults = UserDefaults(suiteName: suiteName)!

@@ -25,26 +25,10 @@ struct ShareIngestResponse: Codable {
 }
 
 /// Service that posts URLs to the workout ingestor backend.
-/// Uses a background URLSession so the request survives extension termination.
 final class URLImportService: NSObject {
 
     static let shared = URLImportService()
 
-    /// Completion handler stashed by the system for background session events
-    var backgroundCompletionHandler: (() -> Void)?
-
-    private lazy var backgroundSession: URLSession = {
-        let config = URLSessionConfiguration.background(withIdentifier: "com.amakaflow.share.import")
-        config.sessionSendsLaunchEvents = true
-        config.isDiscretionary = false
-        config.shouldUseExtendedBackgroundIdleMode = true
-        // Share extensions have limited memory — keep timeouts reasonable
-        config.timeoutIntervalForRequest = 60
-        config.timeoutIntervalForResource = 120
-        return URLSession(configuration: config, delegate: self, delegateQueue: nil)
-    }()
-
-    /// Non-background session for immediate inline requests (used when the extension is still alive)
     private lazy var immediateSession: URLSession = {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
@@ -84,21 +68,6 @@ final class URLImportService: NSObject {
         } catch {
             throw ImportError.decodingFailed(error)
         }
-    }
-
-    /// Fire-and-forget import via background session.
-    /// Result will be delivered via delegate callbacks even if the extension is terminated.
-    func importURLInBackground(_ urlString: String, platform: DetectedPlatform) throws {
-        let request = try buildRequest(for: urlString, platform: platform)
-
-        // Stash metadata so we can match the task later
-        let metadata = BackgroundTaskMetadata(url: urlString, platform: platform.name)
-        if let metadataData = try? JSONEncoder().encode(metadata) {
-            UserDefaults(suiteName: SharedContainerManager.suiteName)?
-                .set(metadataData, forKey: "bg_task_\(urlString.hashValue)")
-        }
-
-        backgroundSession.dataTask(with: request).resume()
     }
 
     // MARK: - Request Building
@@ -178,88 +147,6 @@ final class URLImportService: NSObject {
             case .noURLsFound:
                 return "No URLs found in shared content"
             }
-        }
-    }
-}
-
-// MARK: - Background Session Metadata
-
-private struct BackgroundTaskMetadata: Codable {
-    let url: String
-    let platform: String
-}
-
-// MARK: - URLSessionDelegate (background session callbacks)
-
-extension URLImportService: URLSessionDataDelegate {
-
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        let originalURL = task.originalRequest?.url?.absoluteString ?? "unknown"
-
-        if let error {
-            // Network failure
-            let result = SharedContainerManager.ImportResult(
-                url: originalURL,
-                platform: "unknown",
-                title: nil,
-                workoutType: nil,
-                success: false,
-                errorMessage: error.localizedDescription,
-                timestamp: Date()
-            )
-            SharedContainerManager.saveImportResult(result)
-
-            URLImportService.sendLocalNotification(
-                title: "Import Failed",
-                body: "Could not import workout: \(error.localizedDescription)",
-                success: false
-            )
-        }
-
-        backgroundCompletionHandler?()
-        backgroundCompletionHandler = nil
-    }
-
-    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
-        let originalURL = dataTask.originalRequest?.url?.absoluteString ?? "unknown"
-        let statusCode = (dataTask.response as? HTTPURLResponse)?.statusCode ?? 0
-
-        if (200..<300).contains(statusCode) {
-            let response = try? JSONDecoder().decode(ShareIngestResponse.self, from: data)
-            let result = SharedContainerManager.ImportResult(
-                url: originalURL,
-                platform: response?.source ?? "unknown",
-                title: response?.title,
-                workoutType: response?.workoutType,
-                success: true,
-                errorMessage: nil,
-                timestamp: Date()
-            )
-            SharedContainerManager.saveImportResult(result)
-
-            URLImportService.sendLocalNotification(
-                title: "Workout Imported",
-                body: response?.title ?? "Workout imported successfully",
-                success: true
-            )
-        } else {
-            let body = String(data: data, encoding: .utf8) ?? ""
-            let result = SharedContainerManager.ImportResult(
-                url: originalURL,
-                platform: "unknown",
-                title: nil,
-                workoutType: nil,
-                success: false,
-                errorMessage: "Server error (\(statusCode)): \(body.prefix(200))",
-                timestamp: Date()
-            )
-            SharedContainerManager.saveImportResult(result)
-
-            URLImportService.sendLocalNotification(
-                title: "Import Failed",
-                body: "Server returned error \(statusCode)",
-                success: false
-            )
         }
     }
 }

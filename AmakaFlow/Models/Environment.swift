@@ -42,6 +42,9 @@ enum AppEnvironment: String, CaseIterable {
         }
         set {
             UserDefaults.standard.set(newValue.rawValue, forKey: environmentKey)
+            // Mirror to App Group container so the share extension picks up the active environment.
+            UserDefaults(suiteName: "group.com.amakaflow.companion")?
+                .set(newValue.rawValue, forKey: "app_environment")
         }
     }
 
