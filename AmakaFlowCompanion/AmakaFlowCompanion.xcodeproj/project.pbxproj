@@ -383,6 +383,7 @@
 		V01C301900000000000000 /* VoiceWorkoutReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = V01C300900000000000000 /* VoiceWorkoutReviewView.swift */; };
 		W41T1NG000000002C0000002 /* WaitingForWatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = W41T1NG000000001B0000001 /* WaitingForWatchView.swift */; };
 		XCT4H34LTH00000001 /* XCTHealthKit in Frameworks */ = {isa = PBXBuildFile; productRef = XCT4H34LTH00000002 /* XCTHealthKit */; };
+		AMA313WRCMODELBLD /* WorkoutConnectivityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA313WRCMODELREF /* WorkoutConnectivityModels.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -832,6 +833,7 @@
 		V01C300800000000000000 /* TranscriptionReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/TranscriptionReviewView.swift; sourceTree = SOURCE_ROOT; };
 		V01C300900000000000000 /* VoiceWorkoutReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceWorkoutReviewView.swift; path = ../AmakaFlow/Views/VoiceWorkout/VoiceWorkoutReviewView.swift; sourceTree = SOURCE_ROOT; };
 		W41T1NG000000001B0000001 /* WaitingForWatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WaitingForWatchView.swift; path = ../AmakaFlow/Views/Components/WaitingForWatchView.swift; sourceTree = SOURCE_ROOT; };
+		AMA313WRCMODELREF /* WorkoutConnectivityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutConnectivityModels.swift; path = "AmakaFlowWatch Watch App/WorkoutConnectivityModels.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -1793,6 +1795,7 @@
 				F84E22782ED0D59B00459747 /* SettingsView.swift in Sources */,
 				F84E22792ED0D59B00459747 /* WorkoutDetailView.swift in Sources */,
 				F84E227A2ED0D59B00459747 /* WorkoutsView.swift in Sources */,
+				AMA313WRCMODELBLD /* WorkoutConnectivityModels.swift in Sources */,
 				F85C4F6DCDE4544563BA4983 /* WorkoutState.swift in Sources */,
 				F8654CAC3BB541420480C602 /* FlattenedInterval.swift in Sources */,
 				F85318ABF59B874E5BB8013B /* WorkoutEngine.swift in Sources */,

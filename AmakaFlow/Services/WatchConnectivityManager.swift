@@ -630,19 +630,6 @@ extension WatchConnectivityManager: WCSessionDelegate {
     }
 }
 
-// MARK: - Standalone Workout Summary (from Watch)
-struct StandaloneWorkoutSummary: Codable {
-    let workoutId: String
-    let workoutName: String
-    let startDate: Date
-    let endDate: Date
-    let durationSeconds: Int
-    let totalCalories: Double
-    let averageHeartRate: Double?
-    let completedSteps: Int
-    let totalSteps: Int
-}
-
 // MARK: - Heart Rate Sample (for sparkline chart)
 struct HeartRateSample: Identifiable {
     let id = UUID()
