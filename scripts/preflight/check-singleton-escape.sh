@@ -14,7 +14,16 @@
 
 set -euo pipefail
 
-ROOT="${1:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+if [[ "${1:-}" == "--root" ]]; then
+    if [[ -z "${2:-}" ]]; then
+        echo "Usage: $0 [--root <dir>]"
+        exit 2
+    fi
+    ROOT="$2"
+elif [[ -n "${1:-}" ]]; then
+    ROOT="$1"
+fi
 cd "$ROOT"
 
 # Services fully managed by AppDependencies — .shared must not appear outside
@@ -26,7 +35,7 @@ MANAGED_SERVICES=(
 # Files allowed to reference these .shared singletons (the seam itself + @main).
 ALLOWLIST_PATHS=(
     "AmakaFlow/DependencyInjection/AppDependencies.swift"
-    "AmakaFlowCompanion/AmakaFlowCompanion/AmakaFlowApp.swift"
+    "AmakaFlow/AmakaFlowApp.swift"
     "AmakaFlowCompanion/AmakaFlowCompanionTests/"
 )
 
