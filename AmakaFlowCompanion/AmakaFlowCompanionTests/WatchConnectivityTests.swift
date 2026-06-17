@@ -553,4 +553,106 @@ final class WatchConnectivityTests: XCTestCase {
         XCTAssertNil(Workout.decodeFromSyncWorkoutsUserInfo(userInfo),
                      "Missing 'workouts' key must return nil, not crash")
     }
+
+    // MARK: - Issue 301: Watch Connectivity Race Fixes
+
+    // --- HR buffer cap (AMA-301 fix 5) ---
+
+    func testHeartRateSamplesCappedAt120() {
+        let manager = WatchConnectivityManager()
+        // Feed 200 samples — must not grow past the cap
+        for i in 0..<200 {
+            let message: [String: Any] = [
+                "action": "healthMetrics",
+                "heartRate": Double(i),
+                "activeCalories": 0.0
+            ]
+            manager.handleHealthMetrics(message)
+        }
+        // handleHealthMetrics dispatches to main; drain the queue before asserting
+        let exp = expectation(description: "main queue drained")
+        DispatchQueue.main.async { exp.fulfill() }
+        wait(for: [exp], timeout: 1.0)
+
+        XCTAssertLessThanOrEqual(
+            manager.heartRateSamples.count, WatchConnectivityManager.maxHeartRateSamples,
+            "heartRateSamples must be bounded to avoid unbounded memory growth"
+        )
+    }
+
+    func testHeartRateSamplesRetainsNewestEntries() {
+        let manager = WatchConnectivityManager()
+        for i in 0..<150 {
+            manager.handleHealthMetrics(["action": "healthMetrics", "heartRate": Double(i), "activeCalories": 0.0])
+        }
+        let exp = expectation(description: "main queue drained")
+        DispatchQueue.main.async { exp.fulfill() }
+        wait(for: [exp], timeout: 1.0)
+
+        XCTAssertEqual(manager.heartRateSamples.count, WatchConnectivityManager.maxHeartRateSamples)
+        // The last retained sample should be the most recently appended value (hr=149)
+        XCTAssertEqual(manager.heartRateSamples.last?.value, 149)
+    }
+
+    // --- DayStateConflictResponse codable round-trip (AMA-301 fix 4) ---
+
+    func testDayStateConflictResponseCodableRoundTrip() throws {
+        let conflict = DayStateConflictResponse(
+            message: "Hard session tomorrow may affect recovery",
+            severity: "warning",
+            suggestedAction: "Consider scaling back today"
+        )
+        let data = try encoder.encode(conflict)
+        let decoded = try decoder.decode(DayStateConflictResponse.self, from: data)
+
+        XCTAssertEqual(decoded.message, conflict.message)
+        XCTAssertEqual(decoded.severity, conflict.severity)
+        XCTAssertEqual(decoded.suggestedAction, conflict.suggestedAction)
+    }
+
+    func testDayStateConflictResponseNilSuggestedAction() throws {
+        let json = """
+        {"message": "Rest recommended", "severity": "critical"}
+        """
+        let decoded = try decoder.decode(DayStateConflictResponse.self, from: json.data(using: .utf8)!)
+        XCTAssertEqual(decoded.message, "Rest recommended")
+        XCTAssertEqual(decoded.severity, "critical")
+        XCTAssertNil(decoded.suggestedAction)
+    }
+
+    // --- DayStateResponse passes through conflictAlert (AMA-301 fix 4) ---
+
+    func testDayStateResponseWithConflictAlertRoundTrip() throws {
+        let conflict = DayStateConflictResponse(
+            message: "Back-to-back hard sessions",
+            severity: "warning",
+            suggestedAction: nil
+        )
+        let response = DayStateResponse(
+            date: "2026-06-17",
+            readinessScore: 72,
+            readinessLabel: "ready",
+            sessions: [],
+            conflictAlert: conflict
+        )
+        let data = try encoder.encode(response)
+        let decoded = try decoder.decode(DayStateResponse.self, from: data)
+
+        XCTAssertNotNil(decoded.conflictAlert, "conflictAlert must survive encode/decode round-trip")
+        XCTAssertEqual(decoded.conflictAlert?.message, "Back-to-back hard sessions")
+        XCTAssertEqual(decoded.conflictAlert?.severity, "warning")
+    }
+
+    func testDayStateResponseNilConflictAlertPreserved() throws {
+        let response = DayStateResponse(
+            date: "2026-06-17",
+            readinessScore: 80,
+            readinessLabel: "ready",
+            sessions: [],
+            conflictAlert: nil
+        )
+        let data = try encoder.encode(response)
+        let decoded = try decoder.decode(DayStateResponse.self, from: data)
+        XCTAssertNil(decoded.conflictAlert)
+    }
 }
