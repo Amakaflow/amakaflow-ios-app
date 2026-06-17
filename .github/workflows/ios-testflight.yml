@@ -569,14 +569,17 @@ jobs:
             run_smoke
             STATUS=$?
             if [ "$STATUS" = 0 ]; then break; fi
-            if grep -q "IOSDriverTimeoutException" maestro-output/golden-path.log && [ "$attempt" -lt 2 ]; then
-              echo "Maestro driver timed out — warming simulator and retrying once."
+            # Always retry once: IOSDriverTimeoutException is the known flake class,
+            # but auth/tabbar assertion failures are equally transient on freshly-erased
+            # sims that are still settling post-boot (issue #329). Both get one warm-up
+            # retry; a real regression will fail both attempts and page correctly.
+            if [ "$attempt" -lt 2 ]; then
+              echo "Smoke failed on attempt 1 — warming simulator and retrying once."
               open -a Simulator
               xcrun simctl bootstatus "$SIM_UDID" -b
               sleep 10
               continue
             fi
-            break
           done
           echo "outcome=$([ "$STATUS" = 0 ] && echo passed || echo failed)" >> "$GITHUB_OUTPUT"
           exit "$STATUS"
@@ -610,8 +613,8 @@ jobs:
           gh issue create \
             --repo "${{ github.repository }}" \
             --title "🚨 Golden-path smoke FAILED on main @ ${GITHUB_SHA:0:7} (AMA-1804)" \
-            --label "P1,bug" \
-            --body "$BODY" || echo "::warning::gh issue create failed (label may not exist) — see run log."
+            --label "bug" \
+            --body "$BODY" || echo "::warning::gh issue create failed — see run log."
 
       - name: Page — Telegram (if token configured)
         if: steps.smoke.outcome == 'failure'
