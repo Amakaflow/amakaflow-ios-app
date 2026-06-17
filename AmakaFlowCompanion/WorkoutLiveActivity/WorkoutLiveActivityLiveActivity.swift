@@ -77,8 +77,9 @@ struct LockScreenView: View {
             // Right: Timer or step count
             VStack(alignment: .trailing, spacing: 4) {
                 if context.state.isTimedStep {
-                    if let deadline = context.state.stepDeadline, !context.state.isPaused {
-                        Text(timerInterval: Date.now...deadline, countsDown: true)
+                    let now = Date.now
+                    if let deadline = context.state.stepDeadline, !context.state.isPaused, deadline > now {
+                        Text(timerInterval: now...deadline, countsDown: true)
                             .font(.title)
                             .fontWeight(.bold)
                             .monospacedDigit()
@@ -122,8 +123,9 @@ struct CompactTrailingView: View {
 
     var body: some View {
         if context.state.isTimedStep {
-            if let deadline = context.state.stepDeadline, !context.state.isPaused {
-                Text(timerInterval: Date.now...deadline, countsDown: true)
+            let now = Date.now
+            if let deadline = context.state.stepDeadline, !context.state.isPaused, deadline > now {
+                Text(timerInterval: now...deadline, countsDown: true)
                     .font(.caption)
                     .fontWeight(.semibold)
                     .monospacedDigit()
@@ -178,8 +180,9 @@ struct ExpandedTrailingView: View {
     var body: some View {
         VStack(alignment: .trailing, spacing: 2) {
             if context.state.isTimedStep {
-                if let deadline = context.state.stepDeadline, !context.state.isPaused {
-                    Text(timerInterval: Date.now...deadline, countsDown: true)
+                let now = Date.now
+                if let deadline = context.state.stepDeadline, !context.state.isPaused, deadline > now {
+                    Text(timerInterval: now...deadline, countsDown: true)
                         .font(.title2)
                         .fontWeight(.bold)
                         .monospacedDigit()

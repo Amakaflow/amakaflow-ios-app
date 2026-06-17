@@ -64,6 +64,7 @@ final class LiveActivityManager {
     static let shared = LiveActivityManager()
 
     private var currentActivity: Activity<WorkoutActivityAttributes>?
+    private var startTask: Task<Void, Never>?
 
     private init() {}
 
@@ -94,10 +95,6 @@ final class LiveActivityManager {
         currentActivity = nil
 
         let attributes = WorkoutActivityAttributes(workoutId: workoutId, workoutName: workoutName)
-        let content = ActivityContent(
-            state: initialState,
-            staleDate: initialState.activityStaleDate
-        )
 
         print("🔵 Requesting new Live Activity for workout: \(workoutName)")
         print("🔵 Initial state: step=\(initialState.stepName), phase=\(initialState.phase)")
@@ -105,7 +102,9 @@ final class LiveActivityManager {
         // AMA-1324: Activity.request() can block the main thread for 2000ms+ via synchronous XPC.
         // Dispatch to background. Teardown and creation run in a SINGLE task to prevent the
         // old-end/new-request race that produced zombie lock-screen activities (issue #308).
-        Task.detached {
+        let previousStartTask = startTask
+        startTask = Task.detached {
+            await previousStartTask?.value
             // 1. End the previously tracked activity (serialized — must complete before request).
             if let tracked = trackedActivity {
                 print("🔵 Ending tracked activity: \(tracked.id)")
@@ -117,6 +116,10 @@ final class LiveActivityManager {
                 await activity.end(nil, dismissalPolicy: .immediate)
             }
             // 3. All teardown complete — safe to request new activity.
+            let content = ActivityContent(
+                state: initialState,
+                staleDate: initialState.activityStaleDate
+            )
             do {
                 let activity = try Activity.request(
                     attributes: attributes,
