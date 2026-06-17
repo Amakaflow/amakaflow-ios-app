@@ -98,3 +98,16 @@ jobs:
         run: |
           chmod +x scripts/preflight/check-info-plist.sh
           ./scripts/preflight/check-info-plist.sh "${{ steps.locate.outputs.plist }}"
+
+  check-singleton-escape:
+    name: No .shared singletons outside AppDependencies seam
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Enforce AppDependencies seam
+        run: |
+          chmod +x scripts/preflight/check-singleton-escape.sh
+          ./scripts/preflight/check-singleton-escape.sh

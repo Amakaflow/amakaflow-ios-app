@@ -46,7 +46,7 @@ class VolumeAnalyticsViewModel: ObservableObject {
         return f
     }()
 
-    init(dependencies: AppDependencies = .live) {
+    init(dependencies: AppDependencies = .current) {
         self.dependencies = dependencies
     }
 

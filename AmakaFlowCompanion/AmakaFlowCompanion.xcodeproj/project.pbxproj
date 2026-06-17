@@ -142,6 +142,7 @@
 		AK00TST002B /* ActivityHistoryViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST002A /* ActivityHistoryViewModelTests.swift */; };
 		AMA291RC004BLD /* SubscriptionAccessViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA291RC004REF /* SubscriptionAccessViewModelTests.swift */; };
 		AMA307CVMSTREAMTSTBLD /* CoachViewModelStreamingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA307CVMSTREAMTSTREF /* CoachViewModelStreamingTests.swift */; };
+		AMA314APPD3PSBLD /* AppDependenciesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA314APPD3PSREF /* AppDependenciesTests.swift */; };
 		AK00TST003B /* AmakaFlowCompanionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST003A /* AmakaFlowCompanionTests.swift */; };
 		AK00TST004B /* APIIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST004A /* APIIntegrationTests.swift */; };
 		AK00TST005B /* CompletionDetailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00TST005A /* CompletionDetailTests.swift */; };
@@ -595,6 +596,7 @@
 		AK00TST002A /* ActivityHistoryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivityHistoryViewModelTests.swift; path = AmakaFlowCompanionTests/ActivityHistoryViewModelTests.swift; sourceTree = "<group>"; };
 		AMA291RC004REF /* SubscriptionAccessViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SubscriptionAccessViewModelTests.swift; path = AmakaFlowCompanionTests/SubscriptionAccessViewModelTests.swift; sourceTree = "<group>"; };
 		AMA307CVMSTREAMTSTREF /* CoachViewModelStreamingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CoachViewModelStreamingTests.swift; path = AmakaFlowCompanionTests/CoachViewModelStreamingTests.swift; sourceTree = "<group>"; };
+		AMA314APPD3PSREF /* AppDependenciesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDependenciesTests.swift; path = AmakaFlowCompanionTests/AppDependenciesTests.swift; sourceTree = "<group>"; };
 		AK00TST003A /* AmakaFlowCompanionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AmakaFlowCompanionTests.swift; path = AmakaFlowCompanionTests/AmakaFlowCompanionTests.swift; sourceTree = "<group>"; };
 		AK00TST004A /* APIIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIIntegrationTests.swift; path = AmakaFlowCompanionTests/APIIntegrationTests.swift; sourceTree = "<group>"; };
 		AK00TST005A /* CompletionDetailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CompletionDetailTests.swift; path = AmakaFlowCompanionTests/CompletionDetailTests.swift; sourceTree = "<group>"; };
@@ -1386,6 +1388,7 @@
 				AK00TST024A /* WorkoutsViewModelTests.swift */,
 				AK00TST025A /* XPBarViewTests.swift */,
 				96BF60E98CCB044FBF23EB80 /* ShareExtensionTests.swift */,
+				AMA314APPD3PSREF /* AppDependenciesTests.swift */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -2095,6 +2098,7 @@
 				688E97FB5938812BF52882A0 /* ShareExtensionTests.swift in Sources */,
 				A469F200B85B870CA8481098 /* ShareImportViewModel.swift in Sources */,
 				AMA307CVMSTREAMTSTBLD /* CoachViewModelStreamingTests.swift in Sources */,
+				AMA314APPD3PSBLD /* AppDependenciesTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

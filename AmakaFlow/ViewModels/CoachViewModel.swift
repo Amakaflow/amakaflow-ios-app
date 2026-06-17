@@ -59,7 +59,7 @@ class CoachViewModel: ObservableObject {
 
     // MARK: - Init
 
-    init(dependencies: AppDependencies = .live) {
+    init(dependencies: AppDependencies = .current) {
         self.dependencies = dependencies
         let initialUserId = dependencies.pairingService.userProfile?.id ?? "unknown"
         boundSessionUserId = initialUserId

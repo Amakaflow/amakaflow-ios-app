@@ -86,7 +86,7 @@ class CompletionDetailViewModel: ObservableObject {
     // MARK: - Initialization
 
     @MainActor
-    init(completionId: String, dependencies: AppDependencies = .live) {
+    init(completionId: String, dependencies: AppDependencies = .current) {
         self.completionId = completionId
         self.dependencies = dependencies
     }

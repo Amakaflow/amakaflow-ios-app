@@ -23,7 +23,7 @@ class LeaderboardViewModel: ObservableObject {
 
     private let dependencies: AppDependencies
 
-    init(dependencies: AppDependencies = .live, crewId: String? = nil) {
+    init(dependencies: AppDependencies = .current, crewId: String? = nil) {
         self.dependencies = dependencies
         self.crewId = crewId
     }

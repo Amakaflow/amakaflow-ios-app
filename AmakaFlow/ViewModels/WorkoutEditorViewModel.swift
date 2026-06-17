@@ -39,13 +39,13 @@ class WorkoutEditorViewModel: ObservableObject {
     // MARK: - Init
 
     /// Create mode — empty workout
-    init(dependencies: AppDependencies = .live) {
+    init(dependencies: AppDependencies = .current) {
         self.dependencies = dependencies
         self.existingWorkoutId = nil
     }
 
     /// Edit mode — populate from existing workout
-    init(workout: Workout, dependencies: AppDependencies = .live) {
+    init(workout: Workout, dependencies: AppDependencies = .current) {
         self.dependencies = dependencies
         self.existingWorkoutId = workout.id
         self.name = workout.name

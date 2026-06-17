@@ -39,7 +39,7 @@ class FatigueHistoryViewModel: ObservableObject {
     private let syncHealthKitHRV: () async -> HealthKitHRVSyncResult
 
     init(
-        dependencies: AppDependencies = .live,
+        dependencies: AppDependencies = .current,
         syncHealthKitHRV: @escaping () async -> HealthKitHRVSyncResult = {
             await HealthKitHRVService.shared.syncRecentHRV()
         }

@@ -230,7 +230,7 @@ class SuggestWorkoutViewModel: ObservableObject {
     private let dependencies: AppDependencies
     private static let profileKey = DefaultsKey.suggestedWorkoutCoachingProfile.rawValue
 
-    init(dependencies: AppDependencies = .live) {
+    init(dependencies: AppDependencies = .current) {
         self.dependencies = dependencies
     }
 

@@ -121,7 +121,7 @@ class RPEFeedbackViewModel: ObservableObject {
 
     // MARK: - Init
 
-    init(workoutId: String?, onComplete: (() -> Void)? = nil, dependencies: AppDependencies = .live) {
+    init(workoutId: String?, onComplete: (() -> Void)? = nil, dependencies: AppDependencies = .current) {
         self.workoutId = workoutId
         self.onComplete = onComplete
         self.dependencies = dependencies
