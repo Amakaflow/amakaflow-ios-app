@@ -26,8 +26,12 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
     private var session: HKWorkoutSession?
     private var builder: HKLiveWorkoutBuilder?
 
-    // Callback for sending HR updates to phone
-    var onHeartRateUpdate: ((Double, Double) -> Void)?
+    // Multicast callbacks for HR updates (supports multiple consumers without clobbering)
+    private var heartRateHandlers: [(Double, Double) -> Void] = []
+
+    func addHeartRateHandler(_ handler: @escaping (Double, Double) -> Void) {
+        heartRateHandlers.append(handler)
+    }
 
     private override init() {
         super.init()
@@ -155,7 +159,7 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
             if let value = statistics.mostRecentQuantity()?.doubleValue(for: unit) {
                 heartRate = value
                 print("❤️ HR: \(Int(value)) bpm")
-                onHeartRateUpdate?(heartRate, activeCalories)
+                heartRateHandlers.forEach { $0(heartRate, activeCalories) }
             }
 
         case HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned):
@@ -163,7 +167,7 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
             if let value = statistics.sumQuantity()?.doubleValue(for: unit) {
                 activeCalories = value
                 print("❤️ Calories: \(Int(value)) kcal")
-                onHeartRateUpdate?(heartRate, activeCalories)
+                heartRateHandlers.forEach { $0(heartRate, activeCalories) }
             }
 
         default:

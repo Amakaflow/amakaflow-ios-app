@@ -85,11 +85,10 @@ final class StandaloneWorkoutEngine: ObservableObject {
     // MARK: - HealthKit Integration
 
     private func setupHealthKitBindings() {
-        healthManager.onHeartRateUpdate = { [weak self] hr, calories in
+        healthManager.addHeartRateHandler { [weak self] hr, calories in
             Task { @MainActor in
                 self?.heartRate = hr
                 self?.activeCalories = calories
-                // Track samples for average calculation
                 if hr > 0 {
                     self?.averageHeartRateSamples.append(hr)
                 }

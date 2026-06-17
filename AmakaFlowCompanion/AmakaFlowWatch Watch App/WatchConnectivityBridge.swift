@@ -35,13 +35,15 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
     weak var workoutManager: WatchWorkoutManager?
 
     private(set) var session: WCSession?
-    private var pendingCommandId: String?
+    // Track multiple in-flight commands so rapid sends don't clobber each other
+    private var pendingCommandIds: Set<String> = []
     private var healthManager = HealthKitWorkoutManager.shared
     private var hrUpdateTimer: Timer?
 
-    // AMA-1150: Pending callbacks for DayState request/response
-    private var dayStateCallback: ((Result<DayState, Error>) -> Void)?
-    private var coachCallback: ((Result<CoachResponse, Error>) -> Void)?
+    // AMA-1150: Per-request callbacks keyed by requestId — prevents a second request
+    // from clobbering the first caller's completion (the single-slot bug).
+    private var pendingDayStateCallbacks: [String: (Result<DayState, Error>) -> Void] = [:]
+    private var pendingCoachCallbacks: [String: (Result<CoachResponse, Error>) -> Void] = [:]
 
     private override init() {
         super.init()
@@ -59,14 +61,14 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
             isSessionActivated = true  // Allow view to proceed, will show disconnected
         }
 
-        // Subscribe to health updates
+        // Register for health updates (addHeartRateHandler appends — no single-slot clobber)
         setupHealthKitBindings()
     }
 
     // MARK: - HealthKit Integration
 
     private func setupHealthKitBindings() {
-        healthManager.onHeartRateUpdate = { [weak self] hr, calories in
+        healthManager.addHeartRateHandler { [weak self] hr, calories in
             Task { @MainActor in
                 self?.heartRate = hr
                 self?.activeCalories = calories
@@ -140,7 +142,7 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
         }
 
         let commandId = UUID().uuidString
-        pendingCommandId = commandId
+        pendingCommandIds.insert(commandId)
         pendingCommand = command.rawValue
 
         session.sendMessage(
@@ -267,7 +269,10 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
 
     // MARK: - DayState Communication (AMA-1150)
 
-    /// Request today's DayState from the phone (phone calls backend API and relays response)
+    /// Request today's DayState from the phone.
+    /// The phone acks immediately to avoid WCSession reply-handler timeout, then
+    /// pushes the actual result via a "dayStateResponse" message that includes the
+    /// requestId so the correct callback can be resolved.
     func sendDayStateRequest(completion: @escaping (Result<DayState, Error>) -> Void) {
         guard let session = session, session.isReachable else {
             print("⌚️ Phone not reachable, cannot request day state")
@@ -275,28 +280,28 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
             return
         }
 
-        dayStateCallback = completion
+        let requestId = UUID().uuidString
+        pendingDayStateCallbacks[requestId] = completion
 
         session.sendMessage(
-            ["action": DayStateAction.requestDayState.rawValue],
-            replyHandler: { [weak self] reply in
-                Task { @MainActor in
-                    self?.handleDayStateReply(reply)
-                }
+            ["action": DayStateAction.requestDayState.rawValue, "requestId": requestId],
+            replyHandler: { _ in
+                // Phone acked: the real data arrives via dayStateResponse message
             },
             errorHandler: { [weak self] error in
                 Task { @MainActor in
                     print("⌚️ Failed to request day state: \(error)")
-                    self?.dayStateCallback?(.failure(error))
-                    self?.dayStateCallback = nil
+                    self?.pendingDayStateCallbacks[requestId]?(.failure(error))
+                    self?.pendingDayStateCallbacks.removeValue(forKey: requestId)
                 }
             }
         )
 
-        print("⌚️ Sent day state request")
+        print("⌚️ Sent day state request (id=\(requestId))")
     }
 
-    /// Ask the AI coach a question via the phone bridge
+    /// Ask the AI coach a question via the phone bridge.
+    /// Same ack-fast-then-push pattern as sendDayStateRequest.
     func sendCoachRequest(question: String, completion: @escaping (Result<CoachResponse, Error>) -> Void) {
         guard let session = session, session.isReachable else {
             print("⌚️ Phone not reachable, cannot ask coach")
@@ -304,28 +309,28 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
             return
         }
 
-        coachCallback = completion
+        let requestId = UUID().uuidString
+        pendingCoachCallbacks[requestId] = completion
 
         session.sendMessage(
             [
                 "action": DayStateAction.requestCoachAnswer.rawValue,
-                "question": question
+                "question": question,
+                "requestId": requestId
             ],
-            replyHandler: { [weak self] reply in
-                Task { @MainActor in
-                    self?.handleCoachReply(reply)
-                }
+            replyHandler: { _ in
+                // Phone acked: the real answer arrives via coachResponse message
             },
             errorHandler: { [weak self] error in
                 Task { @MainActor in
                     print("⌚️ Failed to send coach request: \(error)")
-                    self?.coachCallback?(.failure(error))
-                    self?.coachCallback = nil
+                    self?.pendingCoachCallbacks[requestId]?(.failure(error))
+                    self?.pendingCoachCallbacks.removeValue(forKey: requestId)
                 }
             }
         )
 
-        print("⌚️ Sent coach question: \(question)")
+        print("⌚️ Sent coach question: \(question) (id=\(requestId))")
     }
 
     /// Send conflict action (adjust/keep) to the phone
@@ -352,51 +357,33 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
         print("⌚️ Sent conflict action: \(action)")
     }
 
-    // MARK: - DayState Response Handling (AMA-1150)
+    // MARK: - DayState / Coach Response Handling (AMA-1150)
 
-    @MainActor
-    private func handleDayStateReply(_ reply: [String: Any]) {
-        guard let dayStateDict = reply["dayState"] as? [String: Any] else {
-            print("⌚️ Invalid day state reply")
-            dayStateCallback?(.failure(WatchConnectivityBridgeError.commandFailed("Invalid response")))
-            dayStateCallback = nil
-            return
-        }
-
-        do {
-            let data = try JSONSerialization.data(withJSONObject: dayStateDict)
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-            let dayState = try decoder.decode(DayState.self, from: data)
-            dayStateCallback?(.success(dayState))
-            dayStateViewModel?.handleDayStateUpdate(dayState)
-        } catch {
-            print("⌚️ Failed to decode day state: \(error)")
-            dayStateCallback?(.failure(error))
-        }
-        dayStateCallback = nil
-    }
-
-    @MainActor
-    private func handleCoachReply(_ reply: [String: Any]) {
-        guard let answer = reply["answer"] as? String,
-              let question = reply["question"] as? String else {
-            print("⌚️ Invalid coach reply")
-            coachCallback?(.failure(WatchConnectivityBridgeError.commandFailed("Invalid response")))
-            coachCallback = nil
-            return
-        }
-
-        let response = CoachResponse(answer: answer, question: question)
-        coachCallback?(.success(response))
-        dayStateViewModel?.handleCoachResponse(response)
-        coachCallback = nil
-    }
-
+    /// Handles "dayStateResponse" messages pushed from the phone (ack-fast-then-push path).
+    /// Resolves the pending callback identified by requestId, then notifies the view model.
     @MainActor
     private func handleDayStatePush(_ message: [String: Any]) {
+        let requestId = message["requestId"] as? String
+
+        // Propagate error replies from the phone instead of swallowing them
+        if message["status"] as? String == "error" {
+            let errorMsg = message["message"] as? String ?? "Request failed"
+            let error = WatchConnectivityBridgeError.commandFailed(errorMsg)
+            print("⌚️ Day state error from phone: \(errorMsg)")
+            if let requestId {
+                pendingDayStateCallbacks[requestId]?(.failure(error))
+                pendingDayStateCallbacks.removeValue(forKey: requestId)
+            }
+            return
+        }
+
         guard let dayStateDict = message["dayState"] as? [String: Any] else {
-            print("⌚️ Invalid day state push")
+            print("⌚️ Invalid day state push: missing dayState key")
+            let error = WatchConnectivityBridgeError.commandFailed("Invalid response")
+            if let requestId {
+                pendingDayStateCallbacks[requestId]?(.failure(error))
+                pendingDayStateCallbacks.removeValue(forKey: requestId)
+            }
             return
         }
 
@@ -405,11 +392,54 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
             let dayState = try decoder.decode(DayState.self, from: data)
+            if let requestId {
+                pendingDayStateCallbacks[requestId]?(.success(dayState))
+                pendingDayStateCallbacks.removeValue(forKey: requestId)
+            }
             dayStateViewModel?.handleDayStateUpdate(dayState)
             print("⌚️ Received day state push update")
         } catch {
             print("⌚️ Failed to decode day state push: \(error)")
+            if let requestId {
+                pendingDayStateCallbacks[requestId]?(.failure(error))
+                pendingDayStateCallbacks.removeValue(forKey: requestId)
+            }
         }
+    }
+
+    /// Handles "coachResponse" messages pushed from the phone (ack-fast-then-push path).
+    @MainActor
+    private func handleCoachPush(_ message: [String: Any]) {
+        let requestId = message["requestId"] as? String
+
+        if message["status"] as? String == "error" {
+            let errorMsg = message["message"] as? String ?? "Request failed"
+            let error = WatchConnectivityBridgeError.commandFailed(errorMsg)
+            print("⌚️ Coach error from phone: \(errorMsg)")
+            if let requestId {
+                pendingCoachCallbacks[requestId]?(.failure(error))
+                pendingCoachCallbacks.removeValue(forKey: requestId)
+            }
+            return
+        }
+
+        guard let answer = message["answer"] as? String,
+              let question = message["question"] as? String else {
+            print("⌚️ Invalid coach response: missing answer or question key")
+            let error = WatchConnectivityBridgeError.commandFailed("Invalid response")
+            if let requestId {
+                pendingCoachCallbacks[requestId]?(.failure(error))
+                pendingCoachCallbacks.removeValue(forKey: requestId)
+            }
+            return
+        }
+
+        let response = CoachResponse(answer: answer, question: question)
+        if let requestId {
+            pendingCoachCallbacks[requestId]?(.success(response))
+            pendingCoachCallbacks.removeValue(forKey: requestId)
+        }
+        dayStateViewModel?.handleCoachResponse(response)
     }
 }
 
@@ -546,11 +576,7 @@ extension WatchConnectivityBridge: WCSessionDelegate {
             handleDayStatePush(message)
 
         case DayStateAction.coachResponse.rawValue:
-            if let answer = message["answer"] as? String,
-               let question = message["question"] as? String {
-                let response = CoachResponse(answer: answer, question: question)
-                dayStateViewModel?.handleCoachResponse(response)
-            }
+            handleCoachPush(message)
 
         default:
             print("⌚️ Unknown action: \(action)")
@@ -620,16 +646,17 @@ extension WatchConnectivityBridge: WCSessionDelegate {
             return
         }
 
-        if commandId == pendingCommandId {
+        guard pendingCommandIds.contains(commandId) else { return }
+        pendingCommandIds.remove(commandId)
+        if pendingCommandIds.isEmpty {
             pendingCommand = nil
-            pendingCommandId = nil
+        }
 
-            if statusRaw == "success" {
-                print("⌚️ Command succeeded")
-            } else if let errorCode = message["errorCode"] as? String {
-                print("⌚️ Command failed: \(errorCode)")
-                playHaptic(.failure)
-            }
+        if statusRaw == "success" {
+            print("⌚️ Command succeeded")
+        } else if let errorCode = message["errorCode"] as? String {
+            print("⌚️ Command failed: \(errorCode)")
+            playHaptic(.failure)
         }
     }
 }

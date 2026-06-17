@@ -33,6 +33,7 @@ struct DayState: Codable, Identifiable {
     let goalPhase: String?
     let acuteLoad: Double?
     let chronicLoad: Double?
+    let conflictAlert: DayStateConflictResponse?
 
     var id: String { date }
 
@@ -50,7 +51,8 @@ struct DayState: Codable, Identifiable {
         constraints: [String] = [],
         goalPhase: String? = nil,
         acuteLoad: Double? = nil,
-        chronicLoad: Double? = nil
+        chronicLoad: Double? = nil,
+        conflictAlert: DayStateConflictResponse? = nil
     ) {
         self.date = date
         self.readiness = readiness
@@ -66,6 +68,7 @@ struct DayState: Codable, Identifiable {
         self.goalPhase = goalPhase
         self.acuteLoad = acuteLoad
         self.chronicLoad = chronicLoad
+        self.conflictAlert = conflictAlert
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -83,6 +86,7 @@ struct DayState: Codable, Identifiable {
         case goalPhase
         case acuteLoad
         case chronicLoad
+        case conflictAlert
     }
 
     init(from decoder: Decoder) throws {
@@ -112,6 +116,7 @@ struct DayState: Codable, Identifiable {
         goalPhase = try container.decodeIfPresent(String.self, forKey: .goalPhase)
         acuteLoad = try container.decodeIfPresent(Double.self, forKey: .acuteLoad)
         chronicLoad = try container.decodeIfPresent(Double.self, forKey: .chronicLoad)
+        conflictAlert = try container.decodeIfPresent(DayStateConflictResponse.self, forKey: .conflictAlert)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -130,6 +135,7 @@ struct DayState: Codable, Identifiable {
         try container.encodeIfPresent(goalPhase, forKey: .goalPhase)
         try container.encodeIfPresent(acuteLoad, forKey: .acuteLoad)
         try container.encodeIfPresent(chronicLoad, forKey: .chronicLoad)
+        try container.encodeIfPresent(conflictAlert, forKey: .conflictAlert)
     }
 
     private static func readinessLevel(from score: Int?) -> ReadinessLevel {

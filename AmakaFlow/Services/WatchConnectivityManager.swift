@@ -351,13 +351,15 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 handleSetLog(message)
                 replyHandler(["status": "received"])
 
-            // AMA-1150: DayState features
+            // AMA-1150: DayState features (ack-fast-then-push — requestId correlates the push)
             case "requestDayState":
-                handleDayStateRequest(replyHandler: replyHandler)
+                let requestId = message["requestId"] as? String
+                handleDayStateRequest(requestId: requestId, replyHandler: replyHandler)
 
             case "requestCoachAnswer":
+                let requestId = message["requestId"] as? String
                 let question = message["question"] as? String ?? ""
-                handleCoachRequest(question: question, replyHandler: replyHandler)
+                handleCoachRequest(requestId: requestId, question: question, replyHandler: replyHandler)
 
             case "conflictAction":
                 let conflictAction = message["conflictAction"] as? String ?? ""
@@ -419,19 +421,22 @@ extension WatchConnectivityManager: WCSessionDelegate {
         }
     }
 
-    private func handleHealthMetrics(_ message: [String: Any]) {
+    // Maximum sparkline samples retained (10 min at 5-second intervals = 120 samples)
+    static let maxHeartRateSamples = 120
+
+    func handleHealthMetrics(_ message: [String: Any]) {
         DispatchQueue.main.async {
             if let hr = message["heartRate"] as? Double {
                 self.watchHeartRate = hr
-
-                // Track max heart rate
                 if hr > self.watchMaxHeartRate {
                     self.watchMaxHeartRate = hr
                 }
-
-                // Store sample for sparkline chart
                 let sample = HeartRateSample(timestamp: Date(), value: Int(hr))
                 self.heartRateSamples.append(sample)
+                // Bound the buffer so memory doesn't grow unbounded over long workouts
+                if self.heartRateSamples.count > Self.maxHeartRateSamples {
+                    self.heartRateSamples.removeFirst(self.heartRateSamples.count - Self.maxHeartRateSamples)
+                }
             }
             if let calories = message["activeCalories"] as? Double {
                 self.watchActiveCalories = calories
@@ -451,38 +456,57 @@ extension WatchConnectivityManager: WCSessionDelegate {
 
     // MARK: - DayState Handlers (AMA-1150)
 
-    private func handleDayStateRequest(replyHandler: @escaping ([String: Any]) -> Void) {
+    /// Ack-fast-then-push: reply immediately so WCSession doesn't time out, then
+    /// push the result asynchronously via sendDayStateToWatch once the API responds.
+    private func handleDayStateRequest(requestId: String?, replyHandler: @escaping ([String: Any]) -> Void) {
+        replyHandler(["status": "ack"])
         Task { @MainActor in
             do {
                 let dayState = try await APIService.shared.fetchDayState()
                 let watchPayload = Self.makeWatchDayStateResponse(from: dayState)
-                let data = try JSONEncoder().encode(watchPayload)
-                if let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    replyHandler(["status": "success", "dayState": dict])
-                } else {
-                    replyHandler(["status": "error", "message": "Encoding failed"])
-                }
+                sendDayStateToWatch(watchPayload, requestId: requestId)
             } catch {
                 print("⌚️ Failed to fetch day state for watch: \(error)")
-                replyHandler(["status": "error", "message": error.localizedDescription])
+                sendMessageToWatch(
+                    ["action": "dayStateResponse", "status": "error",
+                     "message": error.localizedDescription, "requestId": requestId as Any]
+                )
             }
         }
     }
 
-    private func handleCoachRequest(question: String, replyHandler: @escaping ([String: Any]) -> Void) {
+    /// Ack-fast-then-push for coach requests (same pattern as DayState).
+    private func handleCoachRequest(requestId: String?, question: String, replyHandler: @escaping ([String: Any]) -> Void) {
+        replyHandler(["status": "ack"])
         Task { @MainActor in
             do {
                 let answer = try await APIService.shared.askCoach(question: question)
-                replyHandler([
-                    "status": "success",
-                    "answer": answer,
-                    "question": question
-                ])
+                sendCoachResponseToWatch(answer: answer, question: question, requestId: requestId)
             } catch {
                 print("⌚️ Failed to get coach answer for watch: \(error)")
-                replyHandler(["status": "error", "message": error.localizedDescription])
+                sendMessageToWatch(
+                    ["action": "coachResponse", "status": "error",
+                     "message": error.localizedDescription, "requestId": requestId as Any]
+                )
             }
         }
+    }
+
+    private func sendCoachResponseToWatch(answer: String, question: String, requestId: String?) {
+        var payload: [String: Any] = [
+            "action": "coachResponse",
+            "answer": answer,
+            "question": question
+        ]
+        if let requestId { payload["requestId"] = requestId }
+        sendMessageToWatch(payload)
+    }
+
+    private func sendMessageToWatch(_ message: [String: Any]) {
+        guard let session = session, session.isReachable else { return }
+        session.sendMessage(message, replyHandler: nil, errorHandler: { error in
+            print("⌚️ Failed to send watch message: \(error)")
+        })
     }
 
     private func handleConflictAction(action: String, message: String) {
@@ -526,7 +550,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
             readinessScore: dayState.readinessScore ?? Int(dayState.fatigueScore ?? 0),
             readinessLabel: watchReadinessLabel(for: dayState.readiness),
             sessions: plannedSessions + completedSessions,
-            conflictAlert: nil
+            conflictAlert: dayState.conflictAlert
         )
     }
 
@@ -541,21 +565,20 @@ extension WatchConnectivityManager: WCSessionDelegate {
         }
     }
 
-    /// Push DayState update to watch (called from phone when data changes)
-    func sendDayStateToWatch(_ dayState: DayStateResponse) {
+    /// Push DayState update to watch. Pass requestId to correlate with a pending watch request.
+    func sendDayStateToWatch(_ dayState: DayStateResponse, requestId: String? = nil) {
         guard let session = session, session.isReachable else { return }
 
         do {
             let data = try JSONEncoder().encode(dayState)
             guard let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
 
-            session.sendMessage(
-                ["action": "dayStateResponse", "dayState": dict],
-                replyHandler: nil,
-                errorHandler: { error in
-                    print("⌚️ Failed to push day state to watch: \(error)")
-                }
-            )
+            var message: [String: Any] = ["action": "dayStateResponse", "dayState": dict]
+            if let requestId { message["requestId"] = requestId }
+
+            session.sendMessage(message, replyHandler: nil, errorHandler: { error in
+                print("⌚️ Failed to push day state to watch: \(error)")
+            })
         } catch {
             print("⌚️ Failed to encode day state for watch: \(error)")
         }
