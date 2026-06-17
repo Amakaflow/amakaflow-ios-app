@@ -1,9 +1,13 @@
-# AMA-1821 / AMA-1817 contract-first epic — Maestro merge gate flow #3
-# Top user journey: send a message to the coach, get a response.
-# This is a SCAFFOLD — the existing /tmp/maestro flows did not include a
-# coach interaction flow, so test IDs here are best-effort. If selectors
-# don't match in CI, this flow will be skipped via continueOnFailure in
-# the workflow until AMA-1821 follow-up tightens it (see PR description).
+# AMA-2065 / issue #310 — Coach send / receive smoke
+# Verifies: Coach tab loads, input bar renders, a message can be sent, and
+# the LLM begins a response. Every step is a hard assertion — no runFlow/when
+# guards. Replaces the AMA-1821 scaffold that had zero real assertions.
+#
+# Stable a11y IDs (CoachChatView.swift):
+#   af_coach_input  — TextField "Ask your coach..."
+#   af_coach_send   — send button
+#   coach_screen    — invisible root marker injected by ContentView.tabRoot()
+#   coach-message-list — ScrollView wrapping all message bubbles
 
 appId: com.myamaka.AmakaFlowCompanion
 ---
@@ -13,28 +17,38 @@ appId: com.myamaka.AmakaFlowCompanion
       notifications: deny
 - waitForAnimationToEnd:
     timeout: 5000
-- runFlow:
-    when:
-      visible: "Coach"
-    commands:
-      - tapOn: "Coach"
+# Navigate to Coach tab.
+- tapOn:
+    id: "coach_tab"
 - waitForAnimationToEnd:
     timeout: 3000
-# Best-effort: tap a chat input field, type a message, send.
-- runFlow:
-    when:
-      visible:
-        id: "coach_input"
-    commands:
-      - tapOn:
-          id: "coach_input"
-      - inputText: "How did my last workout go?"
-      - runFlow:
-          when:
-            visible:
-              id: "coach_send"
-          commands:
-            - tapOn:
-                id: "coach_send"
-      - waitForAnimationToEnd:
-          timeout: 8000
+# Hard assertion: Coach screen must render.
+- assertVisible:
+    id: "coach_screen"
+# Hard assertion: input bar must be present before typing.
+- assertVisible:
+    id: "af_coach_input"
+- tapOn:
+    id: "af_coach_input"
+- inputText: "How did my last workout go?"
+- tapOn:
+    id: "af_coach_send"
+# User message must appear in the list (proves send button dispatched the call).
+- extendedWaitUntil:
+    visible:
+      text: "How did my last workout go?"
+    timeout: 5000
+# LLM streaming indicator: visible while the coach is composing its reply.
+# A timeout here means the API call never started (network / auth failure).
+- extendedWaitUntil:
+    visible:
+      text: "Coach is thinking..."
+    timeout: 20000
+# Wait for streaming to finish (responses typically arrive within 30 s).
+- extendedWaitUntil:
+    notVisible:
+      text: "Coach is thinking..."
+    timeout: 45000
+# Message list persists after the response — coach interaction proved.
+- assertVisible:
+    id: "coach-message-list"

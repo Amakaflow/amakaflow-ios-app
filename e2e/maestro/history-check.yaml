@@ -25,4 +25,3 @@ appId: com.myamaka.AmakaFlowCompanion
 # screen rendering is itself proof the API round-trip succeeded.
 - assertVisible:
     id: "history_screen"
-    optional: true
