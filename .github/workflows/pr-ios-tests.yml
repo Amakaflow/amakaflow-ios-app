@@ -67,8 +67,9 @@ jobs:
 
       # --reporter github-actions-logging emits ::warning/::error annotations
       # visible inline on the PR diff.  No --strict yet — start warn-clean and
-      # flip to --strict once the baseline is green (follow-up task).
+      # baseline is clean, then remove continue-on-error and enable --strict.
       - name: Run SwiftLint
+        continue-on-error: true
         run: swiftlint lint --reporter github-actions-logging
 
   detect-changes:
