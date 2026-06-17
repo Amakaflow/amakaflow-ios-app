@@ -18,6 +18,8 @@ final class KeychainClerkTokenPersistence: ClerkTokenPersistence, @unchecked Sen
     private let account: String
     private let legacyDefaults: UserDefaults?
     private let legacyKey: String?
+    private let sharedDefaults: UserDefaults?
+    private let sharedDefaultsTokenKey: String
 
     /// - Parameters:
     ///   - service: keychain service identifier — defaults to the app bundle's keychain namespace.
@@ -26,16 +28,25 @@ final class KeychainClerkTokenPersistence: ClerkTokenPersistence, @unchecked Sen
     ///     will perform a one-shot migration from the legacy UserDefaults
     ///     storage on first read, then clear the UserDefaults entry. Pass
     ///     `nil` for both in tests that don't want migration behaviour.
+    ///   - sharedDefaults / sharedDefaultsTokenKey: App Group UserDefaults suite where
+    ///     the raw bearer token string is mirrored so the share extension can read it.
+    ///     Defaults to the `group.com.amakaflow.companion` suite required by
+    ///     SharedContainerManager. Pass a test suite in unit tests to avoid touching
+    ///     the production container.
     init(
         service: String = "com.amakaflow.companion.clerk",
         account: String = "clerk_auth_token",
         legacyDefaults: UserDefaults? = .standard,
-        legacyKey: String? = "clerk_auth_token"
+        legacyKey: String? = "clerk_auth_token",
+        sharedDefaults: UserDefaults? = UserDefaults(suiteName: "group.com.amakaflow.companion"),
+        sharedDefaultsTokenKey: String = "auth_token"
     ) {
         self.service = service
         self.account = account
         self.legacyDefaults = legacyDefaults
         self.legacyKey = legacyKey
+        self.sharedDefaults = sharedDefaults
+        self.sharedDefaultsTokenKey = sharedDefaultsTokenKey
     }
 
     // MARK: - ClerkTokenPersistence
@@ -72,6 +83,10 @@ final class KeychainClerkTokenPersistence: ClerkTokenPersistence, @unchecked Sen
             addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
             _ = SecItemAdd(addQuery as CFDictionary, nil)
         }
+
+        // Mirror the raw bearer token string to the App Group shared container so
+        // the share extension can read it via SharedContainerManager.readAuthToken().
+        sharedDefaults?.set(token.value, forKey: sharedDefaultsTokenKey)
     }
 
     func clearClerkToken() {
@@ -85,6 +100,8 @@ final class KeychainClerkTokenPersistence: ClerkTokenPersistence, @unchecked Sen
         if let legacyDefaults, let legacyKey {
             legacyDefaults.removeObject(forKey: legacyKey)
         }
+        // Clear the App Group mirror so the share extension can't use a stale token.
+        sharedDefaults?.removeObject(forKey: sharedDefaultsTokenKey)
     }
 
     // MARK: - Private
