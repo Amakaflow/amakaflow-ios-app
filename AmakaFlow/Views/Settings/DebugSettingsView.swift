@@ -214,7 +214,6 @@ struct DebugSettingsView: View {
                 return
             }
             lastJWT = jwt
-            print("CLERK_JWT: \(jwt)")
             #if canImport(UIKit)
             // Local-only (no Handoff/Universal Clipboard) and auto-clear in 5
             // minutes so a forgotten clipboard can't leak the bearer token.

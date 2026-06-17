@@ -25,11 +25,15 @@ enum AppEnvironment: String, CaseIterable {
             }
             #endif
 
-            // Check if user has manually set an environment
+            // Manual environment override is only honoured in DEBUG builds.
+            // Persisting this in Release builds would allow a device backup or
+            // a malicious profile to reroute production traffic to staging.
+            #if DEBUG
             if let savedEnv = UserDefaults.standard.string(forKey: environmentKey),
                let env = AppEnvironment(rawValue: savedEnv) {
                 return env
             }
+            #endif
             // Default based on build configuration.
             // TestFlight and App Store Release builds default to .staging until
             // the production *.amakaflow.com hosts exist. The current
