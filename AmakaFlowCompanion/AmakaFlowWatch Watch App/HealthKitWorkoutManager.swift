@@ -128,10 +128,7 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
 
         do {
             try await builder.endCollection(at: endDate)
-
-            // Optionally save the workout to HealthKit
-            // Uncomment if you want to save the workout
-            // try await builder.finishWorkout()
+            try await builder.finishWorkout()
 
             print("❤️ Workout session ended")
         } catch {

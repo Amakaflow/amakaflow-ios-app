@@ -378,12 +378,13 @@ final class StandaloneWorkoutEngine: ObservableObject {
         let avgHeartRate: Double? = averageHeartRateSamples.isEmpty ? nil :
             averageHeartRateSamples.reduce(0, +) / Double(averageHeartRateSamples.count)
 
+        let endDate = Date()
         let summary = StandaloneWorkoutSummary(
             workoutId: workout.id,
             workoutName: workout.name,
             startDate: startDate,
-            endDate: Date(),
-            durationSeconds: elapsedSeconds,
+            endDate: endDate,
+            durationSeconds: Int(endDate.timeIntervalSince(startDate)),
             totalCalories: activeCalories,
             averageHeartRate: avgHeartRate,
             completedSteps: currentStepIndex + 1,
