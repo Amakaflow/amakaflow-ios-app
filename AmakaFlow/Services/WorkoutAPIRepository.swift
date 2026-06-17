@@ -98,42 +98,31 @@ extension APIService {
         dayFormatter.timeZone = Calendar.current.timeZone
         dayFormatter.dateFormat = "yyyy-MM-dd"
 
-        var components = URLComponents(string: "\(bffURL)/workouts/planned")!
-        components.queryItems = [
+        let queryItems = [
             URLQueryItem(name: "from", value: dayFormatter.string(from: startDate)),
             URLQueryItem(name: "to", value: dayFormatter.string(from: endDate))
         ]
-        guard let url = components.url else {
-            throw APIError.invalidURL
-        }
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
 
-        let (data, response) = try await session.data(for: request)
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/workouts/planned",
+            queryItems: queryItems,
+            method: "GET"
+        )
 
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        switch httpResponse.statusCode {
-        case 200:
-            let decoder = APIService.makeDecoder()
-            if let plannedResponse = try? decoder.decode(PlannedWorkoutListDTO.self, from: data) {
-                return plannedResponse.workouts.map(ScheduledWorkout.init(plannedWorkout:))
-            }
-            return try decoder.decode([ScheduledWorkout].self, from: data)
-        case 401:
-            guard !isRetry else { throw APIError.unauthorized }
+        do {
+            let plannedResponse = try await self.request(
+                request,
+                decode: PlannedWorkoutListDTO.self,
+                successStatusCodes: 200...200
+            )
+            return plannedResponse.workouts.map(ScheduledWorkout.init(plannedWorkout:))
+        } catch APIError.unauthorized where !isRetry {
             let refreshed = await PairingService.shared.refreshToken()
             if refreshed {
                 return try await fetchScheduledWorkouts(isRetry: true)
             }
             throw APIError.unauthorized
-        case 404:
-            return []
-        default:
-            throw APIError.serverError(httpResponse.statusCode)
         }
     }
 
@@ -143,100 +132,56 @@ extension APIService {
             throw APIError.unauthorized
         }
 
-        let url = URL(string: "\(baseURL)/workouts/pushed?device=ios-companion")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        let request = try await makeAPIRequest(
+            path: "/workouts/pushed",
+            queryItems: [URLQueryItem(name: "device", value: "ios-companion")],
+            method: "GET"
+        )
 
-        let (data, response) = try await session.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        switch httpResponse.statusCode {
-        case 200:
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-            return try decoder.decode([Workout].self, from: data)
-        case 401:
-            guard !isRetry else { throw APIError.unauthorized }
+        do {
+            return try await self.request(
+                request,
+                decode: [Workout].self,
+                successStatusCodes: 200...200
+            )
+        } catch APIError.unauthorized where !isRetry {
             let refreshed = await PairingService.shared.refreshToken()
             if refreshed {
                 return try await fetchPushedWorkouts(isRetry: true)
             }
             throw APIError.unauthorized
-        case 404:
-            return []
-        default:
-            throw APIError.serverError(httpResponse.statusCode)
         }
     }
 
     /// Fetch pending workouts from sync queue endpoint (AMA-307 / AMA-1820).
     func fetchPendingWorkouts(isRetry: Bool = false) async throws -> [Workout] {
         guard PairingService.shared.isPaired else {
-            print("[APIService] Not paired, throwing unauthorized")
             throw APIError.unauthorized
         }
 
-        let url = URL(string: "\(bffURL)/sync/pending?device_type=ios")!
-        print("[APIService] Fetching pending workouts from: \(url)")
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/sync/pending",
+            queryItems: [URLQueryItem(name: "device_type", value: "ios")],
+            method: "GET"
+        )
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-
-        let (data, response) = try await session.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            print("[APIService] Invalid response type")
-            throw APIError.invalidResponse
-        }
-
-        print("[APIService] Response status: \(httpResponse.statusCode)")
-
-        if let jsonString = String(data: data, encoding: .utf8) {
-            print("[APIService] Raw JSON response (first 1000 chars):")
-            print(String(jsonString.prefix(1000)))
-        }
-
-        switch httpResponse.statusCode {
-        case 200:
-            let decoder = APIService.makeDecoder()
-            do {
-                let pendingResponse = try decoder.decode(PendingWorkoutsResponse.self, from: data)
-                print("[APIService] Decoded \(pendingResponse.count) pending workouts")
-                if let firstWorkout = pendingResponse.workouts.first {
-                    print("[APIService] First workout: \(firstWorkout.name)")
-                    print("[APIService] Intervals: \(firstWorkout.intervals.count)")
-                    for (i, interval) in firstWorkout.intervals.enumerated() {
-                        if case .reps(let sets, let reps, let name, _, let restSec, _) = interval {
-                            print("[APIService]   Interval \(i): reps '\(name)' sets=\(sets ?? -1) reps=\(reps) restSec=\(restSec ?? -999)")
-                        }
-                    }
-                }
-                return pendingResponse.workouts
-            } catch {
-                print("[APIService] Decoding error: \(error)")
-                throw APIError.decodingError(error)
+        do {
+            let pendingResponse = try await self.request(
+                request,
+                decode: PendingWorkoutsResponse.self,
+                successStatusCodes: 200...200
+            )
+            guard pendingResponse.success else {
+                throw APIError.serverErrorWithBody(200, "GET /sync/pending returned success=false")
             }
-        case 401:
-            print("[APIService] Unauthorized (401)")
-            guard !isRetry else { throw APIError.unauthorized }
+            return pendingResponse.workouts
+        } catch APIError.unauthorized where !isRetry {
             let refreshed = await PairingService.shared.refreshToken()
             if refreshed {
                 return try await fetchPendingWorkouts(isRetry: true)
             }
             throw APIError.unauthorized
-        case 404:
-            print("[APIService] Endpoint not found, returning empty array")
-            return []
-        default:
-            if let responseString = String(data: data, encoding: .utf8) {
-                print("[APIService] Error response: \(responseString.prefix(200))")
-            }
-            throw APIError.serverError(httpResponse.statusCode)
         }
     }
 
@@ -293,28 +238,22 @@ extension APIService {
             throw APIError.unauthorized
         }
 
-        let url = URL(string: "\(baseURL)/export/apple/\(workoutId)")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-
-        let (data, response) = try await session.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
+        let encodedWorkoutID = try Self.pathSegment(workoutId)
+        let request = try await makeAPIRequest(
+            path: "/export/apple/\(encodedWorkoutID)",
+            method: "GET"
+        )
+        let data = try await requestData(request, successStatusCodes: 200...200)
+        guard let jsonString = String(data: data, encoding: .utf8) else {
+            throw APIError.decodingError(
+                NSError(
+                    domain: "APIService",
+                    code: 0,
+                    userInfo: [NSLocalizedDescriptionKey: "Failed to decode response"]
+                )
+            )
         }
-
-        switch httpResponse.statusCode {
-        case 200:
-            guard let jsonString = String(data: data, encoding: .utf8) else {
-                throw APIError.decodingError(NSError(domain: "APIService", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to decode response"]))
-            }
-            return jsonString
-        case 401:
-            throw APIError.unauthorized
-        default:
-            throw APIError.serverError(httpResponse.statusCode)
-        }
+        return jsonString
     }
 
     // MARK: - Manual Workout Logging (AMA-5)
@@ -415,12 +354,12 @@ extension APIService {
             throw APIError.unauthorized
         }
 
-        let url = URL(string: "\(bffURL)\(endpoint)")!
-        print("[APIService] Posting workout completion to: \(url)")
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        var request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: endpoint,
+            method: "POST",
+            body: try encodeJSONBody(completion)
+        )
 
         // AMA-1823: stamp client-generated X-Request-ID so the BFF echoes
         // it through to mapper-api logs and Sentry breadcrumbs share the
@@ -429,110 +368,45 @@ extension APIService {
             request.setValue(requestID, forHTTPHeaderField: "X-Request-ID")
         }
 
-        let encoder = JSONEncoder()
-        request.httpBody = try encoder.encode(completion)
-
-        let (data, response) = try await session.data(for: request)
-        let responseString = String(data: data, encoding: .utf8)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            print("[APIService] Invalid response type")
-            logError(endpoint: endpoint, method: "POST", statusCode: nil, response: responseString, error: APIError.invalidResponse)
-            throw AnnotatedAPIError(.invalidResponse)
-        }
-
-        // AMA-1808: capture once at the response site so every failure path
-        // below propagates X-Request-ID via AnnotatedAPIError.
-        let requestId = httpResponse.value(forHTTPHeaderField: "X-Request-ID")
-            ?? httpResponse.value(forHTTPHeaderField: "x-request-id")
-
-        print("[APIService] Response status: \(httpResponse.statusCode)")
-
-        switch httpResponse.statusCode {
-        case 200, 201:
-            let decoder = JSONDecoder()
-            let responseBody = responseString ?? "nil"
-            print("[APIService] POST /workouts/complete response: \(responseBody.prefix(500))")
-            Task { @MainActor in
-                DebugLogService.shared.log(
-                    "API: POST complete",
-                    details: "Status: \(httpResponse.statusCode), Body: \(responseBody.prefix(300))",
-                    metadata: nil
-                )
-            }
-
-            if let responseString = responseString, responseString.contains("\"success\":false") {
-                print("[APIService] Backend returned success:false - treating as error")
-                logError(endpoint: endpoint, method: "POST", statusCode: httpResponse.statusCode, response: responseString, error: nil)
-                Task { @MainActor in
-                    DebugLogService.shared.log(
-                        "API: Completion FAILED",
-                        details: "Backend error: \(responseBody.prefix(200))",
-                        metadata: nil
-                    )
-                }
-                throw AnnotatedAPIError(
-                    .serverErrorWithBody(httpResponse.statusCode, responseBody),
-                    requestId: requestId
-                )
-            }
-
-            do {
-                let completionResponse = try decoder.decode(WorkoutCompletionResponse.self, from: data)
-                print("[APIService] Workout completion posted, ID: \(completionResponse.resolvedCompletionId)")
-                return completionResponse
-            } catch {
-                print("[APIService] Decoding error: \(error)")
-                if let responseString = responseString {
-                    print("[APIService] Response body: \(responseString.prefix(500))")
-                }
-                throw AnnotatedAPIError(.decodingError(error), requestId: requestId)
-            }
-        case 401:
-            print("[APIService] Unauthorized (401)")
-            if isRetry {
-                print("[APIService] Retry also failed with 401, marking auth invalid")
-                logError(endpoint: endpoint, method: "POST", statusCode: 401, response: responseString, error: APIError.unauthorized)
-                await MainActor.run {
-                    PairingService.shared.markAuthInvalid()
-                }
-                throw AnnotatedAPIError(.unauthorized, requestId: requestId)
-            }
-
-            print("[APIService] Attempting silent token refresh...")
-            let refreshed = await PairingService.shared.refreshToken()
-
-            if refreshed {
-                print("[APIService] Token refreshed, retrying request...")
-                return try await postWorkoutCompletion(completion, isRetry: true, requestID: requestID)
-            } else {
-                print("[APIService] Token refresh failed, marking auth invalid")
-                logError(endpoint: endpoint, method: "POST", statusCode: 401, response: responseString, error: APIError.unauthorized)
-                SentrySDK.capture(message: "auth.silent_refresh_failed") { scope in
-                    scope.setTag(value: "auth", key: "subsystem")
-                    scope.setTag(value: endpoint, key: "endpoint")
-                    if let requestId = requestId {
-                        scope.setTag(value: requestId, key: "request_id")
-                    }
-                    scope.setLevel(SentryLevel.warning)
-                }
-                throw AnnotatedAPIError(.unauthorized, requestId: requestId)
-            }
-        default:
-            if let responseString = responseString {
-                print("[APIService] Error response: \(responseString.prefix(200))")
-            }
-            logError(endpoint: endpoint, method: "POST", statusCode: httpResponse.statusCode, response: responseString, error: nil)
-            if let responseBody = responseString, !responseBody.isEmpty {
-                throw AnnotatedAPIError(
-                    .serverErrorWithBody(httpResponse.statusCode, responseBody),
-                    requestId: requestId
-                )
-            }
-            throw AnnotatedAPIError(
-                .serverError(httpResponse.statusCode),
-                requestId: requestId
+        do {
+            let completionResponse = try await self.request(
+                request,
+                decode: WorkoutCompletionResponse.self,
+                successStatusCodes: 200...201
             )
+
+            if completionResponse.success == false {
+                throw AnnotatedAPIError(
+                    .serverErrorWithBody(200, "POST /workouts/complete returned success=false")
+                )
+            }
+
+            guard completionResponse.hasResolvedCompletionId else {
+                throw AnnotatedAPIError(
+                    .serverErrorWithBody(200, "POST /workouts/complete missing completion ID")
+                )
+            }
+
+            return completionResponse
+        } catch APIError.unauthorized where !isRetry {
+            let refreshed = await PairingService.shared.refreshToken()
+            if refreshed {
+                return try await postWorkoutCompletion(completion, isRetry: true, requestID: requestID)
+            }
+            await MainActor.run {
+                PairingService.shared.markAuthInvalid()
+            }
+            SentrySDK.capture(message: "auth.silent_refresh_failed") { scope in
+                scope.setTag(value: "auth", key: "subsystem")
+                scope.setTag(value: endpoint, key: "endpoint")
+                if let requestID {
+                    scope.setTag(value: requestID, key: "request_id")
+                }
+                scope.setLevel(SentryLevel.warning)
+            }
+            throw AnnotatedAPIError(.unauthorized, requestId: requestID)
+        } catch let apiError as APIError {
+            throw AnnotatedAPIError(apiError, requestId: requestID)
         }
     }
 
@@ -653,69 +527,41 @@ extension APIService {
     // MARK: - Completion History
 
     func fetchCompletions(limit: Int = 50, offset: Int = 0) async throws -> [WorkoutCompletion] {
-        let url = URL(string: "\(baseURL)/workouts/completions?limit=\(limit)&offset=\(offset)")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
+        let request = try await makeAPIRequest(
+            path: "/workouts/completions",
+            queryItems: [
+                URLQueryItem(name: "limit", value: String(limit)),
+                URLQueryItem(name: "offset", value: String(offset))
+            ],
+            method: "GET"
+        )
 
-        let (data, response) = try await session.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
+        let wrapped = try await self.request(
+            request,
+            decode: CompletionsListResponse.self,
+            successStatusCodes: 200...200
+        )
+        guard wrapped.success else {
+            throw APIError.serverErrorWithBody(200, "GET /workouts/completions returned success=false")
         }
-
-        let responseBody = String(data: data, encoding: .utf8) ?? "empty"
-        print("[APIService] fetchCompletions - Status: \(httpResponse.statusCode)")
-
-        switch httpResponse.statusCode {
-        case 200:
-            do {
-                let wrapped = try Self.makeDecoder().decode(CompletionsListResponse.self, from: data)
-                return wrapped.completions
-            } catch {
-                logError(endpoint: "/workouts/completions", method: "GET", statusCode: 200,
-                         response: String(responseBody.prefix(500)), error: error)
-                return []
-            }
-        case 401:
-            throw APIError.unauthorized
-        case 404, 500:
-            return []
-        default:
-            logError(endpoint: "/workouts/completions", method: "GET", statusCode: httpResponse.statusCode,
-                     response: responseBody, error: nil)
-            throw APIError.serverErrorWithBody(httpResponse.statusCode, responseBody)
-        }
+        return wrapped.completions
     }
 
     func fetchCompletionDetail(id: String) async throws -> WorkoutCompletionDetail {
-        let url = URL(string: "\(baseURL)/workouts/completions/\(id)")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-
-        let (data, response) = try await session.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
+        let encodedID = try Self.pathSegment(id)
+        let request = try await makeAPIRequest(
+            path: "/workouts/completions/\(encodedID)",
+            method: "GET"
+        )
+        let wrapped = try await self.request(
+            request,
+            decode: CompletionDetailWrappedResponse.self,
+            successStatusCodes: 200...200
+        )
+        guard wrapped.success else {
+            throw APIError.serverErrorWithBody(200, "GET /workouts/completions/{id} returned success=false")
         }
-
-        let responseBody = String(data: data, encoding: .utf8) ?? "empty"
-        print("[APIService] fetchCompletionDetail(\(id)) - Status: \(httpResponse.statusCode)")
-
-        switch httpResponse.statusCode {
-        case 200:
-            let wrapped = try Self.makeDecoder().decode(CompletionDetailWrappedResponse.self, from: data)
-            return wrapped.completion
-        case 401:
-            throw APIError.unauthorized
-        case 404:
-            throw APIError.notFound
-        default:
-            logError(endpoint: "/workouts/completions/\(id)", method: "GET", statusCode: httpResponse.statusCode,
-                     response: responseBody, error: nil)
-            throw APIError.serverError(httpResponse.statusCode)
-        }
+        return wrapped.completion
     }
 
     // MARK: - Workout Editor (AMA-1231)
@@ -742,27 +588,21 @@ extension APIService {
 
     /// Export workout as FIT binary data
     func exportWorkoutFIT(workoutId: String) async throws -> Data {
-        guard let url = URL(string: "\(baseURL)/workouts/\(workoutId)/export/fit") else { throw APIError.invalidURL }
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
-        }
-        return data
+        let encodedWorkoutID = try Self.pathSegment(workoutId)
+        let request = try await makeAPIRequest(
+            path: "/workouts/\(encodedWorkoutID)/export/fit",
+            method: "GET"
+        )
+        return try await requestData(request, successStatusCodes: 200...200)
     }
 
     /// Export workout as CSV data
     func exportWorkoutCSV(workoutId: String) async throws -> Data {
-        guard let url = URL(string: "\(baseURL)/workouts/\(workoutId)/export/csv") else { throw APIError.invalidURL }
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = await makeAuthHeaders()
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            throw APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
-        }
-        return data
+        let encodedWorkoutID = try Self.pathSegment(workoutId)
+        let request = try await makeAPIRequest(
+            path: "/workouts/\(encodedWorkoutID)/export/csv",
+            method: "GET"
+        )
+        return try await requestData(request, successStatusCodes: 200...200)
     }
 }
