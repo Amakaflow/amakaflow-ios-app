@@ -204,11 +204,13 @@ appId: com.myamaka.AmakaFlowCompanion
             - waitForAnimationToEnd:
                 timeout: 3000
 
-# Final assertion: authenticated shell (AMA-1992 tab bar) within 30s.
+# Final assertion: authenticated shell (AMA-1992 tab bar) within 60s.
+# 60s (up from 30s): CI sims run post-boot data migration for 15-20s; sign-in
+# + tab-bar transition needs headroom on a freshly-erased sim (issue #329).
 - extendedWaitUntil:
     visible:
       id: "af_tabbar"
-    timeout: 30000
+    timeout: 60000
 - tapOn:
     id: "home_tab"
 - assertVisible:
