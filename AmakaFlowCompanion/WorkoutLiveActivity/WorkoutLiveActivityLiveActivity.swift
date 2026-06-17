@@ -77,11 +77,19 @@ struct LockScreenView: View {
             // Right: Timer or step count
             VStack(alignment: .trailing, spacing: 4) {
                 if context.state.isTimedStep {
-                    Text(context.state.formattedTime)
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .monospacedDigit()
-                        .foregroundColor(context.state.isPaused ? .orange : .primary)
+                    if let deadline = context.state.stepDeadline, !context.state.isPaused {
+                        Text(timerInterval: Date.now...deadline, countsDown: true)
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .monospacedDigit()
+                            .foregroundColor(.primary)
+                    } else {
+                        Text(context.state.formattedTime)
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .monospacedDigit()
+                            .foregroundColor(context.state.isPaused ? .orange : .primary)
+                    }
                 } else {
                     Image(systemName: "figure.strengthtraining.traditional")
                         .font(.title2)
@@ -114,11 +122,19 @@ struct CompactTrailingView: View {
 
     var body: some View {
         if context.state.isTimedStep {
-            Text(context.state.formattedTime)
-                .font(.caption)
-                .fontWeight(.semibold)
-                .monospacedDigit()
-                .foregroundColor(context.state.isPaused ? .orange : .white)
+            if let deadline = context.state.stepDeadline, !context.state.isPaused {
+                Text(timerInterval: Date.now...deadline, countsDown: true)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .monospacedDigit()
+                    .foregroundColor(.white)
+            } else {
+                Text(context.state.formattedTime)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .monospacedDigit()
+                    .foregroundColor(context.state.isPaused ? .orange : .white)
+            }
         } else {
             Text("\(context.state.stepIndex)/\(context.state.stepCount)")
                 .font(.caption)
@@ -162,10 +178,17 @@ struct ExpandedTrailingView: View {
     var body: some View {
         VStack(alignment: .trailing, spacing: 2) {
             if context.state.isTimedStep {
-                Text(context.state.formattedTime)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .monospacedDigit()
+                if let deadline = context.state.stepDeadline, !context.state.isPaused {
+                    Text(timerInterval: Date.now...deadline, countsDown: true)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .monospacedDigit()
+                } else {
+                    Text(context.state.formattedTime)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .monospacedDigit()
+                }
             } else {
                 Image(systemName: "arrow.forward.circle")
                     .font(.title2)
@@ -244,7 +267,8 @@ extension WorkoutActivityAttributes.ContentState {
             stepCount: 12,
             remainingSeconds: 45,
             stepType: "timed",
-            roundInfo: "Round 2/4"
+            roundInfo: "Round 2/4",
+            stepDeadline: Date().addingTimeInterval(45)
         )
     }
 
@@ -256,7 +280,8 @@ extension WorkoutActivityAttributes.ContentState {
             stepCount: 12,
             remainingSeconds: 30,
             stepType: "timed",
-            roundInfo: nil
+            roundInfo: nil,
+            stepDeadline: nil
         )
     }
 
@@ -268,7 +293,8 @@ extension WorkoutActivityAttributes.ContentState {
             stepCount: 12,
             remainingSeconds: 0,
             stepType: "reps",
-            roundInfo: "Round 3/4"
+            roundInfo: "Round 3/4",
+            stepDeadline: nil
         )
     }
 }

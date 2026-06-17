@@ -1279,14 +1279,20 @@ class WorkoutEngine: ObservableObject {
             return
         }
 
+        let timerSeconds = currentStep?.timerSeconds ?? 0
+        let stepDeadline: Date? = (currentStep?.stepType == .timed && phase == .running && timerSeconds > 0)
+            ? Date().addingTimeInterval(TimeInterval(timerSeconds))
+            : nil
+
         let initialState = WorkoutActivityAttributes.ContentState(
             phase: phase.rawValue,
             stepName: currentStep?.label ?? "",
             stepIndex: currentStepIndex + 1,  // 1-based for display
             stepCount: flattenedSteps.count,
-            remainingSeconds: currentStep?.timerSeconds ?? 0,
+            remainingSeconds: timerSeconds,
             stepType: currentStep?.stepType.rawValue ?? "reps",
-            roundInfo: currentStep?.roundInfo
+            roundInfo: currentStep?.roundInfo,
+            stepDeadline: stepDeadline
         )
 
         LiveActivityManager.shared.startActivity(
@@ -1306,14 +1312,20 @@ class WorkoutEngine: ObservableObject {
             return
         }
 
+        let remainingMs = state.remainingMs ?? 0
+        let stepDeadline: Date? = (state.stepType == .timed && state.phase == .running && remainingMs > 0)
+            ? Date().addingTimeInterval(TimeInterval(remainingMs) / 1000.0)
+            : nil
+
         let activityState = WorkoutActivityAttributes.ContentState(
             phase: state.phase.rawValue,
             stepName: state.stepName,
             stepIndex: state.stepIndex + 1,  // 1-based for display
             stepCount: state.stepCount,
-            remainingSeconds: (state.remainingMs ?? 0) / 1000,
+            remainingSeconds: remainingMs / 1000,
             stepType: state.stepType.rawValue,
-            roundInfo: state.roundInfo
+            roundInfo: state.roundInfo,
+            stepDeadline: stepDeadline
         )
 
         LiveActivityManager.shared.updateActivity(state: activityState)
