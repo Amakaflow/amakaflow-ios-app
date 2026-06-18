@@ -655,4 +655,39 @@ final class WatchConnectivityTests: XCTestCase {
         let decoded = try decoder.decode(DayStateResponse.self, from: data)
         XCTAssertNil(decoded.conflictAlert)
     }
+
+    // MARK: - Issue 300: durationSeconds must reflect wall-clock time
+
+    /// Regression for #300: the watch engine now derives durationSeconds from
+    /// Int(endDate.timeIntervalSince(startDate)) rather than accumulated
+    /// elapsedSeconds. Rep-based workouts have no per-step countdown timer so
+    /// elapsedSeconds stays near zero, producing a near-zero duration unless
+    /// wall-clock subtraction is used. This test pins the contract between the
+    /// watch engine and the phone-side completion handler.
+    func testStandaloneWorkoutSummaryDurationMatchesWallClock() {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let end = start.addingTimeInterval(1800) // 30-minute rep workout
+
+        let wallClockDuration = Int(end.timeIntervalSince(start))
+        let summary = StandaloneWorkoutSummary(
+            workoutId: "rep-workout-300",
+            workoutName: "Strength A",
+            startDate: start,
+            endDate: end,
+            durationSeconds: wallClockDuration,
+            totalCalories: 120.0,
+            averageHeartRate: 132.0,
+            completedSteps: 4,
+            totalSteps: 4
+        )
+
+        XCTAssertEqual(
+            summary.durationSeconds, 1800,
+            "durationSeconds must equal Int(endDate.timeIntervalSince(startDate)); bug #300 would give ~0 for rep workouts"
+        )
+        XCTAssertEqual(
+            summary.durationSeconds, Int(summary.endDate.timeIntervalSince(summary.startDate)),
+            "durationSeconds must be consistent with endDate - startDate"
+        )
+    }
 }
