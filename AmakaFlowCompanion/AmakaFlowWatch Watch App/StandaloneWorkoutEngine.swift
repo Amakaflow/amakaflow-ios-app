@@ -282,6 +282,7 @@ final class StandaloneWorkoutEngine: ObservableObject {
         timer?.invalidate()
         timer = nil
         phase = .ended
+        let endDate = Date()
 
         // End HealthKit session
         await healthManager.endSession()
@@ -291,7 +292,7 @@ final class StandaloneWorkoutEngine: ObservableObject {
         }
 
         // Send summary to phone
-        sendWorkoutSummaryToPhone()
+        sendWorkoutSummaryToPhone(endDate: endDate)
     }
 
     func reset() {
@@ -371,20 +372,19 @@ final class StandaloneWorkoutEngine: ObservableObject {
 
     // MARK: - Workout Summary
 
-    private func sendWorkoutSummaryToPhone() {
+    private func sendWorkoutSummaryToPhone(endDate: Date) {
         guard let workout = workout,
               let startDate = workoutStartDate else { return }
 
         let avgHeartRate: Double? = averageHeartRateSamples.isEmpty ? nil :
             averageHeartRateSamples.reduce(0, +) / Double(averageHeartRateSamples.count)
 
-        let endDate = Date()
         let summary = StandaloneWorkoutSummary(
             workoutId: workout.id,
             workoutName: workout.name,
             startDate: startDate,
             endDate: endDate,
-            durationSeconds: Int(endDate.timeIntervalSince(startDate)),
+            durationSeconds: Self.summaryDurationSeconds(startDate: startDate, endDate: endDate),
             totalCalories: activeCalories,
             averageHeartRate: avgHeartRate,
             completedSteps: currentStepIndex + 1,
@@ -414,6 +414,10 @@ final class StandaloneWorkoutEngine: ObservableObject {
         } catch {
             print("⌚️ Failed to encode workout summary: \(error)")
         }
+    }
+
+    static func summaryDurationSeconds(startDate: Date, endDate: Date) -> Int {
+        max(0, Int(endDate.timeIntervalSince(startDate)))
     }
 
     // MARK: - Helpers

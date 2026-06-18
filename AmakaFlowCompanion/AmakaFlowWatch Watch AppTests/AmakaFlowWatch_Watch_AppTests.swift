@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import HealthKit
 import Testing
 @testable import AmakaFlowWatch_Watch_App
 
@@ -13,6 +14,33 @@ struct AmakaFlowWatch_Watch_AppTests {
 
     @Test func example() async throws {
         // Write your test here and use APIs like `#expect(...)` to check expected conditions.
+    }
+
+    @MainActor
+    @Test("endSession persists workout by ending collection and finishing workout")
+    func endSessionCallsEndCollectionAndFinishWorkout() async {
+        final class MockWorkoutBuilder: WorkoutSessionBuilding {
+            private(set) var endCollectionCalled = false
+            private(set) var finishWorkoutCalled = false
+
+            func endCollection(at end: Date) async throws {
+                endCollectionCalled = true
+            }
+
+            func finishWorkout() async throws -> HKWorkout? {
+                finishWorkoutCalled = true
+                return nil
+            }
+        }
+
+        let mockBuilder = MockWorkoutBuilder()
+        let manager = HealthKitWorkoutManager.shared
+        manager.setBuilderForTesting(mockBuilder, isSessionActive: true)
+
+        await manager.endSession()
+
+        #expect(mockBuilder.endCollectionCalled, "endSession must call endCollection before closing the session")
+        #expect(mockBuilder.finishWorkoutCalled, "endSession must call finishWorkout so completed workouts are persisted to HealthKit")
     }
 
 }
@@ -56,13 +84,11 @@ struct FlattenWatchIntervalsTests {
     /// from endDate - startDate, NOT from accumulated elapsedSeconds.
     /// For a 30-minute rep-only workout, elapsedSeconds stays ~0 (no timer ticks)
     /// but wall-clock time is 1800s.
-    @Test("Duration computed from dates equals wall-clock elapsed time")
+    @Test("StandaloneWorkoutEngine duration helper uses wall-clock elapsed time")
     func durationFromDatesEqualsWallClock() {
         let start = Date(timeIntervalSince1970: 1_700_000_000)
         let end = start.addingTimeInterval(1800)
-
-        // This is the formula now used in sendWorkoutSummaryToPhone (fix for #300).
-        let wallClockDuration = Int(end.timeIntervalSince(start))
+        let wallClockDuration = StandaloneWorkoutEngine.summaryDurationSeconds(startDate: start, endDate: end)
 
         #expect(wallClockDuration == 1800, "Int(endDate - startDate) must equal 1800 for a 30-min workout")
         #expect(wallClockDuration > 0, "wall-clock duration must always be positive")

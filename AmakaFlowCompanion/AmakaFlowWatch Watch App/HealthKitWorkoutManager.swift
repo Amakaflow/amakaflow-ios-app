@@ -9,6 +9,13 @@ import Foundation
 import HealthKit
 import Combine
 
+protocol WorkoutSessionBuilding: AnyObject {
+    func endCollection(at end: Date) async throws
+    func finishWorkout() async throws -> HKWorkout?
+}
+
+extension HKLiveWorkoutBuilder: WorkoutSessionBuilding {}
+
 @MainActor
 final class HealthKitWorkoutManager: NSObject, ObservableObject {
     static let shared = HealthKitWorkoutManager()
@@ -24,7 +31,8 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
 
     private let healthStore = HKHealthStore()
     private var session: HKWorkoutSession?
-    private var builder: HKLiveWorkoutBuilder?
+    private var liveWorkoutBuilder: HKLiveWorkoutBuilder?
+    private var builder: (any WorkoutSessionBuilding)?
 
     // Multicast callbacks for HR updates (supports multiple consumers without clobbering)
     private var heartRateHandlers: [UUID: (Double, Double) -> Void] = [:]
@@ -92,13 +100,15 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
 
         do {
             session = try HKWorkoutSession(healthStore: healthStore, configuration: config)
-            builder = session?.associatedWorkoutBuilder()
+            let liveBuilder = session?.associatedWorkoutBuilder()
+            liveWorkoutBuilder = liveBuilder
+            builder = liveBuilder
 
             session?.delegate = self
-            builder?.delegate = self
+            liveBuilder?.delegate = self
 
             // Set data source for live workout data
-            builder?.dataSource = HKLiveWorkoutDataSource(
+            liveBuilder?.dataSource = HKLiveWorkoutDataSource(
                 healthStore: healthStore,
                 workoutConfiguration: config
             )
@@ -106,7 +116,7 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
             // Start the session
             let startDate = Date()
             session?.startActivity(with: startDate)
-            try await builder?.beginCollection(at: startDate)
+            try await liveBuilder?.beginCollection(at: startDate)
 
             isSessionActive = true
             print("❤️ Workout session started")
@@ -118,13 +128,13 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
     }
 
     func endSession() async {
-        guard isSessionActive, let session = session, let builder = builder else {
+        guard isSessionActive, let builder = builder else {
             print("❤️ No active session to end")
             return
         }
 
         let endDate = Date()
-        session.end()
+        session?.end()
 
         do {
             try await builder.endCollection(at: endDate)
@@ -137,11 +147,21 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
 
         self.session = nil
         self.builder = nil
+        self.liveWorkoutBuilder = nil
         isSessionActive = false
         heartRate = 0
         activeCalories = 0
         heartRateHandlers.removeAll()
     }
+
+#if DEBUG
+    /// Test seam for Issue #300 regression coverage.
+    func setBuilderForTesting(_ builder: any WorkoutSessionBuilding, isSessionActive: Bool = true) {
+        self.builder = builder
+        self.liveWorkoutBuilder = nil
+        self.isSessionActive = isSessionActive
+    }
+#endif
 
     func pauseSession() {
         session?.pause()
