@@ -141,17 +141,16 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
             try await builder.finishWorkout()
 
             print("❤️ Workout session ended")
+            self.session = nil
+            self.builder = nil
+            self.liveWorkoutBuilder = nil
+            isSessionActive = false
+            heartRate = 0
+            activeCalories = 0
+            heartRateHandlers.removeAll()
         } catch {
             print("❤️ Failed to end workout session: \(error)")
         }
-
-        self.session = nil
-        self.builder = nil
-        self.liveWorkoutBuilder = nil
-        isSessionActive = false
-        heartRate = 0
-        activeCalories = 0
-        heartRateHandlers.removeAll()
     }
 
 #if DEBUG

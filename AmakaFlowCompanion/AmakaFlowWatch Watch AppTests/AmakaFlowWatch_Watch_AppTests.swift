@@ -22,13 +22,16 @@ struct AmakaFlowWatch_Watch_AppTests {
         final class MockWorkoutBuilder: WorkoutSessionBuilding {
             private(set) var endCollectionCalled = false
             private(set) var finishWorkoutCalled = false
+            private(set) var callOrder: [String] = []
 
             func endCollection(at end: Date) async throws {
                 endCollectionCalled = true
+                callOrder.append("endCollection")
             }
 
             func finishWorkout() async throws -> HKWorkout? {
                 finishWorkoutCalled = true
+                callOrder.append("finishWorkout")
                 return nil
             }
         }
@@ -41,6 +44,10 @@ struct AmakaFlowWatch_Watch_AppTests {
 
         #expect(mockBuilder.endCollectionCalled, "endSession must call endCollection before closing the session")
         #expect(mockBuilder.finishWorkoutCalled, "endSession must call finishWorkout so completed workouts are persisted to HealthKit")
+        #expect(
+            mockBuilder.callOrder == ["endCollection", "finishWorkout"],
+            "endSession must call endCollection before finishWorkout"
+        )
     }
 
 }
