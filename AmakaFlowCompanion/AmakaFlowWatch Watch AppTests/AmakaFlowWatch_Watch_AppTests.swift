@@ -5,6 +5,7 @@
 //  Created by DAVID ANDREWS on 11/21/25.
 //
 
+import Foundation
 import Testing
 @testable import AmakaFlowWatch_Watch_App
 
