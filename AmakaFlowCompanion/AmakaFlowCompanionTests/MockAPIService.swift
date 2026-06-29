@@ -1320,7 +1320,7 @@ extension CoachKnowledgeReviewResponse {
                 "status": .string(decision == .approve ? "approved" : "rejected")
             ],
             audit: ["boundary": .string("coach_wiki_review")],
-            cacheInvalidated: decision == .approve
+            cacheInvalidated: true
         )
     }
 }

@@ -536,7 +536,7 @@ class FixtureAPIService: APIServiceProviding {
             claim: ["id": .string("fixture-knee-review")],
             pendingAction: ["id": .string(actionId), "status": .string(decision == .approve ? "approved" : "rejected")],
             audit: ["boundary": .string("coach_wiki_review")],
-            cacheInvalidated: decision == .approve
+            cacheInvalidated: true
         )
     }
 

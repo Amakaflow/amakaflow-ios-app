@@ -396,10 +396,10 @@ final class CoachKnowledgeSurfaceTests: XCTestCase {
         XCTAssertEqual(viewModel.acceptedFacts.first?.text, "HYROX race - May 2026")
     }
 
-    func testReadableSectionsExcludeNeedsReviewFactsFromAcceptedTruthRows() async {
+    func testReadableSectionsExcludeNeedsReviewFactsFromAcceptedTruthRows() async throws {
         let api = MockAPIService()
         let base = CoachKnowledgeSurface.ama2229Fixture
-        let accepted = try! XCTUnwrap(base.sections.first?.facts.first)
+        let accepted = try XCTUnwrap(base.sections.first?.facts.first)
         let heldFact = CoachKnowledgeFact(
             id: "fact-held-in-section",
             text: "Possible left knee issue",
@@ -435,12 +435,12 @@ final class CoachKnowledgeSurfaceTests: XCTestCase {
         XCTAssertFalse(viewModel.acceptedFacts.contains { $0.id == "fact-held-in-section" })
     }
 
-    func testAcceptedFactsKeepSourceAndDrillableProvenance() async {
+    func testAcceptedFactsKeepSourceAndDrillableProvenance() async throws {
         let viewModel = CoachKnowledgeViewModel(apiService: MockAPIService())
 
         await viewModel.load()
 
-        let fact = try! XCTUnwrap(viewModel.acceptedFacts.first)
+        let fact = try XCTUnwrap(viewModel.acceptedFacts.first)
         XCTAssertEqual(fact.state, "accepted")
         XCTAssertEqual(fact.source?.label, "You told me")
         XCTAssertEqual(fact.provenance.first?.quote, "HYROX in May.")
@@ -457,11 +457,11 @@ final class CoachKnowledgeSurfaceTests: XCTestCase {
         XCTAssertTrue(viewModel.reviewOnlyFacts.allSatisfy(\.isReviewOnly))
     }
 
-    func testReviewActionsHitSharedCoachWikiPendingActionsPath() async {
+    func testReviewActionsHitSharedCoachWikiPendingActionsPath() async throws {
         let api = MockAPIService()
         let viewModel = CoachKnowledgeViewModel(apiService: api)
         await viewModel.load()
-        let fact = try! XCTUnwrap(viewModel.reviewOnlyFacts.first)
+        let fact = try XCTUnwrap(viewModel.reviewOnlyFacts.first)
 
         await viewModel.reviewSensitiveFact(fact, decision: .approve)
 
@@ -471,11 +471,11 @@ final class CoachKnowledgeSurfaceTests: XCTestCase {
         XCTAssertTrue(api.reviewCoachKnowledgeReason?.contains("iOS CKW surface") ?? false)
     }
 
-    func testRejectReviewActionsHitSharedCoachWikiPendingActionsPath() async {
+    func testRejectReviewActionsHitSharedCoachWikiPendingActionsPath() async throws {
         let api = MockAPIService()
         let viewModel = CoachKnowledgeViewModel(apiService: api)
         await viewModel.load()
-        let fact = try! XCTUnwrap(viewModel.reviewOnlyFacts.first)
+        let fact = try XCTUnwrap(viewModel.reviewOnlyFacts.first)
 
         await viewModel.reviewSensitiveFact(fact, decision: .reject)
 
@@ -485,12 +485,12 @@ final class CoachKnowledgeSurfaceTests: XCTestCase {
         XCTAssertEqual(api.reviewCoachKnowledgeReason, "Kept private from iOS CKW surface.")
     }
 
-    func testDuplicateSensitiveReviewSubmissionsAreBlockedPerAction() async {
+    func testDuplicateSensitiveReviewSubmissionsAreBlockedPerAction() async throws {
         let api = MockAPIService()
         api.reviewCoachKnowledgeDelayNanoseconds = 100_000_000
         let viewModel = CoachKnowledgeViewModel(apiService: api)
         await viewModel.load()
-        let fact = try! XCTUnwrap(viewModel.reviewOnlyFacts.first)
+        let fact = try XCTUnwrap(viewModel.reviewOnlyFacts.first)
 
         async let first: Void = viewModel.reviewSensitiveFact(fact, decision: .approve)
         async let second: Void = viewModel.reviewSensitiveFact(fact, decision: .reject)
@@ -499,10 +499,10 @@ final class CoachKnowledgeSurfaceTests: XCTestCase {
         XCTAssertEqual(api.reviewCoachKnowledgeCallCount, 1)
     }
 
-    func testMultipleContradictionsRemainAvailableForResolveSurface() async {
+    func testMultipleContradictionsRemainAvailableForResolveSurface() async throws {
         let api = MockAPIService()
         let base = CoachKnowledgeSurface.ama2229Fixture
-        let first = try! XCTUnwrap(base.contradictions.first)
+        let first = try XCTUnwrap(base.contradictions.first)
         let second = CoachKnowledgeContradiction(
             id: "contradiction-training-source",
             state: "needs_user_review",
