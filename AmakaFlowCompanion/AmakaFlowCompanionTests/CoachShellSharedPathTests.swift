@@ -220,6 +220,36 @@ final class CoachShellSharedPathTests: XCTestCase {
         XCTAssertNil(viewModel.error)
     }
 
+    // MARK: - Stop affordance cleanup
+
+    func testCancelBeforeFirstTokenRemovesEmptyAssistantPlaceholder() async {
+        let viewModel = makeViewModel()
+        let userMessage = ChatMessage(role: .user, content: "Plan my week")
+        let pendingAssistant = ChatMessage(role: .assistant, content: "", isStreaming: true)
+        viewModel.messages = [userMessage, pendingAssistant]
+
+        viewModel.cancelStream()
+
+        // The user's message stays; the blank assistant placeholder is removed
+        // (Stop during the first-token wait must not leave an empty bubble).
+        XCTAssertEqual(viewModel.messages.map(\.role), [.user])
+        XCTAssertFalse(viewModel.isStreaming)
+    }
+
+    func testCancelAfterFirstTokenKeepsPartialAssistantReply() async {
+        let viewModel = makeViewModel()
+        let userMessage = ChatMessage(role: .user, content: "Plan my week")
+        let partialAssistant = ChatMessage(role: .assistant, content: "Here's a start", isStreaming: true)
+        viewModel.messages = [userMessage, partialAssistant]
+
+        viewModel.cancelStream()
+
+        // Partial content is real coach output — keep it, just stop streaming.
+        XCTAssertEqual(viewModel.messages.count, 2)
+        XCTAssertEqual(viewModel.messages.last?.content, "Here's a start")
+        XCTAssertFalse(viewModel.messages.last?.isStreaming ?? true)
+    }
+
     // MARK: - Mock/dev fixture mode is sticky and honest
 
     func testMockCoachPathIsStickyMockOnSuccess() async {

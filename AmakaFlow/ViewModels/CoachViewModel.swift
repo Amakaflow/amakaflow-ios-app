@@ -495,7 +495,13 @@ class CoachViewModel: ObservableObject {
         isStreaming = false
         currentStage = nil
         completedStages = []
-        messages.last?.isStreaming = false
+        // Stopping during the first-token wait must not leave a blank assistant
+        // bubble behind — drop the empty placeholder instead of un-streaming it.
+        if let last = messages.last, last.role == .assistant, last.content.isEmpty {
+            messages.removeLast()
+        } else {
+            messages.last?.isStreaming = false
+        }
     }
 
     private func persistSessionId() {
