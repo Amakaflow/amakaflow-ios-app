@@ -128,6 +128,8 @@ final class CoachViewModelStreamingTests: XCTestCase {
         } else {
             XCTFail("expected .lyingSuccess on SSE .error event, got \(String(describing: viewModel.error))")
         }
+        XCTAssertFalse(viewModel.error?.isRetryable ?? true,
+                       "rate-limit SSE errors should remain deterministic and non-retryable")
     }
 
     // MARK: - AMA-1803 P2: typed CTAError tests
