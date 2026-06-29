@@ -26,6 +26,12 @@ struct AppDependencies {
     let syncQueueRepository: SyncQueueRepository
     let syncEngine: SyncEngine
 
+    /// AMA-2234 (E9-3): true when the coach path is wired to local fixtures /
+    /// mocks (dev / simulator validation) rather than the live shared
+    /// BFF / Channel Gateway / coach core. Drives the coach shell's sticky
+    /// `.mock` degrade mode so dev replies are never presented as live.
+    let isMockCoachPath: Bool
+
     init(
         apiService: APIServiceProviding,
         pairingService: PairingServiceProviding,
@@ -38,7 +44,8 @@ struct AppDependencies {
         acceptedSuggestionsRepository: AcceptedSuggestionsRepository = AcceptedSuggestionsRepository(),
         workoutEventsRepository: WorkoutEventsRepository = WorkoutEventsRepository(),
         syncQueueRepository: SyncQueueRepository = SyncQueueRepository(),
-        syncEngine: SyncEngine = SyncEngine.shared
+        syncEngine: SyncEngine = SyncEngine.shared,
+        isMockCoachPath: Bool = false
     ) {
         self.apiService = apiService
         self.pairingService = pairingService
@@ -52,6 +59,7 @@ struct AppDependencies {
         self.workoutEventsRepository = workoutEventsRepository
         self.syncQueueRepository = syncQueueRepository
         self.syncEngine = syncEngine
+        self.isMockCoachPath = isMockCoachPath
     }
 
     /// Live dependencies using real service implementations
@@ -88,7 +96,8 @@ struct AppDependencies {
         acceptedSuggestionsRepository: AcceptedSuggestionsRepository(),
         workoutEventsRepository: WorkoutEventsRepository(),
         syncQueueRepository: SyncQueueRepository(),
-        syncEngine: SyncEngine()
+        syncEngine: SyncEngine(),
+        isMockCoachPath: true
     )
 
     /// Returns the appropriate dependencies based on environment:

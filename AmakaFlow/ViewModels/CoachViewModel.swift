@@ -11,6 +11,73 @@ import Combine
 /// AMA-2123: session-scoped coach store hoisted above tab shell.
 typealias CoachSessionStore = CoachViewModel
 
+/// AMA-2234 (E9-3): explicit degradation modes for the single in-app coach
+/// shell.
+///
+/// iOS does **not** own a coach brain. Every turn routes through the shared
+/// mobile-BFF / Channel Gateway / coach core path (the same path Telegram
+/// proved in Epic 8). When a shared dependency is unavailable the shell must
+/// surface one of these honest modes instead of a blank screen, a crash, or a
+/// silent "success". Mirrors the Epic 9 voice degradation contract
+/// (`text` / `manual` / `mock` / `skip` / `data_gap`).
+enum CoachDegradeMode: String, Equatable, CaseIterable {
+    /// Typed text path is available and is always the source of truth.
+    case text
+    /// Shared coach path is unreachable right now — the user can keep typing
+    /// and retry; nothing is auto-executed and nothing is faked as sent.
+    case manual
+    /// Dev/fixture dependencies are in use (simulator validation). No live
+    /// BFF / gateway / LLM call is made.
+    case mock
+    /// An optional capability (e.g. voice, AMA-2231) is intentionally not in
+    /// this slice. Same coach, text only.
+    case skip
+    /// Required session/history data is unavailable and must not be fabricated.
+    case dataGap
+
+    /// Contract token used in logs, telemetry, and tests.
+    var contractToken: String {
+        switch self {
+        case .text: return "text"
+        case .manual: return "manual"
+        case .mock: return "mock"
+        case .skip: return "skip"
+        case .dataGap: return "data_gap"
+        }
+    }
+
+    /// Whether the header health dot should render in the degraded color.
+    var isDegraded: Bool { self != .text }
+
+    /// Title shown on the degraded banner. `nil` when no banner is needed.
+    var bannerTitle: String? {
+        switch self {
+        case .text: return nil
+        case .manual: return "Coach is reachable by text only"
+        case .mock: return "Dev mock mode"
+        case .skip: return "Voice is unavailable right now"
+        case .dataGap: return "Couldn't restore your earlier conversation"
+        }
+    }
+
+    /// Supporting copy under the banner title.
+    var bannerDetail: String? {
+        switch self {
+        case .text: return nil
+        case .manual:
+            return "We couldn't route that through your shared coach just now. "
+                + "Your message wasn't sent — same coach as Telegram and Watch, text only. Tap retry."
+        case .mock:
+            return "Coach replies are local fixtures for validation. No live BFF / gateway / LLM call is made."
+        case .skip:
+            return "Same coach, text only — your messages still route normally."
+        case .dataGap:
+            return "Your history is temporarily unavailable, so we're not guessing it. "
+                + "New messages still route through your shared coach."
+        }
+    }
+}
+
 @MainActor
 class CoachViewModel: ObservableObject {
     // MARK: - Published State
@@ -34,6 +101,12 @@ class CoachViewModel: ObservableObject {
     @Published var isLoadingMessages = false
     @Published var didRestoreConversation = false
     @Published var restoreError: CoachSessionError? = nil
+
+    /// AMA-2234 (E9-3): current degradation mode for the coach shell. `nil`
+    /// (or `.text`) means the shared coach path is healthy. Drives the header
+    /// health dot and the text-only degraded banner. Never left in a state
+    /// that hides a failure or fakes a success.
+    @Published var degradeMode: CoachDegradeMode?
     @Published var sessionId: String? {
         didSet { persistSessionId() }
     }
@@ -49,6 +122,26 @@ class CoachViewModel: ObservableObject {
     private var profileSubscription: AnyCancellable?
     private var boundSessionUserId: String?
 
+    /// Monotonic id for the in-flight stream turn. Bumped on every new send and
+    /// on cancel so a superseded/cancelled stream task can't run its late
+    /// cleanup against a newer turn (which would clobber `isStreaming`, the
+    /// error/degrade state, or remove the wrong placeholder). Only the task
+    /// whose captured generation still matches may mutate shared turn state.
+    private var streamGeneration = 0
+
+    /// Monotonic id for the in-flight session restore. Bumped by startNewChat()
+    /// so a late `fetchMessages` completion can't repopulate (or re-degrade) a
+    /// thread the user has already cleared.
+    private var restoreGeneration = 0
+
+    /// AMA-2234: the steady-state degrade mode for the current dependency
+    /// wiring. `.mock` when fixture/mock services are injected (dev/simulator
+    /// validation), otherwise `nil` (healthy live shared path). Transient
+    /// failures degrade to `.manual` / `.dataGap` and then fall back to this
+    /// baseline on recovery — mock mode stays sticky because it reflects the
+    /// environment, not a transient failure.
+    private let baselineDegradeMode: CoachDegradeMode?
+
     private func sessionStorageKey(for userId: String) -> String {
         DefaultsKey.coachSessionID(userID: userId)
     }
@@ -61,6 +154,13 @@ class CoachViewModel: ObservableObject {
 
     init(dependencies: AppDependencies = .current) {
         self.dependencies = dependencies
+        // AMA-2234: fixture/mock coach wiring means we are exercising the
+        // shell against local fixtures (simulator/dev), not the live shared
+        // coach path. Surface that honestly as `.mock` rather than pretending
+        // replies are live.
+        let baseline: CoachDegradeMode? = dependencies.isMockCoachPath ? .mock : nil
+        self.baselineDegradeMode = baseline
+        self.degradeMode = baseline
         let initialUserId = dependencies.pairingService.userProfile?.id ?? "unknown"
         boundSessionUserId = initialUserId
         self.sessionId = UserDefaults.standard.string(forKey: sessionStorageKey(for: initialUserId))
@@ -100,7 +200,16 @@ class CoachViewModel: ObservableObject {
 
         isLoadingMessages = true
         restoreError = nil
+        // Snapshot the conversation identity. If startNewChat() (which bumps
+        // restoreGeneration) or a session change happens while we're awaiting,
+        // this restore is stale and must not repopulate or re-degrade the
+        // now-cleared thread.
+        let restoreGenerationSnapshot = restoreGeneration
         defer { isLoadingMessages = false }
+
+        func restoreIsStale() -> Bool {
+            restoreGenerationSnapshot != restoreGeneration || self.sessionId != sessionId
+        }
 
         do {
             let restored = try await dependencies.coachSessionClient.fetchMessages(
@@ -108,17 +217,36 @@ class CoachViewModel: ObservableObject {
                 limit: 50,
                 token: token
             )
-            guard !restored.isEmpty else { return }
+            guard !restoreIsStale() else { return }
+            guard !restored.isEmpty else {
+                // An empty (but successful) restore is a normal new/empty thread,
+                // not a data gap — clear any prior degraded state on retry.
+                resetDegradeToBaseline()
+                return
+            }
             messages = restored.map {
                 ChatMessage(role: $0.role, content: $0.content, timestamp: $0.timestamp)
             }
             didRestoreConversation = true
+            // Successful restore: clear any prior data-gap and return to the
+            // baseline (healthy, or sticky mock in dev).
+            resetDegradeToBaseline()
         } catch CoachSessionError.sessionNotFound {
+            guard !restoreIsStale() else { return }
+            // 404 is a normal "new conversation" outcome, not a degradation.
+            // Clear any prior data-gap so a recovered retry isn't stuck degraded.
             self.sessionId = nil
+            resetDegradeToBaseline()
         } catch let error as CoachSessionError {
+            guard !restoreIsStale() else { return }
             restoreError = error
+            // History could not be loaded from the shared path — surface a
+            // data_gap rather than silently showing an empty thread.
+            degradeIfNotMock(.dataGap)
         } catch {
+            guard !restoreIsStale() else { return }
             restoreError = .httpError(statusCode: 0, body: error.localizedDescription)
+            degradeIfNotMock(.dataGap)
         }
     }
 
@@ -131,7 +259,12 @@ class CoachViewModel: ObservableObject {
 
     func sendMessage(_ text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, !isStreaming else { return }
+        // Reject sends while a turn is streaming or while session restore is in
+        // flight: loadMessagesIfNeeded() snapshots `messages.isEmpty` before its
+        // await and replaces `messages` wholesale when it resolves, so a send
+        // started mid-restore would be overwritten. The composer also gates this,
+        // but guard here too for direct/retry callers.
+        guard !trimmed.isEmpty, !isStreaming, !isLoadingMessages else { return }
 
         // Add user message
         let userMessage = ChatMessage(role: .user, content: trimmed)
@@ -154,6 +287,9 @@ class CoachViewModel: ObservableObject {
             assistantMessage.isStreaming = false
             isStreaming = false
             error = .unauthenticated()
+            // Auth is its own surface, not a dependency-down condition — don't
+            // leave a stale `.manual` / `.dataGap` banner on screen.
+            resetDegradeToBaseline()
             return
         }
 
@@ -164,43 +300,91 @@ class CoachViewModel: ObservableObject {
         )
 
         streamTask?.cancel()
+        streamGeneration += 1
+        let generation = streamGeneration
 
         streamTask = Task { @MainActor [weak self] in
             guard let self else { return }
             let stream = self.dependencies.chatStreamService.stream(request: request, token: token)
+            var caughtError: Error?
             do {
                 for try await event in stream {
-                    guard !Task.isCancelled else { break }
+                    // Stop if cancelled or if a newer turn has superseded us.
+                    guard !Task.isCancelled, self.streamGeneration == generation else { break }
                     self.processEvent(event, message: assistantMessage)
                 }
             } catch {
-                if !Task.isCancelled {
-                    if assistantMessage.content.isEmpty {
-                        if let idx = self.messages.lastIndex(where: { $0.id == assistantMessage.id }) {
-                            self.messages.remove(at: idx)
-                        }
-                        if let idx = self.messages.lastIndex(where: { $0.id == userMessage.id }) {
-                            self.messages.remove(at: idx)
-                        }
-                    }
-                    self.error = CTAError.map(error)
+                caughtError = error
+            }
+
+            // Only the active stream may finalize shared turn state. If Stop was
+            // tapped (or a newer send started), this task's late cleanup must not
+            // flip `isStreaming` off mid-turn or remove the new turn's bubbles.
+            guard self.streamGeneration == generation else { return }
+
+            if let caughtError, !Task.isCancelled {
+                if assistantMessage.content.isEmpty {
+                    self.messages.removeAll { $0.id == assistantMessage.id || $0.id == userMessage.id }
                 }
+                self.error = CTAError.map(caughtError)
             }
             // Clean up empty placeholder if an SSE .error event set the error
             if assistantMessage.content.isEmpty && self.error != nil {
-                if let idx = self.messages.lastIndex(where: { $0.id == assistantMessage.id }) {
-                    self.messages.remove(at: idx)
-                }
-                if let idx = self.messages.lastIndex(where: { $0.id == userMessage.id }) {
-                    self.messages.remove(at: idx)
-                }
+                self.messages.removeAll { $0.id == assistantMessage.id || $0.id == userMessage.id }
             }
             assistantMessage.isStreaming = false
             self.isStreaming = false
+
+            // AMA-2234: resolve the degrade mode once the turn settles. A
+            // failed turn (transport down / 5xx / SSE error) degrades to
+            // text-only `manual`; a clean turn returns to baseline. This is
+            // what keeps a missing BFF / gateway / LLM from becoming a blank
+            // screen, crash, or silent success.
+            if let ctaError = self.error {
+                self.applyDegrade(forTurnFailure: ctaError)
+            } else if !Task.isCancelled {
+                self.resetDegradeToBaseline()
+            }
         }
 
         // Wait for stream to complete
         await streamTask?.value
+    }
+
+    // MARK: - Degradation (AMA-2234)
+
+    /// Reset the degrade mode to the dependency baseline (healthy `nil`, or
+    /// sticky `.mock` in dev/fixture mode).
+    private func resetDegradeToBaseline() {
+        degradeMode = baselineDegradeMode
+    }
+
+    /// Set a transient degrade mode unless we are pinned to `.mock` (dev),
+    /// which reflects the environment and stays sticky.
+    private func degradeIfNotMock(_ mode: CoachDegradeMode) {
+        guard baselineDegradeMode != .mock else { return }
+        degradeMode = mode
+    }
+
+    /// Map a settled coach-turn failure onto a degrade mode. Rate-limit and
+    /// auth failures are not dependency-down conditions (they have their own
+    /// surfaces), so they fall back to the baseline.
+    private func applyDegrade(forTurnFailure error: CTAError) {
+        if baselineDegradeMode == .mock {
+            degradeMode = .mock
+            return
+        }
+        if rateLimitInfo != nil {
+            degradeMode = baselineDegradeMode
+            return
+        }
+        switch error {
+        case .unauthenticated:
+            degradeMode = baselineDegradeMode
+        case .network, .http, .lyingSuccess, .decoding, .unknown:
+            // Shared coach path could not complete the turn → text-only.
+            degradeMode = .manual
+        }
     }
 
     // MARK: - Process SSE Event
@@ -303,6 +487,12 @@ class CoachViewModel: ObservableObject {
     // MARK: - Session Management
 
     func startNewChat() {
+        // Invalidate any in-flight restore so its late completion can't
+        // repopulate or re-degrade the cleared thread, and re-enable input
+        // immediately even if a restore is still suspended.
+        restoreGeneration += 1
+        isLoadingMessages = false
+        streamGeneration += 1
         streamTask?.cancel()
         streamTask = nil
         isStreaming = false
@@ -315,6 +505,7 @@ class CoachViewModel: ObservableObject {
         currentStage = nil
         completedStages = []
         rateLimitInfo = nil
+        resetDegradeToBaseline()
     }
 
     /// AMA-1803 P2: re-send the last user message after a transient
@@ -336,12 +527,21 @@ class CoachViewModel: ObservableObject {
     }
 
     func cancelStream() {
+        // Invalidate the in-flight task so its late cleanup can't reset state on
+        // (or tear down) a subsequent turn the user starts right after Stop.
+        streamGeneration += 1
         streamTask?.cancel()
         streamTask = nil
         isStreaming = false
         currentStage = nil
         completedStages = []
-        messages.last?.isStreaming = false
+        // Stopping during the first-token wait must not leave a blank assistant
+        // bubble behind — drop the empty placeholder instead of un-streaming it.
+        if let last = messages.last, last.role == .assistant, last.content.isEmpty {
+            messages.removeLast()
+        } else {
+            messages.last?.isStreaming = false
+        }
     }
 
     private func persistSessionId() {
