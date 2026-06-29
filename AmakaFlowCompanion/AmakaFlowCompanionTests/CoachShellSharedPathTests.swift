@@ -159,15 +159,10 @@ final class CoachShellSharedPathTests: XCTestCase {
 
         for (dependency, mode, action, phase) in expectations {
             let state = CoachVoiceState(
-                phase: phase,
+                phase: .listening,
                 partialTranscript: "fixture phrase",
-                manualTranscript: "fixture phrase",
-                durationLabel: "0:06",
-                savedRecordingLabel: "0:06",
-                dependency: dependency,
-                textResponseVisible: true,
-                pendingActionConfirmationVisible: true
-            )
+                durationLabel: "0:06"
+            ).applyingInputDegrade(dependency)
 
             XCTAssertEqual(state.phase, phase, "\(dependency.rawValue) should render a visible fallback")
             XCTAssertEqual(state.fallbackMode.contractToken, mode.contractToken)
@@ -176,12 +171,7 @@ final class CoachShellSharedPathTests: XCTestCase {
             XCTAssertTrue(state.pendingActionConfirmationVisible)
         }
 
-        let ttsState = CoachVoiceState(
-            phase: .degraded,
-            dependency: .ttsDown,
-            textResponseVisible: true,
-            pendingActionConfirmationVisible: true
-        )
+        let ttsState = CoachVoiceState().applyingOutputDegrade(.ttsDown)
 
         XCTAssertEqual(ttsState.phase, .degraded)
         XCTAssertEqual(ttsState.fallbackMode.contractToken, CoachDegradeMode.skip.contractToken)

@@ -600,7 +600,7 @@ private struct CoachMicButton: View {
         }
         .disabled(isTextOnly || isDisabled)
         .opacity(isTextOnly ? 0.45 : 1)
-        .accessibilityLabel(isTextOnly ? "Voice unavailable" : "Hold to talk")
+        .accessibilityLabel(isTextOnly ? "Voice unavailable" : "Start voice input")
         .accessibilityIdentifier(isTextOnly ? "coach-mic-disabled" : "coach-mic-button")
     }
 }
@@ -717,13 +717,14 @@ private struct VoiceFallbackSheet: View {
 
             HStack(spacing: Theme.Spacing.sm) {
                 Button(action: onPlay) {
-                    Image(systemName: "play.fill")
+                    Image(systemName: state.isPlayingSavedRecording ? "waveform" : "play.fill")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(Theme.Colors.primaryForeground)
                         .frame(width: 30, height: 30)
                         .background(Theme.Colors.primary)
                         .clipShape(Circle())
                 }
+                .accessibilityLabel(state.isPlayingSavedRecording ? "Playing saved recording" : "Play saved recording")
                 .accessibilityIdentifier("coach-voice-playback")
 
                 VoiceWaveform(barCount: 32, color: Theme.Colors.textSecondary)
