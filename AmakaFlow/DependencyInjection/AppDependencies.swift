@@ -21,6 +21,7 @@ struct AppDependencies {
     let chatStreamService: ChatStreamProviding
     let coachSessionClient: CoachSessionProviding
     let pendingActionsClient: PendingActionsProviding
+    let coachTurnTelemetrySink: CoachTurnTelemetryProviding
     let programStreamService: ProgramStreamProviding
     let acceptedSuggestionsRepository: AcceptedSuggestionsRepository
     let workoutEventsRepository: WorkoutEventsRepository
@@ -42,6 +43,7 @@ struct AppDependencies {
         chatStreamService: ChatStreamProviding,
         coachSessionClient: CoachSessionProviding = CoachSessionClient(),
         pendingActionsClient: PendingActionsProviding = PendingActionsClient(),
+        coachTurnTelemetrySink: CoachTurnTelemetryProviding = CoachTurnDebugTelemetrySink(),
         programStreamService: ProgramStreamProviding = ProgramStreamService(),
         acceptedSuggestionsRepository: AcceptedSuggestionsRepository = AcceptedSuggestionsRepository(),
         workoutEventsRepository: WorkoutEventsRepository = WorkoutEventsRepository(),
@@ -57,6 +59,7 @@ struct AppDependencies {
         self.chatStreamService = chatStreamService
         self.coachSessionClient = coachSessionClient
         self.pendingActionsClient = pendingActionsClient
+        self.coachTurnTelemetrySink = coachTurnTelemetrySink
         self.programStreamService = programStreamService
         self.acceptedSuggestionsRepository = acceptedSuggestionsRepository
         self.workoutEventsRepository = workoutEventsRepository
@@ -76,6 +79,7 @@ struct AppDependencies {
         chatStreamService: ChatStreamService(),
         coachSessionClient: CoachSessionClient(),
         pendingActionsClient: PendingActionsClient(),
+        coachTurnTelemetrySink: CoachTurnDebugTelemetrySink(),
         programStreamService: ProgramStreamService(),
         acceptedSuggestionsRepository: AcceptedSuggestionsRepository(),
         workoutEventsRepository: WorkoutEventsRepository(),
@@ -97,6 +101,7 @@ struct AppDependencies {
         chatStreamService: PendingActionsFixtureChatStreamService(),
         coachSessionClient: MockCoachSessionClient(),
         pendingActionsClient: MockPendingActionsClient(),
+        coachTurnTelemetrySink: CoachTurnDebugTelemetrySink(),
         programStreamService: MockProgramStreamService(),
         acceptedSuggestionsRepository: AcceptedSuggestionsRepository(),
         workoutEventsRepository: WorkoutEventsRepository(),

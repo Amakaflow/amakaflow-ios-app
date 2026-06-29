@@ -196,6 +196,131 @@ struct CoachVoiceState: Equatable {
     }
 }
 
+enum CoachTurnMode: String, Equatable, CaseIterable {
+    case live
+    case mock
+    case skip
+    case dataGap = "data_gap"
+}
+
+enum CoachTurnSourceStage: String, Equatable, CaseIterable {
+    case app
+    case bff
+    case gateway
+    case coachCore = "coach_core"
+    case llm
+    case dependencyDown = "dependency_down"
+    case telemetrySink = "telemetry_sink"
+
+    static func fromStreamErrorType(_ type: String) -> CoachTurnSourceStage {
+        let normalized = type.lowercased()
+        if normalized.contains("bff") { return .bff }
+        if normalized.contains("gateway") { return .gateway }
+        if normalized.contains("llm") || normalized.contains("ai") { return .llm }
+        if normalized.contains("coach") || normalized.contains("stream") { return .coachCore }
+        return .dependencyDown
+    }
+}
+
+enum CoachStreamingPhase: String, Equatable, CaseIterable {
+    case idle
+    case waiting
+    case firstTokenReceived = "first_token_received"
+    case partialResponse = "partial_response"
+    case completed
+    case failed
+    case interrupted
+    case degraded
+
+    var footerLabel: String? {
+        switch self {
+        case .waiting:
+            return "WAITING"
+        case .firstTokenReceived:
+            return "FIRST TOKEN"
+        case .partialResponse:
+            return "STREAMING"
+        default:
+            return nil
+        }
+    }
+
+    var statusLine: String {
+        switch self {
+        case .waiting:
+            return "Reading your recent sessions..."
+        case .firstTokenReceived:
+            return "Starting the response..."
+        case .partialResponse:
+            return "Building the response..."
+        case .failed:
+            return "The turn failed. Retry is available."
+        case .interrupted:
+            return "Stopped. Partial text stays visible."
+        case .degraded:
+            return "Shared coach path degraded. Text fallback is available."
+        case .completed, .idle:
+            return ""
+        }
+    }
+}
+
+struct CoachTurnTelemetryEvent: Equatable {
+    enum Name: String {
+        case sendStarted = "send_started"
+        case messageStarted = "message_started"
+        case firstToken = "first_token"
+        case partialChunk = "partial_chunk"
+        case pendingActionSurfaced = "pending_action_surfaced"
+        case completed
+        case failed
+        case interrupted
+        case degraded
+        case telemetrySinkDown = "telemetry_sink_down"
+    }
+
+    let name: Name
+    let turnId: String
+    let mode: CoachTurnMode
+    let sourceStage: CoachTurnSourceStage
+    let streamingPhase: CoachStreamingPhase
+    let latencyMs: Int?
+    let sessionId: String?
+    let traceId: String?
+    let details: String?
+}
+
+protocol CoachTurnTelemetryProviding {
+    @MainActor
+    func emit(_ event: CoachTurnTelemetryEvent) throws
+}
+
+struct CoachTurnDebugTelemetrySink: CoachTurnTelemetryProviding {
+    @MainActor
+    func emit(_ event: CoachTurnTelemetryEvent) throws {
+        var metadata: [String: String] = [
+            "turn_id": event.turnId,
+            "mode": event.mode.rawValue,
+            "source_stage": event.sourceStage.rawValue,
+            "streaming_phase": event.streamingPhase.rawValue
+        ]
+        if let latencyMs = event.latencyMs {
+            metadata["latency_ms"] = "\(latencyMs)"
+        }
+        if let sessionId = event.sessionId {
+            metadata["session_id"] = sessionId
+        }
+        if let traceId = event.traceId {
+            metadata["trace_id"] = traceId
+        }
+        DebugLogService.shared.log(
+            "Coach turn telemetry: \(event.name.rawValue)",
+            details: event.details ?? event.streamingPhase.statusLine,
+            metadata: metadata
+        )
+    }
+}
+
 @MainActor
 class CoachViewModel: ObservableObject {
     // MARK: - Published State
@@ -228,6 +353,9 @@ class CoachViewModel: ObservableObject {
     @Published var pendingActionLifecycle: [PendingActionContract] = []
     @Published var pendingActionBusyIds: Set<String> = []
     @Published var voiceState = CoachVoiceState()
+    @Published private(set) var streamingLifecycle: [CoachStreamingPhase] = []
+    @Published private(set) var coachTurnTelemetryEvents: [CoachTurnTelemetryEvent] = []
+    @Published private(set) var telemetrySinkMode: CoachTurnMode = .live
     @Published var sessionId: String? {
         didSet { persistSessionId() }
     }
@@ -242,6 +370,8 @@ class CoachViewModel: ObservableObject {
     private var streamTask: Task<Void, Never>?
     private var profileSubscription: AnyCancellable?
     private var boundSessionUserId: String?
+    private var activeTurnTelemetry: CoachTurnTelemetryContext?
+    private let maxCoachTurnTelemetryEvents = 100
 
     /// Monotonic id for the in-flight stream turn. Bumped on every new send and
     /// on cancel so a superseded/cancelled stream task can't run its late
@@ -263,6 +393,14 @@ class CoachViewModel: ObservableObject {
     /// baseline on recovery — mock mode stays sticky because it reflects the
     /// environment, not a transient failure.
     private let baselineDegradeMode: CoachDegradeMode?
+
+    private struct CoachTurnTelemetryContext {
+        let turnId: String
+        let startedAt: Date
+        var traceId: String?
+        var firstTokenRecorded = false
+        var partialChunkCount = 0
+    }
 
     private func sessionStorageKey(for userId: String) -> String {
         DefaultsKey.coachSessionID(userID: userId)
@@ -383,6 +521,134 @@ class CoachViewModel: ObservableObject {
         await loadMessagesIfNeeded()
     }
 
+    // MARK: - First-token / Streaming Telemetry (AMA-2233)
+
+    private func currentTelemetryMode(for error: CTAError? = nil) -> CoachTurnMode {
+        if baselineDegradeMode == .mock {
+            return .mock
+        }
+        if baselineDegradeMode == .skip || degradeMode == .skip {
+            return .skip
+        }
+        if baselineDegradeMode == .dataGap || degradeMode == .dataGap {
+            return .dataGap
+        }
+        if error != nil {
+            return .dataGap
+        }
+        return .live
+    }
+
+    private func beginTurnTelemetry(for message: ChatMessage) {
+        let turnId = UUID().uuidString
+        activeTurnTelemetry = CoachTurnTelemetryContext(turnId: turnId, startedAt: Date())
+        streamingLifecycle = [.waiting]
+        message.streamingPhase = .waiting
+        message.streamingMode = currentTelemetryMode()
+        telemetrySinkMode = .live
+        emitTelemetry(
+            .sendStarted,
+            mode: message.streamingMode,
+            sourceStage: .app,
+            phase: .waiting,
+            latencyMs: nil,
+            details: "iOS coach turn sent through shared stream path"
+        )
+    }
+
+    private func transitionStream(
+        _ phase: CoachStreamingPhase,
+        message: ChatMessage,
+        mode: CoachTurnMode? = nil,
+        sourceStage: CoachTurnSourceStage,
+        eventName: CoachTurnTelemetryEvent.Name,
+        latencyMs: Int? = nil,
+        details: String? = nil
+    ) {
+        if streamingLifecycle.last != phase {
+            streamingLifecycle.append(phase)
+        }
+        message.streamingPhase = phase
+        if let mode {
+            message.streamingMode = mode
+        }
+        message.streamingSourceStage = sourceStage
+        if phase == .firstTokenReceived, let latencyMs {
+            message.firstTokenLatencyMs = latencyMs
+        }
+        emitTelemetry(
+            eventName,
+            mode: mode ?? message.streamingMode,
+            sourceStage: sourceStage,
+            phase: phase,
+            latencyMs: latencyMs,
+            details: details
+        )
+    }
+
+    private func firstTokenLatencyMs(explicitLatencyMs: Int? = nil) -> Int {
+        if let explicitLatencyMs {
+            return explicitLatencyMs
+        }
+        guard let startedAt = activeTurnTelemetry?.startedAt else { return 0 }
+        return max(0, Int(Date().timeIntervalSince(startedAt) * 1000))
+    }
+
+    private func updateActiveTurn(_ update: (inout CoachTurnTelemetryContext) -> Void) {
+        guard var context = activeTurnTelemetry else { return }
+        update(&context)
+        activeTurnTelemetry = context
+    }
+
+    private func emitTelemetry(
+        _ name: CoachTurnTelemetryEvent.Name,
+        mode: CoachTurnMode,
+        sourceStage: CoachTurnSourceStage,
+        phase: CoachStreamingPhase,
+        latencyMs: Int?,
+        details: String?
+    ) {
+        let turnId = activeTurnTelemetry?.turnId ?? UUID().uuidString
+        let event = CoachTurnTelemetryEvent(
+            name: name,
+            turnId: turnId,
+            mode: mode,
+            sourceStage: sourceStage,
+            streamingPhase: phase,
+            latencyMs: latencyMs,
+            sessionId: sessionId,
+            traceId: activeTurnTelemetry?.traceId,
+            details: details
+        )
+        coachTurnTelemetryEvents.append(event)
+        trimCoachTurnTelemetryEvents()
+        guard telemetrySinkMode != .dataGap else { return }
+        do {
+            try dependencies.coachTurnTelemetrySink.emit(event)
+        } catch {
+            telemetrySinkMode = .dataGap
+            let sinkEvent = CoachTurnTelemetryEvent(
+                name: .telemetrySinkDown,
+                turnId: turnId,
+                mode: .dataGap,
+                sourceStage: .telemetrySink,
+                streamingPhase: phase,
+                latencyMs: latencyMs,
+                sessionId: sessionId,
+                traceId: activeTurnTelemetry?.traceId,
+                details: "Telemetry sink unavailable: \(error.localizedDescription)"
+            )
+            coachTurnTelemetryEvents.append(sinkEvent)
+            trimCoachTurnTelemetryEvents()
+        }
+    }
+
+    private func trimCoachTurnTelemetryEvents() {
+        if coachTurnTelemetryEvents.count > maxCoachTurnTelemetryEvents {
+            coachTurnTelemetryEvents = Array(coachTurnTelemetryEvents.suffix(maxCoachTurnTelemetryEvents))
+        }
+    }
+
     // MARK: - Send Message (Streaming)
 
     @discardableResult
@@ -409,9 +675,18 @@ class CoachViewModel: ObservableObject {
         lastSentMessageText = trimmed
         currentStage = nil
         completedStages = []
+        beginTurnTelemetry(for: assistantMessage)
 
         // Get auth token
         guard let token = dependencies.pairingService.getToken() else {
+            transitionStream(
+                .failed,
+                message: assistantMessage,
+                mode: .skip,
+                sourceStage: .app,
+                eventName: .failed,
+                details: "Auth token unavailable; coach turn skipped"
+            )
             messages.removeAll { $0.id == userMessage.id || $0.id == assistantMessage.id }
             assistantMessage.isStreaming = false
             isStreaming = false
@@ -419,6 +694,7 @@ class CoachViewModel: ObservableObject {
             // Auth is its own surface, not a dependency-down condition — don't
             // leave a stale `.manual` / `.dataGap` banner on screen.
             resetDegradeToBaseline()
+            activeTurnTelemetry = nil
             return false
         }
 
@@ -452,6 +728,15 @@ class CoachViewModel: ObservableObject {
             guard self.streamGeneration == generation else { return }
 
             if let caughtError, !Task.isCancelled {
+                let failurePhase: CoachStreamingPhase = assistantMessage.content.isEmpty ? .failed : .degraded
+                self.transitionStream(
+                    failurePhase,
+                    message: assistantMessage,
+                    mode: .dataGap,
+                    sourceStage: .dependencyDown,
+                    eventName: failurePhase == .failed ? .failed : .degraded,
+                    details: caughtError.localizedDescription
+                )
                 if assistantMessage.content.isEmpty {
                     self.messages.removeAll { $0.id == assistantMessage.id || $0.id == userMessage.id }
                 }
@@ -472,9 +757,19 @@ class CoachViewModel: ObservableObject {
             if let ctaError = self.error {
                 self.applyDegrade(forTurnFailure: ctaError)
             } else if !Task.isCancelled {
+                self.transitionStream(
+                    .completed,
+                    message: assistantMessage,
+                    mode: self.currentTelemetryMode(),
+                    sourceStage: .coachCore,
+                    eventName: .completed,
+                    latencyMs: assistantMessage.latencyMs,
+                    details: "Coach stream completed"
+                )
                 self.resetDegradeToBaseline()
                 self.speakVoiceReplyIfNeeded(assistantMessage.content)
             }
+            self.activeTurnTelemetry = nil
         }
 
         // Wait for stream to complete
@@ -768,13 +1063,56 @@ class CoachViewModel: ObservableObject {
 
     private func processEvent(_ event: SSEEvent, message: ChatMessage) {
         switch event {
-        case .messageStart(let sid, _):
+        case .messageStart(let sid, let traceId):
             if sessionId != sid {
                 sessionId = sid
             }
+            updateActiveTurn { $0.traceId = traceId }
+            transitionStream(
+                .waiting,
+                message: message,
+                sourceStage: .bff,
+                eventName: .messageStarted,
+                details: "BFF/gateway stream opened"
+            )
+
+        case .firstToken(let latencyMs, let sourceStage, let mode):
+            let resolvedMode = mode.flatMap(CoachTurnMode.init(rawValue:)) ?? currentTelemetryMode()
+            let resolvedStage = sourceStage.flatMap(CoachTurnSourceStage.init(rawValue:)) ?? .llm
+            let measuredLatency = firstTokenLatencyMs(explicitLatencyMs: latencyMs)
+            updateActiveTurn { $0.firstTokenRecorded = true }
+            transitionStream(
+                .firstTokenReceived,
+                message: message,
+                mode: resolvedMode,
+                sourceStage: resolvedStage,
+                eventName: .firstToken,
+                latencyMs: measuredLatency,
+                details: "First token received"
+            )
 
         case .contentDelta(let text):
+            if activeTurnTelemetry?.firstTokenRecorded != true {
+                let latency = firstTokenLatencyMs()
+                updateActiveTurn { $0.firstTokenRecorded = true }
+                transitionStream(
+                    .firstTokenReceived,
+                    message: message,
+                    sourceStage: .llm,
+                    eventName: .firstToken,
+                    latencyMs: latency,
+                    details: "First token inferred from first content delta"
+                )
+            }
             message.content += text
+            updateActiveTurn { $0.partialChunkCount += 1 }
+            transitionStream(
+                .partialResponse,
+                message: message,
+                sourceStage: .llm,
+                eventName: .partialChunk,
+                details: "Streaming partial response chunk"
+            )
             scrollTrigger = UUID()
 
         case .functionCall(let id, let name):
@@ -788,7 +1126,17 @@ class CoachViewModel: ObservableObject {
                 updated.result = result
                 message.toolCalls[idx] = updated
             }
-            appendPendingActions(PendingActionParse.actions(fromFunctionResult: result), to: message)
+            let parsedPendingActions = PendingActionParse.actions(fromFunctionResult: result)
+            appendPendingActions(parsedPendingActions, to: message)
+            if !parsedPendingActions.isEmpty {
+                transitionStream(
+                    message.isStreaming ? .partialResponse : message.streamingPhase,
+                    message: message,
+                    sourceStage: .coachCore,
+                    eventName: .pendingActionSurfaced,
+                    details: "PendingAction surfaced; confirmation still required"
+                )
+            }
             tryParseWorkoutData(result: result, message: message)
 
         case .stage(let stage, _):
@@ -832,6 +1180,15 @@ class CoachViewModel: ObservableObject {
                 message: errorMsg,
                 errorCode: type,
                 requestId: nil
+            )
+            let failurePhase: CoachStreamingPhase = message.content.isEmpty ? .failed : .degraded
+            transitionStream(
+                failurePhase,
+                message: message,
+                mode: type == "rate_limit_exceeded" ? currentTelemetryMode() : .dataGap,
+                sourceStage: CoachTurnSourceStage.fromStreamErrorType(type),
+                eventName: failurePhase == .failed ? .failed : .degraded,
+                details: errorMsg
             )
             if type == "rate_limit_exceeded", let usage, let limit {
                 rateLimitInfo = RateLimitInfo(usage: usage, limit: limit)
@@ -883,6 +1240,8 @@ class CoachViewModel: ObservableObject {
         lastSentMessageText = nil
         currentStage = nil
         completedStages = []
+        streamingLifecycle = []
+        activeTurnTelemetry = nil
         rateLimitInfo = nil
         pendingActionLifecycle.removeAll()
         pendingActionBusyIds.removeAll()
@@ -924,10 +1283,29 @@ class CoachViewModel: ObservableObject {
         // Stopping during the first-token wait must not leave a blank assistant
         // bubble behind — drop the empty placeholder instead of un-streaming it.
         if let last = messages.last, last.role == .assistant, last.content.isEmpty {
+            transitionStream(
+                .interrupted,
+                message: last,
+                sourceStage: .app,
+                eventName: .interrupted,
+                details: "Stopped before first token"
+            )
             messages.removeLast()
         } else {
-            messages.last?.isStreaming = false
+            if let last = messages.last, last.role == .assistant {
+                transitionStream(
+                    .interrupted,
+                    message: last,
+                    sourceStage: .app,
+                    eventName: .interrupted,
+                    details: "Stopped after partial response"
+                )
+                last.isStreaming = false
+            } else {
+                messages.last?.isStreaming = false
+            }
         }
+        activeTurnTelemetry = nil
     }
 
     private func persistSessionId() {
@@ -966,6 +1344,10 @@ class ChatMessage: Identifiable, ObservableObject {
     @Published var pendingActions: [PendingActionContract]
     @Published var tokensUsed: Int?
     @Published var latencyMs: Int?
+    @Published var firstTokenLatencyMs: Int?
+    @Published var streamingPhase: CoachStreamingPhase
+    @Published var streamingMode: CoachTurnMode
+    @Published var streamingSourceStage: CoachTurnSourceStage?
     @Published var isStreaming: Bool
 
     let suggestions: [CoachSuggestion]?
@@ -992,6 +1374,10 @@ class ChatMessage: Identifiable, ObservableObject {
         self.pendingActions = pendingActions
         self.tokensUsed = nil
         self.latencyMs = nil
+        self.firstTokenLatencyMs = nil
+        self.streamingPhase = isStreaming ? .waiting : .idle
+        self.streamingMode = .live
+        self.streamingSourceStage = nil
         self.isStreaming = isStreaming
         self.suggestions = suggestions
         self.actionItems = actionItems

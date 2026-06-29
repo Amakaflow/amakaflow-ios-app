@@ -266,6 +266,12 @@ final class ChatStreamServiceTests: XCTestCase {
         XCTAssertEqual(event, .messageStart(sessionId: "abc-123", traceId: "tr-1"))
     }
 
+    func testParseFirstTokenEvent() throws {
+        let block = "event: first_token\ndata: {\"latency_ms\":432,\"source_stage\":\"llm\",\"mode\":\"live\"}"
+        let event = SSEParser.parse(block: block)
+        XCTAssertEqual(event, .firstToken(latencyMs: 432, sourceStage: "llm", mode: "live"))
+    }
+
     func testParseFunctionCallEvent() throws {
         let block = "event: function_call\ndata: {\"id\":\"toolu_01\",\"name\":\"search_workout_library\"}"
         let event = SSEParser.parse(block: block)

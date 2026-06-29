@@ -847,7 +847,7 @@ struct CoachMessageRow: View {
     var body: some View {
         VStack(alignment: isUser ? .trailing : .leading, spacing: Theme.Spacing.xs) {
             if isThinking {
-                CoachThinkingBubble()
+                CoachThinkingBubble(statusLine: message.streamingPhase.statusLine)
             } else {
                 bubble
             }
@@ -928,7 +928,7 @@ struct CoachMessageRow: View {
                 Circle()
                     .fill(Theme.Colors.readyHigh)
                     .frame(width: 5, height: 5)
-                Text(isThinking ? "WAITING" : "STREAMING")
+                Text(message.streamingPhase.footerLabel ?? (isThinking ? "WAITING" : "STREAMING"))
                     .font(Font.geistMono(9, .medium))
                     .foregroundColor(Theme.Colors.readyHigh)
             }
@@ -954,6 +954,7 @@ struct CoachMessageRow: View {
 /// First-token waiting state: animated dots + a step line. Maps the approved
 /// "thinking" artboard. Detailed first-token instrumentation is AMA-2233.
 private struct CoachThinkingBubble: View {
+    let statusLine: String
     @State private var animating = false
 
     var body: some View {
@@ -981,7 +982,7 @@ private struct CoachThinkingBubble: View {
             )
             .clipShape(BubbleShape(tightCorner: .bottomLeading))
 
-            Text("Reading your recent sessions…")
+            Text(statusLine.isEmpty ? "Reading your recent sessions..." : statusLine)
                 .font(Font.geistMono(9.5, .regular))
                 .foregroundColor(Theme.Colors.textTertiary)
                 .padding(.leading, Theme.Spacing.xs)
