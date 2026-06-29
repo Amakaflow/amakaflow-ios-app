@@ -60,10 +60,14 @@ final class CoachFirstTokenStreamingTests: XCTestCase {
         await viewModel.sendMessage("How hard should today be?")
 
         let assistant = viewModel.messages.last
-        XCTAssertEqual(assistant?.firstTokenLatencyMs, 487)
-        XCTAssertEqual(viewModel.coachTurnTelemetryEvents.first(where: { $0.name == .firstToken })?.latencyMs, 487)
-        XCTAssertEqual(viewModel.coachTurnTelemetryEvents.first(where: { $0.name == .firstToken })?.mode, .live)
-        XCTAssertEqual(viewModel.coachTurnTelemetryEvents.first(where: { $0.name == .firstToken })?.sourceStage, .llm)
+        XCTAssertNotNil(assistant?.firstTokenLatencyMs)
+        XCTAssertGreaterThanOrEqual(assistant?.firstTokenLatencyMs ?? -1, 0)
+        let firstTokenEvent = viewModel.coachTurnTelemetryEvents.first(where: { $0.name == .firstToken })
+        XCTAssertNotNil(firstTokenEvent?.latencyMs)
+        XCTAssertGreaterThanOrEqual(firstTokenEvent?.latencyMs ?? -1, 0)
+        XCTAssertEqual(firstTokenEvent?.details, "First token received (source_latency_ms=487)")
+        XCTAssertEqual(firstTokenEvent?.mode, .live)
+        XCTAssertEqual(firstTokenEvent?.sourceStage, .llm)
     }
 
     func testStreamingLifecycleRendersInOrderAndFailureShowsRetry() async {

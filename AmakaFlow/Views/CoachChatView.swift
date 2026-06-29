@@ -989,7 +989,11 @@ private struct CoachThinkingBubble: View {
         }
         .onAppear { animating = true }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Coach is thinking")
+        .accessibilityLabel(
+            statusLine.isEmpty
+                ? "Coach is thinking"
+                : "Coach is thinking. \(statusLine)"
+        )
         .accessibilityIdentifier("coach-thinking")
         .accessibilityAddTraits(.updatesFrequently)
     }

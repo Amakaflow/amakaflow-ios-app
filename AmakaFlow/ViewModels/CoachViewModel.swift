@@ -586,12 +586,18 @@ class CoachViewModel: ObservableObject {
         )
     }
 
-    private func firstTokenLatencyMs(explicitLatencyMs: Int? = nil) -> Int {
-        if let explicitLatencyMs {
-            return explicitLatencyMs
-        }
+    /// App-side first-token latency from send tap through first visible token.
+    /// Source-reported `latency_ms` from the BFF is carried in telemetry details only.
+    private func appMeasuredFirstTokenLatencyMs() -> Int {
         guard let startedAt = activeTurnTelemetry?.startedAt else { return 0 }
         return max(0, Int(Date().timeIntervalSince(startedAt) * 1000))
+    }
+
+    private func firstTokenDetails(sourceLatencyMs: Int? = nil) -> String {
+        if let sourceLatencyMs {
+            return "First token received (source_latency_ms=\(sourceLatencyMs))"
+        }
+        return "First token inferred from first content delta"
     }
 
     private func updateActiveTurn(_ update: (inout CoachTurnTelemetryContext) -> Void) {
@@ -1079,7 +1085,7 @@ class CoachViewModel: ObservableObject {
         case .firstToken(let latencyMs, let sourceStage, let mode):
             let resolvedMode = mode.flatMap(CoachTurnMode.init(rawValue:)) ?? currentTelemetryMode()
             let resolvedStage = sourceStage.flatMap(CoachTurnSourceStage.init(rawValue:)) ?? .llm
-            let measuredLatency = firstTokenLatencyMs(explicitLatencyMs: latencyMs)
+            let measuredLatency = appMeasuredFirstTokenLatencyMs()
             updateActiveTurn { $0.firstTokenRecorded = true }
             transitionStream(
                 .firstTokenReceived,
@@ -1088,12 +1094,12 @@ class CoachViewModel: ObservableObject {
                 sourceStage: resolvedStage,
                 eventName: .firstToken,
                 latencyMs: measuredLatency,
-                details: "First token received"
+                details: firstTokenDetails(sourceLatencyMs: latencyMs)
             )
 
         case .contentDelta(let text):
             if activeTurnTelemetry?.firstTokenRecorded != true {
-                let latency = firstTokenLatencyMs()
+                let latency = appMeasuredFirstTokenLatencyMs()
                 updateActiveTurn { $0.firstTokenRecorded = true }
                 transitionStream(
                     .firstTokenReceived,
@@ -1101,7 +1107,7 @@ class CoachViewModel: ObservableObject {
                     sourceStage: .llm,
                     eventName: .firstToken,
                     latencyMs: latency,
-                    details: "First token inferred from first content delta"
+                    details: firstTokenDetails()
                 )
             }
             message.content += text
