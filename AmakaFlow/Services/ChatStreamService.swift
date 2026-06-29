@@ -489,9 +489,13 @@ class MockChatStreamService: ChatStreamProviding {
     var eventsToYield: [SSEEvent] = []
     var errorToThrow: Error?
     var streamCalled = false
+    private(set) var lastRequest: ChatStreamRequest?
+    private(set) var lastToken: String?
 
     func stream(request: ChatStreamRequest, token: String) -> AsyncThrowingStream<SSEEvent, Error> {
         streamCalled = true
+        lastRequest = request
+        lastToken = token
         let events = eventsToYield
         let error = errorToThrow
         return AsyncThrowingStream { continuation in

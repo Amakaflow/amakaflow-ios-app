@@ -45,16 +45,19 @@ final class CoachShellSharedPathTests: XCTestCase {
     /// fixture/dev wiring; default `false` exercises the live-path contract.
     private func makeViewModel(
         isMockCoachPath: Bool = false,
-        sessionClient: CoachSessionProviding? = nil
+        sessionClient: CoachSessionProviding? = nil,
+        audioService: AudioProviding = MockAudioService(),
+        pendingActionsClient: PendingActionsProviding = MockPendingActionsClient()
     ) -> CoachViewModel {
         let dependencies = AppDependencies(
             apiService: MockAPIService(),
             pairingService: mockPairingService,
-            audioService: MockAudioService(),
+            audioService: audioService,
             progressStore: MockProgressStore(),
             watchSession: MockWatchSession(),
             chatStreamService: mockStreamService,
             coachSessionClient: sessionClient ?? mockSessionClient,
+            pendingActionsClient: pendingActionsClient,
             isMockCoachPath: isMockCoachPath
         )
         return CoachViewModel(dependencies: dependencies)
@@ -95,6 +98,116 @@ final class CoachShellSharedPathTests: XCTestCase {
 
         XCTAssertNil(viewModel.degradeMode, "a healthy live turn must not be flagged degraded")
         XCTAssertFalse(viewModel.degradeMode?.isDegraded ?? false)
+    }
+
+    // MARK: - Voice input/output contract
+
+    func testVoiceInputYieldsTextBeforeSharedCoachSessionPath() async {
+        let viewModel = makeViewModel()
+        viewModel.startVoiceListening(partialTranscript: "Move my long run to Saturday", durationLabel: "0:06")
+        viewModel.updateVoicePartialTranscript("Move my long run to Saturday and make today easy")
+        mockStreamService.eventsToYield = [
+            .messageStart(sessionId: "voice-shared-session", traceId: "voice-trace"),
+            .contentDelta(text: "Done as a proposal."),
+            .messageEnd(sessionId: "voice-shared-session", tokensUsed: 8, latencyMs: 80)
+        ]
+
+        let accepted = await viewModel.submitVoiceTranscript(speakResponse: false)
+
+        XCTAssertTrue(accepted)
+        XCTAssertTrue(mockStreamService.streamCalled, "voice must enter the same shared stream path as typed text")
+        XCTAssertEqual(mockStreamService.lastRequest?.message, "Move my long run to Saturday and make today easy")
+        XCTAssertEqual(viewModel.voiceState.lastSubmittedTranscript, "Move my long run to Saturday and make today easy")
+        XCTAssertEqual(viewModel.messages.first?.role, .user)
+        XCTAssertEqual(viewModel.messages.first?.content, "Move my long run to Saturday and make today easy")
+    }
+
+    func testSpokenOutputNeverSuppressesTextOrPendingActionConfirmation() async {
+        let audio = MockAudioService()
+        let viewModel = makeViewModel(audioService: audio)
+        mockStreamService.eventsToYield = [
+            .messageStart(sessionId: "voice-pa-session", traceId: "voice-pa-trace"),
+            .contentDelta(text: "I can move it, but approve first."),
+            .functionResult(
+                toolUseId: "pa-tool",
+                name: "coach_execute",
+                result: pendingActionCreatedJSON(actionId: "pa_voice_requires_approval")
+            ),
+            .messageEnd(sessionId: "voice-pa-session", tokensUsed: 12, latencyMs: 95)
+        ]
+
+        let accepted = await viewModel.submitVoiceTranscript("Move my threshold run", speakResponse: true)
+
+        XCTAssertTrue(accepted)
+        XCTAssertTrue(audio.speakCalled, "spoken output may play, but only after text is present")
+        XCTAssertEqual(audio.lastSpokenText, "I can move it, but approve first.")
+        XCTAssertEqual(viewModel.messages.last?.content, "I can move it, but approve first.")
+        XCTAssertEqual(viewModel.messages.last?.pendingActions.first?.actionId, "pa_voice_requires_approval")
+        XCTAssertEqual(viewModel.messages.last?.pendingActions.first?.executionStatus, .pending)
+        XCTAssertTrue(viewModel.voiceState.textResponseVisible)
+        XCTAssertTrue(viewModel.voiceState.pendingActionConfirmationVisible)
+    }
+
+    func testVoiceDependencyFailuresMapToExplicitFallbacks() {
+        let expectations: [(CoachVoiceDependency, CoachDegradeMode, String, CoachVoicePhase)] = [
+            (.permissionDenied, .manual, "manual", .transcriptionFallback),
+            (.recorderUnavailable, .mock, "mock", .transcriptionFallback),
+            (.sttDown, .manual, "manual", .transcriptionFallback),
+            (.networkDown, .manual, "manual", .transcriptionFallback),
+            (.gatewayDown, .dataGap, "data_gap", .transcriptionFallback)
+        ]
+
+        for (dependency, mode, action, phase) in expectations {
+            let state = CoachVoiceState(
+                phase: phase,
+                partialTranscript: "fixture phrase",
+                manualTranscript: "fixture phrase",
+                durationLabel: "0:06",
+                savedRecordingLabel: "0:06",
+                dependency: dependency,
+                textResponseVisible: true,
+                pendingActionConfirmationVisible: true
+            )
+
+            XCTAssertEqual(state.phase, phase, "\(dependency.rawValue) should render a visible fallback")
+            XCTAssertEqual(state.fallbackMode.contractToken, mode.contractToken)
+            XCTAssertEqual(state.fallbackAction, action)
+            XCTAssertTrue(state.textResponseVisible)
+            XCTAssertTrue(state.pendingActionConfirmationVisible)
+        }
+
+        let ttsState = CoachVoiceState(
+            phase: .degraded,
+            dependency: .ttsDown,
+            textResponseVisible: true,
+            pendingActionConfirmationVisible: true
+        )
+
+        XCTAssertEqual(ttsState.phase, .degraded)
+        XCTAssertEqual(ttsState.fallbackMode.contractToken, CoachDegradeMode.skip.contractToken)
+        XCTAssertEqual(ttsState.fallbackAction, "skip")
+        XCTAssertTrue(ttsState.textResponseVisible, "TTS down must skip speech while keeping text visible")
+    }
+
+    func testVoiceTranscriptCannotAutoApprovePendingAction() async {
+        let pendingClient = MockPendingActionsClient()
+        let viewModel = makeViewModel(pendingActionsClient: pendingClient)
+        mockStreamService.eventsToYield = [
+            .messageStart(sessionId: "voice-no-auto-approve", traceId: nil),
+            .contentDelta(text: "Here is a proposed change."),
+            .functionResult(
+                toolUseId: "pa-tool",
+                name: "coach_execute",
+                result: pendingActionCreatedJSON(actionId: "pa_voice_no_auto_approve")
+            ),
+            .messageEnd(sessionId: "voice-no-auto-approve", tokensUsed: 10, latencyMs: 70)
+        ]
+
+        await viewModel.submitVoiceTranscript("Yes move it", speakResponse: false)
+
+        XCTAssertTrue(pendingClient.confirmationRequests.isEmpty, "voice input is a message, not approval")
+        XCTAssertEqual(viewModel.pendingActionLifecycle.first?.actionId, "pa_voice_no_auto_approve")
+        XCTAssertEqual(viewModel.pendingActionLifecycle.first?.executionStatus, .pending)
     }
 
     // MARK: - Session continuity / restore
@@ -354,6 +467,34 @@ final class CoachShellSharedPathTests: XCTestCase {
         for mode in CoachDegradeMode.allCases where mode != .text {
             XCTAssertTrue(mode.isDegraded, "\(mode) should render as degraded")
         }
+    }
+
+    private func pendingActionCreatedJSON(actionId: String) -> String {
+        """
+        {
+          "status": "pending_action_created",
+          "mode": "mock",
+          "action": {
+            "action_id": "\(actionId)",
+            "tool_name": "propose_schedule_workout",
+            "risk_tier": "medium",
+            "execution_status": "pending",
+            "channel": "app",
+            "normalized_payload": {
+              "target": "session:threshold-thu",
+              "workout_id": "wrk_threshold_42",
+              "date": "2026-06-29"
+            },
+            "idempotency_key": "pending-action:v1:voice-test"
+          },
+          "side_effect_count": 0,
+          "dependency_status": {
+            "supabase": "mock",
+            "redis_iris": "skip",
+            "llm": "skip"
+          }
+        }
+        """
     }
 }
 

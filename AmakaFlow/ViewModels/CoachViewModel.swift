@@ -78,6 +78,101 @@ enum CoachDegradeMode: String, Equatable, CaseIterable {
     }
 }
 
+enum CoachVoiceDependency: String, Equatable, CaseIterable {
+    case permissionDenied = "permission_denied"
+    case recorderUnavailable = "recorder_unavailable"
+    case sttDown = "stt_down"
+    case ttsDown = "tts_down"
+    case networkDown = "network_down"
+    case gatewayDown = "gateway_down"
+
+    var title: String {
+        switch self {
+        case .permissionDenied: return "Microphone permission is off"
+        case .recorderUnavailable: return "Recorder is unavailable"
+        case .sttDown: return "Couldn't transcribe that"
+        case .ttsDown: return "Spoken output is unavailable"
+        case .networkDown: return "Network is unavailable"
+        case .gatewayDown: return "Coach gateway is unavailable"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .permissionDenied:
+            return "Same coach, text only. Type what you wanted to say."
+        case .recorderUnavailable:
+            return "Use the saved fixture or type manually. No live recording is required."
+        case .sttDown:
+            return "We saved your recording. Play it back, retry, or type instead."
+        case .ttsDown:
+            return "The coach response stays visible as text. Speech is skipped for this turn."
+        case .networkDown:
+            return "Your transcript was not sent. Text entry and retry remain available."
+        case .gatewayDown:
+            return "The shared BFF / gateway path is missing data, so nothing is guessed or auto-sent."
+        }
+    }
+
+    var fallbackMode: CoachDegradeMode {
+        switch self {
+        case .permissionDenied, .sttDown, .networkDown:
+            return .manual
+        case .recorderUnavailable:
+            return .mock
+        case .ttsDown:
+            return .skip
+        case .gatewayDown:
+            return .dataGap
+        }
+    }
+
+    var fallbackAction: String {
+        switch self {
+        case .permissionDenied, .sttDown, .networkDown:
+            return "manual"
+        case .recorderUnavailable:
+            return "mock"
+        case .ttsDown:
+            return "skip"
+        case .gatewayDown:
+            return "data_gap"
+        }
+    }
+}
+
+enum CoachVoicePhase: Equatable {
+    case idle
+    case listening
+    case transcriptionFallback
+    case degraded
+}
+
+struct CoachVoiceState: Equatable {
+    var phase: CoachVoicePhase = .idle
+    var partialTranscript: String = ""
+    var manualTranscript: String = ""
+    var durationLabel: String = "0:00"
+    var savedRecordingLabel: String?
+    var dependency: CoachVoiceDependency?
+    var lastSubmittedTranscript: String?
+    var lastSpokenText: String?
+    var textResponseVisible: Bool = true
+    var pendingActionConfirmationVisible: Bool = true
+
+    var fallbackMode: CoachDegradeMode {
+        dependency?.fallbackMode ?? .text
+    }
+
+    var fallbackAction: String {
+        dependency?.fallbackAction ?? "text"
+    }
+
+    var isPresented: Bool {
+        phase != .idle
+    }
+}
+
 @MainActor
 class CoachViewModel: ObservableObject {
     // MARK: - Published State
@@ -109,6 +204,7 @@ class CoachViewModel: ObservableObject {
     @Published var degradeMode: CoachDegradeMode?
     @Published var pendingActionLifecycle: [PendingActionContract] = []
     @Published var pendingActionBusyIds: Set<String> = []
+    @Published var voiceState = CoachVoiceState()
     @Published var sessionId: String? {
         didSet { persistSessionId() }
     }
@@ -130,6 +226,7 @@ class CoachViewModel: ObservableObject {
     /// error/degrade state, or remove the wrong placeholder). Only the task
     /// whose captured generation still matches may mutate shared turn state.
     private var streamGeneration = 0
+    private var shouldSpeakNextCoachReply = false
 
     /// Monotonic id for the in-flight session restore. Bumped by startNewChat()
     /// so a late `fetchMessages` completion can't repopulate (or re-degrade) a
@@ -353,12 +450,110 @@ class CoachViewModel: ObservableObject {
                 self.applyDegrade(forTurnFailure: ctaError)
             } else if !Task.isCancelled {
                 self.resetDegradeToBaseline()
+                self.speakVoiceReplyIfNeeded(assistantMessage.content)
             }
         }
 
         // Wait for stream to complete
         await streamTask?.value
         return error == nil
+    }
+
+    // MARK: - Voice UX (AMA-2231)
+
+    func startVoiceListening(
+        partialTranscript: String = "",
+        durationLabel: String = "0:00"
+    ) {
+        guard !isStreaming, !isLoadingMessages else { return }
+        voiceState = CoachVoiceState(
+            phase: .listening,
+            partialTranscript: partialTranscript,
+            manualTranscript: "",
+            durationLabel: durationLabel,
+            savedRecordingLabel: nil,
+            dependency: nil,
+            lastSubmittedTranscript: voiceState.lastSubmittedTranscript,
+            lastSpokenText: voiceState.lastSpokenText,
+            textResponseVisible: true,
+            pendingActionConfirmationVisible: true
+        )
+    }
+
+    func updateVoicePartialTranscript(_ transcript: String) {
+        guard voiceState.phase == .listening else { return }
+        voiceState.partialTranscript = transcript
+    }
+
+    func cancelVoiceInput() {
+        voiceState.phase = .idle
+        voiceState.partialTranscript = ""
+        voiceState.manualTranscript = ""
+        voiceState.dependency = nil
+    }
+
+    func setVoiceManualTranscript(_ transcript: String) {
+        voiceState.manualTranscript = transcript
+    }
+
+    func playSavedVoiceRecording() {
+        guard voiceState.savedRecordingLabel != nil else { return }
+        voiceState.lastSpokenText = "saved_recording_playback"
+    }
+
+    func retryVoiceInput() {
+        startVoiceListening(partialTranscript: "", durationLabel: "0:00")
+    }
+
+    func degradeVoiceInput(_ dependency: CoachVoiceDependency) {
+        voiceState.phase = dependency == .ttsDown ? .degraded : .transcriptionFallback
+        voiceState.dependency = dependency
+        voiceState.savedRecordingLabel = dependency == .ttsDown ? nil : "0:06"
+        voiceState.manualTranscript = voiceState.partialTranscript
+        voiceState.textResponseVisible = true
+        voiceState.pendingActionConfirmationVisible = true
+        degradeIfNotMock(dependency.fallbackMode)
+    }
+
+    @discardableResult
+    func submitVoiceTranscript(_ transcript: String? = nil, speakResponse: Bool = true) async -> Bool {
+        let source = transcript ?? (voiceState.manualTranscript.isEmpty ? voiceState.partialTranscript : voiceState.manualTranscript)
+        let trimmed = source.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            degradeVoiceInput(.sttDown)
+            return false
+        }
+
+        voiceState.lastSubmittedTranscript = trimmed
+        voiceState.textResponseVisible = true
+        voiceState.pendingActionConfirmationVisible = true
+        voiceState.phase = .idle
+        shouldSpeakNextCoachReply = speakResponse
+        let accepted = await sendMessage(trimmed)
+        if !accepted {
+            degradeVoiceInput(.networkDown)
+        }
+        return accepted
+    }
+
+    func degradeVoiceOutput(_ dependency: CoachVoiceDependency = .ttsDown) {
+        voiceState.dependency = dependency
+        voiceState.textResponseVisible = true
+        voiceState.pendingActionConfirmationVisible = true
+        voiceState.phase = .degraded
+        shouldSpeakNextCoachReply = false
+        degradeIfNotMock(dependency.fallbackMode)
+    }
+
+    private func speakVoiceReplyIfNeeded(_ text: String) {
+        guard shouldSpeakNextCoachReply else { return }
+        shouldSpeakNextCoachReply = false
+        let spoken = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !spoken.isEmpty else { return }
+        voiceState.lastSpokenText = spoken
+        voiceState.textResponseVisible = true
+        voiceState.pendingActionConfirmationVisible = true
+        dependencies.audioService.speak(spoken, priority: .normal)
     }
 
     // MARK: - Degradation (AMA-2234)
