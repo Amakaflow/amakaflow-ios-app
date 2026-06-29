@@ -43,7 +43,10 @@ final class CoachShellSharedPathTests: XCTestCase {
     /// Build a view model whose coach turns are served by the injected
     /// (shared-path) stream/session doubles. `isMockCoachPath` mirrors the
     /// fixture/dev wiring; default `false` exercises the live-path contract.
-    private func makeViewModel(isMockCoachPath: Bool = false) -> CoachViewModel {
+    private func makeViewModel(
+        isMockCoachPath: Bool = false,
+        sessionClient: CoachSessionProviding? = nil
+    ) -> CoachViewModel {
         let dependencies = AppDependencies(
             apiService: MockAPIService(),
             pairingService: mockPairingService,
@@ -51,7 +54,7 @@ final class CoachShellSharedPathTests: XCTestCase {
             progressStore: MockProgressStore(),
             watchSession: MockWatchSession(),
             chatStreamService: mockStreamService,
-            coachSessionClient: mockSessionClient,
+            coachSessionClient: sessionClient ?? mockSessionClient,
             isMockCoachPath: isMockCoachPath
         )
         return CoachViewModel(dependencies: dependencies)
@@ -124,6 +127,31 @@ final class CoachShellSharedPathTests: XCTestCase {
         XCTAssertEqual(viewModel.degradeMode?.contractToken, "data_gap")
         XCTAssertNotNil(viewModel.restoreError)
         XCTAssertTrue(viewModel.messages.isEmpty, "must not fabricate restored messages on failure")
+    }
+
+    func testStartNewChatDuringRestoreIgnoresLateCompletion() async {
+        let suspending = SuspendingCoachSessionClient()
+        suspending.messagesToReturn = [
+            RestoredSessionMessage(role: .assistant, content: "stale history", timestamp: Date(timeIntervalSince1970: 1_700_000_000))
+        ]
+        let viewModel = makeViewModel(sessionClient: suspending)
+        viewModel.sessionId = "to-be-abandoned"
+
+        // Restore starts and suspends inside fetchMessages.
+        let restoreTask = Task { await viewModel.loadMessagesIfNeeded() }
+        await fulfillment(of: [suspending.entered], timeout: 2.0)
+
+        // User starts a brand-new chat while the restore is still in flight.
+        viewModel.startNewChat()
+
+        // Now let the stale restore complete.
+        suspending.release()
+        await restoreTask.value
+
+        XCTAssertTrue(viewModel.messages.isEmpty, "a late restore must not repopulate a thread cleared by New Chat")
+        XCTAssertNil(viewModel.sessionId, "New Chat cleared the session; the stale restore must not revive it")
+        XCTAssertNil(viewModel.degradeMode, "the fresh thread stays healthy, not re-degraded by the stale restore")
+        XCTAssertFalse(viewModel.didRestoreConversation, "the abandoned restore must not flag a restored conversation")
     }
 
     func testStaleSessionRestore404IsNotADegradation() async {
@@ -326,5 +354,26 @@ final class CoachShellSharedPathTests: XCTestCase {
         for mode in CoachDegradeMode.allCases where mode != .text {
             XCTAssertTrue(mode.isDegraded, "\(mode) should render as degraded")
         }
+    }
+}
+
+/// A session client whose `fetchMessages` suspends until `release()` is called,
+/// so a test can interleave another action (e.g. `startNewChat()`) with an
+/// in-flight restore and then let the stale completion land.
+@MainActor
+private final class SuspendingCoachSessionClient: CoachSessionProviding {
+    var messagesToReturn: [RestoredSessionMessage] = []
+    let entered = XCTestExpectation(description: "fetchMessages entered")
+    private var continuation: CheckedContinuation<Void, Never>?
+
+    func fetchMessages(sessionId: String, limit: Int, token: String) async throws -> [RestoredSessionMessage] {
+        entered.fulfill()
+        await withCheckedContinuation { continuation = $0 }
+        return messagesToReturn
+    }
+
+    func release() {
+        continuation?.resume()
+        continuation = nil
     }
 }

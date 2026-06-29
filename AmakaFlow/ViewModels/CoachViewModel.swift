@@ -129,6 +129,11 @@ class CoachViewModel: ObservableObject {
     /// whose captured generation still matches may mutate shared turn state.
     private var streamGeneration = 0
 
+    /// Monotonic id for the in-flight session restore. Bumped by startNewChat()
+    /// so a late `fetchMessages` completion can't repopulate (or re-degrade) a
+    /// thread the user has already cleared.
+    private var restoreGeneration = 0
+
     /// AMA-2234: the steady-state degrade mode for the current dependency
     /// wiring. `.mock` when fixture/mock services are injected (dev/simulator
     /// validation), otherwise `nil` (healthy live shared path). Transient
@@ -195,7 +200,16 @@ class CoachViewModel: ObservableObject {
 
         isLoadingMessages = true
         restoreError = nil
+        // Snapshot the conversation identity. If startNewChat() (which bumps
+        // restoreGeneration) or a session change happens while we're awaiting,
+        // this restore is stale and must not repopulate or re-degrade the
+        // now-cleared thread.
+        let restoreGenerationSnapshot = restoreGeneration
         defer { isLoadingMessages = false }
+
+        func restoreIsStale() -> Bool {
+            restoreGenerationSnapshot != restoreGeneration || self.sessionId != sessionId
+        }
 
         do {
             let restored = try await dependencies.coachSessionClient.fetchMessages(
@@ -203,6 +217,7 @@ class CoachViewModel: ObservableObject {
                 limit: 50,
                 token: token
             )
+            guard !restoreIsStale() else { return }
             guard !restored.isEmpty else {
                 // An empty (but successful) restore is a normal new/empty thread,
                 // not a data gap — clear any prior degraded state on retry.
@@ -217,16 +232,19 @@ class CoachViewModel: ObservableObject {
             // baseline (healthy, or sticky mock in dev).
             resetDegradeToBaseline()
         } catch CoachSessionError.sessionNotFound {
+            guard !restoreIsStale() else { return }
             // 404 is a normal "new conversation" outcome, not a degradation.
             // Clear any prior data-gap so a recovered retry isn't stuck degraded.
             self.sessionId = nil
             resetDegradeToBaseline()
         } catch let error as CoachSessionError {
+            guard !restoreIsStale() else { return }
             restoreError = error
             // History could not be loaded from the shared path — surface a
             // data_gap rather than silently showing an empty thread.
             degradeIfNotMock(.dataGap)
         } catch {
+            guard !restoreIsStale() else { return }
             restoreError = .httpError(statusCode: 0, body: error.localizedDescription)
             degradeIfNotMock(.dataGap)
         }
@@ -469,6 +487,12 @@ class CoachViewModel: ObservableObject {
     // MARK: - Session Management
 
     func startNewChat() {
+        // Invalidate any in-flight restore so its late completion can't
+        // repopulate or re-degrade the cleared thread, and re-enable input
+        // immediately even if a restore is still suspended.
+        restoreGeneration += 1
+        isLoadingMessages = false
+        streamGeneration += 1
         streamTask?.cancel()
         streamTask = nil
         isStreaming = false
