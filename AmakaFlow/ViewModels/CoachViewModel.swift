@@ -107,6 +107,8 @@ class CoachViewModel: ObservableObject {
     /// health dot and the text-only degraded banner. Never left in a state
     /// that hides a failure or fakes a success.
     @Published var degradeMode: CoachDegradeMode?
+    @Published var pendingActionLifecycle: [PendingActionContract] = []
+    @Published var pendingActionBusyIds: Set<String> = []
     @Published var sessionId: String? {
         didSet { persistSessionId() }
     }
@@ -225,8 +227,14 @@ class CoachViewModel: ObservableObject {
                 return
             }
             messages = restored.map {
-                ChatMessage(role: $0.role, content: $0.content, timestamp: $0.timestamp)
+                ChatMessage(
+                    role: $0.role,
+                    content: $0.content,
+                    pendingActions: $0.pendingActions,
+                    timestamp: $0.timestamp
+                )
             }
+            rebuildPendingActionLifecycle()
             didRestoreConversation = true
             // Successful restore: clear any prior data-gap and return to the
             // baseline (healthy, or sticky mock in dev).
@@ -257,14 +265,15 @@ class CoachViewModel: ObservableObject {
 
     // MARK: - Send Message (Streaming)
 
-    func sendMessage(_ text: String) async {
+    @discardableResult
+    func sendMessage(_ text: String) async -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         // Reject sends while a turn is streaming or while session restore is in
         // flight: loadMessagesIfNeeded() snapshots `messages.isEmpty` before its
         // await and replaces `messages` wholesale when it resolves, so a send
         // started mid-restore would be overwritten. The composer also gates this,
         // but guard here too for direct/retry callers.
-        guard !trimmed.isEmpty, !isStreaming, !isLoadingMessages else { return }
+        guard !trimmed.isEmpty, !isStreaming, !isLoadingMessages else { return false }
 
         // Add user message
         let userMessage = ChatMessage(role: .user, content: trimmed)
@@ -290,7 +299,7 @@ class CoachViewModel: ObservableObject {
             // Auth is its own surface, not a dependency-down condition — don't
             // leave a stale `.manual` / `.dataGap` banner on screen.
             resetDegradeToBaseline()
-            return
+            return false
         }
 
         let request = ChatStreamRequest(
@@ -349,6 +358,7 @@ class CoachViewModel: ObservableObject {
 
         // Wait for stream to complete
         await streamTask?.value
+        return error == nil
     }
 
     // MARK: - Degradation (AMA-2234)
@@ -387,6 +397,135 @@ class CoachViewModel: ObservableObject {
         }
     }
 
+    // MARK: - PendingActions (AMA-2230)
+
+    func pendingAction(withId actionId: String) -> PendingActionContract? {
+        pendingActionLifecycle.first { $0.actionId == actionId }
+    }
+
+    func isPendingActionBusy(_ action: PendingActionContract) -> Bool {
+        pendingActionBusyIds.contains(action.actionId)
+    }
+
+    func confirmPendingAction(_ action: PendingActionContract, decision: PendingActionDecision) async {
+        let currentAction = pendingAction(withId: action.actionId) ?? action
+        guard currentAction.riskTier.requiresConfirmation else { return }
+        guard currentAction.executionStatus.acceptsConfirmationDecision else { return }
+        await executePendingAction(currentAction, decision: decision)
+    }
+
+    func retryPendingAction(_ action: PendingActionContract) async {
+        let currentAction = pendingAction(withId: action.actionId) ?? action
+        guard currentAction.riskTier.requiresConfirmation else { return }
+        guard currentAction.executionStatus == .failedRetryable else { return }
+        await executePendingAction(currentAction, decision: .approve)
+    }
+
+    private func executePendingAction(_ action: PendingActionContract, decision: PendingActionDecision) async {
+        guard !pendingActionBusyIds.contains(action.actionId) else { return }
+
+        guard let token = dependencies.pairingService.getToken() else {
+            error = .unauthenticated()
+            resetDegradeToBaseline()
+            return
+        }
+
+        pendingActionBusyIds.insert(action.actionId)
+        applyPendingActionStatus(.executing, to: action.actionId, responseStatus: "executing", error: nil)
+        defer { pendingActionBusyIds.remove(action.actionId) }
+
+        do {
+            let response = try await dependencies.pendingActionsClient.confirm(
+                action: action,
+                decision: decision,
+                token: token
+            )
+            if let updated = response.action {
+                var decorated = updated.withFallbackPresentation()
+                decorated.lastResponseStatus = response.status
+                decorated.error = response.error ?? decorated.error
+                if let responseStatus = PendingActionExecutionStatus(rawValue: response.status),
+                   responseStatus != .replayedNoop {
+                    decorated.executionStatus = responseStatus
+                }
+                upsertPendingAction(decorated)
+            } else {
+                let next: PendingActionExecutionStatus = decision == .approve ? .succeeded : .declined
+                applyPendingActionStatus(next, to: action.actionId, responseStatus: response.status, error: response.error)
+            }
+            if response.error?.mode == "data_gap" {
+                degradeIfNotMock(.dataGap)
+            } else {
+                resetDegradeToBaseline()
+            }
+        } catch {
+            let envelope = PendingActionErrorEnvelope(
+                mode: "data_gap",
+                code: "ios_pending_action_execute_failed",
+                message: error.localizedDescription,
+                retryable: true,
+                dataGaps: [["code": "pending_actions:ios_execute_failed", "source": "ios"]]
+            )
+            applyPendingActionStatus(.failedRetryable, to: action.actionId, responseStatus: "failed_retryable", error: envelope)
+            degradeIfNotMock(.dataGap)
+        }
+    }
+
+    func markPendingActionStale(_ action: PendingActionContract) {
+        applyPendingActionStatus(.stale, to: action.actionId, responseStatus: "stale", error: nil)
+    }
+
+    private func appendPendingActions(_ actions: [PendingActionContract], to message: ChatMessage) {
+        guard !actions.isEmpty else { return }
+        for action in actions.map({ $0.withFallbackPresentation() }) where action.riskTier.requiresConfirmation {
+            if !message.pendingActions.contains(where: { $0.actionId == action.actionId }) {
+                message.pendingActions.append(action)
+            }
+            upsertPendingAction(action)
+        }
+        scrollTrigger = UUID()
+    }
+
+    private func upsertPendingAction(_ action: PendingActionContract) {
+        if let idx = pendingActionLifecycle.firstIndex(where: { $0.actionId == action.actionId }) {
+            pendingActionLifecycle[idx] = action
+        } else {
+            pendingActionLifecycle.insert(action, at: 0)
+        }
+        updateMessagePendingAction(action)
+    }
+
+    private func applyPendingActionStatus(
+        _ status: PendingActionExecutionStatus,
+        to actionId: String,
+        responseStatus: String?,
+        error: PendingActionErrorEnvelope?
+    ) {
+        guard let existing = pendingActionLifecycle.first(where: { $0.actionId == actionId }) else { return }
+        var updated = existing
+        updated.executionStatus = status
+        updated.lastResponseStatus = responseStatus
+        updated.error = error
+        upsertPendingAction(updated)
+    }
+
+    private func updateMessagePendingAction(_ action: PendingActionContract) {
+        for message in messages {
+            if let idx = message.pendingActions.firstIndex(where: { $0.actionId == action.actionId }) {
+                message.pendingActions[idx] = action
+            }
+        }
+    }
+
+    private func rebuildPendingActionLifecycle() {
+        pendingActionLifecycle = messages
+            .flatMap(\.pendingActions)
+            .reduce(into: [PendingActionContract]()) { result, action in
+                guard !result.contains(where: { $0.actionId == action.actionId }) else { return }
+                result.append(action)
+            }
+    }
+
     // MARK: - Process SSE Event
 
     private func processEvent(_ event: SSEEvent, message: ChatMessage) {
@@ -411,6 +550,7 @@ class CoachViewModel: ObservableObject {
                 updated.result = result
                 message.toolCalls[idx] = updated
             }
+            appendPendingActions(PendingActionParse.actions(fromFunctionResult: result), to: message)
             tryParseWorkoutData(result: result, message: message)
 
         case .stage(let stage, _):
@@ -505,6 +645,8 @@ class CoachViewModel: ObservableObject {
         currentStage = nil
         completedStages = []
         rateLimitInfo = nil
+        pendingActionLifecycle.removeAll()
+        pendingActionBusyIds.removeAll()
         resetDegradeToBaseline()
     }
 
@@ -577,6 +719,7 @@ class ChatMessage: Identifiable, ObservableObject {
     @Published var currentStage: ChatStage?
     @Published var workoutData: GeneratedWorkout?
     @Published var searchResults: [WorkoutSearchResult]?
+    @Published var pendingActions: [PendingActionContract]
     @Published var tokensUsed: Int?
     @Published var latencyMs: Int?
     @Published var isStreaming: Bool
@@ -589,6 +732,7 @@ class ChatMessage: Identifiable, ObservableObject {
         content: String,
         suggestions: [CoachSuggestion]? = nil,
         actionItems: [CoachActionItem]? = nil,
+        pendingActions: [PendingActionContract] = [],
         isStreaming: Bool = false,
         timestamp: Date = Date()
     ) {
@@ -601,6 +745,7 @@ class ChatMessage: Identifiable, ObservableObject {
         self.currentStage = nil
         self.workoutData = nil
         self.searchResults = nil
+        self.pendingActions = pendingActions
         self.tokensUsed = nil
         self.latencyMs = nil
         self.isStreaming = isStreaming

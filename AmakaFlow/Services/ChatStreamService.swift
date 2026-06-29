@@ -307,6 +307,19 @@ struct RestoredSessionMessage: Equatable {
     let role: ChatRole
     let content: String
     let timestamp: Date
+    let pendingActions: [PendingActionContract]
+
+    init(
+        role: ChatRole,
+        content: String,
+        timestamp: Date,
+        pendingActions: [PendingActionContract] = []
+    ) {
+        self.role = role
+        self.content = content
+        self.timestamp = timestamp
+        self.pendingActions = pendingActions
+    }
 }
 
 protocol CoachSessionProviding {
@@ -411,15 +424,18 @@ private struct SessionMessageDTO: Decodable {
     let role: String
     let content: String?
     let createdAt: Date
+    let pendingActions: [PendingActionContract]?
 
     enum CodingKeys: String, CodingKey {
         case role
         case content
         case createdAt = "created_at"
+        case pendingActions = "pending_actions"
     }
 
     func toRestoredMessage() -> RestoredSessionMessage? {
-        guard let content, !content.isEmpty else { return nil }
+        let restoredPendingActions = pendingActions?.map { $0.withFallbackPresentation() } ?? []
+        guard content?.isEmpty == false || !restoredPendingActions.isEmpty else { return nil }
         let chatRole: ChatRole
         switch role.lowercased() {
         case "user":
@@ -429,7 +445,12 @@ private struct SessionMessageDTO: Decodable {
         default:
             return nil
         }
-        return RestoredSessionMessage(role: chatRole, content: content, timestamp: createdAt)
+        return RestoredSessionMessage(
+            role: chatRole,
+            content: content ?? "",
+            timestamp: createdAt,
+            pendingActions: restoredPendingActions
+        )
     }
 }
 

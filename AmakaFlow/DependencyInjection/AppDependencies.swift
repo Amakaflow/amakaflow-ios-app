@@ -20,6 +20,7 @@ struct AppDependencies {
     let watchSession: WatchSessionProviding
     let chatStreamService: ChatStreamProviding
     let coachSessionClient: CoachSessionProviding
+    let pendingActionsClient: PendingActionsProviding
     let programStreamService: ProgramStreamProviding
     let acceptedSuggestionsRepository: AcceptedSuggestionsRepository
     let workoutEventsRepository: WorkoutEventsRepository
@@ -40,6 +41,7 @@ struct AppDependencies {
         watchSession: WatchSessionProviding,
         chatStreamService: ChatStreamProviding,
         coachSessionClient: CoachSessionProviding = CoachSessionClient(),
+        pendingActionsClient: PendingActionsProviding = PendingActionsClient(),
         programStreamService: ProgramStreamProviding = ProgramStreamService(),
         acceptedSuggestionsRepository: AcceptedSuggestionsRepository = AcceptedSuggestionsRepository(),
         workoutEventsRepository: WorkoutEventsRepository = WorkoutEventsRepository(),
@@ -54,6 +56,7 @@ struct AppDependencies {
         self.watchSession = watchSession
         self.chatStreamService = chatStreamService
         self.coachSessionClient = coachSessionClient
+        self.pendingActionsClient = pendingActionsClient
         self.programStreamService = programStreamService
         self.acceptedSuggestionsRepository = acceptedSuggestionsRepository
         self.workoutEventsRepository = workoutEventsRepository
@@ -72,6 +75,7 @@ struct AppDependencies {
         watchSession: LiveWatchSession.shared,
         chatStreamService: ChatStreamService(),
         coachSessionClient: CoachSessionClient(),
+        pendingActionsClient: PendingActionsClient(),
         programStreamService: ProgramStreamService(),
         acceptedSuggestionsRepository: AcceptedSuggestionsRepository(),
         workoutEventsRepository: WorkoutEventsRepository(),
@@ -90,8 +94,9 @@ struct AppDependencies {
         audioService: AudioCueManager(),
         progressStore: LiveProgressStore.shared,
         watchSession: MockWatchSession(),
-        chatStreamService: MockChatStreamService(),
+        chatStreamService: PendingActionsFixtureChatStreamService(),
         coachSessionClient: MockCoachSessionClient(),
+        pendingActionsClient: MockPendingActionsClient(),
         programStreamService: MockProgramStreamService(),
         acceptedSuggestionsRepository: AcceptedSuggestionsRepository(),
         workoutEventsRepository: WorkoutEventsRepository(),
