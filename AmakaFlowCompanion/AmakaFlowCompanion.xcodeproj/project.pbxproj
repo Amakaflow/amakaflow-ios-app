@@ -11,6 +11,10 @@
 		056DCE6864994871816A3AF9 /* OpenAPIRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = 5428DFDDAABA4C78929FAD58 /* OpenAPIRuntime */; };
 		0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
 		11C72B7C6EA17FC8DEA354FB /* CoachModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */; };
+		AMA2230PNDMODELBLD001 /* PendingActionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2230PNDMODELREF001 /* PendingActionModels.swift */; };
+		AMA2230PNDCLIENTBLD01 /* PendingActionsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2230PNDCLIENTREF01 /* PendingActionsClient.swift */; };
+		AMA2230PNDVIEWSBLD001 /* PendingActionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2230PNDVIEWSREF001 /* PendingActionViews.swift */; };
+		AMA2230PNDTESTSBLD001 /* CoachPendingActionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2230PNDTESTSREF001 /* CoachPendingActionsTests.swift */; };
 		141CFD120F8C663BD0F2C3BC /* MentalModelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C1640626E3952B7DBBBF33 /* MentalModelView.swift */; };
 		1A7B03C2552441FEB810773A /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FC49A15AC3F44858DFEE3E6 /* QRScannerView.swift */; };
 		1N5T4GR4MR33L0002 /* InstagramReelIngestionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1N5T4GR4MR33L0001 /* InstagramReelIngestionView.swift */; };
@@ -598,6 +602,7 @@
 		AK00TST002A /* ActivityHistoryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActivityHistoryViewModelTests.swift; path = AmakaFlowCompanionTests/ActivityHistoryViewModelTests.swift; sourceTree = "<group>"; };
 		AMA291RC004REF /* SubscriptionAccessViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SubscriptionAccessViewModelTests.swift; path = AmakaFlowCompanionTests/SubscriptionAccessViewModelTests.swift; sourceTree = "<group>"; };
 		AMA307CVMSTREAMTSTREF /* CoachViewModelStreamingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CoachViewModelStreamingTests.swift; path = AmakaFlowCompanionTests/CoachViewModelStreamingTests.swift; sourceTree = "<group>"; };
+		AMA2230PNDTESTSREF001 /* CoachPendingActionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CoachPendingActionsTests.swift; path = AmakaFlowCompanionTests/CoachPendingActionsTests.swift; sourceTree = "<group>"; };
 		AMA314APPD3PSREF /* AppDependenciesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDependenciesTests.swift; path = AmakaFlowCompanionTests/AppDependenciesTests.swift; sourceTree = "<group>"; };
 		AK00TST003A /* AmakaFlowCompanionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AmakaFlowCompanionTests.swift; path = AmakaFlowCompanionTests/AmakaFlowCompanionTests.swift; sourceTree = "<group>"; };
 		AK00TST004A /* APIIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIIntegrationTests.swift; path = AmakaFlowCompanionTests/APIIntegrationTests.swift; sourceTree = "<group>"; };
@@ -654,9 +659,12 @@
 		AMA14090000000001000002 /* ExerciseRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ExerciseRowView.swift; path = ../AmakaFlow/Views/Components/ExerciseRowView.swift; sourceTree = SOURCE_ROOT; };
 		AMA14090000000002000002 /* BlockSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BlockSectionView.swift; path = ../AmakaFlow/Views/Components/BlockSectionView.swift; sourceTree = SOURCE_ROOT; };
 		AMA14100001FILEREF /* ChatStreamModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ChatStreamModels.swift; path = ../AmakaFlow/Models/ChatStreamModels.swift; sourceTree = "<group>"; };
+		AMA2230PNDMODELREF001 /* PendingActionModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PendingActionModels.swift; path = ../AmakaFlow/Models/PendingActionModels.swift; sourceTree = "<group>"; };
 		AMA14100002FILEREF /* ChatStreamService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ChatStreamService.swift; path = ../AmakaFlow/Services/ChatStreamService.swift; sourceTree = "<group>"; };
+		AMA2230PNDCLIENTREF01 /* PendingActionsClient.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PendingActionsClient.swift; path = ../AmakaFlow/Services/PendingActionsClient.swift; sourceTree = "<group>"; };
 		AMA2096PRGSTRA /* ProgramStreamService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProgramStreamService.swift; path = ../AmakaFlow/Services/ProgramStreamService.swift; sourceTree = "<group>"; };
 		AMA14100003FILEREF /* ToolCallCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ToolCallCard.swift; path = ../AmakaFlow/Views/Components/ToolCallCard.swift; sourceTree = SOURCE_ROOT; };
+		AMA2230PNDVIEWSREF001 /* PendingActionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PendingActionViews.swift; path = ../AmakaFlow/Views/PendingActionViews.swift; sourceTree = SOURCE_ROOT; };
 		AMA14100004FILEREF /* WorkoutPreviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutPreviewCard.swift; path = ../AmakaFlow/Views/Components/WorkoutPreviewCard.swift; sourceTree = SOURCE_ROOT; };
 		AMA14100005FILEREF /* StageIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StageIndicator.swift; path = ../AmakaFlow/Views/Components/StageIndicator.swift; sourceTree = SOURCE_ROOT; };
 		AMA14120001FILEREF /* NutritionModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NutritionModels.swift; path = ../AmakaFlow/Models/NutritionModels.swift; sourceTree = "<group>"; };
@@ -1127,15 +1135,18 @@
 				EBCE80D8EA7940E025E8D41D /* PlanningModels.swift */,
 				A2743FC2084DF0ED3EE6E15D /* CoachModels.swift */,
 				AMA14100001FILEREF /* ChatStreamModels.swift */,
+				AMA2230PNDMODELREF001 /* PendingActionModels.swift */,
 				AMA14120001FILEREF /* NutritionModels.swift */,
 				FC35C6AFFE23A2DA83D8C2E7 /* ActionModels.swift */,
 				68B54D3FBC9E8561760B53F0 /* AnalyticsModels.swift */,
 				1AF716C8C0EE3CC5A4BA56C5 /* CalendarViewModel.swift */,
 				1F87085CB2DDF9255246439F /* CoachViewModel.swift */,
+				AMA2230PNDCLIENTREF01 /* PendingActionsClient.swift */,
 				1555CD79DFEAA04822AEB965 /* ActivityFeedViewModel.swift */,
 				0949526387D9FA932B940DF3 /* TrainingPreferencesViewModel.swift */,
 				83178781B2C087203EB17951 /* ShoeComparisonViewModel.swift */,
 				DA5BD907B0A6F491AC66198E /* CoachChatView.swift */,
+				AMA2230PNDVIEWSREF001 /* PendingActionViews.swift */,
 				4F945C56EB30A4BA6E5CAC50 /* ActivityFeedView.swift */,
 				887645B05D4D7BABC29CAB9A /* ShoeComparisonView.swift */,
 				C1660F7A199C30F1FF9B8DFD /* TrainingPreferencesView.swift */,
@@ -1149,6 +1160,7 @@
 				AMA12820010A /* PRDetectionServiceTests.swift */,
 				D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */,
 				AMA12650021 /* SuggestWorkoutViewModelTests.swift */,
+				AMA2230PNDTESTSREF001 /* CoachPendingActionsTests.swift */,
 				AMA1995EQTST000000000A /* EquipmentProfileViewModelTests.swift */,
 				AMA1993HOMETEST0000A /* HomeViewModelTests.swift */,
 				AK304WKRNGTEST000A /* WeeklyProgressRingTests.swift */,
@@ -1926,8 +1938,10 @@
 				F4E8733C34C4B41F73806D0A /* PlanningModels.swift in Sources */,
 				11C72B7C6EA17FC8DEA354FB /* CoachModels.swift in Sources */,
 				AMA14100001BLDFILE /* ChatStreamModels.swift in Sources */,
+				AMA2230PNDMODELBLD001 /* PendingActionModels.swift in Sources */,
 				AMA14120001BLDFILE /* NutritionModels.swift in Sources */,
 				AMA14100002BLDFILE /* ChatStreamService.swift in Sources */,
+				AMA2230PNDCLIENTBLD01 /* PendingActionsClient.swift in Sources */,
 				AMA2096PRGSTRB /* ProgramStreamService.swift in Sources */,
 				63D97E9B43FEB4A771D87EE8 /* ActionModels.swift in Sources */,
 				AF50AD9DC3B0E509ED0ED715 /* AnalyticsModels.swift in Sources */,
@@ -1937,6 +1951,7 @@
 				76A4BDCCD65A2C7EB4B82ACB /* TrainingPreferencesViewModel.swift in Sources */,
 				FBD997594D2332FD373C62C8 /* ShoeComparisonViewModel.swift in Sources */,
 				868593590A9CA72F3E328DDD /* CoachChatView.swift in Sources */,
+				AMA2230PNDVIEWSBLD001 /* PendingActionViews.swift in Sources */,
 				DF8B91B894B9DEA16C43ABFB /* ActivityFeedView.swift in Sources */,
 				83FA8BE2A6AAF21B52B5B16A /* ShoeComparisonView.swift in Sources */,
 				AAA43473A50C02F82E139FED /* TrainingPreferencesView.swift in Sources */,
@@ -2105,6 +2120,7 @@
 				688E97FB5938812BF52882A0 /* ShareExtensionTests.swift in Sources */,
 				A469F200B85B870CA8481098 /* ShareImportViewModel.swift in Sources */,
 				AMA307CVMSTREAMTSTBLD /* CoachViewModelStreamingTests.swift in Sources */,
+				AMA2230PNDTESTSBLD001 /* CoachPendingActionsTests.swift in Sources */,
 				AMA314APPD3PSBLD /* AppDependenciesTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

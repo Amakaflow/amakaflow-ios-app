@@ -38,6 +38,8 @@ struct CoachChatView: View {
     private enum CoachShellRoute: Hashable {
         case readiness
         case fatigue
+        case pendingDetails(String)
+        case pendingLifecycle
     }
 
     var body: some View {
@@ -47,7 +49,8 @@ struct CoachChatView: View {
                     isDegraded: viewModel.degradeMode?.isDegraded ?? false,
                     onNewChat: { requestNewChat() },
                     onReadiness: { route = .readiness },
-                    onFatigue: { route = .fatigue }
+                    onFatigue: { route = .fatigue },
+                    onActions: { route = .pendingLifecycle }
                 )
 
                 if let mode = viewModel.degradeMode, mode.isDegraded {
@@ -74,6 +77,33 @@ struct CoachChatView: View {
                     FatigueHistoryView()
                 case .fatigue:
                     FatigueAdvisorView(viewModel: viewModel)
+                case .pendingDetails(let actionId):
+                    if let action = viewModel.pendingAction(withId: actionId) {
+                        PendingActionDetailsView(
+                            action: action,
+                            isBusy: viewModel.isPendingActionBusy(action),
+                            onReject: {
+                                Task { await viewModel.confirmPendingAction(action, decision: .reject) }
+                            },
+                            onApprove: {
+                                Task { await viewModel.confirmPendingAction(action, decision: .approve) }
+                            }
+                        )
+                    } else {
+                        Text("Action no longer available.")
+                            .foregroundColor(Theme.Colors.textSecondary)
+                    }
+                case .pendingLifecycle:
+                    PendingActionsLifecycleView(
+                        actions: viewModel.pendingActionLifecycle,
+                        onRetry: { action in
+                            Task { await viewModel.confirmPendingAction(action, decision: .approve) }
+                        },
+                        onAskAgain: { action in
+                            viewModel.markPendingActionStale(action)
+                            Task { await viewModel.sendMessage("Ask again about: \(action.title)") }
+                        }
+                    )
                 }
             }
             .confirmationDialog("Start new chat?", isPresented: $showNewChatConfirmation) {
@@ -141,6 +171,14 @@ struct CoachChatView: View {
                                     viewModel.cancelStream()
                                 } onSendMessage: { text in
                                     Task { await viewModel.sendMessage(text) }
+                                } onPendingApprove: { action in
+                                    Task { await viewModel.confirmPendingAction(action, decision: .approve) }
+                                } onPendingReject: { action in
+                                    Task { await viewModel.confirmPendingAction(action, decision: .reject) }
+                                } onPendingDetails: { action in
+                                    route = .pendingDetails(action.actionId)
+                                } isPendingBusy: { action in
+                                    viewModel.isPendingActionBusy(action)
                                 }
                                 .id(message.id)
                             }
@@ -362,6 +400,7 @@ private struct CoachShellHeader: View {
     let onNewChat: () -> Void
     let onReadiness: () -> Void
     let onFatigue: () -> Void
+    let onActions: () -> Void
 
     var body: some View {
         HStack(spacing: Theme.Spacing.sm) {
@@ -405,6 +444,11 @@ private struct CoachShellHeader: View {
                     onFatigue()
                 } label: {
                     Label("Fatigue advisor", systemImage: "heart.text.square")
+                }
+                Button {
+                    onActions()
+                } label: {
+                    Label("Actions", systemImage: "bolt.badge.clock")
                 }
             } label: {
                 Image(systemName: "slider.horizontal.3")
@@ -519,6 +563,10 @@ struct CoachMessageRow: View {
     @ObservedObject var message: ChatMessage
     let onStop: () -> Void
     let onSendMessage: (String) -> Void
+    let onPendingApprove: (PendingActionContract) -> Void
+    let onPendingReject: (PendingActionContract) -> Void
+    let onPendingDetails: (PendingActionContract) -> Void
+    let isPendingBusy: (PendingActionContract) -> Bool
 
     private var isUser: Bool { message.role == .user }
     private var isThinking: Bool { message.role == .assistant && message.isStreaming && message.content.isEmpty }
@@ -540,6 +588,22 @@ struct CoachMessageRow: View {
 
             if let workout = message.workoutData {
                 WorkoutPreviewCard(workout: workout)
+            }
+
+            ForEach(message.pendingActions) { action in
+                PendingActionCard(
+                    action: action,
+                    isBusy: isPendingBusy(action),
+                    onReject: { onPendingReject(action) },
+                    onDetails: { onPendingDetails(action) },
+                    onApprove: { onPendingApprove(action) }
+                )
+                .frame(maxWidth: 320, alignment: .leading)
+                Text("NOTHING RUNS UNTIL YOU APPROVE")
+                    .font(Font.geistMono(9, .medium))
+                    .foregroundColor(Theme.Colors.textTertiary)
+                    .frame(maxWidth: 320, alignment: .center)
+                    .accessibilityIdentifier("pending-action-guarantee-\(action.actionId)")
             }
 
             // Keep the Stop affordance visible for the whole live turn,
