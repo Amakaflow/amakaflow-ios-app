@@ -377,3 +377,168 @@ private final class SuspendingCoachSessionClient: CoachSessionProviding {
         continuation = nil
     }
 }
+
+@MainActor
+final class CoachKnowledgeSurfaceTests: XCTestCase {
+
+    func testReadableSectionsRenderBeforeAtomicClaimDetail() async {
+        let api = MockAPIService()
+        let viewModel = CoachKnowledgeViewModel(apiService: api)
+
+        await viewModel.load()
+
+        XCTAssertTrue(api.fetchCoachKnowledgeSurfaceCalled)
+        XCTAssertEqual(viewModel.surface?.readableOrder.first, "sections")
+        XCTAssertEqual(viewModel.surface?.readableOrder.dropFirst().first, "provenance")
+        XCTAssertEqual(viewModel.surfaceContentOrder.first, "readable_sections")
+        XCTAssertEqual(viewModel.surfaceContentOrder.dropFirst().first, "attention_banners")
+        XCTAssertEqual(viewModel.surface?.sections.first?.title, "Goals")
+        XCTAssertEqual(viewModel.acceptedFacts.first?.text, "HYROX race - May 2026")
+    }
+
+    func testReadableSectionsExcludeNeedsReviewFactsFromAcceptedTruthRows() async throws {
+        let api = MockAPIService()
+        let base = CoachKnowledgeSurface.ama2229Fixture
+        let accepted = try XCTUnwrap(base.sections.first?.facts.first)
+        let heldFact = CoachKnowledgeFact(
+            id: "fact-held-in-section",
+            text: "Possible left knee issue",
+            state: "needs_review",
+            category: "Injury",
+            confidence: 0.6,
+            sensitivity: "sensitive_health",
+            source: accepted.source,
+            provenance: []
+        )
+        let mixedSection = CoachKnowledgeSection(
+            id: "mixed-health",
+            title: "Health & recovery",
+            summary: "",
+            facts: [heldFact, accepted]
+        )
+        api.fetchCoachKnowledgeSurfaceResult = .success(
+            CoachKnowledgeSurface(
+                mode: base.mode,
+                readableOrder: base.readableOrder,
+                sections: [mixedSection],
+                sensitivePending: base.sensitivePending,
+                contradictions: base.contradictions,
+                dataGaps: base.dataGaps,
+                contract: base.contract
+            )
+        )
+        let viewModel = CoachKnowledgeViewModel(apiService: api)
+
+        await viewModel.load()
+
+        XCTAssertEqual(viewModel.visibleReadableSections.first?.facts.map(\.id), ["fact-goal"])
+        XCTAssertFalse(viewModel.acceptedFacts.contains { $0.id == "fact-held-in-section" })
+    }
+
+    func testAcceptedFactsKeepSourceAndDrillableProvenance() async throws {
+        let viewModel = CoachKnowledgeViewModel(apiService: MockAPIService())
+
+        await viewModel.load()
+
+        let fact = try XCTUnwrap(viewModel.acceptedFacts.first(where: { !$0.provenance.isEmpty }))
+        XCTAssertEqual(fact.state, "accepted")
+        XCTAssertEqual(fact.source?.label, "You told me")
+        XCTAssertEqual(fact.provenance.first?.quote, "HYROX in May.")
+    }
+
+    func testSensitiveNeedsReviewFactsAreReviewOnlyNeverAcceptedTruth() async {
+        let viewModel = CoachKnowledgeViewModel(apiService: MockAPIService())
+
+        await viewModel.load()
+
+        XCTAssertFalse(viewModel.acceptedFacts.contains { $0.text == "Possible left knee issue" })
+        XCTAssertEqual(viewModel.reviewOnlyFacts.first?.state, "needs_review")
+        XCTAssertEqual(viewModel.reviewOnlyFacts.first?.heldLabel, "HELD · NOT APPLIED")
+        XCTAssertTrue(viewModel.reviewOnlyFacts.allSatisfy(\.isReviewOnly))
+    }
+
+    func testReviewActionsHitSharedCoachWikiPendingActionsPath() async throws {
+        let api = MockAPIService()
+        let viewModel = CoachKnowledgeViewModel(apiService: api)
+        await viewModel.load()
+        let fact = try XCTUnwrap(viewModel.reviewOnlyFacts.first)
+
+        await viewModel.reviewSensitiveFact(fact, decision: .approve)
+
+        XCTAssertTrue(api.reviewCoachKnowledgeCalled)
+        XCTAssertEqual(api.reviewCoachKnowledgeActionId, "pa-knee-review")
+        XCTAssertEqual(api.reviewCoachKnowledgeDecision, .approve)
+        XCTAssertEqual(api.reviewCoachKnowledgeReason, "Approved from iOS CKW surface.")
+    }
+
+    func testRejectReviewActionsHitSharedCoachWikiPendingActionsPath() async throws {
+        let api = MockAPIService()
+        let viewModel = CoachKnowledgeViewModel(apiService: api)
+        await viewModel.load()
+        let fact = try XCTUnwrap(viewModel.reviewOnlyFacts.first)
+
+        await viewModel.reviewSensitiveFact(fact, decision: .reject)
+
+        XCTAssertTrue(api.reviewCoachKnowledgeCalled)
+        XCTAssertEqual(api.reviewCoachKnowledgeActionId, "pa-knee-review")
+        XCTAssertEqual(api.reviewCoachKnowledgeDecision, .reject)
+        XCTAssertEqual(api.reviewCoachKnowledgeReason, "Kept private from iOS CKW surface.")
+    }
+
+    func testDuplicateSensitiveReviewSubmissionsAreBlockedPerAction() async throws {
+        let api = MockAPIService()
+        api.reviewCoachKnowledgeDelayNanoseconds = 100_000_000
+        let viewModel = CoachKnowledgeViewModel(apiService: api)
+        await viewModel.load()
+        let fact = try XCTUnwrap(viewModel.reviewOnlyFacts.first)
+
+        async let first: Void = viewModel.reviewSensitiveFact(fact, decision: .approve)
+        async let second: Void = viewModel.reviewSensitiveFact(fact, decision: .reject)
+        _ = await (first, second)
+
+        XCTAssertEqual(api.reviewCoachKnowledgeCallCount, 1)
+    }
+
+    func testMultipleContradictionsRemainAvailableForResolveSurface() async throws {
+        let api = MockAPIService()
+        let base = CoachKnowledgeSurface.ama2229Fixture
+        let first = try XCTUnwrap(base.contradictions.first)
+        let second = CoachKnowledgeContradiction(
+            id: "contradiction-training-source",
+            state: "needs_user_review",
+            claimIdA: "threshold-chat",
+            claimIdB: "threshold-device",
+            options: first.options
+        )
+        api.fetchCoachKnowledgeSurfaceResult = .success(
+            CoachKnowledgeSurface(
+                mode: base.mode,
+                readableOrder: base.readableOrder,
+                sections: base.sections,
+                sensitivePending: base.sensitivePending,
+                contradictions: [first, second],
+                dataGaps: base.dataGaps,
+                contract: base.contract
+            )
+        )
+        let viewModel = CoachKnowledgeViewModel(apiService: api)
+
+        await viewModel.load()
+
+        XCTAssertEqual(viewModel.surface?.contradictions.map(\.id), ["contradiction-knee", "contradiction-training-source"])
+        XCTAssertEqual(viewModel.surface?.contradictions.flatMap { $0.options ?? [] }.count, 4)
+    }
+
+    func testDependencyDownDegradesToDataGapWithoutFabricatedKnowledge() async {
+        let api = MockAPIService()
+        api.fetchCoachKnowledgeSurfaceResult = .failure(APIError.networkError(URLError(.notConnectedToInternet)))
+        let viewModel = CoachKnowledgeViewModel(apiService: api)
+
+        await viewModel.load()
+
+        XCTAssertEqual(viewModel.surface?.mode, "data_gap")
+        XCTAssertTrue(viewModel.acceptedFacts.isEmpty)
+        XCTAssertEqual(viewModel.surface?.dataGaps.first?.id, "ios-ckw-bff-unavailable")
+        XCTAssertTrue(viewModel.surface?.dataGaps.first?.detail.contains("No accepted knowledge was fabricated") ?? false)
+    }
+}

@@ -5,6 +5,7 @@
 //  Settings screen with device selection, audio cues, and preferences
 //
 
+import Combine
 import SwiftUI
 
 // MARK: - Audio Behavior
@@ -552,6 +553,18 @@ struct SettingsView: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("settings_row_readiness_sources")
+
+        case .coachKnowledge:
+            NavigationLink(destination: CoachKnowledgeView()) {
+                SettingsNavigationRow(
+                    icon: "sparkles",
+                    tint: Theme.Colors.readyHigh,
+                    title: row.title,
+                    subtitle: row.subtitle
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings_row_coach_knowledge")
 
         case .notifications:
             NavigationLink(destination: NotificationPreferencesView()) {
@@ -2622,6 +2635,7 @@ struct SettingsRefreshRowModel: Equatable, Identifiable {
         case fatigue
         case voice
         case readinessSources
+        case coachKnowledge
         case social
         case nutrition
         case trainingPreferences
@@ -2672,6 +2686,7 @@ struct SettingsRefreshSectionModel: Equatable, Identifiable {
                 title: "Coaching",
                 rows: [
                     SettingsRefreshRowModel(id: "readiness_sources", title: "Readiness Sources", subtitle: "HRV, sleep, resting HR, and source badges", destination: .readinessSources),
+                    SettingsRefreshRowModel(id: "coach_knowledge", title: "What my coach knows", subtitle: "Readable facts, sources, review, and gaps", destination: .coachKnowledge),
                     SettingsRefreshRowModel(id: "fatigue", title: "Fatigue", subtitle: "Readiness threshold and fatigue tracking", destination: .fatigue),
                     SettingsRefreshRowModel(id: "notifications", title: "Notifications", subtitle: "Reminders, nudges, and coach alerts", destination: .notifications),
                     SettingsRefreshRowModel(id: "voice", title: "Voice Transcription", subtitle: "Provider, accent, and dictionary", destination: .voice)
@@ -2944,6 +2959,552 @@ private struct SettingsToggleRow: View {
                 .stroke(Theme.Colors.borderLight, lineWidth: 1)
         )
         .cornerRadius(Theme.CornerRadius.md)
+    }
+}
+
+// MARK: - Coach Knowledge Wiki (AMA-2229)
+
+@MainActor
+final class CoachKnowledgeViewModel: ObservableObject {
+    @Published private(set) var surface: CoachKnowledgeSurface?
+    @Published private(set) var isLoading = false
+    @Published private(set) var inFlightReviewActionIDs = Set<String>()
+    @Published var actionMessage: String?
+
+    private let apiService: APIServiceProviding
+
+    init(apiService: APIServiceProviding = AppDependencies.current.apiService) {
+        self.apiService = apiService
+    }
+
+    var acceptedFacts: [CoachKnowledgeFact] {
+        surface?.sections.flatMap(\.facts).filter(\.isAcceptedTruth) ?? []
+    }
+
+    var reviewOnlyFacts: [CoachKnowledgePendingSensitiveFact] {
+        surface?.sensitivePending.filter(\.isReviewOnly) ?? []
+    }
+
+    var visibleReadableSections: [CoachKnowledgeSection] {
+        surface?.sections.compactMap { section in
+            let acceptedFacts = section.facts.filter(\.isAcceptedTruth)
+            guard !acceptedFacts.isEmpty else { return nil }
+            return CoachKnowledgeSection(
+                id: section.id,
+                title: section.title,
+                summary: section.summary,
+                facts: acceptedFacts
+            )
+        } ?? []
+    }
+
+    var surfaceContentOrder: [String] {
+        ["readable_sections", "attention_banners", "footer"]
+    }
+
+    func isReviewInFlight(_ actionId: String) -> Bool {
+        inFlightReviewActionIDs.contains(actionId)
+    }
+
+    func load() async {
+        guard !isLoading else { return }
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            surface = try await apiService.fetchCoachKnowledgeSurface()
+        } catch {
+            surface = CoachKnowledgeSurface(
+                mode: "data_gap",
+                readableOrder: ["sections", "provenance"],
+                sections: [],
+                sensitivePending: [],
+                contradictions: [],
+                dataGaps: [
+                    CoachKnowledgeGap(
+                        id: "ios-ckw-bff-unavailable",
+                        title: "Coach knowledge is temporarily unavailable",
+                        detail: "CKW/BFF could not be reached. No accepted knowledge was fabricated.",
+                        mode: "data_gap",
+                        actionLabel: nil
+                    )
+                ],
+                contract: CoachKnowledgeContract(
+                    readRoute: "GET /coach/wiki/surface",
+                    reviewQueueRoute: "GET /coach/wiki/review-queue",
+                    reviewActionRoutes: [
+                        "POST /coach/wiki/review-actions/{action_id}/approve",
+                        "POST /coach/wiki/review-actions/{action_id}/reject"
+                    ],
+                    factStates: ["accepted", "rejected", "superseded", "contradicted", "needs_review"],
+                    mode: "data_gap"
+                )
+            )
+        }
+    }
+
+    func reviewSensitiveFact(_ fact: CoachKnowledgePendingSensitiveFact, decision: CoachKnowledgeReviewDecision) async {
+        guard !inFlightReviewActionIDs.contains(fact.actionId) else { return }
+        inFlightReviewActionIDs.insert(fact.actionId)
+        defer { inFlightReviewActionIDs.remove(fact.actionId) }
+
+        do {
+            _ = try await apiService.reviewCoachKnowledge(
+                actionId: fact.actionId,
+                decision: decision,
+                reason: decision == .approve ? "Approved from iOS CKW surface." : "Kept private from iOS CKW surface."
+            )
+            actionMessage = decision == .approve ? "Sent through CKW review. The coach can use it after the shared boundary accepts it." : "Sent through CKW review. The coach will keep it private."
+            await load()
+        } catch {
+            actionMessage = "Review action could not reach the shared CKW PendingActions path. Nothing was accepted locally."
+        }
+    }
+
+    func recordBoundaryOnlyAction(_ label: String) {
+        actionMessage = "\(label) must go through the shared CKW review boundary. iOS did not write accepted coach knowledge."
+    }
+}
+
+struct CoachKnowledgeView: View {
+    @StateObject private var viewModel: CoachKnowledgeViewModel
+    @State private var selectedFact: CoachKnowledgeFact?
+    @State private var showSensitive = false
+    @State private var showResolve = false
+
+    @MainActor
+    init() {
+        _viewModel = StateObject(wrappedValue: CoachKnowledgeViewModel())
+    }
+
+    init(viewModel: CoachKnowledgeViewModel) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                header
+
+                if viewModel.isLoading && viewModel.surface == nil {
+                    ProgressView("Loading what your coach knows...")
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, Theme.Spacing.xl)
+                } else if let surface = viewModel.surface {
+                    readableSections(viewModel.visibleReadableSections)
+                    attentionBanners(surface)
+                    footerNote(surface)
+                }
+            }
+            .padding(Theme.Spacing.md)
+        }
+        .navigationTitle("What my coach knows")
+        .navigationBarTitleDisplayMode(.inline)
+        .background(Theme.Colors.background.ignoresSafeArea())
+        .task { await viewModel.load() }
+        .sheet(item: $selectedFact) { fact in
+            CoachKnowledgeProvenanceView(fact: fact, onBoundaryAction: viewModel.recordBoundaryOnlyAction)
+        }
+        .sheet(isPresented: $showSensitive) {
+            CoachKnowledgeSensitiveView(viewModel: viewModel)
+        }
+        .sheet(isPresented: $showResolve) {
+            CoachKnowledgeResolveView(surface: viewModel.surface, onBoundaryAction: viewModel.recordBoundaryOnlyAction)
+        }
+        .alert("CKW review", isPresented: Binding(
+            get: { viewModel.actionMessage != nil },
+            set: { if !$0 { viewModel.actionMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.actionMessage ?? "")
+        }
+        .accessibilityIdentifier("ckw-overview")
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            Text("Readable sections come first")
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.textSecondary)
+                .textCase(.uppercase)
+            Text("Your coach reads the same accepted facts in the app, Telegram, and on your watch. Tap a fact to see where it came from.")
+                .font(Theme.Typography.body)
+                .foregroundColor(Theme.Colors.textSecondary)
+        }
+    }
+
+    @ViewBuilder
+    private func attentionBanners(_ surface: CoachKnowledgeSurface) -> some View {
+        if !surface.sensitivePending.isEmpty {
+            Button { showSensitive = true } label: {
+                CoachKnowledgeBanner(
+                    title: "\(surface.sensitivePending.count) sensitive facts",
+                    detail: "need your review before I use them",
+                    color: Theme.Colors.readyModerate,
+                    systemImage: "eye"
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("ckw-sensitive-banner")
+        }
+
+        if !surface.contradictions.isEmpty || !surface.dataGaps.isEmpty {
+            Button { showResolve = true } label: {
+                CoachKnowledgeBanner(
+                    title: "\(surface.contradictions.count) contradiction · \(surface.dataGaps.count) gap",
+                    detail: "to resolve",
+                    color: Theme.Colors.textSecondary,
+                    systemImage: "info.circle"
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("ckw-resolve-banner")
+        }
+    }
+
+    private func readableSections(_ sections: [CoachKnowledgeSection]) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            ForEach(sections) { section in
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Text(section.title.uppercased())
+                        .font(Theme.Typography.label)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                    VStack(spacing: 0) {
+                        ForEach(section.facts) { fact in
+                            Button { selectedFact = fact } label: {
+                                CoachKnowledgeFactRow(fact: fact)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("ckw-fact-\(fact.id)")
+                        }
+                    }
+                    .background(Theme.Colors.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                            .stroke(Theme.Colors.borderLight, lineWidth: 1)
+                    )
+                }
+            }
+        }
+        .accessibilityIdentifier("ckw-readable-sections")
+    }
+
+    private func footerNote(_ surface: CoachKnowledgeSurface) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            Text(surface.isDegraded ? "DATA_GAP" : "ONE SHARED MEMORY")
+                .font(Theme.Typography.label)
+                .foregroundColor(Theme.Colors.textSecondary)
+            Text(surface.dataGaps.first?.detail ?? "Unapproved sensitive facts are held for review and are not accepted coach truth.")
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.textSecondary)
+        }
+        .padding(Theme.Spacing.md)
+        .background(Theme.Colors.backgroundSubtle)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
+    }
+}
+
+private struct CoachKnowledgeBanner: View {
+    let title: String
+    let detail: String
+    let color: Color
+    let systemImage: String
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Image(systemName: systemImage)
+                .foregroundColor(color)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(Theme.Typography.bodyBold)
+                    .foregroundColor(Theme.Colors.textPrimary)
+                Text(detail)
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textSecondary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(Theme.Colors.textTertiary)
+        }
+        .padding(Theme.Spacing.md)
+        .background(Theme.Colors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
+                .stroke(Theme.Colors.borderLight, lineWidth: 1)
+        )
+    }
+}
+
+private struct CoachKnowledgeFactRow: View {
+    let fact: CoachKnowledgeFact
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(fact.text)
+                    .font(Theme.Typography.bodyBold)
+                    .foregroundColor(Theme.Colors.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                CoachKnowledgeSourceTag(source: fact.source)
+            }
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(Theme.Colors.textTertiary)
+        }
+        .padding(Theme.Spacing.md)
+        .overlay(alignment: .bottom) {
+            Divider().padding(.leading, Theme.Spacing.md)
+        }
+    }
+}
+
+private struct CoachKnowledgeSourceTag: View {
+    let source: CoachKnowledgeSourceRef?
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+            Text((source?.label ?? "Source").uppercased())
+        }
+        .font(.system(size: 10, weight: .medium, design: .monospaced))
+        .foregroundColor(color)
+    }
+
+    private var icon: String {
+        switch source?.kind {
+        case "device", "garmin", "apple_health": return "applewatch"
+        case "inferred": return "sparkles"
+        case "chat", "telegram": return "bubble.left.and.bubble.right"
+        default: return "person"
+        }
+    }
+
+    private var color: Color {
+        switch source?.kind {
+        case "device", "garmin", "apple_health": return Theme.Colors.accentBlue
+        case "inferred": return .purple
+        default: return Theme.Colors.textSecondary
+        }
+    }
+}
+
+private struct CoachKnowledgeProvenanceView: View {
+    let fact: CoachKnowledgeFact
+    let onBoundaryAction: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                        Text("FACT · \(fact.category.uppercased())")
+                            .font(Theme.Typography.label)
+                            .foregroundColor(Theme.Colors.textSecondary)
+                        Text(fact.text)
+                            .font(Theme.Typography.title3)
+                            .foregroundColor(Theme.Colors.textPrimary)
+                        CoachKnowledgeSourceTag(source: fact.source)
+                        Text("CONFIDENCE · \(confidenceLabel)")
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                            .foregroundColor(Theme.Colors.textSecondary)
+                    }
+                    .padding(Theme.Spacing.md)
+                    .background(Theme.Colors.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
+
+                    Text("SOURCE TRAIL")
+                        .font(Theme.Typography.label)
+                        .foregroundColor(Theme.Colors.textSecondary)
+
+                    ForEach(provenance) { source in
+                        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                            CoachKnowledgeSourceTag(source: source)
+                            if !source.title.isEmpty {
+                                Text(source.title)
+                                    .font(Theme.Typography.bodyBold)
+                            }
+                            if !source.quote.isEmpty {
+                                Text(source.quote)
+                                    .font(Theme.Typography.caption)
+                                    .foregroundColor(Theme.Colors.textSecondary)
+                            }
+                        }
+                        .padding(Theme.Spacing.md)
+                        .background(Theme.Colors.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
+                    }
+                }
+                .padding(Theme.Spacing.md)
+            }
+            .navigationTitle("Where this came from")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+                ToolbarItemGroup(placement: .bottomBar) {
+                    Button("Correct") { onBoundaryAction("Correct") }
+                    Spacer()
+                    Button("Forget", role: .destructive) { onBoundaryAction("Forget") }
+                }
+            }
+            .accessibilityIdentifier("ckw-provenance")
+        }
+    }
+
+    private var provenance: [CoachKnowledgeSourceRef] {
+        fact.provenance.isEmpty ? [fact.source].compactMap { $0 } : fact.provenance
+    }
+
+    private var confidenceLabel: String {
+        guard let confidence = fact.confidence else { return "UNKNOWN" }
+        if confidence >= 0.8 { return "HIGH" }
+        if confidence >= 0.55 { return "MEDIUM" }
+        return "LOW"
+    }
+}
+
+private struct CoachKnowledgeSensitiveView: View {
+    @ObservedObject var viewModel: CoachKnowledgeViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                    Text("These came up in conversation but touch your health. Your coach will not act on them until you say so.")
+                        .font(Theme.Typography.body)
+                        .padding(Theme.Spacing.md)
+                        .background(Theme.Colors.readyModerate.opacity(0.14))
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
+
+                    ForEach(viewModel.reviewOnlyFacts) { fact in
+                        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                            HStack {
+                                Text(fact.category.uppercased())
+                                    .font(Theme.Typography.label)
+                                Spacer()
+                                Text(fact.heldLabel)
+                                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                    .foregroundColor(Theme.Colors.readyModerate)
+                            }
+                            Text(fact.text)
+                                .font(Theme.Typography.bodyBold)
+                            CoachKnowledgeSourceTag(source: fact.source)
+                            Text(fact.detail)
+                                .font(Theme.Typography.caption)
+                                .foregroundColor(Theme.Colors.textSecondary)
+                            Divider()
+                            Text(fact.prompt)
+                                .font(Theme.Typography.bodyBold)
+                            HStack {
+                                Button("Yes, use it") {
+                                    Task { await viewModel.reviewSensitiveFact(fact, decision: .approve) }
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .disabled(viewModel.isReviewInFlight(fact.actionId))
+                                Button("Keep private") {
+                                    Task { await viewModel.reviewSensitiveFact(fact, decision: .reject) }
+                                }
+                                .buttonStyle(.bordered)
+                                .disabled(viewModel.isReviewInFlight(fact.actionId))
+                            }
+                        }
+                        .padding(Theme.Spacing.md)
+                        .background(Theme.Colors.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
+                    }
+                }
+                .padding(Theme.Spacing.md)
+            }
+            .navigationTitle("Sensitive · review")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .accessibilityIdentifier("ckw-sensitive")
+        }
+    }
+}
+
+private struct CoachKnowledgeResolveView: View {
+    let surface: CoachKnowledgeSurface?
+    let onBoundaryAction: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                    ForEach(surface?.contradictions ?? []) { contradiction in
+                        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                            Text("CONTRADICTION")
+                                .font(Theme.Typography.label)
+                                .foregroundColor(Theme.Colors.readyLow)
+                            Text("Two things I've heard don't match")
+                                .font(Theme.Typography.bodyBold)
+                            Text("Choose a source through the shared CKW review boundary; iOS will not rewrite facts locally.")
+                                .font(Theme.Typography.caption)
+                                .foregroundColor(Theme.Colors.textSecondary)
+                            ForEach(contradiction.options ?? []) { option in
+                                Button {
+                                    onBoundaryAction("Contradiction resolution")
+                                } label: {
+                                    HStack {
+                                        Circle().stroke(Theme.Colors.borderMedium, lineWidth: 1).frame(width: 18, height: 18)
+                                        Text(option.text)
+                                        Spacer()
+                                        CoachKnowledgeSourceTag(source: option.source)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(Theme.Spacing.md)
+                        .background(Theme.Colors.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
+                    }
+
+                    ForEach(surface?.dataGaps ?? []) { gap in
+                        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                            Text("DATA GAP")
+                                .font(Theme.Typography.label)
+                                .foregroundColor(Theme.Colors.textSecondary)
+                            Text(gap.title)
+                                .font(Theme.Typography.bodyBold)
+                            Text(gap.detail)
+                                .font(Theme.Typography.caption)
+                                .foregroundColor(Theme.Colors.textSecondary)
+                            HStack {
+                                Button(gap.actionLabel ?? "Connect a source") {
+                                    onBoundaryAction("Data gap resolution")
+                                }
+                                .buttonStyle(.borderedProminent)
+                                Button("Log manually") {
+                                    onBoundaryAction("Manual data-gap logging")
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                        }
+                        .padding(Theme.Spacing.md)
+                        .background(Theme.Colors.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
+                    }
+                }
+                .padding(Theme.Spacing.md)
+            }
+            .navigationTitle("Resolve")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .accessibilityIdentifier("ckw-resolve")
+        }
     }
 }
 

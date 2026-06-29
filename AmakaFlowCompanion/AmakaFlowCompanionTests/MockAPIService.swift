@@ -265,6 +265,15 @@ class MockAPIService: APIServiceProviding {
     var undoActionResult: Result<AgentAction, Error> = .success(.sampleApplied)
     var undoActionCalled = false
     var undoActionId: String?
+    var fetchCoachKnowledgeSurfaceResult: Result<CoachKnowledgeSurface, Error> = .success(.ama2229Fixture)
+    var fetchCoachKnowledgeSurfaceCalled = false
+    var reviewCoachKnowledgeResult: Result<CoachKnowledgeReviewResponse, Error>?
+    var reviewCoachKnowledgeDelayNanoseconds: UInt64 = 0
+    var reviewCoachKnowledgeCalled = false
+    var reviewCoachKnowledgeCallCount = 0
+    var reviewCoachKnowledgeActionId: String?
+    var reviewCoachKnowledgeDecision: CoachKnowledgeReviewDecision?
+    var reviewCoachKnowledgeReason: String?
 
     func fetchAgentActions(status: String?) async throws -> [AgentAction] {
         fetchAgentActionsCalled = true
@@ -283,6 +292,30 @@ class MockAPIService: APIServiceProviding {
         undoActionCalled = true
         undoActionId = id
         return try undoActionResult.get()
+    }
+
+    func fetchCoachKnowledgeSurface() async throws -> CoachKnowledgeSurface {
+        fetchCoachKnowledgeSurfaceCalled = true
+        return try fetchCoachKnowledgeSurfaceResult.get()
+    }
+
+    func reviewCoachKnowledge(
+        actionId: String,
+        decision: CoachKnowledgeReviewDecision,
+        reason: String
+    ) async throws -> CoachKnowledgeReviewResponse {
+        reviewCoachKnowledgeCalled = true
+        reviewCoachKnowledgeCallCount += 1
+        reviewCoachKnowledgeActionId = actionId
+        reviewCoachKnowledgeDecision = decision
+        reviewCoachKnowledgeReason = reason
+        if reviewCoachKnowledgeDelayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: reviewCoachKnowledgeDelayNanoseconds)
+        }
+        if let reviewCoachKnowledgeResult {
+            return try reviewCoachKnowledgeResult.get()
+        }
+        return .ama2229Fixture(actionId: actionId, decision: decision)
     }
 
     // MARK: - Coach (AMA-1147)
@@ -1135,5 +1168,159 @@ class MockAPIService: APIServiceProviding {
     func deleteAccount() async throws {
         deleteAccountCalled = true
         try deleteAccountResult.get()
+    }
+}
+
+
+extension CoachKnowledgeSurface {
+    static var ama2229Fixture: CoachKnowledgeSurface {
+        CoachKnowledgeSurface(
+            mode: "mock",
+            readableOrder: ["sections", "provenance"],
+            sections: [
+                CoachKnowledgeSection(
+                    id: "goals",
+                    title: "Goals",
+                    summary: "",
+                    facts: [
+                        CoachKnowledgeFact(
+                            id: "fact-goal",
+                            text: "HYROX race - May 2026",
+                            state: "accepted",
+                            category: "goal",
+                            confidence: 0.9,
+                            sensitivity: "public_or_low",
+                            source: CoachKnowledgeSourceRef(
+                                kind: "user",
+                                sourceId: "source-goal",
+                                label: "You told me",
+                                title: "Goal chat",
+                                uri: "",
+                                quote: "HYROX in May.",
+                                confidence: 0.9,
+                                occurredAt: "2026-04-20"
+                            ),
+                            provenance: [
+                                CoachKnowledgeSourceRef(
+                                    kind: "user",
+                                    sourceId: "source-goal",
+                                    label: "You told me",
+                                    title: "Goal chat",
+                                    uri: "",
+                                    quote: "HYROX in May.",
+                                    confidence: 0.9,
+                                    occurredAt: "2026-04-20"
+                                )
+                            ]
+                        )
+                    ]
+                )
+            ],
+            sensitivePending: [
+                CoachKnowledgePendingSensitiveFact(
+                    id: "fact-knee-review",
+                    actionId: "pa-knee-review",
+                    text: "Possible left knee issue",
+                    category: "Injury",
+                    state: "needs_review",
+                    reviewState: "pending_user",
+                    heldLabel: "HELD · NOT APPLIED",
+                    prompt: "Treat this as an active injury to plan around?",
+                    source: CoachKnowledgeSourceRef(
+                        kind: "chat",
+                        sourceId: "source-knee-chat",
+                        label: "From chat",
+                        title: "Telegram",
+                        uri: "",
+                        quote: "Knee was sore.",
+                        confidence: 0.7,
+                        occurredAt: "2026-04-22"
+                    ),
+                    provenance: [],
+                    detail: "Not accepted coach truth."
+                )
+            ],
+            contradictions: [
+                CoachKnowledgeContradiction(
+                    id: "contradiction-knee",
+                    state: "needs_user_review",
+                    claimIdA: "knee-fine",
+                    claimIdB: "fact-knee-review",
+                    options: [
+                        CoachKnowledgeContradictionOption(
+                            text: "Knee feels fine now",
+                            source: CoachKnowledgeSourceRef(
+                                kind: "chat",
+                                sourceId: "source-knee-fine",
+                                label: "From chat",
+                                title: "Telegram",
+                                uri: "",
+                                quote: "Knee feels fine now.",
+                                confidence: 0.8,
+                                occurredAt: "2026-04-25"
+                            )
+                        ),
+                        CoachKnowledgeContradictionOption(
+                            text: "Logged knee pain twice this week",
+                            source: CoachKnowledgeSourceRef(
+                                kind: "device",
+                                sourceId: "source-knee-device",
+                                label: "From device",
+                                title: "Device note",
+                                uri: "",
+                                quote: "Knee pain logged twice.",
+                                confidence: 0.7,
+                                occurredAt: "2026-04-24"
+                            )
+                        )
+                    ]
+                )
+            ],
+            dataGaps: [
+                CoachKnowledgeGap(
+                    id: "gap-hrv",
+                    title: "No HRV for 3 days",
+                    detail: "Connect a source or log manually.",
+                    mode: "data_gap",
+                    actionLabel: "Connect a source"
+                )
+            ],
+            contract: CoachKnowledgeContract(
+                readRoute: "GET /coach/wiki/surface",
+                reviewQueueRoute: "GET /coach/wiki/review-queue",
+                reviewActionRoutes: [
+                    "POST /coach/wiki/review-actions/{action_id}/approve",
+                    "POST /coach/wiki/review-actions/{action_id}/reject"
+                ],
+                factStates: ["accepted", "rejected", "superseded", "contradicted", "needs_review"],
+                mode: "mock"
+            )
+        )
+    }
+}
+
+extension CoachKnowledgeReviewResponse {
+    static var ama2229ApprovedFixture: CoachKnowledgeReviewResponse {
+        ama2229Fixture(actionId: "pa-knee-review", decision: .approve)
+    }
+
+    static var ama2229RejectedFixture: CoachKnowledgeReviewResponse {
+        ama2229Fixture(actionId: "pa-knee-review", decision: .reject)
+    }
+
+    static func ama2229Fixture(
+        actionId: String,
+        decision: CoachKnowledgeReviewDecision
+    ) -> CoachKnowledgeReviewResponse {
+        CoachKnowledgeReviewResponse(
+            operation: decision.rawValue,
+            claim: ["id": .string("fact-knee-review")],
+            pendingAction: [
+                "id": .string(actionId),
+                "status": .string(decision == .approve ? "approved" : "rejected")
+            ],
+            audit: ["boundary": .string("coach_wiki_review")],
+            cacheInvalidated: true
+        )
     }
 }

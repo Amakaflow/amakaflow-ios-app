@@ -517,6 +517,49 @@ extension APIService {
         return try await self.request(request, decode: AgentAction.self, successStatusCodes: 200...200)
     }
 
+    // MARK: - Coach Knowledge Wiki (AMA-2229)
+
+    func fetchCoachKnowledgeSurface() async throws -> CoachKnowledgeSurface {
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/coach/wiki/surface",
+            method: "GET"
+        )
+        return try await self.request(
+            request,
+            decode: CoachKnowledgeSurface.self,
+            decoder: APIService.makeDecoder(),
+            successStatusCodes: 200...200
+        )
+    }
+
+    func reviewCoachKnowledge(
+        actionId: String,
+        decision: CoachKnowledgeReviewDecision,
+        reason: String
+    ) async throws -> CoachKnowledgeReviewResponse {
+        let encodedID = try Self.pathSegment(actionId)
+        let route: String
+        switch decision {
+        case .approve:
+            route = "/coach/wiki/review-actions/\(encodedID)/approve"
+        case .reject:
+            route = "/coach/wiki/review-actions/\(encodedID)/reject"
+        }
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: route,
+            method: "POST",
+            body: try encodeJSONBody(["reason": reason])
+        )
+        return try await self.request(
+            request,
+            decode: CoachKnowledgeReviewResponse.self,
+            decoder: APIService.makeDecoder(),
+            successStatusCodes: 200...200
+        )
+    }
+
     // MARK: - Analytics API (AMA-1147 / AMA-1133)
 
     func fetchShoeComparison() async throws -> [ShoeStats] {
