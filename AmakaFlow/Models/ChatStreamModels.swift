@@ -11,6 +11,7 @@ import Foundation
 
 enum SSEEvent: Equatable {
     case messageStart(sessionId: String, traceId: String?)
+    case firstToken(latencyMs: Int?, sourceStage: String?, mode: String?)
     case contentDelta(text: String)
     case functionCall(id: String, name: String)
     case functionResult(toolUseId: String, name: String, result: String)

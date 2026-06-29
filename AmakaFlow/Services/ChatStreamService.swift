@@ -62,6 +62,12 @@ enum SSEParser {
                 let traceId = json["trace_id"] as? String
                 return .messageStart(sessionId: sessionId, traceId: traceId)
 
+            case "first_token":
+                let latencyMs = json["latency_ms"] as? Int
+                let sourceStage = json["source_stage"] as? String
+                let mode = json["mode"] as? String
+                return .firstToken(latencyMs: latencyMs, sourceStage: sourceStage, mode: mode)
+
             case "content_delta":
                 guard let text = json["text"] as? String else { return nil }
                 return .contentDelta(text: text)
