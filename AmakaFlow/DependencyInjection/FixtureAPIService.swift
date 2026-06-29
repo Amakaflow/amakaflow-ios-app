@@ -15,6 +15,7 @@ import Foundation
 /// without changes to ViewModels, Engine, or UI.
 class FixtureAPIService: APIServiceProviding {
     private var followedUserIds = Set<String>()
+    private var reviewedCoachKnowledgeActionIDs = Set<String>()
     private var fixtureCoachingProfile = Components.Schemas.CoachingProfile(
         createdAt: "2026-05-28T00:00:00Z",
         equipment: nil,
@@ -401,7 +402,30 @@ class FixtureAPIService: APIServiceProviding {
     func undoAction(id: String) async throws -> AgentAction { .sampleApplied }
 
     func fetchCoachKnowledgeSurface() async throws -> CoachKnowledgeSurface {
-        CoachKnowledgeSurface(
+        let sensitiveFact = CoachKnowledgePendingSensitiveFact(
+            id: "fixture-knee-review",
+            actionId: "pa-fixture-knee-review",
+            text: "Possible left knee issue",
+            category: "Injury",
+            state: "needs_review",
+            reviewState: "pending_user",
+            heldLabel: "HELD · NOT APPLIED",
+            prompt: "Treat this as an active injury to plan around?",
+            source: CoachKnowledgeSourceRef(
+                kind: "chat",
+                sourceId: "fixture-telegram-knee",
+                label: "From chat",
+                title: "Telegram note",
+                uri: "",
+                quote: "Knee was a bit sore.",
+                confidence: 0.7,
+                occurredAt: "2026-04-22"
+            ),
+            provenance: [],
+            detail: "Mentioned knee soreness after a long run. Not accepted coach truth."
+        )
+        let isReviewed = reviewedCoachKnowledgeActionIDs.contains(sensitiveFact.actionId)
+        return CoachKnowledgeSurface(
             mode: "mock",
             readableOrder: ["sections", "provenance"],
             sections: [
@@ -469,31 +493,8 @@ class FixtureAPIService: APIServiceProviding {
                     ]
                 )
             ],
-            sensitivePending: [
-                CoachKnowledgePendingSensitiveFact(
-                    id: "fixture-knee-review",
-                    actionId: "pa-fixture-knee-review",
-                    text: "Possible left knee issue",
-                    category: "Injury",
-                    state: "needs_review",
-                    reviewState: "pending_user",
-                    heldLabel: "HELD · NOT APPLIED",
-                    prompt: "Treat this as an active injury to plan around?",
-                    source: CoachKnowledgeSourceRef(
-                        kind: "chat",
-                        sourceId: "fixture-telegram-knee",
-                        label: "From chat",
-                        title: "Telegram note",
-                        uri: "",
-                        quote: "Knee was a bit sore.",
-                        confidence: 0.7,
-                        occurredAt: "2026-04-22"
-                    ),
-                    provenance: [],
-                    detail: "Mentioned knee soreness after a long run. Not accepted coach truth."
-                )
-            ],
-            contradictions: [
+            sensitivePending: isReviewed ? [] : [sensitiveFact],
+            contradictions: isReviewed ? [] : [
                 CoachKnowledgeContradiction(
                     id: "fixture-knee-contradiction",
                     state: "needs_user_review",
@@ -529,7 +530,8 @@ class FixtureAPIService: APIServiceProviding {
         decision: CoachKnowledgeReviewDecision,
         reason: String
     ) async throws -> CoachKnowledgeReviewResponse {
-        CoachKnowledgeReviewResponse(
+        reviewedCoachKnowledgeActionIDs.insert(actionId)
+        return CoachKnowledgeReviewResponse(
             operation: decision.rawValue,
             claim: ["id": .string("fixture-knee-review")],
             pendingAction: ["id": .string(actionId), "status": .string(decision == .approve ? "approved" : "rejected")],

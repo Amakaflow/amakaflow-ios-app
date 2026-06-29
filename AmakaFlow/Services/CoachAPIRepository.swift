@@ -521,7 +521,7 @@ extension APIService {
 
     func fetchCoachKnowledgeSurface() async throws -> CoachKnowledgeSurface {
         let request = try await makeAPIRequest(
-            baseURL: AppEnvironment.current.mobileBFFURL,
+            baseURL: bffURL,
             path: "/coach/wiki/surface",
             method: "GET"
         )
@@ -547,7 +547,7 @@ extension APIService {
             route = "/coach/wiki/review-actions/\(encodedID)/reject"
         }
         let request = try await makeAPIRequest(
-            baseURL: AppEnvironment.current.mobileBFFURL,
+            baseURL: bffURL,
             path: route,
             method: "POST",
             body: try encodeJSONBody(["reason": reason])

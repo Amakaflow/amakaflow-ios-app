@@ -267,8 +267,10 @@ class MockAPIService: APIServiceProviding {
     var undoActionId: String?
     var fetchCoachKnowledgeSurfaceResult: Result<CoachKnowledgeSurface, Error> = .success(.ama2229Fixture)
     var fetchCoachKnowledgeSurfaceCalled = false
-    var reviewCoachKnowledgeResult: Result<CoachKnowledgeReviewResponse, Error> = .success(.ama2229ApprovedFixture)
+    var reviewCoachKnowledgeResult: Result<CoachKnowledgeReviewResponse, Error>?
+    var reviewCoachKnowledgeDelayNanoseconds: UInt64 = 0
     var reviewCoachKnowledgeCalled = false
+    var reviewCoachKnowledgeCallCount = 0
     var reviewCoachKnowledgeActionId: String?
     var reviewCoachKnowledgeDecision: CoachKnowledgeReviewDecision?
     var reviewCoachKnowledgeReason: String?
@@ -303,10 +305,17 @@ class MockAPIService: APIServiceProviding {
         reason: String
     ) async throws -> CoachKnowledgeReviewResponse {
         reviewCoachKnowledgeCalled = true
+        reviewCoachKnowledgeCallCount += 1
         reviewCoachKnowledgeActionId = actionId
         reviewCoachKnowledgeDecision = decision
         reviewCoachKnowledgeReason = reason
-        return try reviewCoachKnowledgeResult.get()
+        if reviewCoachKnowledgeDelayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: reviewCoachKnowledgeDelayNanoseconds)
+        }
+        if let reviewCoachKnowledgeResult {
+            return try reviewCoachKnowledgeResult.get()
+        }
+        return .ama2229Fixture(actionId: actionId, decision: decision)
     }
 
     // MARK: - Coach (AMA-1147)
@@ -1162,6 +1171,7 @@ class MockAPIService: APIServiceProviding {
     }
 }
 
+
 extension CoachKnowledgeSurface {
     static var ama2229Fixture: CoachKnowledgeSurface {
         CoachKnowledgeSurface(
@@ -1236,7 +1246,34 @@ extension CoachKnowledgeSurface {
                     state: "needs_user_review",
                     claimIdA: "knee-fine",
                     claimIdB: "fact-knee-review",
-                    options: nil
+                    options: [
+                        CoachKnowledgeContradictionOption(
+                            text: "Knee feels fine now",
+                            source: CoachKnowledgeSourceRef(
+                                kind: "chat",
+                                sourceId: "source-knee-fine",
+                                label: "From chat",
+                                title: "Telegram",
+                                uri: "",
+                                quote: "Knee feels fine now.",
+                                confidence: 0.8,
+                                occurredAt: "2026-04-25"
+                            )
+                        ),
+                        CoachKnowledgeContradictionOption(
+                            text: "Logged knee pain twice this week",
+                            source: CoachKnowledgeSourceRef(
+                                kind: "device",
+                                sourceId: "source-knee-device",
+                                label: "From device",
+                                title: "Device note",
+                                uri: "",
+                                quote: "Knee pain logged twice.",
+                                confidence: 0.7,
+                                occurredAt: "2026-04-24"
+                            )
+                        )
+                    ]
                 )
             ],
             dataGaps: [
@@ -1264,12 +1301,26 @@ extension CoachKnowledgeSurface {
 
 extension CoachKnowledgeReviewResponse {
     static var ama2229ApprovedFixture: CoachKnowledgeReviewResponse {
+        ama2229Fixture(actionId: "pa-knee-review", decision: .approve)
+    }
+
+    static var ama2229RejectedFixture: CoachKnowledgeReviewResponse {
+        ama2229Fixture(actionId: "pa-knee-review", decision: .reject)
+    }
+
+    static func ama2229Fixture(
+        actionId: String,
+        decision: CoachKnowledgeReviewDecision
+    ) -> CoachKnowledgeReviewResponse {
         CoachKnowledgeReviewResponse(
-            operation: "approve",
+            operation: decision.rawValue,
             claim: ["id": .string("fact-knee-review")],
-            pendingAction: ["id": .string("pa-knee-review"), "status": .string("approved")],
+            pendingAction: [
+                "id": .string(actionId),
+                "status": .string(decision == .approve ? "approved" : "rejected")
+            ],
             audit: ["boundary": .string("coach_wiki_review")],
-            cacheInvalidated: true
+            cacheInvalidated: decision == .approve
         )
     }
 }

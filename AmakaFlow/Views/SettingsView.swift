@@ -2968,6 +2968,7 @@ private struct SettingsToggleRow: View {
 final class CoachKnowledgeViewModel: ObservableObject {
     @Published private(set) var surface: CoachKnowledgeSurface?
     @Published private(set) var isLoading = false
+    @Published private(set) var inFlightReviewActionIDs = Set<String>()
     @Published var actionMessage: String?
 
     private let apiService: APIServiceProviding
@@ -2982,6 +2983,27 @@ final class CoachKnowledgeViewModel: ObservableObject {
 
     var reviewOnlyFacts: [CoachKnowledgePendingSensitiveFact] {
         surface?.sensitivePending.filter(\.isReviewOnly) ?? []
+    }
+
+    var visibleReadableSections: [CoachKnowledgeSection] {
+        surface?.sections.compactMap { section in
+            let acceptedFacts = section.facts.filter(\.isAcceptedTruth)
+            guard !acceptedFacts.isEmpty else { return nil }
+            return CoachKnowledgeSection(
+                id: section.id,
+                title: section.title,
+                summary: section.summary,
+                facts: acceptedFacts
+            )
+        } ?? []
+    }
+
+    var surfaceContentOrder: [String] {
+        ["readable_sections", "attention_banners", "footer"]
+    }
+
+    func isReviewInFlight(_ actionId: String) -> Bool {
+        inFlightReviewActionIDs.contains(actionId)
     }
 
     func load() async {
@@ -3021,6 +3043,10 @@ final class CoachKnowledgeViewModel: ObservableObject {
     }
 
     func reviewSensitiveFact(_ fact: CoachKnowledgePendingSensitiveFact, decision: CoachKnowledgeReviewDecision) async {
+        guard !inFlightReviewActionIDs.contains(fact.actionId) else { return }
+        inFlightReviewActionIDs.insert(fact.actionId)
+        defer { inFlightReviewActionIDs.remove(fact.actionId) }
+
         do {
             _ = try await apiService.reviewCoachKnowledge(
                 actionId: fact.actionId,
@@ -3064,8 +3090,8 @@ struct CoachKnowledgeView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical, Theme.Spacing.xl)
                 } else if let surface = viewModel.surface {
+                    readableSections(viewModel.visibleReadableSections)
                     attentionBanners(surface)
-                    readableSections(surface.sections)
                     footerNote(surface)
                 }
             }
@@ -3379,10 +3405,12 @@ private struct CoachKnowledgeSensitiveView: View {
                                     Task { await viewModel.reviewSensitiveFact(fact, decision: .approve) }
                                 }
                                 .buttonStyle(.borderedProminent)
+                                .disabled(viewModel.isReviewInFlight(fact.actionId))
                                 Button("Keep private") {
                                     Task { await viewModel.reviewSensitiveFact(fact, decision: .reject) }
                                 }
                                 .buttonStyle(.bordered)
+                                .disabled(viewModel.isReviewInFlight(fact.actionId))
                             }
                         }
                         .padding(Theme.Spacing.md)
@@ -3412,7 +3440,7 @@ private struct CoachKnowledgeResolveView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                    if let contradiction = surface?.contradictions.first {
+                    ForEach(surface?.contradictions ?? []) { contradiction in
                         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                             Text("CONTRADICTION")
                                 .font(Theme.Typography.label)
