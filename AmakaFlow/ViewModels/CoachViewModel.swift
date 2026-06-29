@@ -196,7 +196,12 @@ class CoachViewModel: ObservableObject {
                 limit: 50,
                 token: token
             )
-            guard !restored.isEmpty else { return }
+            guard !restored.isEmpty else {
+                // An empty (but successful) restore is a normal new/empty thread,
+                // not a data gap — clear any prior degraded state on retry.
+                resetDegradeToBaseline()
+                return
+            }
             messages = restored.map {
                 ChatMessage(role: $0.role, content: $0.content, timestamp: $0.timestamp)
             }
@@ -206,7 +211,9 @@ class CoachViewModel: ObservableObject {
             resetDegradeToBaseline()
         } catch CoachSessionError.sessionNotFound {
             // 404 is a normal "new conversation" outcome, not a degradation.
+            // Clear any prior data-gap so a recovered retry isn't stuck degraded.
             self.sessionId = nil
+            resetDegradeToBaseline()
         } catch let error as CoachSessionError {
             restoreError = error
             // History could not be loaded from the shared path — surface a
@@ -250,6 +257,9 @@ class CoachViewModel: ObservableObject {
             assistantMessage.isStreaming = false
             isStreaming = false
             error = .unauthenticated()
+            // Auth is its own surface, not a dependency-down condition — don't
+            // leave a stale `.manual` / `.dataGap` banner on screen.
+            resetDegradeToBaseline()
             return
         }
 

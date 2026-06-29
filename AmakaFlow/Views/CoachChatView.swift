@@ -96,7 +96,17 @@ struct CoachChatView: View {
     }
 
     private func requestNewChat() {
-        if !viewModel.messages.isEmpty {
+        // A degraded/empty thread (e.g. after a restore failure) still holds a
+        // stale sessionId + degraded banner, so "New chat" must be able to clear
+        // it without a confirmation prompt (there's no visible history to lose).
+        guard !viewModel.messages.isEmpty
+            || viewModel.sessionId != nil
+            || viewModel.restoreError != nil
+            || viewModel.degradeMode == .dataGap else { return }
+
+        if viewModel.messages.isEmpty {
+            viewModel.startNewChat()
+        } else {
             showNewChatConfirmation = true
         }
     }
@@ -286,6 +296,10 @@ struct CoachChatView: View {
 
     private var composer: some View {
         let isTextOnly = viewModel.degradeMode?.isDegraded ?? false
+        // Block input while a turn is streaming or while session restore is in
+        // flight: loadMessagesIfNeeded() replaces `messages` wholesale when it
+        // completes, so a send started during restore would be overwritten.
+        let isBusy = viewModel.isStreaming || viewModel.isLoadingMessages
         return HStack(spacing: Theme.Spacing.sm) {
             TextField(isTextOnly ? "Message your coach…" : "Message…", text: $inputText)
                 .font(Theme.Typography.body)
@@ -294,7 +308,7 @@ struct CoachChatView: View {
                 .background(Theme.Colors.inputBackground)
                 .cornerRadius(Theme.CornerRadius.lg)
                 .focused($isInputFocused)
-                .disabled(viewModel.isStreaming)
+                .disabled(isBusy)
                 .submitLabel(.send)
                 .onSubmit(send)
                 .accessibilityIdentifier("af_coach_input")
@@ -325,12 +339,14 @@ struct CoachChatView: View {
     }
 
     private var canSend: Bool {
-        !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !viewModel.isStreaming
+        !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !viewModel.isStreaming
+            && !viewModel.isLoadingMessages
     }
 
     private func send() {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, !viewModel.isStreaming else { return }
+        guard !text.isEmpty, !viewModel.isStreaming, !viewModel.isLoadingMessages else { return }
         inputText = ""
         Task { await viewModel.sendMessage(text) }
     }
@@ -526,7 +542,10 @@ struct CoachMessageRow: View {
                 WorkoutPreviewCard(workout: workout)
             }
 
-            if isStreamingText {
+            // Keep the Stop affordance visible for the whole live turn,
+            // including the first-token wait — otherwise a hung "thinking"
+            // request can't be cancelled.
+            if message.role == .assistant && message.isStreaming {
                 streamingFooter
             }
         }
@@ -571,7 +590,7 @@ struct CoachMessageRow: View {
                 Circle()
                     .fill(Theme.Colors.readyHigh)
                     .frame(width: 5, height: 5)
-                Text("STREAMING")
+                Text(isThinking ? "WAITING" : "STREAMING")
                     .font(Font.geistMono(9, .medium))
                     .foregroundColor(Theme.Colors.readyHigh)
             }

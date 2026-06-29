@@ -125,6 +125,40 @@ final class CoachShellSharedPathTests: XCTestCase {
         XCTAssertTrue(viewModel.messages.isEmpty)
     }
 
+    func testDataGapClearsOnRetryThatReturnsEmpty() async {
+        let viewModel = makeViewModel()
+        viewModel.sessionId = "recovering-session"
+        // First restore fails (server 500) → data_gap.
+        mockSessionClient.errorToThrow = CoachSessionError.httpError(statusCode: 500, body: "boom")
+        await viewModel.loadMessagesIfNeeded()
+        XCTAssertEqual(viewModel.degradeMode, .dataGap)
+
+        // Shared path recovers but the session legitimately has no history yet.
+        mockSessionClient.errorToThrow = nil
+        mockSessionClient.messagesToReturn = []
+        await viewModel.retryLoadMessages()
+
+        XCTAssertNil(viewModel.degradeMode, "a successful (empty) retry must clear the prior data_gap")
+        XCTAssertNil(viewModel.restoreError)
+        XCTAssertTrue(viewModel.messages.isEmpty, "an empty thread is not fabricated, and not stuck degraded")
+    }
+
+    func testDataGapClearsOnRetryThatReturns404() async {
+        let viewModel = makeViewModel()
+        viewModel.sessionId = "recovering-session"
+        mockSessionClient.errorToThrow = CoachSessionError.httpError(statusCode: 503, body: "unavailable")
+        await viewModel.loadMessagesIfNeeded()
+        XCTAssertEqual(viewModel.degradeMode, .dataGap)
+
+        // Retry now resolves the session as gone → normal new-conversation.
+        mockSessionClient.errorToThrow = CoachSessionError.sessionNotFound
+        await viewModel.retryLoadMessages()
+
+        XCTAssertNil(viewModel.degradeMode, "a 404 on retry is a new conversation, not a lingering data_gap")
+        XCTAssertNil(viewModel.sessionId, "the stale session id is cleared on 404")
+        XCTAssertTrue(viewModel.messages.isEmpty)
+    }
+
     // MARK: - Dependency-down degradation (not crash / blank / silent success)
 
     func testTransportDownDegradesToManualTextOnly() async {
