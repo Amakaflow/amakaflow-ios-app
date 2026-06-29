@@ -142,6 +142,10 @@ struct PendingActionDetailsView: View {
     let onReject: () -> Void
     let onApprove: () -> Void
 
+    private var canDecide: Bool {
+        action.executionStatus.acceptsConfirmationDecision
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
@@ -202,10 +206,10 @@ struct PendingActionDetailsView: View {
             HStack(spacing: Theme.Spacing.sm) {
                 Button("Reject", action: onReject)
                     .buttonStyle(AFGhostButtonStyle())
-                    .disabled(isBusy)
+                    .disabled(isBusy || !canDecide)
                 Button("Approve", action: onApprove)
                     .buttonStyle(AFPrimaryButtonStyle())
-                    .disabled(isBusy)
+                    .disabled(isBusy || !canDecide)
             }
             .padding(Theme.Spacing.lg)
             .background(Theme.Colors.background.overlay(Rectangle().fill(Theme.Colors.borderLight).frame(height: 1), alignment: .top))

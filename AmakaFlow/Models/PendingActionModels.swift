@@ -363,10 +363,10 @@ extension PendingActionContract {
             copy = copy.replacingTitle(Self.title(for: toolName, payload: normalizedPayload))
         }
         if copy.why.isEmpty {
-            copy = copy.replacingWhy(Self.why(for: toolName, policyReasons: policyReasons))
+            copy = copy.replacingWhy(Self.why(policyReasons: policyReasons))
         }
         if copy.exactSteps.isEmpty {
-            copy = copy.replacingSteps(Self.steps(for: toolName, payload: normalizedPayload))
+            copy = copy.replacingSteps(Self.steps(payload: normalizedPayload))
         }
         return copy
     }
@@ -384,30 +384,47 @@ extension PendingActionContract {
     }
 
     private static func title(for toolName: String, payload: [String: PendingActionJSONValue]) -> String {
-        if toolName == "propose_schedule_workout" || toolName == "propose_move_session" {
-            return "Move Thursday's threshold run to Saturday"
+        if let title = stringValue(forAnyKey: ["title", "summary", "action_title"], in: payload) {
+            return title
         }
         return "Confirm \(toolName.replacingOccurrences(of: "_", with: " "))"
     }
 
-    private static func why(for toolName: String, policyReasons: [String]) -> String {
-        if toolName == "propose_schedule_workout" || toolName == "propose_move_session" {
-            return "You flagged feeling flat and Thursday clashes with your late meeting. Saturday keeps the weekly load intact."
-        }
+    private static func why(policyReasons: [String]) -> String {
         return policyReasons.first ?? "This action can change your plan or connected devices, so it needs explicit confirmation."
     }
 
-    private static func steps(for toolName: String, payload: [String: PendingActionJSONValue]) -> [String] {
-        if toolName == "propose_schedule_workout" || toolName == "propose_move_session" {
-            return [
-                "Swap Thu 4x8 threshold -> Sat, move long run to Sun",
-                "Re-push both workouts to your Garmin watch",
-                "Update this week's plan in the app"
-            ]
+    private static func steps(payload: [String: PendingActionJSONValue]) -> [String] {
+        if let steps = arrayValue(forAnyKey: ["exact_steps", "steps", "changes"], in: payload), !steps.isEmpty {
+            return steps
         }
         let payloadSteps = payload
             .sorted { $0.key < $1.key }
             .map { "\($0.key.replacingOccurrences(of: "_", with: " ")): \($0.value.description)" }
         return payloadSteps.isEmpty ? ["Send confirmation through the shared PendingActions execute path"] : payloadSteps
+    }
+
+    private static func stringValue(forAnyKey keys: [String], in payload: [String: PendingActionJSONValue]) -> String? {
+        for key in keys {
+            if case .string(let value) = payload[key], !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return value
+            }
+        }
+        return nil
+    }
+
+    private static func arrayValue(forAnyKey keys: [String], in payload: [String: PendingActionJSONValue]) -> [String]? {
+        for key in keys {
+            if case .array(let values) = payload[key] {
+                let steps = values.compactMap { value -> String? in
+                    if case .string(let step) = value, !step.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        return step
+                    }
+                    return nil
+                }
+                return steps
+            }
+        }
+        return nil
     }
 }

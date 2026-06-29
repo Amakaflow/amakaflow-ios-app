@@ -227,7 +227,12 @@ class CoachViewModel: ObservableObject {
                 return
             }
             messages = restored.map {
-                ChatMessage(role: $0.role, content: $0.content, timestamp: $0.timestamp)
+                ChatMessage(
+                    role: $0.role,
+                    content: $0.content,
+                    pendingActions: $0.pendingActions,
+                    timestamp: $0.timestamp
+                )
             }
             rebuildPendingActionLifecycle()
             didRestoreConversation = true
@@ -260,14 +265,15 @@ class CoachViewModel: ObservableObject {
 
     // MARK: - Send Message (Streaming)
 
-    func sendMessage(_ text: String) async {
+    @discardableResult
+    func sendMessage(_ text: String) async -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         // Reject sends while a turn is streaming or while session restore is in
         // flight: loadMessagesIfNeeded() snapshots `messages.isEmpty` before its
         // await and replaces `messages` wholesale when it resolves, so a send
         // started mid-restore would be overwritten. The composer also gates this,
         // but guard here too for direct/retry callers.
-        guard !trimmed.isEmpty, !isStreaming, !isLoadingMessages else { return }
+        guard !trimmed.isEmpty, !isStreaming, !isLoadingMessages else { return false }
 
         // Add user message
         let userMessage = ChatMessage(role: .user, content: trimmed)
@@ -293,7 +299,7 @@ class CoachViewModel: ObservableObject {
             // Auth is its own surface, not a dependency-down condition — don't
             // leave a stale `.manual` / `.dataGap` banner on screen.
             resetDegradeToBaseline()
-            return
+            return false
         }
 
         let request = ChatStreamRequest(
@@ -352,6 +358,7 @@ class CoachViewModel: ObservableObject {
 
         // Wait for stream to complete
         await streamTask?.value
+        return error == nil
     }
 
     // MARK: - Degradation (AMA-2234)
@@ -422,7 +429,14 @@ class CoachViewModel: ObservableObject {
                 token: token
             )
             if let updated = response.action {
-                upsertPendingAction(updated.withFallbackPresentation())
+                var decorated = updated.withFallbackPresentation()
+                decorated.lastResponseStatus = response.status
+                decorated.error = response.error ?? decorated.error
+                if let responseStatus = PendingActionExecutionStatus(rawValue: response.status),
+                   responseStatus != .replayedNoop {
+                    decorated.executionStatus = responseStatus
+                }
+                upsertPendingAction(decorated)
             } else {
                 let next: PendingActionExecutionStatus = decision == .approve ? .succeeded : .declined
                 applyPendingActionStatus(next, to: action.actionId, responseStatus: response.status, error: response.error)

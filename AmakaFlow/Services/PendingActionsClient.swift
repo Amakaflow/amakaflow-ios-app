@@ -80,6 +80,7 @@ final class PendingActionsClient: PendingActionsProviding {
 final class MockPendingActionsClient: PendingActionsProviding {
     var responses: [PendingActionExecuteResponse] = []
     var errorToThrow: Error?
+    var delayNanoseconds: UInt64 = 0
     private(set) var confirmationRequests: [(action: PendingActionContract, decision: PendingActionDecision)] = []
 
     func confirm(
@@ -88,6 +89,9 @@ final class MockPendingActionsClient: PendingActionsProviding {
         token: String
     ) async throws -> PendingActionExecuteResponse {
         confirmationRequests.append((action, decision))
+        if delayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: delayNanoseconds)
+        }
         if let errorToThrow {
             throw errorToThrow
         }

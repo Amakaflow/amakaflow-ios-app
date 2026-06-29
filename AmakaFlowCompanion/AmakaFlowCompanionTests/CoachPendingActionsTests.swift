@@ -110,6 +110,7 @@ final class CoachPendingActionsTests: XCTestCase {
         let action = pendingAction(actionId: "pa_replay")
         viewModel.messages = [ChatMessage(role: .assistant, content: "Approve?", pendingActions: [action])]
         viewModel.pendingActionLifecycle = [action]
+        pendingClient.delayNanoseconds = 50_000_000
         pendingClient.responses = [
             PendingActionExecuteResponse(
                 status: "replayed_noop",
@@ -122,22 +123,44 @@ final class CoachPendingActionsTests: XCTestCase {
             )
         ]
 
-        viewModel.pendingActionBusyIds.insert(action.actionId)
-        await viewModel.confirmPendingAction(action, decision: .approve)
-        XCTAssertTrue(pendingClient.confirmationRequests.isEmpty, "a second tap while confirm is in-flight must not hit execute")
-        viewModel.pendingActionBusyIds.remove(action.actionId)
-        await viewModel.confirmPendingAction(action, decision: .approve)
+        let first = Task { await viewModel.confirmPendingAction(action, decision: .approve) }
+        while pendingClient.confirmationRequests.isEmpty {
+            await Task.yield()
+        }
+        let second = Task { await viewModel.confirmPendingAction(action, decision: .approve) }
+        await first.value
+        await second.value
+
         XCTAssertEqual(pendingClient.confirmationRequests.count, 1)
         XCTAssertEqual(viewModel.pendingActionLifecycle.first?.lastResponseStatus, "replayed_noop")
         XCTAssertEqual(viewModel.pendingActionLifecycle.first?.executionStatus, .succeeded)
     }
 
+    func testRestoredMessagesPreservePendingActionsLifecycle() async {
+        let viewModel = makeViewModel()
+        let action = pendingAction(actionId: "pa_restore")
+        viewModel.sessionId = "s-restore"
+        session.messagesToReturn = [
+            RestoredSessionMessage(
+                role: .assistant,
+                content: "Approve?",
+                timestamp: Date(),
+                pendingActions: [action]
+            )
+        ]
+
+        await viewModel.loadMessagesIfNeeded()
+
+        XCTAssertEqual(viewModel.messages.first?.pendingActions.first?.actionId, action.actionId)
+        XCTAssertEqual(viewModel.pendingActionLifecycle.first?.actionId, action.actionId)
+    }
+
     func testDeclinedExpiredStaleTerminalStatesDoNotDuplicateSideEffects() async {
         let viewModel = makeViewModel()
         let declined = updated(pendingAction(actionId: "pa_declined"), status: .declined, responseStatus: "blocked")
-        let expired = updated(pendingAction(actionId: "pa_expired"), status: .expired, responseStatus: "replayed_noop")
+        let expired = updated(pendingAction(actionId: "pa_expired"), status: .expired, responseStatus: "expired")
         let stale = updated(pendingAction(actionId: "pa_stale"), status: .stale, responseStatus: "stale")
-        let terminal = updated(pendingAction(actionId: "pa_terminal"), status: .failedTerminal, responseStatus: "replayed_noop")
+        let terminal = updated(pendingAction(actionId: "pa_terminal"), status: .failedTerminal, responseStatus: "failed_terminal")
         viewModel.pendingActionLifecycle = [declined, expired, stale, terminal]
 
         XCTAssertTrue(declined.executionStatus.isTerminal)

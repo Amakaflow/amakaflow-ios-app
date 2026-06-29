@@ -100,8 +100,12 @@ struct CoachChatView: View {
                             Task { await viewModel.confirmPendingAction(action, decision: .approve) }
                         },
                         onAskAgain: { action in
-                            viewModel.markPendingActionStale(action)
-                            Task { await viewModel.sendMessage("Ask again about: \(action.title)") }
+                            Task {
+                                let accepted = await viewModel.sendMessage("Ask again about: \(action.title)")
+                                if accepted {
+                                    viewModel.markPendingActionStale(action)
+                                }
+                            }
                         }
                     )
                 }
