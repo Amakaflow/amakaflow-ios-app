@@ -122,6 +122,13 @@ class CoachViewModel: ObservableObject {
     private var profileSubscription: AnyCancellable?
     private var boundSessionUserId: String?
 
+    /// Monotonic id for the in-flight stream turn. Bumped on every new send and
+    /// on cancel so a superseded/cancelled stream task can't run its late
+    /// cleanup against a newer turn (which would clobber `isStreaming`, the
+    /// error/degrade state, or remove the wrong placeholder). Only the task
+    /// whose captured generation still matches may mutate shared turn state.
+    private var streamGeneration = 0
+
     /// AMA-2234: the steady-state degrade mode for the current dependency
     /// wiring. `.mock` when fixture/mock services are injected (dev/simulator
     /// validation), otherwise `nil` (healthy live shared path). Transient
@@ -234,7 +241,12 @@ class CoachViewModel: ObservableObject {
 
     func sendMessage(_ text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, !isStreaming else { return }
+        // Reject sends while a turn is streaming or while session restore is in
+        // flight: loadMessagesIfNeeded() snapshots `messages.isEmpty` before its
+        // await and replaces `messages` wholesale when it resolves, so a send
+        // started mid-restore would be overwritten. The composer also gates this,
+        // but guard here too for direct/retry callers.
+        guard !trimmed.isEmpty, !isStreaming, !isLoadingMessages else { return }
 
         // Add user message
         let userMessage = ChatMessage(role: .user, content: trimmed)
@@ -270,36 +282,37 @@ class CoachViewModel: ObservableObject {
         )
 
         streamTask?.cancel()
+        streamGeneration += 1
+        let generation = streamGeneration
 
         streamTask = Task { @MainActor [weak self] in
             guard let self else { return }
             let stream = self.dependencies.chatStreamService.stream(request: request, token: token)
+            var caughtError: Error?
             do {
                 for try await event in stream {
-                    guard !Task.isCancelled else { break }
+                    // Stop if cancelled or if a newer turn has superseded us.
+                    guard !Task.isCancelled, self.streamGeneration == generation else { break }
                     self.processEvent(event, message: assistantMessage)
                 }
             } catch {
-                if !Task.isCancelled {
-                    if assistantMessage.content.isEmpty {
-                        if let idx = self.messages.lastIndex(where: { $0.id == assistantMessage.id }) {
-                            self.messages.remove(at: idx)
-                        }
-                        if let idx = self.messages.lastIndex(where: { $0.id == userMessage.id }) {
-                            self.messages.remove(at: idx)
-                        }
-                    }
-                    self.error = CTAError.map(error)
+                caughtError = error
+            }
+
+            // Only the active stream may finalize shared turn state. If Stop was
+            // tapped (or a newer send started), this task's late cleanup must not
+            // flip `isStreaming` off mid-turn or remove the new turn's bubbles.
+            guard self.streamGeneration == generation else { return }
+
+            if let caughtError, !Task.isCancelled {
+                if assistantMessage.content.isEmpty {
+                    self.messages.removeAll { $0.id == assistantMessage.id || $0.id == userMessage.id }
                 }
+                self.error = CTAError.map(caughtError)
             }
             // Clean up empty placeholder if an SSE .error event set the error
             if assistantMessage.content.isEmpty && self.error != nil {
-                if let idx = self.messages.lastIndex(where: { $0.id == assistantMessage.id }) {
-                    self.messages.remove(at: idx)
-                }
-                if let idx = self.messages.lastIndex(where: { $0.id == userMessage.id }) {
-                    self.messages.remove(at: idx)
-                }
+                self.messages.removeAll { $0.id == assistantMessage.id || $0.id == userMessage.id }
             }
             assistantMessage.isStreaming = false
             self.isStreaming = false
@@ -490,6 +503,9 @@ class CoachViewModel: ObservableObject {
     }
 
     func cancelStream() {
+        // Invalidate the in-flight task so its late cleanup can't reset state on
+        // (or tear down) a subsequent turn the user starts right after Stop.
+        streamGeneration += 1
         streamTask?.cancel()
         streamTask = nil
         isStreaming = false

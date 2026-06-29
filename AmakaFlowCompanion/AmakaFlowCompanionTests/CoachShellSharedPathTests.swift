@@ -18,6 +18,7 @@ final class CoachShellSharedPathTests: XCTestCase {
     private var mockStreamService: MockChatStreamService!
     private var mockSessionClient: MockCoachSessionClient!
     private var mockPairingService: MockPairingService!
+    private var testUserId: String!
 
     override func setUp() async throws {
         mockStreamService = MockChatStreamService()
@@ -25,6 +26,18 @@ final class CoachShellSharedPathTests: XCTestCase {
         mockPairingService = MockPairingService()
         mockPairingService.storedToken = "test-jwt-token"
         mockPairingService.isPaired = true
+        // CoachViewModel.init reloads sessionId from UserDefaults.standard and
+        // streamed turns write it back, so give each test a unique per-user
+        // session key to keep the suite order-independent.
+        testUserId = "coach-shell-test-\(UUID().uuidString)"
+        mockPairingService.userProfile = UserProfile(id: testUserId, email: nil, name: nil, avatarUrl: nil)
+        UserDefaults.standard.removeObject(forKey: DefaultsKey.coachSessionID(userID: testUserId))
+    }
+
+    override func tearDown() async throws {
+        if let testUserId {
+            UserDefaults.standard.removeObject(forKey: DefaultsKey.coachSessionID(userID: testUserId))
+        }
     }
 
     /// Build a view model whose coach turns are served by the injected
@@ -157,6 +170,20 @@ final class CoachShellSharedPathTests: XCTestCase {
         XCTAssertNil(viewModel.degradeMode, "a 404 on retry is a new conversation, not a lingering data_gap")
         XCTAssertNil(viewModel.sessionId, "the stale session id is cleared on 404")
         XCTAssertTrue(viewModel.messages.isEmpty)
+    }
+
+    func testSendIsRejectedWhileSessionRestoreInFlight() async {
+        let viewModel = makeViewModel()
+        // Simulate restore still running: loadMessagesIfNeeded() snapshots
+        // messages.isEmpty before its await and replaces messages on completion,
+        // so a send during this window would be clobbered.
+        viewModel.isLoadingMessages = true
+
+        await viewModel.sendMessage("Sneak a message in during restore")
+
+        XCTAssertFalse(mockStreamService.streamCalled, "send must be rejected while restore is in flight")
+        XCTAssertTrue(viewModel.messages.isEmpty, "no turn is started until restore settles")
+        XCTAssertFalse(viewModel.isStreaming)
     }
 
     // MARK: - Dependency-down degradation (not crash / blank / silent success)
