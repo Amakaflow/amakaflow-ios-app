@@ -126,6 +126,111 @@ struct CoachQuickResponse: Codable {
     let answer: String
 }
 
+// MARK: - Coach Knowledge Wiki (AMA-2229)
+
+enum CoachKnowledgeReviewDecision: String, Codable, Equatable {
+    case approve
+    case reject
+}
+
+struct CoachKnowledgeSourceRef: Codable, Equatable, Identifiable {
+    var id: String { "\(kind):\(sourceId)" }
+    let kind: String
+    let sourceId: String
+    let label: String
+    let title: String
+    let uri: String
+    let quote: String
+    let confidence: Double?
+    let occurredAt: String?
+}
+
+struct CoachKnowledgeFact: Codable, Equatable, Identifiable {
+    let id: String
+    let text: String
+    let state: String
+    let category: String
+    let confidence: Double?
+    let sensitivity: String
+    let source: CoachKnowledgeSourceRef?
+    let provenance: [CoachKnowledgeSourceRef]
+
+    var isAcceptedTruth: Bool { state == "accepted" }
+}
+
+struct CoachKnowledgeSection: Codable, Equatable, Identifiable {
+    let id: String
+    let title: String
+    let summary: String
+    let facts: [CoachKnowledgeFact]
+}
+
+struct CoachKnowledgePendingSensitiveFact: Codable, Equatable, Identifiable {
+    let id: String
+    let actionId: String
+    let text: String
+    let category: String
+    let state: String
+    let reviewState: String
+    let heldLabel: String
+    let prompt: String
+    let source: CoachKnowledgeSourceRef?
+    let provenance: [CoachKnowledgeSourceRef]
+    let detail: String
+
+    var isReviewOnly: Bool { state == "needs_review" }
+}
+
+struct CoachKnowledgeGap: Codable, Equatable, Identifiable {
+    let id: String
+    let title: String
+    let detail: String
+    let mode: String
+    let actionLabel: String?
+}
+
+struct CoachKnowledgeSurface: Codable, Equatable {
+    let mode: String
+    let readableOrder: [String]
+    let sections: [CoachKnowledgeSection]
+    let sensitivePending: [CoachKnowledgePendingSensitiveFact]
+    let contradictions: [CoachKnowledgeContradiction]
+    let dataGaps: [CoachKnowledgeGap]
+    let contract: CoachKnowledgeContract?
+
+    var isDegraded: Bool { mode == "data_gap" || mode == "mock" || mode == "skip" }
+}
+
+struct CoachKnowledgeContract: Codable, Equatable {
+    let readRoute: String?
+    let reviewQueueRoute: String?
+    let reviewActionRoutes: [String]?
+    let factStates: [String]?
+    let mode: String?
+}
+
+struct CoachKnowledgeContradiction: Codable, Equatable, Identifiable {
+    let id: String
+    let state: String?
+    let claimIdA: String?
+    let claimIdB: String?
+    let options: [CoachKnowledgeContradictionOption]?
+}
+
+struct CoachKnowledgeContradictionOption: Codable, Equatable, Identifiable {
+    var id: String { "\(text)-\(source?.id ?? "source")" }
+    let text: String
+    let source: CoachKnowledgeSourceRef?
+}
+
+struct CoachKnowledgeReviewResponse: Codable, Equatable {
+    let operation: String
+    let claim: [String: JSONValue]
+    let pendingAction: [String: JSONValue]
+    let audit: [String: JSONValue]
+    let cacheInvalidated: Bool
+}
+
 // MARK: - Completion History Responses
 
 struct CompletionsListResponse: Codable {

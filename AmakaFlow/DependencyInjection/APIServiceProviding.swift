@@ -133,6 +133,18 @@ protocol APIServiceProviding: TelegramLinkAPIProviding {
     /// Undo an applied agent action when the backend marks it reversible.
     func undoAction(id: String) async throws -> AgentAction
 
+    // MARK: - Coach Knowledge Wiki (AMA-2229)
+
+    /// Fetch the readable "What my coach knows" surface from the shared CKW/BFF contract.
+    func fetchCoachKnowledgeSurface() async throws -> CoachKnowledgeSurface
+
+    /// Review a held sensitive fact through the shared CKW PendingActions boundary.
+    func reviewCoachKnowledge(
+        actionId: String,
+        decision: CoachKnowledgeReviewDecision,
+        reason: String
+    ) async throws -> CoachKnowledgeReviewResponse
+
     // MARK: - Coach (AMA-1147)
 
     /// Send a message to the AI coach
