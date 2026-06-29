@@ -468,7 +468,7 @@ final class CoachKnowledgeSurfaceTests: XCTestCase {
         XCTAssertTrue(api.reviewCoachKnowledgeCalled)
         XCTAssertEqual(api.reviewCoachKnowledgeActionId, "pa-knee-review")
         XCTAssertEqual(api.reviewCoachKnowledgeDecision, .approve)
-        XCTAssertTrue(api.reviewCoachKnowledgeReason?.contains("iOS CKW surface") ?? false)
+        XCTAssertEqual(api.reviewCoachKnowledgeReason, "Approved from iOS CKW surface.")
     }
 
     func testRejectReviewActionsHitSharedCoachWikiPendingActionsPath() async throws {
