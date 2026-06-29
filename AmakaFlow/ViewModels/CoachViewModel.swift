@@ -408,8 +408,20 @@ class CoachViewModel: ObservableObject {
     }
 
     func confirmPendingAction(_ action: PendingActionContract, decision: PendingActionDecision) async {
-        guard action.riskTier.requiresConfirmation else { return }
-        guard action.executionStatus.acceptsConfirmationDecision else { return }
+        let currentAction = pendingAction(withId: action.actionId) ?? action
+        guard currentAction.riskTier.requiresConfirmation else { return }
+        guard currentAction.executionStatus.acceptsConfirmationDecision else { return }
+        await executePendingAction(currentAction, decision: decision)
+    }
+
+    func retryPendingAction(_ action: PendingActionContract) async {
+        let currentAction = pendingAction(withId: action.actionId) ?? action
+        guard currentAction.riskTier.requiresConfirmation else { return }
+        guard currentAction.executionStatus == .failedRetryable else { return }
+        await executePendingAction(currentAction, decision: .approve)
+    }
+
+    private func executePendingAction(_ action: PendingActionContract, decision: PendingActionDecision) async {
         guard !pendingActionBusyIds.contains(action.actionId) else { return }
 
         guard let token = dependencies.pairingService.getToken() else {

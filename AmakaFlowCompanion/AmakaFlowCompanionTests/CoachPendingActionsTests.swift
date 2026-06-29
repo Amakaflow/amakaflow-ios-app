@@ -124,9 +124,7 @@ final class CoachPendingActionsTests: XCTestCase {
         ]
 
         let first = Task { await viewModel.confirmPendingAction(action, decision: .approve) }
-        while pendingClient.confirmationRequests.isEmpty {
-            await Task.yield()
-        }
+        await waitForConfirmationRequest()
         let second = Task { await viewModel.confirmPendingAction(action, decision: .approve) }
         await first.value
         await second.value
@@ -138,12 +136,24 @@ final class CoachPendingActionsTests: XCTestCase {
 
     func testRestoredMessagesPreservePendingActionsLifecycle() async {
         let viewModel = makeViewModel()
-        let action = pendingAction(actionId: "pa_restore")
+        let envelope = PendingActionErrorEnvelope(
+            mode: "data_gap",
+            code: "restore_metadata",
+            message: "Dependency was unavailable when this action last ran.",
+            retryable: true,
+            dataGaps: [["code": "pending_actions:restore_metadata", "source": "execute"]]
+        )
+        let action = updated(
+            pendingAction(actionId: "pa_restore"),
+            status: .failedRetryable,
+            responseStatus: "failed_retryable",
+            error: envelope
+        )
         viewModel.sessionId = "s-restore"
         session.messagesToReturn = [
             RestoredSessionMessage(
                 role: .assistant,
-                content: "Approve?",
+                content: "",
                 timestamp: Date(),
                 pendingActions: [action]
             )
@@ -151,8 +161,16 @@ final class CoachPendingActionsTests: XCTestCase {
 
         await viewModel.loadMessagesIfNeeded()
 
-        XCTAssertEqual(viewModel.messages.first?.pendingActions.first?.actionId, action.actionId)
-        XCTAssertEqual(viewModel.pendingActionLifecycle.first?.actionId, action.actionId)
+        let restoredMessageAction = viewModel.messages.first?.pendingActions.first
+        let lifecycleAction = viewModel.pendingActionLifecycle.first
+        XCTAssertEqual(restoredMessageAction?.actionId, action.actionId)
+        XCTAssertEqual(restoredMessageAction?.executionStatus, .failedRetryable)
+        XCTAssertEqual(restoredMessageAction?.lastResponseStatus, "failed_retryable")
+        XCTAssertEqual(restoredMessageAction?.error, envelope)
+        XCTAssertEqual(lifecycleAction?.actionId, action.actionId)
+        XCTAssertEqual(lifecycleAction?.executionStatus, .failedRetryable)
+        XCTAssertEqual(lifecycleAction?.lastResponseStatus, "failed_retryable")
+        XCTAssertEqual(lifecycleAction?.error, envelope)
     }
 
     func testDeclinedExpiredStaleTerminalStatesDoNotDuplicateSideEffects() async {
@@ -174,6 +192,37 @@ final class CoachPendingActionsTests: XCTestCase {
         await viewModel.confirmPendingAction(terminal, decision: .approve)
 
         XCTAssertTrue(pendingClient.confirmationRequests.isEmpty, "terminal or stale confirmations must not hit execute again")
+
+        let staleSnapshot = pendingAction(actionId: "pa_snapshot")
+        let completed = updated(staleSnapshot, status: .succeeded, responseStatus: "succeeded")
+        viewModel.pendingActionLifecycle = [completed]
+
+        await viewModel.confirmPendingAction(staleSnapshot, decision: .approve)
+
+        XCTAssertTrue(pendingClient.confirmationRequests.isEmpty, "stale pending snapshots must be checked against current lifecycle state")
+    }
+
+    func testRetryableFailureUsesRetryPath() async {
+        let viewModel = makeViewModel()
+        let failed = updated(pendingAction(actionId: "pa_retry"), status: .failedRetryable, responseStatus: "failed_retryable")
+        viewModel.messages = [ChatMessage(role: .assistant, content: "Retry?", pendingActions: [failed])]
+        viewModel.pendingActionLifecycle = [failed]
+        pendingClient.responses = [
+            PendingActionExecuteResponse(
+                status: "succeeded",
+                mode: "mock",
+                action: updated(failed, status: .succeeded, responseStatus: "succeeded"),
+                outcome: ["applied_action_id": .string(failed.actionId)],
+                error: nil,
+                sideEffectCount: 1,
+                dependencyStatus: ["supabase": "mock", "redis_iris": "skip", "llm": "skip"]
+            )
+        ]
+
+        await viewModel.retryPendingAction(failed)
+
+        XCTAssertEqual(pendingClient.confirmationRequests.count, 1)
+        XCTAssertEqual(viewModel.pendingActionLifecycle.first?.executionStatus, .succeeded)
     }
 
     func testDependencyDownDegradesToDataGapNotSilentSuccess() async {
@@ -266,5 +315,15 @@ final class CoachPendingActionsTests: XCTestCase {
           }
         }
         """
+    }
+
+    private func waitForConfirmationRequest(file: StaticString = #filePath, line: UInt = #line) async {
+        for _ in 0..<100 {
+            if !pendingClient.confirmationRequests.isEmpty {
+                return
+            }
+            try? await Task.sleep(nanoseconds: 1_000_000)
+        }
+        XCTFail("Timed out waiting for PendingActions confirmation request", file: file, line: line)
     }
 }

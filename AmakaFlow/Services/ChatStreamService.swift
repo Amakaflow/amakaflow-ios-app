@@ -434,7 +434,8 @@ private struct SessionMessageDTO: Decodable {
     }
 
     func toRestoredMessage() -> RestoredSessionMessage? {
-        guard let content, !content.isEmpty else { return nil }
+        let restoredPendingActions = pendingActions?.map { $0.withFallbackPresentation() } ?? []
+        guard content?.isEmpty == false || !restoredPendingActions.isEmpty else { return nil }
         let chatRole: ChatRole
         switch role.lowercased() {
         case "user":
@@ -446,9 +447,9 @@ private struct SessionMessageDTO: Decodable {
         }
         return RestoredSessionMessage(
             role: chatRole,
-            content: content,
+            content: content ?? "",
             timestamp: createdAt,
-            pendingActions: pendingActions?.map { $0.withFallbackPresentation() } ?? []
+            pendingActions: restoredPendingActions
         )
     }
 }

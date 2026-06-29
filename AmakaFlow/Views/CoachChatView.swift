@@ -97,7 +97,7 @@ struct CoachChatView: View {
                     PendingActionsLifecycleView(
                         actions: viewModel.pendingActionLifecycle,
                         onRetry: { action in
-                            Task { await viewModel.confirmPendingAction(action, decision: .approve) }
+                            Task { await viewModel.retryPendingAction(action) }
                         },
                         onAskAgain: { action in
                             Task {
@@ -603,11 +603,13 @@ struct CoachMessageRow: View {
                     onApprove: { onPendingApprove(action) }
                 )
                 .frame(maxWidth: 320, alignment: .leading)
-                Text("NOTHING RUNS UNTIL YOU APPROVE")
-                    .font(Font.geistMono(9, .medium))
-                    .foregroundColor(Theme.Colors.textTertiary)
-                    .frame(maxWidth: 320, alignment: .center)
-                    .accessibilityIdentifier("pending-action-guarantee-\(action.actionId)")
+                if action.executionStatus.acceptsConfirmationDecision {
+                    Text("NOTHING RUNS UNTIL YOU APPROVE")
+                        .font(Font.geistMono(9, .medium))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                        .frame(maxWidth: 320, alignment: .center)
+                        .accessibilityIdentifier("pending-action-guarantee-\(action.actionId)")
+                }
             }
 
             // Keep the Stop affordance visible for the whole live turn,
