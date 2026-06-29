@@ -147,8 +147,8 @@ final class CoachViewModelStreamingTests: XCTestCase {
         XCTAssertEqual(msg, "Coach is offline")
         XCTAssertEqual(code, "coach_unavailable")
         XCTAssertNil(viewModel.rateLimitInfo, "non-rate-limit must not populate rateLimitInfo")
-        XCTAssertFalse(viewModel.error?.isRetryable ?? true,
-                       "lyingSuccess is deterministic — retry just re-fails")
+        XCTAssertTrue(viewModel.error?.isRetryable ?? false,
+                      "dependency-down SSE errors should offer retry")
     }
 
     func testRetryLastMessageReSendsAndClearsError() async {
