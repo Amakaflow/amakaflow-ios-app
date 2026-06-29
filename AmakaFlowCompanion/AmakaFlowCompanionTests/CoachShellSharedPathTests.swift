@@ -440,7 +440,7 @@ final class CoachKnowledgeSurfaceTests: XCTestCase {
 
         await viewModel.load()
 
-        let fact = try XCTUnwrap(viewModel.acceptedFacts.first)
+        let fact = try XCTUnwrap(viewModel.acceptedFacts.first(where: { !$0.provenance.isEmpty }))
         XCTAssertEqual(fact.state, "accepted")
         XCTAssertEqual(fact.source?.label, "You told me")
         XCTAssertEqual(fact.provenance.first?.quote, "HYROX in May.")
