@@ -128,6 +128,8 @@ final class CoachViewModelStreamingTests: XCTestCase {
         } else {
             XCTFail("expected .lyingSuccess on SSE .error event, got \(String(describing: viewModel.error))")
         }
+        XCTAssertFalse(viewModel.error?.isRetryable ?? true,
+                       "rate-limit SSE errors should remain deterministic and non-retryable")
     }
 
     // MARK: - AMA-1803 P2: typed CTAError tests
@@ -147,8 +149,8 @@ final class CoachViewModelStreamingTests: XCTestCase {
         XCTAssertEqual(msg, "Coach is offline")
         XCTAssertEqual(code, "coach_unavailable")
         XCTAssertNil(viewModel.rateLimitInfo, "non-rate-limit must not populate rateLimitInfo")
-        XCTAssertFalse(viewModel.error?.isRetryable ?? true,
-                       "lyingSuccess is deterministic — retry just re-fails")
+        XCTAssertTrue(viewModel.error?.isRetryable ?? false,
+                      "dependency-down SSE errors should offer retry")
     }
 
     func testRetryLastMessageReSendsAndClearsError() async {

@@ -113,9 +113,28 @@ public extension CTAError {
             return Self.isTransientURLError(code)
         case .http(let status, _, _):
             return status >= 500
-        case .lyingSuccess, .decoding, .unauthenticated, .unknown:
+        case .lyingSuccess(_, let errorCode, _):
+            return Self.isTransientServerFailureCode(errorCode)
+        case .decoding, .unauthenticated, .unknown:
             return false
         }
+    }
+
+    /// SSE error events can arrive over a successful HTTP stream while still
+    /// representing a transient upstream dependency failure.
+    static func isTransientServerFailureCode(_ code: String?) -> Bool {
+        guard let code = code?.lowercased() else { return false }
+        return code.contains("unavailable")
+            || code.contains("transient")
+            || code.contains("timeout")
+            || code.contains("timed_out")
+            || code.contains("network")
+            || code.contains("dependency")
+            || code.contains("data_gap")
+            || code.contains("gateway")
+            || code.contains("llm")
+            || code.contains("bff")
+            || code.contains("stream")
     }
 
     /// Codes that genuinely benefit from another attempt — narrow,
