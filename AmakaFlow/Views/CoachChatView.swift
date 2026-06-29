@@ -14,10 +14,9 @@
 //  Epic 8. The "ONE COACH · iOS · TELEGRAM · WATCH" header encodes that
 //  no-duplicate-brain invariant.
 //
-//  Voice capture/output is intentionally out of scope here (AMA-2231); the
-//  mic affordance is a disabled placeholder. PendingActions (AMA-2230) and
-//  first-token/streaming instrumentation (AMA-2233) layer on top of this
-//  shell.
+//  Voice capture/output (AMA-2231) is a thin input/output layer over this same
+//  `CoachViewModel` path: voice becomes text before sending, text remains
+//  visible, and PendingActions still require explicit confirmation.
 //
 
 import SwiftUI
@@ -66,7 +65,13 @@ struct CoachChatView: View {
                 }
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                composer
+                Group {
+                    if viewModel.voiceState.isPresented {
+                        voiceSheet
+                    } else {
+                        composer
+                    }
+                }
                     .padding(.bottom, tabBarClearance)
             }
             .background(Theme.Colors.background.ignoresSafeArea())
@@ -355,10 +360,9 @@ struct CoachChatView: View {
                 .onSubmit(send)
                 .accessibilityIdentifier("af_coach_input")
 
-            // Voice is AMA-2231 — placeholder only. Disabled, and visibly
-            // crossed-out while text-only/degraded to match the approved
-            // text-fallback artboard.
-            CoachMicPlaceholder(isTextOnly: isTextOnly)
+            CoachMicButton(isTextOnly: isTextOnly, isDisabled: isBusy) {
+                viewModel.startVoiceListening()
+            }
 
             Button(action: send) {
                 Image(systemName: "paperplane.fill")
@@ -391,6 +395,44 @@ struct CoachChatView: View {
         guard !text.isEmpty, !viewModel.isStreaming, !viewModel.isLoadingMessages else { return }
         inputText = ""
         Task { await viewModel.sendMessage(text) }
+    }
+
+    @ViewBuilder
+    private var voiceSheet: some View {
+        switch viewModel.voiceState.phase {
+        case .idle:
+            EmptyView()
+        case .listening:
+            VoiceListeningSheet(
+                state: viewModel.voiceState,
+                onCancel: { viewModel.cancelVoiceInput() },
+                onStop: {
+                    Task { await viewModel.submitVoiceTranscript() }
+                },
+                onSend: {
+                    Task { await viewModel.submitVoiceTranscript() }
+                }
+            )
+        case .transcriptionFallback:
+            VoiceFallbackSheet(
+                state: viewModel.voiceState,
+                manualTranscript: Binding(
+                    get: { viewModel.voiceState.manualTranscript },
+                    set: { viewModel.setVoiceManualTranscript($0) }
+                ),
+                onPlay: { viewModel.playSavedVoiceRecording() },
+                onRetry: { viewModel.retryVoiceInput() },
+                onSendManual: {
+                    Task { await viewModel.submitVoiceTranscript() }
+                },
+                onCancel: { viewModel.cancelVoiceInput() }
+            )
+        case .degraded:
+            VoiceUnavailableSheet(
+                state: viewModel.voiceState,
+                onDismiss: { viewModel.cancelVoiceInput() }
+            )
+        }
     }
 }
 
@@ -531,31 +573,257 @@ private struct CoachDegradedBanner: View {
     }
 }
 
-// MARK: - Mic placeholder (voice = AMA-2231)
+// MARK: - Voice UX (AMA-2231)
 
-private struct CoachMicPlaceholder: View {
+private struct CoachMicButton: View {
     let isTextOnly: Bool
+    let isDisabled: Bool
+    let onTap: () -> Void
 
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(Theme.Colors.inputBackground)
-                .overlay(Circle().stroke(Theme.Colors.borderLight, lineWidth: 1))
-                .frame(width: 38, height: 38)
-            Image(systemName: "mic")
-                .font(.system(size: 15))
-                .foregroundColor(Theme.Colors.textTertiary)
-            if isTextOnly {
-                Rectangle()
-                    .fill(Theme.Colors.textSecondary)
-                    .frame(width: 24, height: 1.5)
-                    .rotationEffect(.degrees(-45))
+        Button(action: onTap) {
+            ZStack {
+                Circle()
+                    .fill(isTextOnly ? Theme.Colors.inputBackground : Theme.Colors.surfaceElevated)
+                    .overlay(Circle().stroke(Theme.Colors.borderLight, lineWidth: 1))
+                    .frame(width: 38, height: 38)
+                Image(systemName: "mic")
+                    .font(.system(size: 15))
+                    .foregroundColor(isTextOnly ? Theme.Colors.textTertiary : Theme.Colors.textPrimary)
+                if isTextOnly {
+                    Rectangle()
+                        .fill(Theme.Colors.textSecondary)
+                        .frame(width: 24, height: 1.5)
+                        .rotationEffect(.degrees(-45))
+                }
             }
         }
-        .opacity(isTextOnly ? 0.5 : 0.7)
-        .accessibilityLabel(isTextOnly ? "Voice unavailable" : "Voice coming soon")
-        .accessibilityIdentifier("coach-mic-placeholder")
-        .allowsHitTesting(false)
+        .disabled(isTextOnly || isDisabled)
+        .opacity(isTextOnly ? 0.45 : 1)
+        .accessibilityLabel(isTextOnly ? "Voice unavailable" : "Start voice input")
+        .accessibilityIdentifier(isTextOnly ? "coach-mic-disabled" : "coach-mic-button")
+    }
+}
+
+private struct VoiceListeningSheet: View {
+    let state: CoachVoiceState
+    let onCancel: () -> Void
+    let onStop: () -> Void
+    let onSend: () -> Void
+
+    var body: some View {
+        VStack(spacing: Theme.Spacing.md) {
+            HStack {
+                HStack(spacing: 7) {
+                    Circle()
+                        .fill(Theme.Colors.readyLow)
+                        .frame(width: 7, height: 7)
+                        .opacity(0.9)
+                    Text("LISTENING")
+                        .font(Theme.Typography.label)
+                        .foregroundColor(Theme.Colors.readyLow)
+                }
+                Spacer()
+                Text(state.durationLabel)
+                    .font(Font.geistMono(11, .regular))
+                    .foregroundColor(Theme.Colors.textSecondary)
+            }
+
+            Text(state.partialTranscript.isEmpty ? "Listening..." : state.partialTranscript)
+                .font(Theme.Typography.title3)
+                .foregroundColor(state.partialTranscript.isEmpty ? Theme.Colors.textSecondary : Theme.Colors.textPrimary)
+                .frame(maxWidth: .infinity, minHeight: 46, alignment: .leading)
+                .accessibilityIdentifier("coach-voice-partial-transcript")
+
+            VoiceWaveform(barCount: 27, color: Theme.Colors.textPrimary)
+                .frame(height: 40)
+                .accessibilityIdentifier("coach-voice-waveform")
+
+            HStack {
+                Button("Cancel", action: onCancel)
+                    .font(Theme.Typography.captionBold)
+                    .foregroundColor(Theme.Colors.textSecondary)
+                    .accessibilityIdentifier("coach-voice-cancel")
+
+                Spacer()
+
+                Button(action: onStop) {
+                    Image(systemName: "stop.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 60, height: 60)
+                        .background(Theme.Colors.readyLow)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Theme.Colors.readyLow.opacity(0.18), lineWidth: 6))
+                }
+                .accessibilityLabel("Stop and send voice transcript")
+                .accessibilityIdentifier("coach-voice-stop")
+
+                Spacer()
+
+                Button(action: onSend) {
+                    Text("TAP TO\nSEND")
+                        .font(Font.geistMono(10, .regular))
+                        .multilineTextAlignment(.trailing)
+                        .foregroundColor(Theme.Colors.textTertiary)
+                }
+                .frame(width: 52, alignment: .trailing)
+                .accessibilityIdentifier("coach-voice-send")
+            }
+        }
+        .padding(.horizontal, Theme.Spacing.xl)
+        .padding(.top, Theme.Spacing.lg)
+        .padding(.bottom, Theme.Spacing.lg)
+        .background(Theme.Colors.surfaceElevated)
+        .overlay(Rectangle().fill(Theme.Colors.borderLight).frame(height: 1), alignment: .top)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("coach-voice-listening-sheet")
+    }
+}
+
+private struct VoiceFallbackSheet: View {
+    let state: CoachVoiceState
+    @Binding var manualTranscript: String
+    let onPlay: () -> Void
+    let onRetry: () -> Void
+    let onSendManual: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            HStack(alignment: .top, spacing: Theme.Spacing.sm) {
+                Image(systemName: "info.circle")
+                    .foregroundColor(Theme.Colors.readyModerate)
+                    .frame(width: 26, height: 26)
+                    .background(Theme.Colors.readyModerate.opacity(0.15))
+                    .clipShape(Circle())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(state.dependency?.title ?? "Couldn't transcribe that")
+                        .font(Theme.Typography.captionBold)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    Text(state.dependency?.detail ?? "We saved your recording. Play it back, retry, or type instead.")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                    Text("Fallback: \(state.fallbackAction)")
+                        .font(Font.geistMono(9, .regular))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                        .accessibilityIdentifier("coach-voice-fallback-token")
+                }
+                Spacer()
+                Button("Cancel", action: onCancel)
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textSecondary)
+            }
+
+            HStack(spacing: Theme.Spacing.sm) {
+                Button(action: onPlay) {
+                    Image(systemName: state.isPlayingSavedRecording ? "waveform" : "play.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Theme.Colors.primaryForeground)
+                        .frame(width: 30, height: 30)
+                        .background(Theme.Colors.primary)
+                        .clipShape(Circle())
+                }
+                .accessibilityLabel(state.isPlayingSavedRecording ? "Playing saved recording" : "Play saved recording")
+                .accessibilityIdentifier("coach-voice-playback")
+
+                VoiceWaveform(barCount: 32, color: Theme.Colors.textSecondary)
+                    .frame(height: 22)
+
+                Text(state.savedRecordingLabel ?? "0:06")
+                    .font(Font.geistMono(10, .regular))
+                    .foregroundColor(Theme.Colors.textSecondary)
+            }
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.vertical, Theme.Spacing.sm)
+            .background(Theme.Colors.background)
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous)
+                    .stroke(Theme.Colors.borderLight, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous))
+
+            HStack(spacing: Theme.Spacing.sm) {
+                TextField("Type what you said...", text: $manualTranscript)
+                    .font(Theme.Typography.body)
+                    .foregroundColor(Theme.Colors.textPrimary)
+                    .padding(Theme.Spacing.sm)
+                    .background(Theme.Colors.inputBackground)
+                    .cornerRadius(Theme.CornerRadius.sm)
+                    .accessibilityIdentifier("coach-voice-manual-input")
+
+                Button(action: onRetry) {
+                    Label("Retry", systemImage: "mic")
+                        .font(Theme.Typography.captionBold)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("coach-voice-retry")
+
+                Button(action: onSendManual) {
+                    Image(systemName: "paperplane.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(manualTranscript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityIdentifier("coach-voice-manual-send")
+            }
+        }
+        .padding(.horizontal, Theme.Spacing.lg)
+        .padding(.top, Theme.Spacing.lg)
+        .padding(.bottom, Theme.Spacing.lg)
+        .background(Theme.Colors.surfaceElevated)
+        .overlay(Rectangle().fill(Theme.Colors.borderLight).frame(height: 1), alignment: .top)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("coach-voice-fallback-sheet")
+        .accessibilityValue(state.fallbackMode.contractToken)
+    }
+}
+
+private struct VoiceUnavailableSheet: View {
+    let state: CoachVoiceState
+    let onDismiss: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Theme.Spacing.sm) {
+            Image(systemName: "speaker.slash")
+                .foregroundColor(Theme.Colors.readyModerate)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(state.dependency?.title ?? "Voice is unavailable right now")
+                    .font(Theme.Typography.captionBold)
+                    .foregroundColor(Theme.Colors.textPrimary)
+                Text(state.dependency?.detail ?? "Same coach, text only.")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textSecondary)
+                Text("Fallback: \(state.fallbackAction). Text remains the source of truth.")
+                    .font(Font.geistMono(9, .regular))
+                    .foregroundColor(Theme.Colors.textTertiary)
+            }
+            Spacer()
+            Button("OK", action: onDismiss)
+                .font(Theme.Typography.captionBold)
+        }
+        .padding(Theme.Spacing.lg)
+        .background(Theme.Colors.surfaceElevated)
+        .overlay(Rectangle().fill(Theme.Colors.borderLight).frame(height: 1), alignment: .top)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("coach-voice-unavailable-sheet")
+        .accessibilityValue(state.fallbackMode.contractToken)
+    }
+}
+
+private struct VoiceWaveform: View {
+    let barCount: Int
+    let color: Color
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 3) {
+            ForEach(0..<barCount, id: \.self) { index in
+                Capsule()
+                    .fill(color.opacity(0.75))
+                    .frame(width: 3, height: CGFloat(10 + (index * 7 % 26)))
+            }
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 

@@ -78,6 +78,124 @@ enum CoachDegradeMode: String, Equatable, CaseIterable {
     }
 }
 
+enum CoachVoiceDependency: String, Equatable, CaseIterable {
+    case permissionDenied = "permission_denied"
+    case recorderUnavailable = "recorder_unavailable"
+    case sttDown = "stt_down"
+    case ttsDown = "tts_down"
+    case networkDown = "network_down"
+    case gatewayDown = "gateway_down"
+
+    var title: String {
+        switch self {
+        case .permissionDenied: return "Microphone permission is off"
+        case .recorderUnavailable: return "Recorder is unavailable"
+        case .sttDown: return "Couldn't transcribe that"
+        case .ttsDown: return "Spoken output is unavailable"
+        case .networkDown: return "Network is unavailable"
+        case .gatewayDown: return "Coach gateway is unavailable"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .permissionDenied:
+            return "Same coach, text only. Type what you wanted to say."
+        case .recorderUnavailable:
+            return "Use the saved fixture or type manually. No live recording is required."
+        case .sttDown:
+            return "We saved your recording. Play it back, retry, or type instead."
+        case .ttsDown:
+            return "The coach response stays visible as text. Speech is skipped for this turn."
+        case .networkDown:
+            return "Your transcript was not sent. Text entry and retry remain available."
+        case .gatewayDown:
+            return "The shared BFF / gateway path is missing data, so nothing is guessed or auto-sent."
+        }
+    }
+
+    var fallbackMode: CoachDegradeMode {
+        switch self {
+        case .permissionDenied, .sttDown, .networkDown:
+            return .manual
+        case .recorderUnavailable:
+            return .mock
+        case .ttsDown:
+            return .skip
+        case .gatewayDown:
+            return .dataGap
+        }
+    }
+
+    var fallbackAction: String {
+        switch self {
+        case .permissionDenied, .sttDown, .networkDown:
+            return "manual"
+        case .recorderUnavailable:
+            return "mock"
+        case .ttsDown:
+            return "skip"
+        case .gatewayDown:
+            return "data_gap"
+        }
+    }
+}
+
+enum CoachVoicePhase: Equatable {
+    case idle
+    case listening
+    case transcriptionFallback
+    case degraded
+}
+
+struct CoachVoiceState: Equatable {
+    var phase: CoachVoicePhase = .idle
+    var partialTranscript: String = ""
+    var manualTranscript: String = ""
+    var durationLabel: String = "0:00"
+    var savedRecordingLabel: String?
+    var dependency: CoachVoiceDependency?
+    var lastSubmittedTranscript: String?
+    var lastSpokenText: String?
+    var isPlayingSavedRecording: Bool = false
+    var textResponseVisible: Bool = true
+    var pendingActionConfirmationVisible: Bool = true
+
+    var fallbackMode: CoachDegradeMode {
+        dependency?.fallbackMode ?? .text
+    }
+
+    var fallbackAction: String {
+        dependency?.fallbackAction ?? "text"
+    }
+
+    var isPresented: Bool {
+        phase != .idle
+    }
+
+    func applyingInputDegrade(_ dependency: CoachVoiceDependency) -> CoachVoiceState {
+        var next = self
+        next.phase = dependency == .ttsDown ? .degraded : .transcriptionFallback
+        next.dependency = dependency
+        next.savedRecordingLabel = dependency == .ttsDown ? nil : "0:06"
+        next.manualTranscript = partialTranscript
+        next.isPlayingSavedRecording = false
+        next.textResponseVisible = true
+        next.pendingActionConfirmationVisible = true
+        return next
+    }
+
+    func applyingOutputDegrade(_ dependency: CoachVoiceDependency) -> CoachVoiceState {
+        var next = self
+        next.dependency = dependency
+        next.textResponseVisible = true
+        next.pendingActionConfirmationVisible = true
+        next.phase = .degraded
+        next.isPlayingSavedRecording = false
+        return next
+    }
+}
+
 @MainActor
 class CoachViewModel: ObservableObject {
     // MARK: - Published State
@@ -109,6 +227,7 @@ class CoachViewModel: ObservableObject {
     @Published var degradeMode: CoachDegradeMode?
     @Published var pendingActionLifecycle: [PendingActionContract] = []
     @Published var pendingActionBusyIds: Set<String> = []
+    @Published var voiceState = CoachVoiceState()
     @Published var sessionId: String? {
         didSet { persistSessionId() }
     }
@@ -130,6 +249,7 @@ class CoachViewModel: ObservableObject {
     /// error/degrade state, or remove the wrong placeholder). Only the task
     /// whose captured generation still matches may mutate shared turn state.
     private var streamGeneration = 0
+    private var shouldSpeakNextCoachReply = false
 
     /// Monotonic id for the in-flight session restore. Bumped by startNewChat()
     /// so a late `fetchMessages` completion can't repopulate (or re-degrade) a
@@ -353,12 +473,130 @@ class CoachViewModel: ObservableObject {
                 self.applyDegrade(forTurnFailure: ctaError)
             } else if !Task.isCancelled {
                 self.resetDegradeToBaseline()
+                self.speakVoiceReplyIfNeeded(assistantMessage.content)
             }
         }
 
         // Wait for stream to complete
         await streamTask?.value
         return error == nil
+    }
+
+    // MARK: - Voice UX (AMA-2231)
+
+    func startVoiceListening(
+        partialTranscript: String = "",
+        durationLabel: String = "0:00"
+    ) {
+        guard !isStreaming, !isLoadingMessages else { return }
+        voiceState = CoachVoiceState(
+            phase: .listening,
+            partialTranscript: partialTranscript,
+            manualTranscript: "",
+            durationLabel: durationLabel,
+            savedRecordingLabel: nil,
+            dependency: nil,
+            lastSubmittedTranscript: voiceState.lastSubmittedTranscript,
+            lastSpokenText: voiceState.lastSpokenText,
+            isPlayingSavedRecording: false,
+            textResponseVisible: true,
+            pendingActionConfirmationVisible: true
+        )
+    }
+
+    func updateVoicePartialTranscript(_ transcript: String) {
+        guard voiceState.phase == .listening else { return }
+        var next = voiceState
+        next.partialTranscript = transcript
+        voiceState = next
+    }
+
+    func cancelVoiceInput() {
+        shouldSpeakNextCoachReply = false
+        voiceState = CoachVoiceState(
+            lastSubmittedTranscript: voiceState.lastSubmittedTranscript,
+            lastSpokenText: voiceState.lastSpokenText
+        )
+    }
+
+    func setVoiceManualTranscript(_ transcript: String) {
+        var next = voiceState
+        next.manualTranscript = transcript
+        voiceState = next
+    }
+
+    func playSavedVoiceRecording() {
+        guard voiceState.savedRecordingLabel != nil else { return }
+        let playbackText = [voiceState.manualTranscript, voiceState.partialTranscript]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { !$0.isEmpty } ?? "Saved voice recording"
+        var next = voiceState
+        next.lastSpokenText = playbackText
+        next.isPlayingSavedRecording = true
+        voiceState = next
+        dependencies.audioService.speak(playbackText, priority: .normal)
+    }
+
+    func retryVoiceInput() {
+        startVoiceListening(partialTranscript: "", durationLabel: "0:00")
+    }
+
+    func degradeVoiceInput(_ dependency: CoachVoiceDependency) {
+        voiceState = voiceState.applyingInputDegrade(dependency)
+        degradeIfNotMock(dependency.fallbackMode)
+    }
+
+    @discardableResult
+    func submitVoiceTranscript(_ transcript: String? = nil, speakResponse: Bool = true) async -> Bool {
+        let source = transcript ?? (voiceState.manualTranscript.isEmpty ? voiceState.partialTranscript : voiceState.manualTranscript)
+        let trimmed = source.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            degradeVoiceInput(.sttDown)
+            return false
+        }
+
+        var submittedState = voiceState
+        submittedState.lastSubmittedTranscript = trimmed
+        submittedState.textResponseVisible = true
+        submittedState.pendingActionConfirmationVisible = true
+        submittedState.phase = .idle
+        submittedState.isPlayingSavedRecording = false
+        voiceState = submittedState
+        shouldSpeakNextCoachReply = speakResponse
+        let priorDegradeMode = degradeMode
+        let accepted = await sendMessage(trimmed)
+        guard !accepted else { return true }
+
+        shouldSpeakNextCoachReply = false
+        if case .unauthenticated? = error {
+            return false
+        }
+
+        if priorDegradeMode == .dataGap || degradeMode == .dataGap {
+            degradeVoiceInput(.gatewayDown)
+        } else if error != nil {
+            degradeVoiceInput(.networkDown)
+        }
+        return false
+    }
+
+    func degradeVoiceOutput(_ dependency: CoachVoiceDependency = .ttsDown) {
+        voiceState = voiceState.applyingOutputDegrade(dependency)
+        shouldSpeakNextCoachReply = false
+        degradeIfNotMock(dependency.fallbackMode)
+    }
+
+    private func speakVoiceReplyIfNeeded(_ text: String) {
+        guard shouldSpeakNextCoachReply else { return }
+        shouldSpeakNextCoachReply = false
+        let spoken = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !spoken.isEmpty else { return }
+        var next = voiceState
+        next.lastSpokenText = spoken
+        next.textResponseVisible = true
+        next.pendingActionConfirmationVisible = true
+        voiceState = next
+        dependencies.audioService.speak(spoken, priority: .normal)
     }
 
     // MARK: - Degradation (AMA-2234)
@@ -635,6 +873,7 @@ class CoachViewModel: ObservableObject {
         streamGeneration += 1
         streamTask?.cancel()
         streamTask = nil
+        shouldSpeakNextCoachReply = false
         isStreaming = false
         messages.removeAll()
         sessionId = nil
@@ -647,6 +886,10 @@ class CoachViewModel: ObservableObject {
         rateLimitInfo = nil
         pendingActionLifecycle.removeAll()
         pendingActionBusyIds.removeAll()
+        voiceState = CoachVoiceState(
+            lastSubmittedTranscript: voiceState.lastSubmittedTranscript,
+            lastSpokenText: voiceState.lastSpokenText
+        )
         resetDegradeToBaseline()
     }
 
@@ -674,6 +917,7 @@ class CoachViewModel: ObservableObject {
         streamGeneration += 1
         streamTask?.cancel()
         streamTask = nil
+        shouldSpeakNextCoachReply = false
         isStreaming = false
         currentStage = nil
         completedStages = []
