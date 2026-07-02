@@ -381,6 +381,16 @@ class CoachViewModel: ObservableObject {
     private var streamGeneration = 0
     private var shouldSpeakNextCoachReply = false
 
+    /// AMA-2257: reuse workout voice infra for coach mic capture → STT.
+    private let voiceRecordingService = VoiceRecordingService()
+    private let transcriptionRouter = TranscriptionRouter.shared
+    private var voiceCaptureTask: Task<Void, Never>?
+    private var voiceDurationCancellable: AnyCancellable?
+    private var isStoppingVoiceCapture = false
+    /// Bumped whenever live capture is torn down so late async completions
+    /// cannot mutate a replaced voice session.
+    private var voiceCaptureGeneration = 0
+
     /// Monotonic id for the in-flight session restore. Bumped by startNewChat()
     /// so a late `fetchMessages` completion can't repopulate (or re-degrade) a
     /// thread the user has already cleared.
@@ -790,6 +800,7 @@ class CoachViewModel: ObservableObject {
         durationLabel: String = "0:00"
     ) {
         guard !isStreaming, !isLoadingMessages else { return }
+        cancelLiveVoiceCaptureIfNeeded()
         voiceState = CoachVoiceState(
             phase: .listening,
             partialTranscript: partialTranscript,
@@ -803,6 +814,13 @@ class CoachViewModel: ObservableObject {
             textResponseVisible: true,
             pendingActionConfirmationVisible: true
         )
+
+        // Tests and fixture validation inject a transcript directly.
+        guard partialTranscript.isEmpty else { return }
+
+        voiceCaptureTask = Task { [weak self] in
+            await self?.beginLiveVoiceCapture()
+        }
     }
 
     func updateVoicePartialTranscript(_ transcript: String) {
@@ -814,6 +832,7 @@ class CoachViewModel: ObservableObject {
 
     func cancelVoiceInput() {
         shouldSpeakNextCoachReply = false
+        cancelLiveVoiceCaptureIfNeeded()
         voiceState = CoachVoiceState(
             lastSubmittedTranscript: voiceState.lastSubmittedTranscript,
             lastSpokenText: voiceState.lastSpokenText
@@ -840,6 +859,69 @@ class CoachViewModel: ObservableObject {
 
     func retryVoiceInput() {
         startVoiceListening(partialTranscript: "", durationLabel: "0:00")
+    }
+
+    /// Stop live capture (if any), transcribe, then submit through the shared coach path.
+    @discardableResult
+    func stopVoiceCaptureAndSubmit(speakResponse: Bool = true) async -> Bool {
+        guard !isStoppingVoiceCapture, voiceState.phase == .listening else { return false }
+        isStoppingVoiceCapture = true
+        defer { isStoppingVoiceCapture = false }
+
+        let sessionGeneration = voiceCaptureGeneration
+        voiceCaptureTask?.cancel()
+        voiceDurationCancellable?.cancel()
+
+        if voiceRecordingService.isRecording {
+            do {
+                let audioURL = try await voiceRecordingService.stopRecording()
+                guard voiceCaptureSessionIsCurrent(sessionGeneration) else { return false }
+
+                let durationLabel = formatVoiceDuration(voiceRecordingService.recordingDuration)
+                var next = voiceState
+                next.savedRecordingLabel = durationLabel
+                next.durationLabel = durationLabel
+                voiceState = next
+
+                let result = try await transcriptionRouter.transcribe(audioURL: audioURL)
+                guard voiceCaptureSessionIsCurrent(sessionGeneration) else { return false }
+                updateVoicePartialTranscript(result.text)
+                setVoiceManualTranscript(result.text)
+            } catch let error as VoiceRecordingService.RecordingError {
+                guard voiceCaptureSessionIsCurrent(sessionGeneration) else { return false }
+                switch error {
+                case .permissionDenied:
+                    degradeVoiceInput(.permissionDenied)
+                    return false
+                case .recordingCancelled:
+                    cancelVoiceInput()
+                    return false
+                default:
+                    degradeVoiceInput(.recorderUnavailable)
+                    return false
+                }
+            } catch let error as TranscriptionError {
+                guard voiceCaptureSessionIsCurrent(sessionGeneration) else { return false }
+                switch error {
+                case .permissionDenied:
+                    degradeVoiceInput(.permissionDenied)
+                    return false
+                case .notAvailable:
+                    degradeVoiceInput(.sttDown)
+                    return false
+                default:
+                    degradeVoiceInput(.sttDown)
+                    return false
+                }
+            } catch {
+                guard voiceCaptureSessionIsCurrent(sessionGeneration) else { return false }
+                degradeVoiceInput(.sttDown)
+                return false
+            }
+        }
+
+        guard voiceCaptureSessionIsCurrent(sessionGeneration) else { return false }
+        return await submitVoiceTranscript(speakResponse: speakResponse)
     }
 
     func degradeVoiceInput(_ dependency: CoachVoiceDependency) {
@@ -898,6 +980,82 @@ class CoachViewModel: ObservableObject {
         next.pendingActionConfirmationVisible = true
         voiceState = next
         dependencies.audioService.speak(spoken, priority: .normal)
+    }
+
+    private func beginLiveVoiceCapture() async {
+        let sessionGeneration = voiceCaptureGeneration
+        guard !Task.isCancelled, voiceCaptureSessionIsCurrent(sessionGeneration) else { return }
+
+        let permissionManager = PermissionManager.shared
+        permissionManager.refreshPermissionStatus()
+
+        if !permissionManager.hasMicrophonePermission {
+            let granted = await permissionManager.requestMicrophonePermission()
+            guard voiceCaptureSessionIsCurrent(sessionGeneration) else { return }
+            guard granted else {
+                degradeVoiceInput(.permissionDenied)
+                return
+            }
+        }
+
+        if !permissionManager.hasSpeechRecognitionPermission {
+            let granted = await permissionManager.requestSpeechRecognitionPermission()
+            guard voiceCaptureSessionIsCurrent(sessionGeneration) else { return }
+            guard granted else {
+                degradeVoiceInput(.permissionDenied)
+                return
+            }
+        }
+
+        guard !Task.isCancelled, voiceCaptureSessionIsCurrent(sessionGeneration) else { return }
+
+        voiceDurationCancellable = voiceRecordingService.$recordingDuration
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] duration in
+                guard let self, self.voiceState.phase == .listening else { return }
+                var next = self.voiceState
+                next.durationLabel = self.formatVoiceDuration(duration)
+                self.voiceState = next
+            }
+
+        do {
+            _ = try await voiceRecordingService.startRecording()
+            guard !Task.isCancelled, voiceCaptureSessionIsCurrent(sessionGeneration) else {
+                if voiceRecordingService.isRecording {
+                    voiceRecordingService.cancelRecording()
+                }
+                return
+            }
+        } catch VoiceRecordingService.RecordingError.permissionDenied {
+            guard voiceCaptureSessionIsCurrent(sessionGeneration) else { return }
+            degradeVoiceInput(.permissionDenied)
+        } catch {
+            guard voiceCaptureSessionIsCurrent(sessionGeneration) else { return }
+            degradeVoiceInput(.recorderUnavailable)
+        }
+    }
+
+    private func voiceCaptureSessionIsCurrent(_ generation: Int) -> Bool {
+        generation == voiceCaptureGeneration && voiceState.phase == .listening
+    }
+
+    private func cancelLiveVoiceCaptureIfNeeded() {
+        voiceCaptureGeneration += 1
+        isStoppingVoiceCapture = false
+        voiceCaptureTask?.cancel()
+        voiceCaptureTask = nil
+        voiceDurationCancellable?.cancel()
+        voiceDurationCancellable = nil
+        if voiceRecordingService.isRecording {
+            voiceRecordingService.cancelRecording()
+        }
+    }
+
+    private func formatVoiceDuration(_ duration: TimeInterval) -> String {
+        let totalSeconds = max(0, Int(duration.rounded()))
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%d:%02d", minutes, seconds)
     }
 
     // MARK: - Degradation (AMA-2234)
@@ -1251,6 +1409,7 @@ class CoachViewModel: ObservableObject {
         rateLimitInfo = nil
         pendingActionLifecycle.removeAll()
         pendingActionBusyIds.removeAll()
+        cancelLiveVoiceCaptureIfNeeded()
         voiceState = CoachVoiceState(
             lastSubmittedTranscript: voiceState.lastSubmittedTranscript,
             lastSpokenText: voiceState.lastSpokenText

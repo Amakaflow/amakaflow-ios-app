@@ -407,10 +407,10 @@ struct CoachChatView: View {
                 state: viewModel.voiceState,
                 onCancel: { viewModel.cancelVoiceInput() },
                 onStop: {
-                    Task { await viewModel.submitVoiceTranscript() }
+                    Task { await viewModel.stopVoiceCaptureAndSubmit() }
                 },
                 onSend: {
-                    Task { await viewModel.submitVoiceTranscript() }
+                    Task { await viewModel.stopVoiceCaptureAndSubmit() }
                 }
             )
         case .transcriptionFallback:
