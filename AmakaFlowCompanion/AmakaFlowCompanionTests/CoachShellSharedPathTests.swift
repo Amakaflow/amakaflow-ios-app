@@ -122,6 +122,34 @@ final class CoachShellSharedPathTests: XCTestCase {
         XCTAssertEqual(viewModel.messages.first?.content, "Move my long run to Saturday and make today easy")
     }
 
+    func testStopVoiceCaptureAndSubmitUsesInjectedTranscriptWithoutRecording() async {
+        let viewModel = makeViewModel()
+        viewModel.startVoiceListening(partialTranscript: "What should I do today?", durationLabel: "0:04")
+        mockStreamService.eventsToYield = [
+            .messageStart(sessionId: "voice-capture-session", traceId: "voice-capture-trace"),
+            .contentDelta(text: "Keep today easy."),
+            .messageEnd(sessionId: "voice-capture-session", tokensUsed: 6, latencyMs: 70)
+        ]
+
+        let accepted = await viewModel.stopVoiceCaptureAndSubmit(speakResponse: false)
+
+        XCTAssertTrue(accepted)
+        XCTAssertTrue(mockStreamService.streamCalled)
+        XCTAssertEqual(mockStreamService.lastRequest?.message, "What should I do today?")
+    }
+
+    func testEmptyVoiceTranscriptFallsBackToManualEntry() async {
+        let viewModel = makeViewModel()
+        viewModel.startVoiceListening()
+
+        let accepted = await viewModel.submitVoiceTranscript(speakResponse: false)
+
+        XCTAssertFalse(accepted)
+        XCTAssertEqual(viewModel.voiceState.phase, .transcriptionFallback)
+        XCTAssertEqual(viewModel.voiceState.dependency, .sttDown)
+        XCTAssertFalse(mockStreamService.streamCalled)
+    }
+
     func testSpokenOutputNeverSuppressesTextOrPendingActionConfirmation() async {
         let audio = MockAudioService()
         let viewModel = makeViewModel(audioService: audio)
