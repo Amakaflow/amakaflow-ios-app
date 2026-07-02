@@ -1,0 +1,30 @@
+# AMA-2260 — PendingAction confirm/reject with fixture stream (warn-only)
+#
+# Real Clerk session (password bypass) + UITEST_USE_FIXTURES so the AMA-2230
+# fixture pending action surfaces without a live LLM call.
+
+appId: com.myamaka.AmakaFlowCompanion
+env:
+  USE_FIXTURES: "true"
+---
+- runFlow: ../../../_lib/clerk-signin.yaml
+- tapOn:
+    id: "coach_tab"
+- assertVisible:
+    id: "coach_screen"
+- tapOn:
+    id: "af_coach_input"
+- inputText: "Move my threshold run to Sunday"
+- tapOn:
+    id: "af_coach_send"
+- extendedWaitUntil:
+    visible:
+      id: "pending-action-card-pa_ios_ama_2230_fixture"
+    timeout: 20000
+- assertVisible:
+    id: "pending-action-card-pa_ios_ama_2230_fixture"
+- tapOn: "Reject"
+- extendedWaitUntil:
+    notVisible:
+      id: "pending-action-card-pa_ios_ama_2230_fixture"
+    timeout: 10000

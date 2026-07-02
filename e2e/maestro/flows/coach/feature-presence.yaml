@@ -1,0 +1,77 @@
+# AMA-2260 — Coach feature-presence smoke (fast, post-TestFlight gating)
+#
+# Asserts every user-visible coach entry point from the Feature Map exists.
+# Runs after TestFlight upload alongside golden-path.yaml.
+#
+# Feature Map rows covered:
+#   - Coach tab + ONE COACH header          → coach_tab, coach-one-brain-indicator
+#   - Mic in composer                       → coach-mic-button | coach-mic-disabled
+#   - Profile → Coaching → CKW              → settings_row_coach_knowledge, ckw-overview
+#   - Coach options menu                    → coach-menu-fatigue-advisor, etc.
+
+appId: com.myamaka.AmakaFlowCompanion
+---
+- runFlow: ../../_lib/clerk-signin.yaml
+- takeScreenshot: presence-01-signed-in
+
+# Coach tab + one-coach header
+- tapOn:
+    id: "coach_tab"
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible:
+    id: "coach_screen"
+- assertVisible:
+    id: "coach-one-brain-indicator"
+- takeScreenshot: presence-02-coach-header
+
+# Mic button in composer (may be disabled while degraded/streaming)
+- assertVisible:
+    id: "coach-mic-button"
+- runFlow:
+    when:
+      notVisible:
+        id: "coach-mic-button"
+    commands:
+      - assertVisible:
+          id: "coach-mic-disabled"
+- takeScreenshot: presence-03-coach-mic
+
+# Coach options menu items
+- tapOn:
+    id: "coach-options-menu"
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible:
+    id: "coach-menu-fatigue-advisor"
+- assertVisible:
+    id: "coach-menu-readiness-history"
+- assertVisible:
+    id: "coach-menu-actions"
+- takeScreenshot: presence-04-coach-menu
+- tapOn:
+    id: "coach_screen"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# Profile → Coaching → What my coach knows → CKW surface
+- tapOn:
+    id: "profile_tab"
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible:
+    id: "profile_screen"
+- scrollUntilVisible:
+    element:
+      id: "settings_row_coach_knowledge"
+    direction: DOWN
+    speed: 40
+- tapOn:
+    id: "settings_row_coach_knowledge"
+- extendedWaitUntil:
+    visible:
+      id: "ckw-overview"
+    timeout: 20000
+- assertVisible:
+    id: "ckw-overview"
+- takeScreenshot: presence-05-ckw-surface

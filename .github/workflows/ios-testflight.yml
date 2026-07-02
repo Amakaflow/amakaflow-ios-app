@@ -386,7 +386,7 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
 
-  # AMA-1804 — Golden-path smoke AFTER the TestFlight upload.
+  # AMA-1804 / AMA-2260 — Golden-path + coach feature-presence smoke AFTER TestFlight upload.
   #
   # Runs the primary user journey (e2e/maestro/flows/golden-path.yaml) on a
   # SIMULATOR build of the SAME commit against the staging backend, and PAGES
@@ -400,7 +400,7 @@ jobs:
   #   - Telegram ping  — only if secrets.TELEGRAM_BOT_TOKEN is set
   #   - Linear P1      — only if secrets.LINEAR_API_KEY is set
   golden-path-smoke:
-    name: Golden-path smoke (post-upload)
+    name: Golden-path + feature-presence smoke (post-upload)
     needs: testflight
     if: "github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]')"
     runs-on: macos-15
@@ -534,7 +534,7 @@ jobs:
           xcrun simctl install "${{ steps.simulator.outputs.udid }}" "$APP"
           xcrun simctl bootstatus "${{ steps.simulator.outputs.udid }}" -b
 
-      - name: Run golden-path smoke
+      - name: Run golden-path + feature-presence smoke
         id: smoke
         continue-on-error: true
         env:
@@ -549,36 +549,45 @@ jobs:
             echo "outcome=skipped" >> "$GITHUB_OUTPUT"
             exit 1
           fi
-          # Date token for the History-row assertion. Format confirmed
-          # against the app during local-sim validation (AMA-1804 plan);
-          # injected so the flow stays date-agnostic.
           TODAY="$(date +%-d)"
           SIM_UDID="${{ steps.simulator.outputs.udid }}"
-          run_smoke() {
+          run_smoke_flow() {
+            local flow="$1"
+            local label="$2"
             maestro test \
               --device "$SIM_UDID" \
               -e UITEST_CLERK_PASSWORD="$UITEST_CLERK_PASSWORD" \
               -e TODAY="$TODAY" \
-              --format junit --output maestro-output/golden-path-junit.xml \
-              e2e/maestro/flows/golden-path.yaml 2>&1 | tee maestro-output/golden-path.log
+              --format junit --output "maestro-output/${label}-junit.xml" \
+              "$flow" 2>&1 | tee "maestro-output/${label}.log"
             return "${PIPESTATUS[0]}"
+          }
+          run_all_smokes() {
+            local overall=0
+            for spec in \
+              "e2e/maestro/flows/golden-path.yaml:golden-path" \
+              "e2e/maestro/flows/coach/feature-presence.yaml:feature-presence"; do
+              flow="${spec%%:*}"
+              label="${spec##*:}"
+              echo "::group::maestro test ${flow}"
+              run_smoke_flow "$flow" "$label"
+              st=$?
+              echo "::endgroup::"
+              if [ "$st" != "0" ]; then overall=1; fi
+            done
+            return "$overall"
           }
           STATUS=1
           for attempt in 1 2; do
-            echo "Golden-path smoke attempt ${attempt}/2"
-            run_smoke
+            echo "Post-upload smoke attempt ${attempt}/2 (golden-path + feature-presence)"
+            run_all_smokes
             STATUS=$?
             if [ "$STATUS" = 0 ]; then break; fi
-            # Always retry once: IOSDriverTimeoutException is the known flake class,
-            # but auth/tabbar assertion failures are equally transient on freshly-erased
-            # sims that are still settling post-boot (issue #329). Both get one warm-up
-            # retry; a real regression will fail both attempts and page correctly.
             if [ "$attempt" -lt 2 ]; then
               echo "Smoke failed on attempt 1 — warming simulator and retrying once."
               open -a Simulator
               xcrun simctl bootstatus "$SIM_UDID" -b
               sleep 10
-              continue
             fi
           done
           echo "outcome=$([ "$STATUS" = 0 ] && echo passed || echo failed)" >> "$GITHUB_OUTPUT"

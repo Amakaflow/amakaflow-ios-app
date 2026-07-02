@@ -301,6 +301,7 @@ struct CalendarView: View {
             .cornerRadius(Theme.CornerRadius.md)
         }
         .disabled(calendarVM.isGeneratingWeek)
+        .accessibilityIdentifier("af_generate_week")
         .padding(.bottom, Theme.Spacing.sm)
     }
 

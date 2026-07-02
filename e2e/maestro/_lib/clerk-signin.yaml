@@ -1,67 +1,34 @@
-# AMA-1837 — Reusable Clerk staging sign-in subflow
+# AMA-1837 / AMA-2269 — Reusable Clerk staging sign-in subflow
 #
-# Drives a real Clerk sign-in against the staging instance
-# (ruling-mite-84.clerk.accounts.dev) using the documented `+clerk_test`
-# subaddress, which makes Clerk accept the universal verification code
-# `424242` regardless of dashboard config (see Clerk docs on "Test mode").
+# Primary path (AMA-1849 + AMA-2269): programmatic password session via
+# `UITEST_CLERK_REAL_SESSION_EMAIL` + `UITEST_CLERK_PASSWORD` injected at
+# launchApp. Staging Clerk is password-first for the CI test user — UI
+# email-code sign-in was the root cause of af_tabbar timeouts in CI.
 #
-# Test credentials (intentionally hardcoded — see below):
-#   - Email:  claude+clerk_test@amakaflow.dev
-#   - Code:   424242
-# Both are PUBLIC Clerk test-mode values, safe to commit. The `+clerk_test`
-# subaddress is the documented Clerk pattern that pins the verification
-# code to `424242` regardless of dashboard config (see Clerk docs:
-# https://clerk.com/docs/testing/test-emails-and-phones). Hardcoding them
-# is required for deterministic CI — parameterizing via env vars would
-# add a runtime-config foot-gun without any security benefit, since these
-# values are explicitly designed by Clerk to be public test fixtures.
+# Fallback path: walk the Clerk email/password UI when programmatic auth
+# did not hydrate a session (local dev without password env, etc.).
 #
-# This subflow is intentionally idempotent:
-#   - If the app is ALREADY signed in (Home tab visible), it is a no-op.
-#   - Otherwise it walks the email -> code flow and asserts the Home tab
-#     becomes visible within ~30s. If sign-in fails to complete, the flow
-#     fails loudly via `assertVisible` rather than silently continuing.
-#
-# Preconditions for callers:
-#   - The app under test must be a build pointed at the STAGING backend
-#     (Release config, or Debug with CLERK_PUBLISHABLE_KEY_STAGING set to
-#     the ruling-mite-84 key — see memory clerk-instances-by-environment.md).
-#   - The simulator must have network access to *.clerk.accounts.dev and the
-#     staging mapper-api host.
-#   - Test account `claude+clerk_test@amakaflow.dev` must exist in the
-#     staging Clerk instance (provisioned via Clerk Backend API — see
-#     memory ios-sim-test-loop-recipe.md).
-#
-# Callers should `runFlow: _lib/clerk-signin.yaml` as their FIRST step and
-# then immediately proceed with their own steps. Do NOT add a separate
-# `launchApp` step in the caller — this subflow already launches the app
-# with the right notification permission.
+# Test email (public Clerk test fixture):
+#   claude+clerk_test@amakaflow.dev
+# Password: pass at run time via -e UITEST_CLERK_PASSWORD=... (never commit).
 
 appId: com.myamaka.AmakaFlowCompanion
+env:
+  USE_FIXTURES: ${USE_FIXTURES || "false"}
 ---
 - launchApp:
     appId: com.myamaka.AmakaFlowCompanion
     permissions:
       notifications: deny
+    arguments:
+      UITEST_CLERK_REAL_SESSION_EMAIL: "claude+clerk_test@amakaflow.dev"
+      UITEST_CLERK_PASSWORD: ${UITEST_CLERK_PASSWORD}
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: ${USE_FIXTURES}
 - waitForAnimationToEnd:
     timeout: 5000
 
-# First-launch "mental model" value-prop carousel (multi-page; "Three
-# places. One coach." / "Coach agent" / … with a top-right Skip) appears
-# BEFORE the email field on a fresh install and hides the "Enter your
-# email" field the sign-in branch keys off. Dismiss via the Skip button's
-# resource-id (NOT text "Skip" — and NOT the bare "Coach" sentinel, which
-# substring-matches the carousel's "Coach agent" copy and corrupts the
-# guards). (AMA-1804: surfaced + fixed via golden-path local-sim repro
-# 2026-05-27.)
-# Two onboarding layers gate the auth screen on a fresh install:
-#   1. OnboardingFlowView value-prop carousel ("See your week fill with
-#      effort" …) — its "Skip" (accessibilityLabel "Skip onboarding")
-#      calls complete() directly, dismissing the whole carousel.
-#   2. MentalModelView ("Three places. One coach.") — AMA-1988 added a
-#      prominent "Continue without a watch" button (id below); also a
-#      top-bar Skip id.
-# Loop generously so we blow through both, whatever order they appear.
+# Pre-auth onboarding carousel / mental model (fresh install).
 - repeat:
     times: 10
     commands:
@@ -90,18 +57,8 @@ appId: com.myamaka.AmakaFlowCompanion
                 id: "mental_model_skip"
             - waitForAnimationToEnd:
                 timeout: 2500
-      - runFlow:
-          when:
-            visible:
-              id: "mental_model_skip"
-          commands:
-            - tapOn:
-                id: "mental_model_skip"
-            - waitForAnimationToEnd:
-                timeout: 2500
 
-# Fast path: already signed in. AMA-1992 custom tab bar is the stable
-# post-auth sentinel (Home content ids may not exist while loading).
+# Fast path: programmatic auth or persisted session.
 - runFlow:
     when:
       visible:
@@ -112,9 +69,20 @@ appId: com.myamaka.AmakaFlowCompanion
       - assertVisible:
           id: "home_tab"
 
-# Sign-in path: only runs if the tab bar is NOT yet visible AND the email
-# input is visible. (If neither is visible, a session persisted and we just
-# walk onboarding — the post-signin loop below handles that.)
+# Wait for AMA-1849 password bypass (CI sims may migrate data 15–20s post-boot).
+- runFlow:
+    when:
+      notVisible:
+        id: "af_tabbar"
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: "af_tabbar"
+          timeout: 90000
+
+- runFlow: dismiss-post-auth-onboarding.yaml
+
+# UI fallback when programmatic auth did not complete.
 - runFlow:
     when:
       notVisible:
@@ -124,32 +92,12 @@ appId: com.myamaka.AmakaFlowCompanion
     commands:
       - tapOn:
           text: "Enter your email"
-      # Clear any autofilled / leftover text (Clerk shows "Last Used"
-      # email after a prior session — appending to it produces an
-      # invalid identifier on the next run).
       - eraseText
       - inputText: "claude+clerk_test@amakaflow.dev"
       - tapOn:
           text: "Continue"
       - waitForAnimationToEnd:
           timeout: 10000
-
-      # Clerk staging is configured password-first for this test user
-      # (the "Email code" link on "Use another method" only shows
-      # Apple/Google on this instance — no email-code factor). Enter
-      # the dev-instance password from the UITEST_CLERK_PASSWORD env
-      # var, then Continue.
-      #
-      # NEVER hardcode the password here. Pass it at run time:
-      #   UITEST_CLERK_PASSWORD=$(grep "^UITEST_CLERK_PASSWORD=" \
-      #     ~/.claude/projects/-Users-davidmini/secrets/keys.env \
-      #     | cut -d= -f2-) \
-      #   maestro test -e UITEST_CLERK_PASSWORD="$UITEST_CLERK_PASSWORD" \
-      #     e2e/maestro/.../<flow>.yaml
-      #
-      # See docs/testing/blueprint.md + memory keys-registry.md.
-      # Matches the existing UITEST_AUTH_SECRET / UITEST_USER_ID
-      # convention used by other Maestro flows in this repo.
       - runFlow:
           when:
             visible: "Enter password"
@@ -162,9 +110,6 @@ appId: com.myamaka.AmakaFlowCompanion
                 text: "Continue"
             - waitForAnimationToEnd:
                 timeout: 12000
-
-      # Clerk flow may show a password field first OR jump straight to the
-      # 6-digit code screen depending on instance config. Handle both.
       - runFlow:
           when:
             visible: "Check your email"
@@ -180,37 +125,12 @@ appId: com.myamaka.AmakaFlowCompanion
             - waitForAnimationToEnd:
                 timeout: 12000
 
-# Post-signin onboarding: fresh-install users see a stack of cards
-# (Nutrition Awareness, Biometric consent, etc.) before the Coach tab
-# is reachable. Tap "Not now" / "Skip" on whatever appears, up to 6
-# cards (per ios-sim-test-loop-recipe.md). Lives OUTSIDE the sign-in
-# branch so it also runs when the session persisted from a prior run
-# and the app launched directly into the onboarding stack.
-- repeat:
-    times: 6
-    commands:
-      - runFlow:
-          when:
-            visible: "Not now"
-          commands:
-            - tapOn: "Not now"
-            - waitForAnimationToEnd:
-                timeout: 3000
-      - runFlow:
-          when:
-            visible: "Skip"
-          commands:
-            - tapOn: "Skip"
-            - waitForAnimationToEnd:
-                timeout: 3000
+- runFlow: dismiss-post-auth-onboarding.yaml
 
-# Final assertion: authenticated shell (AMA-1992 tab bar) within 60s.
-# 60s (up from 30s): CI sims run post-boot data migration for 15-20s; sign-in
-# + tab-bar transition needs headroom on a freshly-erased sim (issue #329).
 - extendedWaitUntil:
     visible:
       id: "af_tabbar"
-    timeout: 60000
+    timeout: 90000
 - tapOn:
     id: "home_tab"
 - assertVisible:

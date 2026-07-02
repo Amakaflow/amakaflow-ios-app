@@ -142,8 +142,25 @@ final class AuthViewModel: ObservableObject {
   /// (matches Clerk SDK's own `extractFrontendApiUrl` logic — the
   /// part after `pk_test_` / `pk_live_` is base64-encoded host).
   private func applyUITestRealSessionBypass() async {
+    defer {
+      // Never leave the launch screen stuck on black if bypass fails
+      // (AMA-2269: CI Maestro timed out waiting for af_tabbar).
+      if !hasResolvedInitialSession {
+        refreshFromClerk()
+        if authEventsTask == nil {
+          subscribeToAuthEvents()
+        }
+      }
+    }
+
     let email = UITestEnvironment.value(for: "UITEST_CLERK_REAL_SESSION_EMAIL") ?? ""
+    let password = UITestEnvironment.value(for: "UITEST_CLERK_PASSWORD")
     let code = UITestEnvironment.value(for: "UITEST_CLERK_REAL_SESSION_CODE") ?? "424242"
+
+    guard !email.isEmpty else {
+      print("[AuthViewModel] AMA-1849 bypass FAILED: UITEST_CLERK_REAL_SESSION_EMAIL is empty")
+      return
+    }
 
     guard let host = AuthViewModel.deriveClerkFrontendHost(from: Clerk.shared.publishableKey) else {
       print("[AuthViewModel] AMA-1849 bypass FAILED: could not derive frontend API host from publishable key")
@@ -152,42 +169,75 @@ final class AuthViewModel: ObservableObject {
     let base = "https://\(host)"
 
     do {
-      // 1. Create sign-in
-      let signIn = try await postClerkForm(
-        url: URL(string: "\(base)/v1/client/sign_ins?_is_native=true")!,
-        body: "identifier=\(urlEncode(email))&strategy=email_code"
-      )
-      guard let signInId = (signIn["response"] as? [String: Any])?["id"] as? String
-              ?? signIn["id"] as? String else {
-        print("[AuthViewModel] AMA-1849 bypass FAILED: no sign-in id in response: \(signIn)")
-        return
+      let sessionId: String
+      if let password, !password.isEmpty {
+        // Staging CI test user (claude+clerk_test@amakaflow.dev) is password-first
+        // per AMA-2250 — email_code UI/API path fails there (AMA-2269).
+        sessionId = try await createClerkSession(
+          base: base,
+          email: email,
+          signInBody: "identifier=\(urlEncode(email))&strategy=password",
+          attemptBody: "strategy=password&password=\(urlEncode(password))"
+        )
+      } else {
+        sessionId = try await createClerkSession(
+          base: base,
+          email: email,
+          signInBody: "identifier=\(urlEncode(email))&strategy=email_code",
+          attemptBody: "strategy=email_code&code=\(code)"
+        )
       }
 
-      // 2. Attempt first factor with universal test code
-      let verified = try await postClerkForm(
-        url: URL(string: "\(base)/v1/client/sign_ins/\(signInId)/attempt_first_factor?_is_native=true")!,
-        body: "strategy=email_code&code=\(code)"
-      )
-      guard let sessionId = (verified["response"] as? [String: Any])?["created_session_id"] as? String
-              ?? verified["created_session_id"] as? String else {
-        print("[AuthViewModel] AMA-1849 bypass FAILED: no created_session_id in response: \(verified)")
-        return
-      }
-
-      // 3. Activate the session via the public Clerk SDK API
       try await Clerk.shared.auth.setActive(sessionId: sessionId)
 
       print("[AuthViewModel] AMA-1849 bypass OK: session \(sessionId) active for \(email)")
 
-      // Mirror the normal start() event subscription so token refreshes
-      // and signOut events still flow through this view model.
-      // Uses the shared subscribeToAuthEvents helper (CR-suggested DRY
-      // extraction, PR #219).
       refreshFromClerk()
       subscribeToAuthEvents()
     } catch {
       print("[AuthViewModel] AMA-1849 bypass FAILED: \(error)")
     }
+  }
+
+  private func createClerkSession(
+    base: String,
+    email: String,
+    signInBody: String,
+    attemptBody: String
+  ) async throws -> String {
+    let signIn = try await postClerkForm(
+      url: URL(string: "\(base)/v1/client/sign_ins?_is_native=true")!,
+      body: signInBody
+    )
+    guard let signInId = Self.extractClerkSignInID(from: signIn) else {
+      throw NSError(
+        domain: "AMA-1849",
+        code: -2,
+        userInfo: [NSLocalizedDescriptionKey: "no sign-in id for \(email)"]
+      )
+    }
+
+    let verified = try await postClerkForm(
+      url: URL(string: "\(base)/v1/client/sign_ins/\(signInId)/attempt_first_factor?_is_native=true")!,
+      body: attemptBody
+    )
+    guard let sessionId = Self.extractClerkCreatedSessionID(from: verified) else {
+      throw NSError(
+        domain: "AMA-1849",
+        code: -3,
+        userInfo: [NSLocalizedDescriptionKey: "no created_session_id for \(email)"]
+      )
+    }
+    return sessionId
+  }
+
+  private static func extractClerkSignInID(from payload: [String: Any]) -> String? {
+    (payload["response"] as? [String: Any])?["id"] as? String ?? payload["id"] as? String
+  }
+
+  private static func extractClerkCreatedSessionID(from payload: [String: Any]) -> String? {
+    (payload["response"] as? [String: Any])?["created_session_id"] as? String
+      ?? payload["created_session_id"] as? String
   }
 
   /// Decode the frontend-api host (`solid-chicken-50.clerk.accounts.dev`)

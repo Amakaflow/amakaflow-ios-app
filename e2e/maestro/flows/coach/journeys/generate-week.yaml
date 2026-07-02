@@ -1,0 +1,21 @@
+# AMA-2260 — Generate My Week journey (PR maestro label, warn-only)
+
+appId: com.myamaka.AmakaFlowCompanion
+---
+- runFlow: ../../../_lib/clerk-signin.yaml
+- tapOn:
+    id: "workouts_tab"
+- assertVisible:
+    id: "workouts_screen"
+- tapOn:
+    id: "workouts_calendar_button"
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible:
+    id: "af_generate_week"
+- tapOn:
+    id: "af_generate_week"
+- extendedWaitUntil:
+    visible:
+      text: "Proposed Week Plan"
+    timeout: 45000
