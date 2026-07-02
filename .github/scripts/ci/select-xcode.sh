@@ -14,9 +14,10 @@ fi
 
 echo "Using Xcode: $XCODE_PATH"
 sudo xcode-select -s "$XCODE_PATH"
-xcodebuild -version
+XCODE_VERSION_OUTPUT="$(xcodebuild -version)"
+echo "$XCODE_VERSION_OUTPUT"
 
-XCODE_VER=$(xcodebuild -version | head -1 | tr ' ' '-')
+XCODE_VER=$(printf '%s\n' "$XCODE_VERSION_OUTPUT" | head -1 | tr ' ' '-')
 if [ -n "${GITHUB_OUTPUT:-}" ]; then
   echo "version=$XCODE_VER" >> "$GITHUB_OUTPUT"
 fi
