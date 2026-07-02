@@ -278,7 +278,7 @@ struct NotificationPreferencesView: View {
 
     private var pushStatusIcon: String {
         switch pushAuthStatus {
-        case .authorized, .provisional: return "bell.badge.fill"
+        case .authorized, .provisional, .ephemeral: return "bell.badge.fill"
         case .denied: return "bell.slash.fill"
         case .notDetermined: return "bell.fill"
         @unknown default: return "bell.fill"
@@ -287,7 +287,7 @@ struct NotificationPreferencesView: View {
 
     private var pushStatusColor: Color {
         switch pushAuthStatus {
-        case .authorized, .provisional: return Theme.Colors.accentGreen
+        case .authorized, .provisional, .ephemeral: return Theme.Colors.accentGreen
         case .denied: return Theme.Colors.accentRed
         case .notDetermined: return Theme.Colors.accentOrange
         @unknown default: return Theme.Colors.textSecondary
@@ -296,7 +296,7 @@ struct NotificationPreferencesView: View {
 
     private var pushStatusTitle: String {
         switch pushAuthStatus {
-        case .authorized, .provisional: return "Notifications Enabled"
+        case .authorized, .provisional, .ephemeral: return "Notifications Enabled"
         case .denied: return "Notifications Disabled"
         case .notDetermined: return "Not Set Up"
         @unknown default: return "Unknown"
@@ -305,7 +305,7 @@ struct NotificationPreferencesView: View {
 
     private var pushStatusSubtitle: String {
         switch pushAuthStatus {
-        case .authorized, .provisional: return "You will receive push notifications"
+        case .authorized, .provisional, .ephemeral: return "You will receive push notifications"
         case .denied: return "Enable in System Settings to receive notifications"
         case .notDetermined: return "Tap below to enable push notifications"
         @unknown default: return ""

@@ -31,11 +31,11 @@ final class HomeViewModel: ObservableObject {
     init(
         calendar: Calendar = .current,
         now: @escaping () -> Date = Date.init,
-        apiService: APIServiceProviding = AppDependencies.live.apiService
+        apiService: APIServiceProviding? = nil
     ) {
         self.calendar = calendar
         self.now = now
-        self.apiService = apiService
+        self.apiService = apiService ?? AppDependencies.live.apiService
     }
 
     func loadReadiness() async {

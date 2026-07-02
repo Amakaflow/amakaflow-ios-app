@@ -362,6 +362,7 @@ private enum Visuals {
     }
 }
 
+#if DEBUG
 #Preview("Watch Delivery") {
     NavigationStack {
         WatchDeliveryView(
@@ -371,3 +372,4 @@ private enum Visuals {
         )
     }
 }
+#endif

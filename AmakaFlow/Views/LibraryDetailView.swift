@@ -388,8 +388,10 @@ private struct DetailTagPills: View {
     }
 }
 
+#if DEBUG
 #Preview("Library detail") {
     NavigationStack {
         LibraryDetailView(itemID: "mock-strength-basics", viewModel: LibraryDetailViewModel(apiService: FixtureAPIService()))
     }
 }
+#endif

@@ -26,7 +26,6 @@ actor SyncEngine {
     private let syncHandler: (SyncQueueItem) async throws -> Void
     private let completedRetention: TimeInterval
 
-    @MainActor
     init(
         queueRepository: SyncQueueRepository = SyncQueueRepository(),
         maxAttempts: Int = 5,

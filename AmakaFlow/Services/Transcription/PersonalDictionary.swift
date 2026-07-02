@@ -46,10 +46,11 @@ final class PersonalDictionary: ObservableObject {
         // Load from storage on background to avoid blocking main thread (AMA-1075)
         Task.detached(priority: .utility) { [weak self] in
             let (corrections, customTerms, lastSync) = await self?.loadFromStorageBackground() ?? ([:], [], nil)
-            await MainActor.run {
-                self?.corrections = corrections
-                self?.customTerms = customTerms
-                self?.lastSyncDate = lastSync
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.corrections = corrections
+                self.customTerms = customTerms
+                self.lastSyncDate = lastSync
             }
         }
     }
@@ -70,7 +71,7 @@ final class PersonalDictionary: ObservableObject {
         scheduleSaveToStorage()  // Debounced save on background (AMA-1075)
 
         // Trigger background sync
-        Task {
+        Task { @MainActor in
             await syncWithBackend()
         }
     }
@@ -81,7 +82,7 @@ final class PersonalDictionary: ObservableObject {
         corrections.removeValue(forKey: normalized)
         scheduleSaveToStorage()  // Debounced save on background (AMA-1075)
 
-        Task {
+        Task { @MainActor in
             await syncWithBackend()
         }
     }
@@ -94,7 +95,7 @@ final class PersonalDictionary: ObservableObject {
         customTerms.append(normalized)
         scheduleSaveToStorage()  // Debounced save on background (AMA-1075)
 
-        Task {
+        Task { @MainActor in
             await syncWithBackend()
         }
     }
@@ -104,7 +105,7 @@ final class PersonalDictionary: ObservableObject {
         customTerms.removeAll { $0 == term }
         scheduleSaveToStorage()  // Debounced save on background (AMA-1075)
 
-        Task {
+        Task { @MainActor in
             await syncWithBackend()
         }
     }

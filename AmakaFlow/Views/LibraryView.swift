@@ -414,6 +414,8 @@ private struct LibraryEmptyStateView: View {
     }
 }
 
+#if DEBUG
 #Preview("Library") {
     LibraryView(viewModel: LibraryViewModel(apiService: FixtureAPIService()))
 }
+#endif

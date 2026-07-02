@@ -395,9 +395,11 @@ struct EquipmentProfileView: View {
     }
 }
 
+#if DEBUG
 #Preview("Equipment Profile") {
     NavigationStack {
         EquipmentProfileView(viewModel: EquipmentProfileViewModel(apiService: FixtureAPIService()))
     }
     .preferredColorScheme(.dark)
 }
+#endif

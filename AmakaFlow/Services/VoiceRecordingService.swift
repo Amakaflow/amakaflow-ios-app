@@ -185,8 +185,9 @@ class VoiceRecordingService: NSObject, ObservableObject {
 
     private func startMeteringTimer() {
         meterTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.updateAudioLevel()
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.updateAudioLevel()
             }
         }
     }

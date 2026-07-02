@@ -130,8 +130,9 @@ class FollowAlongPlayerViewModel: ObservableObject {
                 object: nil,
                 queue: .main
             ) { [weak self] _ in
-                Task { @MainActor in
-                    self?.handleVideoEnded()
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    self.handleVideoEnded()
                 }
             }
         }
@@ -241,8 +242,9 @@ class FollowAlongPlayerViewModel: ObservableObject {
         timerCancellable = Timer.publish(every: 1, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
-                Task { @MainActor in
-                    self?.tick()
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    self.tick()
                 }
             }
     }

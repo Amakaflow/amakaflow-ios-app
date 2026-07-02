@@ -460,6 +460,8 @@ private struct HRVSparkline: View {
     }
 }
 
+#if DEBUG
 #Preview("Readiness Detail") {
     ReadinessDetailView(viewModel: ReadinessDetailViewModel(apiService: FixtureAPIService()))
 }
+#endif

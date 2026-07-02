@@ -29,11 +29,11 @@ final class SubscriptionAccessViewModel: ObservableObject {
     private let userIdProvider: (() -> String?)?
 
     init(
-        apiService: APIServiceProviding = AppDependencies.live.apiService,
+        apiService: APIServiceProviding? = nil,
         billingClient: SubscriptionBillingProviding? = nil,
         userIdProvider: (() -> String?)? = nil
     ) {
-        self.apiService = apiService
+        self.apiService = apiService ?? AppDependencies.live.apiService
         self.billingClient = billingClient ?? NoOpSubscriptionBillingClient()
         self.userIdProvider = userIdProvider
         if FeatureFlags.paywallGateEnabled {
