@@ -386,6 +386,7 @@ class CoachViewModel: ObservableObject {
     private let transcriptionRouter = TranscriptionRouter.shared
     private var voiceCaptureTask: Task<Void, Never>?
     private var voiceDurationCancellable: AnyCancellable?
+    private var isStoppingVoiceCapture = false
 
     /// Monotonic id for the in-flight session restore. Bumped by startNewChat()
     /// so a late `fetchMessages` completion can't repopulate (or re-degrade) a
@@ -796,8 +797,7 @@ class CoachViewModel: ObservableObject {
         durationLabel: String = "0:00"
     ) {
         guard !isStreaming, !isLoadingMessages else { return }
-        voiceCaptureTask?.cancel()
-        voiceDurationCancellable?.cancel()
+        cancelLiveVoiceCaptureIfNeeded()
         voiceState = CoachVoiceState(
             phase: .listening,
             partialTranscript: partialTranscript,
@@ -829,11 +829,7 @@ class CoachViewModel: ObservableObject {
 
     func cancelVoiceInput() {
         shouldSpeakNextCoachReply = false
-        voiceCaptureTask?.cancel()
-        voiceDurationCancellable?.cancel()
-        if voiceRecordingService.isRecording {
-            voiceRecordingService.cancelRecording()
-        }
+        cancelLiveVoiceCaptureIfNeeded()
         voiceState = CoachVoiceState(
             lastSubmittedTranscript: voiceState.lastSubmittedTranscript,
             lastSpokenText: voiceState.lastSpokenText
@@ -865,6 +861,10 @@ class CoachViewModel: ObservableObject {
     /// Stop live capture (if any), transcribe, then submit through the shared coach path.
     @discardableResult
     func stopVoiceCaptureAndSubmit(speakResponse: Bool = true) async -> Bool {
+        guard !isStoppingVoiceCapture, voiceState.phase == .listening else { return false }
+        isStoppingVoiceCapture = true
+        defer { isStoppingVoiceCapture = false }
+
         voiceCaptureTask?.cancel()
         voiceDurationCancellable?.cancel()
 
@@ -898,7 +898,7 @@ class CoachViewModel: ObservableObject {
                     degradeVoiceInput(.permissionDenied)
                     return false
                 case .notAvailable:
-                    degradeVoiceInput(.recorderUnavailable)
+                    degradeVoiceInput(.sttDown)
                     return false
                 default:
                     degradeVoiceInput(.sttDown)
@@ -986,7 +986,11 @@ class CoachViewModel: ObservableObject {
         }
 
         if !permissionManager.hasSpeechRecognitionPermission {
-            _ = await permissionManager.requestSpeechRecognitionPermission()
+            let granted = await permissionManager.requestSpeechRecognitionPermission()
+            guard granted else {
+                degradeVoiceInput(.permissionDenied)
+                return
+            }
         }
 
         guard !Task.isCancelled, voiceState.phase == .listening else { return }
@@ -1006,6 +1010,17 @@ class CoachViewModel: ObservableObject {
             degradeVoiceInput(.permissionDenied)
         } catch {
             degradeVoiceInput(.recorderUnavailable)
+        }
+    }
+
+    private func cancelLiveVoiceCaptureIfNeeded() {
+        isStoppingVoiceCapture = false
+        voiceCaptureTask?.cancel()
+        voiceCaptureTask = nil
+        voiceDurationCancellable?.cancel()
+        voiceDurationCancellable = nil
+        if voiceRecordingService.isRecording {
+            voiceRecordingService.cancelRecording()
         }
     }
 
@@ -1367,6 +1382,7 @@ class CoachViewModel: ObservableObject {
         rateLimitInfo = nil
         pendingActionLifecycle.removeAll()
         pendingActionBusyIds.removeAll()
+        cancelLiveVoiceCaptureIfNeeded()
         voiceState = CoachVoiceState(
             lastSubmittedTranscript: voiceState.lastSubmittedTranscript,
             lastSpokenText: voiceState.lastSpokenText

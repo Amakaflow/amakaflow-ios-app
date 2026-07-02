@@ -136,11 +136,12 @@ final class CoachShellSharedPathTests: XCTestCase {
         XCTAssertTrue(accepted)
         XCTAssertTrue(mockStreamService.streamCalled)
         XCTAssertEqual(mockStreamService.lastRequest?.message, "What should I do today?")
+        XCTAssertEqual(viewModel.voiceState.lastSubmittedTranscript, "What should I do today?")
     }
 
     func testEmptyVoiceTranscriptFallsBackToManualEntry() async {
         let viewModel = makeViewModel()
-        viewModel.startVoiceListening()
+        viewModel.startVoiceListening(partialTranscript: " ", durationLabel: "0:00")
 
         let accepted = await viewModel.submitVoiceTranscript(speakResponse: false)
 
