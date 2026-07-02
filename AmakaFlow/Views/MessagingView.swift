@@ -428,8 +428,10 @@ private struct MessagingChannelCard: View {
     }
 }
 
+#if DEBUG
 #Preview("Messaging") {
     NavigationStack {
         MessagingView(viewModel: MessagingViewModel(apiService: FixtureAPIService()))
     }
 }
+#endif

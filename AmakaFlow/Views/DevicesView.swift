@@ -457,8 +457,10 @@ private struct PairDeviceSheet: View {
     }
 }
 
+#if DEBUG
 #Preview("Devices") {
     NavigationStack {
         DevicesView(viewModel: DevicesViewModel(apiService: FixtureAPIService()))
     }
 }
+#endif

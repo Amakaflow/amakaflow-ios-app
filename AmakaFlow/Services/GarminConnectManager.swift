@@ -150,8 +150,9 @@ class GarminConnectManager: NSObject, ObservableObject {
         // Load saved device in background to avoid blocking main thread (AMA-1075)
         Task.detached(priority: .utility) { [weak self] in
             let device = await self?.loadSavedDeviceBackground()
-            await MainActor.run {
-                self?.savedDeviceInfo = device
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.savedDeviceInfo = device
                 if let device = device {
                     print("⌚ [DEBUG] Loaded saved device: \(device.friendlyName) (\(device.uuid))")
                 }
@@ -229,9 +230,10 @@ class GarminConnectManager: NSObject, ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
                 print("⌚ [DEBUG] App entering foreground")
-                self?.lastDebugAction = "App foregrounded"
+                self.lastDebugAction = "App foregrounded"
             }
         }
 
@@ -1196,16 +1198,17 @@ extension GarminConnectManager {
             to: app,
             progress: nil,
             completion: { [weak self] result in
-                Task { @MainActor in
-                    self?.log("Ping result: \(result.rawValue)")
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    self.log("Ping result: \(result.rawValue)")
                     switch result {
                     case .success:
-                        self?.lastDebugAction = "Ping sent! Waiting for pong..."
-                        self?.log("✅ Ping delivered to watch!")
+                        self.lastDebugAction = "Ping sent! Waiting for pong..."
+                        self.log("✅ Ping delivered to watch!")
                     default:
-                        self?.lastDebugAction = "Ping failed: \(self?.sendResultName(result) ?? "?")"
-                        self?.log("❌ Ping failed: \(self?.sendResultName(result) ?? "code \(result.rawValue)")")
-                        self?.log("TIP: Make sure watch app is open, try 'Wake' button first")
+                        self.lastDebugAction = "Ping failed: \(self.sendResultName(result))"
+                        self.log("❌ Ping failed: \(self.sendResultName(result))")
+                        self.log("TIP: Make sure watch app is open, try 'Wake' button first")
                     }
                 }
             }
@@ -1360,8 +1363,8 @@ extension GarminConnectManager {
         lastDebugAction = "Checking app status..."
 
         connectIQ?.getAppStatus(appToCheck) { [weak self] appStatus in
-            Task { @MainActor in
-                guard let self = self else { return }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
 
                 if let status = appStatus {
                     let installed = status.isInstalled

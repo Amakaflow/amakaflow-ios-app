@@ -79,8 +79,9 @@ class DebugLogService: ObservableObject {
         // Load entries on background queue to avoid blocking main thread (AMA-1075)
         Task.detached(priority: .utility) { [weak self] in
             let loadedEntries = await self?.loadEntriesBackground() ?? []
-            await MainActor.run {
-                self?.entries = loadedEntries
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.entries = loadedEntries
             }
         }
     }

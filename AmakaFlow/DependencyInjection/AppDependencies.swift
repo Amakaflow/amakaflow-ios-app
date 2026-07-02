@@ -48,7 +48,7 @@ struct AppDependencies {
         acceptedSuggestionsRepository: AcceptedSuggestionsRepository = AcceptedSuggestionsRepository(),
         workoutEventsRepository: WorkoutEventsRepository = WorkoutEventsRepository(),
         syncQueueRepository: SyncQueueRepository = SyncQueueRepository(),
-        syncEngine: SyncEngine = SyncEngine.shared,
+        syncEngine: SyncEngine = SyncEngine(),
         isMockCoachPath: Bool = false
     ) {
         self.apiService = apiService

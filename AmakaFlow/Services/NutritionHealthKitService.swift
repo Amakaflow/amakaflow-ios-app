@@ -165,8 +165,9 @@ final class NutritionHealthKitService: ObservableObject {
             ) { [weak self] _, samples, _ in
                 if let sample = samples?.first {
                     let name = sample.sourceRevision.source.name
-                    Task { @MainActor in
-                        self?.sourceAppName = name
+                    Task { @MainActor [weak self] in
+                        guard let self else { return }
+                        self.sourceAppName = name
                     }
                 }
                 continuation.resume()
