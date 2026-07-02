@@ -79,6 +79,8 @@ Maestro flows live under `e2e/maestro/`; see `e2e/maestro/README.md` for the cur
 
 Documentation is organized by subject in `docs/`, including architecture, CI, setup, HealthKit, watchOS, target membership, troubleshooting, and implementation notes. Some historical setup docs are retained for context; prefer this README, CI workflows, and the checked-in Xcode project as the current source of truth.
 
+For staging TestFlight releases (founder/device validation), see `docs/ci/STAGING_TESTFLIGHT_RELEASE.md`.
+
 ## Requirements
 
 - iOS 17.0+

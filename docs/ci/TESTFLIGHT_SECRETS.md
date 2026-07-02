@@ -93,6 +93,7 @@ Usually precedes the certificate-limit error. Fixing certificates/profiles in th
 
 ## Related
 
+- **Release runbook:** `docs/ci/STAGING_TESTFLIGHT_RELEASE.md` (how to cut the next staging TestFlight build)
 - Workflow: `.github/workflows/ios-testflight.yml`
 - Production readiness gap #3: `docs/architecture/PRODUCTION_READINESS.md`
 - Local Release archive debugging: `scripts/sim-build.sh` (Debug only; TestFlight uses Release in CI)
