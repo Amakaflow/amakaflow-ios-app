@@ -70,8 +70,6 @@ capture_failure_evidence() {
 run_smoke_flow() {
   local flow="$1"
   local label="$2"
-  shift 2
-  local -a extra_env=("$@")
 
   local flow_debug="$MAESTRO_OUTPUT_DIR/${label}-debug"
   local flow_test_output="$MAESTRO_OUTPUT_DIR/${label}-test-output"
@@ -93,7 +91,6 @@ run_smoke_flow() {
   if [[ -n "${TODAY:-}" ]]; then
     maestro_env+=(-e "TODAY=$TODAY")
   fi
-  maestro_env+=("${extra_env[@]}")
 
   set +e
   maestro test \
