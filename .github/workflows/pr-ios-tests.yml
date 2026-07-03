@@ -519,7 +519,7 @@ jobs:
           # lacks. Demoted to warn-only so the workflow scaffold runs on
           # every PR without permanently blocking iOS merges. Tightening
           # tracked in AMA-1821-bis (file follow-up).
-          for flow in save-and-end history-check coach-message; do
+          for flow in save-and-end history-check; do
             echo "::group::maestro test e2e/maestro/${flow}.yaml (warn-only)"
             maestro test "e2e/maestro/${flow}.yaml" \
               "${MAESTRO_ENV[@]}" \
@@ -529,6 +529,32 @@ jobs:
             echo "::endgroup::"
             if [ "$STATUS" != "0" ]; then
               echo "::warning::Maestro scaffold flow ${flow} failed (warn-only)."
+            fi
+          done
+
+          # AMA-2260 — Coach journey flows (deeper; PR-label `maestro` only).
+          # Feature-presence is gating on ios-testflight post-upload; these
+          # journeys stay warn-only here because LLM latency can exceed 60s.
+          for flow in \
+            flows/coach/journeys/coach-chat \
+            flows/coach/journeys/fatigue-advice \
+            flows/coach/journeys/generate-week \
+            flows/coach/journeys/pending-action-fixture \
+            flows/coach/journeys/ckw-surface; do
+            echo "::group::maestro test e2e/maestro/${flow}.yaml (warn-only)"
+            EXTRA_ENV=()
+            if [[ "$flow" == "flows/coach/journeys/pending-action-fixture" ]]; then
+              EXTRA_ENV=(-e "USE_FIXTURES=true")
+            fi
+            maestro test "e2e/maestro/${flow}.yaml" \
+              "${MAESTRO_ENV[@]}" \
+              "${EXTRA_ENV[@]}" \
+              --format junit \
+              --output "maestro-output/${flow//\//-}.xml" 2>&1 | tee "maestro-output/${flow//\//-}.log" || true
+            STATUS=${PIPESTATUS[0]}
+            echo "::endgroup::"
+            if [ "$STATUS" != "0" ]; then
+              echo "::warning::Coach journey flow ${flow} failed (warn-only)."
             fi
           done
 

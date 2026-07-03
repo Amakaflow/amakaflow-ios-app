@@ -1,0 +1,22 @@
+# Dismiss post-auth onboarding cards (Nutrition, biometric consent, etc.)
+# before the tab shell is reachable. Shared by clerk-signin and coach flows.
+
+appId: com.myamaka.AmakaFlowCompanion
+---
+- repeat:
+    times: 6
+    commands:
+      - runFlow:
+          when:
+            visible: "Not now"
+          commands:
+            - tapOn: "Not now"
+            - waitForAnimationToEnd:
+                timeout: 3000
+      - runFlow:
+          when:
+            visible: "Skip"
+          commands:
+            - tapOn: "Skip"
+            - waitForAnimationToEnd:
+                timeout: 3000

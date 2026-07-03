@@ -486,16 +486,19 @@ private struct CoachShellHeader: View {
                 } label: {
                     Label("Readiness history", systemImage: "chart.line.uptrend.xyaxis")
                 }
+                .accessibilityIdentifier("coach-menu-readiness-history")
                 Button {
                     onFatigue()
                 } label: {
                     Label("Fatigue advisor", systemImage: "heart.text.square")
                 }
+                .accessibilityIdentifier("coach-menu-fatigue-advisor")
                 Button {
                     onActions()
                 } label: {
                     Label("Actions", systemImage: "bolt.badge.clock")
                 }
+                .accessibilityIdentifier("coach-menu-actions")
             } label: {
                 Image(systemName: "slider.horizontal.3")
                     .font(.system(size: 18, weight: .regular))
@@ -1104,6 +1107,7 @@ struct FatigueAdvisorView: View {
         .background(Theme.Colors.background.ignoresSafeArea())
         .navigationTitle("Fatigue Advisor")
         .navigationBarTitleDisplayMode(.inline)
+        .accessibilityIdentifier("fatigue-advisor-screen")
         .task {
             if viewModel.fatigueAdvice == nil {
                 await viewModel.loadFatigueAdvice()

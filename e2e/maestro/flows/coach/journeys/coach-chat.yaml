@@ -1,0 +1,27 @@
+# AMA-2260 — Coach chat send/receive journey (PR maestro label, warn-only)
+# Replaces legacy e2e/maestro/coach-message.yaml scaffold.
+
+appId: com.myamaka.AmakaFlowCompanion
+---
+- runFlow: ../../../_lib/clerk-signin.yaml
+- tapOn:
+    id: "coach_tab"
+- assertVisible:
+    id: "coach_screen"
+- assertVisible:
+    id: "af_coach_input"
+- tapOn:
+    id: "af_coach_input"
+- inputText: "How did my last workout go?"
+- tapOn:
+    id: "af_coach_send"
+- extendedWaitUntil:
+    visible:
+      text: "How did my last workout go?"
+    timeout: 5000
+- extendedWaitUntil:
+    notVisible:
+      text: "Coach is thinking..."
+    timeout: 45000
+- assertVisible:
+    id: "coach-message-list"

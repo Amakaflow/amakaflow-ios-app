@@ -1,0 +1,20 @@
+# AMA-2260 — CKW surface loads with staging data (PR maestro label, warn-only)
+
+appId: com.myamaka.AmakaFlowCompanion
+---
+- runFlow: ../../../_lib/clerk-signin.yaml
+- tapOn:
+    id: "profile_tab"
+- scrollUntilVisible:
+    element:
+      id: "settings_row_coach_knowledge"
+    direction: DOWN
+    speed: 40
+- tapOn:
+    id: "settings_row_coach_knowledge"
+- extendedWaitUntil:
+    visible:
+      id: "ckw-overview"
+    timeout: 20000
+- assertVisible:
+    id: "ckw-overview"

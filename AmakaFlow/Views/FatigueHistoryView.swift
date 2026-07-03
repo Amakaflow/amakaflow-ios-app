@@ -63,6 +63,7 @@ struct FatigueHistoryView: View {
         .background(Theme.Colors.background.ignoresSafeArea())
         .navigationTitle("Readiness History")
         .navigationBarTitleDisplayMode(.inline)
+        .accessibilityIdentifier("readiness-history-screen")
         .task {
             await viewModel.loadHistory()
         }
