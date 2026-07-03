@@ -18,6 +18,22 @@ log_env_probe() {
   fi
 }
 
+# Space-separated `flow.yaml:label` pairs. Bash arrays are not inherited by child
+# scripts, so callers must pass a string env var (not `export arr=(...)`).
+resolve_smoke_flow_specs() {
+  local -a specs=()
+  if [[ -n "${SMOKE_FLOW_SPECS:-}" ]]; then
+    # shellcheck disable=SC2206
+    specs=(${SMOKE_FLOW_SPECS})
+  else
+    specs=(
+      "e2e/maestro/flows/golden-path.yaml:golden-path"
+      "e2e/maestro/flows/coach/feature-presence.yaml:feature-presence"
+    )
+  fi
+  SMOKE_FLOW_SPECS=("${specs[@]}")
+}
+
 capture_failure_evidence() {
   local label="$1"
   local evidence_dir="$MAESTRO_OUTPUT_DIR/${label}-failure-evidence"
@@ -107,6 +123,7 @@ run_smoke_flow() {
 }
 
 log_env_probe
+resolve_smoke_flow_specs
 
 OVERALL=0
 FAILED_LABELS=()

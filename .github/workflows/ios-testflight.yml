@@ -563,10 +563,7 @@ jobs:
             echo "failed_flows=none" >> "$GITHUB_OUTPUT"
             exit 1
           fi
-          export SMOKE_FLOW_SPECS=(
-            "e2e/maestro/flows/golden-path.yaml:golden-path"
-            "e2e/maestro/flows/coach/feature-presence.yaml:feature-presence"
-          )
+          export SMOKE_FLOW_SPECS="e2e/maestro/flows/golden-path.yaml:golden-path e2e/maestro/flows/coach/feature-presence.yaml:feature-presence"
           STATUS=1
           FAILED="golden-path,feature-presence"
           for attempt in 1 2; do
@@ -601,7 +598,6 @@ jobs:
           name: golden-path-smoke-build-${{ needs.testflight.outputs.build_number || format('smoke-only-{0}', github.run_number) }}
           path: |
             maestro-output/
-            ~/.maestro/tests/
             AmakaFlowCompanion/smoke-build.log
           retention-days: 14
           if-no-files-found: warn
