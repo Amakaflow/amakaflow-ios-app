@@ -23,7 +23,8 @@ env:
     timeout: 20000
 - assertVisible:
     id: "pending-action-card-pa_ios_ama_2230_fixture"
-- tapOn: "Reject"
+- tapOn:
+    id: "pending-action-reject-pa_ios_ama_2230_fixture"
 - extendedWaitUntil:
     notVisible:
       id: "pending-action-card-pa_ios_ama_2230_fixture"

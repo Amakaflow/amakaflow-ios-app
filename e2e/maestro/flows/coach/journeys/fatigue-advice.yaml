@@ -9,6 +9,8 @@ appId: com.myamaka.AmakaFlowCompanion
     id: "coach_screen"
 - tapOn:
     id: "coach-options-menu"
+- waitForAnimationToEnd:
+    timeout: 2000
 - tapOn:
     id: "coach-menu-fatigue-advisor"
 - extendedWaitUntil:

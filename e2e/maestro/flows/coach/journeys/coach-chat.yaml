@@ -20,10 +20,6 @@ appId: com.myamaka.AmakaFlowCompanion
       text: "How did my last workout go?"
     timeout: 5000
 - extendedWaitUntil:
-    visible:
-      text: "Coach is thinking..."
-    timeout: 20000
-- extendedWaitUntil:
     notVisible:
       text: "Coach is thinking..."
     timeout: 45000

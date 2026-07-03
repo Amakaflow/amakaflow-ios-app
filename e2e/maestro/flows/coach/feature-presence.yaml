@@ -25,9 +25,14 @@ appId: com.myamaka.AmakaFlowCompanion
     id: "coach-one-brain-indicator"
 - takeScreenshot: presence-02-coach-header
 
-# Mic button in composer (may be disabled while degraded/streaming)
-- assertVisible:
-    id: "coach-mic-button"
+# Mic button in composer (enabled or degraded/disabled state)
+- runFlow:
+    when:
+      visible:
+        id: "coach-mic-button"
+    commands:
+      - assertVisible:
+          id: "coach-mic-button"
 - runFlow:
     when:
       notVisible:

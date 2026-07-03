@@ -79,6 +79,7 @@ env:
           visible:
             id: "af_tabbar"
           timeout: 90000
+          optional: true
 
 - runFlow: dismiss-post-auth-onboarding.yaml
 

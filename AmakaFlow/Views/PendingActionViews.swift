@@ -78,11 +78,32 @@ struct PendingActionCard: View {
             .padding(Theme.Spacing.md)
 
             HStack(spacing: 0) {
-                PendingActionButton(title: "Reject", foreground: Theme.Colors.textSecondary, background: Color.clear, isDisabled: isBusy || !canDecide, action: onReject)
+                PendingActionButton(
+                    title: "Reject",
+                    foreground: Theme.Colors.textSecondary,
+                    background: Color.clear,
+                    isDisabled: isBusy || !canDecide,
+                    accessibilityIdentifier: "pending-action-reject-\(action.actionId)",
+                    action: onReject
+                )
                 Divider().background(Theme.Colors.borderLight)
-                PendingActionButton(title: "Details", foreground: Theme.Colors.textPrimary, background: Color.clear, isDisabled: isBusy, action: onDetails)
+                PendingActionButton(
+                    title: "Details",
+                    foreground: Theme.Colors.textPrimary,
+                    background: Color.clear,
+                    isDisabled: isBusy,
+                    accessibilityIdentifier: "pending-action-details-button-\(action.actionId)",
+                    action: onDetails
+                )
                 Divider().background(Theme.Colors.borderLight)
-                PendingActionButton(title: "Approve", foreground: Theme.Colors.primaryForeground, background: Theme.Colors.primary, isDisabled: isBusy || !canDecide, action: onApprove)
+                PendingActionButton(
+                    title: "Approve",
+                    foreground: Theme.Colors.primaryForeground,
+                    background: Theme.Colors.primary,
+                    isDisabled: isBusy || !canDecide,
+                    accessibilityIdentifier: "pending-action-approve-\(action.actionId)",
+                    action: onApprove
+                )
             }
             .frame(height: 44)
             .overlay(Rectangle().fill(Theme.Colors.borderLight).frame(height: 1), alignment: .top)
@@ -122,6 +143,7 @@ private struct PendingActionButton: View {
     let foreground: Color
     let background: Color
     let isDisabled: Bool
+    var accessibilityIdentifier: String?
     let action: () -> Void
 
     var body: some View {
@@ -133,6 +155,7 @@ private struct PendingActionButton: View {
                 .background(background.opacity(isDisabled ? 0.65 : 1))
         }
         .disabled(isDisabled)
+        .accessibilityIdentifier(accessibilityIdentifier ?? title.lowercased())
     }
 }
 
