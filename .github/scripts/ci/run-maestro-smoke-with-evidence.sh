@@ -43,9 +43,9 @@ capture_failure_evidence() {
   xcrun simctl io "$SIM_UDID" screenshot "$evidence_dir/simctl-screenshot.png" \
     2>&1 | tee "$evidence_dir/simctl-screenshot.log" || true
 
-  maestro hierarchy --udid "$SIM_UDID" \
+  maestro hierarchy \
     > "$evidence_dir/view-hierarchy.txt" 2>&1 || true
-  maestro hierarchy --udid "$SIM_UDID" --compact \
+  maestro hierarchy --compact \
     > "$evidence_dir/view-hierarchy.csv" 2>&1 || true
 
   # Last ~90s of simulator logs (auth / Clerk prints are NSLog/print).

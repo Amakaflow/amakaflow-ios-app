@@ -21,6 +21,12 @@ env:
     appId: com.myamaka.AmakaFlowCompanion
     permissions:
       notifications: deny
+    environment:
+      UITEST_CLERK_REAL_SESSION_EMAIL: "claude+clerk_test@amakaflow.dev"
+      UITEST_CLERK_PASSWORD: ${UITEST_CLERK_PASSWORD}
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_USE_FIXTURES: ${USE_FIXTURES}
     arguments:
       UITEST_CLERK_REAL_SESSION_EMAIL: "claude+clerk_test@amakaflow.dev"
       UITEST_CLERK_PASSWORD: ${UITEST_CLERK_PASSWORD}
@@ -102,33 +108,22 @@ env:
           text: "Continue"
       - waitForAnimationToEnd:
           timeout: 10000
+
+      # Staging Clerk: password-first on the main factor screen OR email code
+      # (424242 for +clerk_test). NEVER tap "Use another method" — that sheet
+      # only offers Apple/Google on ruling-mite-84 (AMA-2271 evidence).
       - runFlow:
           when:
-            visible: "Use another method"
+            visible: "Enter password"
           commands:
             - tapOn:
-                text: "Use another method"
+                text: "Enter your password"
+            - eraseText
+            - inputText: ${UITEST_CLERK_PASSWORD}
+            - tapOn:
+                text: "Continue"
             - waitForAnimationToEnd:
-                timeout: 5000
-            - scrollUntilVisible:
-                element:
-                  text: "Password"
-                direction: DOWN
-                speed: 40
-                optional: true
-            - runFlow:
-                when:
-                  visible: "Password"
-                commands:
-                  - tapOn:
-                      text: "Password"
-                  - waitForAnimationToEnd:
-                      timeout: 5000
-      - extendedWaitUntil:
-          visible:
-            text: "Enter your password"
-          timeout: 20000
-          optional: true
+                timeout: 15000
       - runFlow:
           when:
             visible: "Enter your password"
@@ -145,10 +140,14 @@ env:
           when:
             visible: "Check your email"
           commands:
-            - tapOn:
-                text: "Resend"
-            - waitForAnimationToEnd:
-                timeout: 8000
+            - runFlow:
+                when:
+                  visible: "Resend"
+                commands:
+                  - tapOn:
+                      text: "Resend"
+                  - waitForAnimationToEnd:
+                      timeout: 8000
             - inputText: "424242"
             - waitForAnimationToEnd:
                 timeout: 12000
@@ -159,6 +158,18 @@ env:
             - inputText: "424242"
             - waitForAnimationToEnd:
                 timeout: 12000
+
+# Recover from a prior dead-end on the Apple/Google-only alt-methods sheet.
+- runFlow:
+    when:
+      notVisible:
+        id: "af_tabbar"
+      visible: "Facing issues?"
+    commands:
+      - tapOn:
+          point: "8%,13%"
+      - waitForAnimationToEnd:
+          timeout: 3000
 
 - runFlow: dismiss-post-auth-onboarding.yaml
 
