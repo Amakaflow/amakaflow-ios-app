@@ -51,6 +51,11 @@ on:
       - 'e2e/maestro/**'
       - '.github/workflows/ios-testflight.yml'
   workflow_dispatch:  # allow manual re-runs from the Actions tab
+    inputs:
+      smoke_only:
+        description: 'Skip archive/upload — run golden-path-smoke only (AMA-2271 diagnosis)'
+        type: boolean
+        default: false
 
 # Cancel any in-flight upload for the same ref so a rapid second merge
 # doesn't double-upload (TestFlight rejects duplicate build numbers).
@@ -132,7 +137,9 @@ jobs:
   testflight:
     name: Archive + Upload to TestFlight
     needs: [secrets-preflight, completion-contract]
-    if: "github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]')"
+    if: >-
+      (github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]'))
+      && (github.event_name != 'workflow_dispatch' || inputs.smoke_only != true)
     runs-on: macos-15
     timeout-minutes: 45
     outputs:
@@ -401,8 +408,13 @@ jobs:
   #   - Linear P1      — only if secrets.LINEAR_API_KEY is set
   golden-path-smoke:
     name: Golden-path + feature-presence smoke (post-upload)
-    needs: testflight
-    if: "github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]')"
+    needs: [secrets-preflight, completion-contract, testflight]
+    if: >-
+      always()
+      && (needs.secrets-preflight.result == 'success' || needs.secrets-preflight.result == 'skipped')
+      && (needs.completion-contract.result == 'success' || needs.completion-contract.result == 'skipped')
+      && (needs.testflight.result == 'success' || needs.testflight.result == 'skipped')
+      && (github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]'))
     runs-on: macos-15
     timeout-minutes: 60
     permissions:
@@ -541,53 +553,36 @@ jobs:
           UITEST_CLERK_PASSWORD: ${{ secrets.UITEST_CLERK_PASSWORD }}
           MAESTRO_DRIVER_STARTUP_TIMEOUT: "120000"
           MAESTRO_CLI_NO_ANALYTICS: "1"
+          SIM_UDID: ${{ steps.simulator.outputs.udid }}
         run: |
           set +e
-          mkdir -p maestro-output
+          chmod +x .github/scripts/ci/run-maestro-smoke-with-evidence.sh
           if [ -z "$UITEST_CLERK_PASSWORD" ]; then
             echo "::error::UITEST_CLERK_PASSWORD secret not set — golden-path smoke cannot authenticate."
             echo "outcome=skipped" >> "$GITHUB_OUTPUT"
+            echo "failed_flows=none" >> "$GITHUB_OUTPUT"
             exit 1
           fi
-          TODAY="$(date +%-d)"
-          SIM_UDID="${{ steps.simulator.outputs.udid }}"
-          run_smoke_flow() {
-            local flow="$1"
-            local label="$2"
-            maestro test \
-              --device "$SIM_UDID" \
-              -e UITEST_CLERK_PASSWORD="$UITEST_CLERK_PASSWORD" \
-              -e TODAY="$TODAY" \
-              --format junit --output "maestro-output/${label}-junit.xml" \
-              "$flow" 2>&1 | tee "maestro-output/${label}.log"
-            return "${PIPESTATUS[0]}"
-          }
-          run_all_smokes() {
-            local overall=0
-            FAILED=""
-            for spec in \
-              "e2e/maestro/flows/golden-path.yaml:golden-path" \
-              "e2e/maestro/flows/coach/feature-presence.yaml:feature-presence"; do
-              flow="${spec%%:*}"
-              label="${spec##*:}"
-              echo "::group::maestro test ${flow}"
-              run_smoke_flow "$flow" "$label"
-              st=$?
-              echo "::endgroup::"
-              if [ "$st" != "0" ]; then
-                overall=1
-                FAILED="${FAILED:+$FAILED,}$label"
-              fi
-            done
-            echo "failed_flows=${FAILED:-none}" >> "$GITHUB_OUTPUT"
-            return "$overall"
-          }
+          export SMOKE_FLOW_SPECS=(
+            "e2e/maestro/flows/golden-path.yaml:golden-path"
+            "e2e/maestro/flows/coach/feature-presence.yaml:feature-presence"
+          )
           STATUS=1
+          FAILED="golden-path,feature-presence"
           for attempt in 1 2; do
             echo "Post-upload smoke attempt ${attempt}/2 (golden-path + feature-presence)"
-            run_all_smokes
-            STATUS=$?
-            if [ "$STATUS" = 0 ]; then break; fi
+            TODAY="$(date +%-d)"
+            export TODAY
+            if .github/scripts/ci/run-maestro-smoke-with-evidence.sh; then
+              STATUS=0
+              FAILED="none"
+              break
+            fi
+            if [ -f maestro-output/summary.txt ]; then
+              # shellcheck disable=SC1091
+              source maestro-output/summary.txt
+              FAILED="${failed_flows:-golden-path,feature-presence}"
+            fi
             if [ "$attempt" -lt 2 ]; then
               echo "Smoke failed on attempt 1 — warming simulator and retrying once."
               open -a Simulator
@@ -595,6 +590,7 @@ jobs:
               sleep 10
             fi
           done
+          echo "failed_flows=${FAILED}" >> "$GITHUB_OUTPUT"
           echo "outcome=$([ "$STATUS" = 0 ] && echo passed || echo failed)" >> "$GITHUB_OUTPUT"
           exit "$STATUS"
 
@@ -602,10 +598,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: golden-path-smoke-build-${{ needs.testflight.outputs.build_number || github.run_number }}
+          name: golden-path-smoke-build-${{ needs.testflight.outputs.build_number || format('smoke-only-{0}', github.run_number) }}
           path: |
             maestro-output/
-            ~/.maestro/tests/**/screenshots/**
+            ~/.maestro/tests/
             AmakaFlowCompanion/smoke-build.log
           retention-days: 14
           if-no-files-found: warn
