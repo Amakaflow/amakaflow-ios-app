@@ -39,6 +39,10 @@ final class AuthViewModel: ObservableObject {
     // the bypass code (DoD inspected via PlistBuddy on the IPA).
     #if DEBUG
     if AuthViewModel.uiTestRealSessionRequested() {
+      // AMA-2269: Resolve the launch shell immediately. While bypass runs,
+      // Maestro must see mental-model / sign-in UI — not the black spinner.
+      refreshFromClerk()
+      subscribeToAuthEvents()
       Task { [weak self] in
         await self?.applyUITestRealSessionBypass()
       }
@@ -162,26 +166,34 @@ final class AuthViewModel: ObservableObject {
       return
     }
 
-    guard let host = AuthViewModel.deriveClerkFrontendHost(from: Clerk.shared.publishableKey) else {
-      print("[AuthViewModel] AMA-1849 bypass FAILED: could not derive frontend API host from publishable key")
-      return
-    }
-    let base = "https://\(host)"
+    let hasPassword = password?.isEmpty == false
+    print("[AuthViewModel] AMA-1849 bypass starting for \(email) (password=\(hasPassword))")
 
     do {
       let sessionId: String
-      if let password, !password.isEmpty {
+      if hasPassword, let password {
         // Staging CI test user (claude+clerk_test@amakaflow.dev) is password-first
-        // per AMA-2250 — email_code UI/API path fails there (AMA-2269).
-        sessionId = try await createClerkSession(
-          base: base,
-          email: email,
-          signInBody: "identifier=\(urlEncode(email))&strategy=password",
-          attemptBody: "strategy=password&password=\(urlEncode(password))"
+        // per AMA-2250. Use Clerk SDK signInWithPassword — single create call with
+        // identifier+password (not strategy=password on sign_ins create).
+        let signIn = try await Clerk.shared.auth.signInWithPassword(
+          identifier: email,
+          password: password
         )
+        guard let created = signIn.createdSessionId else {
+          throw NSError(
+            domain: "AMA-1849",
+            code: -3,
+            userInfo: [NSLocalizedDescriptionKey: "no created_session_id after password sign-in"]
+          )
+        }
+        sessionId = created
       } else {
+        guard let host = AuthViewModel.deriveClerkFrontendHost(from: Clerk.shared.publishableKey) else {
+          print("[AuthViewModel] AMA-1849 bypass FAILED: could not derive frontend API host from publishable key")
+          return
+        }
         sessionId = try await createClerkSession(
-          base: base,
+          base: "https://\(host)",
           email: email,
           signInBody: "identifier=\(urlEncode(email))&strategy=email_code",
           attemptBody: "strategy=email_code&code=\(code)"
@@ -193,7 +205,6 @@ final class AuthViewModel: ObservableObject {
       print("[AuthViewModel] AMA-1849 bypass OK: session \(sessionId) active for \(email)")
 
       refreshFromClerk()
-      subscribeToAuthEvents()
     } catch {
       print("[AuthViewModel] AMA-1849 bypass FAILED: \(error)")
     }

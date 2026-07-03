@@ -15,6 +15,7 @@
 appId: com.myamaka.AmakaFlowCompanion
 env:
   USE_FIXTURES: ${USE_FIXTURES || "false"}
+  UITEST_CLERK_PASSWORD: ${UITEST_CLERK_PASSWORD}
 ---
 - launchApp:
     appId: com.myamaka.AmakaFlowCompanion
@@ -28,35 +29,9 @@ env:
 - waitForAnimationToEnd:
     timeout: 5000
 
-# Pre-auth onboarding carousel / mental model (fresh install).
-- repeat:
-    times: 10
-    commands:
-      - runFlow:
-          when:
-            visible: "Skip onboarding"
-          commands:
-            - tapOn: "Skip onboarding"
-            - waitForAnimationToEnd:
-                timeout: 2500
-      - runFlow:
-          when:
-            visible:
-              id: "mental_model_continue_without_watch"
-          commands:
-            - tapOn:
-                id: "mental_model_continue_without_watch"
-            - waitForAnimationToEnd:
-                timeout: 2500
-      - runFlow:
-          when:
-            visible:
-              id: "mental_model_skip"
-          commands:
-            - tapOn:
-                id: "mental_model_skip"
-            - waitForAnimationToEnd:
-                timeout: 2500
+# Auth shell resolves immediately while bypass runs (AMA-2269). Dismiss
+# pre-auth gates whenever they appear — repeat after the bypass wait too.
+- runFlow: dismiss-pre-auth-onboarding.yaml
 
 # Fast path: programmatic auth or persisted session.
 - runFlow:
@@ -78,9 +53,10 @@ env:
       - extendedWaitUntil:
           visible:
             id: "af_tabbar"
-          timeout: 90000
+          timeout: 60000
           optional: true
 
+- runFlow: dismiss-pre-auth-onboarding.yaml
 - runFlow: dismiss-post-auth-onboarding.yaml
 
 # UI fallback when programmatic auth did not complete.
