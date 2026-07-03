@@ -178,7 +178,12 @@ final class AuthViewModel: ObservableObject {
     }
 
     let hasPassword = password?.isEmpty == false
+    #if DEBUG
+    let pwdKeyPresent = UITestEnvironment.value(for: "UITEST_CLERK_PASSWORD") != nil
+    print("[AuthViewModel] AMA-1849 bypass starting for \(email) (password=\(hasPassword), pwdKeyPresent=\(pwdKeyPresent))")
+    #else
     print("[AuthViewModel] AMA-1849 bypass starting for \(email) (password=\(hasPassword))")
+    #endif
 
     do {
       let sessionId: String

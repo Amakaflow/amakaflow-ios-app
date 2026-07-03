@@ -214,8 +214,10 @@ struct AmakaFlowCompanionApp: App {
         let _ = mentalModelGateRefresh
         let userId = pairingService.userProfile?.id ?? UIDevice.current.identifierForVendor?.uuidString ?? "device"
         let seenKey = DefaultsKey.mentalModelSeen(userID: userId)
+        let mentalModelSeen = UserDefaults.standard.bool(forKey: seenKey)
+            || UITestEnvironment.shared.skipOnboarding
 
-        if UserDefaults.standard.bool(forKey: seenKey) {
+        if mentalModelSeen {
             SignUpView()
                 .onOpenURL { url in
                     // AMA-1259: Still handle deep links while unauthenticated —

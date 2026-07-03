@@ -23,6 +23,9 @@ class UITestEnvironment {
         if let stored = UserDefaults.standard.string(forKey: key), !stored.isEmpty {
             return stored
         }
+        if let stored = UserDefaults.standard.string(forKey: "-\(key)"), !stored.isEmpty {
+            return stored
+        }
         let args = ProcessInfo.processInfo.arguments
         for index in args.indices {
             let token = args[index]

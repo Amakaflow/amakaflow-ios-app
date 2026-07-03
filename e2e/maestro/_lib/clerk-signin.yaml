@@ -25,6 +25,7 @@ env:
       UITEST_CLERK_REAL_SESSION_EMAIL: "claude+clerk_test@amakaflow.dev"
       UITEST_CLERK_PASSWORD: ${UITEST_CLERK_PASSWORD}
       UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_SKIP_ONBOARDING: "true"
       UITEST_USE_FIXTURES: ${USE_FIXTURES}
 - waitForAnimationToEnd:
     timeout: 5000
@@ -101,7 +102,6 @@ env:
           text: "Continue"
       - waitForAnimationToEnd:
           timeout: 10000
-      # Staging CI user is password-first (AMA-2250); Clerk may still offer email code.
       - runFlow:
           when:
             visible: "Use another method"
@@ -110,6 +110,12 @@ env:
                 text: "Use another method"
             - waitForAnimationToEnd:
                 timeout: 5000
+            - scrollUntilVisible:
+                element:
+                  text: "Password"
+                direction: DOWN
+                speed: 40
+                optional: true
             - runFlow:
                 when:
                   visible: "Password"
@@ -118,9 +124,14 @@ env:
                       text: "Password"
                   - waitForAnimationToEnd:
                       timeout: 5000
+      - extendedWaitUntil:
+          visible:
+            text: "Enter your password"
+          timeout: 20000
+          optional: true
       - runFlow:
           when:
-            visible: "Enter password"
+            visible: "Enter your password"
           commands:
             - tapOn:
                 text: "Enter your password"
@@ -130,14 +141,6 @@ env:
                 text: "Continue"
             - waitForAnimationToEnd:
                 timeout: 15000
-      - runFlow:
-          when:
-            visible: "Close"
-          commands:
-            - tapOn:
-                text: "Close"
-            - waitForAnimationToEnd:
-                timeout: 3000
       - runFlow:
           when:
             visible: "Check your email"
