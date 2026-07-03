@@ -59,6 +59,32 @@ env:
 - runFlow: dismiss-pre-auth-onboarding.yaml
 - runFlow: dismiss-post-auth-onboarding.yaml
 
+# AMA-2007 SignUpView: Clerk email UI is behind "Continue with email".
+# Fresh CI sims land here when AMA-1849 bypass fails — the old fallback
+# waited for "Enter your email" which never appears without this tap.
+- runFlow:
+    when:
+      notVisible:
+        id: "af_tabbar"
+      visible:
+        id: "signup_email_button"
+    commands:
+      - tapOn:
+          id: "signup_email_button"
+      - waitForAnimationToEnd:
+          timeout: 8000
+- runFlow:
+    when:
+      notVisible:
+        id: "af_tabbar"
+      visible:
+        text: "Continue with email"
+    commands:
+      - tapOn:
+          text: "Continue with email"
+      - waitForAnimationToEnd:
+          timeout: 8000
+
 # UI fallback when programmatic auth did not complete.
 - runFlow:
     when:

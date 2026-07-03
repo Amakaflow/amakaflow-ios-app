@@ -131,6 +131,19 @@ final class AuthViewModel: ObservableObject {
     !(UITestEnvironment.value(for: "UITEST_CLERK_REAL_SESSION_EMAIL") ?? "").isEmpty
   }
 
+  /// Maestro `launchApp.arguments` can land in UserDefaults slightly after `start()`.
+  /// Poll briefly so CI password bypass does not race an empty read.
+  private func uiTestClerkPassword(maxWaitSeconds: TimeInterval = 3) async -> String? {
+    let deadline = Date().addingTimeInterval(maxWaitSeconds)
+    while Date() < deadline {
+      if let password = UITestEnvironment.value(for: "UITEST_CLERK_PASSWORD"), !password.isEmpty {
+        return password
+      }
+      try? await Task.sleep(nanoseconds: 200_000_000)
+    }
+    return UITestEnvironment.value(for: "UITEST_CLERK_PASSWORD")
+  }
+
   /// AMA-1849: bypass that creates a REAL Clerk session via the
   /// Frontend API, then hands it to the SDK via `setActive`. Unlike
   /// the mock bypass, `Clerk.shared.session` is populated and
@@ -158,7 +171,7 @@ final class AuthViewModel: ObservableObject {
     }
 
     let email = UITestEnvironment.value(for: "UITEST_CLERK_REAL_SESSION_EMAIL") ?? ""
-    let password = UITestEnvironment.value(for: "UITEST_CLERK_PASSWORD")
+    let password = await uiTestClerkPassword()
     let code = UITestEnvironment.value(for: "UITEST_CLERK_REAL_SESSION_CODE") ?? "424242"
 
     guard !email.isEmpty else {
