@@ -134,24 +134,44 @@ env:
           when:
             visible: "Check your email"
           commands:
-            - runFlow:
-                when:
-                  visible: "Resend"
-                commands:
-                  - tapOn:
-                      text: "Resend"
-                  - waitForAnimationToEnd:
-                      timeout: 8000
+            - tapOn:
+                point: "18%,42%"
             - inputText: "424242"
             - waitForAnimationToEnd:
-                timeout: 12000
+                timeout: 15000
       - runFlow:
           when:
             visible: "Verification code"
           commands:
+            - tapOn:
+                point: "18%,42%"
             - inputText: "424242"
             - waitForAnimationToEnd:
-                timeout: 12000
+                timeout: 15000
+
+# Email-code path can appear without re-showing "Enter your email" (Clerk remembers identifier).
+- runFlow:
+    when:
+      notVisible:
+        id: "af_tabbar"
+      visible: "Check your email"
+    commands:
+      - tapOn:
+          point: "18%,42%"
+      - inputText: "424242"
+      - waitForAnimationToEnd:
+          timeout: 15000
+- runFlow:
+    when:
+      notVisible:
+        id: "af_tabbar"
+      visible: "Verification code"
+    commands:
+      - tapOn:
+          point: "18%,42%"
+      - inputText: "424242"
+      - waitForAnimationToEnd:
+          timeout: 15000
 
 # Recover from a prior dead-end on the Apple/Google-only alt-methods sheet.
 - runFlow:
