@@ -21,18 +21,17 @@ env:
     appId: com.myamaka.AmakaFlowCompanion
     permissions:
       notifications: deny
-    environment:
-      UITEST_CLERK_REAL_SESSION_EMAIL: "claude+clerk_test@amakaflow.dev"
-      UITEST_CLERK_PASSWORD: ${UITEST_CLERK_PASSWORD}
-      UITEST_SKIP_APPLE_WATCH: "true"
-      UITEST_SKIP_ONBOARDING: "true"
-      UITEST_USE_FIXTURES: ${USE_FIXTURES}
     arguments:
-      UITEST_CLERK_REAL_SESSION_EMAIL: "claude+clerk_test@amakaflow.dev"
-      UITEST_CLERK_PASSWORD: ${UITEST_CLERK_PASSWORD}
-      UITEST_SKIP_APPLE_WATCH: "true"
-      UITEST_SKIP_ONBOARDING: "true"
-      UITEST_USE_FIXTURES: ${USE_FIXTURES}
+      - "-UITEST_CLERK_REAL_SESSION_EMAIL"
+      - "claude+clerk_test@amakaflow.dev"
+      - "-UITEST_CLERK_PASSWORD"
+      - ${UITEST_CLERK_PASSWORD}
+      - "-UITEST_SKIP_APPLE_WATCH"
+      - "true"
+      - "-UITEST_SKIP_ONBOARDING"
+      - "true"
+      - "-UITEST_USE_FIXTURES"
+      - ${USE_FIXTURES}
 - waitForAnimationToEnd:
     timeout: 5000
 
