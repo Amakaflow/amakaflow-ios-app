@@ -101,6 +101,23 @@ env:
           text: "Continue"
       - waitForAnimationToEnd:
           timeout: 10000
+      # Staging CI user is password-first (AMA-2250); Clerk may still offer email code.
+      - runFlow:
+          when:
+            visible: "Use another method"
+          commands:
+            - tapOn:
+                text: "Use another method"
+            - waitForAnimationToEnd:
+                timeout: 5000
+            - runFlow:
+                when:
+                  visible: "Password"
+                commands:
+                  - tapOn:
+                      text: "Password"
+                  - waitForAnimationToEnd:
+                      timeout: 5000
       - runFlow:
           when:
             visible: "Enter password"
@@ -112,11 +129,23 @@ env:
             - tapOn:
                 text: "Continue"
             - waitForAnimationToEnd:
-                timeout: 12000
+                timeout: 15000
+      - runFlow:
+          when:
+            visible: "Close"
+          commands:
+            - tapOn:
+                text: "Close"
+            - waitForAnimationToEnd:
+                timeout: 3000
       - runFlow:
           when:
             visible: "Check your email"
           commands:
+            - tapOn:
+                text: "Resend"
+            - waitForAnimationToEnd:
+                timeout: 8000
             - inputText: "424242"
             - waitForAnimationToEnd:
                 timeout: 12000

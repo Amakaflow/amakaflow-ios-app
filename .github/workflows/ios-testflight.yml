@@ -416,7 +416,7 @@ jobs:
       && (needs.testflight.result == 'success' || needs.testflight.result == 'skipped')
       && (github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]'))
     runs-on: macos-15
-    timeout-minutes: 60
+    timeout-minutes: 90
     permissions:
       contents: read
       issues: write
