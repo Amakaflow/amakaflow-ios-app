@@ -14,13 +14,24 @@ class UITestEnvironment {
     private init() {}
 
     /// XCTest injects `UITEST_*` via `launchEnvironment`; Maestro 2.x passes
-    /// `launchApp.arguments`, which the SDK surfaces as UserDefaults keys.
+    /// `launchApp.arguments`, which iOS surfaces as UserDefaults keys and/or
+    /// raw `ProcessInfo.arguments` entries (`-Key`, `value`).
     static func value(for key: String) -> String? {
         if let env = ProcessInfo.processInfo.environment[key], !env.isEmpty {
             return env
         }
         if let stored = UserDefaults.standard.string(forKey: key), !stored.isEmpty {
             return stored
+        }
+        let args = ProcessInfo.processInfo.arguments
+        for index in args.indices {
+            let token = args[index]
+            if token == key || token == "-\(key)" {
+                let next = index + 1
+                if next < args.count, !args[next].hasPrefix("-") {
+                    return args[next]
+                }
+            }
         }
         return nil
     }

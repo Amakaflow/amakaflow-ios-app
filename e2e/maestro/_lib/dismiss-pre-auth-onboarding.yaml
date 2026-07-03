@@ -1,0 +1,33 @@
+# Pre-auth onboarding: value-prop carousel + mental model gate before Clerk sign-in.
+# Safe to call repeatedly while AMA-1849 bypass is in flight.
+
+appId: com.myamaka.AmakaFlowCompanion
+---
+- repeat:
+    times: 10
+    commands:
+      - runFlow:
+          when:
+            visible: "Skip onboarding"
+          commands:
+            - tapOn: "Skip onboarding"
+            - waitForAnimationToEnd:
+                timeout: 2500
+      - runFlow:
+          when:
+            visible:
+              id: "mental_model_continue_without_watch"
+          commands:
+            - tapOn:
+                id: "mental_model_continue_without_watch"
+            - waitForAnimationToEnd:
+                timeout: 2500
+      - runFlow:
+          when:
+            visible:
+              id: "mental_model_skip"
+          commands:
+            - tapOn:
+                id: "mental_model_skip"
+            - waitForAnimationToEnd:
+                timeout: 2500
