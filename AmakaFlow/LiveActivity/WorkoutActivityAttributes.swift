@@ -5,12 +5,12 @@
 //  ActivityKit attributes for workout Live Activity (Dynamic Island)
 //
 
-import ActivityKit
+@preconcurrency import ActivityKit
 import Foundation
 
-struct WorkoutActivityAttributes: ActivityAttributes {
+nonisolated struct WorkoutActivityAttributes: ActivityAttributes, Sendable {
     // Static content (doesn't change during activity)
-    public struct ContentState: Codable, Hashable {
+    nonisolated struct ContentState: Codable, Hashable, Sendable {
         var phase: String              // "running", "paused", "ended"
         var stepName: String           // "Squat", "Rest", "Warm Up"
         var stepIndex: Int             // Current step (1-based for display)
@@ -50,132 +50,9 @@ extension WorkoutActivityAttributes.ContentState {
 
     /// The date after which ActivityKit should dim the Live Activity as stale.
     /// Only set for timed, running steps with a known deadline; nil otherwise keeps the activity fresh.
-    var activityStaleDate: Date? {
-        guard isTimedStep, !isPaused, let deadline = stepDeadline else { return nil }
+    nonisolated var activityStaleDate: Date? {
+        guard stepType == "timed", phase != "paused", let deadline = stepDeadline else { return nil }
         // 30s buffer: gives the app time to push the next step update before the OS dims the widget.
         return deadline.addingTimeInterval(30)
-    }
-}
-
-// MARK: - Live Activity Manager
-
-@MainActor
-final class LiveActivityManager {
-    static let shared = LiveActivityManager()
-
-    private var currentActivity: Activity<WorkoutActivityAttributes>?
-    private var startTask: Task<Void, Never>?
-
-    private init() {}
-
-    // MARK: - Start Activity
-
-    func startActivity(
-        workoutId: String,
-        workoutName: String,
-        initialState: WorkoutActivityAttributes.ContentState
-    ) {
-        let authInfo = ActivityAuthorizationInfo()
-        print("🔵 Live Activities authorization:")
-        print("   - areActivitiesEnabled: \(authInfo.areActivitiesEnabled)")
-        print("   - frequentPushesEnabled: \(authInfo.frequentPushesEnabled)")
-
-        guard authInfo.areActivitiesEnabled else {
-            print("🔴 Live Activities NOT enabled - enable in Settings → AmakaFlow → Live Activities")
-            return
-        }
-
-        // Capture current state before clearing; includes orphans from previous processes.
-        let trackedActivity = currentActivity
-        let allExisting = Array(Activity<WorkoutActivityAttributes>.activities)
-        print("🔵 Existing activities count: \(allExisting.count)")
-        for activity in allExisting {
-            print("   - Activity ID: \(activity.id), state: \(activity.activityState)")
-        }
-        currentActivity = nil
-
-        let attributes = WorkoutActivityAttributes(workoutId: workoutId, workoutName: workoutName)
-
-        print("🔵 Requesting new Live Activity for workout: \(workoutName)")
-        print("🔵 Initial state: step=\(initialState.stepName), phase=\(initialState.phase)")
-
-        // AMA-1324: Activity.request() can block the main thread for 2000ms+ via synchronous XPC.
-        // Dispatch to background. Teardown and creation run in a SINGLE task to prevent the
-        // old-end/new-request race that produced zombie lock-screen activities (issue #308).
-        let previousStartTask = startTask
-        startTask = Task.detached {
-            await previousStartTask?.value
-            // 1. End the previously tracked activity (serialized — must complete before request).
-            if let tracked = trackedActivity {
-                print("🔵 Ending tracked activity: \(tracked.id)")
-                await tracked.end(nil, dismissalPolicy: .immediate)
-            }
-            // 2. End any orphaned activities from previous process launches.
-            for activity in allExisting where activity.id != trackedActivity?.id {
-                print("🔵 Ending orphaned activity: \(activity.id)")
-                await activity.end(nil, dismissalPolicy: .immediate)
-            }
-            // 3. All teardown complete — safe to request new activity.
-            let content = ActivityContent(
-                state: initialState,
-                staleDate: initialState.activityStaleDate
-            )
-            do {
-                let activity = try Activity.request(
-                    attributes: attributes,
-                    content: content,
-                    pushType: nil  // Local updates only
-                )
-                await MainActor.run {
-                    self.currentActivity = activity
-                    print("🟢 Live Activity started successfully! ID: \(activity.id)")
-                }
-            } catch {
-                await MainActor.run {
-                    print("🔴 Failed to start Live Activity: \(error)")
-                }
-            }
-        }
-    }
-
-    // MARK: - Update Activity
-
-    func updateActivity(state: WorkoutActivityAttributes.ContentState) {
-        guard let activity = currentActivity else { return }
-
-        let content = ActivityContent(
-            state: state,
-            staleDate: state.activityStaleDate
-        )
-
-        Task {
-            await activity.update(content)
-        }
-    }
-
-    // MARK: - End Activity
-
-    func endActivity() async {
-        guard let activity = currentActivity else { return }
-
-        let finalState = WorkoutActivityAttributes.ContentState(
-            phase: "ended",
-            stepName: "Workout Complete",
-            stepIndex: 0,
-            stepCount: 0,
-            remainingSeconds: 0,
-            stepType: "reps",
-            roundInfo: nil,
-            stepDeadline: nil
-        )
-
-        let content = ActivityContent(
-            state: finalState,
-            staleDate: nil
-        )
-
-        await activity.end(content, dismissalPolicy: .after(.now + 5))
-        currentActivity = nil
-        print("🟢 Live Activity ended")
     }
 }

@@ -344,6 +344,7 @@
 		F85C4F6DCDE4544563BA4983 /* WorkoutState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F883912261E9D246979DD881 /* WorkoutState.swift */; };
 		F8654CAC3BB541420480C602 /* FlattenedInterval.swift in Sources */ = {isa = PBXBuildFile; fileRef = F82258553831E24BC9B8C650 /* FlattenedInterval.swift */; };
 		F87ADA7721B76045D5938EA4 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */; };
+		AMA2273LIVEMGR001 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2273LIVEMGR002 /* LiveActivityManager.swift */; };
 		F880AD622F09559A00E8D7D3 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
 		F8B356C52EF8BA7B00E88B51 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F8B356C42EF8BA7B00E88B51 /* WidgetKit.framework */; };
 		F8B356C72EF8BA7B00E88B51 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F8B356C62EF8BA7B00E88B51 /* SwiftUI.framework */; };
@@ -807,6 +808,7 @@
 		F8BFF8D1C38311406C868156 /* StepDisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StepDisplayView.swift; path = ../AmakaFlow/Views/Components/StepDisplayView.swift; sourceTree = SOURCE_ROOT; };
 		F8C125A02EFAB01000459747 /* GarminConnectManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminConnectManager.swift; path = ../AmakaFlow/Services/GarminConnectManager.swift; sourceTree = SOURCE_ROOT; };
 		F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutActivityAttributes.swift; path = ../AmakaFlow/LiveActivity/WorkoutActivityAttributes.swift; sourceTree = SOURCE_ROOT; };
+		AMA2273LIVEMGR002 /* LiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LiveActivityManager.swift; path = ../AmakaFlow/LiveActivity/LiveActivityManager.swift; sourceTree = SOURCE_ROOT; };
 		F8FC29620578214144920365 /* AudioCueManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioCueManager.swift; path = ../AmakaFlow/Services/AudioCueManager.swift; sourceTree = SOURCE_ROOT; };
 		FC35C6AFFE23A2DA83D8C2E7 /* ActionModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ActionModels.swift; path = ../AmakaFlow/Models/ActionModels.swift; sourceTree = "<group>"; };
 		KB00ADD0001A /* AddKnowledgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AddKnowledgeView.swift; path = ../AmakaFlow/Views/AddKnowledgeView.swift; sourceTree = SOURCE_ROOT; };
@@ -1045,6 +1047,7 @@
 				F856B28A238E234FDAB29478 /* WorkoutEngine.swift */,
 				EXEC10NL0G8U1LD3R0001 /* ExecutionLogBuilder.swift */,
 				F8CB18AE0DE73449FE995951 /* WorkoutActivityAttributes.swift */,
+				AMA2273LIVEMGR002 /* LiveActivityManager.swift */,
 				SK1P1NT3RV4L5H33T0001 /* SkipIntervalSheet.swift */,
 				F84E22852ED0D5D100459747 /* WorkoutKitConverter.swift */,
 				F8FC29620578214144920365 /* AudioCueManager.swift */,
@@ -1818,6 +1821,7 @@
 				AA8C7E7D040E462BB1347220 /* RestPeriodView.swift in Sources */,
 				F8B8C2FBBE453C44649F8E94 /* PlayerControlsView.swift in Sources */,
 				F87ADA7721B76045D5938EA4 /* WorkoutActivityAttributes.swift in Sources */,
+				AMA2273LIVEMGR001 /* LiveActivityManager.swift in Sources */,
 				E33FF845EAAD4110B7D87FB0 /* DevicePreference.swift in Sources */,
 				BL0CK5W1FT00000002 /* Block.swift in Sources */,
 				3X3RC1S35W1FT000002 /* Exercise.swift in Sources */,
