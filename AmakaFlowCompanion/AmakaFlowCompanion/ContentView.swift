@@ -299,13 +299,16 @@ struct AFTabBar: View {
             .padding(.top, Theme.Spacing.sm)
             .padding(.bottom, Theme.Spacing.sm)
         }
-        .background(
+        .background {
             Theme.Colors.surface
                 .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: -4)
                 .ignoresSafeArea(edges: .bottom)
-        )
-        .accessibilityIdentifier("af_tabbar")
-        .accessibilityElement(children: .contain)
+                // Container marker on chrome background only — never on the
+                // button HStack with `.contain` (iOS 26 leaks id to children).
+                .accessibilityIdentifier("af_tabbar")
+                .accessibilityLabel("Tab bar")
+                .accessibilityElement(children: .ignore)
+        }
     }
 }
 
@@ -340,13 +343,15 @@ private struct AFTabBarButton: View {
             }
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
+            // Apply identifiers on the label subtree — iOS 26 often drops
+            // `accessibilityIdentifier` applied to the outer SwiftUI Button.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(tab.title)
+            .accessibilityValue(isSelected ? "Selected" : "Not selected")
+            .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+            .accessibilityIdentifier(tab.accessibilityIdentifier)
         }
         .buttonStyle(.plain)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(tab.title)
-        .accessibilityIdentifier(tab.accessibilityIdentifier)
-        .accessibilityValue(isSelected ? "Selected" : "Not selected")
-        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }
 
