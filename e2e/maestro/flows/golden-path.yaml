@@ -27,6 +27,14 @@ appId: com.myamaka.AmakaFlowCompanion
 ---
 # --- Step 1: launch + sign in (reusable subflow) ---
 - runFlow: ../_lib/clerk-signin.yaml
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 15000
+- assertVisible:
+    id: "af_tabbar"
 - takeScreenshot: golden-01-signed-in
 
 # --- Step 2: Suggest a workout from Home ---
