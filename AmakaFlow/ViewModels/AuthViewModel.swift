@@ -131,6 +131,18 @@ final class AuthViewModel: ObservableObject {
     !(UITestEnvironment.value(for: "UITEST_CLERK_REAL_SESSION_EMAIL") ?? "").isEmpty
   }
 
+  /// Poll briefly so CI password bypass does not race an empty Maestro launch-arg read.
+  private func uiTestClerkPassword(maxWaitSeconds: TimeInterval = 10) async -> String? {
+    let deadline = Date().addingTimeInterval(maxWaitSeconds)
+    while Date() < deadline {
+      if let password = UITestEnvironment.value(for: "UITEST_CLERK_PASSWORD"), !password.isEmpty {
+        return password
+      }
+      try? await Task.sleep(nanoseconds: 200_000_000)
+    }
+    return UITestEnvironment.value(for: "UITEST_CLERK_PASSWORD")
+  }
+
   /// AMA-1849: bypass that creates a REAL Clerk session via the
   /// Frontend API, then hands it to the SDK via `setActive`. Unlike
   /// the mock bypass, `Clerk.shared.session` is populated and
@@ -158,8 +170,7 @@ final class AuthViewModel: ObservableObject {
     }
 
     let email = UITestEnvironment.value(for: "UITEST_CLERK_REAL_SESSION_EMAIL") ?? ""
-    let password = UITestEnvironment.value(for: "UITEST_CLERK_PASSWORD")
-    let code = UITestEnvironment.value(for: "UITEST_CLERK_REAL_SESSION_CODE") ?? "424242"
+    let password = await uiTestClerkPassword()
 
     guard !email.isEmpty else {
       print("[AuthViewModel] AMA-1849 bypass FAILED: UITEST_CLERK_REAL_SESSION_EMAIL is empty")
@@ -167,7 +178,12 @@ final class AuthViewModel: ObservableObject {
     }
 
     let hasPassword = password?.isEmpty == false
+    #if DEBUG
+    let pwdKeyPresent = UITestEnvironment.value(for: "UITEST_CLERK_PASSWORD") != nil
+    print("[AuthViewModel] AMA-1849 bypass starting for \(email) (password=\(hasPassword), pwdKeyPresent=\(pwdKeyPresent))")
+    #else
     print("[AuthViewModel] AMA-1849 bypass starting for \(email) (password=\(hasPassword))")
+    #endif
 
     do {
       let sessionId: String
@@ -188,16 +204,11 @@ final class AuthViewModel: ObservableObject {
         }
         sessionId = created
       } else {
-        guard let host = AuthViewModel.deriveClerkFrontendHost(from: Clerk.shared.publishableKey) else {
-          print("[AuthViewModel] AMA-1849 bypass FAILED: could not derive frontend API host from publishable key")
-          return
-        }
-        sessionId = try await createClerkSession(
-          base: "https://\(host)",
-          email: email,
-          signInBody: "identifier=\(urlEncode(email))&strategy=email_code",
-          attemptBody: "strategy=email_code&code=\(code)"
-        )
+        // AMA-2271: HTTP email_code bypass races Maestro Clerk UI on fresh CI sims and
+        // leaves expired verifications. When password is unavailable, defer to the
+        // Maestro UI fallback in clerk-signin.yaml instead of opening a sign-in here.
+        print("[AuthViewModel] AMA-1849 bypass deferred — no UITEST_CLERK_PASSWORD (Maestro UI)")
+        return
       }
 
       try await Clerk.shared.auth.setActive(sessionId: sessionId)

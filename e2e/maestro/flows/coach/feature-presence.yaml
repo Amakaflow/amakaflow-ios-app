@@ -12,6 +12,14 @@
 appId: com.myamaka.AmakaFlowCompanion
 ---
 - runFlow: ../../_lib/clerk-signin.yaml
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 15000
+- assertVisible:
+    id: "af_tabbar"
 - takeScreenshot: presence-01-signed-in
 
 # Coach tab + one-coach header

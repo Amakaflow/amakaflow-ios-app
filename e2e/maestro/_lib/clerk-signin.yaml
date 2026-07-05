@@ -25,6 +25,7 @@ env:
       UITEST_CLERK_REAL_SESSION_EMAIL: "claude+clerk_test@amakaflow.dev"
       UITEST_CLERK_PASSWORD: ${UITEST_CLERK_PASSWORD}
       UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_SKIP_ONBOARDING: "true"
       UITEST_USE_FIXTURES: ${USE_FIXTURES}
 - waitForAnimationToEnd:
     timeout: 5000
@@ -59,6 +60,32 @@ env:
 - runFlow: dismiss-pre-auth-onboarding.yaml
 - runFlow: dismiss-post-auth-onboarding.yaml
 
+# AMA-2007 SignUpView: Clerk email UI is behind "Continue with email".
+# Fresh CI sims land here when AMA-1849 bypass fails — the old fallback
+# waited for "Enter your email" which never appears without this tap.
+- runFlow:
+    when:
+      notVisible:
+        id: "af_tabbar"
+      visible:
+        id: "signup_email_button"
+    commands:
+      - tapOn:
+          id: "signup_email_button"
+      - waitForAnimationToEnd:
+          timeout: 8000
+- runFlow:
+    when:
+      notVisible:
+        id: "af_tabbar"
+      visible:
+        text: "Continue with email"
+    commands:
+      - tapOn:
+          text: "Continue with email"
+      - waitForAnimationToEnd:
+          timeout: 8000
+
 # UI fallback when programmatic auth did not complete.
 - runFlow:
     when:
@@ -75,6 +102,10 @@ env:
           text: "Continue"
       - waitForAnimationToEnd:
           timeout: 10000
+
+      # Staging Clerk: password-first on the main factor screen OR email code
+      # (424242 for +clerk_test). NEVER tap "Use another method" — that sheet
+      # only offers Apple/Google on ruling-mite-84 (AMA-2271 evidence).
       - runFlow:
           when:
             visible: "Enter password"
@@ -86,21 +117,73 @@ env:
             - tapOn:
                 text: "Continue"
             - waitForAnimationToEnd:
-                timeout: 12000
+                timeout: 15000
+      - runFlow:
+          when:
+            visible: "Enter your password"
+          commands:
+            - tapOn:
+                text: "Enter your password"
+            - eraseText
+            - inputText: ${UITEST_CLERK_PASSWORD}
+            - tapOn:
+                text: "Continue"
+            - waitForAnimationToEnd:
+                timeout: 15000
       - runFlow:
           when:
             visible: "Check your email"
           commands:
+            - tapOn:
+                point: "18%,42%"
             - inputText: "424242"
             - waitForAnimationToEnd:
-                timeout: 12000
+                timeout: 15000
       - runFlow:
           when:
             visible: "Verification code"
           commands:
+            - tapOn:
+                point: "18%,42%"
             - inputText: "424242"
             - waitForAnimationToEnd:
-                timeout: 12000
+                timeout: 15000
+
+# Email-code path can appear without re-showing "Enter your email" (Clerk remembers identifier).
+- runFlow:
+    when:
+      notVisible:
+        id: "af_tabbar"
+      visible: "Check your email"
+    commands:
+      - tapOn:
+          point: "18%,42%"
+      - inputText: "424242"
+      - waitForAnimationToEnd:
+          timeout: 15000
+- runFlow:
+    when:
+      notVisible:
+        id: "af_tabbar"
+      visible: "Verification code"
+    commands:
+      - tapOn:
+          point: "18%,42%"
+      - inputText: "424242"
+      - waitForAnimationToEnd:
+          timeout: 15000
+
+# Recover from a prior dead-end on the Apple/Google-only alt-methods sheet.
+- runFlow:
+    when:
+      notVisible:
+        id: "af_tabbar"
+      visible: "Facing issues?"
+    commands:
+      - tapOn:
+          point: "8%,13%"
+      - waitForAnimationToEnd:
+          timeout: 3000
 
 - runFlow: dismiss-post-auth-onboarding.yaml
 
