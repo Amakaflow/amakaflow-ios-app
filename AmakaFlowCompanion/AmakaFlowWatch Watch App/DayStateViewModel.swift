@@ -32,8 +32,8 @@ final class DayStateViewModel: ObservableObject {
 
     // MARK: - Init
 
-    init(bridge: WatchConnectivityBridge = .shared) {
-        self.bridge = bridge
+    init(bridge: WatchConnectivityBridge? = nil) {
+        self.bridge = bridge ?? WatchConnectivityBridge.shared
     }
 
     // MARK: - DayState Request

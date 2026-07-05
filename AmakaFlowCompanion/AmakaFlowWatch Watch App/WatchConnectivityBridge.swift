@@ -98,7 +98,7 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
     private func startHRStreaming() {
         // Send HR updates to phone every 5 seconds
         hrUpdateTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 self?.sendHealthMetricsToPhone()
             }
         }
@@ -515,12 +515,12 @@ extension WatchConnectivityBridge: WCSessionDelegate {
     // AMA-297: Receive background-queued workout syncs sent via transferUserInfo.
     nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
         guard (userInfo["action"] as? String) == "syncWorkouts" else { return }
-        if let workouts = Workout.decodeFromSyncWorkoutsUserInfo(userInfo) {
-            Task { @MainActor in
+        Task { @MainActor in
+            if let workouts = Workout.decodeFromSyncWorkoutsUserInfo(userInfo) {
                 self.workoutManager?.setWorkouts(workouts)
+            } else {
+                print("⌚️ syncWorkouts userInfo: failed to decode workouts payload")
             }
-        } else {
-            print("⌚️ syncWorkouts userInfo: failed to decode workouts payload")
         }
     }
 
