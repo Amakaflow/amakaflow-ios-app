@@ -665,18 +665,7 @@ jobs:
           echo "outcome=$([ "$STATUS" = 0 ] && echo passed || echo failed)" >> "$GITHUB_OUTPUT"
           exit "$STATUS"
 
-      - name: Upload smoke evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: golden-path-smoke-build-${{ needs.testflight.outputs.build_number || format('smoke-only-{0}', github.run_number) }}
-          path: |
-            maestro-output/
-            AmakaFlowCompanion/smoke-build.log
-          retention-days: 14
-          if-no-files-found: warn
-
-      # ---- Paging on red (assertion failure OR Maestro timeout-kill) ----
+      # ---- Paging on red (assertion failure OR Maestro timeout-kill) — before artifact upload ----
       - name: Page — open GitHub issue (always available)
         if: steps.smoke.outcome == 'failure'
         env:
@@ -749,6 +738,17 @@ jobs:
             --data @<(jq -nc --arg t "$TITLE" --arg d "$DESC" --arg team "$TEAM_ID" \
               '{query:"mutation($t:String!,$d:String!,$team:String!){issueCreate(input:{title:$t,description:$d,teamId:$team,priority:1}){success}}",variables:{t:$t,d:$d,team:$team}}') \
             >/dev/null || echo "::warning::Linear P1 page failed."
+
+      - name: Upload smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-path-smoke-build-${{ needs.testflight.outputs.build_number || format('smoke-only-{0}', github.run_number) }}
+          path: |
+            maestro-output/
+            AmakaFlowCompanion/smoke-build.log
+          retention-days: 14
+          if-no-files-found: warn
 
       - name: Fail the job if the smoke failed
         if: steps.smoke.outcome == 'failure'
