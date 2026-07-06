@@ -52,13 +52,13 @@ CI imports **one** Apple Distribution + **one** Apple Development certificate (w
 4. Base64-encode and store as GitHub secrets:
 
 ```bash
-# Distribution
+# Distribution (use -b with openssl -A — single-line base64, no paste corruption)
 gh secret set APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD --repo Amakaflow/amakaflow-ios-app --body "your-export-password"
-base64 -i Distribution.p12 | gh secret set APPLE_DISTRIBUTION_CERTIFICATE_P12 --repo Amakaflow/amakaflow-ios-app
+gh secret set APPLE_DISTRIBUTION_CERTIFICATE_P12 --repo Amakaflow/amakaflow-ios-app -b "$(openssl base64 -A -in ~/Downloads/Distribution.p12)"
 
 # Development
 gh secret set APPLE_DEVELOPMENT_CERTIFICATE_PASSWORD --repo Amakaflow/amakaflow-ios-app --body "your-export-password"
-base64 -i Development.p12 | gh secret set APPLE_DEVELOPMENT_CERTIFICATE_P12 --repo Amakaflow/amakaflow-ios-app
+gh secret set APPLE_DEVELOPMENT_CERTIFICATE_P12 --repo Amakaflow/amakaflow-ios-app -b "$(openssl base64 -A -in ~/Downloads/Certificates.p12)"
 
 # CI keychain password (any strong random string — not the p12 export password)
 gh secret set APPLE_KEYCHAIN_PASSWORD --repo Amakaflow/amakaflow-ios-app --body "$(openssl rand -base64 32)"
