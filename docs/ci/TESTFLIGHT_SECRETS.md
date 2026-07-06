@@ -1,4 +1,4 @@
-# TestFlight CI secrets (AMA-1852)
+# TestFlight CI secrets (AMA-1852, AMA-2267)
 
 Setup guide for `.github/workflows/ios-testflight.yml` — auto-upload to TestFlight on every `main` push that touches app code.
 
@@ -13,6 +13,11 @@ Configure at **Settings → Secrets and variables → Actions** on `Amakaflow/am
 | `APP_STORE_CONNECT_API_PRIVATE_KEY` | Raw `.p8` PEM contents (include `BEGIN/END` lines) | Required |
 | `CLERK_PUBLISHABLE_KEY_STAGING` | Baked into Release IPA; v1 uses staging as production | Required |
 | `CLERK_PUBLISHABLE_KEY_DEV` | solid-chicken-50 dev key in Info.plist | Required (workflow falls back to public default if unset) |
+| `APPLE_KEYCHAIN_PASSWORD` | Ephemeral CI keychain unlock password (any strong random string) | Required (AMA-2267) |
+| `APPLE_DISTRIBUTION_CERTIFICATE_P12` | Base64-encoded `.p12` export of **one** Apple Distribution cert | Required (AMA-2267) |
+| `APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD` | Export password for the Distribution `.p12` | Required (AMA-2267) |
+| `APPLE_DEVELOPMENT_CERTIFICATE_P12` | Base64-encoded `.p12` export of **one** Apple Development cert | Required (AMA-2267) |
+| `APPLE_DEVELOPMENT_CERTIFICATE_PASSWORD` | Export password for the Development `.p12` | Required (AMA-2267) |
 
 ### Create the App Store Connect API key
 
@@ -30,6 +35,38 @@ gh secret set APP_STORE_CONNECT_API_KEY_ID --repo Amakaflow/amakaflow-ios-app --
 gh secret set APP_STORE_CONNECT_API_KEY_ISSUER_ID --repo Amakaflow/amakaflow-ios-app --body "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 gh secret set APP_STORE_CONNECT_API_PRIVATE_KEY --repo Amakaflow/amakaflow-ios-app < AuthKey_XXXXXXXXXX.p8
 ```
+
+### Persisted signing identities (AMA-2267)
+
+CI imports **one** Apple Distribution + **one** Apple Development certificate (with private keys) into an ephemeral runner keychain before archive/export. This stops each run from minting new "Created via API" certs and hitting Apple's slot limit.
+
+**Before creating new certs:** check [Certificates](https://developer.apple.com/account/resources/certificates/list). If the account is at the limit, **revoke accumulated "Created via API" Development/Distribution certs first** — do not create new ones until slots are free.
+
+#### One-time cert creation (founder, on a Mac with Keychain Access)
+
+1. Open **Keychain Access** → **Certificate Assistant** → **Request a Certificate from a Certificate Authority** → save a `.certSigningRequest` to disk.
+2. [developer.apple.com → Certificates](https://developer.apple.com/account/resources/certificates/list) → **+**:
+   - Create **Apple Distribution** (App Store Connect) — download `.cer`, double-click to install.
+   - Create **Apple Development** — download `.cer`, double-click to install.
+3. In Keychain Access, export each identity (cert + private key) as `.p12` with a strong export password. **Never commit `.p12` files or passwords to git.**
+4. Base64-encode and store as GitHub secrets:
+
+```bash
+# Distribution
+gh secret set APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD --repo Amakaflow/amakaflow-ios-app --body "your-export-password"
+base64 -i Distribution.p12 | gh secret set APPLE_DISTRIBUTION_CERTIFICATE_P12 --repo Amakaflow/amakaflow-ios-app
+
+# Development
+gh secret set APPLE_DEVELOPMENT_CERTIFICATE_PASSWORD --repo Amakaflow/amakaflow-ios-app --body "your-export-password"
+base64 -i Development.p12 | gh secret set APPLE_DEVELOPMENT_CERTIFICATE_P12 --repo Amakaflow/amakaflow-ios-app
+
+# CI keychain password (any strong random string — not the p12 export password)
+gh secret set APPLE_KEYCHAIN_PASSWORD --repo Amakaflow/amakaflow-ios-app --body "$(openssl rand -base64 32)"
+```
+
+5. After wiring secrets, run **two consecutive** `workflow_dispatch` builds and confirm **zero** new certificates appear in the Apple portal.
+
+Import script: `.github/scripts/ci/import-signing-identity.sh` (runs on macOS archive job only).
 
 ### Clerk publishable keys
 
@@ -54,7 +91,7 @@ Dev key is the public solid-chicken-50 instance (same as `scripts/sim-build.sh`)
 
 ## Preflight
 
-The workflow runs a **Secrets preflight** job before archive. It fails fast with a link to this doc if required secrets are missing or the `.p8` is malformed.
+The workflow runs a **Secrets preflight** job before archive. It fails fast with a link to this doc if required secrets are missing, malformed, or if `.p12` blobs are not valid base64.
 
 ## Build numbers
 
@@ -64,15 +101,16 @@ CI sets `CURRENT_PROJECT_VERSION = 100 + github.run_number` so TestFlight build 
 
 ### `Your account has reached the maximum number of certificates`
 
-Apple Developer accounts allow a limited number of distribution certificates. CI `-allowProvisioningUpdates` tries to create new ones when profiles are missing.
+Apple Developer accounts allow a limited number of **Development** and **Distribution** certificates. Before AMA-2267, CI `-allowProvisioningUpdates` minted a new Development cert on every ephemeral runner because the private key was lost between runs.
 
 **Fix (manual, ~5 min):**
 
 1. [developer.apple.com](https://developer.apple.com/account/resources/certificates/list) → **Certificates**.
-2. Revoke **expired** or **duplicate** “Apple Distribution” / “iOS Distribution” certificates you no longer use (keep the one matching your last successful manual TestFlight upload if unsure).
-3. Re-run the workflow (`workflow_dispatch` on Actions tab, or push an empty commit to `main`).
+2. Revoke **duplicate** "Created via API" **Development** and **Distribution** certificates (keep the two identities exported to GitHub secrets).
+3. Ensure persisted `.p12` secrets are wired (see above) so CI reuses them instead of minting new certs.
+4. Re-run the workflow (`workflow_dispatch` on Actions tab, or push to `main`).
 
-If the error persists, ensure the ASC API key role can manage certificates and that bundle IDs `com.myamaka.AmakaFlowCompanion` (+ extensions: Share, Watch, Live Activity) have App Store distribution profiles in **Profiles**.
+The workflow error message now names **Development** vs **Distribution** when the limit trips.
 
 ### `CLERK_PUBLISHABLE_KEY_* does not match the secret value`
 
@@ -80,15 +118,20 @@ xcodebuild silently dropped a build-setting override. Check the **Archive** step
 
 ### `No profiles for 'com.myamaka…' were found`
 
-Usually precedes the certificate-limit error. Fixing certificates/profiles in the Developer portal resolves both.
+Usually precedes the certificate-limit error. Fixing certificates/profiles in the Developer portal resolves both. With persisted certs imported, `-allowProvisioningUpdates` should refresh profiles without creating new identities.
 
-## Verify AMA-1852 acceptance
+### Post-upload smoke hangs (AMA-2276)
+
+The smoke job has layered timeouts (40 min job cap; 10 min sim boot; 20 min Debug build; 12 min per Maestro flow with GNU `timeout` hard-kill). On timeout, evidence artifacts and paging (GitHub issue / Telegram / Linear P1) still fire. Healthy smoke runtime is ~15 min.
+
+## Verify AMA-1852 / AMA-2267 acceptance
 
 - [x] `ios-testflight.yml` on `main`
 - [x] ASC API key secrets wired
 - [x] Clerk staging + dev secrets wired
 - [x] Build number auto-bump in workflow
-- [ ] Green archive + altool upload on 2 consecutive `main` merges
+- [ ] Persisted signing `.p12` secrets wired (AMA-2267)
+- [ ] Green archive + altool upload on 2 consecutive runs with **zero** new portal certs
 - [ ] Sentry dSYM upload confirmed on a promoted build (check Sentry release for matching build number)
 
 ## Related

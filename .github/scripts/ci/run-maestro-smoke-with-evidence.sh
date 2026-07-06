@@ -1,14 +1,51 @@
 #!/usr/bin/env bash
-# AMA-2271 — Run post-TestFlight Maestro smokes with self-diagnosing failure artifacts.
+# AMA-2271 / AMA-2276 — Run post-TestFlight Maestro smokes with self-diagnosing
+# failure artifacts and hard per-flow timeouts so wedged flows cannot burn the runner.
 #
-# On failure captures: Maestro debug output, simctl screenshot, view hierarchy,
-# and a short simulator screen recording. Never logs secret values.
+# On failure or timeout captures: Maestro debug output, simctl screenshot, view
+# hierarchy, and a short simulator screen recording. Never logs secret values.
 set -euo pipefail
 
 : "${SIM_UDID:?SIM_UDID required}"
 : "${MAESTRO_OUTPUT_DIR:=maestro-output}"
+: "${MAESTRO_FLOW_TIMEOUT_SECONDS:=720}"  # 12 min per flow (matches workflow step budget)
 
 mkdir -p "$MAESTRO_OUTPUT_DIR"
+
+CURRENT_LABEL=""
+VIDEO_PID=""
+FAILURE_REASON="assertion"
+
+run_with_timeout() {
+  local seconds="$1"
+  shift
+  if command -v timeout >/dev/null 2>&1; then
+    timeout --signal=TERM --kill-after=30 "$seconds" "$@"
+  elif command -v gtimeout >/dev/null 2>&1; then
+    gtimeout --signal=TERM --kill-after=30 "$seconds" "$@"
+  else
+    echo "::warning::GNU timeout not found — running Maestro without hard kill (install coreutils on runner)."
+    "$@"
+  fi
+}
+
+on_smoke_interrupt() {
+  local rc=$?
+  if [[ -n "$CURRENT_LABEL" ]]; then
+    capture_failure_evidence "$CURRENT_LABEL" || true
+    if [[ "$rc" -eq 124 || "$rc" -eq 137 ]]; then
+      FAILURE_REASON="timeout"
+      echo "failure_reason=timeout" >> "$MAESTRO_OUTPUT_DIR/summary.txt"
+    fi
+  fi
+  if [[ -n "${VIDEO_PID:-}" ]]; then
+    kill -INT "$VIDEO_PID" 2>/dev/null || true
+    wait "$VIDEO_PID" 2>/dev/null || true
+  fi
+  return "$rc"
+}
+
+trap on_smoke_interrupt EXIT INT TERM
 
 log_env_probe() {
   if [[ -n "${UITEST_CLERK_PASSWORD:-}" ]]; then
@@ -70,6 +107,7 @@ capture_failure_evidence() {
 run_smoke_flow() {
   local flow="$1"
   local label="$2"
+  CURRENT_LABEL="$label"
 
   local flow_debug="$MAESTRO_OUTPUT_DIR/${label}-debug"
   local flow_test_output="$MAESTRO_OUTPUT_DIR/${label}-test-output"
@@ -80,7 +118,7 @@ run_smoke_flow() {
   rm -f "$evidence_dir/failure-recording.mp4"
   mkdir -p "$evidence_dir"
 
-  # Short screen recording for the whole flow; stopped on failure.
+  # Short screen recording for the whole flow; stopped on failure/timeout.
   xcrun simctl io "$SIM_UDID" recordVideo --codec=h264 \
     "$evidence_dir/failure-recording.mp4" &
   VIDEO_PID=$!
@@ -93,7 +131,8 @@ run_smoke_flow() {
   fi
 
   set +e
-  maestro test \
+  run_with_timeout "$MAESTRO_FLOW_TIMEOUT_SECONDS" \
+    maestro test \
     --device "$SIM_UDID" \
     "${maestro_env[@]}" \
     --debug-output "$flow_debug" \
@@ -105,7 +144,11 @@ run_smoke_flow() {
   local status=${PIPESTATUS[0]}
   set -e
 
-  if [[ "$status" -ne 0 ]]; then
+  if [[ "$status" -eq 124 || "$status" -eq 137 ]]; then
+    echo "::error::Maestro flow '${label}' timed out after ${MAESTRO_FLOW_TIMEOUT_SECONDS}s — hard-killed."
+    FAILURE_REASON="timeout"
+    capture_failure_evidence "$label"
+  elif [[ "$status" -ne 0 ]]; then
     capture_failure_evidence "$label"
   else
     if [[ -n "${VIDEO_PID:-}" ]]; then
@@ -115,6 +158,7 @@ run_smoke_flow() {
     fi
   fi
   VIDEO_PID=""
+  CURRENT_LABEL=""
 
   return "$status"
 }
@@ -141,6 +185,11 @@ if [[ ${#FAILED_LABELS[@]} -gt 0 ]]; then
 else
   failed_flows="none"
 fi
-echo "failed_flows=${failed_flows}" | tee "$MAESTRO_OUTPUT_DIR/summary.txt"
 
+{
+  echo "failed_flows=${failed_flows}"
+  echo "failure_reason=${FAILURE_REASON}"
+} | tee "$MAESTRO_OUTPUT_DIR/summary.txt"
+
+trap - EXIT INT TERM
 exit "$OVERALL"
