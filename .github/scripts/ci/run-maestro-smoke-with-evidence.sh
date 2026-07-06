@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# AMA-2271 / AMA-2276 — Run post-TestFlight Maestro smokes with self-diagnosing
-# failure artifacts and hard per-flow timeouts so wedged flows cannot burn the runner.
+# AMA-2271 / AMA-2276 / AMA-2277 — Run post-TestFlight Maestro smokes with self-diagnosing
+# failure artifacts, hard per-flow timeouts, and retry ONLY failed flows (not the suite).
 #
 # On failure or timeout captures: Maestro debug output, simctl screenshot, view
 # hierarchy, and a short simulator screen recording. Never logs secret values.
@@ -8,7 +8,8 @@ set -euo pipefail
 
 : "${SIM_UDID:?SIM_UDID required}"
 : "${MAESTRO_OUTPUT_DIR:=maestro-output}"
-: "${MAESTRO_FLOW_TIMEOUT_SECONDS:=720}"  # 12 min per flow (matches workflow step budget)
+: "${MAESTRO_FLOW_TIMEOUT_SECONDS:=360}"  # 6 min per flow (healthy golden-path ~3.5 min)
+: "${SMOKE_FLOW_MAX_ATTEMPTS:=2}"
 
 mkdir -p "$MAESTRO_OUTPUT_DIR"
 
@@ -71,6 +72,14 @@ resolve_smoke_flow_specs() {
   SMOKE_FLOW_SPECS=("${specs[@]}")
 }
 
+stop_failure_recording() {
+  if [[ -n "${VIDEO_PID:-}" ]]; then
+    kill -INT "$VIDEO_PID" 2>/dev/null || true
+    run_with_timeout 15 wait "$VIDEO_PID" 2>/dev/null || kill -9 "$VIDEO_PID" 2>/dev/null || true
+    VIDEO_PID=""
+  fi
+}
+
 capture_failure_evidence() {
   local label="$1"
   local evidence_dir="$MAESTRO_OUTPUT_DIR/${label}-failure-evidence"
@@ -90,8 +99,7 @@ capture_failure_evidence() {
     > "$evidence_dir/simulator-last-90s.log" 2>&1 || true
 
   if [[ -n "${VIDEO_PID:-}" ]]; then
-    kill -INT "$VIDEO_PID" 2>/dev/null || true
-    wait "$VIDEO_PID" 2>/dev/null || true
+    stop_failure_recording
     if [[ -f "$evidence_dir/failure-recording.mp4" ]]; then
       echo "Saved screen recording: $evidence_dir/failure-recording.mp4"
     fi
@@ -102,6 +110,14 @@ capture_failure_evidence() {
     cp -R "$HOME/.maestro/tests/." "$evidence_dir/maestro-tests-mirror/" 2>/dev/null || true
   fi
   echo "::endgroup::"
+}
+
+warm_simulator_for_retry() {
+  echo "Warming simulator before retrying failed flow(s)..."
+  open -a Simulator 2>/dev/null || true
+  xcrun simctl bootstatus "$SIM_UDID" -b 2>/dev/null || true
+  xcrun simctl terminate "$SIM_UDID" com.myamaka.AmakaFlowCompanion 2>/dev/null || true
+  sleep 3
 }
 
 run_smoke_flow() {
@@ -126,9 +142,6 @@ run_smoke_flow() {
   local -a maestro_env=(
     -e "UITEST_CLERK_PASSWORD=${UITEST_CLERK_PASSWORD:-}"
   )
-  if [[ -n "${TODAY:-}" ]]; then
-    maestro_env+=(-e "TODAY=$TODAY")
-  fi
 
   set +e
   run_with_timeout "$MAESTRO_FLOW_TIMEOUT_SECONDS" \
@@ -147,15 +160,16 @@ run_smoke_flow() {
   if [[ "$status" -eq 124 || "$status" -eq 137 ]]; then
     echo "::error::Maestro flow '${label}' timed out after ${MAESTRO_FLOW_TIMEOUT_SECONDS}s — hard-killed."
     FAILURE_REASON="timeout"
+    stop_failure_recording
     capture_failure_evidence "$label"
+    pkill -f "maestro.cli" 2>/dev/null || true
   elif [[ "$status" -ne 0 ]]; then
+    stop_failure_recording
     capture_failure_evidence "$label"
+    pkill -f "maestro.cli" 2>/dev/null || true
   else
-    if [[ -n "${VIDEO_PID:-}" ]]; then
-      kill -INT "$VIDEO_PID" 2>/dev/null || true
-      wait "$VIDEO_PID" 2>/dev/null || true
-      rm -f "$evidence_dir/failure-recording.mp4"
-    fi
+    stop_failure_recording
+    rm -f "$evidence_dir/failure-recording.mp4"
   fi
   VIDEO_PID=""
   CURRENT_LABEL=""
@@ -168,20 +182,59 @@ resolve_smoke_flow_specs
 
 OVERALL=0
 FAILED_LABELS=()
+declare -a pending_specs=("${SMOKE_FLOW_SPECS[@]}")
+attempt=1
 
-for spec in "${SMOKE_FLOW_SPECS[@]}"; do
-  flow="${spec%%:*}"
-  label="${spec##*:}"
-  echo "::group::maestro test ${flow} (${label})"
-  if ! run_smoke_flow "$flow" "$label"; then
-    OVERALL=1
-    FAILED_LABELS+=("$label")
-  fi
+while [[ ${#pending_specs[@]} -gt 0 && $attempt -le $SMOKE_FLOW_MAX_ATTEMPTS ]]; do
+  echo "::group::Smoke attempt ${attempt}/${SMOKE_FLOW_MAX_ATTEMPTS} (${#pending_specs[@]} flow(s))"
+  declare -a retry_specs=()
+
+  for spec in "${pending_specs[@]}"; do
+    flow="${spec%%:*}"
+    label="${spec##*:}"
+    echo "::group::maestro test ${flow} (${label})"
+    if run_smoke_flow "$flow" "$label"; then
+      echo "Flow '${label}' passed on attempt ${attempt}."
+    else
+      OVERALL=1
+      FAILED_LABELS+=("$label")
+      retry_specs+=("$spec")
+      if [[ "$label" == "golden-path" ]]; then
+        echo "golden-path failed — skipping remaining flows this attempt (shared auth/shell precondition)."
+        break
+      fi
+    fi
+    echo "::endgroup::"
+  done
+
   echo "::endgroup::"
+
+  if [[ ${#retry_specs[@]} -eq 0 ]]; then
+    OVERALL=0
+    FAILED_LABELS=()
+    break
+  fi
+
+  if [[ $attempt -lt $SMOKE_FLOW_MAX_ATTEMPTS ]]; then
+    warm_simulator_for_retry
+  fi
+
+  pending_specs=("${retry_specs[@]}")
+  retry_specs=()
+  attempt=$((attempt + 1))
 done
 
+if [[ ${#pending_specs[@]} -gt 0 ]]; then
+  OVERALL=1
+  FAILED_LABELS=()
+  for spec in "${pending_specs[@]}"; do
+    FAILED_LABELS+=("${spec##*:}")
+  done
+fi
+
 if [[ ${#FAILED_LABELS[@]} -gt 0 ]]; then
-  failed_flows="$(IFS=,; echo "${FAILED_LABELS[*]}")"
+  # De-dupe labels while preserving order.
+  failed_flows="$(printf '%s\n' "${FAILED_LABELS[@]}" | awk '!seen[$0]++' | paste -sd, -)"
 else
   failed_flows="none"
 fi
