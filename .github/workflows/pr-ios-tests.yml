@@ -113,7 +113,17 @@ jobs:
       - name: Detect app/entrypoint changes
         id: app
         run: |
-          CHANGED=$(git diff --name-only "origin/${GITHUB_BASE_REF:-main}...HEAD" || true)
+          # Two-dot diff against the fetched base tip. The previous
+          # three-dot form needed a merge base, which a depth-1 clone lacks
+          # ("fatal: no merge base") — the `|| true` then silently produced
+          # an empty CHANGED and app_changed=false on every PR (AMA-2283).
+          # HEAD here is the PR merge ref, so base-tip..HEAD is exactly the
+          # PR's changes. If the diff still fails, fail CLOSED (build).
+          if ! CHANGED=$(git diff --name-only "origin/${GITHUB_BASE_REF:-main}" HEAD); then
+            echo "::warning::git diff failed — failing closed (app_changed=true)"
+            echo "app_changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           APP_CHANGED="false"
           if echo "$CHANGED" | grep -qE '^(AmakaFlow/|AmakaFlowCompanion/AmakaFlowCompanion/|AmakaFlowCompanion/AmakaFlowCompanion\.xcodeproj/|AmakaFlowCompanion/AmakaFlowCompanionApp/|scripts/cold-launch-check\.sh|\.github/workflows/)'; then
             APP_CHANGED="true"
