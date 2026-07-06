@@ -15,7 +15,10 @@ import_p12() {
   p12_file="$(mktemp -t "${label}.XXXXXX.p12")"
   # shellcheck disable=SC2064
   trap "rm -f '$p12_file'" RETURN
-  printf '%s' "$b64" | base64 --decode > "$p12_file"
+  # Secrets are stored as single-line base64 (openssl base64 -A). macOS BSD
+  # base64 --decode requires -A for that format; GNU base64 on preflight accepts
+  # both. Use openssl for a consistent decode on GHA macOS runners.
+  printf '%s' "$b64" | openssl base64 -d -A > "$p12_file"
   security import "$p12_file" -k "$KEYCHAIN_NAME" -P "$password" \
     -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/xcodebuild \
     -A
