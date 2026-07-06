@@ -54,7 +54,7 @@ env:
       - extendedWaitUntil:
           visible:
             id: "af_tabbar"
-          timeout: 60000
+          timeout: 30000
           optional: true
 
 - runFlow: dismiss-pre-auth-onboarding.yaml
@@ -190,7 +190,7 @@ env:
 - extendedWaitUntil:
     visible:
       id: "af_tabbar"
-    timeout: 90000
+    timeout: 30000
 - tapOn:
     id: "home_tab"
 - assertVisible:

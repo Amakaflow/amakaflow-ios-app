@@ -15,13 +15,14 @@
 # Selectors reuse the AMA-1842 accessibilityIdentifiers proven by CJ-01.
 # The workout title is captured at the preview step (copyTextFrom) and
 # re-asserted in History so the smoke proves the SPECIFIC workout round-
-# tripped, not just that some row exists. `TODAY` is injected by the
-# workflow (`-e TODAY=...`) for the date assertion; format confirmed during
-# local-sim validation before this flow is wired as gating.
+# tripped, not just that some row exists.
 #
 # Preconditions (same as clerk-signin.yaml): Release/staging build with the
 # ruling-mite-84 Clerk key; UITEST_CLERK_PASSWORD provided at run time;
 # sim has network to *.clerk.accounts.dev + staging hosts.
+#
+# AMA-2277: all extendedWaitUntil / scrollUntilVisible / assertVisible waits
+# capped at 30s so a missing history cell fails in seconds, not ~20 min.
 
 appId: com.myamaka.AmakaFlowCompanion
 ---
@@ -32,9 +33,10 @@ appId: com.myamaka.AmakaFlowCompanion
 - extendedWaitUntil:
     visible:
       id: "af_tabbar"
-    timeout: 15000
+    timeout: 30000
 - assertVisible:
     id: "af_tabbar"
+    timeout: 5000
 - takeScreenshot: golden-01-signed-in
 
 # --- Step 2: Suggest a workout from Home ---
@@ -82,6 +84,7 @@ appId: com.myamaka.AmakaFlowCompanion
             text: "Generate My Workout"
           direction: DOWN
           speed: 25
+          timeout: 30000
       - tapOn:
           text: "Generate My Workout"
       - waitForAnimationToEnd:
@@ -106,6 +109,7 @@ appId: com.myamaka.AmakaFlowCompanion
       text: "Start workout"
     direction: DOWN
     speed: 25
+    timeout: 30000
 - tapOn:
     id: "af_suggest_start"
 - waitForAnimationToEnd:
@@ -145,17 +149,31 @@ appId: com.myamaka.AmakaFlowCompanion
     id: "history_tab"
 - waitForAnimationToEnd:
     timeout: 3000
+# Staging API eventual consistency: pull-to-refresh once, then poll for the
+# first history cell (index 0 within the "Today" section).
+- swipe:
+    direction: DOWN
+    duration: 400
+- waitForAnimationToEnd:
+    timeout: 3000
+- scrollUntilVisible:
+    element:
+      id: "ama1842.activityHistory.cell.0"
+    direction: DOWN
+    speed: 25
+    timeout: 30000
 - extendedWaitUntil:
     visible:
       id: "ama1842.activityHistory.cell.0"
-    timeout: 10000
+    timeout: 30000
 - takeScreenshot: golden-07-history-shows-workout
-# HARD ASSERTION: the most recent history cell exists (round-trip proven)
 - assertVisible:
     id: "ama1842.activityHistory.cell.0"
-# The completed workout dated today is present in the list.
+    timeout: 5000
+# Section header proves the completion landed under Today (not a stale row).
 - assertVisible:
-    text: ".*${TODAY}.*"
+    text: "Today"
+    timeout: 5000
 
 # --- Step 7: relaunch, assert persistence (catches save-not-persisted) ---
 # Reuse clerk-signin (idempotent) so cold relaunch dismisses onboarding and
@@ -165,10 +183,24 @@ appId: com.myamaka.AmakaFlowCompanion
 - runFlow: ../_lib/clerk-signin.yaml
 - tapOn:
     id: "history_tab"
+- waitForAnimationToEnd:
+    timeout: 3000
+- swipe:
+    direction: DOWN
+    duration: 400
+- waitForAnimationToEnd:
+    timeout: 3000
+- scrollUntilVisible:
+    element:
+      id: "ama1842.activityHistory.cell.0"
+    direction: DOWN
+    speed: 25
+    timeout: 30000
 - extendedWaitUntil:
     visible:
       id: "ama1842.activityHistory.cell.0"
-    timeout: 10000
+    timeout: 30000
 - assertVisible:
     id: "ama1842.activityHistory.cell.0"
+    timeout: 5000
 - takeScreenshot: golden-08-persisted-after-relaunch

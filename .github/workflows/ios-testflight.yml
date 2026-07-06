@@ -431,33 +431,27 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
 
-  # AMA-1804 / AMA-2260 / AMA-2276 — Golden-path + coach feature-presence smoke AFTER TestFlight upload.
+  # AMA-1804 / AMA-2260 / AMA-2276 / AMA-2277 — Golden-path + coach feature-presence smoke.
   #
-  # Layered timeouts (AMA-2276): job 40 min; sim boot 10; Debug build 20; Maestro 12 min/flow
-  # with GNU timeout hard-kill; evidence + paging on timeout-kill as well as assertion failure.
+  # Runs IN PARALLEL with archive+upload (same commit; builds its own Debug sim app — never
+  # consumes the IPA). Layered timeouts: job 25 min; sim boot 10; Debug build 20; Maestro
+  # step 10 (6 min/flow hard-kill + retry failed flows only). Failed smoke dies <10 min when
+  # flow waits are capped (AMA-2277 golden-path fix).
   #
-  # Runs the primary user journey (e2e/maestro/flows/golden-path.yaml) on a
-  # SIMULATOR build of the SAME commit against the staging backend, and PAGES
-  # on red. Caveat (David's call 2026-05-27): the sim build tests the code,
-  # not the exact signed IPA — device-farm fidelity is a deferred follow-up.
+  # Runs the primary user journey (e2e/maestro/flows/golden-path.yaml) on a SIMULATOR build
+  # against staging, and PAGES on red. Post-upload semantics: paging copy references the
+  # same commit; archive may still be in flight or failed independently.
   #
-  # This is a POST-DEPLOY alert, not a PR merge gate, so it stays consistent
-  # with the "L4 Maestro = evidence, not merge-validator" rule. Paging is
-  # layered + best-effort so it works regardless of which secrets exist:
-  #   - GitHub issue   — always (built-in GITHUB_TOKEN)
-  #   - Telegram ping  — only if secrets.TELEGRAM_BOT_TOKEN is set
-  #   - Linear P1      — only if secrets.LINEAR_API_KEY is set
+  # This is a POST-DEPLOY alert, not a PR merge gate ("L4 Maestro = evidence, not merge-validator").
   golden-path-smoke:
     name: Golden-path + feature-presence smoke (post-upload)
-    needs: [secrets-preflight, completion-contract, testflight]
+    needs: [secrets-preflight, completion-contract]
     if: >-
-      always()
-      && (needs.secrets-preflight.result == 'success' || needs.secrets-preflight.result == 'skipped')
+      (needs.secrets-preflight.result == 'success' || needs.secrets-preflight.result == 'skipped')
       && (needs.completion-contract.result == 'success' || needs.completion-contract.result == 'skipped')
-      && (needs.testflight.result == 'success' || needs.testflight.result == 'skipped')
       && (github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]'))
     runs-on: macos-15
-    timeout-minutes: 40
+    timeout-minutes: 25
     permissions:
       contents: read
       issues: write
@@ -475,6 +469,13 @@ jobs:
             brew install coreutils
           fi
           gtimeout --version
+
+      - name: Compute build number (artifact label)
+        id: build-number
+        run: |
+          BUILD_NUMBER=$((100 + ${{ github.run_number }}))
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "Smoke artifact build label: $BUILD_NUMBER"
 
       - name: Determine + boot simulator
         id: simulator
@@ -522,7 +523,9 @@ jobs:
           echo "udid=$BEST_UDID" >> "$GITHUB_OUTPUT"
           echo "ios=$BEST_IOS" >> "$GITHUB_OUTPUT"
           xcrun simctl shutdown all || true
-          xcrun simctl erase "$BEST_UDID" || true
+          # AMA-2277: fresh runners are already clean — erase triggers a multi-minute
+          # indexing storm. Uninstall the app only so the next install is deterministic.
+          xcrun simctl uninstall "$BEST_UDID" com.myamaka.AmakaFlowCompanion 2>/dev/null || true
           xcrun simctl boot "$BEST_UDID"
           # Sim-boot watchdog — fail fast on slow/stuck runners (8 min cap inside 10 min step).
           if ! run_boot_watchdog 480 xcrun simctl bootstatus "$BEST_UDID" -b; then
@@ -546,8 +549,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: AmakaFlowCompanion/.spm
-          key: spm-tf-smoke-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
-          restore-keys: spm-tf-smoke-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
+          key: spm-tf-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
+          restore-keys: |
+            spm-tf-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
 
       - name: Restore DerivedData cache
         uses: actions/cache@v4
@@ -614,13 +618,14 @@ jobs:
 
       - name: Run golden-path + feature-presence smoke
         id: smoke
-        timeout-minutes: 25
+        timeout-minutes: 10
         continue-on-error: true
         env:
           UITEST_CLERK_PASSWORD: ${{ secrets.UITEST_CLERK_PASSWORD }}
           MAESTRO_DRIVER_STARTUP_TIMEOUT: "120000"
           MAESTRO_CLI_NO_ANALYTICS: "1"
-          MAESTRO_FLOW_TIMEOUT_SECONDS: "720"
+          MAESTRO_FLOW_TIMEOUT_SECONDS: "360"
+          SMOKE_FLOW_MAX_ATTEMPTS: "2"
           SIM_UDID: ${{ steps.simulator.outputs.udid }}
         run: |
           set +e
@@ -633,37 +638,24 @@ jobs:
             exit 1
           fi
           export SMOKE_FLOW_SPECS="e2e/maestro/flows/golden-path.yaml:golden-path e2e/maestro/flows/coach/feature-presence.yaml:feature-presence"
-          STATUS=1
+          if .github/scripts/ci/run-maestro-smoke-with-evidence.sh; then
+            echo "failed_flows=none" >> "$GITHUB_OUTPUT"
+            echo "failure_reason=none" >> "$GITHUB_OUTPUT"
+            echo "outcome=passed" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           FAILED="golden-path,feature-presence"
           FAILURE_REASON="assertion"
-          MAX_ATTEMPTS=2
-          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
-            echo "Post-upload smoke attempt ${attempt}/${MAX_ATTEMPTS} (golden-path + feature-presence)"
-            TODAY="$(date +%-d)"
-            export TODAY
-            if .github/scripts/ci/run-maestro-smoke-with-evidence.sh; then
-              STATUS=0
-              FAILED="none"
-              FAILURE_REASON="none"
-              break
-            fi
-            if [ -f maestro-output/summary.txt ]; then
-              # shellcheck disable=SC1091
-              source maestro-output/summary.txt
-              FAILED="${failed_flows:-golden-path,feature-presence}"
-              FAILURE_REASON="${failure_reason:-assertion}"
-            fi
-            if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
-              echo "Smoke failed on attempt ${attempt} — warming simulator and retrying once (bounded ${MAX_ATTEMPTS} attempts)."
-              open -a Simulator
-              xcrun simctl bootstatus "$SIM_UDID" -b || true
-              sleep 5
-            fi
-          done
+          if [ -f maestro-output/summary.txt ]; then
+            # shellcheck disable=SC1091
+            source maestro-output/summary.txt
+            FAILED="${failed_flows:-golden-path,feature-presence}"
+            FAILURE_REASON="${failure_reason:-assertion}"
+          fi
           echo "failed_flows=${FAILED}" >> "$GITHUB_OUTPUT"
           echo "failure_reason=${FAILURE_REASON}" >> "$GITHUB_OUTPUT"
-          echo "outcome=$([ "$STATUS" = 0 ] && echo passed || echo failed)" >> "$GITHUB_OUTPUT"
-          exit "$STATUS"
+          echo "outcome=failed" >> "$GITHUB_OUTPUT"
+          exit 1
 
       # ---- Paging on red (assertion failure OR Maestro timeout-kill) — before artifact upload ----
       - name: Page — open GitHub issue (always available)
@@ -743,7 +735,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: golden-path-smoke-build-${{ needs.testflight.outputs.build_number || format('smoke-only-{0}', github.run_number) }}
+          name: golden-path-smoke-build-${{ steps.build-number.outputs.build_number }}
           path: |
             maestro-output/
             AmakaFlowCompanion/smoke-build.log
