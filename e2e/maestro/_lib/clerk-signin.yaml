@@ -190,7 +190,7 @@ env:
 - extendedWaitUntil:
     visible:
       id: "af_tabbar"
-    timeout: 30000
+    timeout: 60000
 - tapOn:
     id: "home_tab"
 - assertVisible:

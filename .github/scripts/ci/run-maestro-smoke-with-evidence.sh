@@ -199,6 +199,10 @@ while [[ ${#pending_specs[@]} -gt 0 && $attempt -le $SMOKE_FLOW_MAX_ATTEMPTS ]];
       OVERALL=1
       FAILED_LABELS+=("$label")
       retry_specs+=("$spec")
+      if [[ "$label" == "golden-path" ]]; then
+        echo "golden-path failed — skipping remaining flows this attempt (shared auth/shell precondition)."
+        break
+      fi
     fi
     echo "::endgroup::"
   done
