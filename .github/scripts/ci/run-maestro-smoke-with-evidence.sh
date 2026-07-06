@@ -19,12 +19,12 @@ FAILURE_REASON="assertion"
 run_with_timeout() {
   local seconds="$1"
   shift
-  if command -v timeout >/dev/null 2>&1; then
-    timeout --signal=TERM --kill-after=30 "$seconds" "$@"
-  elif command -v gtimeout >/dev/null 2>&1; then
+  if command -v gtimeout >/dev/null 2>&1; then
     gtimeout --signal=TERM --kill-after=30 "$seconds" "$@"
+  elif command -v timeout >/dev/null 2>&1; then
+    timeout --signal=TERM --kill-after=30 "$seconds" "$@"
   else
-    echo "::warning::GNU timeout not found — running Maestro without hard kill (install coreutils on runner)."
+    echo "::error::GNU timeout (coreutils) required for Maestro hard-kill — install coreutils on the runner."
     "$@"
   fi
 }

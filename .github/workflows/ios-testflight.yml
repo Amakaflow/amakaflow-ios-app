@@ -469,6 +469,13 @@ jobs:
         id: xcode
         run: .github/scripts/ci/select-xcode.sh
 
+      - name: Install GNU coreutils (Maestro timeout hard-kill)
+        run: |
+          if ! command -v gtimeout >/dev/null 2>&1; then
+            brew install coreutils
+          fi
+          gtimeout --version
+
       - name: Determine + boot simulator
         id: simulator
         timeout-minutes: 10
@@ -678,8 +685,9 @@ jobs:
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           FAILED="${{ steps.smoke.outputs.failed_flows }}"
           REASON="${{ steps.smoke.outputs.failure_reason }}"
-          if [ "$REASON" = "timeout" ]; then
-            REASON_TEXT="Maestro flow timeout (hard-killed)"
+          if [ -z "$REASON" ]; then REASON="timeout-or-unknown"; fi
+          if [ "$REASON" = "timeout" ] || [ "$REASON" = "timeout-or-unknown" ]; then
+            REASON_TEXT="Maestro flow timeout (hard-killed or step timeout)"
           else
             REASON_TEXT="assertion failure"
           fi
@@ -706,7 +714,8 @@ jobs:
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           FAILED="${{ steps.smoke.outputs.failed_flows }}"
           REASON="${{ steps.smoke.outputs.failure_reason }}"
-          if [ "$REASON" = "timeout" ]; then
+          if [ -z "$REASON" ]; then REASON="timeout-or-unknown"; fi
+          if [ "$REASON" = "timeout" ] || [ "$REASON" = "timeout-or-unknown" ]; then
             REASON_TEXT="timeout"
           else
             REASON_TEXT="assertion"
@@ -725,7 +734,8 @@ jobs:
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           FAILED="${{ steps.smoke.outputs.failed_flows }}"
           REASON="${{ steps.smoke.outputs.failure_reason }}"
-          if [ "$REASON" = "timeout" ]; then
+          if [ -z "$REASON" ]; then REASON="timeout-or-unknown"; fi
+          if [ "$REASON" = "timeout" ] || [ "$REASON" = "timeout-or-unknown" ]; then
             REASON_TEXT="Maestro timeout"
           else
             REASON_TEXT="assertion failure"
