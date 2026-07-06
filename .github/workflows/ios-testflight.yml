@@ -110,13 +110,34 @@ jobs:
             echo "::error::APP_STORE_CONNECT_API_PRIVATE_KEY must be the raw .p8 PEM (include BEGIN/END lines)."
             exit 1
           fi
-          if [ -n "${APPLE_DIST_P12:-}" ] && ! printf '%s' "$APPLE_DIST_P12" | base64 --decode >/dev/null 2>&1; then
-            echo "::error::APPLE_DISTRIBUTION_CERTIFICATE_P12 must be a base64-encoded .p12 blob."
-            exit 1
+          validate_p12_secret() {
+            local b64="$1"
+            local name="$2"
+            local tmp cleaned size magic
+            tmp="$(mktemp)"
+            cleaned="$(printf '%s' "$b64" | tr -cd 'A-Za-z0-9+/=')"
+            if [ -z "$cleaned" ]; then
+              echo "::error::${name} is empty. Run: gh secret set ${name} --repo Amakaflow/amakaflow-ios-app -b \"\$(openssl base64 -A -in ~/Downloads/YourCert.p12)\""
+              exit 1
+            fi
+            if ! printf '%s' "$cleaned" | openssl base64 -d -A > "$tmp" 2>/dev/null; then
+              echo "::error::${name} is not valid base64."
+              exit 1
+            fi
+            size="$(wc -c < "$tmp" | tr -d ' ')"
+            magic="$(xxd -p -l 2 "$tmp" 2>/dev/null || echo "??")"
+            rm -f "$tmp"
+            if [ "$size" -lt 500 ] || [ "$magic" != "3082" ]; then
+              echo "::error::${name} is corrupt (${size} bytes, header ${magic}). Re-set: gh secret set ${name} --repo Amakaflow/amakaflow-ios-app -b \"\$(openssl base64 -A -in ~/Downloads/YourCert.p12)\""
+              exit 1
+            fi
+            echo "✅ ${name}: valid .p12 (${size} bytes)"
+          }
+          if [ -n "${APPLE_DIST_P12:-}" ]; then
+            validate_p12_secret "$APPLE_DIST_P12" "APPLE_DISTRIBUTION_CERTIFICATE_P12"
           fi
-          if [ -n "${APPLE_DEV_P12:-}" ] && ! printf '%s' "$APPLE_DEV_P12" | base64 --decode >/dev/null 2>&1; then
-            echo "::error::APPLE_DEVELOPMENT_CERTIFICATE_P12 must be a base64-encoded .p12 blob."
-            exit 1
+          if [ -n "${APPLE_DEV_P12:-}" ]; then
+            validate_p12_secret "$APPLE_DEV_P12" "APPLE_DEVELOPMENT_CERTIFICATE_P12"
           fi
           if [ -z "${CLERK_DEV:-}" ]; then
             echo "::warning::CLERK_PUBLISHABLE_KEY_DEV not set — using solid-chicken-50 publishable default."
