@@ -36,7 +36,6 @@ appId: com.myamaka.AmakaFlowCompanion
     timeout: 30000
 - assertVisible:
     id: "af_tabbar"
-    timeout: 5000
 - takeScreenshot: golden-01-signed-in
 
 # --- Step 2: Suggest a workout from Home ---
@@ -169,11 +168,9 @@ appId: com.myamaka.AmakaFlowCompanion
 - takeScreenshot: golden-07-history-shows-workout
 - assertVisible:
     id: "ama1842.activityHistory.cell.0"
-    timeout: 5000
 # Section header proves the completion landed under Today (not a stale row).
 - assertVisible:
     text: "Today"
-    timeout: 5000
 
 # --- Step 7: relaunch, assert persistence (catches save-not-persisted) ---
 # Reuse clerk-signin (idempotent) so cold relaunch dismisses onboarding and
@@ -202,5 +199,4 @@ appId: com.myamaka.AmakaFlowCompanion
     timeout: 30000
 - assertVisible:
     id: "ama1842.activityHistory.cell.0"
-    timeout: 5000
 - takeScreenshot: golden-08-persisted-after-relaunch

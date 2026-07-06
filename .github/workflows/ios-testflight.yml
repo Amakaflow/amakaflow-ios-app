@@ -629,7 +629,7 @@ jobs:
 
       - name: Run golden-path + feature-presence smoke
         id: smoke
-        timeout-minutes: 10
+        timeout-minutes: 12
         continue-on-error: true
         env:
           UITEST_CLERK_PASSWORD: ${{ secrets.UITEST_CLERK_PASSWORD }}
@@ -668,6 +668,21 @@ jobs:
           echo "outcome=failed" >> "$GITHUB_OUTPUT"
           exit 1
 
+      - name: Hydrate smoke outputs (step timeout / kill path)
+        if: always() && steps.smoke.outcome == 'failure' && steps.smoke.outputs.failed_flows == ''
+        id: smoke_meta
+        run: |
+          FAILED="golden-path,feature-presence"
+          REASON="timeout-or-unknown"
+          if [ -f maestro-output/summary.txt ]; then
+            # shellcheck disable=SC1091
+            source maestro-output/summary.txt
+            FAILED="${failed_flows:-golden-path,feature-presence}"
+            REASON="${failure_reason:-timeout-or-unknown}"
+          fi
+          echo "failed_flows=${FAILED}" >> "$GITHUB_OUTPUT"
+          echo "failure_reason=${REASON}" >> "$GITHUB_OUTPUT"
+
       # ---- Paging on red (assertion failure OR Maestro timeout-kill) — before artifact upload ----
       - name: Page — open GitHub issue (always available)
         if: steps.smoke.outcome == 'failure'
@@ -675,8 +690,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          FAILED="${{ steps.smoke.outputs.failed_flows }}"
-          REASON="${{ steps.smoke.outputs.failure_reason }}"
+          FAILED="${{ steps.smoke.outputs.failed_flows || steps.smoke_meta.outputs.failed_flows }}"
+          REASON="${{ steps.smoke.outputs.failure_reason || steps.smoke_meta.outputs.failure_reason }}"
           if [ -z "$REASON" ]; then REASON="timeout-or-unknown"; fi
           if [ "$REASON" = "timeout" ] || [ "$REASON" = "timeout-or-unknown" ]; then
             REASON_TEXT="Maestro flow timeout (hard-killed or step timeout)"
@@ -704,8 +719,8 @@ jobs:
         run: |
           if [ -z "$TG_TOKEN" ]; then echo "TELEGRAM_BOT_TOKEN not set — skipping Telegram page."; exit 0; fi
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          FAILED="${{ steps.smoke.outputs.failed_flows }}"
-          REASON="${{ steps.smoke.outputs.failure_reason }}"
+          FAILED="${{ steps.smoke.outputs.failed_flows || steps.smoke_meta.outputs.failed_flows }}"
+          REASON="${{ steps.smoke.outputs.failure_reason || steps.smoke_meta.outputs.failure_reason }}"
           if [ -z "$REASON" ]; then REASON="timeout-or-unknown"; fi
           if [ "$REASON" = "timeout" ] || [ "$REASON" = "timeout-or-unknown" ]; then
             REASON_TEXT="timeout"
@@ -724,8 +739,8 @@ jobs:
         run: |
           if [ -z "$LINEAR_KEY" ]; then echo "LINEAR_API_KEY not set — skipping Linear P1 (GitHub issue covers the alert)."; exit 0; fi
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          FAILED="${{ steps.smoke.outputs.failed_flows }}"
-          REASON="${{ steps.smoke.outputs.failure_reason }}"
+          FAILED="${{ steps.smoke.outputs.failed_flows || steps.smoke_meta.outputs.failed_flows }}"
+          REASON="${{ steps.smoke.outputs.failure_reason || steps.smoke_meta.outputs.failure_reason }}"
           if [ -z "$REASON" ]; then REASON="timeout-or-unknown"; fi
           if [ "$REASON" = "timeout" ] || [ "$REASON" = "timeout-or-unknown" ]; then
             REASON_TEXT="Maestro timeout"
@@ -756,5 +771,7 @@ jobs:
       - name: Fail the job if the smoke failed
         if: steps.smoke.outcome == 'failure'
         run: |
-          echo "::error::Post-upload smoke failed (${{ steps.smoke.outputs.failed_flows }}, reason=${{ steps.smoke.outputs.failure_reason }}) — see paging + the golden-path-smoke artifact."
+          FAILED="${{ steps.smoke.outputs.failed_flows || steps.smoke_meta.outputs.failed_flows }}"
+          REASON="${{ steps.smoke.outputs.failure_reason || steps.smoke_meta.outputs.failure_reason }}"
+          echo "::error::Post-upload smoke failed (${FAILED}, reason=${REASON}) — see paging + the golden-path-smoke artifact."
           exit 1

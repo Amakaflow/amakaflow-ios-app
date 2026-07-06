@@ -72,6 +72,14 @@ resolve_smoke_flow_specs() {
   SMOKE_FLOW_SPECS=("${specs[@]}")
 }
 
+stop_failure_recording() {
+  if [[ -n "${VIDEO_PID:-}" ]]; then
+    kill -INT "$VIDEO_PID" 2>/dev/null || true
+    run_with_timeout 15 wait "$VIDEO_PID" 2>/dev/null || kill -9 "$VIDEO_PID" 2>/dev/null || true
+    VIDEO_PID=""
+  fi
+}
+
 capture_failure_evidence() {
   local label="$1"
   local evidence_dir="$MAESTRO_OUTPUT_DIR/${label}-failure-evidence"
@@ -91,8 +99,7 @@ capture_failure_evidence() {
     > "$evidence_dir/simulator-last-90s.log" 2>&1 || true
 
   if [[ -n "${VIDEO_PID:-}" ]]; then
-    kill -INT "$VIDEO_PID" 2>/dev/null || true
-    wait "$VIDEO_PID" 2>/dev/null || true
+    stop_failure_recording
     if [[ -f "$evidence_dir/failure-recording.mp4" ]]; then
       echo "Saved screen recording: $evidence_dir/failure-recording.mp4"
     fi
@@ -153,15 +160,16 @@ run_smoke_flow() {
   if [[ "$status" -eq 124 || "$status" -eq 137 ]]; then
     echo "::error::Maestro flow '${label}' timed out after ${MAESTRO_FLOW_TIMEOUT_SECONDS}s — hard-killed."
     FAILURE_REASON="timeout"
+    stop_failure_recording
     capture_failure_evidence "$label"
+    pkill -f "maestro.cli" 2>/dev/null || true
   elif [[ "$status" -ne 0 ]]; then
+    stop_failure_recording
     capture_failure_evidence "$label"
+    pkill -f "maestro.cli" 2>/dev/null || true
   else
-    if [[ -n "${VIDEO_PID:-}" ]]; then
-      kill -INT "$VIDEO_PID" 2>/dev/null || true
-      wait "$VIDEO_PID" 2>/dev/null || true
-      rm -f "$evidence_dir/failure-recording.mp4"
-    fi
+    stop_failure_recording
+    rm -f "$evidence_dir/failure-recording.mp4"
   fi
   VIDEO_PID=""
   CURRENT_LABEL=""
