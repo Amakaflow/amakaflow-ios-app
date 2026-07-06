@@ -44,8 +44,30 @@ import_p12() {
     exit 1
   fi
 
+  # GitHub secrets sometimes include a trailing newline from UI paste.
+  password="${password//$'\r'/}"
+  while [ "${password%$'\n'}" != "$password" ]; do password="${password%$'\n'}"; done
+
+  # Keychain Access exports legacy RC2 PKCS#12. GHA macOS security(1) rejects them
+  # with "Unknown format in import" even when bytes/size are valid (run #158).
+  local modern_p12="${p12_file}.modern"
+  if openssl pkcs12 -in "$p12_file" -passin "pass:${password}" -legacy \
+      -export -out "$modern_p12" -passout "pass:${password}" 2>/tmp/"${label}"-rewrap.err; then
+    mv "$modern_p12" "$p12_file"
+    size="$(wc -c < "$p12_file" | tr -d ' ')"
+    echo "Re-wrapped ${label} PKCS#12 for CI keychain (${size} bytes)."
+  elif grep -qi "Mac verify error\|invalid password\|password" /tmp/"${label}"-rewrap.err; then
+    echo "::error::Wrong password in ${secret_name%_P12}_PASSWORD (openssl pkcs12 MAC verify failed)."
+    cat /tmp/"${label}"-rewrap.err >&2
+    exit 1
+  else
+    echo "::warning::${label}: PKCS#12 re-wrap skipped; attempting direct import."
+    rm -f "$modern_p12"
+  fi
+
   echo "Importing ${label} (${size} bytes)..."
   if ! security import "$p12_file" -k "$KEYCHAIN_NAME" -P "$password" \
+    -f pkcs12 \
     -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/xcodebuild \
     -A 2>/tmp/"${label}"-import.err; then
     if grep -qi "MAC verification failed\|password" /tmp/"${label}"-import.err; then
