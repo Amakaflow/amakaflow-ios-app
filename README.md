@@ -94,3 +94,5 @@ For staging TestFlight releases (founder/device validation), see `docs/ci/STAGIN
 - [EventKit](https://developer.apple.com/documentation/eventkit)
 - [WatchConnectivity](https://developer.apple.com/documentation/watchconnectivity)
 - [HealthKit](https://developer.apple.com/documentation/healthkit)
+
+<!-- AMA-2283 docs-only PR pipeline validation -->
