@@ -19,22 +19,25 @@ name: iOS Preflight
 # that boots the .app, asserts the process survives 5s, and asserts at least
 # one API call returned 2xx. That catches Bug A end-to-end.
 
+# AMA-2283 (CI-3): no path filter on the PR trigger — preflight's PR-time jobs
+# are cheap ubuntu checks (<1 min) and are branch-protection required, so they
+# must post a status on EVERY PR (a path filter would leave docs-only PRs
+# waiting forever on a check that never reports — the pr-ios-tests-docs-skip
+# shim bug class).
 on:
   pull_request:
     branches: [main]
-    paths:
-      # Run preflight whenever something that affects the shipped binary changes.
-      - "AmakaFlow/**"
-      - "AmakaFlowCompanion/**"
-      - "Project.swift"
-      - "scripts/preflight/**"
-      - ".github/workflows/preflight.yml"
   workflow_dispatch:
     inputs:
       strict_production:
         description: "Treat production DNS gaps as failures (not just warnings)"
         type: boolean
         default: false
+
+# Rapid pushes to the same PR cancel the prior in-progress run (AMA-2283).
+concurrency:
+  group: preflight-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check-hosts:
@@ -65,7 +68,7 @@ jobs:
     # `$(VAR)` is intentional and gets substituted at build time) we accept by
     # excluding the source-side run; this job only runs on a built archive.
     name: Lint Info.plist for unresolved placeholders
-    runs-on: macos-14
+    runs-on: macos-15
     if: github.event_name == 'workflow_dispatch'  # only run when a build is intended; PRs run check-hosts only
     timeout-minutes: 25
     steps:

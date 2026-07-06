@@ -7,8 +7,8 @@
 #
 #   build (Debug-sim, build-for-testing, generic destination)
 #     ├─▶ ios-tests      — ALWAYS (when affected != NONE); runs test-without-building
-#     ├─▶ cold-launch    — when app/entrypoint/workflow paths changed (or dispatch)
-#     └─▶ maestro         — only when the PR carries the `maestro` label (or dispatch)
+#     ├─▶ cold-launch    — only when the PR carries the `run-cold-launch` label (or dispatch)
+#     └─▶ maestro         — only when the PR carries the `run-maestro` label (or dispatch)
 #
 # The build emits two artifacts:
 #   - `cold-launch-app`  : tarred AmakaFlowCompanion.app (cold-launch + maestro install)
@@ -18,19 +18,22 @@
 # and sharing the products primarily SAVES RUNNER-MINUTES while keeping every
 # downstream check identical to its previous behavior. CI check names are
 # preserved verbatim so branch-protection required-checks keep matching.
+#
+# AMA-2283 (CI-3): no path filters on the trigger — the workflow runs on EVERY
+# PR (docs included) so the required check names are always posted. Docs-only
+# PRs skip the macOS jobs via detect-changes (skipped required jobs satisfy
+# branch protection), which replaces the pr-ios-tests-docs-skip.yml shim.
+# Timeout caps are sized from recent successful runs +50% headroom
+# (build 11.9m→18, impacted tests 18.6m→28, cold-launch 7.4m→12).
 
 name: iOS PR Pipeline
 
 on:
   pull_request:
     branches: [main]
-    # `labeled` is required so the maestro label gate re-evaluates when the
-    # `maestro` label is added to an already-open PR.
+    # `labeled` is required so the `run-maestro` / `run-cold-launch` label
+    # gates re-evaluate when a label is added to an already-open PR.
     types: [opened, synchronize, reopened, labeled]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
-      - ".github/ISSUE_TEMPLATE/**"
   workflow_dispatch: {}
 
 # Rapid pushes to the same PR cancel the prior in-progress run instead of
@@ -82,9 +85,10 @@ jobs:
       affected: ${{ steps.affected.outputs.result }}
       app_changed: ${{ steps.app.outputs.app_changed }}
       # should_build ORs the shell-computed `code_build` (affected != NONE OR
-      # app paths changed) with the GitHub context for the maestro label and
+      # app paths changed) with the GitHub context for the run-maestro /
+      # run-cold-launch labels (their jobs consume the build artifact) and
       # the workflow_dispatch event.
-      should_build: ${{ steps.code.outputs.code_build == 'true' || contains(github.event.pull_request.labels.*.name, 'maestro') || github.event_name == 'workflow_dispatch' }}
+      should_build: ${{ steps.code.outputs.code_build == 'true' || contains(github.event.pull_request.labels.*.name, 'run-maestro') || contains(github.event.pull_request.labels.*.name, 'run-cold-launch') || github.event_name == 'workflow_dispatch' }}
 
     steps:
       - name: Checkout
@@ -109,7 +113,17 @@ jobs:
       - name: Detect app/entrypoint changes
         id: app
         run: |
-          CHANGED=$(git diff --name-only "origin/${GITHUB_BASE_REF:-main}...HEAD" || true)
+          # Two-dot diff against the fetched base tip. The previous
+          # three-dot form needed a merge base, which a depth-1 clone lacks
+          # ("fatal: no merge base") — the `|| true` then silently produced
+          # an empty CHANGED and app_changed=false on every PR (AMA-2283).
+          # HEAD here is the PR merge ref, so base-tip..HEAD is exactly the
+          # PR's changes. If the diff still fails, fail CLOSED (build).
+          if ! CHANGED=$(git diff --name-only "origin/${GITHUB_BASE_REF:-main}" HEAD); then
+            echo "::warning::git diff failed — failing closed (app_changed=true)"
+            echo "app_changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           APP_CHANGED="false"
           if echo "$CHANGED" | grep -qE '^(AmakaFlow/|AmakaFlowCompanion/AmakaFlowCompanion/|AmakaFlowCompanion/AmakaFlowCompanion\.xcodeproj/|AmakaFlowCompanion/AmakaFlowCompanionApp/|scripts/cold-launch-check\.sh|\.github/workflows/)'; then
             APP_CHANGED="true"
@@ -132,7 +146,8 @@ jobs:
     runs-on: macos-15
     needs: [detect-changes, lint]
     if: needs.detect-changes.outputs.should_build == 'true'
-    timeout-minutes: 30
+    # Cap sized from recent successful runs (max 11.9m) +50% headroom (AMA-2283).
+    timeout-minutes: 18
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -241,7 +256,8 @@ jobs:
     runs-on: macos-15
     needs: [detect-changes, build]
     if: needs.detect-changes.outputs.affected != 'NONE'
-    timeout-minutes: 30
+    # Cap sized from recent successful runs (max 18.6m) +50% headroom (AMA-2283).
+    timeout-minutes: 28
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -346,9 +362,14 @@ jobs:
   cold-launch:
     name: Cold-launch on ${{ matrix.runtime }} / ${{ matrix.device }}
     needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.app_changed == 'true' || github.event_name == 'workflow_dispatch'
+    # AMA-2283 (CI-3 design): opt-in only — runs on the `run-cold-launch`
+    # label or manual dispatch, not on every app-touching PR.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'run-cold-launch')
     runs-on: macos-15
-    timeout-minutes: 20
+    # Cap sized from recent successful runs (max 7.4m) +50% headroom (AMA-2283).
+    timeout-minutes: 12
     strategy:
       fail-fast: false
       matrix:
@@ -442,11 +463,11 @@ jobs:
   maestro-flow-tests:
     name: Maestro Flow Tests
     needs: build
-    # Run only on manual dispatch, or on a PR explicitly labeled `maestro`
+    # Run only on manual dispatch, or on a PR explicitly labeled `run-maestro`
     # (the labeled trigger above re-evaluates this when the label is added).
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      contains(github.event.pull_request.labels.*.name, 'maestro')
+      contains(github.event.pull_request.labels.*.name, 'run-maestro')
     runs-on: macos-15
     timeout-minutes: 75
     steps:
@@ -532,7 +553,7 @@ jobs:
             fi
           done
 
-          # AMA-2260 — Coach journey flows (deeper; PR-label `maestro` only).
+          # AMA-2260 — Coach journey flows (deeper; PR-label `run-maestro` only).
           # Feature-presence is gating on ios-testflight post-upload; these
           # journeys stay warn-only here because LLM latency can exceed 60s.
           for flow in \

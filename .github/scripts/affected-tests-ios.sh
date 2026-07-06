@@ -30,7 +30,17 @@ HEAD_REF="${2:-HEAD}"
 # before invoking this script; the fetch here is a no-op in that case and a
 # safety net for standalone local runs.
 git fetch --no-tags --depth=1 origin "${GITHUB_BASE_REF:-main}" >/dev/null 2>&1 || true
-CHANGED=$(git diff --name-only "${BASE_REF}...${HEAD_REF}" || true)
+
+# Two-dot diff against the base tip. The previous three-dot form required a
+# merge base, which a depth-1 CI clone lacks ("fatal: no merge base") — the
+# `|| true` then silently yielded an empty diff and NONE on every PR, so
+# impacted tests were skipped even for Swift changes (AMA-2283). In CI,
+# HEAD_REF is the PR merge ref, so base-tip..HEAD is exactly the PR's
+# changes. If the diff fails outright, fail CLOSED with a FULL run.
+if ! CHANGED=$(git diff --name-only "${BASE_REF}" "${HEAD_REF}"); then
+  echo "FULL"
+  exit 0
+fi
 
 # If Xcode project or Swift package config changes, safest is full test run
 if echo "$CHANGED" | grep -E -q '(\.xcodeproj/|Package\.swift|Package\.resolved|\.xcworkspace/)'; then
