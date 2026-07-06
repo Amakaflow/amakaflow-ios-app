@@ -12,16 +12,44 @@ import_p12() {
   local password="$2"
   local label="$3"
   local p12_file
-  p12_file="$(mktemp -t "${label}.XXXXXX.p12")"
+  local clean_b64
+  local size
+
+  # macOS mktemp requires XXXXXX at end of template (not .p12 suffix after X's).
+  p12_file="$(mktemp "${TMPDIR:-/tmp}/amaka-${label}.XXXXXXXX")"
   # shellcheck disable=SC2064
   trap "rm -f '$p12_file'" RETURN
-  # Secrets are stored as single-line base64 (openssl base64 -A). macOS BSD
-  # base64 --decode requires -A for that format; GNU base64 on preflight accepts
-  # both. Use openssl for a consistent decode on GHA macOS runners.
-  printf '%s' "$b64" | openssl base64 -d -A > "$p12_file"
-  security import "$p12_file" -k "$KEYCHAIN_NAME" -P "$password" \
+
+  clean_b64="$(printf '%s' "$b64" | tr -d '[:space:]')"
+  if [ -z "$clean_b64" ]; then
+    echo "::error::${label}: GitHub secret is empty. Re-upload from docs/ci/TESTFLIGHT_SECRETS.md"
+    exit 1
+  fi
+
+  if ! printf '%s' "$clean_b64" | openssl base64 -d -A > "$p12_file" 2>/dev/null; then
+    echo "::error::${label}: base64 decode failed. Re-upload: openssl base64 -A -in YourCert.p12 | gh secret set APPLE_${label^^}_CERTIFICATE_P12 --repo Amakaflow/amakaflow-ios-app"
+    exit 1
+  fi
+
+  size="$(wc -c < "$p12_file" | tr -d ' ')"
+  if [ "$size" -lt 500 ]; then
+    echo "::error::${label}: decoded p12 is only ${size} bytes (expected ~3000+). Secret is corrupt — re-upload the .p12 secret."
+    exit 1
+  fi
+
+  if ! openssl pkcs12 -info -in "$p12_file" -noout -passin "pass:${password}" >/dev/null 2>&1; then
+    echo "::error::${label}: p12 decode OK (${size} bytes) but password/MAC check failed. Fix APPLE_${label^^}_CERTIFICATE_PASSWORD to match the export password."
+    exit 1
+  fi
+
+  echo "Importing ${label} identity (${size} bytes)..."
+  if ! security import "$p12_file" -k "$KEYCHAIN_NAME" -P "$password" \
     -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/xcodebuild \
-    -A
+    -A 2>/dev/null; then
+    echo "::error::${label}: security import failed after pkcs12 check. See docs/ci/TESTFLIGHT_SECRETS.md"
+    exit 1
+  fi
+
   rm -f "$p12_file"
   trap - RETURN
 }
