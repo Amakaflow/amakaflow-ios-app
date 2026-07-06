@@ -37,18 +37,28 @@ import_p12() {
     exit 1
   fi
 
-  if ! openssl pkcs12 -info -in "$p12_file" -noout -passin "pass:${password}" >/dev/null 2>&1; then
-    echo "::error::${label}: p12 decode OK (${size} bytes) but password/MAC check failed. Fix APPLE_${label^^}_CERTIFICATE_PASSWORD to match the export password."
-    exit 1
+  if ! openssl pkcs12 -info -in "$p12_file" -noout -passin "pass:${password}" -legacy >/dev/null 2>&1; then
+    # Fallback: macOS Keychain import (handles legacy RC2 p12 from Keychain Access export).
+    if ! security import "$p12_file" -k "$KEYCHAIN_NAME" -P "$password" \
+      -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/xcodebuild \
+      -A 2>/tmp/"${label}"-import.err; then
+      if grep -qi "MAC verification failed\|password" /tmp/"${label}"-import.err; then
+        echo "::error::${label}: wrong export password in APPLE_${label^^}_CERTIFICATE_PASSWORD."
+      else
+        echo "::error::${label}: import failed — re-upload APPLE_${label^^}_CERTIFICATE_P12 via GitHub UI (paste from: openssl base64 -A -in YourCert.p12 | pbcopy)."
+      fi
+      cat /tmp/"${label}"-import.err >&2
+      exit 1
+    fi
+    rm -f "$p12_file" /tmp/"${label}"-import.err
+    trap - RETURN
+    return 0
   fi
 
   echo "Importing ${label} identity (${size} bytes)..."
-  if ! security import "$p12_file" -k "$KEYCHAIN_NAME" -P "$password" \
+  security import "$p12_file" -k "$KEYCHAIN_NAME" -P "$password" \
     -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/xcodebuild \
-    -A 2>/dev/null; then
-    echo "::error::${label}: security import failed after pkcs12 check. See docs/ci/TESTFLIGHT_SECRETS.md"
-    exit 1
-  fi
+    -A
 
   rm -f "$p12_file"
   trap - RETURN
