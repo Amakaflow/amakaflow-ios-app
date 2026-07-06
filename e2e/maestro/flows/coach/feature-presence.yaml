@@ -25,8 +25,10 @@ appId: com.myamaka.AmakaFlowCompanion
 # Coach tab + one-coach header
 - tapOn:
     id: "coach_tab"
-- waitForAnimationToEnd:
-    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "coach_screen"
+    timeout: 15000
 - assertVisible:
     id: "coach_screen"
 - assertVisible:
@@ -62,10 +64,17 @@ appId: com.myamaka.AmakaFlowCompanion
 - assertVisible:
     id: "coach-menu-actions"
 - takeScreenshot: presence-04-coach-menu
+# Dismiss the options menu. While the SwiftUI Menu overlay is open, the
+# scrim occludes the ENTIRE accessibility tree (coach_screen, af_tabbar —
+# everything; build 238 view-hierarchy evidence on AMA-2274), so no id
+# selector can resolve. Tap the scrim by coordinate instead; the first tap
+# outside the menu is consumed as dismiss.
 - tapOn:
-    id: "coach_screen"
-- waitForAnimationToEnd:
-    timeout: 1500
+    point: "15%,60%"
+- extendedWaitUntil:
+    visible:
+      id: "coach_screen"
+    timeout: 5000
 
 # Profile → Coaching → What my coach knows → CKW surface
 - tapOn:
