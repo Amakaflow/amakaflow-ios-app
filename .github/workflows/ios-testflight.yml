@@ -475,10 +475,12 @@ jobs:
         run: |
           set -euo pipefail
           run_boot_watchdog() {
-            if command -v timeout >/dev/null 2>&1; then
-              timeout --signal=TERM --kill-after=30 "$@"
-            elif command -v gtimeout >/dev/null 2>&1; then
-              gtimeout --signal=TERM --kill-after=30 "$@"
+            local seconds="$1"
+            shift
+            if command -v gtimeout >/dev/null 2>&1; then
+              gtimeout --signal=TERM --kill-after=30 "$seconds" "$@"
+            elif command -v timeout >/dev/null 2>&1; then
+              timeout --signal=TERM --kill-after=30 "$seconds" "$@"
             else
               "$@"
             fi
