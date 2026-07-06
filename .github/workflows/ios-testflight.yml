@@ -446,10 +446,14 @@ jobs:
   golden-path-smoke:
     name: Golden-path + feature-presence smoke (post-upload)
     needs: [secrets-preflight, completion-contract]
+    # Founder decision 2026-07-06: smoke runs ONLY on explicit workflow_dispatch.
+    # Push-to-main uploads are never blocked or paged by simulator smoke; run it
+    # on demand (smoke_only dispatch) or as part of scheduled validation instead.
+    # (AMA-2277: also un-serialized from the archive job — no needs: testflight.)
     if: >-
-      (needs.secrets-preflight.result == 'success' || needs.secrets-preflight.result == 'skipped')
+      github.event_name == 'workflow_dispatch'
+      && (needs.secrets-preflight.result == 'success' || needs.secrets-preflight.result == 'skipped')
       && (needs.completion-contract.result == 'success' || needs.completion-contract.result == 'skipped')
-      && (github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]'))
     runs-on: macos-15
     timeout-minutes: 25
     permissions:
