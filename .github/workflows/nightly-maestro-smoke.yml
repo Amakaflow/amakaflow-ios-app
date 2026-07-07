@@ -30,9 +30,14 @@ jobs:
   nightly-smoke:
     name: Nightly Maestro smoke (golden-path + feature-presence)
     runs-on: macos-15
-    timeout-minutes: 50
+    # Step budgets: try-fetch ~3m + boot 10m + smoke 32m + overhead ~10m = ~55m (fast path).
+    # Fallback-build worst case: build 20m + boot 10m + smoke 32m + overhead ~13m = ~75m.
+    # Job cap must exceed worst-case sum so steps can fail with their own timeout message
+    # instead of the job being killed as 'cancelled' (issue #408).
+    timeout-minutes: 75
     permissions:
       contents: read
+      actions: read  # needed to query and download artifacts from the iOS PR Pipeline
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -121,12 +126,66 @@ jobs:
           key: dd-smoke-${{ runner.os }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj', 'AmakaFlow/**/*.swift', 'AmakaFlowCompanion/**/*.swift') }}
           restore-keys: dd-smoke-${{ runner.os }}-
 
+      # Try to reuse the cold-launch-app artifact from the most recent successful
+      # iOS PR Pipeline run (retention 3 days). Saves ~20m of build time on the
+      # happy path. Falls back to building from source when no artifact is found.
+      - name: Try to download cold-launch-app from recent PR build
+        id: try-fetch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          RUN_ID=$(gh api \
+            "repos/${{ github.repository }}/actions/workflows/pr-ios-tests.yml/runs?status=success&per_page=5" \
+            --jq '[.workflow_runs[] | select(.conclusion == "success")] | .[0].id // ""' 2>/dev/null)
+          if [ -z "$RUN_ID" ]; then
+            echo "No recent successful iOS PR Pipeline run found — will build from source."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          ARTIFACT_ID=$(gh api \
+            "repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts" \
+            --jq '[.artifacts[] | select(.name == "cold-launch-app" and .expired == false)] | .[0].id // ""' 2>/dev/null)
+          if [ -z "$ARTIFACT_ID" ]; then
+            echo "No valid cold-launch-app artifact in run $RUN_ID — will build from source."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          mkdir -p /tmp/smoke-app
+          if ! gh api \
+            "repos/${{ github.repository }}/actions/artifacts/$ARTIFACT_ID/zip" \
+            --output /tmp/smoke-app/app.zip 2>/dev/null; then
+            echo "::warning::Artifact download failed — will build from source."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! unzip -q /tmp/smoke-app/app.zip -d /tmp/smoke-app 2>/dev/null; then
+            echo "::warning::Artifact unzip failed — will build from source."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ ! -f /tmp/smoke-app/built-app.tar ]; then
+            echo "::warning::built-app.tar not found in artifact — will build from source."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          tar -xf /tmp/smoke-app/built-app.tar -C /tmp/smoke-app 2>/dev/null
+          if [ -d /tmp/smoke-app/AmakaFlowCompanion.app ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "Reusing cold-launch-app from PR Pipeline run $RUN_ID — build step skipped."
+          else
+            echo "::warning::Extracted .app not found after untar — will build from source."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
       # Debug sim build with the staging Clerk key baked in. Per
       # Environment.swift, DEBUG builds default to `.staging`, so the
       # journey hits the staging backend (same as scripts/sim-build.sh).
       # Use DerivedData-smoke (not DerivedData) so we never restore the
       # Release archive cache from the testflight job into a Debug sim build.
+      # Skipped when try-fetch succeeds (cold-launch-app artifact available).
       - name: Build Debug app for simulator (staging)
+        if: steps.try-fetch.outputs.available != 'true'
         timeout-minutes: 20
         working-directory: AmakaFlowCompanion
         env:
@@ -195,11 +254,15 @@ jobs:
       - name: Install app on simulator
         working-directory: AmakaFlowCompanion
         run: |
-          APP=$(find DerivedData-smoke/Build/Products/Debug-iphonesimulator -maxdepth 2 -name "AmakaFlowCompanion.app" -type d | head -1)
-          if [ -z "$APP" ]; then
-            echo "No .app built under DerivedData-smoke/Build/Products/Debug-iphonesimulator" >&2
-            find DerivedData-smoke -name "*.app" -type d 2>/dev/null || true
-            exit 1
+          if [ "${{ steps.try-fetch.outputs.available }}" = "true" ]; then
+            APP="/tmp/smoke-app/AmakaFlowCompanion.app"
+          else
+            APP=$(find DerivedData-smoke/Build/Products/Debug-iphonesimulator -maxdepth 2 -name "AmakaFlowCompanion.app" -type d | head -1)
+            if [ -z "$APP" ]; then
+              echo "::error::No .app found under DerivedData-smoke/Build/Products/Debug-iphonesimulator" >&2
+              find DerivedData-smoke -name "*.app" -type d 2>/dev/null || true
+              exit 1
+            fi
           fi
           echo "Installing $APP on ${{ steps.simulator.outputs.udid }}"
           xcrun simctl install "${{ steps.simulator.outputs.udid }}" "$APP"
