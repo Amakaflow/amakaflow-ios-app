@@ -85,14 +85,19 @@ jobs:
       && inputs.expected_sha != ''
     runs-on: ubuntu-latest
     timeout-minutes: 2
+    permissions:
+      contents: read
     steps:
       - name: Checkout (main ref only)
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
           ref: main
+          persist-credentials: false
       - name: Verify expected_sha matches origin/main
-        run: .github/scripts/ci/check-expected-sha.sh "${{ inputs.expected_sha }}"
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: .github/scripts/ci/check-expected-sha.sh "$EXPECTED_SHA"
 
   # AMA-1852 — fail in seconds if required GitHub secrets are missing or
   # malformed, before we spend ~10min on archive + export.
@@ -105,6 +110,8 @@ jobs:
       && (github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]'))
     runs-on: ubuntu-latest
     timeout-minutes: 2
+    permissions:
+      contents: read
     steps:
       - name: Validate TestFlight secrets
         env:
@@ -194,9 +201,13 @@ jobs:
       && (github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -229,6 +240,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Select pinned Xcode
         id: xcode
@@ -422,7 +434,7 @@ jobs:
         run: |
           set -e
           EXPECTED_CLERK_DEV="${EXPECTED_CLERK_DEV:-pk_test_c29saWQtY2hpY2tlbi01MC5jbGVyay5hY2NvdW50cy5kZXYk}"
-          IPA=$(ls build/export/*.ipa | head -1)
+          IPA=$(find build/export -maxdepth 1 -name '*.ipa' -print -quit)
           test -f "$IPA"
           echo "IPA: $IPA"
           mkdir -p /tmp/ipa-extract
@@ -466,7 +478,7 @@ jobs:
         working-directory: AmakaFlowCompanion
         run: |
           set -e
-          IPA=$(ls build/export/*.ipa | head -1)
+          IPA=$(find build/export -maxdepth 1 -name '*.ipa' -print -quit)
           echo "Uploading $IPA to TestFlight..."
           xcrun altool --upload-app \
             -f "$IPA" \
