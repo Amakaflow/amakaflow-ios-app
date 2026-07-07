@@ -37,7 +37,7 @@ jobs:
           for PR_NUM in $PR_NUMBERS; do
             # GitHub computes mergeability lazily — retry up to 3 times
             MERGEABLE="unknown"
-            for attempt in 1 2 3; do
+            for _ in 1 2 3; do
               MERGEABLE=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUM" \
                 --jq '.mergeable // "unknown"')
               [ "$MERGEABLE" != "unknown" ] && break
