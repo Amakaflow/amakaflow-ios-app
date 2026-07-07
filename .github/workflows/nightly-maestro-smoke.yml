@@ -41,6 +41,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Select pinned Xcode
         id: xcode
@@ -91,9 +93,11 @@ jobs:
             exit 1
           fi
           echo "Using simulator: $BEST_NAME ($BEST_UDID) on iOS $BEST_IOS"
-          echo "name=$BEST_NAME" >> "$GITHUB_OUTPUT"
-          echo "udid=$BEST_UDID" >> "$GITHUB_OUTPUT"
-          echo "ios=$BEST_IOS" >> "$GITHUB_OUTPUT"
+          {
+            echo "name=$BEST_NAME"
+            echo "udid=$BEST_UDID"
+            echo "ios=$BEST_IOS"
+          } >> "$GITHUB_OUTPUT"
           xcrun simctl shutdown all || true
           # AMA-2277: fresh runners are already clean — erase triggers a multi-minute
           # indexing storm. Uninstall the app only so the next install is deterministic.
@@ -203,7 +207,7 @@ jobs:
             -destination "platform=iOS Simulator,id=${SIM_UDID}" \
             -derivedDataPath DerivedData-smoke \
             -clonedSourcePackagesDirPath .spm \
-            -parallelizeTargets -jobs $(sysctl -n hw.ncpu) \
+            -parallelizeTargets -jobs "$(sysctl -n hw.ncpu)" \
             CLERK_PUBLISHABLE_KEY_STAGING="$CLERK_PUBLISHABLE_KEY_STAGING" \
             CLERK_PUBLISHABLE_KEY_PRODUCTION="$CLERK_PUBLISHABLE_KEY_STAGING" \
             CLERK_PUBLISHABLE_KEY_DEV="$CLERK_PUBLISHABLE_KEY_DEV" \
@@ -284,16 +288,20 @@ jobs:
           chmod +x .github/scripts/ci/run-maestro-smoke-with-evidence.sh
           if [ -z "$UITEST_CLERK_PASSWORD" ]; then
             echo "::error::UITEST_CLERK_PASSWORD secret not set — golden-path smoke cannot authenticate."
-            echo "outcome=skipped" >> "$GITHUB_OUTPUT"
-            echo "failed_flows=none" >> "$GITHUB_OUTPUT"
-            echo "failure_reason=missing_secret" >> "$GITHUB_OUTPUT"
+            {
+              echo "outcome=skipped"
+              echo "failed_flows=none"
+              echo "failure_reason=missing_secret"
+            } >> "$GITHUB_OUTPUT"
             exit 1
           fi
           export SMOKE_FLOW_SPECS="e2e/maestro/flows/golden-path.yaml:golden-path e2e/maestro/flows/coach/feature-presence.yaml:feature-presence"
           if .github/scripts/ci/run-maestro-smoke-with-evidence.sh; then
-            echo "failed_flows=none" >> "$GITHUB_OUTPUT"
-            echo "failure_reason=none" >> "$GITHUB_OUTPUT"
-            echo "outcome=passed" >> "$GITHUB_OUTPUT"
+            {
+              echo "failed_flows=none"
+              echo "failure_reason=none"
+              echo "outcome=passed"
+            } >> "$GITHUB_OUTPUT"
             exit 0
           fi
           FAILED="golden-path,feature-presence"
@@ -304,9 +312,11 @@ jobs:
             FAILED="${failed_flows:-golden-path,feature-presence}"
             FAILURE_REASON="${failure_reason:-assertion}"
           fi
-          echo "failed_flows=${FAILED}" >> "$GITHUB_OUTPUT"
-          echo "failure_reason=${FAILURE_REASON}" >> "$GITHUB_OUTPUT"
-          echo "outcome=failed" >> "$GITHUB_OUTPUT"
+          {
+            echo "failed_flows=${FAILED}"
+            echo "failure_reason=${FAILURE_REASON}"
+            echo "outcome=failed"
+          } >> "$GITHUB_OUTPUT"
           exit 1
 
       - name: Hydrate smoke outputs (step timeout / kill path)
@@ -321,8 +331,10 @@ jobs:
             FAILED="${failed_flows:-golden-path,feature-presence}"
             REASON="${failure_reason:-timeout-or-unknown}"
           fi
-          echo "failed_flows=${FAILED}" >> "$GITHUB_OUTPUT"
-          echo "failure_reason=${REASON}" >> "$GITHUB_OUTPUT"
+          {
+            echo "failed_flows=${FAILED}"
+            echo "failure_reason=${REASON}"
+          } >> "$GITHUB_OUTPUT"
 
       # ---- Paging on red: DISABLED until 10 consecutive green nights (0/10) ----
       # No GitHub issue / Telegram / Linear P1 steps here (AMA-2280 / AMA-2281).
