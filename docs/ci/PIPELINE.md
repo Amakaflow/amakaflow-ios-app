@@ -227,7 +227,7 @@ Re-wiring Sentry release registration to the release pipeline is a follow-up tic
 
 | Guardrail | PR | Release | Nightly |
 |-----------|----|---------|---------|
-| macOS job `timeout-minutes` | ✓ (build 18, tests 28, maestro 75, cold-launch 12) | ✓ (archive 90) | ✓ (job 25) |
+| macOS job `timeout-minutes` | ✓ (build 18, tests 28, maestro 75, cold-launch 12) | ✓ (archive 90) | ✓ (job 50, Maestro step 32) |
 | `concurrency` + `cancel-in-progress` | ✓ `ios-pr-*`, `preflight-*` | ✓ `testflight-*` | ✓ `nightly-smoke` |
 | No paging steps | ✓ | ✓ | ✓ (explicitly disabled) |
 | No post-upload Maestro | n/a | ✓ | n/a |
