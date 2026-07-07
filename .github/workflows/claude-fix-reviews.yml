@@ -4,13 +4,19 @@ on:
   pull_request_review:
     types: [submitted]
 
+concurrency:
+  group: claude-fix-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
 jobs:
   auto-fix:
     if: >
-      github.event.review.state == 'changes_requested' ||
-      (github.event.review.state == 'commented' &&
-       github.event.review.user.login == 'factory-droid[bot]')
+      (github.event.review.state == 'changes_requested' ||
+       github.event.review.state == 'commented') &&
+      (github.event.review.user.login == 'factory-droid[bot]' ||
+       github.event.review.user.login == 'droid-review[bot]')
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
       pull-requests: write
@@ -20,6 +26,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Claude Code fix review comments
         uses: anthropics/claude-code-action@v1
