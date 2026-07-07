@@ -4,7 +4,7 @@
 # Assumes the app is launched into a state where a workout is queued and
 # the home screen shows "Start workout". The app must be already signed in
 # (CI seeds this via the same TestCredentials hook used by the existing
-# UITests; see ios-tests.yml).
+# UITests; see pr-ios-tests.yml / nightly-maestro-smoke.yml).
 
 appId: com.myamaka.AmakaFlowCompanion
 ---
