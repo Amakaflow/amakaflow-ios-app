@@ -73,11 +73,10 @@ jobs:
           sudo mv /tmp/swiftlint-bin/swiftlint /usr/local/bin/swiftlint
           swiftlint version
 
-      # --reporter github-actions-logging emits ::warning/::error annotations
-      # visible inline on the PR diff. --strict makes any violation a hard
-      # failure (baseline was warning-clean on main when this was enabled).
+      # --strict upgrades warnings to errors; baseline freezes existing debt so
+      # only NEW violations fail the gate (1501 pre-existing on main at enable).
       - name: Run SwiftLint
-        run: swiftlint lint --strict --reporter github-actions-logging
+        run: swiftlint lint --strict --baseline .swiftlint-baseline.yml --reporter github-actions-logging
 
   detect-changes:
     name: Detect Changed Files

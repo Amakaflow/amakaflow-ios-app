@@ -37,6 +37,10 @@ excluded:
   - Pods
   - .build
   - DerivedData
+  - AmakaFlowCompanion/DerivedData
+  - "**/DerivedData/**"
+  - "**/SourcePackages/**"
+  - "**/.spm/**"
   - AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj
   - AmakaFlowCompanion/AmakaFlowCompanionTests
   - AmakaFlowCompanion/AmakaFlowCompanionUITests
