@@ -478,13 +478,24 @@ jobs:
 
       # AMA-2281 — auto "What to Test" from merges since previous testflight/build* tag.
       # Must run BEFORE tag push so the diff anchor is still the prior build.
+      # macOS runners block system pip (PEP 668) — use a job-local venv.
+      - name: Set up Python for ASC notes
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Set TestFlight What to Test notes (AMA-2281)
         env:
           BUILD_NUMBER: ${{ steps.build-number.outputs.build_number }}
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
           ASC_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
-        run: .github/scripts/ci/set-testflight-notes.sh
+        run: |
+          python -m venv .venv-notes
+          source .venv-notes/bin/activate
+          python -m pip install --upgrade pip
+          pip install -r .github/scripts/ci/requirements-asc-notes.txt
+          .github/scripts/ci/set-testflight-notes.sh
 
       # AMA-2281 — tag this commit as testflight/buildNNN for next-release diffing.
       - name: Push testflight/build tag (AMA-2281)

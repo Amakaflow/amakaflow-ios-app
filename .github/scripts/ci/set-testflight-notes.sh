@@ -41,7 +41,11 @@ echo "=== What to Test preview (${#NOTES} chars) ==="
 printf '%s\n' "$NOTES"
 echo "=============================================="
 
-python3 -m pip install --quiet PyJWT cryptography
+# Expects an activated venv with PyJWT + cryptography (see ios-testflight.yml).
+if ! python3 -c "import jwt" 2>/dev/null; then
+  echo "::error::PyJWT not available — activate the workflow venv before running this script."
+  exit 1
+fi
 
 export BUILD_NUMBER APP_BUNDLE_ID LOCALE
 export ASC_KEY_ID ASC_ISSUER_ID
