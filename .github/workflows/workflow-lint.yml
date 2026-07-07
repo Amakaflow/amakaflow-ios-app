@@ -1,0 +1,67 @@
+name: Workflow Lint
+
+on:
+  pull_request:
+    paths: ['.github/**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workflow-lint-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Collect changed workflow files
+        id: changed
+        run: |
+          mapfile -t files < <(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}" -- '.github/workflows/*.yml' '.github/workflows/*.yaml')
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            {
+              echo 'files<<EOF'
+              printf '%s\n' "${files[@]}"
+              echo 'EOF'
+            } >> "$GITHUB_OUTPUT"
+          fi
+      - name: Run actionlint
+        if: steps.changed.outputs.skip != 'true'
+        uses: docker://rhysd/actionlint:1.7.11
+        with:
+          args: -color ${{ steps.changed.outputs.files }}
+
+  zizmor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Collect changed workflow files
+        id: changed
+        run: |
+          mapfile -t files < <(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}" -- '.github/workflows/*.yml' '.github/workflows/*.yaml')
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            {
+              echo 'files<<EOF'
+              printf '%s\n' "${files[@]}"
+              echo 'EOF'
+            } >> "$GITHUB_OUTPUT"
+          fi
+      - name: Run zizmor
+        if: steps.changed.outputs.skip != 'true'
+        run: pipx run zizmor==1.5.0 --min-severity medium ${{ steps.changed.outputs.files }}
