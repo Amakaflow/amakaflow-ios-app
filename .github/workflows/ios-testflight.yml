@@ -24,6 +24,14 @@
 # the commit message for the push to main.  workflow_dispatch runs
 # are never skipped by this guard.
 #
+# SHA-guarded dispatch (AMA-2281): pass expected_sha on workflow_dispatch
+# to abort in seconds when origin/main HEAD differs (stale-dispatch guard).
+# Example: gh workflow run ios-testflight.yml --ref main -f expected_sha=$(git rev-parse origin/main)
+#
+# Post-upload (AMA-2281): pushes testflight/buildNNN tag at github.sha and
+# sets TestFlight "What to Test" via ASC betaBuildLocalizations API.
+# Runbook: docs/ci/TESTFLIGHT_SECRETS.md
+#
 # Code signing (AMA-2267, 2026-07-06):
 # Persisted Distribution + Development .p12 identities are imported into a
 # CI keychain before archive/export so ephemeral runners reuse the same
@@ -48,7 +56,14 @@ on:
       - 'AmakaFlowCompanion/**'
       - 'e2e/maestro/**'
       - '.github/workflows/ios-testflight.yml'
-  workflow_dispatch: {}  # allow manual re-runs from the Actions tab
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: >-
+          Optional — abort if origin/main HEAD differs (stale-dispatch guard).
+          Set to $(git rev-parse origin/main) when dispatching manually.
+        required: false
+        type: string
 
 # Cancel any in-flight upload for the same ref so a rapid second merge
 # doesn't double-upload (TestFlight rejects duplicate build numbers).
@@ -61,11 +76,33 @@ env:
   MAESTRO_VERSION: "2.6.1"
 
 jobs:
+  # AMA-2281 — stale-dispatch guard: when expected_sha is set on
+  # workflow_dispatch, fetch origin/main and abort before archive if HEAD differs.
+  dispatch-sha-guard:
+    name: Dispatch SHA guard (AMA-2281)
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      && inputs.expected_sha != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout (main ref only)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: main
+      - name: Verify expected_sha matches origin/main
+        run: .github/scripts/ci/check-expected-sha.sh "${{ inputs.expected_sha }}"
+
   # AMA-1852 — fail in seconds if required GitHub secrets are missing or
   # malformed, before we spend ~10min on archive + export.
   secrets-preflight:
     name: Secrets preflight (AMA-1852)
-    if: "github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]')"
+    needs: [dispatch-sha-guard]
+    if: >-
+      always()
+      && (needs.dispatch-sha-guard.result == 'success' || needs.dispatch-sha-guard.result == 'skipped')
+      && (github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]'))
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -150,7 +187,11 @@ jobs:
   # completion-contract-nightly.yml.)
   completion-contract:
     name: Completion contract (offline schema gate)
-    if: "github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]')"
+    needs: [dispatch-sha-guard]
+    if: >-
+      always()
+      && (needs.dispatch-sha-guard.result == 'success' || needs.dispatch-sha-guard.result == 'skipped')
+      && (github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -171,17 +212,23 @@ jobs:
 
   testflight:
     name: Archive + Upload to TestFlight
-    needs: [secrets-preflight, completion-contract]
+    needs: [dispatch-sha-guard, secrets-preflight, completion-contract]
     if: >-
-      (github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]'))
+      always()
+      && (needs.dispatch-sha-guard.result == 'success' || needs.dispatch-sha-guard.result == 'skipped')
+      && (github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]'))
     runs-on: macos-15
     timeout-minutes: 90
+    permissions:
+      contents: write
     outputs:
       build_number: ${{ steps.build-number.outputs.build_number }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Select pinned Xcode
         id: xcode
@@ -428,6 +475,22 @@ jobs:
             --output-format normal \
             2>&1 | tee altool.log
           echo "✅ altool upload completed."
+
+      # AMA-2281 — auto "What to Test" from merges since previous testflight/build* tag.
+      # Must run BEFORE tag push so the diff anchor is still the prior build.
+      - name: Set TestFlight What to Test notes (AMA-2281)
+        env:
+          BUILD_NUMBER: ${{ steps.build-number.outputs.build_number }}
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+        run: .github/scripts/ci/set-testflight-notes.sh
+
+      # AMA-2281 — tag this commit as testflight/buildNNN for next-release diffing.
+      - name: Push testflight/build tag (AMA-2281)
+        env:
+          BUILD_NUMBER: ${{ steps.build-number.outputs.build_number }}
+        run: .github/scripts/ci/push-testflight-build-tag.sh "${BUILD_NUMBER}"
 
       # Always upload the build artifacts for debugging — IPA + xcarchive
       # contains the .dSYM bundle needed for symbolicated crash reports

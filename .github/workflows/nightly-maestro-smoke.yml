@@ -5,6 +5,10 @@
 # more, until the suite proves 10 consecutive green nights (then paging may be
 # reintroduced by explicit founder decision — see AMA-2280).
 #
+# Green-night scoreboard (AMA-2281): 0/10 consecutive green nights as of
+# 2026-07-07. First scheduled run (28863293299) FAILED — golden-path +
+# feature-presence timeout. Do NOT add paging until scoreboard reaches 10/10.
+#
 # The release workflow (ios-testflight.yml) is archive + upload ONLY.
 
 name: Nightly Maestro Smoke
@@ -257,10 +261,8 @@ jobs:
           echo "failed_flows=${FAILED}" >> "$GITHUB_OUTPUT"
           echo "failure_reason=${REASON}" >> "$GITHUB_OUTPUT"
 
-      # ---- Paging on red (assertion failure OR Maestro timeout-kill) — before artifact upload ----
-
-
-
+      # ---- Paging on red: DISABLED until 10 consecutive green nights (0/10) ----
+      # No GitHub issue / Telegram / Linear P1 steps here (AMA-2280 / AMA-2281).
       - name: Upload smoke evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -277,5 +279,5 @@ jobs:
         run: |
           FAILED="${{ steps.smoke.outputs.failed_flows || steps.smoke_meta.outputs.failed_flows }}"
           REASON="${{ steps.smoke.outputs.failure_reason || steps.smoke_meta.outputs.failure_reason }}"
-          echo "::error::Post-upload smoke failed (${FAILED}, reason=${REASON}) — see paging + the golden-path-smoke artifact."
+          echo "::error::Nightly Maestro smoke failed (${FAILED}, reason=${REASON}) — see golden-path-smoke artifact (non-paging; scoreboard 0/10 green nights)."
           exit 1

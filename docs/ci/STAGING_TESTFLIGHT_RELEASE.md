@@ -39,7 +39,7 @@ Include `[skip-testflight]` anywhere in the merge commit message. The workflow s
 
 ### Manual re-run (no code change)
 
-Actions tab → **iOS TestFlight Upload** → **Run workflow** → branch `main` → Run.
+Actions tab → **iOS TestFlight Upload** → **Run workflow** → branch `main` → optionally set **expected_sha** to current main HEAD (recommended — see `docs/ci/TESTFLIGHT_SECRETS.md`) → Run.
 
 Use after fixing Apple account/signing issues without a new merge.
 
@@ -64,8 +64,10 @@ Local Debug sim builds use `scripts/sim-build.sh` — not the same as the Releas
 ## Post-upload checks
 
 1. **ASC processing** — build status moves from Processing → Ready to Test.
-2. **Golden-path smoke** — workflow job `golden-path-smoke` runs Maestro on a sim build of the same commit (post-upload alert, not a PR gate).
-3. **Founder device smoke** — install from TestFlight on a physical device; record results on the Linear issue (see checklist in AMA-2259).
+2. **What to Test** — CI sets notes automatically via ASC API (AMA-2281). Verify in App Store Connect → TestFlight → build → **What to Test**, or in the workflow log step **Set TestFlight What to Test notes**.
+3. **Build tag** — confirm `testflight/buildNNN` exists on the uploaded commit (`git fetch --tags && git tag -l 'testflight/build*'`).
+4. **Nightly Maestro smoke** — runs separately at 04:00 ET (non-paging; see scoreboard in `docs/ci/TESTFLIGHT_SECRETS.md`).
+5. **Founder device smoke** — install from TestFlight on a physical device; record results on the Linear issue (see checklist in AMA-2259).
 
 ## Internal tester setup
 
