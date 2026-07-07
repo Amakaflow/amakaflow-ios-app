@@ -41,7 +41,10 @@ echo "=== What to Test preview (${#NOTES} chars) ==="
 printf '%s\n' "$NOTES"
 echo "=============================================="
 
-python3 -m pip install --quiet PyJWT cryptography
+# macOS runners use PEP 668 externally-managed Python — install into a temp venv.
+NOTES_VENV="$(mktemp -d)/notes-venv"
+python3 -m venv "$NOTES_VENV"
+"$NOTES_VENV/bin/pip" install --quiet PyJWT cryptography
 
 export BUILD_NUMBER APP_BUNDLE_ID LOCALE
 export ASC_KEY_ID ASC_ISSUER_ID
@@ -49,7 +52,7 @@ NOTES_FILE="$(mktemp)"
 printf '%s' "$NOTES" > "$NOTES_FILE"
 export NOTES_FILE
 
-python3 <<'PY'
+"$NOTES_VENV/bin/python" <<'PY'
 import json
 import os
 import sys
@@ -178,4 +181,5 @@ print("::notice title=What to Test set::Notes applied via betaBuildLocalizations
 PY
 
 rm -f "$NOTES_FILE"
+rm -rf "$(dirname "$NOTES_VENV")"
 echo "✅ What to Test notes set for build ${BUILD_NUMBER}."
