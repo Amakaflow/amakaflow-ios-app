@@ -218,7 +218,7 @@ jobs:
       && (needs.dispatch-sha-guard.result == 'success' || needs.dispatch-sha-guard.result == 'skipped')
       && (github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]'))
     runs-on: macos-15
-    timeout-minutes: 90
+    timeout-minutes: 40
     permissions:
       contents: write
     outputs:
@@ -459,6 +459,7 @@ jobs:
           echo "✅ Info.plist sanity checks passed (non-empty, no placeholder, strict equality vs secrets)."
 
       - name: Upload IPA to TestFlight via altool
+        id: upload
         env:
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
@@ -485,6 +486,8 @@ jobs:
           python-version: "3.12"
 
       - name: Set TestFlight What to Test notes (AMA-2281)
+        id: notes
+        continue-on-error: true
         env:
           BUILD_NUMBER: ${{ steps.build-number.outputs.build_number }}
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
@@ -499,9 +502,49 @@ jobs:
 
       # AMA-2281 — tag this commit as testflight/buildNNN for next-release diffing.
       - name: Push testflight/build tag (AMA-2281)
+        id: tag
+        continue-on-error: true
         env:
           BUILD_NUMBER: ${{ steps.build-number.outputs.build_number }}
         run: .github/scripts/ci/push-testflight-build-tag.sh "${BUILD_NUMBER}"
+
+      - name: Upload summary
+        if: always()
+        env:
+          BUILD_NUMBER: ${{ steps.build-number.outputs.build_number }}
+          UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
+          NOTES_OUTCOME: ${{ steps.notes.outcome }}
+          TAG_OUTCOME: ${{ steps.tag.outcome }}
+        run: |
+          UPLOAD_STATUS="✅ uploaded"
+          [ "$UPLOAD_OUTCOME" != "success" ] && UPLOAD_STATUS="❌ FAILED"
+
+          if [ "$NOTES_OUTCOME" != "success" ]; then
+            echo "::warning::TestFlight 'What to Test' notes NOT set for build ${BUILD_NUMBER}. Backfill: BUILD_NUMBER=${BUILD_NUMBER} ASC_KEY_ID=<id> ASC_ISSUER_ID=<issuer> ASC_PRIVATE_KEY=\$(cat AuthKey.p8) .github/scripts/ci/set-testflight-notes.sh"
+            NOTES_STATUS="❌ FAILED (see warning)"
+          else
+            NOTES_STATUS="✅ set"
+          fi
+
+          if [ "$TAG_OUTCOME" != "success" ]; then
+            echo "::warning::testflight/build${BUILD_NUMBER} tag NOT pushed. Backfill: git tag testflight/build${BUILD_NUMBER} ${{ github.sha }} && git push origin testflight/build${BUILD_NUMBER}"
+            TAG_STATUS="❌ FAILED (see warning)"
+          else
+            TAG_STATUS="✅ pushed"
+          fi
+
+          {
+            echo "## TestFlight Upload — build ${BUILD_NUMBER}"
+            echo ""
+            echo "| Step | Status |"
+            echo "| --- | --- |"
+            echo "| IPA upload | ${UPLOAD_STATUS} |"
+            echo "| What to Test notes | ${NOTES_STATUS} |"
+            echo "| testflight/build tag | ${TAG_STATUS} |"
+            echo ""
+            echo "**Commit:** ${{ github.sha }}"
+            echo "**Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # Always upload the build artifacts for debugging — IPA + xcarchive
       # contains the .dSYM bundle needed for symbolicated crash reports
