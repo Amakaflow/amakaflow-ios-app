@@ -61,6 +61,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
 
       - name: Install SwiftLint ${{ env.SWIFTLINT_VERSION }}
         run: |
@@ -98,6 +100,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       # Fetch only the target branch tip so the base...head diff works without
       # pulling the full history (which carries ~10k deleted design-bundle blobs
@@ -154,6 +157,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
 
       - name: Select pinned Xcode
         id: xcode
@@ -212,7 +217,7 @@ jobs:
             -derivedDataPath DerivedData \
             -clonedSourcePackagesDirPath .spm \
             -parallelizeTargets \
-            -jobs $(sysctl -n hw.ncpu) \
+            -jobs "$(sysctl -n hw.ncpu)" \
             CLERK_PUBLISHABLE_KEY_DEV="${CLERK_PUBLISHABLE_KEY_DEV:-pk_test_c29saWQtY2hpY2tlbi01MC5jbGVyay5hY2NvdW50cy5kZXYk}" \
             CLERK_PUBLISHABLE_KEY_STAGING="${CLERK_PUBLISHABLE_KEY_STAGING:-pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA}" \
             CLERK_PUBLISHABLE_KEY_PRODUCTION="${CLERK_PUBLISHABLE_KEY_PRODUCTION:-pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA}"
@@ -264,6 +269,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
 
       - name: Select pinned Xcode
         id: xcode
@@ -304,11 +311,12 @@ jobs:
         if: needs.detect-changes.outputs.affected != 'NONE' && needs.detect-changes.outputs.affected != 'FULL'
         working-directory: AmakaFlowCompanion
         run: |
-          ONLY_TESTING=""
-          for test in ${{ needs.detect-changes.outputs.affected }}; do
-            ONLY_TESTING="$ONLY_TESTING -only-testing:$test"
+          ONLY_FLAGS=()
+          IFS=' ' read -ra TESTS <<< "${{ needs.detect-changes.outputs.affected }}"
+          for test in "${TESTS[@]}"; do
+            ONLY_FLAGS+=("-only-testing:${test}")
           done
-          echo "Running: xcodebuild test-without-building $ONLY_TESTING"
+          echo "Running: xcodebuild test-without-building ${ONLY_FLAGS[*]}"
 
           set +e
           xcodebuild test-without-building \
@@ -317,7 +325,7 @@ jobs:
             -destination "platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}" \
             -derivedDataPath DerivedData \
             -clonedSourcePackagesDirPath .spm \
-            $ONLY_TESTING \
+            "${ONLY_FLAGS[@]}" \
             -resultBundlePath TestResults \
             -enableCodeCoverage NO \
             -parallel-testing-enabled YES \
@@ -328,7 +336,7 @@ jobs:
           if grep -q "TEST SUCCEEDED" test_output.log || grep -q "with 0 failures" test_output.log; then
             exit 0
           fi
-          exit $XCODE_EXIT
+          exit "$XCODE_EXIT"
 
       - name: Run full tests (fallback)
         if: needs.detect-changes.outputs.affected == 'FULL'
@@ -352,7 +360,7 @@ jobs:
           if grep -q "TEST SUCCEEDED" test_output.log || grep -q "with 0 failures" test_output.log; then
             exit 0
           fi
-          exit $XCODE_EXIT
+          exit "$XCODE_EXIT"
 
       - name: Upload test results
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -387,6 +395,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
 
       - name: Select pinned Xcode
         run: .github/scripts/ci/select-xcode.sh
@@ -476,6 +486,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
 
       - name: Select pinned Xcode
         id: xcode

@@ -49,15 +49,19 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
       - name: Install dig
         run: |
           # Ubuntu runners ship with bind9-host; install dnsutils for `dig` proper.
           sudo apt-get update -qq
           sudo apt-get install -y -qq dnsutils
       - name: Run check-hosts.sh
+        env:
+          STRICT_PRODUCTION: ${{ inputs.strict_production }}
         run: |
           chmod +x scripts/preflight/check-hosts.sh
-          if [ "${{ inputs.strict_production }}" = "true" ]; then
+          if [ "$STRICT_PRODUCTION" = "true" ]; then
             ./scripts/preflight/check-hosts.sh --strict-production
           else
             ./scripts/preflight/check-hosts.sh
@@ -76,6 +80,8 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
       - name: Build Release archive (no signing)
         run: |
           # Build for the simulator so we can inspect the .app/Info.plist without
