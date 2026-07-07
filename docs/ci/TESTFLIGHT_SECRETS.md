@@ -97,6 +97,64 @@ The workflow runs a **Secrets preflight** job before archive. It fails fast with
 
 CI sets `CURRENT_PROJECT_VERSION = 100 + github.run_number` so TestFlight build numbers stay above the last manual upload (build 39) without committing `pbxproj` bumps.
 
+## Build tags (AMA-2281)
+
+After a successful altool upload, CI pushes a git tag:
+
+- Pattern: `testflight/buildNNN` (e.g. `testflight/build261`)
+- Points at: the commit that was built (`github.sha`)
+- Purpose: anchor for **What to Test** diffing on the next release
+
+List tags:
+
+```bash
+git fetch --tags origin
+git tag -l 'testflight/build*' --sort=-version:refname | head
+```
+
+## What to Test automation (AMA-2281, absorbs AMA-2270)
+
+After upload, CI sets TestFlight **What to Test** via the App Store Connect API (`betaBuildLocalizations.whatsNew`), using the same `APP_STORE_CONNECT_API_*` secrets as altool.
+
+**Source text:** merge commit subjects since the previous `testflight/build*` tag:
+
+```bash
+git log <prev-tag-sha>..HEAD --merges --pretty='- %s'
+```
+
+`[AMA-XXXX]` prefixes are stripped; output is truncated at ~4000 characters. Script: `.github/scripts/ci/set-testflight-notes.sh`.
+
+If notes cannot be set, the workflow **fails** after a successful upload (incomplete release).
+
+## SHA-guarded dispatch (AMA-2281)
+
+Stale `workflow_dispatch` runs against an old commit can burn ~10 minutes before failing. Pass `expected_sha` to abort in seconds when `origin/main` HEAD differs.
+
+**GitHub Actions UI:** Run workflow → branch `main` → set **expected_sha** to the current main SHA.
+
+**CLI:**
+
+```bash
+SHA=$(git rev-parse origin/main)
+gh workflow run ios-testflight.yml --repo Amakaflow/amakaflow-ios-app --ref main -f "expected_sha=${SHA}"
+```
+
+**Wrong SHA (validation):** dispatch with a deliberately wrong SHA — the **Dispatch SHA guard** job should fail in under 1 minute.
+
+Omit `expected_sha` for ad-hoc re-runs when you intentionally want to build whatever is on `main` at run time (no guard).
+
+## Nightly Maestro smoke scoreboard
+
+UI smoke runs in `.github/workflows/nightly-maestro-smoke.yml` (04:00 ET cron + `workflow_dispatch`). **Non-paging** until **10 consecutive green nights** (AMA-2280 fixed decision).
+
+| Metric | Value |
+|--------|-------|
+| Green-night scoreboard | **0/10** (as of 2026-07-07) |
+| First scheduled run | [28863293299](https://github.com/Amakaflow/amakaflow-ios-app/actions/runs/28863293299) — FAILED (golden-path + feature-presence timeout) |
+| Paging | Disabled (no GitHub issue / Telegram / Linear P1) |
+
+Do not add paging until the scoreboard reaches 10/10 and the founder explicitly re-enables it.
+
 ## Troubleshooting
 
 ### `Your account has reached the maximum number of certificates`
@@ -122,7 +180,7 @@ Usually precedes the certificate-limit error. Fixing certificates/profiles in th
 
 ### Post-upload smoke hangs (AMA-2276)
 
-The smoke job has layered timeouts (40 min job cap; 10 min sim boot; 20 min Debug build; 12 min per Maestro flow with GNU `timeout` hard-kill). On timeout, evidence artifacts and paging (GitHub issue / Telegram / Linear P1) still fire. Healthy smoke runtime is ~15 min.
+**Historical:** post-upload smoke used to run inside `ios-testflight.yml`. As of AMA-2280/2283, smoke lives only in `nightly-maestro-smoke.yml` (non-paging until 10 green nights). The nightly job has layered timeouts (25 min job cap; 12 min per Maestro flow with GNU `timeout` hard-kill). Healthy smoke runtime is ~15 min.
 
 ## Verify AMA-1852 / AMA-2267 acceptance
 
