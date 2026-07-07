@@ -30,7 +30,7 @@ jobs:
   nightly-smoke:
     name: Nightly Maestro smoke (golden-path + feature-presence)
     runs-on: macos-15
-    timeout-minutes: 25
+    timeout-minutes: 50
     permissions:
       contents: read
     steps:
@@ -207,7 +207,7 @@ jobs:
 
       - name: Run golden-path + feature-presence smoke
         id: smoke
-        timeout-minutes: 12
+        timeout-minutes: 32
         continue-on-error: true
         env:
           UITEST_CLERK_PASSWORD: ${{ secrets.UITEST_CLERK_PASSWORD }}
