@@ -11,7 +11,7 @@ Both run after every TestFlight upload on a Debug sim build of the same commit.
 Auth uses `_lib/clerk-signin.yaml` (AMA-1849 programmatic password session +
 UI fallback).
 
-## PR-label coach journeys (pr-ios-tests.yml, `run-maestro` label)
+## PR-label coach journeys (`pr-ios-tests.yml`, `run-maestro` label)
 
 Deeper journeys stay **warn-only** on PRs because LLM steps can exceed 60s.
 Feature-presence on TestFlight is the regression gate for entry points.
