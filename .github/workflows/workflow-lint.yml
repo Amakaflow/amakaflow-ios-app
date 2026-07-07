@@ -1,0 +1,31 @@
+name: Workflow Lint
+
+on:
+  pull_request:
+    paths: ['.github/**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workflow-lint-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run actionlint
+        uses: docker://rhysd/actionlint:1.7.11
+        with:
+          args: -color
+
+  zizmor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run zizmor
+        run: pipx run zizmor==1.5.0 --min-severity medium .github/workflows/
