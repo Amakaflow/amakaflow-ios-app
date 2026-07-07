@@ -252,3 +252,5 @@ Partial baseline (pre–7-day window) lives on AMA-2282 / AMA-2278 Linear commen
 ## Swift 6 warnings (AMA-2275)
 
 Out of scope for CI-5. Re-triage at CI-0 close: schedule post–Mobile Beta or archive as accepted warnings documented here.
+
+<!-- CI-5 post-merge validation 2026-07-07 -->
