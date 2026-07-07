@@ -65,6 +65,9 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: read
+
 # Cancel any in-flight upload for the same ref so a rapid second merge
 # doesn't double-upload (TestFlight rejects duplicate build numbers).
 concurrency:
@@ -89,7 +92,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout (main ref only)
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 1
           ref: main
@@ -205,11 +208,11 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           persist-credentials: false
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install jsonschema
@@ -237,7 +240,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -247,7 +250,7 @@ jobs:
         run: .github/scripts/ci/select-xcode.sh
 
       - name: Restore SPM cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: AmakaFlowCompanion/.spm
           key: spm-tf-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
@@ -255,7 +258,7 @@ jobs:
             spm-tf-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
 
       - name: Restore DerivedData cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: AmakaFlowCompanion/DerivedData
           key: dd-tf-${{ runner.os }}-${{ github.sha }}
@@ -493,7 +496,7 @@ jobs:
       # Must run BEFORE tag push so the diff anchor is still the prior build.
       # macOS runners block system pip (PEP 668) — use a job-local venv.
       - name: Set up Python for ASC notes
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
 
@@ -563,7 +566,7 @@ jobs:
       # if/when Sentry symbol upload gets wired (deferred follow-up).
       - name: Upload build artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: testflight-build-${{ steps.build-number.outputs.build_number }}
           path: |

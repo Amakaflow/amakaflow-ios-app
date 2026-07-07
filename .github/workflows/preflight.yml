@@ -34,6 +34,9 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: read
+
 # Rapid pushes to the same PR cancel the prior in-progress run (AMA-2283).
 concurrency:
   group: preflight-${{ github.head_ref || github.ref }}
@@ -45,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Install dig
         run: |
           # Ubuntu runners ship with bind9-host; install dnsutils for `dig` proper.
@@ -72,7 +75,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch'  # only run when a build is intended; PRs run check-hosts only
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Build Release archive (no signing)
         run: |
           # Build for the simulator so we can inspect the .app/Info.plist without

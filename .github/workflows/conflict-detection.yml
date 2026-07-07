@@ -6,10 +6,19 @@ on:
   schedule:
     - cron: '0 8 * * *'  # Daily 8am UTC
 
+permissions:
+  contents: read
+
+concurrency:
+  group: conflict-detection
+  cancel-in-progress: true
+
 jobs:
   detect-conflicts:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
+      contents: read
       pull-requests: write
 
     steps:
