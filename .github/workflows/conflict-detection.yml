@@ -6,10 +6,19 @@ on:
   schedule:
     - cron: '0 8 * * *'  # Daily 8am UTC
 
+permissions:
+  contents: read
+
+concurrency:
+  group: conflict-detection
+  cancel-in-progress: true
+
 jobs:
   detect-conflicts:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
+      contents: read
       pull-requests: write
 
     steps:
@@ -28,7 +37,7 @@ jobs:
           for PR_NUM in $PR_NUMBERS; do
             # GitHub computes mergeability lazily — retry up to 3 times
             MERGEABLE="unknown"
-            for attempt in 1 2 3; do
+            for _ in 1 2 3; do
               MERGEABLE=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUM" \
                 --jq '.mergeable // "unknown"')
               [ "$MERGEABLE" != "unknown" ] && break

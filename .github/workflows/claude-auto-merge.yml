@@ -4,6 +4,9 @@ on:
   issue_comment:
     types: [created]
 
+permissions:
+  contents: read
+
 jobs:
   auto-merge:
     if: >
@@ -11,6 +14,7 @@ jobs:
       contains(github.event.comment.user.login, 'factory-droid') &&
       contains(github.event.comment.body, 'Droid finished')
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: write
       pull-requests: write

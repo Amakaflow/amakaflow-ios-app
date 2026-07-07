@@ -18,6 +18,9 @@ on:
     - cron: '0 9 * * *'   # 04:00 ET daily
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+
 concurrency:
   group: nightly-smoke
   cancel-in-progress: true
@@ -40,7 +43,7 @@ jobs:
       actions: read  # needed to query and download artifacts from the iOS PR Pipeline
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           persist-credentials: false
 
@@ -107,7 +110,7 @@ jobs:
           # xcodebuild boots the sim when building; we open Simulator after build.
 
       - name: Restore Maestro cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.maestro
           key: maestro-${{ runner.os }}-${{ env.MAESTRO_VERSION }}
@@ -116,7 +119,7 @@ jobs:
         run: .github/scripts/ci/install-maestro.sh
 
       - name: Restore SPM cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: AmakaFlowCompanion/.spm
           key: spm-tf-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
@@ -124,7 +127,7 @@ jobs:
             spm-tf-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
 
       - name: Restore DerivedData cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: AmakaFlowCompanion/DerivedData-smoke
           key: dd-smoke-${{ runner.os }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj', 'AmakaFlow/**/*.swift', 'AmakaFlowCompanion/**/*.swift') }}
@@ -340,7 +343,7 @@ jobs:
       # No GitHub issue / Telegram / Linear P1 steps here (AMA-2280 / AMA-2281).
       - name: Upload smoke evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: golden-path-smoke-build-${{ steps.build-number.outputs.build_number }}
           path: |

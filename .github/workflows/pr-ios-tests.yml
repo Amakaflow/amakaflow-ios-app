@@ -36,6 +36,9 @@ on:
     types: [opened, synchronize, reopened, labeled]
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+
 # Rapid pushes to the same PR cancel the prior in-progress run instead of
 # stacking full macOS runs (#326).
 concurrency:
@@ -57,7 +60,9 @@ jobs:
       SWIFTLINT_VERSION: "0.57.1"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
 
       - name: Install SwiftLint ${{ env.SWIFTLINT_VERSION }}
         run: |
@@ -92,9 +97,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       # Fetch only the target branch tip so the base...head diff works without
       # pulling the full history (which carries ~10k deleted design-bundle blobs
@@ -150,7 +156,9 @@ jobs:
     timeout-minutes: 18
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
 
       - name: Select pinned Xcode
         id: xcode
@@ -160,7 +168,7 @@ jobs:
         run: .github/scripts/ci/create-test-credentials-stub.sh
 
       - name: Restore SwiftPM cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: AmakaFlowCompanion/.spm
           key: spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
@@ -168,7 +176,7 @@ jobs:
             spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
 
       - name: Restore DerivedData cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: AmakaFlowCompanion/DerivedData
           key: deriveddata-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj', 'AmakaFlow/**/*.swift', 'AmakaFlowCompanion/**/*.swift') }}
@@ -209,7 +217,7 @@ jobs:
             -derivedDataPath DerivedData \
             -clonedSourcePackagesDirPath .spm \
             -parallelizeTargets \
-            -jobs $(sysctl -n hw.ncpu) \
+            -jobs "$(sysctl -n hw.ncpu)" \
             CLERK_PUBLISHABLE_KEY_DEV="${CLERK_PUBLISHABLE_KEY_DEV:-pk_test_c29saWQtY2hpY2tlbi01MC5jbGVyay5hY2NvdW50cy5kZXYk}" \
             CLERK_PUBLISHABLE_KEY_STAGING="${CLERK_PUBLISHABLE_KEY_STAGING:-pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA}" \
             CLERK_PUBLISHABLE_KEY_PRODUCTION="${CLERK_PUBLISHABLE_KEY_PRODUCTION:-pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA}"
@@ -231,7 +239,7 @@ jobs:
         run: tar -cf /tmp/built-app.tar AmakaFlowCompanion.app
 
       - name: Upload .app tarball
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: cold-launch-app
           path: /tmp/built-app.tar
@@ -245,7 +253,7 @@ jobs:
         run: tar -cf /tmp/test-products.tar DerivedData/Build
 
       - name: Upload test products
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: test-products
           path: /tmp/test-products.tar
@@ -260,7 +268,9 @@ jobs:
     timeout-minutes: 28
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
 
       - name: Select pinned Xcode
         id: xcode
@@ -287,7 +297,7 @@ jobs:
       # AmakaFlowCompanion/DerivedData/Build — the path test-without-building
       # + -derivedDataPath DerivedData expects.
       - name: Download test products
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: test-products
           path: /tmp/test-products
@@ -301,11 +311,12 @@ jobs:
         if: needs.detect-changes.outputs.affected != 'NONE' && needs.detect-changes.outputs.affected != 'FULL'
         working-directory: AmakaFlowCompanion
         run: |
-          ONLY_TESTING=""
-          for test in ${{ needs.detect-changes.outputs.affected }}; do
-            ONLY_TESTING="$ONLY_TESTING -only-testing:$test"
+          ONLY_FLAGS=()
+          IFS=' ' read -ra TESTS <<< "${{ needs.detect-changes.outputs.affected }}"
+          for test in "${TESTS[@]}"; do
+            ONLY_FLAGS+=("-only-testing:${test}")
           done
-          echo "Running: xcodebuild test-without-building $ONLY_TESTING"
+          echo "Running: xcodebuild test-without-building ${ONLY_FLAGS[*]}"
 
           set +e
           xcodebuild test-without-building \
@@ -314,7 +325,7 @@ jobs:
             -destination "platform=iOS Simulator,name=${{ steps.simulator.outputs.name }}" \
             -derivedDataPath DerivedData \
             -clonedSourcePackagesDirPath .spm \
-            $ONLY_TESTING \
+            "${ONLY_FLAGS[@]}" \
             -resultBundlePath TestResults \
             -enableCodeCoverage NO \
             -parallel-testing-enabled YES \
@@ -325,7 +336,7 @@ jobs:
           if grep -q "TEST SUCCEEDED" test_output.log || grep -q "with 0 failures" test_output.log; then
             exit 0
           fi
-          exit $XCODE_EXIT
+          exit "$XCODE_EXIT"
 
       - name: Run full tests (fallback)
         if: needs.detect-changes.outputs.affected == 'FULL'
@@ -349,10 +360,10 @@ jobs:
           if grep -q "TEST SUCCEEDED" test_output.log || grep -q "with 0 failures" test_output.log; then
             exit 0
           fi
-          exit $XCODE_EXIT
+          exit "$XCODE_EXIT"
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: ios-test-results
@@ -383,13 +394,15 @@ jobs:
             device: "iPhone 16 Pro Max"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
 
       - name: Select pinned Xcode
         run: .github/scripts/ci/select-xcode.sh
 
       - name: Download .app tarball
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: cold-launch-app
           path: built-app
@@ -445,7 +458,7 @@ jobs:
 
       - name: Upload evidence screenshot
         if: always() && steps.create-sim.outputs.skipped != 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: cold-launch-evidence-${{ strategy.job-index }}
           path: /tmp/cold-launch-${{ strategy.job-index }}.png
@@ -472,7 +485,9 @@ jobs:
     timeout-minutes: 75
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
 
       - name: Select pinned Xcode
         id: xcode
@@ -490,7 +505,7 @@ jobs:
           xcrun simctl boot "${{ steps.simulator.outputs.name }}" || true
 
       - name: Restore Maestro cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.maestro
           key: maestro-${{ runner.os }}-${{ env.MAESTRO_VERSION }}
@@ -505,7 +520,7 @@ jobs:
       # Consume the shared build instead of rebuilding. Download the tarred
       # .app, untar it, and install on the booted sim.
       - name: Download .app tarball
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: cold-launch-app
           path: built-app
@@ -617,7 +632,7 @@ jobs:
 
       - name: Upload Maestro output
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: maestro-output
           path: |
@@ -628,7 +643,7 @@ jobs:
 
       - name: Upload CJ-01 L4 evidence screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: cj01-l4-evidence
           path: |
@@ -639,7 +654,7 @@ jobs:
 
       - name: Upload CJ-01 L4 JUnit report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: cj01-l4-junit
           path: maestro-output/cj01-l4/cj01-l4-junit.xml

@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -36,15 +36,20 @@ jobs:
           fi
       - name: Run actionlint
         if: steps.changed.outputs.skip != 'true'
-        uses: docker://rhysd/actionlint:1.7.11
-        with:
-          args: -color ${{ steps.changed.outputs.files }}
+        shell: bash
+        run: |
+          mapfile -t files < <(printf '%s\n' "${{ steps.changed.outputs.files }}")
+          docker run --rm \
+            -v "${{ github.workspace }}:/github/workspace" \
+            -w /github/workspace \
+            rhysd/actionlint:1.7.11 \
+            -color "${files[@]}"
 
   zizmor:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -64,4 +69,7 @@ jobs:
           fi
       - name: Run zizmor
         if: steps.changed.outputs.skip != 'true'
-        run: pipx run zizmor==1.5.0 --min-severity medium ${{ steps.changed.outputs.files }}
+        shell: bash
+        run: |
+          mapfile -t files < <(printf '%s\n' "${{ steps.changed.outputs.files }}")
+          pipx run zizmor==1.5.0 --min-severity medium "${files[@]}"
