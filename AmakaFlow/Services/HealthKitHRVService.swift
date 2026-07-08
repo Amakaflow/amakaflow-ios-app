@@ -5,9 +5,10 @@
 //  AMA-2052 Wedge C — read real HealthKit HRV (SDNN) samples and write daily
 //  apple_health readiness samples to the mobile BFF. No fabricated HRV.
 //
+//  HealthKitHRVSample and HealthKitHRVServiceError live in HealthKitProvider.swift.
+//
 
 import Foundation
-import HealthKit
 
 struct ReadinessSampleWriteResult: Codable, Equatable, Sendable {
     let success: Bool
@@ -18,13 +19,6 @@ struct ReadinessSampleWriteResult: Codable, Equatable, Sendable {
 struct DailyHRVSample: Equatable, Sendable {
     let sampleDate: String
     let hrvMilliseconds: Double
-}
-
-struct HealthKitHRVSample: Equatable, Sendable {
-    let startDate: Date
-    let endDate: Date
-    /// HealthKit reports heartRateVariabilitySDNN in seconds.
-    let sdnnSeconds: Double
 }
 
 enum HealthKitHRVSyncResult: Equatable {
@@ -41,103 +35,11 @@ enum HealthKitHRVSyncResult: Equatable {
     }
 }
 
-enum HealthKitHRVServiceError: Error, LocalizedError, Equatable {
-    case healthKitUnavailable
-    case hrvTypeUnavailable
-    case notAuthorized
-    case queryFailed(String)
-
-    var errorDescription: String? {
-        switch self {
-        case .healthKitUnavailable:
-            return "HealthKit HRV is not available on this device."
-        case .hrvTypeUnavailable:
-            return "HealthKit HRV sample type is not available."
-        case .notAuthorized:
-            return "HealthKit HRV is not authorized."
-        case .queryFailed(let message):
-            return "HealthKit HRV query failed: \(message)"
-        }
-    }
-}
-
-protocol HealthKitHRVStoreProviding {
-    var isHealthDataAvailable: Bool { get }
-    func requestHRVReadAuthorization() async throws
-    func queryHRVSamples(start: Date, end: Date) async throws -> [HealthKitHRVSample]
-}
-
-final class LiveHealthKitHRVStore: HealthKitHRVStoreProviding {
-    private let healthStore: HKHealthStore?
-
-    var isHealthDataAvailable: Bool { healthStore != nil }
-
-    init(healthStore: HKHealthStore? = nil) {
-        self.healthStore = HKHealthStore.isHealthDataAvailable() ? (healthStore ?? HKHealthStore()) : nil
-    }
-
-    func requestHRVReadAuthorization() async throws {
-        guard let healthStore else { throw HealthKitHRVServiceError.healthKitUnavailable }
-        guard let hrvType = HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN) else {
-            throw HealthKitHRVServiceError.hrvTypeUnavailable
-        }
-
-        try await healthStore.requestAuthorization(toShare: [], read: [hrvType])
-    }
-
-    func queryHRVSamples(start: Date, end: Date) async throws -> [HealthKitHRVSample] {
-        guard let healthStore else { throw HealthKitHRVServiceError.healthKitUnavailable }
-        guard let hrvType = HKQuantityType.quantityType(forIdentifier: .heartRateVariabilitySDNN) else {
-            throw HealthKitHRVServiceError.hrvTypeUnavailable
-        }
-
-        let predicate = HKQuery.predicateForSamples(
-            withStart: start,
-            end: end,
-            options: .strictStartDate
-        )
-        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
-
-        return try await withCheckedThrowingContinuation { continuation in
-            let query = HKSampleQuery(
-                sampleType: hrvType,
-                predicate: predicate,
-                limit: HKObjectQueryNoLimit,
-                sortDescriptors: [sort]
-            ) { _, samples, error in
-                if let error {
-                    continuation.resume(throwing: Self.map(error))
-                    return
-                }
-
-                let hrvSamples = (samples as? [HKQuantitySample] ?? []).map { sample in
-                    HealthKitHRVSample(
-                        startDate: sample.startDate,
-                        endDate: sample.endDate,
-                        sdnnSeconds: sample.quantity.doubleValue(for: .second())
-                    )
-                }
-                continuation.resume(returning: hrvSamples)
-            }
-            healthStore.execute(query)
-        }
-    }
-
-    private static func map(_ error: Error) -> HealthKitHRVServiceError {
-        let nsError = error as NSError
-        if nsError.domain == HKError.errorDomain,
-           nsError.code == HKError.errorAuthorizationDenied.rawValue || nsError.code == HKError.errorAuthorizationNotDetermined.rawValue {
-            return .notAuthorized
-        }
-        return .queryFailed(error.localizedDescription)
-    }
-}
-
 @MainActor
 final class HealthKitHRVService {
     static let shared = HealthKitHRVService()
 
-    private let store: HealthKitHRVStoreProviding
+    private let provider: HealthKitProviding
     private let apiService: APIServiceProviding
     private let calendar: Calendar
     private let now: () -> Date
@@ -145,13 +47,13 @@ final class HealthKitHRVService {
     private var lastSyncAttemptAt: Date?
 
     init(
-        store: HealthKitHRVStoreProviding? = nil,
+        provider: HealthKitProviding? = nil,
         apiService: APIServiceProviding? = nil,
         calendar: Calendar = Calendar(identifier: .gregorian),
         now: @escaping () -> Date = Date.init,
         minimumSyncInterval: TimeInterval = 30 * 60
     ) {
-        self.store = store ?? LiveHealthKitHRVStore()
+        self.provider = provider ?? LiveHealthKitProvider()
         self.apiService = apiService ?? AppDependencies.current.apiService
         self.calendar = calendar
         self.now = now
@@ -167,17 +69,16 @@ final class HealthKitHRVService {
             return .skipped(lastSyncAttemptAt)
         }
 
-        guard store.isHealthDataAvailable else {
+        guard provider.isHealthDataAvailable else {
             lastSyncAttemptAt = currentDate
             return .unavailable("HealthKit HRV not available on this device")
         }
 
         do {
-            try await store.requestHRVReadAuthorization()
-        } catch let error as HealthKitHRVServiceError {
-            let result = authorizationResult(for: error)
-            if !result.isFailure { lastSyncAttemptAt = currentDate }
-            return result
+            try await provider.requestAuthorization()
+        } catch let error as HealthKitProviderError {
+            lastSyncAttemptAt = currentDate
+            return .unavailable(error.localizedDescription)
         } catch {
             lastSyncAttemptAt = currentDate
             return .unauthorized("HealthKit HRV not authorized: \(error.localizedDescription)")
@@ -189,7 +90,7 @@ final class HealthKitHRVService {
 
         let rawSamples: [HealthKitHRVSample]
         do {
-            rawSamples = try await store.queryHRVSamples(start: queryStart, end: currentDate)
+            rawSamples = try await provider.queryHRVSamples(start: queryStart, end: currentDate)
         } catch let error as HealthKitHRVServiceError {
             let result = authorizationResult(for: error)
             if !result.isFailure { lastSyncAttemptAt = currentDate }

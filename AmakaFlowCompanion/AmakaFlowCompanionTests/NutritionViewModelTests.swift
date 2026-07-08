@@ -18,7 +18,7 @@ final class NutritionViewModelTests: XCTestCase {
         try await super.setUp()
         UserDefaults.standard.removeObject(forKey: settingsKey)
         let testSettings = NutritionSettings.default
-        let service = NutritionHealthKitService(testing: true)
+        let service = NutritionHealthKitService(provider: MockHealthKitProvider(isHealthDataAvailable: false))
         viewModel = NutritionViewModel(settings: testSettings, healthKitService: service)
     }
 

@@ -3,6 +3,7 @@
 //  AmakaFlowCompanionTests
 //
 //  AMA-2052 Wedge C — HealthKit HRV ingestion honesty + aggregation tests.
+//  AMA-433 — updated to use consolidated MockHealthKitProvider (dropped FakeHRVStore).
 //
 
 import XCTest
@@ -13,7 +14,8 @@ final class HealthKitHRVServiceTests: XCTestCase {
 
     func testSamplesConvertSecondsToMillisecondsAggregateDailyMeanAndPost() async throws {
         let now = Self.date("2026-05-30T12:00:00Z")
-        let store = FakeHRVStore(samples: [
+        let provider = MockHealthKitProvider()
+        provider.hrvSamples = [
             HealthKitHRVSample(
                 startDate: Self.date("2026-05-29T06:00:00Z"),
                 endDate: Self.date("2026-05-29T06:01:00Z"),
@@ -29,10 +31,10 @@ final class HealthKitHRVServiceTests: XCTestCase {
                 endDate: Self.date("2026-05-30T06:01:00Z"),
                 sdnnSeconds: 0.055
             )
-        ])
+        ]
         let api = MockAPIService()
         let service = HealthKitHRVService(
-            store: store,
+            provider: provider,
             apiService: api,
             calendar: Self.utcCalendar,
             now: { now },
@@ -44,8 +46,8 @@ final class HealthKitHRVServiceTests: XCTestCase {
         guard case .synced(let dailySamples) = result else {
             return XCTFail("Expected synced result, got \(result)")
         }
-        XCTAssertTrue(store.requestAuthorizationCalled)
-        XCTAssertEqual(store.queryStart, Self.date("2026-05-29T00:00:00Z"))
+        XCTAssertTrue(provider.requestAuthorizationCalled)
+        XCTAssertEqual(provider.lastHRVQueryStart, Self.date("2026-05-29T00:00:00Z"))
         XCTAssertEqual(dailySamples.map(\.sampleDate), ["2026-05-29", "2026-05-30"])
         XCTAssertEqual(dailySamples[0].hrvMilliseconds, 50, accuracy: 0.0001)
         XCTAssertEqual(dailySamples[1].hrvMilliseconds, 55, accuracy: 0.0001)
@@ -59,10 +61,11 @@ final class HealthKitHRVServiceTests: XCTestCase {
     }
 
     func testAuthorizationDeniedReturnsHonestNoDataAndPostsNothing() async throws {
-        let store = FakeHRVStore(authError: HealthKitHRVServiceError.notAuthorized)
+        let provider = MockHealthKitProvider()
+        provider.requestAuthorizationError = HealthKitHRVServiceError.notAuthorized
         let api = MockAPIService()
         let service = HealthKitHRVService(
-            store: store,
+            provider: provider,
             apiService: api,
             calendar: Self.utcCalendar,
             now: { Self.date("2026-05-30T12:00:00Z") },
@@ -76,14 +79,14 @@ final class HealthKitHRVServiceTests: XCTestCase {
         }
         XCTAssertTrue(message.contains("not authorized"))
         XCTAssertFalse(api.postReadinessSampleCalled)
-        XCTAssertNil(store.queryStart)
+        XCTAssertNil(provider.lastHRVQueryStart)
     }
 
     func testEmptyHealthKitSamplesReturnHonestEmptyAndPostNothing() async throws {
-        let store = FakeHRVStore(samples: [])
+        let provider = MockHealthKitProvider()
         let api = MockAPIService()
         let service = HealthKitHRVService(
-            store: store,
+            provider: provider,
             apiService: api,
             calendar: Self.utcCalendar,
             now: { Self.date("2026-05-30T12:00:00Z") },
@@ -146,17 +149,18 @@ final class HealthKitHRVServiceTests: XCTestCase {
 
     func testPostFailureDoesNotDebounceRetry() async throws {
         let now = Self.date("2026-05-30T12:00:00Z")
-        let store = FakeHRVStore(samples: [
+        let provider = MockHealthKitProvider()
+        provider.hrvSamples = [
             HealthKitHRVSample(
                 startDate: Self.date("2026-05-30T06:00:00Z"),
                 endDate: Self.date("2026-05-30T06:01:00Z"),
                 sdnnSeconds: 0.050
             )
-        ])
+        ]
         let api = MockAPIService()
         api.postReadinessSampleResult = .failure(APIError.serverError(503))
         let service = HealthKitHRVService(
-            store: store,
+            provider: provider,
             apiService: api,
             calendar: Self.utcCalendar,
             now: { now },
@@ -186,40 +190,5 @@ final class HealthKitHRVServiceTests: XCTestCase {
 
     private static func date(_ isoString: String) -> Date {
         ISO8601DateFormatter().date(from: isoString)!
-    }
-}
-
-private final class FakeHRVStore: HealthKitHRVStoreProviding {
-    var isHealthDataAvailable: Bool
-    private let authError: Error?
-    private let queryError: Error?
-    private let samples: [HealthKitHRVSample]
-
-    private(set) var requestAuthorizationCalled = false
-    private(set) var queryStart: Date?
-    private(set) var queryEnd: Date?
-
-    init(
-        isHealthDataAvailable: Bool = true,
-        authError: Error? = nil,
-        queryError: Error? = nil,
-        samples: [HealthKitHRVSample] = []
-    ) {
-        self.isHealthDataAvailable = isHealthDataAvailable
-        self.authError = authError
-        self.queryError = queryError
-        self.samples = samples
-    }
-
-    func requestHRVReadAuthorization() async throws {
-        requestAuthorizationCalled = true
-        if let authError { throw authError }
-    }
-
-    func queryHRVSamples(start: Date, end: Date) async throws -> [HealthKitHRVSample] {
-        queryStart = start
-        queryEnd = end
-        if let queryError { throw queryError }
-        return samples
     }
 }
