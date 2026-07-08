@@ -72,6 +72,24 @@ final class APITransportObservabilityTests: XCTestCase {
         }
     }
 
+    func test401MapsToUnauthorized() {
+        let error = APIService.mapStatusCode(401, data: nil)
+        guard case .unauthorized = error else {
+            XCTFail("Expected .unauthorized for 401, got \(error)")
+            return
+        }
+    }
+
+    // 401 with a body must still map to .unauthorized, not .serverErrorWithBody.
+    func test401WithBodyMapsToUnauthorized() {
+        let body = #"{"detail":"invalid token"}"#.data(using: .utf8)!
+        let error = APIService.mapStatusCode(401, data: body)
+        guard case .unauthorized = error else {
+            XCTFail("Expected .unauthorized for 401-with-body, got \(error)")
+            return
+        }
+    }
+
     // AMA-302: 404 with a non-empty body must map to .notFound, not .serverErrorWithBody.
     func test404WithBodyMapsToNotFound() {
         let body = #"{"detail":"resource not found"}"#.data(using: .utf8)!
