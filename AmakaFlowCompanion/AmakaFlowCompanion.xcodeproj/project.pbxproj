@@ -271,6 +271,12 @@
 		AMA1828TELEG00B /* TelegramAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828TELEG00A /* TelegramAPIRepository.swift */; };
 		AMA1828TRANS00B /* APITransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828TRANS00A /* APITransport.swift */; };
 		AMA1828WORKO00B /* WorkoutAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828WORKO00A /* WorkoutAPIRepository.swift */; };
+		AMA1832CHATTSTBLD /* ChatAPIRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832CHATTSTREF /* ChatAPIRepositoryTests.swift */; };
+		AMA1832DEVITSTBLD /* DeviceAPIRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832DEVITSTREF /* DeviceAPIRepositoryTests.swift */; };
+		AMA1832INGSTBLD01 /* IngestionAPIRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832INGSTREF01 /* IngestionAPIRepositoryTests.swift */; };
+		AMA1832PROGTST_BLD /* ProgramsAPIRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832PROGTST_REF /* ProgramsAPIRepositoryTests.swift */; };
+		AMA1832SOCITSTBLD /* SocialAPIRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832SOCITSTREF /* SocialAPIRepositoryTests.swift */; };
+		AMA1832TELGTSTBLD /* TelegramAPIRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832TELGTSTREF /* TelegramAPIRepositoryTests.swift */; };
 		B1910EAEA57AF40FBA6FEDD3 /* FollowAlongPlayerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */; };
 		B44263A997564169A4DE795A /* KeychainClerkTokenPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CA747C5C41B432C9BEE9C9F /* KeychainClerkTokenPersistence.swift */; };
 		B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E57529578481B8991A91F /* SourcesView.swift */; };
@@ -732,6 +738,12 @@
 		AMA1828TELEG00A /* TelegramAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TelegramAPIRepository.swift; path = ../AmakaFlow/Services/TelegramAPIRepository.swift; sourceTree = SOURCE_ROOT; };
 		AMA1828TRANS00A /* APITransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APITransport.swift; path = ../AmakaFlow/Services/APITransport.swift; sourceTree = SOURCE_ROOT; };
 		AMA1828WORKO00A /* WorkoutAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutAPIRepository.swift; path = ../AmakaFlow/Services/WorkoutAPIRepository.swift; sourceTree = SOURCE_ROOT; };
+		AMA1832CHATTSTREF /* ChatAPIRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ChatAPIRepositoryTests.swift; path = AmakaFlowCompanionTests/ChatAPIRepositoryTests.swift; sourceTree = "<group>"; };
+		AMA1832DEVITSTREF /* DeviceAPIRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DeviceAPIRepositoryTests.swift; path = AmakaFlowCompanionTests/DeviceAPIRepositoryTests.swift; sourceTree = "<group>"; };
+		AMA1832INGSTREF01 /* IngestionAPIRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = IngestionAPIRepositoryTests.swift; path = AmakaFlowCompanionTests/IngestionAPIRepositoryTests.swift; sourceTree = "<group>"; };
+		AMA1832PROGTST_REF /* ProgramsAPIRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProgramsAPIRepositoryTests.swift; path = AmakaFlowCompanionTests/ProgramsAPIRepositoryTests.swift; sourceTree = "<group>"; };
+		AMA1832SOCITSTREF /* SocialAPIRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialAPIRepositoryTests.swift; path = AmakaFlowCompanionTests/SocialAPIRepositoryTests.swift; sourceTree = "<group>"; };
+		AMA1832TELGTSTREF /* TelegramAPIRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TelegramAPIRepositoryTests.swift; path = AmakaFlowCompanionTests/TelegramAPIRepositoryTests.swift; sourceTree = "<group>"; };
 		B44D7C6673CB9BE868FC1006 /* ShareImportViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShareImportViewModel.swift; sourceTree = "<group>"; };
 		BAC6A807F5A4820B05339B99 /* PlanRevealView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlanRevealView.swift; path = ../AmakaFlow/Views/PlanRevealView.swift; sourceTree = SOURCE_ROOT; };
 		BC16168084DD4307BA295F94 /* CTAError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CTAError.swift; path = ../AmakaFlow/Models/CTAError.swift; sourceTree = SOURCE_ROOT; };
@@ -1409,6 +1421,12 @@
 				AK00TST025A /* XPBarViewTests.swift */,
 				96BF60E98CCB044FBF23EB80 /* ShareExtensionTests.swift */,
 				AMA314APPD3PSREF /* AppDependenciesTests.swift */,
+				AMA1832CHATTSTREF /* ChatAPIRepositoryTests.swift */,
+				AMA1832DEVITSTREF /* DeviceAPIRepositoryTests.swift */,
+				AMA1832INGSTREF01 /* IngestionAPIRepositoryTests.swift */,
+				AMA1832PROGTST_REF /* ProgramsAPIRepositoryTests.swift */,
+				AMA1832SOCITSTREF /* SocialAPIRepositoryTests.swift */,
+				AMA1832TELGTSTREF /* TelegramAPIRepositoryTests.swift */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -2126,6 +2144,12 @@
 				AMA307CVMSTREAMTSTBLD /* CoachViewModelStreamingTests.swift in Sources */,
 				AMA2230PNDTESTSBLD001 /* CoachPendingActionsTests.swift in Sources */,
 				AMA314APPD3PSBLD /* AppDependenciesTests.swift in Sources */,
+				AMA1832CHATTSTBLD /* ChatAPIRepositoryTests.swift in Sources */,
+				AMA1832DEVITSTBLD /* DeviceAPIRepositoryTests.swift in Sources */,
+				AMA1832INGSTBLD01 /* IngestionAPIRepositoryTests.swift in Sources */,
+				AMA1832PROGTST_BLD /* ProgramsAPIRepositoryTests.swift in Sources */,
+				AMA1832SOCITSTBLD /* SocialAPIRepositoryTests.swift in Sources */,
+				AMA1832TELGTSTBLD /* TelegramAPIRepositoryTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
