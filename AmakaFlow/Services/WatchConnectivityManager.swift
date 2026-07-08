@@ -35,7 +35,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     // Standalone workout summaries from watch
     @Published var lastStandaloneWorkoutSummary: StandaloneWorkoutSummary?
 
-    private var session: WCSession?
+    private var session: (any WatchSessionProviding)?
 
     override init() {
         super.init()
@@ -48,9 +48,16 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         #endif
 
         if WCSession.isSupported() {
-            session = WCSession.default
-            session?.delegate = self
+            let liveSession = LiveWatchSession.shared
+            liveSession.delegate = self
+            session = liveSession
         }
+    }
+
+    // Initializer for unit testing — injects a WatchSessionProviding double.
+    init(session: any WatchSessionProviding) {
+        super.init()
+        self.session = session
     }
 
     func activate() {
