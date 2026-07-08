@@ -127,6 +127,8 @@
 		AK00LDR005B /* LeaderboardViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00LDR005A /* LeaderboardViewModelTests.swift */; };
 		AK00NUT001B /* NutritionHealthKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT001A /* NutritionHealthKitService.swift */; };
 		AMA2052HRVSVCB /* HealthKitHRVService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2052HRVSVCA /* HealthKitHRVService.swift */; };
+		AMA433HKPVDRB /* HealthKitProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA433HKPVDRA /* HealthKitProvider.swift */; };
+		AMA433MOCKHKB /* MockHealthKitProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA433MOCKHKA /* MockHealthKitProvider.swift */; };
 		AK00NUT002B /* NutritionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT002A /* NutritionViewModel.swift */; };
 		AK00NUT003B /* NutritionDashboardCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT003A /* NutritionDashboardCard.swift */; };
 		AK00NUT004B /* ProteinTrackerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT004A /* ProteinTrackerView.swift */; };
@@ -590,6 +592,8 @@
 		AK00LDR005A /* LeaderboardViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LeaderboardViewModelTests.swift; path = AmakaFlowCompanionTests/LeaderboardViewModelTests.swift; sourceTree = "<group>"; };
 		AK00NUT001A /* NutritionHealthKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionHealthKitService.swift; path = ../AmakaFlow/Services/NutritionHealthKitService.swift; sourceTree = "<group>"; };
 		AMA2052HRVSVCA /* HealthKitHRVService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HealthKitHRVService.swift; path = ../AmakaFlow/Services/HealthKitHRVService.swift; sourceTree = "<group>"; };
+		AMA433HKPVDRA /* HealthKitProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HealthKitProvider.swift; path = ../AmakaFlow/Services/HealthKitProvider.swift; sourceTree = "<group>"; };
+		AMA433MOCKHKA /* MockHealthKitProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MockHealthKitProvider.swift; path = AmakaFlowCompanionTests/MockHealthKitProvider.swift; sourceTree = "<group>"; };
 		AK00NUT002A /* NutritionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionViewModel.swift; path = ../AmakaFlow/ViewModels/NutritionViewModel.swift; sourceTree = "<group>"; };
 		AK00NUT003A /* NutritionDashboardCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionDashboardCard.swift; path = ../AmakaFlow/Views/Nutrition/NutritionDashboardCard.swift; sourceTree = "<group>"; };
 		AK00NUT004A /* ProteinTrackerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProteinTrackerView.swift; path = ../AmakaFlow/Views/Nutrition/ProteinTrackerView.swift; sourceTree = "<group>"; };
@@ -1205,6 +1209,7 @@
 				AK00LDR005A /* LeaderboardViewModelTests.swift */,
 				AK00NUT001A /* NutritionHealthKitService.swift */,
 				AMA2052HRVSVCA /* HealthKitHRVService.swift */,
+				AMA433HKPVDRA /* HealthKitProvider.swift */,
 				AK00NUT002A /* NutritionViewModel.swift */,
 				AK00AFL005A /* FoodLoggingViewModel.swift */,
 				AK00NUT003A /* NutritionDashboardCard.swift */,
@@ -1218,6 +1223,7 @@
 				AK00AFL004A /* TextFoodEntryView.swift */,
 				AK00NUT008A /* NutritionViewModelTests.swift */,
 				AMA2052HRVTSTA /* HealthKitHRVServiceTests.swift */,
+				AMA433MOCKHKA /* MockHealthKitProvider.swift */,
 				AK00AFL006A /* FoodLoggingViewModelTests.swift */,
 				AK00FUL001A /* FuelingViewModel.swift */,
 				AK00FUL002A /* FuelingStatusCard.swift */,
@@ -2031,6 +2037,7 @@
 				AK00LDR004B /* LeaderboardEntryRow.swift in Sources */,
 				AK00NUT001B /* NutritionHealthKitService.swift in Sources */,
 				AMA2052HRVSVCB /* HealthKitHRVService.swift in Sources */,
+				AMA433HKPVDRB /* HealthKitProvider.swift in Sources */,
 				AK00NUT002B /* NutritionViewModel.swift in Sources */,
 				AK00NUT003B /* NutritionDashboardCard.swift in Sources */,
 				AK00NUT004B /* ProteinTrackerView.swift in Sources */,
@@ -2136,6 +2143,7 @@
 				AK00LDR005B /* LeaderboardViewModelTests.swift in Sources */,
 				AK00NUT008B /* NutritionViewModelTests.swift in Sources */,
 				AMA2052HRVTSTB /* HealthKitHRVServiceTests.swift in Sources */,
+				AMA433MOCKHKB /* MockHealthKitProvider.swift in Sources */,
 				AK00AFL006B /* FoodLoggingViewModelTests.swift in Sources */,
 				AK00FUL004B /* FuelingViewModelTests.swift in Sources */,
 				AMA14120013B /* FatigueHistoryViewModelTests.swift in Sources */,
