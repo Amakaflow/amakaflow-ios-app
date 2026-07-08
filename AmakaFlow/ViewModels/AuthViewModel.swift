@@ -562,4 +562,3 @@ actor ClerkTokenRefreshCoordinator {
     }
   }
 }
-
