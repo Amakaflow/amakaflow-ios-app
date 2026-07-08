@@ -55,7 +55,6 @@ struct AmakaFlowWatch_Watch_AppTests {
 /// (which never ticked for rep-only workouts) instead of wall-clock time.
 @MainActor
 struct FlattenWatchIntervalsTests {
-
     // A minimal strength workout: 3x5 push-ups with 60s rest between sets.
     private func pushUpWorkout() -> [WorkoutInterval] {
         [.reps(sets: 3, reps: 5, name: "Push-ups", load: nil, restSec: 60, followAlongUrl: nil)]
@@ -106,7 +105,6 @@ struct FlattenWatchIntervalsTests {
 /// Both shapes must decode correctly so watches running a mix of app versions stay functional.
 @MainActor
 struct DayStateLegacyPayloadCompatTests {
-
     private func decode(_ dict: [String: Any]) throws -> DayState {
         let data = try JSONSerialization.data(withJSONObject: dict)
         let decoder = JSONDecoder()
