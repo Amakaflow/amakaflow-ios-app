@@ -335,7 +335,7 @@ class MockProgressStore: ProgressStoreProviding {
 }
 
 /// Mock watch session for testing
-class MockWatchSession: WatchSessionProviding {
+class MockWatchSession: NSObject, WatchSessionProviding {
     // MARK: - Configurable State
 
     var isWatchAppInstalled: Bool = true
