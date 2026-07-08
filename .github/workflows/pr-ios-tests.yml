@@ -237,7 +237,7 @@ jobs:
         run: tar -cf /tmp/built-app.tar AmakaFlowCompanion.app
 
       - name: Upload .app tarball
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cold-launch-app
           path: /tmp/built-app.tar
@@ -251,7 +251,7 @@ jobs:
         run: tar -cf /tmp/test-products.tar DerivedData/Build
 
       - name: Upload test products
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-products
           path: /tmp/test-products.tar
@@ -361,7 +361,7 @@ jobs:
           exit "$XCODE_EXIT"
 
       - name: Upload test results
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: ios-test-results
@@ -456,7 +456,7 @@ jobs:
 
       - name: Upload evidence screenshot
         if: always() && steps.create-sim.outputs.skipped != 'true'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cold-launch-evidence-${{ strategy.job-index }}
           path: /tmp/cold-launch-${{ strategy.job-index }}.png
@@ -632,7 +632,7 @@ jobs:
 
       - name: Upload Maestro output
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: maestro-output
           path: |
@@ -643,7 +643,7 @@ jobs:
 
       - name: Upload CJ-01 L4 evidence screenshots
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cj01-l4-evidence
           path: |
@@ -654,7 +654,7 @@ jobs:
 
       - name: Upload CJ-01 L4 JUnit report
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cj01-l4-junit
           path: maestro-output/cj01-l4/cj01-l4-junit.xml
