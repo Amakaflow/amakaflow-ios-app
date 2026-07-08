@@ -53,6 +53,7 @@ struct AmakaFlowWatch_Watch_AppTests {
 /// Rep steps must have timerSeconds = nil, confirming they cannot drive
 /// elapsedSeconds via the countdown timer. Bug #300 used elapsedSeconds
 /// (which never ticked for rep-only workouts) instead of wall-clock time.
+@MainActor
 struct FlattenWatchIntervalsTests {
 
     // A minimal strength workout: 3x5 push-ups with 60s rest between sets.
@@ -103,6 +104,7 @@ struct FlattenWatchIntervalsTests {
 /// WatchConnectivityBridge deserializes DayState using convertFromSnakeCase.
 /// AMA-1932: the phone historically pushed camelCase keys before snake_case was standardised.
 /// Both shapes must decode correctly so watches running a mix of app versions stay functional.
+@MainActor
 struct DayStateLegacyPayloadCompatTests {
 
     private func decode(_ dict: [String: Any]) throws -> DayState {
