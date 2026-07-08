@@ -250,7 +250,7 @@ jobs:
         run: .github/scripts/ci/select-xcode.sh
 
       - name: Restore SPM cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: AmakaFlowCompanion/.spm
           key: spm-tf-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
@@ -258,7 +258,7 @@ jobs:
             spm-tf-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
 
       - name: Restore DerivedData cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: AmakaFlowCompanion/DerivedData
           key: dd-tf-${{ runner.os }}-${{ github.sha }}
