@@ -143,17 +143,9 @@ gh workflow run ios-testflight.yml --repo Amakaflow/amakaflow-ios-app --ref main
 
 Omit `expected_sha` for ad-hoc re-runs when you intentionally want to build whatever is on `main` at run time (no guard).
 
-## Nightly Maestro smoke scoreboard
+## Nightly Maestro smoke scoreboard (RETIRED 2026-07-08)
 
-UI smoke runs in `.github/workflows/nightly-maestro-smoke.yml` (04:00 ET cron + `workflow_dispatch`). **Non-paging** until **10 consecutive green nights** (AMA-2280 fixed decision).
-
-| Metric | Value |
-|--------|-------|
-| Green-night scoreboard | **0/10** (as of 2026-07-07) |
-| First scheduled run | [28863293299](https://github.com/Amakaflow/amakaflow-ios-app/actions/runs/28863293299) — FAILED (golden-path + feature-presence timeout) |
-| Paging | Disabled (no GitHub issue / Telegram / Linear P1) |
-
-Do not add paging until the scoreboard reaches 10/10 and the founder explicitly re-enables it.
+The nightly smoke workflow was removed at 0/10 green nights. GHA sims ran Maestro UI steps at ~8–20 s each; Clerk sign-in alone exceeded the per-flow timeout, so every run died mid-login without testing the app (run 28937274287 evidence). Coverage now: daily-driver dogfooding (AMA-2272) + on-demand `run-maestro` PR label. See `docs/ci/PIPELINE.md`.
 
 ## Troubleshooting
 
@@ -180,7 +172,7 @@ Usually precedes the certificate-limit error. Fixing certificates/profiles in th
 
 ### Post-upload smoke hangs (AMA-2276)
 
-**Historical:** post-upload smoke used to run inside `ios-testflight.yml`. As of AMA-2280/2283, smoke lives only in `nightly-maestro-smoke.yml` (non-paging until 10 green nights). The nightly job has layered timeouts (25 min job cap; 12 min per Maestro flow with GNU `timeout` hard-kill). Healthy smoke runtime is ~15 min.
+**Historical:** post-upload smoke used to run inside `ios-testflight.yml`; AMA-2280/2283 moved it to a nightly workflow, which was retired 2026-07-08 (see scoreboard section above). Scheduled UI smoke no longer exists; use the `run-maestro` PR label for on-demand flows.
 
 ## Verify AMA-1852 / AMA-2267 acceptance
 
