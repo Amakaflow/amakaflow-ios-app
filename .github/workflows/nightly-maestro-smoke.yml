@@ -340,7 +340,46 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       # ---- Paging on red: DISABLED until 10 consecutive green nights (0/10) ----
-      # No GitHub issue / Telegram / Linear P1 steps here (AMA-2280 / AMA-2281).
+      # When re-enabling paging (AMA-2280 founder decision required), uncomment the
+      # step below. It uses create-or-update dedup: searches for an open issue with
+      # the fixed title "🚨 Nightly Maestro smoke health" and updates it if found,
+      # or creates it if not — so exactly ONE rolling issue exists at any time.
+      #
+      # - name: Page on smoke failure (create-or-update rolling issue)
+      #   if: always() && steps.smoke.outcome == 'failure'
+      #   env:
+      #     GH_TOKEN: ${{ github.token }}
+      #     FAILED: ${{ steps.smoke.outputs.failed_flows || steps.smoke_meta.outputs.failed_flows }}
+      #     REASON: ${{ steps.smoke.outputs.failure_reason || steps.smoke_meta.outputs.failure_reason }}
+      #     RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      #   run: |
+      #     set -euo pipefail
+      #     TITLE="🚨 Nightly Maestro smoke health"
+      #     BODY="Nightly smoke failed: flows=${FAILED}, reason=${REASON}
+      #     Run: ${RUN_URL}
+      #     Commit: ${{ github.sha }}
+      #     *(Auto-updated by nightly-maestro-smoke — one rolling issue, no duplicates.)*"
+      #     EXISTING=$(gh issue list \
+      #       --repo "${{ github.repository }}" \
+      #       --state open \
+      #       --search "\"${TITLE}\" in:title" \
+      #       --json number \
+      #       --jq '.[0].number // ""' 2>/dev/null || echo "")
+      #     if [ -n "$EXISTING" ]; then
+      #       gh issue comment "$EXISTING" \
+      #         --repo "${{ github.repository }}" \
+      #         --body "$BODY"
+      #       echo "Updated rolling issue #${EXISTING}"
+      #     else
+      #       gh issue create \
+      #         --repo "${{ github.repository }}" \
+      #         --title "$TITLE" \
+      #         --body "$BODY" \
+      #         --label "bug"
+      #       echo "Created new rolling issue"
+      #     fi
+      #   # Grant issues: write when re-enabling (add to job permissions block above).
+
       - name: Upload smoke evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
