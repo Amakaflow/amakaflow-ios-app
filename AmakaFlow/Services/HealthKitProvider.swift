@@ -122,11 +122,11 @@ final class LiveHealthKitProvider: HealthKitProviding {
                     continuation.resume(throwing: Self.mapHRVError(error))
                     return
                 }
-                let result = (samples as? [HKQuantitySample] ?? []).map { s in
+                let result = (samples as? [HKQuantitySample] ?? []).map { sample in
                     HealthKitHRVSample(
-                        startDate: s.startDate,
-                        endDate: s.endDate,
-                        sdnnSeconds: s.quantity.doubleValue(for: .second())
+                        startDate: sample.startDate,
+                        endDate: sample.endDate,
+                        sdnnSeconds: sample.quantity.doubleValue(for: .second())
                     )
                 }
                 continuation.resume(returning: result)
@@ -145,8 +145,8 @@ final class LiveHealthKitProvider: HealthKitProviding {
         async let fat = fetchSum(healthStore: healthStore, identifier: .dietaryFatTotal, unit: .gram(), predicate: predicate)
         async let water = fetchSum(healthStore: healthStore, identifier: .dietaryWater, unit: .literUnit(with: .milli), predicate: predicate)
 
-        let (c, p, ca, f, w) = await (cal, pro, carb, fat, water)
-        return NutritionDailySums(calories: c, protein: p, carbs: ca, fat: f, water: w)
+        let (calories, protein, carbs, fatGrams, waterMl) = await (cal, pro, carb, fat, water)
+        return NutritionDailySums(calories: calories, protein: protein, carbs: carbs, fat: fatGrams, water: waterMl)
     }
 
     func fetchMostRecentNutritionSourceName(startOfDay: Date, now: Date) async -> String? {
@@ -218,7 +218,7 @@ final class LiveHealthKitProvider: HealthKitProviding {
             .dietaryEnergyConsumed, .dietaryProtein, .dietaryCarbohydrates, .dietaryFatTotal, .dietaryWater
         ]
         for id in nutritionIds {
-            if let t = HKObjectType.quantityType(forIdentifier: id) { types.insert(t) }
+            if let quantityType = HKObjectType.quantityType(forIdentifier: id) { types.insert(quantityType) }
         }
         if let hrv = HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN) {
             types.insert(hrv)
@@ -229,7 +229,7 @@ final class LiveHealthKitProvider: HealthKitProviding {
     private var writeTypes: Set<HKSampleType> {
         var types = Set<HKSampleType>()
         for id: HKQuantityTypeIdentifier in [.dietaryProtein, .dietaryWater] {
-            if let t = HKObjectType.quantityType(forIdentifier: id) { types.insert(t) }
+            if let quantityType = HKObjectType.quantityType(forIdentifier: id) { types.insert(quantityType) }
         }
         return types
     }
