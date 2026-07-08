@@ -12,10 +12,6 @@ import Testing
 
 struct AmakaFlowWatch_Watch_AppTests {
 
-    @Test func example() async throws {
-        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
-    }
-
     @MainActor
     @Test("endSession persists workout by ending collection and finishing workout")
     func endSessionCallsEndCollectionAndFinishWorkout() async {
@@ -57,8 +53,8 @@ struct AmakaFlowWatch_Watch_AppTests {
 /// Rep steps must have timerSeconds = nil, confirming they cannot drive
 /// elapsedSeconds via the countdown timer. Bug #300 used elapsedSeconds
 /// (which never ticked for rep-only workouts) instead of wall-clock time.
+@MainActor
 struct FlattenWatchIntervalsTests {
-
     // A minimal strength workout: 3x5 push-ups with 60s rest between sets.
     private func pushUpWorkout() -> [WorkoutInterval] {
         [.reps(sets: 3, reps: 5, name: "Push-ups", load: nil, restSec: 60, followAlongUrl: nil)]
@@ -99,5 +95,100 @@ struct FlattenWatchIntervalsTests {
 
         #expect(wallClockDuration == 1800, "Int(endDate - startDate) must equal 1800 for a 30-min workout")
         #expect(wallClockDuration > 0, "wall-clock duration must always be positive")
+    }
+}
+
+// MARK: - AMA-1932: DayState legacy payload-shape compatibility
+
+/// WatchConnectivityBridge deserializes DayState using convertFromSnakeCase.
+/// AMA-1932: the phone historically pushed camelCase keys before snake_case was standardised.
+/// Both shapes must decode correctly so watches running a mix of app versions stay functional.
+@MainActor
+struct DayStateLegacyPayloadCompatTests {
+    private func decode(_ dict: [String: Any]) throws -> DayState {
+        let data = try JSONSerialization.data(withJSONObject: dict)
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try decoder.decode(DayState.self, from: data)
+    }
+
+    @Test("AMA-1932: snake_case payload (current format) decodes via convertFromSnakeCase")
+    func snakeCasePayloadDecodes() throws {
+        let payload: [String: Any] = [
+            "date": "2026-05-01",
+            "readiness_score": 80,
+            "readiness_label": "ready",
+            "sessions": [],
+            "conflict_alert": NSNull()
+        ]
+        let dayState = try decode(payload)
+        #expect(dayState.readinessScore == 80)
+        #expect(dayState.readinessLabel == .ready)
+        #expect(dayState.sessions.isEmpty)
+        #expect(dayState.conflictAlert == nil)
+    }
+
+    @Test("AMA-1932: camelCase payload (legacy format) also decodes via convertFromSnakeCase")
+    func camelCasePayloadDecodesAsLegacy() throws {
+        // Prior to snake_case standardisation the phone sent camelCase keys directly.
+        // convertFromSnakeCase passes already-camelCase keys through unchanged, so both shapes work.
+        let payload: [String: Any] = [
+            "date": "2026-05-01",
+            "readinessScore": 80,
+            "readinessLabel": "ready",
+            "sessions": [],
+            "conflictAlert": NSNull()
+        ]
+        let dayState = try decode(payload)
+        #expect(dayState.readinessScore == 80)
+        #expect(dayState.readinessLabel == .ready)
+        #expect(dayState.sessions.isEmpty)
+        #expect(dayState.conflictAlert == nil)
+    }
+
+    @Test("AMA-1932: legacy payload with sessions and conflict decodes all fields")
+    func legacyPayloadWithSessionsAndConflict() throws {
+        let payload: [String: Any] = [
+            "date": "2026-05-01",
+            "readiness_score": 55,
+            "readiness_label": "moderate",
+            "sessions": [
+                [
+                    "id": "s1",
+                    "name": "Morning Run",
+                    "scheduled_time": "07:00",
+                    "sport": "running",
+                    "duration_minutes": 45,
+                    "is_completed": false,
+                    "is_next": true
+                ] as [String: Any]
+            ],
+            "conflict_alert": [
+                "message": "Hard session tomorrow",
+                "severity": "warning",
+                "suggested_action": "Reduce intensity"
+            ] as [String: Any]
+        ]
+        let dayState = try decode(payload)
+        #expect(dayState.readinessLabel == .moderate)
+        #expect(dayState.sessions.count == 1)
+        #expect(dayState.sessions[0].name == "Morning Run")
+        #expect(dayState.sessions[0].isNext == true)
+        #expect(dayState.conflictAlert?.message == "Hard session tomorrow")
+        #expect(dayState.conflictAlert?.severity == .warning)
+    }
+
+    @Test("AMA-1932: rest-day payload with empty sessions decodes correctly")
+    func restDayPayloadDecodes() throws {
+        let payload: [String: Any] = [
+            "date": "2026-05-02",
+            "readiness_score": 20,
+            "readiness_label": "rest",
+            "sessions": [],
+            "conflict_alert": NSNull()
+        ]
+        let dayState = try decode(payload)
+        #expect(dayState.readinessLabel == .rest)
+        #expect(dayState.sessions.isEmpty)
     }
 }

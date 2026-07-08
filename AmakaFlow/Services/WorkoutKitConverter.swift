@@ -88,7 +88,7 @@ class WorkoutKitConverter {
     // MARK: - Private Helpers
     
     /// Map WorkoutSport to WorkoutKit sport type string
-    private func mapSportType(_ sport: WorkoutSport) -> String {
+    func mapSportType(_ sport: WorkoutSport) -> String {
         switch sport {
         case .running:
             return "running"

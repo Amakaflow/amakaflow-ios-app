@@ -74,11 +74,12 @@ final class WatchDeliveryViewModelTests: XCTestCase {
         await viewModel.load(workoutId: "poll-workout")
         XCTAssertEqual(viewModel.status?.state, .generated)
 
-        try await Task.sleep(nanoseconds: 90_000_000)
+        try await waitUntil { self.viewModel.status?.state == .confirmedOnDevice }
 
         XCTAssertEqual(viewModel.status?.state, .confirmedOnDevice)
         let callsAtTerminal = api.watchDeliveryStatusCallCount
-        try await Task.sleep(nanoseconds: 70_000_000)
+        // Terminal state stops polling — yield to event loop to confirm call count is stable
+        for _ in 0..<10 { await Task.yield() }
         XCTAssertEqual(api.watchDeliveryStatusCallCount, callsAtTerminal, "Polling must stop after confirmed_on_device")
         XCTAssertEqual(viewModel.state, .content)
     }
@@ -94,7 +95,8 @@ final class WatchDeliveryViewModelTests: XCTestCase {
             )
 
             await viewModel.load(workoutId: "terminal-\(terminal.rawValue)")
-            try await Task.sleep(nanoseconds: 70_000_000)
+            // Terminal state must not trigger polling; yield to event loop to confirm no tasks were scheduled
+            for _ in 0..<10 { await Task.yield() }
 
             XCTAssertEqual(viewModel.status?.state, terminal)
             XCTAssertEqual(api.watchDeliveryStatusCallCount, 1, "Terminal \(terminal.rawValue) must not poll")
@@ -122,7 +124,7 @@ final class WatchDeliveryViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.ctaError)
         XCTAssertNil(viewModel.lastFailedAction)
 
-        try await Task.sleep(nanoseconds: 70_000_000)
+        try await waitUntil { self.viewModel.status?.state == .confirmedOnDevice }
         XCTAssertEqual(viewModel.status?.state, .confirmedOnDevice)
         XCTAssertGreaterThanOrEqual(api.watchDeliveryStatusCallCount, 2)
     }
@@ -254,6 +256,20 @@ final class WatchDeliveryViewModelTests: XCTestCase {
         case .confirmedOnDevice: return "Confirmed on device"
         case .failed: return "Delivery failed"
         }
+    }
+
+    // MARK: - Helpers
+
+    private func waitUntil(
+        timeout: TimeInterval = 2,
+        condition: @escaping @MainActor () -> Bool
+    ) async throws {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if condition() { return }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTFail("Timed out waiting for condition")
     }
 
     // MARK: - Swift-6 Actor-Deinit Safety (#306)
