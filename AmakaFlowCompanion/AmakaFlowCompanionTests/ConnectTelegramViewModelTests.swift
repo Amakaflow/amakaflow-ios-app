@@ -73,7 +73,9 @@ final class ConnectTelegramViewModelTests: XCTestCase {
 
     viewModel.cancel()
     let callsAfterCancel = api.statusCallCount
-    try await Task.sleep(nanoseconds: 120_000_000)
+    try await waitUntil { viewModel.state == .idle }
+    // Yield to confirm no delayed polls fire after cancellation
+    for _ in 0..<10 { await Task.yield() }
 
     XCTAssertEqual(viewModel.state, .idle)
     XCTAssertEqual(api.statusCallCount, callsAfterCancel)
@@ -128,8 +130,8 @@ final class ConnectTelegramViewModelTests: XCTestCase {
       return false
     }
 
-    // Give any (incorrectly scheduled) poll a chance to fire so the assertion is meaningful.
-    try await Task.sleep(nanoseconds: 50_000_000)
+    // Give any incorrectly-scheduled poll a chance to fire (poll interval is 1 ns here).
+    for _ in 0..<10 { await Task.yield() }
 
     XCTAssertEqual(api.statusCallCount, 0, "pollStatus must not run after openTelegram fails")
     XCTAssertEqual(connectedIds, [])
