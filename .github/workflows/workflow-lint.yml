@@ -23,7 +23,11 @@ jobs:
       - name: Collect changed workflow files
         id: changed
         run: |
-          mapfile -t files < <(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}" -- '.github/workflows/*.yml' '.github/workflows/*.yaml')
+          # --diff-filter=d excludes DELETED workflows — linters can only read
+          # files that still exist on the head (deleting a workflow broke both
+          # jobs on PR #428: actionlint "could not read", zizmor treated the
+          # missing path as a GitHub repo ref).
+          mapfile -t files < <(git diff --name-only --diff-filter=d "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}" -- '.github/workflows/*.yml' '.github/workflows/*.yaml')
           if [ ${#files[@]} -eq 0 ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
@@ -56,7 +60,11 @@ jobs:
       - name: Collect changed workflow files
         id: changed
         run: |
-          mapfile -t files < <(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}" -- '.github/workflows/*.yml' '.github/workflows/*.yaml')
+          # --diff-filter=d excludes DELETED workflows — linters can only read
+          # files that still exist on the head (deleting a workflow broke both
+          # jobs on PR #428: actionlint "could not read", zizmor treated the
+          # missing path as a GitHub repo ref).
+          mapfile -t files < <(git diff --name-only --diff-filter=d "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}" -- '.github/workflows/*.yml' '.github/workflows/*.yaml')
           if [ ${#files[@]} -eq 0 ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
