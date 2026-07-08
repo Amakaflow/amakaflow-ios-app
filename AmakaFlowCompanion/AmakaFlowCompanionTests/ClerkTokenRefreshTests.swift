@@ -217,17 +217,14 @@ final class ClerkTokenRefreshTests: XCTestCase {
     XCTAssertNil(persistence.savedToken)
   }
 
-  // MARK: - AMA-1809: KeychainClerkTokenPersistence
+  // MARK: - AMA-436: SecureStorageProviding / KeychainClerkTokenPersistence
 
-  func testKeychainPersistenceRoundTripsToken() {
-    let service = "ClerkTokenRefreshTests.\(UUID().uuidString)"
+  func testSecureStoragePersistenceRoundTripsToken() {
     let persistence = KeychainClerkTokenPersistence(
-      service: service,
-      account: "clerk_auth_token",
+      storage: MockSecureStorage(),
       legacyDefaults: nil,
       legacyKey: nil
     )
-    defer { persistence.clearClerkToken() }
 
     XCTAssertNil(persistence.loadClerkToken(), "starts empty")
 
@@ -237,15 +234,12 @@ final class ClerkTokenRefreshTests: XCTestCase {
     XCTAssertEqual(persistence.loadClerkToken(), saved)
   }
 
-  func testKeychainPersistenceOverwritesExistingToken() {
-    let service = "ClerkTokenRefreshTests.\(UUID().uuidString)"
+  func testSecureStoragePersistenceOverwritesExistingToken() {
     let persistence = KeychainClerkTokenPersistence(
-      service: service,
-      account: "clerk_auth_token",
+      storage: MockSecureStorage(),
       legacyDefaults: nil,
       legacyKey: nil
     )
-    defer { persistence.clearClerkToken() }
 
     let first = ClerkAuthToken(value: "first", expiresAt: now.addingTimeInterval(60))
     let second = ClerkAuthToken(value: "second", expiresAt: now.addingTimeInterval(600))
@@ -253,14 +247,12 @@ final class ClerkTokenRefreshTests: XCTestCase {
     persistence.saveClerkToken(second)
 
     XCTAssertEqual(persistence.loadClerkToken(), second,
-                   "save must update in place, not append")
+                   "save must overwrite the prior token")
   }
 
-  func testKeychainPersistenceClearRemovesToken() {
-    let service = "ClerkTokenRefreshTests.\(UUID().uuidString)"
+  func testSecureStoragePersistenceClearRemovesToken() {
     let persistence = KeychainClerkTokenPersistence(
-      service: service,
-      account: "clerk_auth_token",
+      storage: MockSecureStorage(),
       legacyDefaults: nil,
       legacyKey: nil
     )
@@ -273,10 +265,10 @@ final class ClerkTokenRefreshTests: XCTestCase {
     XCTAssertNil(persistence.loadClerkToken())
   }
 
-  func testKeychainPersistenceMigratesFromUserDefaultsOnFirstRead() {
+  func testSecureStoragePersistenceMigratesFromUserDefaultsOnFirstRead() {
     // Simulate the legacy state: a prior install wrote the token into
-    // UserDefaults. New install should pick it up, copy to Keychain, and
-    // wipe the UserDefaults entry so subsequent reads bypass the migration.
+    // UserDefaults. New install should pick it up, copy to secure storage,
+    // and wipe the UserDefaults entry so subsequent reads bypass migration.
     let suiteName = "ClerkTokenRefreshTests.\(UUID().uuidString)"
     let defaults = UserDefaults(suiteName: suiteName)!
     defer { defaults.removePersistentDomain(forName: suiteName) }
@@ -284,36 +276,30 @@ final class ClerkTokenRefreshTests: XCTestCase {
     let legacyToken = ClerkAuthToken(value: "legacy", expiresAt: now.addingTimeInterval(600))
     defaults.set(try! JSONEncoder().encode(legacyToken), forKey: legacyKey)
 
-    let service = "ClerkTokenRefreshTests.\(UUID().uuidString)"
     let persistence = KeychainClerkTokenPersistence(
-      service: service,
-      account: "clerk_auth_token",
+      storage: MockSecureStorage(),
       legacyDefaults: defaults,
       legacyKey: legacyKey
     )
-    defer { persistence.clearClerkToken() }
 
     let migrated = persistence.loadClerkToken()
     XCTAssertEqual(migrated, legacyToken, "first read must migrate")
     XCTAssertNil(defaults.data(forKey: legacyKey),
                  "legacy entry must be wiped after migration")
 
-    // Subsequent reads come from Keychain directly.
     let secondRead = persistence.loadClerkToken()
     XCTAssertEqual(secondRead, legacyToken)
   }
 
-  func testKeychainPersistenceClearAlsoWipesLegacyDefaults() {
+  func testSecureStoragePersistenceClearAlsoWipesLegacyDefaults() {
     let suiteName = "ClerkTokenRefreshTests.\(UUID().uuidString)"
     let defaults = UserDefaults(suiteName: suiteName)!
     defer { defaults.removePersistentDomain(forName: suiteName) }
     let legacyKey = "legacy_clerk_token"
     defaults.set(Data([0x01]), forKey: legacyKey)
 
-    let service = "ClerkTokenRefreshTests.\(UUID().uuidString)"
     let persistence = KeychainClerkTokenPersistence(
-      service: service,
-      account: "clerk_auth_token",
+      storage: MockSecureStorage(),
       legacyDefaults: defaults,
       legacyKey: legacyKey
     )
@@ -326,21 +312,18 @@ final class ClerkTokenRefreshTests: XCTestCase {
 
   // MARK: - AMA-298: shared container mirroring
 
-  func testKeychainPersistenceSaveTokenMirrorsToSharedContainer() {
+  func testSecureStoragePersistenceSaveTokenMirrorsToSharedContainer() {
     let suiteName = "ClerkTokenRefreshTests.SharedContainer.\(UUID().uuidString)"
     let sharedDefaults = UserDefaults(suiteName: suiteName)!
     defer { sharedDefaults.removePersistentDomain(forName: suiteName) }
 
-    let service = "ClerkTokenRefreshTests.\(UUID().uuidString)"
     let persistence = KeychainClerkTokenPersistence(
-      service: service,
-      account: "clerk_auth_token",
+      storage: MockSecureStorage(),
       legacyDefaults: nil,
       legacyKey: nil,
       sharedDefaults: sharedDefaults,
       sharedDefaultsTokenKey: "auth_token"
     )
-    defer { persistence.clearClerkToken() }
 
     let saved = ClerkAuthToken(value: "share-ext-bearer", expiresAt: now.addingTimeInterval(600))
     persistence.saveClerkToken(saved)
@@ -349,15 +332,13 @@ final class ClerkTokenRefreshTests: XCTestCase {
                    "raw JWT value must be mirrored to shared container for share extension")
   }
 
-  func testKeychainPersistenceClearTokenRemovesSharedContainerEntry() {
+  func testSecureStoragePersistenceClearTokenRemovesSharedContainerEntry() {
     let suiteName = "ClerkTokenRefreshTests.SharedContainer.\(UUID().uuidString)"
     let sharedDefaults = UserDefaults(suiteName: suiteName)!
     defer { sharedDefaults.removePersistentDomain(forName: suiteName) }
 
-    let service = "ClerkTokenRefreshTests.\(UUID().uuidString)"
     let persistence = KeychainClerkTokenPersistence(
-      service: service,
-      account: "clerk_auth_token",
+      storage: MockSecureStorage(),
       legacyDefaults: nil,
       legacyKey: nil,
       sharedDefaults: sharedDefaults,
@@ -373,21 +354,18 @@ final class ClerkTokenRefreshTests: XCTestCase {
                  "shared container auth_token must be removed on clear")
   }
 
-  func testKeychainPersistenceOverwriteUpdatesSharedContainer() {
+  func testSecureStoragePersistenceOverwriteUpdatesSharedContainer() {
     let suiteName = "ClerkTokenRefreshTests.SharedContainer.\(UUID().uuidString)"
     let sharedDefaults = UserDefaults(suiteName: suiteName)!
     defer { sharedDefaults.removePersistentDomain(forName: suiteName) }
 
-    let service = "ClerkTokenRefreshTests.\(UUID().uuidString)"
     let persistence = KeychainClerkTokenPersistence(
-      service: service,
-      account: "clerk_auth_token",
+      storage: MockSecureStorage(),
       legacyDefaults: nil,
       legacyKey: nil,
       sharedDefaults: sharedDefaults,
       sharedDefaultsTokenKey: "auth_token"
     )
-    defer { persistence.clearClerkToken() }
 
     persistence.saveClerkToken(
       ClerkAuthToken(value: "first-token", expiresAt: now.addingTimeInterval(60)))
@@ -398,20 +376,23 @@ final class ClerkTokenRefreshTests: XCTestCase {
                    "shared container must reflect the most-recently saved token")
   }
 
-  func testUserDefaultsPersistenceRoundTripsToken() {
-    let suiteName = "ClerkTokenRefreshTests.\(UUID().uuidString)"
-    let defaults = UserDefaults(suiteName: suiteName)!
-    defer { defaults.removePersistentDomain(forName: suiteName) }
-    let persistence = UserDefaultsClerkTokenPersistence(
-      userDefaults: defaults, key: "test_clerk_token")
-    let saved = ClerkAuthToken(value: "persisted-token", expiresAt: now.addingTimeInterval(600))
+  // MARK: - AMA-1809: LiveSecureStorage (Keychain round-trip integration test)
 
+  func testLiveSecureStorageRoundTripsToken() {
+    let uniqueService = "ClerkTokenRefreshTests.\(UUID().uuidString)"
+    let persistence = KeychainClerkTokenPersistence(
+      storage: LiveSecureStorage(service: uniqueService),
+      legacyDefaults: nil,
+      legacyKey: nil
+    )
+    defer { persistence.clearClerkToken() }
+
+    XCTAssertNil(persistence.loadClerkToken(), "starts empty")
+
+    let saved = ClerkAuthToken(value: "live-kc-token", expiresAt: now.addingTimeInterval(600))
     persistence.saveClerkToken(saved)
-    let loaded = persistence.loadClerkToken()
-    persistence.clearClerkToken()
 
-    XCTAssertEqual(loaded, saved)
-    XCTAssertNil(persistence.loadClerkToken())
+    XCTAssertEqual(persistence.loadClerkToken(), saved)
   }
 
   private func makeCoordinator() -> ClerkTokenRefreshCoordinator {
