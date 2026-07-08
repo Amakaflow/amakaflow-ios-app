@@ -31,12 +31,7 @@ flowchart TB
     REL1 --> REL2 --> REL3
   end
 
-  subgraph NIGHT["Nightly pipeline (04:00 ET schedule + dispatch)"]
-    N1[nightly-maestro-smoke.yml — golden-path + feature-presence]
-  end
-
   PR -.->|merge| REL
-  NIGHT -.->|validates main UI| N1
 ```
 
 **Supporting workflows** (not part of the three pipelines above):
@@ -47,19 +42,19 @@ flowchart TB
 | `claude-auto-merge.yml` | Factory Droid auto-merge helper |
 | `claude-fix-reviews.yml` | Auto-fix on Droid review comments |
 
-**Target workflow count:** 7 files under `.github/workflows/` (design doc §1).
+**Target workflow count:** 6 files under `.github/workflows/` (design doc §1).
 
 | File | Pipeline |
 |------|----------|
 | `pr-ios-tests.yml` | PR |
 | `preflight.yml` | PR |
 | `ios-testflight.yml` | Release |
-| `nightly-maestro-smoke.yml` | Nightly |
 | `conflict-detection.yml` | Support |
 | `claude-auto-merge.yml` | Support |
 | `claude-fix-reviews.yml` | Support |
 
 **Removed (CI-5 kill list):** `ios-tests.yml`, `agent-validation.yml`, `pr-ios-tests-docs-skip.yml` (CI-3).
+**Removed 2026-07-08:** `nightly-maestro-smoke.yml` — retired after 0/10 green nights; golden-path flow could not finish Clerk sign-in within any sane flow timeout on GHA sims (~8–20 s per UI step ⇒ sign-in alone ~5 min). Coverage replaced by daily-driver dogfooding (AMA-2272); on-demand UI smoke remains available via the `run-maestro` PR label.
 
 ---
 
@@ -136,24 +131,11 @@ Maestro uses the shared Debug-sim `.app` artifact from the single PR build (no s
 
 ---
 
-## Nightly Maestro smoke
+## Nightly Maestro smoke (RETIRED 2026-07-08)
 
-| | |
-|---|---|
-| **Schedule** | 04:00 ET daily (`0 9 * * *` UTC) |
-| **Workflow** | `nightly-maestro-smoke.yml` |
-| **Scope** | Golden-path + feature-presence against latest `main` |
-| **Paging** | **Disabled** — failures appear in Actions only |
+The nightly smoke workflow was removed after the scoreboard never left 0/10. Root cause of the persistent red: GHA macOS simulators execute Maestro UI steps at ~8–20 s each, so the Clerk sign-in sub-flow alone consumed ~5 minutes and every run was hard-killed by the per-flow timeout mid-login (evidence: run 28937274287 artifact). The app under test was never actually exercised.
 
-### Manual dispatch
-
-Actions → **Nightly Maestro Smoke** → **Run workflow** → branch `main` → Run.
-
-### Green-night scoreboard
-
-**Current: 0/10** consecutive green scheduled nights (as of 2026-07-07).
-
-First scheduled run `28863293299` failed (golden-path + feature-presence timeout). Paging (Telegram / Linear P1 / GitHub issue) stays off until **10/10** green nights, then only by explicit founder decision (AMA-2280).
+Replacement coverage: daily-driver real usage (AMA-2272) plus the on-demand `run-maestro` PR label in `pr-ios-tests.yml`.
 
 ---
 

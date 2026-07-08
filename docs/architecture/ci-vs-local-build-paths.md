@@ -12,7 +12,7 @@
 
 ## Background
 
-CI workflows at `.github/workflows/{pr-ios-tests,preflight,ios-testflight,nightly-maestro-smoke}.yml` pass:
+CI workflows at `.github/workflows/{pr-ios-tests,preflight,ios-testflight}.yml` pass:
 
 ```bash
 xcodebuild test \
