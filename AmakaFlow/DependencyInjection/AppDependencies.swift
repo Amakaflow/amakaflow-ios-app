@@ -27,6 +27,7 @@ struct AppDependencies {
     let workoutEventsRepository: WorkoutEventsRepository
     let syncQueueRepository: SyncQueueRepository
     let syncEngine: SyncEngine
+    let suggestionAcceptanceService: SuggestionAcceptanceService
 
     /// AMA-2234 (E9-3): true when the coach path is wired to local fixtures /
     /// mocks (dev / simulator validation) rather than the live shared
@@ -65,6 +66,7 @@ struct AppDependencies {
         self.workoutEventsRepository = workoutEventsRepository
         self.syncQueueRepository = syncQueueRepository
         self.syncEngine = syncEngine
+        self.suggestionAcceptanceService = SuggestionAcceptanceService(repository: acceptedSuggestionsRepository)
         self.isMockCoachPath = isMockCoachPath
     }
 
