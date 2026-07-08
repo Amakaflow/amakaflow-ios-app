@@ -554,7 +554,7 @@ class WorkoutsViewModel: ObservableObject {
             // perceived contract of "Suggest replaces my current
             // suggestion" — without this, repeated Accepts pile up in
             // Quick Start (which renders all of `incomingWorkouts`).
-            try acceptedRepo.replacePriorAcceptsAndInsert(userId: userId, suggestion: suggestion, event: event, enqueueSync: true)
+            try dependencies.suggestionAcceptanceService.accept(userId: userId, suggestion: suggestion, event: event)
             DebugLogService.shared.log(
                 "Accepted suggestion persisted (local-first, replace-on-accept)",
                 details: "userId=\(userId) clientId=\(clientId)",
