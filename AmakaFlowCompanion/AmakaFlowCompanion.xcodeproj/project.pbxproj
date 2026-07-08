@@ -277,6 +277,7 @@
 		AMA1832PROGTST_BLD /* ProgramsAPIRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832PROGTST_REF /* ProgramsAPIRepositoryTests.swift */; };
 		AMA1832SOCITSTBLD /* SocialAPIRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832SOCITSTREF /* SocialAPIRepositoryTests.swift */; };
 		AMA1832TELGTSTBLD /* TelegramAPIRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832TELGTSTREF /* TelegramAPIRepositoryTests.swift */; };
+		AMA434WKCTST_BLD /* WorkoutKitConverterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA434WKCTST_REF /* WorkoutKitConverterTests.swift */; };
 		B1910EAEA57AF40FBA6FEDD3 /* FollowAlongPlayerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */; };
 		B44263A997564169A4DE795A /* KeychainClerkTokenPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CA747C5C41B432C9BEE9C9F /* KeychainClerkTokenPersistence.swift */; };
 		B6424999D3CD4CA789EA8014 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79E57529578481B8991A91F /* SourcesView.swift */; };
@@ -744,6 +745,7 @@
 		AMA1832PROGTST_REF /* ProgramsAPIRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProgramsAPIRepositoryTests.swift; path = AmakaFlowCompanionTests/ProgramsAPIRepositoryTests.swift; sourceTree = "<group>"; };
 		AMA1832SOCITSTREF /* SocialAPIRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialAPIRepositoryTests.swift; path = AmakaFlowCompanionTests/SocialAPIRepositoryTests.swift; sourceTree = "<group>"; };
 		AMA1832TELGTSTREF /* TelegramAPIRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TelegramAPIRepositoryTests.swift; path = AmakaFlowCompanionTests/TelegramAPIRepositoryTests.swift; sourceTree = "<group>"; };
+		AMA434WKCTST_REF /* WorkoutKitConverterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutKitConverterTests.swift; path = AmakaFlowCompanionTests/WorkoutKitConverterTests.swift; sourceTree = "<group>"; };
 		B44D7C6673CB9BE868FC1006 /* ShareImportViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShareImportViewModel.swift; sourceTree = "<group>"; };
 		BAC6A807F5A4820B05339B99 /* PlanRevealView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlanRevealView.swift; path = ../AmakaFlow/Views/PlanRevealView.swift; sourceTree = SOURCE_ROOT; };
 		BC16168084DD4307BA295F94 /* CTAError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CTAError.swift; path = ../AmakaFlow/Models/CTAError.swift; sourceTree = SOURCE_ROOT; };
@@ -1427,6 +1429,7 @@
 				AMA1832PROGTST_REF /* ProgramsAPIRepositoryTests.swift */,
 				AMA1832SOCITSTREF /* SocialAPIRepositoryTests.swift */,
 				AMA1832TELGTSTREF /* TelegramAPIRepositoryTests.swift */,
+				AMA434WKCTST_REF /* WorkoutKitConverterTests.swift */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -2150,6 +2153,7 @@
 				AMA1832PROGTST_BLD /* ProgramsAPIRepositoryTests.swift in Sources */,
 				AMA1832SOCITSTBLD /* SocialAPIRepositoryTests.swift in Sources */,
 				AMA1832TELGTSTBLD /* TelegramAPIRepositoryTests.swift in Sources */,
+				AMA434WKCTST_BLD /* WorkoutKitConverterTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
