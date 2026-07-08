@@ -129,6 +129,7 @@
 		AMA2052HRVSVCB /* HealthKitHRVService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2052HRVSVCA /* HealthKitHRVService.swift */; };
 		AMA433HKPVDRB /* HealthKitProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA433HKPVDRA /* HealthKitProvider.swift */; };
 		AMA433MOCKHKB /* MockHealthKitProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA433MOCKHKA /* MockHealthKitProvider.swift */; };
+		AMA436MOCKSECB /* MockSecureStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA436MOCKSECA /* MockSecureStorage.swift */; };
 		AMA435SACCSVCA /* SuggestionAcceptanceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA435SACCSVCREF /* SuggestionAcceptanceService.swift */; };
 		AMA435SACCTST_B /* SuggestionAcceptanceServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA435SACCTSTREFA /* SuggestionAcceptanceServiceTests.swift */; };
 		AK00NUT002B /* NutritionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT002A /* NutritionViewModel.swift */; };
@@ -596,6 +597,7 @@
 		AMA2052HRVSVCA /* HealthKitHRVService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HealthKitHRVService.swift; path = ../AmakaFlow/Services/HealthKitHRVService.swift; sourceTree = "<group>"; };
 		AMA433HKPVDRA /* HealthKitProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HealthKitProvider.swift; path = ../AmakaFlow/Services/HealthKitProvider.swift; sourceTree = "<group>"; };
 		AMA433MOCKHKA /* MockHealthKitProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MockHealthKitProvider.swift; path = AmakaFlowCompanionTests/MockHealthKitProvider.swift; sourceTree = "<group>"; };
+		AMA436MOCKSECA /* MockSecureStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MockSecureStorage.swift; path = AmakaFlowCompanionTests/MockSecureStorage.swift; sourceTree = "<group>"; };
 		AMA435SACCSVCREF /* SuggestionAcceptanceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SuggestionAcceptanceService.swift; path = ../AmakaFlow/Services/SuggestionAcceptanceService.swift; sourceTree = "<group>"; };
 		AMA435SACCTSTREFA /* SuggestionAcceptanceServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SuggestionAcceptanceServiceTests.swift; path = AmakaFlowCompanionTests/SuggestionAcceptanceServiceTests.swift; sourceTree = "<group>"; };
 		AK00NUT002A /* NutritionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionViewModel.swift; path = ../AmakaFlow/ViewModels/NutritionViewModel.swift; sourceTree = "<group>"; };
@@ -1229,6 +1231,7 @@
 				AK00NUT008A /* NutritionViewModelTests.swift */,
 				AMA2052HRVTSTA /* HealthKitHRVServiceTests.swift */,
 				AMA433MOCKHKA /* MockHealthKitProvider.swift */,
+				AMA436MOCKSECA /* MockSecureStorage.swift */,
 				AMA435SACCTSTREFA /* SuggestionAcceptanceServiceTests.swift */,
 				AK00AFL006A /* FoodLoggingViewModelTests.swift */,
 				AK00FUL001A /* FuelingViewModel.swift */,
@@ -2151,6 +2154,7 @@
 				AK00NUT008B /* NutritionViewModelTests.swift in Sources */,
 				AMA2052HRVTSTB /* HealthKitHRVServiceTests.swift in Sources */,
 				AMA433MOCKHKB /* MockHealthKitProvider.swift in Sources */,
+				AMA436MOCKSECB /* MockSecureStorage.swift in Sources */,
 				AMA435SACCTST_B /* SuggestionAcceptanceServiceTests.swift in Sources */,
 				AK00AFL006B /* FoodLoggingViewModelTests.swift in Sources */,
 				AK00FUL004B /* FuelingViewModelTests.swift in Sources */,

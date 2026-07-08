@@ -563,35 +563,3 @@ actor ClerkTokenRefreshCoordinator {
   }
 }
 
-#if DEBUG
-// UserDefaultsClerkTokenPersistence is test-only. Production code uses
-// KeychainClerkTokenPersistence (AMA-1809). This type must never be
-// wired into the production DI graph — the #if DEBUG guard prevents a
-// Release-reachable caller from accidentally regressing that invariant.
-final class UserDefaultsClerkTokenPersistence: ClerkTokenPersistence, @unchecked Sendable {
-  private let userDefaults: UserDefaults
-  private let key: String
-
-  init(
-    userDefaults: UserDefaults = .standard,
-    key: String = "clerk_auth_token"
-  ) {
-    self.userDefaults = userDefaults
-    self.key = key
-  }
-
-  func loadClerkToken() -> ClerkAuthToken? {
-    guard let data = userDefaults.data(forKey: key) else { return nil }
-    return try? JSONDecoder().decode(ClerkAuthToken.self, from: data)
-  }
-
-  func saveClerkToken(_ token: ClerkAuthToken) {
-    guard let data = try? JSONEncoder().encode(token) else { return }
-    userDefaults.set(data, forKey: key)
-  }
-
-  func clearClerkToken() {
-    userDefaults.removeObject(forKey: key)
-  }
-}
-#endif

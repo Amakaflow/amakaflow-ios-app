@@ -1,36 +1,47 @@
 import Foundation
 import Security
 
-// AMA-973: Keychain helper for secure data storage
+// AMA-436: unified secure-storage interface; LiveSecureStorage is the Keychain adapter.
 
-class KeychainHelper {
-    static let shared = KeychainHelper()
-    private let service = "com.amakaflow.companion"
+protocol SecureStorageProviding: Sendable {
+    @discardableResult func save(_ data: Data, forKey key: String) -> Bool
+    func load(forKey key: String) -> Data?
+    @discardableResult func delete(forKey key: String) -> Bool
+    func exists(forKey key: String) -> Bool
+}
 
-    private init() {}
+/// Keychain-backed implementation of `SecureStorageProviding`.
+///
+/// All entries use `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` so that
+/// background token refresh can succeed after the device has been unlocked once
+/// following a reboot, while preventing iCloud Keychain sync.
+final class LiveSecureStorage: SecureStorageProviding, @unchecked Sendable {
+    static let shared = LiveSecureStorage(service: "com.amakaflow.companion")
 
-    func save(_ data: Data, for key: String) -> Bool {
+    private let service: String
+
+    init(service: String) {
+        self.service = service
+    }
+
+    @discardableResult
+    func save(_ data: Data, forKey key: String) -> Bool {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: key,
-            kSecValueData as String: data
+            kSecAttrAccount as String: key
         ]
-
-        // Delete any existing item first
         SecItemDelete(query as CFDictionary)
 
-        // Add the new item
-        let status = SecItemAdd(query as CFDictionary, nil)
+        var addQuery = query
+        addQuery[kSecValueData as String] = data
+        addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+
+        let status = SecItemAdd(addQuery as CFDictionary, nil)
         return status == errSecSuccess
     }
 
-    func save(_ string: String, for key: String) -> Bool {
-        guard let data = string.data(using: .utf8) else { return false }
-        return save(data, for: key)
-    }
-
-    func read(for key: String) -> Data? {
+    func load(forKey key: String) -> Data? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -38,21 +49,14 @@ class KeychainHelper {
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
-
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
-
         guard status == errSecSuccess else { return nil }
         return result as? Data
     }
 
-    func readString(for key: String) -> String? {
-        guard let data = read(for: key) else { return nil }
-        return String(data: data, encoding: .utf8)
-    }
-
     @discardableResult
-    func delete(for key: String) -> Bool {
+    func delete(forKey key: String) -> Bool {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -62,14 +66,13 @@ class KeychainHelper {
         return status == errSecSuccess || status == errSecItemNotFound
     }
 
-    func exists(for key: String) -> Bool {
+    func exists(forKey key: String) -> Bool {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: key,
             kSecReturnData as String: false
         ]
-
         let status = SecItemCopyMatching(query as CFDictionary, nil)
         return status == errSecSuccess
     }
