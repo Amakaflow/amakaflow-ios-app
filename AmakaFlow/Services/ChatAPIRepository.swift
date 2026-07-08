@@ -229,9 +229,7 @@ extension APIService {
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         switch httpResponse.statusCode {
         case 200:
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-            return try decoder.decode(AnalyzePhotoAPIResponse.self, from: data)
+            return try JSONDecoder().decode(AnalyzePhotoAPIResponse.self, from: data)
         case 401: throw APIError.unauthorized
         default:
             let body = String(data: data, encoding: .utf8) ?? "empty"
@@ -252,9 +250,7 @@ extension APIService {
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         switch httpResponse.statusCode {
         case 200:
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-            return try decoder.decode(BarcodeNutritionAPIResponse.self, from: data)
+            return try JSONDecoder().decode(BarcodeNutritionAPIResponse.self, from: data)
         case 401: throw APIError.unauthorized
         default:
             let body = String(data: data, encoding: .utf8) ?? "empty"
@@ -275,9 +271,7 @@ extension APIService {
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         switch httpResponse.statusCode {
         case 200:
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-            return try decoder.decode(ParseTextAPIResponse.self, from: data)
+            return try JSONDecoder().decode(ParseTextAPIResponse.self, from: data)
         case 401: throw APIError.unauthorized
         default:
             let body = String(data: data, encoding: .utf8) ?? "empty"
@@ -297,9 +291,7 @@ extension APIService {
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         switch httpResponse.statusCode {
         case 200:
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-            return try decoder.decode(FuelingStatusResponse.self, from: data)
+            return try JSONDecoder().decode(FuelingStatusResponse.self, from: data)
         case 401: throw APIError.unauthorized
         default:
             let body = String(data: data, encoding: .utf8) ?? "empty"
@@ -319,9 +311,7 @@ extension APIService {
         guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         switch httpResponse.statusCode {
         case 200:
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-            return try decoder.decode(ProteinNudgeResponse.self, from: data)
+            return try JSONDecoder().decode(ProteinNudgeResponse.self, from: data)
         case 401: throw APIError.unauthorized
         default:
             let body = String(data: data, encoding: .utf8) ?? "empty"
