@@ -28,7 +28,6 @@ protocol WorkoutCompletionModuleProviding: AnyObject {
 
 @MainActor
 final class WorkoutCompletionModule: ObservableObject, WorkoutCompletionModuleProviding {
-
     // MARK: - SaveStatus
 
     enum SaveStatus: Equatable {
@@ -45,8 +44,8 @@ final class WorkoutCompletionModule: ObservableObject, WorkoutCompletionModulePr
             switch (lhs, rhs) {
             case (.idle, .idle), (.inFlight, .inFlight), (.succeeded, .succeeded):
                 return true
-            case (.failed(let a), .failed(let b)):
-                return a == b
+            case (.failed(let lhsError), .failed(let rhsError)):
+                return lhsError == rhsError
             default:
                 return false
             }
