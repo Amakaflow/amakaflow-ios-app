@@ -16,12 +16,16 @@ import Foundation
 protocol WorkoutCompletionModuleProviding: AnyObject {
     var saveStatus: WorkoutCompletionModule.SaveStatus { get }
     var lastSaveError: CTAError? { get }
+    /// Current count of completions waiting for a retry. Published so UI can observe.
+    var pendingCount: Int { get }
     /// Fires just before any state change — subscribe to propagate UI updates.
     var willChange: AnyPublisher<Void, Never> { get }
     func beginSave()
     func succeedSave()
     func failSave(_ error: CTAError)
     func acknowledgeError()
+    /// Drain the offline retry queue. No-op if network is unavailable or auth is invalid.
+    func retryPending() async
 }
 
 // MARK: - Live implementation
@@ -57,8 +61,27 @@ final class WorkoutCompletionModule: ObservableObject, WorkoutCompletionModulePr
     @Published private(set) var saveStatus: SaveStatus = .idle
     @Published private(set) var lastSaveError: CTAError?
 
+    /// Live count of completions waiting for retry — reads directly from the
+    /// queue service so there is no Combine timing gap.
+    var pendingCount: Int { queueService.pendingCount }
+
+    /// Fires before any state change in this module OR when the queue service's
+    /// pendingCount changes, so SwiftUI observers on WorkoutEngine re-render.
     var willChange: AnyPublisher<Void, Never> {
-        objectWillChange.map { _ in () }.eraseToAnyPublisher()
+        Publishers.Merge(
+            objectWillChange.map { _ in () },
+            queueService.pendingCountPublisher.map { _ in () }
+        )
+        .eraseToAnyPublisher()
+    }
+
+    // MARK: - Queue bridge
+
+    private let queueService: WorkoutCompletionQueueProviding
+    private var cancellables = Set<AnyCancellable>()
+
+    init(queueService: WorkoutCompletionQueueProviding = WorkoutCompletionService.shared) {
+        self.queueService = queueService
     }
 
     // MARK: - Transitions
@@ -82,5 +105,9 @@ final class WorkoutCompletionModule: ObservableObject, WorkoutCompletionModulePr
         if case .failed = saveStatus {
             saveStatus = .idle
         }
+    }
+
+    func retryPending() async {
+        await queueService.retryPendingCompletions()
     }
 }

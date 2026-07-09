@@ -69,6 +69,7 @@ class WorkoutEngine: ObservableObject {
 
     var saveStatus: WorkoutCompletionModule.SaveStatus { completionModule.saveStatus }
     var lastSaveError: CTAError? { completionModule.lastSaveError }
+    var pendingCount: Int { completionModule.pendingCount }
 
     // Rest state
     @Published private(set) var restRemainingSeconds: Int = 0
@@ -915,6 +916,12 @@ class WorkoutEngine: ObservableObject {
     @MainActor
     func acknowledgeSaveError() {
         completionModule.acknowledgeError()
+    }
+
+    /// Drain the offline completion queue. Called from the UI retry CTA.
+    @MainActor
+    func retryPending() async {
+        await completionModule.retryPending()
     }
 
     /// Get health metrics with HR samples - uses simulated data in simulation mode, mock data in E2E test mode, otherwise from Watch
