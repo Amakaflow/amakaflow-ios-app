@@ -132,6 +132,8 @@
 		AMA436MOCKSECB /* MockSecureStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA436MOCKSECA /* MockSecureStorage.swift */; };
 		AMA435SACCSVCA /* SuggestionAcceptanceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA435SACCSVCREF /* SuggestionAcceptanceService.swift */; };
 		AMA435SACCTST_B /* SuggestionAcceptanceServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA435SACCTSTREFA /* SuggestionAcceptanceServiceTests.swift */; };
+		AMA446WCMODBLD /* WorkoutCompletionModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA446WCMODREF /* WorkoutCompletionModule.swift */; };
+		AMA446WCMODTSTBLD /* WorkoutCompletionModuleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA446WCMODTSTREF /* WorkoutCompletionModuleTests.swift */; };
 		AK00NUT002B /* NutritionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT002A /* NutritionViewModel.swift */; };
 		AK00NUT003B /* NutritionDashboardCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT003A /* NutritionDashboardCard.swift */; };
 		AK00NUT004B /* ProteinTrackerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT004A /* ProteinTrackerView.swift */; };
@@ -602,6 +604,8 @@
 		AMA436MOCKSECA /* MockSecureStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MockSecureStorage.swift; path = AmakaFlowCompanionTests/MockSecureStorage.swift; sourceTree = "<group>"; };
 		AMA435SACCSVCREF /* SuggestionAcceptanceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SuggestionAcceptanceService.swift; path = ../AmakaFlow/Services/SuggestionAcceptanceService.swift; sourceTree = "<group>"; };
 		AMA435SACCTSTREFA /* SuggestionAcceptanceServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SuggestionAcceptanceServiceTests.swift; path = AmakaFlowCompanionTests/SuggestionAcceptanceServiceTests.swift; sourceTree = "<group>"; };
+		AMA446WCMODREF /* WorkoutCompletionModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionModule.swift; path = ../AmakaFlow/Services/WorkoutCompletionModule.swift; sourceTree = "<group>"; };
+		AMA446WCMODTSTREF /* WorkoutCompletionModuleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionModuleTests.swift; path = AmakaFlowCompanionTests/WorkoutCompletionModuleTests.swift; sourceTree = "<group>"; };
 		AK00NUT002A /* NutritionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionViewModel.swift; path = ../AmakaFlow/ViewModels/NutritionViewModel.swift; sourceTree = "<group>"; };
 		AK00NUT003A /* NutritionDashboardCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionDashboardCard.swift; path = ../AmakaFlow/Views/Nutrition/NutritionDashboardCard.swift; sourceTree = "<group>"; };
 		AK00NUT004A /* ProteinTrackerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProteinTrackerView.swift; path = ../AmakaFlow/Views/Nutrition/ProteinTrackerView.swift; sourceTree = "<group>"; };
@@ -1221,6 +1225,7 @@
 				AMA2052HRVSVCA /* HealthKitHRVService.swift */,
 				AMA433HKPVDRA /* HealthKitProvider.swift */,
 				AMA435SACCSVCREF /* SuggestionAcceptanceService.swift */,
+				AMA446WCMODREF /* WorkoutCompletionModule.swift */,
 				AK00NUT002A /* NutritionViewModel.swift */,
 				AK00AFL005A /* FoodLoggingViewModel.swift */,
 				AK00NUT003A /* NutritionDashboardCard.swift */,
@@ -1237,6 +1242,7 @@
 				AMA433MOCKHKA /* MockHealthKitProvider.swift */,
 				AMA436MOCKSECA /* MockSecureStorage.swift */,
 				AMA435SACCTSTREFA /* SuggestionAcceptanceServiceTests.swift */,
+				AMA446WCMODTSTREF /* WorkoutCompletionModuleTests.swift */,
 				AK00AFL006A /* FoodLoggingViewModelTests.swift */,
 				AK00FUL001A /* FuelingViewModel.swift */,
 				AK00FUL002A /* FuelingStatusCard.swift */,
@@ -2054,6 +2060,7 @@
 				AMA2052HRVSVCB /* HealthKitHRVService.swift in Sources */,
 				AMA433HKPVDRB /* HealthKitProvider.swift in Sources */,
 				AMA435SACCSVCA /* SuggestionAcceptanceService.swift in Sources */,
+				AMA446WCMODBLD /* WorkoutCompletionModule.swift in Sources */,
 				AK00NUT002B /* NutritionViewModel.swift in Sources */,
 				AK00NUT003B /* NutritionDashboardCard.swift in Sources */,
 				AK00NUT004B /* ProteinTrackerView.swift in Sources */,
@@ -2162,6 +2169,7 @@
 				AMA433MOCKHKB /* MockHealthKitProvider.swift in Sources */,
 				AMA436MOCKSECB /* MockSecureStorage.swift in Sources */,
 				AMA435SACCTST_B /* SuggestionAcceptanceServiceTests.swift in Sources */,
+				AMA446WCMODTSTBLD /* WorkoutCompletionModuleTests.swift in Sources */,
 				AK00AFL006B /* FoodLoggingViewModelTests.swift in Sources */,
 				AK00FUL004B /* FuelingViewModelTests.swift in Sources */,
 				AMA14120013B /* FatigueHistoryViewModelTests.swift in Sources */,
