@@ -34,10 +34,6 @@ class WorkoutEngine: ObservableObject {
     /// Pairing service for auth status
     private let pairingService: PairingServiceProviding
 
-    /// Completion posting service. Injected in tests so completion-save
-    /// error handling can be exercised without the singleton/network queue.
-    private let completionService: WorkoutCompletionServiceProviding
-
     // MARK: - Simulation Mode (AMA-271)
 
     /// Whether this engine is running in simulation mode
@@ -131,7 +127,6 @@ class WorkoutEngine: ObservableObject {
         audioService: AudioProviding? = nil,
         progressStore: ProgressStoreProviding = LiveProgressStore.shared,
         pairingService: PairingServiceProviding? = nil,
-        completionService: WorkoutCompletionServiceProviding = WorkoutCompletionService.shared,
         completionModule: WorkoutCompletionModuleProviding? = nil
     ) {
         self.preservesInjectedClock = clock != nil
@@ -140,7 +135,6 @@ class WorkoutEngine: ObservableObject {
         self.progressStore = progressStore
         // Use provided pairingService or default to shared (allows nil for convenience init)
         self.pairingService = pairingService ?? PairingService.shared
-        self.completionService = completionService
         self.completionModule = completionModule ?? WorkoutCompletionModule()
         self.isSimulation = false
         self.healthProvider = nil
@@ -847,66 +841,21 @@ class WorkoutEngine: ObservableObject {
         // In UI test mode, generate mock data
         let (avgHeartRate, activeCalories, hrSamples) = getHealthMetricsWithSamples(durationSeconds: durationSeconds)
 
-        // Declare in-flight before awaiting the network. Clears any stale error
-        // from a prior attempt; the completion screen renders a spinner until
-        // the round-trip terminally resolves.
-        completionModule.beginSave()
-
         Task {
-            do {
-                let response = try await completionService.postPhoneWorkoutCompletion(
-                    workoutId: workoutId,
-                    workoutName: workoutName ?? "Workout",
-                    startedAt: startedAt,
-                    endedAt: endedAt,
-                    durationSeconds: durationSeconds,
-                    avgHeartRate: avgHeartRate,
-                    activeCalories: activeCalories,
-                    heartRateSamples: hrSamples,  // (AMA-291) HR samples for chart display
-                    workoutStructure: intervals,  // (AMA-240) Include workout structure for "Run Again"
-                    isSimulated: isSimulation,    // (AMA-271) Flag simulated workouts
-                    setLogs: setLogs,             // (AMA-281) Weight tracking
-                    executionLog: executionLog    // (AMA-291) Execution tracking
-                )
-                if response?.success == false {
-                    throw APIError.serverErrorWithBody(
-                        200,
-                        "{\"success\":false,\"message\":\"Workout completion failed\",\"error_code\":\"WORKOUT_COMPLETION_FAILED\"}"
-                    )
-                }
-
-                logger.info("Workout completion posted successfully")
-                DebugLogService.shared.log(
-                    "Completion: SUCCESS",
-                    details: "Posted for workout \(workoutId)",
-                    metadata: ["completionId": response?.resolvedCompletionId ?? "nil"]
-                )
-                await MainActor.run {
-                    completionModule.succeedSave()
-                }
-
-                // Notify WorkoutsViewModel to remove from incoming/upcoming lists (AMA-237)
-                NotificationCenter.default.post(
-                    name: .workoutCompleted,
-                    object: nil,
-                    userInfo: ["workoutId": workoutId]
-                )
-            } catch {
-                logger.error("Failed to post workout completion: \(error.localizedDescription)")
-                DebugLogService.shared.logCompletionError(
-                    workoutId: workoutId,
-                    error: error,
-                    context: "WorkoutEngine.postWorkoutCompletion"
-                )
-                // Surface the failure through the module so the completion screen
-                // renders the honest verdict. The catch lives inside a non-MainActor
-                // Task, so state writes hop back through MainActor.run.
-                let ctaError = CTAError.map(error)
-                await MainActor.run {
-                    completionModule.failSave(ctaError)
-                }
-                // Error is already logged and queued for retry by WorkoutCompletionService
-            }
+            await completionModule.savePhoneCompletion(
+                workoutId: workoutId,
+                workoutName: workoutName ?? "Workout",
+                startedAt: startedAt,
+                endedAt: endedAt,
+                durationSeconds: durationSeconds,
+                avgHeartRate: avgHeartRate,
+                activeCalories: activeCalories,
+                heartRateSamples: hrSamples,
+                workoutStructure: intervals,
+                isSimulated: isSimulation,
+                setLogs: setLogs,
+                executionLog: executionLog
+            )
         }
     }
 

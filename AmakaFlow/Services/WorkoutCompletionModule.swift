@@ -6,6 +6,9 @@
 //  (idle → inFlight → succeeded | failed) previously split across
 //  WorkoutEngine and WorkoutCompletionView.
 //
+//  Issue #448: also owns the save round-trip (savePhoneCompletion),
+//  removing that logic from WorkoutEngine.
+//
 
 import Combine
 import Foundation
@@ -26,6 +29,23 @@ protocol WorkoutCompletionModuleProviding: AnyObject {
     func acknowledgeError()
     /// Drain the offline retry queue. No-op if network is unavailable or auth is invalid.
     func retryPending() async
+    /// Execute the full save round-trip: beginSave → network POST → succeedSave/failSave.
+    /// Callers (WorkoutEngine) assemble the payload and hand off; this method owns all
+    /// completion semantics including the success:false guard and notification posting.
+    func savePhoneCompletion(
+        workoutId: String,
+        workoutName: String,
+        startedAt: Date,
+        endedAt: Date,
+        durationSeconds: Int,
+        avgHeartRate: Int?,
+        activeCalories: Int?,
+        heartRateSamples: [HRSample]?,
+        workoutStructure: [WorkoutInterval]?,
+        isSimulated: Bool,
+        setLogs: [SetLog]?,
+        executionLog: [String: Any]?
+    ) async
 }
 
 // MARK: - Live implementation
@@ -75,13 +95,18 @@ final class WorkoutCompletionModule: ObservableObject, WorkoutCompletionModulePr
         .eraseToAnyPublisher()
     }
 
-    // MARK: - Queue bridge
+    // MARK: - Dependencies
 
     private let queueService: WorkoutCompletionQueueProviding
+    private let completionService: WorkoutCompletionServiceProviding
     private var cancellables = Set<AnyCancellable>()
 
-    init(queueService: WorkoutCompletionQueueProviding = WorkoutCompletionService.shared) {
+    init(
+        queueService: WorkoutCompletionQueueProviding = WorkoutCompletionService.shared,
+        completionService: WorkoutCompletionServiceProviding = WorkoutCompletionService.shared
+    ) {
         self.queueService = queueService
+        self.completionService = completionService
     }
 
     // MARK: - Transitions
@@ -109,5 +134,54 @@ final class WorkoutCompletionModule: ObservableObject, WorkoutCompletionModulePr
 
     func retryPending() async {
         await queueService.retryPendingCompletions()
+    }
+
+    // MARK: - Save round-trip
+
+    func savePhoneCompletion(
+        workoutId: String,
+        workoutName: String,
+        startedAt: Date,
+        endedAt: Date,
+        durationSeconds: Int,
+        avgHeartRate: Int?,
+        activeCalories: Int?,
+        heartRateSamples: [HRSample]?,
+        workoutStructure: [WorkoutInterval]?,
+        isSimulated: Bool,
+        setLogs: [SetLog]?,
+        executionLog: [String: Any]?
+    ) async {
+        beginSave()
+        do {
+            let response = try await completionService.postPhoneWorkoutCompletion(
+                workoutId: workoutId,
+                workoutName: workoutName,
+                startedAt: startedAt,
+                endedAt: endedAt,
+                durationSeconds: durationSeconds,
+                avgHeartRate: avgHeartRate,
+                activeCalories: activeCalories,
+                heartRateSamples: heartRateSamples,
+                workoutStructure: workoutStructure,
+                isSimulated: isSimulated,
+                setLogs: setLogs,
+                executionLog: executionLog
+            )
+            if response?.success == false {
+                throw APIError.serverErrorWithBody(
+                    200,
+                    "{\"success\":false,\"message\":\"Workout completion failed\",\"error_code\":\"WORKOUT_COMPLETION_FAILED\"}"
+                )
+            }
+            succeedSave()
+            NotificationCenter.default.post(
+                name: .workoutCompleted,
+                object: nil,
+                userInfo: ["workoutId": workoutId]
+            )
+        } catch {
+            failSave(CTAError.map(error))
+        }
     }
 }
