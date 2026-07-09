@@ -245,6 +245,22 @@ protocol WorkoutCompletionServiceProviding: AnyObject {
         setLogs: [SetLog]?,
         executionLog: [String: Any]?
     ) async throws -> WorkoutCompletionResponse?
+
+    func postWatchWorkoutCompletion(
+        summary: StandaloneWorkoutSummary,
+        workoutStructure: [WorkoutInterval]?,
+        workoutName: String?
+    ) async throws -> WorkoutCompletionResponse?
+
+    func postGarminWorkoutCompletion(
+        workoutId: String,
+        startedAt: Date,
+        endedAt: Date,
+        avgHeartRate: Int?,
+        activeCalories: Int?,
+        workoutStructure: [WorkoutInterval]?,
+        workoutName: String?
+    ) async throws -> WorkoutCompletionResponse?
 }
 
 @MainActor

@@ -756,6 +756,18 @@ private final class MockWorkoutCompletionModule: WorkoutCompletionModuleProvidin
             failSave(CTAError.map(error))
         }
     }
+
+    func saveWatchCompletion(summary: StandaloneWorkoutSummary) async {}
+
+    func saveGarminCompletion(
+        workoutId: String,
+        startedAt: Date,
+        endedAt: Date,
+        avgHeartRate: Int?,
+        activeCalories: Int?,
+        workoutStructure: [WorkoutInterval]?,
+        workoutName: String?
+    ) async {}
 }
 
 // MARK: - FlattenedInterval Tests
