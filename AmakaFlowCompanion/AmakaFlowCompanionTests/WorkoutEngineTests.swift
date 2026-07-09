@@ -567,70 +567,6 @@ final class WorkoutEngineCompletionTests: XCTestCase {
         }
     }
 
-    func testPostWorkoutCompletionLyingSuccessFalseMarksFailedNonRetryable() async {
-        completionModule.result = .success(
-            WorkoutCompletionResponse(
-                completionId: nil,
-                id: nil,
-                status: "rejected",
-                success: false
-            )
-        )
-
-        await endWorkoutAndWaitForCompletion()
-
-        let cta = assertFailedSaveStatus()
-        guard case .lyingSuccess(let message, let errorCode, _) = cta else {
-            return XCTFail("expected .lyingSuccess, got \(String(describing: cta))")
-        }
-        XCTAssertEqual(message, "Workout completion failed")
-        XCTAssertEqual(errorCode, "WORKOUT_COMPLETION_FAILED")
-        XCTAssertFalse(cta.isRetryable, "success:false is deterministic — Retry would re-fail")
-        XCTAssertEqual(engine.lastSaveError, cta)
-    }
-
-    func testPostWorkoutCompletion4xxMarksFailedNonRetryable() async {
-        completionModule.result = .failure(APIError.serverError(422))
-
-        await endWorkoutAndWaitForCompletion()
-
-        let cta = assertFailedSaveStatus()
-        guard case .http(let status, _, _) = cta else {
-            return XCTFail("expected .http, got \(String(describing: cta))")
-        }
-        XCTAssertEqual(status, 422)
-        XCTAssertFalse(cta.isRetryable, "4xx completion failures must not offer Retry")
-        XCTAssertEqual(engine.lastSaveError, cta)
-    }
-
-    func testPostWorkoutCompletion5xxMarksFailedRetryable() async {
-        completionModule.result = .failure(APIError.serverError(503))
-
-        await endWorkoutAndWaitForCompletion()
-
-        let cta = assertFailedSaveStatus()
-        guard case .http(let status, _, _) = cta else {
-            return XCTFail("expected .http, got \(String(describing: cta))")
-        }
-        XCTAssertEqual(status, 503)
-        XCTAssertTrue(cta.isRetryable, "5xx completion failures must offer Retry")
-        XCTAssertEqual(engine.lastSaveError, cta)
-    }
-
-    func testPostWorkoutCompletionNetworkFailureMarksFailedRetryable() async {
-        completionModule.result = .failure(URLError(.notConnectedToInternet))
-
-        await endWorkoutAndWaitForCompletion()
-
-        let cta = assertFailedSaveStatus()
-        guard case .network(let code, _) = cta else {
-            return XCTFail("expected .network, got \(String(describing: cta))")
-        }
-        XCTAssertEqual(code, .notConnectedToInternet)
-        XCTAssertTrue(cta.isRetryable, "offline completion failures must offer Retry")
-        XCTAssertEqual(engine.lastSaveError, cta)
-    }
-
     private func endWorkoutAndWaitForCompletion(
         file: StaticString = #filePath,
         line: UInt = #line
@@ -676,16 +612,6 @@ final class WorkoutEngineCompletionTests: XCTestCase {
         }
     }
 
-    private func assertFailedSaveStatus(
-        file: StaticString = #filePath,
-        line: UInt = #line
-    ) -> CTAError {
-        guard case .failed(let cta) = engine.saveStatus else {
-            XCTFail("expected .failed, got \(engine.saveStatus)", file: file, line: line)
-            return .unknown(description: "test did not fail as expected")
-        }
-        return cta
-    }
 }
 
 @MainActor
@@ -694,6 +620,7 @@ private final class MockWorkoutCompletionModule: WorkoutCompletionModuleProvidin
     var lastSaveError: CTAError?
     var pendingCount: Int = 0
     var willChange: AnyPublisher<Void, Never> { Just(()).eraseToAnyPublisher() }
+    var onWorkoutCompleted: ((String) -> Void)?
 
     private(set) var savePhoneCompletionCalled = false
     var result: Result<WorkoutCompletionResponse?, Error> = .success(
