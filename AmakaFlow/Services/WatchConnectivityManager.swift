@@ -36,6 +36,9 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     @Published var lastStandaloneWorkoutSummary: StandaloneWorkoutSummary?
 
     private var session: (any WatchSessionProviding)?
+    /// Completion module used for watch standalone saves. Nil until first use on @MainActor,
+    /// at which point it self-initialises. Injectable in tests via init(session:completionModule:).
+    var completionModule: (any WorkoutCompletionModuleProviding)?
 
     override init() {
         super.init()
@@ -55,9 +58,10 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     }
 
     // Initializer for unit testing — injects a WatchSessionProviding double.
-    init(session: any WatchSessionProviding) {
+    init(session: any WatchSessionProviding, completionModule: (any WorkoutCompletionModuleProviding)? = nil) {
         super.init()
         self.session = session
+        self.completionModule = completionModule
     }
 
     func activate() {
@@ -636,28 +640,30 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 )
             }
 
-            // Post to backend API
+            // Post to backend API via completion module (single notification source)
             Task { @MainActor in
-                do {
-                    _ = try await WorkoutCompletionService.shared.postWatchWorkoutCompletion(summary: summary)
-                    NotificationCenter.default.post(
-                        name: .workoutCompleted,
-                        object: nil,
-                        userInfo: ["workoutId": summary.workoutId]
-                    )
+                let module: any WorkoutCompletionModuleProviding
+                if let existing = self.completionModule {
+                    module = existing
+                } else {
+                    let newModule = WorkoutCompletionModule()
+                    self.completionModule = newModule
+                    module = newModule
+                }
+                await module.saveWatchCompletion(summary: summary)
+                if case .succeeded = module.saveStatus {
                     DebugLogService.shared.logWatchEvent(
                         title: "Watch workout completion posted",
                         details: "\(summary.workoutName) → History"
                     )
                     print("⌚️ Watch workout completion posted to API")
-                } catch {
-                    print("⌚️ Failed to post watch workout completion: \(error)")
+                } else if case .failed = module.saveStatus {
+                    print("⌚️ Failed to post watch workout completion — queued for retry")
                     DebugLogService.shared.logCompletionError(
                         workoutId: summary.workoutId,
-                        error: error,
+                        error: NSError(domain: "WatchCompletion", code: -1),
                         context: "watch summary post"
                     )
-                    // WorkoutCompletionService will queue for retry if network unavailable
                 }
             }
 

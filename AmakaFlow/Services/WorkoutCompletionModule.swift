@@ -46,6 +46,20 @@ protocol WorkoutCompletionModuleProviding: AnyObject {
         setLogs: [SetLog]?,
         executionLog: [String: Any]?
     ) async
+    /// Execute the watch standalone save round-trip.
+    /// Posts `.workoutCompleted` on terminal success; queues for retry on failure.
+    func saveWatchCompletion(summary: StandaloneWorkoutSummary) async
+    /// Execute the Garmin save round-trip.
+    /// Posts `.workoutCompleted` on terminal success; queues for retry on failure.
+    func saveGarminCompletion(
+        workoutId: String,
+        startedAt: Date,
+        endedAt: Date,
+        avgHeartRate: Int?,
+        activeCalories: Int?,
+        workoutStructure: [WorkoutInterval]?,
+        workoutName: String?
+    ) async
 }
 
 // MARK: - Live implementation
@@ -167,6 +181,68 @@ final class WorkoutCompletionModule: ObservableObject, WorkoutCompletionModulePr
                 isSimulated: isSimulated,
                 setLogs: setLogs,
                 executionLog: executionLog
+            )
+            if response?.success == false {
+                throw APIError.serverErrorWithBody(
+                    200,
+                    "{\"success\":false,\"message\":\"Workout completion failed\",\"error_code\":\"WORKOUT_COMPLETION_FAILED\"}"
+                )
+            }
+            succeedSave()
+            NotificationCenter.default.post(
+                name: .workoutCompleted,
+                object: nil,
+                userInfo: ["workoutId": workoutId]
+            )
+        } catch {
+            failSave(CTAError.map(error))
+        }
+    }
+
+    func saveWatchCompletion(summary: StandaloneWorkoutSummary) async {
+        beginSave()
+        do {
+            let response = try await completionService.postWatchWorkoutCompletion(
+                summary: summary,
+                workoutStructure: nil,
+                workoutName: nil
+            )
+            if response?.success == false {
+                throw APIError.serverErrorWithBody(
+                    200,
+                    "{\"success\":false,\"message\":\"Workout completion failed\",\"error_code\":\"WORKOUT_COMPLETION_FAILED\"}"
+                )
+            }
+            succeedSave()
+            NotificationCenter.default.post(
+                name: .workoutCompleted,
+                object: nil,
+                userInfo: ["workoutId": summary.workoutId]
+            )
+        } catch {
+            failSave(CTAError.map(error))
+        }
+    }
+
+    func saveGarminCompletion(
+        workoutId: String,
+        startedAt: Date,
+        endedAt: Date,
+        avgHeartRate: Int?,
+        activeCalories: Int?,
+        workoutStructure: [WorkoutInterval]?,
+        workoutName: String?
+    ) async {
+        beginSave()
+        do {
+            let response = try await completionService.postGarminWorkoutCompletion(
+                workoutId: workoutId,
+                startedAt: startedAt,
+                endedAt: endedAt,
+                avgHeartRate: avgHeartRate,
+                activeCalories: activeCalories,
+                workoutStructure: workoutStructure,
+                workoutName: workoutName
             )
             if response?.success == false {
                 throw APIError.serverErrorWithBody(
