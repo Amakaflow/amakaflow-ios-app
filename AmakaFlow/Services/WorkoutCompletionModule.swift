@@ -2,12 +2,17 @@
 //  WorkoutCompletionModule.swift
 //  AmakaFlow
 //
-//  Issue #446: owns the save-lifecycle state machine
-//  (idle → inFlight → succeeded | failed) previously split across
-//  WorkoutEngine and WorkoutCompletionView.
+//  Primary test surface for workout-save lifecycle. Tests drive this module
+//  directly — no WorkoutEngine, no SyncEngine, no NotificationCenter observers.
 //
-//  Issue #448: also owns the save round-trip (savePhoneCompletion),
-//  removing that logic from WorkoutEngine.
+//  State machine: idle → inFlight → succeeded | failed
+//  Side effects:
+//    - onWorkoutCompleted closure (injectable; called only on terminal success)
+//    - NotificationCenter.workoutCompleted (production subscribers)
+//
+//  Issue #446: state machine extracted from WorkoutEngine/WorkoutCompletionView.
+//  Issue #448: save round-trip (savePhoneCompletion) moved here from WorkoutEngine.
+//  Issue #450: onWorkoutCompleted callback added for deterministic test injection.
 //
 
 import Combine
@@ -23,6 +28,9 @@ protocol WorkoutCompletionModuleProviding: AnyObject {
     var pendingCount: Int { get }
     /// Fires just before any state change — subscribe to propagate UI updates.
     var willChange: AnyPublisher<Void, Never> { get }
+    /// Called on terminal success with the workoutId. Injected in tests instead of
+    /// observing NotificationCenter; production callers may also set this.
+    var onWorkoutCompleted: ((String) -> Void)? { get set }
     func beginSave()
     func succeedSave()
     func failSave(_ error: CTAError)
@@ -109,6 +117,10 @@ final class WorkoutCompletionModule: ObservableObject, WorkoutCompletionModulePr
         .eraseToAnyPublisher()
     }
 
+    /// Called on terminal success with the workoutId. Set in tests to avoid
+    /// NotificationCenter observation; production code may also set this.
+    var onWorkoutCompleted: ((String) -> Void)?
+
     // MARK: - Dependencies
 
     private let queueService: WorkoutCompletionQueueProviding
@@ -189,6 +201,7 @@ final class WorkoutCompletionModule: ObservableObject, WorkoutCompletionModulePr
                 )
             }
             succeedSave()
+            onWorkoutCompleted?(workoutId)
             NotificationCenter.default.post(
                 name: .workoutCompleted,
                 object: nil,
@@ -214,6 +227,7 @@ final class WorkoutCompletionModule: ObservableObject, WorkoutCompletionModulePr
                 )
             }
             succeedSave()
+            onWorkoutCompleted?(summary.workoutId)
             NotificationCenter.default.post(
                 name: .workoutCompleted,
                 object: nil,
@@ -251,6 +265,7 @@ final class WorkoutCompletionModule: ObservableObject, WorkoutCompletionModulePr
                 )
             }
             succeedSave()
+            onWorkoutCompleted?(workoutId)
             NotificationCenter.default.post(
                 name: .workoutCompleted,
                 object: nil,

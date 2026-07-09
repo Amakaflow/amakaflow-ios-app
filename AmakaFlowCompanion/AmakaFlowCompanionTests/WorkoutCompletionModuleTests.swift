@@ -154,6 +154,73 @@ final class WorkoutCompletionModuleSaveTests: XCTestCase {
         XCTAssertTrue(cta.isRetryable)
     }
 
+    func test_savePhoneCompletion_4xxError_marksFailedNonRetryable() async {
+        completionService.result = .failure(APIError.serverError(422))
+
+        await module.savePhoneCompletion(
+            workoutId: "w1", workoutName: "Run", startedAt: Date(), endedAt: Date(),
+            durationSeconds: 600, avgHeartRate: nil, activeCalories: nil,
+            heartRateSamples: nil, workoutStructure: nil, isSimulated: false,
+            setLogs: nil, executionLog: nil
+        )
+
+        guard case .failed(let cta) = module.saveStatus,
+              case .http(let status, _, _) = cta else {
+            return XCTFail("expected .failed(.http), got \(module.saveStatus)")
+        }
+        XCTAssertEqual(status, 422)
+        XCTAssertFalse(cta.isRetryable, "4xx must not offer Retry")
+    }
+
+    func test_savePhoneCompletion_5xxError_marksFailedRetryable() async {
+        completionService.result = .failure(APIError.serverError(503))
+
+        await module.savePhoneCompletion(
+            workoutId: "w1", workoutName: "Run", startedAt: Date(), endedAt: Date(),
+            durationSeconds: 600, avgHeartRate: nil, activeCalories: nil,
+            heartRateSamples: nil, workoutStructure: nil, isSimulated: false,
+            setLogs: nil, executionLog: nil
+        )
+
+        guard case .failed(let cta) = module.saveStatus,
+              case .http(let status, _, _) = cta else {
+            return XCTFail("expected .failed(.http), got \(module.saveStatus)")
+        }
+        XCTAssertEqual(status, 503)
+        XCTAssertTrue(cta.isRetryable, "5xx must offer Retry")
+    }
+
+    // Verifies the `onWorkoutCompleted` callback fires only on terminal success —
+    // no WorkoutEngine or NotificationCenter observation needed.
+    func test_workoutCompleted_callbackFiresOnTerminalSuccessOnly() async {
+        var callbackWorkoutIds: [String] = []
+        module.onWorkoutCompleted = { id in callbackWorkoutIds.append(id) }
+
+        // Failure path — callback must NOT fire
+        completionService.result = .failure(URLError(.notConnectedToInternet))
+        await module.savePhoneCompletion(
+            workoutId: "w-fail", workoutName: "Run", startedAt: Date(), endedAt: Date(),
+            durationSeconds: 300, avgHeartRate: nil, activeCalories: nil,
+            heartRateSamples: nil, workoutStructure: nil, isSimulated: false,
+            setLogs: nil, executionLog: nil
+        )
+        XCTAssertTrue(callbackWorkoutIds.isEmpty, "callback must not fire on failure")
+
+        // Success path — callback must fire with the correct id
+        module.acknowledgeError()
+        completionService.result = .success(
+            WorkoutCompletionResponse(completionId: "cid-cb", id: nil, status: "saved", success: true)
+        )
+        await module.savePhoneCompletion(
+            workoutId: "w-success", workoutName: "Run", startedAt: Date(), endedAt: Date(),
+            durationSeconds: 300, avgHeartRate: nil, activeCalories: nil,
+            heartRateSamples: nil, workoutStructure: nil, isSimulated: false,
+            setLogs: nil, executionLog: nil
+        )
+        XCTAssertEqual(callbackWorkoutIds, ["w-success"],
+                       "callback must fire exactly once on terminal success with the workout id")
+    }
+
     func test_savePhoneCompletion_beginsInFlight_thenTransitions() async {
         var capturedDuringFlight: WorkoutCompletionModule.SaveStatus?
         completionService.onCall = {
@@ -269,44 +336,32 @@ final class WorkoutCompletionModuleWatchTests: XCTestCase {
         )
     }
 
-    func test_saveWatchCompletion_success_postsNotification() async {
+    func test_saveWatchCompletion_success_callsOnWorkoutCompleted() async {
         completionService.result = .success(
             WorkoutCompletionResponse(completionId: "cid-w1", id: nil, status: "saved", success: true)
         )
         var receivedWorkoutId: String?
-        let observer = NotificationCenter.default.addObserver(
-            forName: .workoutCompleted,
-            object: nil,
-            queue: nil
-        ) { note in
-            receivedWorkoutId = note.userInfo?["workoutId"] as? String
-        }
-        defer { NotificationCenter.default.removeObserver(observer) }
+        module.onWorkoutCompleted = { id in receivedWorkoutId = id }
 
         await module.saveWatchCompletion(summary: makeSummary(workoutId: "watch-w1"))
 
         guard case .succeeded = module.saveStatus else {
             return XCTFail("expected .succeeded, got \(module.saveStatus)")
         }
-        XCTAssertEqual(receivedWorkoutId, "watch-w1", "notification must carry the workoutId")
+        XCTAssertEqual(receivedWorkoutId, "watch-w1", "callback must carry the workoutId")
     }
 
-    func test_saveWatchCompletion_networkError_marksFailedNoNotification() async {
+    func test_saveWatchCompletion_networkError_doesNotCallOnWorkoutCompleted() async {
         completionService.result = .failure(URLError(.notConnectedToInternet))
-        var notificationFired = false
-        let observer = NotificationCenter.default.addObserver(
-            forName: .workoutCompleted,
-            object: nil,
-            queue: nil
-        ) { _ in notificationFired = true }
-        defer { NotificationCenter.default.removeObserver(observer) }
+        var callbackFired = false
+        module.onWorkoutCompleted = { _ in callbackFired = true }
 
         await module.saveWatchCompletion(summary: makeSummary())
 
         guard case .failed = module.saveStatus else {
             return XCTFail("expected .failed, got \(module.saveStatus)")
         }
-        XCTAssertFalse(notificationFired, "notification must NOT fire on failure")
+        XCTAssertFalse(callbackFired, "callback must NOT fire on failure")
     }
 
     func test_saveWatchCompletion_beginsInFlight_thenSucceeds() async {
