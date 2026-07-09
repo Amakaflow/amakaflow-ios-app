@@ -8,6 +8,7 @@
 //  deterministic, fast tests without real timers or singletons.
 //
 
+import Combine
 import XCTest
 @testable import AmakaFlowCompanion
 
@@ -502,7 +503,7 @@ final class WorkoutEngineCompletionTests: XCTestCase {
     private var audioService: MockAudioService!
     private var progressStore: MockProgressStore!
     private var pairingService: MockPairingService!
-    private var completionService: MockWorkoutCompletionService!
+    private var completionModule: MockWorkoutCompletionModule!
 
     override func setUp() async throws {
         try await super.setUp()
@@ -511,14 +512,14 @@ final class WorkoutEngineCompletionTests: XCTestCase {
         progressStore = MockProgressStore()
         pairingService = MockPairingService()
         pairingService.isPaired = true
-        completionService = MockWorkoutCompletionService()
+        completionModule = MockWorkoutCompletionModule()
 
         engine = WorkoutEngine(
             clock: clock,
             audioService: audioService,
             progressStore: progressStore,
             pairingService: pairingService,
-            completionService: completionService
+            completionModule: completionModule
         )
     }
 
@@ -529,7 +530,7 @@ final class WorkoutEngineCompletionTests: XCTestCase {
         audioService = nil
         progressStore = nil
         pairingService = nil
-        completionService = nil
+        completionModule = nil
         try await super.tearDown()
     }
 
@@ -544,11 +545,11 @@ final class WorkoutEngineCompletionTests: XCTestCase {
         engine.swapActiveWorkout(with: second)
 
         XCTAssertEqual(engine.workout?.id, "second")
-        XCTAssertFalse(completionService.postPhoneWorkoutCompletionCalled)
+        XCTAssertFalse(completionModule.savePhoneCompletionCalled)
     }
 
     func testPostWorkoutCompletionSuccessClearsSaveErrorAndMarksSucceeded() async {
-        completionService.result = .success(
+        completionModule.result = .success(
             WorkoutCompletionResponse(
                 completionId: "completion-success",
                 id: nil,
@@ -559,7 +560,7 @@ final class WorkoutEngineCompletionTests: XCTestCase {
 
         await endWorkoutAndWaitForCompletion()
 
-        XCTAssertTrue(completionService.postPhoneWorkoutCompletionCalled)
+        XCTAssertTrue(completionModule.savePhoneCompletionCalled)
         XCTAssertNil(engine.lastSaveError)
         guard case .succeeded = engine.saveStatus else {
             return XCTFail("expected .succeeded, got \(engine.saveStatus)")
@@ -567,7 +568,7 @@ final class WorkoutEngineCompletionTests: XCTestCase {
     }
 
     func testPostWorkoutCompletionLyingSuccessFalseMarksFailedNonRetryable() async {
-        completionService.result = .success(
+        completionModule.result = .success(
             WorkoutCompletionResponse(
                 completionId: nil,
                 id: nil,
@@ -589,7 +590,7 @@ final class WorkoutEngineCompletionTests: XCTestCase {
     }
 
     func testPostWorkoutCompletion4xxMarksFailedNonRetryable() async {
-        completionService.result = .failure(APIError.serverError(422))
+        completionModule.result = .failure(APIError.serverError(422))
 
         await endWorkoutAndWaitForCompletion()
 
@@ -603,7 +604,7 @@ final class WorkoutEngineCompletionTests: XCTestCase {
     }
 
     func testPostWorkoutCompletion5xxMarksFailedRetryable() async {
-        completionService.result = .failure(APIError.serverError(503))
+        completionModule.result = .failure(APIError.serverError(503))
 
         await endWorkoutAndWaitForCompletion()
 
@@ -617,7 +618,7 @@ final class WorkoutEngineCompletionTests: XCTestCase {
     }
 
     func testPostWorkoutCompletionNetworkFailureMarksFailedRetryable() async {
-        completionService.result = .failure(URLError(.notConnectedToInternet))
+        completionModule.result = .failure(URLError(.notConnectedToInternet))
 
         await endWorkoutAndWaitForCompletion()
 
@@ -688,7 +689,13 @@ final class WorkoutEngineCompletionTests: XCTestCase {
 }
 
 @MainActor
-private final class MockWorkoutCompletionService: WorkoutCompletionServiceProviding {
+private final class MockWorkoutCompletionModule: WorkoutCompletionModuleProviding {
+    var saveStatus: WorkoutCompletionModule.SaveStatus = .idle
+    var lastSaveError: CTAError?
+    var pendingCount: Int = 0
+    var willChange: AnyPublisher<Void, Never> { Just(()).eraseToAnyPublisher() }
+
+    private(set) var savePhoneCompletionCalled = false
     var result: Result<WorkoutCompletionResponse?, Error> = .success(
         WorkoutCompletionResponse(
             completionId: "completion-default",
@@ -697,9 +704,29 @@ private final class MockWorkoutCompletionService: WorkoutCompletionServiceProvid
             success: true
         )
     )
-    private(set) var postPhoneWorkoutCompletionCalled = false
 
-    func postPhoneWorkoutCompletion(
+    func beginSave() {
+        lastSaveError = nil
+        saveStatus = .inFlight
+    }
+
+    func succeedSave() {
+        saveStatus = .succeeded
+    }
+
+    func failSave(_ error: CTAError) {
+        lastSaveError = error
+        saveStatus = .failed(error)
+    }
+
+    func acknowledgeError() {
+        lastSaveError = nil
+        if case .failed = saveStatus { saveStatus = .idle }
+    }
+
+    func retryPending() async {}
+
+    func savePhoneCompletion(
         workoutId: String,
         workoutName: String,
         startedAt: Date,
@@ -712,9 +739,22 @@ private final class MockWorkoutCompletionService: WorkoutCompletionServiceProvid
         isSimulated: Bool,
         setLogs: [SetLog]?,
         executionLog: [String: Any]?
-    ) async throws -> WorkoutCompletionResponse? {
-        postPhoneWorkoutCompletionCalled = true
-        return try result.get()
+    ) async {
+        savePhoneCompletionCalled = true
+        beginSave()
+        switch result {
+        case .success(let response):
+            if response?.success == false {
+                failSave(CTAError.map(APIError.serverErrorWithBody(
+                    200,
+                    "{\"success\":false,\"message\":\"Workout completion failed\",\"error_code\":\"WORKOUT_COMPLETION_FAILED\"}"
+                )))
+            } else {
+                succeedSave()
+            }
+        case .failure(let error):
+            failSave(CTAError.map(error))
+        }
     }
 }
 
