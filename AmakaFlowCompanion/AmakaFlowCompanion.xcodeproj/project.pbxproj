@@ -267,21 +267,23 @@
 		AMA1791QUEUEREPOBLD /* SyncQueueRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791QUEUEREPOREF /* SyncQueueRepository.swift */; };
 		AMA1791V1BLD /* V1_initial_schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791V1REF /* V1_initial_schema.swift */; };
 		AMA1823V2BLD /* V2_add_request_id_to_sync_queue.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1823V2REF /* V2_add_request_id_to_sync_queue.swift */; };
-		AMA1828CHAT000B /* ChatAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828CHAT000A /* ChatAPIRepository.swift */; };
-		AMA1828COACH00B /* CoachAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828COACH00A /* CoachAPIRepository.swift */; };
-		AMA1828DEVIC00B /* DeviceAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828DEVIC00A /* DeviceAPIRepository.swift */; };
-		AMA1828INGES00B /* IngestionAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828INGES00A /* IngestionAPIRepository.swift */; };
-		AMA1828PROGR00B /* ProgramsAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828PROGR00A /* ProgramsAPIRepository.swift */; };
-		AMA1828SOCIA00B /* SocialAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828SOCIA00A /* SocialAPIRepository.swift */; };
-		AMA1828TELEG00B /* TelegramAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828TELEG00A /* TelegramAPIRepository.swift */; };
+		AMA1828CHAT000B /* APIService+Chat.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828CHAT000A /* APIService+Chat.swift */; };
+		AMA1828COACH00B /* APIService+Coach.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828COACH00A /* APIService+Coach.swift */; };
+		AMA1828DEVIC00B /* APIService+Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828DEVIC00A /* APIService+Device.swift */; };
+		AMA1828INGES00B /* APIService+Ingestion.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828INGES00A /* APIService+Ingestion.swift */; };
+		AMA1828PROGR00B /* APIService+Programs.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828PROGR00A /* APIService+Programs.swift */; };
+		AMA1828SOCIA00B /* APIService+Social.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828SOCIA00A /* APIService+Social.swift */; };
+		AMA1828TELEG00B /* APIService+Telegram.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828TELEG00A /* APIService+Telegram.swift */; };
 		AMA1828TRANS00B /* APITransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828TRANS00A /* APITransport.swift */; };
-		AMA1828WORKO00B /* WorkoutAPIRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828WORKO00A /* WorkoutAPIRepository.swift */; };
-		AMA1832CHATTSTBLD /* ChatAPIRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832CHATTSTREF /* ChatAPIRepositoryTests.swift */; };
-		AMA1832DEVITSTBLD /* DeviceAPIRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832DEVITSTREF /* DeviceAPIRepositoryTests.swift */; };
-		AMA1832INGSTBLD01 /* IngestionAPIRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832INGSTREF01 /* IngestionAPIRepositoryTests.swift */; };
-		AMA1832PROGTST_BLD /* ProgramsAPIRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832PROGTST_REF /* ProgramsAPIRepositoryTests.swift */; };
-		AMA1832SOCITSTBLD /* SocialAPIRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832SOCITSTREF /* SocialAPIRepositoryTests.swift */; };
-		AMA1832TELGTSTBLD /* TelegramAPIRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832TELGTSTREF /* TelegramAPIRepositoryTests.swift */; };
+		AMA1828WORKO00B /* APIService+Workout.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828WORKO00A /* APIService+Workout.swift */; };
+		AMA1832CHATTSTBLD /* APIService+ChatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832CHATTSTREF /* APIService+ChatTests.swift */; };
+		AMA1832DEVITSTBLD /* APIService+DeviceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832DEVITSTREF /* APIService+DeviceTests.swift */; };
+		AMA1832INGSTBLD01 /* APIService+IngestionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832INGSTREF01 /* APIService+IngestionTests.swift */; };
+		AMA1832PROGTST_BLD /* APIService+ProgramsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832PROGTST_REF /* APIService+ProgramsTests.swift */; };
+		AMA1832SOCITSTBLD /* APIService+SocialTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832SOCITSTREF /* APIService+SocialTests.swift */; };
+		AMA1832TELGTSTBLD /* APIService+TelegramTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1832TELGTSTREF /* APIService+TelegramTests.swift */; };
+		AMA437COACHTSTBLD /* APIService+CoachTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA437COACHTSTREF /* APIService+CoachTests.swift */; };
+		AMA437WORKOUTSTBLD /* APIService+WorkoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA437WORKOUTSTREF /* APIService+WorkoutTests.swift */; };
 		AMA434WKCTST_BLD /* WorkoutKitConverterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA434WKCTST_REF /* WorkoutKitConverterTests.swift */; };
 		B1910EAEA57AF40FBA6FEDD3 /* FollowAlongPlayerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 167AF46F39500866268684FD /* FollowAlongPlayerViewModelTests.swift */; };
 		B44263A997564169A4DE795A /* KeychainClerkTokenPersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CA747C5C41B432C9BEE9C9F /* KeychainClerkTokenPersistence.swift */; };
@@ -740,21 +742,23 @@
 		AMA1791QUEUEREPOREF /* SyncQueueRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SyncQueueRepository.swift; path = ../AmakaFlow/Storage/Repositories/SyncQueueRepository.swift; sourceTree = SOURCE_ROOT; };
 		AMA1791V1REF /* V1_initial_schema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V1_initial_schema.swift; path = ../AmakaFlow/Storage/Migrations/V1_initial_schema.swift; sourceTree = SOURCE_ROOT; };
 		AMA1823V2REF /* V2_add_request_id_to_sync_queue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V2_add_request_id_to_sync_queue.swift; path = ../AmakaFlow/Storage/Migrations/V2_add_request_id_to_sync_queue.swift; sourceTree = SOURCE_ROOT; };
-		AMA1828CHAT000A /* ChatAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ChatAPIRepository.swift; path = ../AmakaFlow/Services/ChatAPIRepository.swift; sourceTree = SOURCE_ROOT; };
-		AMA1828COACH00A /* CoachAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CoachAPIRepository.swift; path = ../AmakaFlow/Services/CoachAPIRepository.swift; sourceTree = SOURCE_ROOT; };
-		AMA1828DEVIC00A /* DeviceAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DeviceAPIRepository.swift; path = ../AmakaFlow/Services/DeviceAPIRepository.swift; sourceTree = SOURCE_ROOT; };
-		AMA1828INGES00A /* IngestionAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = IngestionAPIRepository.swift; path = ../AmakaFlow/Services/IngestionAPIRepository.swift; sourceTree = SOURCE_ROOT; };
-		AMA1828PROGR00A /* ProgramsAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProgramsAPIRepository.swift; path = ../AmakaFlow/Services/ProgramsAPIRepository.swift; sourceTree = SOURCE_ROOT; };
-		AMA1828SOCIA00A /* SocialAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialAPIRepository.swift; path = ../AmakaFlow/Services/SocialAPIRepository.swift; sourceTree = SOURCE_ROOT; };
-		AMA1828TELEG00A /* TelegramAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TelegramAPIRepository.swift; path = ../AmakaFlow/Services/TelegramAPIRepository.swift; sourceTree = SOURCE_ROOT; };
+		AMA1828CHAT000A /* APIService+Chat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+Chat.swift"; path = "../AmakaFlow/Services/APIService+Chat.swift"; sourceTree = SOURCE_ROOT; };
+		AMA1828COACH00A /* APIService+Coach.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+Coach.swift"; path = "../AmakaFlow/Services/APIService+Coach.swift"; sourceTree = SOURCE_ROOT; };
+		AMA1828DEVIC00A /* APIService+Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+Device.swift"; path = "../AmakaFlow/Services/APIService+Device.swift"; sourceTree = SOURCE_ROOT; };
+		AMA1828INGES00A /* APIService+Ingestion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+Ingestion.swift"; path = "../AmakaFlow/Services/APIService+Ingestion.swift"; sourceTree = SOURCE_ROOT; };
+		AMA1828PROGR00A /* APIService+Programs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+Programs.swift"; path = "../AmakaFlow/Services/APIService+Programs.swift"; sourceTree = SOURCE_ROOT; };
+		AMA1828SOCIA00A /* APIService+Social.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+Social.swift"; path = "../AmakaFlow/Services/APIService+Social.swift"; sourceTree = SOURCE_ROOT; };
+		AMA1828TELEG00A /* APIService+Telegram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+Telegram.swift"; path = "../AmakaFlow/Services/APIService+Telegram.swift"; sourceTree = SOURCE_ROOT; };
 		AMA1828TRANS00A /* APITransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APITransport.swift; path = ../AmakaFlow/Services/APITransport.swift; sourceTree = SOURCE_ROOT; };
-		AMA1828WORKO00A /* WorkoutAPIRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutAPIRepository.swift; path = ../AmakaFlow/Services/WorkoutAPIRepository.swift; sourceTree = SOURCE_ROOT; };
-		AMA1832CHATTSTREF /* ChatAPIRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ChatAPIRepositoryTests.swift; path = AmakaFlowCompanionTests/ChatAPIRepositoryTests.swift; sourceTree = "<group>"; };
-		AMA1832DEVITSTREF /* DeviceAPIRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DeviceAPIRepositoryTests.swift; path = AmakaFlowCompanionTests/DeviceAPIRepositoryTests.swift; sourceTree = "<group>"; };
-		AMA1832INGSTREF01 /* IngestionAPIRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = IngestionAPIRepositoryTests.swift; path = AmakaFlowCompanionTests/IngestionAPIRepositoryTests.swift; sourceTree = "<group>"; };
-		AMA1832PROGTST_REF /* ProgramsAPIRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProgramsAPIRepositoryTests.swift; path = AmakaFlowCompanionTests/ProgramsAPIRepositoryTests.swift; sourceTree = "<group>"; };
-		AMA1832SOCITSTREF /* SocialAPIRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialAPIRepositoryTests.swift; path = AmakaFlowCompanionTests/SocialAPIRepositoryTests.swift; sourceTree = "<group>"; };
-		AMA1832TELGTSTREF /* TelegramAPIRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TelegramAPIRepositoryTests.swift; path = AmakaFlowCompanionTests/TelegramAPIRepositoryTests.swift; sourceTree = "<group>"; };
+		AMA1828WORKO00A /* APIService+Workout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+Workout.swift"; path = "../AmakaFlow/Services/APIService+Workout.swift"; sourceTree = SOURCE_ROOT; };
+		AMA1832CHATTSTREF /* APIService+ChatTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+ChatTests.swift"; path = "AmakaFlowCompanionTests/APIService+ChatTests.swift"; sourceTree = "<group>"; };
+		AMA1832DEVITSTREF /* APIService+DeviceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+DeviceTests.swift"; path = "AmakaFlowCompanionTests/APIService+DeviceTests.swift"; sourceTree = "<group>"; };
+		AMA1832INGSTREF01 /* APIService+IngestionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+IngestionTests.swift"; path = "AmakaFlowCompanionTests/APIService+IngestionTests.swift"; sourceTree = "<group>"; };
+		AMA1832PROGTST_REF /* APIService+ProgramsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+ProgramsTests.swift"; path = "AmakaFlowCompanionTests/APIService+ProgramsTests.swift"; sourceTree = "<group>"; };
+		AMA1832SOCITSTREF /* APIService+SocialTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+SocialTests.swift"; path = "AmakaFlowCompanionTests/APIService+SocialTests.swift"; sourceTree = "<group>"; };
+		AMA1832TELGTSTREF /* APIService+TelegramTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+TelegramTests.swift"; path = "AmakaFlowCompanionTests/APIService+TelegramTests.swift"; sourceTree = "<group>"; };
+		AMA437COACHTSTREF /* APIService+CoachTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+CoachTests.swift"; path = "AmakaFlowCompanionTests/APIService+CoachTests.swift"; sourceTree = "<group>"; };
+		AMA437WORKOUTSTREF /* APIService+WorkoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+WorkoutTests.swift"; path = "AmakaFlowCompanionTests/APIService+WorkoutTests.swift"; sourceTree = "<group>"; };
 		AMA434WKCTST_REF /* WorkoutKitConverterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutKitConverterTests.swift; path = AmakaFlowCompanionTests/WorkoutKitConverterTests.swift; sourceTree = "<group>"; };
 		B44D7C6673CB9BE868FC1006 /* ShareImportViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShareImportViewModel.swift; sourceTree = "<group>"; };
 		BAC6A807F5A4820B05339B99 /* PlanRevealView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PlanRevealView.swift; path = ../AmakaFlow/Views/PlanRevealView.swift; sourceTree = SOURCE_ROOT; };
@@ -1039,14 +1043,14 @@
 			children = (
 				F84E22812ED0D5D100459747 /* APIService.swift */,
 				AMA1828TRANS00A /* APITransport.swift */,
-				AMA1828WORKO00A /* WorkoutAPIRepository.swift */,
-				AMA1828COACH00A /* CoachAPIRepository.swift */,
-				AMA1828CHAT000A /* ChatAPIRepository.swift */,
-				AMA1828DEVIC00A /* DeviceAPIRepository.swift */,
-				AMA1828TELEG00A /* TelegramAPIRepository.swift */,
-				AMA1828INGES00A /* IngestionAPIRepository.swift */,
-				AMA1828SOCIA00A /* SocialAPIRepository.swift */,
-				AMA1828PROGR00A /* ProgramsAPIRepository.swift */,
+				AMA1828WORKO00A /* APIService+Workout.swift */,
+				AMA1828COACH00A /* APIService+Coach.swift */,
+				AMA1828CHAT000A /* APIService+Chat.swift */,
+				AMA1828DEVIC00A /* APIService+Device.swift */,
+				AMA1828TELEG00A /* APIService+Telegram.swift */,
+				AMA1828INGES00A /* APIService+Ingestion.swift */,
+				AMA1828SOCIA00A /* APIService+Social.swift */,
+				AMA1828PROGR00A /* APIService+Programs.swift */,
 				AMA14100002FILEREF /* ChatStreamService.swift */,
 				AMA2096PRGSTRA /* ProgramStreamService.swift */,
 				KBSVC00000000000 /* KnowledgeService.swift */,
@@ -1438,12 +1442,14 @@
 				AK00TST025A /* XPBarViewTests.swift */,
 				96BF60E98CCB044FBF23EB80 /* ShareExtensionTests.swift */,
 				AMA314APPD3PSREF /* AppDependenciesTests.swift */,
-				AMA1832CHATTSTREF /* ChatAPIRepositoryTests.swift */,
-				AMA1832DEVITSTREF /* DeviceAPIRepositoryTests.swift */,
-				AMA1832INGSTREF01 /* IngestionAPIRepositoryTests.swift */,
-				AMA1832PROGTST_REF /* ProgramsAPIRepositoryTests.swift */,
-				AMA1832SOCITSTREF /* SocialAPIRepositoryTests.swift */,
-				AMA1832TELGTSTREF /* TelegramAPIRepositoryTests.swift */,
+				AMA1832CHATTSTREF /* APIService+ChatTests.swift */,
+				AMA1832DEVITSTREF /* APIService+DeviceTests.swift */,
+				AMA1832INGSTREF01 /* APIService+IngestionTests.swift */,
+				AMA1832PROGTST_REF /* APIService+ProgramsTests.swift */,
+				AMA1832SOCITSTREF /* APIService+SocialTests.swift */,
+				AMA1832TELGTSTREF /* APIService+TelegramTests.swift */,
+				AMA437COACHTSTREF /* APIService+CoachTests.swift */,
+				AMA437WORKOUTSTREF /* APIService+WorkoutTests.swift */,
 				AMA434WKCTST_REF /* WorkoutKitConverterTests.swift */,
 			);
 			name = "Recovered References";
@@ -1894,14 +1900,14 @@
 				F8C125A12EFAB01000459747 /* GarminConnectManager.swift in Sources */,
 				F84E22892ED0D5D100459747 /* APIService.swift in Sources */,
 				AMA1828TRANS00B /* APITransport.swift in Sources */,
-				AMA1828WORKO00B /* WorkoutAPIRepository.swift in Sources */,
-				AMA1828COACH00B /* CoachAPIRepository.swift in Sources */,
-				AMA1828CHAT000B /* ChatAPIRepository.swift in Sources */,
-				AMA1828DEVIC00B /* DeviceAPIRepository.swift in Sources */,
-				AMA1828TELEG00B /* TelegramAPIRepository.swift in Sources */,
-				AMA1828INGES00B /* IngestionAPIRepository.swift in Sources */,
-				AMA1828SOCIA00B /* SocialAPIRepository.swift in Sources */,
-				AMA1828PROGR00B /* ProgramsAPIRepository.swift in Sources */,
+				AMA1828WORKO00B /* APIService+Workout.swift in Sources */,
+				AMA1828COACH00B /* APIService+Coach.swift in Sources */,
+				AMA1828CHAT000B /* APIService+Chat.swift in Sources */,
+				AMA1828DEVIC00B /* APIService+Device.swift in Sources */,
+				AMA1828TELEG00B /* APIService+Telegram.swift in Sources */,
+				AMA1828INGES00B /* APIService+Ingestion.swift in Sources */,
+				AMA1828SOCIA00B /* APIService+Social.swift in Sources */,
+				AMA1828PROGR00B /* APIService+Programs.swift in Sources */,
 				KBSVC00000000001 /* KnowledgeService.swift in Sources */,
 				F84E228A2ED0D5D100459747 /* AuthService.swift in Sources */,
 				F84E227E2ED0D5BF00459747 /* IntervalRow.swift in Sources */,
@@ -2167,12 +2173,14 @@
 				AMA307CVMSTREAMTSTBLD /* CoachViewModelStreamingTests.swift in Sources */,
 				AMA2230PNDTESTSBLD001 /* CoachPendingActionsTests.swift in Sources */,
 				AMA314APPD3PSBLD /* AppDependenciesTests.swift in Sources */,
-				AMA1832CHATTSTBLD /* ChatAPIRepositoryTests.swift in Sources */,
-				AMA1832DEVITSTBLD /* DeviceAPIRepositoryTests.swift in Sources */,
-				AMA1832INGSTBLD01 /* IngestionAPIRepositoryTests.swift in Sources */,
-				AMA1832PROGTST_BLD /* ProgramsAPIRepositoryTests.swift in Sources */,
-				AMA1832SOCITSTBLD /* SocialAPIRepositoryTests.swift in Sources */,
-				AMA1832TELGTSTBLD /* TelegramAPIRepositoryTests.swift in Sources */,
+				AMA1832CHATTSTBLD /* APIService+ChatTests.swift in Sources */,
+				AMA1832DEVITSTBLD /* APIService+DeviceTests.swift in Sources */,
+				AMA1832INGSTBLD01 /* APIService+IngestionTests.swift in Sources */,
+				AMA1832PROGTST_BLD /* APIService+ProgramsTests.swift in Sources */,
+				AMA1832SOCITSTBLD /* APIService+SocialTests.swift in Sources */,
+				AMA1832TELGTSTBLD /* APIService+TelegramTests.swift in Sources */,
+				AMA437COACHTSTBLD /* APIService+CoachTests.swift in Sources */,
+				AMA437WORKOUTSTBLD /* APIService+WorkoutTests.swift in Sources */,
 				AMA434WKCTST_BLD /* WorkoutKitConverterTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

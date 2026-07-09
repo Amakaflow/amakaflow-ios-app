@@ -1,5 +1,5 @@
 //
-//  CoachAPIRepositoryTests.swift
+//  APIService+CoachTests.swift
 //  AmakaFlowCompanionTests
 //
 //  Contract tests for CoachAPIRepository endpoints (issue #311).

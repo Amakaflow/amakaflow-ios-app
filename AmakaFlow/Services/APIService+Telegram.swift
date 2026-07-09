@@ -1,5 +1,5 @@
 //
-//  TelegramAPIRepository.swift
+//  APIService+Telegram.swift
 //  AmakaFlow
 //
 //  AMA-1828: Telegram link-token / link-status endpoints, extracted from

@@ -1,5 +1,5 @@
 //
-//  TelegramAPIRepositoryTests.swift
+//  APIService+TelegramTests.swift
 //  AmakaFlowCompanionTests
 //
 //  Contract tests for TelegramAPIRepository endpoints (issue #432).

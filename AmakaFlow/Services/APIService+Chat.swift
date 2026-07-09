@@ -1,5 +1,5 @@
 //
-//  ChatAPIRepository.swift
+//  APIService+Chat.swift
 //  AmakaFlow
 //
 //  AMA-1828: chat-api hosted endpoints split out of APIService.swift.

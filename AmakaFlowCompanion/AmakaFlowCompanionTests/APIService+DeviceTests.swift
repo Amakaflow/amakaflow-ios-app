@@ -1,5 +1,5 @@
 //
-//  DeviceAPIRepositoryTests.swift
+//  APIService+DeviceTests.swift
 //  AmakaFlowCompanionTests
 //
 //  Contract tests for DeviceAPIRepository endpoints (issue #432).

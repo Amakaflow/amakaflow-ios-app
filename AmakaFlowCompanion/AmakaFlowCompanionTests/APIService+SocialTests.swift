@@ -1,5 +1,5 @@
 //
-//  SocialAPIRepositoryTests.swift
+//  APIService+SocialTests.swift
 //  AmakaFlowCompanionTests
 //
 //  Contract tests for SocialAPIRepository endpoints (issue #432).
