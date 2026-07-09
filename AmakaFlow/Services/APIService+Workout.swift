@@ -1,5 +1,5 @@
 //
-//  WorkoutAPIRepository.swift
+//  APIService+Workout.swift
 //  AmakaFlow
 //
 //  AMA-1828: workout-domain endpoints split out of APIService.swift.

@@ -1,5 +1,5 @@
 //
-//  CoachAPIRepository.swift
+//  APIService+Coach.swift
 //  AmakaFlow
 //
 //  AMA-1828: coach + planning + actions endpoints split out of

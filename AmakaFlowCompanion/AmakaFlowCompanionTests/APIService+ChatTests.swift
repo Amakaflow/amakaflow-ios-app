@@ -1,5 +1,5 @@
 //
-//  ChatAPIRepositoryTests.swift
+//  APIService+ChatTests.swift
 //  AmakaFlowCompanionTests
 //
 //  Contract tests for ChatAPIRepository endpoints that route through

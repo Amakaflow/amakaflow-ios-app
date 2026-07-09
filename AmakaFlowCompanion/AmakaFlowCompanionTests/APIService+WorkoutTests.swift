@@ -1,5 +1,5 @@
 //
-//  WorkoutAPIRepositoryTests.swift
+//  APIService+WorkoutTests.swift
 //  AmakaFlowCompanionTests
 //
 //  Contract tests for WorkoutAPIRepository endpoints that use the

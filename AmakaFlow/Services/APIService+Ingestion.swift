@@ -1,5 +1,5 @@
 //
-//  IngestionAPIRepository.swift
+//  APIService+Ingestion.swift
 //  AmakaFlow
 //
 //  AMA-1828: ingestor-API endpoints (voice parse, transcription,

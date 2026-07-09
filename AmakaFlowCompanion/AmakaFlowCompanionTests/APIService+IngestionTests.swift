@@ -1,5 +1,5 @@
 //
-//  IngestionAPIRepositoryTests.swift
+//  APIService+IngestionTests.swift
 //  AmakaFlowCompanionTests
 //
 //  Contract tests for IngestionAPIRepository endpoints (issue #432).

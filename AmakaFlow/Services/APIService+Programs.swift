@@ -1,5 +1,5 @@
 //
-//  ProgramsAPIRepository.swift
+//  APIService+Programs.swift
 //  AmakaFlow
 //
 //  AMA-1828: training-programs + calendar-sync endpoints split out of

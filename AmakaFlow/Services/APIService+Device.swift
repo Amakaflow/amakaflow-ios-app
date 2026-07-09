@@ -1,5 +1,5 @@
 //
-//  DeviceAPIRepository.swift
+//  APIService+Device.swift
 //  AmakaFlow
 //
 //  AMA-1828: Device + user-account endpoints (mobile/profile,

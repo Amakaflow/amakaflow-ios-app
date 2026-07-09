@@ -1,5 +1,5 @@
 //
-//  ProgramsAPIRepositoryTests.swift
+//  APIService+ProgramsTests.swift
 //  AmakaFlowCompanionTests
 //
 //  Contract tests for ProgramsAPIRepository endpoints (issue #432).

@@ -1,5 +1,5 @@
 //
-//  SocialAPIRepository.swift
+//  APIService+Social.swift
 //  AmakaFlow
 //
 //  AMA-1828: social-graph endpoints (feed, reactions, comments, settings,
