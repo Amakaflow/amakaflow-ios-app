@@ -217,6 +217,16 @@ struct PendingCompletion: Codable, Identifiable {
     }
 }
 
+// MARK: - WorkoutCompletionQueueProviding
+
+/// Narrow interface the module bridges to surface offline-queue state and retry.
+@MainActor
+protocol WorkoutCompletionQueueProviding: AnyObject {
+    var pendingCount: Int { get }
+    var pendingCountPublisher: AnyPublisher<Int, Never> { get }
+    func retryPendingCompletions() async
+}
+
 // MARK: - WorkoutCompletionService
 
 @MainActor
@@ -238,30 +248,67 @@ protocol WorkoutCompletionServiceProviding: AnyObject {
 }
 
 @MainActor
-class WorkoutCompletionService: ObservableObject, WorkoutCompletionServiceProviding {
+class WorkoutCompletionService: ObservableObject, WorkoutCompletionServiceProviding, WorkoutCompletionQueueProviding {
     static let shared = WorkoutCompletionService()
 
     @Published private(set) var pendingCount: Int = 0
     @Published private(set) var lastError: Error?
     @Published private(set) var isProcessingQueue: Bool = false
 
+    var pendingCountPublisher: AnyPublisher<Int, Never> {
+        $pendingCount.eraseToAnyPublisher()
+    }
+
     private let pendingQueueKey = DefaultsKey.pendingWorkoutCompletionQueue.rawValue
     private let maxRetries = 3
     private let networkMonitor = NWPathMonitor()
-    private var isNetworkAvailable = true
+    private var isNetworkAvailable: Bool
     private var cancellables = Set<AnyCancellable>()
     /// Reusable background queue for saving pending completions (AMA-1075)
     private let saveQueue = DispatchQueue(label: "com.amakaflow.workoutcompletion.save", qos: .utility)
 
-    private init() {
-        // Load pending queue in background to avoid blocking main thread (AMA-1075)
-        Task.detached(priority: .utility) { [weak self] in
-            let count = await self?.loadPendingQueueBackground() ?? 0
-            await MainActor.run {
-                self?.pendingCount = count
+    /// Injected API service — replaces APIService.shared for testability.
+    private let apiService: APIServiceProviding
+    /// Injected pairing service — replaces PairingService.shared for testability.
+    private let pairingService: PairingServiceProviding
+    /// When true, UserDefaults writes happen on the calling thread (no dispatch queue).
+    /// Set in unit tests to avoid async-save races with assertions.
+    private let synchronousIO: Bool
+
+    /// Designated initialiser.
+    /// - Parameters:
+    ///   - apiService: Network adapter. Defaults to `APIService.shared`.
+    ///   - pairingService: Auth state provider. Defaults to `PairingService.shared`.
+    ///   - isNetworkAvailable: Seed value for reachability; ignored when
+    ///     `startNetworkMonitoring` is true (monitor overrides it on first path update).
+    ///   - startNetworkMonitoring: Pass `false` in unit tests to skip NWPathMonitor.
+    ///   - synchronousIO: Pass `true` in unit tests to make UserDefaults writes
+    ///     synchronous, eliminating async-save races in test assertions.
+    init(
+        apiService: APIServiceProviding = APIService.shared,
+        pairingService: PairingServiceProviding = PairingService.shared,
+        isNetworkAvailable: Bool = true,
+        startNetworkMonitoring: Bool = true,
+        synchronousIO: Bool = false
+    ) {
+        self.apiService = apiService
+        self.pairingService = pairingService
+        self.isNetworkAvailable = isNetworkAvailable
+        self.synchronousIO = synchronousIO
+
+        if startNetworkMonitoring {
+            // Load pending queue in background to avoid blocking main thread (AMA-1075)
+            Task.detached(priority: .utility) { [weak self] in
+                let count = await self?.loadPendingQueueBackground() ?? 0
+                await MainActor.run {
+                    self?.pendingCount = count
+                }
             }
+            setupNetworkMonitoring()
+        } else {
+            // In tests, load synchronously so setUp/tearDown control the starting state.
+            pendingCount = loadPendingCompletions().count
         }
-        setupNetworkMonitoring()
     }
 
     // MARK: - Debug Logging
@@ -498,7 +545,7 @@ class WorkoutCompletionService: ObservableObject, WorkoutCompletionServiceProvid
             return
         }
         // Don't retry if not signed in or auth needs refresh — wait for the user to sign in again
-        let canRetry = PairingService.shared.isPaired && !PairingService.shared.needsReauth
+        let canRetry = pairingService.isPaired && !pairingService.needsReauth
 
         guard canRetry else {
             print("[WorkoutCompletion] Auth invalid or signed out, skipping retry until re-authenticated")
@@ -513,7 +560,7 @@ class WorkoutCompletionService: ObservableObject, WorkoutCompletionServiceProvid
 
         for completion in pending {
             do {
-                _ = try await APIService.shared.postWorkoutCompletion(completion.request)
+                _ = try await apiService.postWorkoutCompletion(completion.request)
                 successful.append(completion.id)
                 print("[WorkoutCompletion] Successfully sent queued completion: \(completion.id)")
             } catch {
@@ -541,7 +588,7 @@ class WorkoutCompletionService: ObservableObject, WorkoutCompletionServiceProvid
         let tx = SentryService.shared.startTransaction(name: "workout.save", operation: "api.post")
 
         // Check for valid auth
-        let hasAuth = PairingService.shared.isPaired && !PairingService.shared.needsReauth
+        let hasAuth = pairingService.isPaired && !pairingService.needsReauth
 
         guard hasAuth else {
             let authError = NSError(domain: "WorkoutCompletion", code: -2, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
@@ -559,7 +606,7 @@ class WorkoutCompletionService: ObservableObject, WorkoutCompletionServiceProvid
         if isNetworkAvailable {
             let networkSpan = tx.startChild(operation: "http.post", description: "/workouts/completions")
             do {
-                let response = try await APIService.shared.postWorkoutCompletion(request)
+                let response = try await apiService.postWorkoutCompletion(request)
                 networkSpan.finish(status: .ok)
                 tx.finish(status: .ok)
                 print("[WorkoutCompletion] Successfully posted completion: \(response.resolvedCompletionId)")
@@ -618,9 +665,7 @@ class WorkoutCompletionService: ObservableObject, WorkoutCompletionServiceProvid
     }
 
     private func savePendingCompletions(_ completions: [PendingCompletion]) {
-        // Save on background queue to avoid blocking main thread (AMA-1075)
-        // Uses class-level queue property to avoid O(n) queue allocations (AMA-1075)
-        saveQueue.async {
+        let save = {
             do {
                 let encoder = JSONEncoder()
                 encoder.dateEncodingStrategy = .iso8601
@@ -629,6 +674,16 @@ class WorkoutCompletionService: ObservableObject, WorkoutCompletionServiceProvid
             } catch {
                 print("[WorkoutCompletion] Failed to save pending queue: \(error)")
             }
+        }
+
+        if synchronousIO {
+            // Test path: write synchronously so assertions see the persisted state
+            // without needing to await a dispatch-queue flush.
+            save()
+        } else {
+            // Production path: offload to background queue (AMA-1075) to avoid
+            // blocking main thread. Uses class-level queue to avoid O(n) allocs.
+            saveQueue.async(execute: save)
         }
     }
 

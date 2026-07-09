@@ -131,12 +131,11 @@ struct WorkoutCompletionView: View {
                         actionTitle: "Couldn't save workout",
                         error: saveError,
                         onRetry: {
-                            // Kick the persistent pending queue. Don't
-                            // clear lastSaveError here — let the queue's
-                            // success path naturally update state on the
-                            // next round-trip. Manual dismiss still works.
+                            // Kick the persistent pending queue via the module
+                            // surface — WorkoutCompletionService is no longer
+                            // called directly from the view.
                             Task {
-                                await WorkoutCompletionService.shared.retryPendingCompletions()
+                                await engine.retryPending()
                             }
                         },
                         onReport: {
