@@ -1259,8 +1259,8 @@ class WorkoutEngine: ObservableObject {
         let step = currentStep
         let setNumber = step?.setNumber
         let totalSets = step?.totalSets
-        var suggestedWeight: Double? = nil
-        var weightUnit: String? = nil
+        var suggestedWeight: Double?
+        var weightUnit: String?
 
         // If this is a reps step, get suggested weight from last logged entry
         if step?.stepType == .reps, let exerciseName = step?.label {
