@@ -63,54 +63,12 @@ class WorkoutEngine: ObservableObject {
     @Published private(set) var stateVersion: Int = 0
     @Published private(set) var elapsedSeconds: Int = 0
 
-    /// AMA-1803 P0: surfaces the result of the post-end completion save so
-    /// the completion screen renders an honest verdict instead of an
-    /// optimistic "Workout Complete!" while the backend silently rejected.
-    /// Set in `postWorkoutCompletion`. `nil` = success or save not yet
-    /// attempted; non-nil = the user saw a green checkmark but the row
-    /// was NOT persisted server-side.
-    ///
-    /// AMA-1803 P1 fix: kept private for backwards-compat with internal
-    /// references; the UI now reads `saveStatus` instead so it can
-    /// distinguish "in-flight" from "succeeded". A nil `lastSaveError`
-    /// no longer implies "saved" — it means "no error reported", which
-    /// is true both BEFORE the network round-trip lands AND after a
-    /// successful save.
-    @Published private(set) var lastSaveError: CTAError?
+    // Save-lifecycle state — owned by WorkoutCompletionModule (issue #446).
+    // Engine exposes computed passthroughs so callers need not change.
+    private let completionModule: WorkoutCompletionModuleProviding
 
-    /// AMA-1803 P1 fix (CR major on PR #181): tri-state save status so
-    /// the completion screen does NOT show "Workout Complete!" while
-    /// the network round-trip is still in flight. The earlier P0
-    /// implementation showed success whenever `lastSaveError == nil`,
-    /// but during the in-flight window that flag is also nil — so the
-    /// user saw the green checkmark BEFORE knowing whether the save
-    /// actually persisted. Exactly the failure mode P0 was supposed
-    /// to close.
-    enum SaveStatus: Equatable {
-        /// No save attempted, or the engine has been reset.
-        case idle
-        /// Save fired; awaiting the network round-trip.
-        case inFlight
-        /// Save round-tripped and the backend confirmed success.
-        case succeeded
-        /// Save round-tripped (or threw locally) and failed. The
-        /// CTAError is also mirrored on `lastSaveError` for legacy
-        /// readers, but new code should switch on `saveStatus`.
-        case failed(CTAError)
-
-        static func == (lhs: SaveStatus, rhs: SaveStatus) -> Bool {
-            switch (lhs, rhs) {
-            case (.idle, .idle), (.inFlight, .inFlight), (.succeeded, .succeeded):
-                return true
-            case (.failed(let a), .failed(let b)):
-                return a == b
-            default:
-                return false
-            }
-        }
-    }
-
-    @Published private(set) var saveStatus: SaveStatus = .idle
+    var saveStatus: WorkoutCompletionModule.SaveStatus { completionModule.saveStatus }
+    var lastSaveError: CTAError? { completionModule.lastSaveError }
 
     // Rest state
     @Published private(set) var restRemainingSeconds: Int = 0
@@ -172,7 +130,8 @@ class WorkoutEngine: ObservableObject {
         audioService: AudioProviding? = nil,
         progressStore: ProgressStoreProviding = LiveProgressStore.shared,
         pairingService: PairingServiceProviding? = nil,
-        completionService: WorkoutCompletionServiceProviding = WorkoutCompletionService.shared
+        completionService: WorkoutCompletionServiceProviding = WorkoutCompletionService.shared,
+        completionModule: WorkoutCompletionModuleProviding? = nil
     ) {
         self.preservesInjectedClock = clock != nil
         self.clock = clock ?? RealClock()
@@ -181,6 +140,7 @@ class WorkoutEngine: ObservableObject {
         // Use provided pairingService or default to shared (allows nil for convenience init)
         self.pairingService = pairingService ?? PairingService.shared
         self.completionService = completionService
+        self.completionModule = completionModule ?? WorkoutCompletionModule()
         self.isSimulation = false
         self.healthProvider = nil
         self.weightProvider = nil  // AMA-308
@@ -886,18 +846,10 @@ class WorkoutEngine: ObservableObject {
         // In UI test mode, generate mock data
         let (avgHeartRate, activeCalories, hrSamples) = getHealthMetricsWithSamples(durationSeconds: durationSeconds)
 
-        // AMA-1803 P0: clear any stale error from a prior save attempt
-        // BEFORE the new attempt fires. The completion screen looks at
-        // this to decide whether to render the success or failure path.
-        // CR-fix: WorkoutEngine is @MainActor, postWorkoutCompletion()
-        // is invoked from a MainActor context — direct assignment is
-        // safe and avoids an unnecessary actor hop.
-        self.lastSaveError = nil
-        // AMA-1803 P1 fix: declare in-flight BEFORE awaiting the
-        // network. The completion screen renders an in-flight UI so
-        // the user never sees "Workout Complete!" until the backend
-        // round-trip terminally resolves.
-        self.saveStatus = .inFlight
+        // Declare in-flight before awaiting the network. Clears any stale error
+        // from a prior attempt; the completion screen renders a spinner until
+        // the round-trip terminally resolves.
+        completionModule.beginSave()
 
         Task {
             do {
@@ -928,12 +880,8 @@ class WorkoutEngine: ObservableObject {
                     details: "Posted for workout \(workoutId)",
                     metadata: ["completionId": response?.resolvedCompletionId ?? "nil"]
                 )
-                // AMA-1803 P1 fix: hop to MainActor and flip
-                // saveStatus to .succeeded ONLY once the backend
-                // round-trip confirmed the row landed. The completion
-                // screen's "Workout Complete!" header keys on this.
                 await MainActor.run {
-                    self.saveStatus = .succeeded
+                    completionModule.succeedSave()
                 }
 
                 // Notify WorkoutsViewModel to remove from incoming/upcoming lists (AMA-237)
@@ -949,49 +897,24 @@ class WorkoutEngine: ObservableObject {
                     error: error,
                     context: "WorkoutEngine.postWorkoutCompletion"
                 )
-                // AMA-1803 P0: surface the failure to the UI so the
-                // completion screen can render the honest verdict
-                // instead of an optimistic "Workout Complete!". The
-                // CTAError preserves the AMA-1805 server tags
-                // (error_code, lying-success classification) so the
-                // user-facing toast and the Sentry breadcrumb agree.
-                //
-                // CR-fix: this catch lives inside a non-MainActor
-                // Task, so the published property write must hop
-                // through `MainActor.run` to guarantee ordering. A
-                // nested Task hop would have been fire-and-forget
-                // and lost the synchronization guarantee.
-                //
-                // Note: requestId plumbing through APIError is a
-                // separate refactor (Swift enum cases can't take
-                // defaulted associated values, so the APIError shape
-                // needs a new variant or wrapper). Tracked as a
-                // follow-up ticket and intentionally not in scope
-                // here.
+                // Surface the failure through the module so the completion screen
+                // renders the honest verdict. The catch lives inside a non-MainActor
+                // Task, so state writes hop back through MainActor.run.
                 let ctaError = CTAError.map(error)
                 await MainActor.run {
-                    self.lastSaveError = ctaError
-                    // AMA-1803 P1 fix: tri-state — failed terminal.
-                    self.saveStatus = .failed(ctaError)
+                    completionModule.failSave(ctaError)
                 }
                 // Error is already logged and queued for retry by WorkoutCompletionService
             }
         }
     }
 
-    /// AMA-1803 P0: called by the completion screen when the user
-    /// dismisses the save-failure toast. Pure UI bookkeeping —
-    /// the underlying retry queue in WorkoutCompletionService is
-    /// untouched by this dismissal.
+    /// Called by the completion screen when the user dismisses the save-failure
+    /// toast. Delegates to the module — the retry queue in WorkoutCompletionService
+    /// is untouched by this dismissal.
     @MainActor
     func acknowledgeSaveError() {
-        lastSaveError = nil
-        // AMA-1803 P1 fix: dismissing the toast also resets the
-        // tri-state so subsequent UI doesn't keep rendering the
-        // failure header forever.
-        if case .failed = saveStatus {
-            saveStatus = .idle
-        }
+        completionModule.acknowledgeError()
     }
 
     /// Get health metrics with HR samples - uses simulated data in simulation mode, mock data in E2E test mode, otherwise from Watch
@@ -1336,8 +1259,8 @@ class WorkoutEngine: ObservableObject {
         let step = currentStep
         let setNumber = step?.setNumber
         let totalSets = step?.totalSets
-        var suggestedWeight: Double? = nil
-        var weightUnit: String? = nil
+        var suggestedWeight: Double?
+        var weightUnit: String?
 
         // If this is a reps step, get suggested weight from last logged entry
         if step?.stepType == .reps, let exerciseName = step?.label {
@@ -1426,6 +1349,13 @@ class WorkoutEngine: ObservableObject {
         NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
             .sink { [weak self] _ in
                 self?.endBackgroundTask()
+            }
+            .store(in: &cancellables)
+
+        // Forward module state changes so SwiftUI observers on WorkoutEngine re-render.
+        completionModule.willChange
+            .sink { [weak self] in
+                self?.objectWillChange.send()
             }
             .store(in: &cancellables)
     }
