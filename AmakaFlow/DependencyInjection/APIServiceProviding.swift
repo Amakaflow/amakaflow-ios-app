@@ -17,7 +17,7 @@ protocol TelegramLinkAPIProviding {
 }
 
 /// Protocol defining the API service interface for dependency injection
-protocol APIServiceProviding: TelegramLinkAPIProviding {
+protocol APIServiceProviding: TelegramLinkAPIProviding, SocialImportAPIProviding {
     // MARK: - Workouts
 
     /// Fetch workouts from backend
@@ -52,20 +52,6 @@ protocol APIServiceProviding: TelegramLinkAPIProviding {
 
     /// Ingest workout from plain text
     func ingestText(text: String, source: String?) async throws -> IngestTextResponse
-
-    // MARK: - Social Import (AMA-2285)
-
-    /// Ingest a social / web URL; returns raw JSON for SocialImportDraft parsing.
-    func ingestSocialURL(url: String, platform: SocialImportPlatform) async throws -> Data
-
-    /// Ingest pasted plain text; returns raw JSON for SocialImportDraft parsing.
-    func ingestSocialText(text: String, source: String?) async throws -> Data
-
-    /// Ingest a screenshot / photo; returns raw JSON for SocialImportDraft parsing.
-    func ingestSocialImage(imageData: Data, filename: String) async throws -> Data
-
-    /// Read coaching equipment for import adaptation (honest empty when missing).
-    func socialImportEquipmentContext() async -> (empty: Bool, note: String?)
 
     // MARK: - Cloud Transcription
 

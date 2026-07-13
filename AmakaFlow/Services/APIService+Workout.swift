@@ -568,107 +568,16 @@ extension APIService {
 
     /// Save a new or edited workout
     func saveWorkout(_ request: WorkoutSaveRequest) async throws -> Workout {
+        // AMA-2285: provenance-aware path lives in APIService+SocialImport.
+        if let source = request.source, !source.isEmpty {
+            return try await saveWorkoutWithProvenance(request, source: source)
+        }
+
         guard let url = URL(string: "\(baseURL)/workouts/save") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.timeoutInterval = 15
         req.allHTTPHeaderFields = try await makeAuthHeaders()
-
-        // AMA-2285: when provenance is present, post mapper-compatible payload
-        // (`sources` + `device`) so Library cards keep the social badge.
-        if let source = request.source, !source.isEmpty {
-            let intervalsPayload: [[String: Any]] = request.intervals.map { interval in
-                var item: [String: Any] = ["type": interval.type]
-                if let name = interval.name { item["name"] = name }
-                if let sets = interval.sets { item["sets"] = sets }
-                if let reps = interval.reps { item["reps"] = reps }
-                if let seconds = interval.seconds { item["seconds"] = seconds }
-                if let meters = interval.meters { item["meters"] = meters }
-                if let restSeconds = interval.restSeconds { item["rest_seconds"] = restSeconds }
-                if let load = interval.load { item["load"] = load }
-                if let target = interval.target { item["target"] = target }
-                return item
-            }
-
-            var body: [String: Any] = [
-                "name": request.name,
-                "title": request.name,
-                "sport": request.sport,
-                "intervals": intervalsPayload,
-                "sources": [source],
-                "device": "ios"
-            ]
-            if let sourceUrl = request.sourceUrl {
-                body["source_url"] = sourceUrl
-            }
-            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            req.httpBody = try JSONSerialization.data(withJSONObject: body)
-
-            let (data, response) = try await session.data(for: req)
-            guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-            guard httpResponse.statusCode == 200 || httpResponse.statusCode == 201 else {
-                if httpResponse.statusCode == 401 { throw APIError.unauthorized }
-                let responseString = String(data: data, encoding: .utf8)
-                throw APIError.serverErrorWithBody(httpResponse.statusCode, responseString ?? "Save failed")
-            }
-
-            if let decoded = try? APIService.makeDecoder().decode(Workout.self, from: data) {
-                // Prefer request provenance when the response omits it.
-                if decoded.source == .other || decoded.source.rawValue.isEmpty {
-                    return Workout(
-                        id: decoded.id,
-                        name: decoded.name,
-                        sport: decoded.sport,
-                        duration: decoded.duration,
-                        blocks: decoded.blocks,
-                        description: decoded.description,
-                        source: WorkoutSource(rawValue: source) ?? .other,
-                        sourceUrl: request.sourceUrl ?? decoded.sourceUrl
-                    )
-                }
-                return decoded
-            }
-
-            // Synthesize a library workout with provenance when mapper returns a thin id payload.
-            let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
-            let workoutId = (object?["workout_id"] as? String)
-                ?? (object?["id"] as? String)
-                ?? UUID().uuidString
-            let intervals: [WorkoutInterval] = request.intervals.compactMap { interval in
-                switch interval.type {
-                case "time":
-                    return .time(seconds: interval.seconds ?? 60, target: interval.target ?? interval.name)
-                case "reps":
-                    return .reps(
-                        sets: interval.sets,
-                        reps: interval.reps ?? 10,
-                        name: interval.name ?? "Exercise",
-                        load: interval.load,
-                        restSec: interval.restSeconds,
-                        followAlongUrl: nil
-                    )
-                case "warmup":
-                    return .warmup(seconds: interval.seconds ?? 60, target: interval.target)
-                case "cooldown":
-                    return .cooldown(seconds: interval.seconds ?? 60, target: interval.target)
-                case "distance":
-                    return .distance(meters: interval.meters ?? 0, target: interval.target)
-                case "rest":
-                    return .rest(seconds: interval.seconds)
-                default:
-                    return nil
-                }
-            }
-            return Workout(
-                id: workoutId,
-                name: request.name,
-                sport: WorkoutSport(rawValue: request.sport) ?? .strength,
-                duration: max(intervals.count * 180, 600),
-                intervals: intervals,
-                source: WorkoutSource(rawValue: source) ?? .other,
-                sourceUrl: request.sourceUrl
-            )
-        }
 
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase

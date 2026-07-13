@@ -26,9 +26,9 @@ struct WorkoutSaveRequest: Codable {
     var sport: String
     var intervals: [WorkoutSaveInterval]
     /// Provenance raw value (instagram / tiktok / youtube / manual / …). AMA-2285.
-    var source: String? = nil
+    var source: String?
     /// Optional origin URL for social imports. AMA-2285.
-    var sourceUrl: String? = nil
+    var sourceUrl: String?
 
     /// Convert from existing Workout model for edit mode
     static func from(workout: Workout) -> WorkoutSaveRequest {

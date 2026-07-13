@@ -98,6 +98,7 @@
 		AMA2285PREVBLD /* SocialImportPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285PREVREF /* SocialImportPreviewView.swift */; };
 		AMA2285PENDBLD /* PendingShareImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285PENDREF /* PendingShareImportCoordinator.swift */; };
 		AMA2285SOCBLD /* APIService+SocialImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285SOCREF /* APIService+SocialImport.swift */; };
+		AMA2285FIXBLD /* FixtureAPIService+SocialImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285FIXREF /* FixtureAPIService+SocialImport.swift */; };
 		AMA2285TSTBLD /* SocialImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285TSTREF /* SocialImportTests.swift */; };
 		AK00FIX004B /* StravaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX004A /* StravaService.swift */; };
 		AK00FIX005B /* AnalyticsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX005A /* AnalyticsViewModel.swift */; };
@@ -579,6 +580,7 @@
 		AMA2285PREVREF /* SocialImportPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialImportPreviewView.swift; path = ../AmakaFlow/Views/SocialImport/SocialImportPreviewView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2285PENDREF /* PendingShareImportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PendingShareImportCoordinator.swift; path = ../AmakaFlow/Services/PendingShareImportCoordinator.swift; sourceTree = SOURCE_ROOT; };
 		AMA2285SOCREF /* APIService+SocialImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+SocialImport.swift"; path = "../AmakaFlow/Services/APIService+SocialImport.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2285FIXREF /* FixtureAPIService+SocialImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "FixtureAPIService+SocialImport.swift"; path = "../AmakaFlow/DependencyInjection/FixtureAPIService+SocialImport.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2285TSTREF /* SocialImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialImportTests.swift; path = AmakaFlowCompanionTests/SocialImportTests.swift; sourceTree = "<group>"; };
 		AK00FIX004A /* StravaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StravaService.swift; path = ../AmakaFlow/Services/StravaService.swift; sourceTree = "<group>"; };
 		AK00FIX005A /* AnalyticsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AnalyticsViewModel.swift; path = ../AmakaFlow/ViewModels/AnalyticsViewModel.swift; sourceTree = "<group>"; };
@@ -1375,6 +1377,7 @@
 				AMA1620UITEST01A /* UITestEnvironment.swift */,
 				F1XTUR3L0AD3R0000001 /* FixtureLoader.swift */,
 				F1XTUR34P15RV0000001 /* FixtureAPIService.swift */,
+				AMA2285FIXREF /* FixtureAPIService+SocialImport.swift */,
 				F1XTUR3JS0N00000001 /* amrap_10min.json */,
 				F1XTUR3JS0N00000002 /* emom_strength.json */,
 				F1XTUR3JS0N00000003 /* for_time_conditioning.json */,
@@ -2049,6 +2052,7 @@
 				AMA2285PREVBLD /* SocialImportPreviewView.swift in Sources */,
 				AMA2285PENDBLD /* PendingShareImportCoordinator.swift in Sources */,
 				AMA2285SOCBLD /* APIService+SocialImport.swift in Sources */,
+				AMA2285FIXBLD /* FixtureAPIService+SocialImport.swift in Sources */,
 				AK00FIX004B /* StravaService.swift in Sources */,
 				AK00FIX005B /* AnalyticsViewModel.swift in Sources */,
 				AK00FIX006B /* CalendarSyncViewModel.swift in Sources */,
