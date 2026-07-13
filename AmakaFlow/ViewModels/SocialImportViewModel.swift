@@ -6,13 +6,12 @@
 //  Edit is always allowed; AI never gatekeeps. Auth fail-fast via PairingService.
 //
 
-import Foundation
 import Combine
+import Foundation
 import SwiftUI
 
 @MainActor
 final class SocialImportViewModel: ObservableObject {
-
     enum Phase: Equatable {
         case idle
         case importing

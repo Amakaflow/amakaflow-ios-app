@@ -335,13 +335,12 @@ struct AmakaFlowCompanionApp: App {
                     NavigationStack {
                         SocialImportPreviewView(
                             viewModel: sharePreviewViewModel,
-                            draft: draft,
-                            onSaved: {
-                                pendingShareImport.clearPresentedDraft()
-                                sharePreviewViewModel.reset()
-                                Task { await workoutsViewModel.refreshWorkouts() }
-                            }
-                        )
+                            draft: draft
+                        ) {
+                            pendingShareImport.clearPresentedDraft()
+                            sharePreviewViewModel.reset()
+                            Task { await workoutsViewModel.refreshWorkouts() }
+                        }
                         .toolbar {
                             ToolbarItem(placement: .cancellationAction) {
                                 Button("Close") {

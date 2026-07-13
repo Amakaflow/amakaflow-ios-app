@@ -128,9 +128,10 @@ struct SourcesView: View {
                     icon: "play.rectangle.fill",
                     iconColor: Color(hex: "FF0000"),
                     title: "YouTube",
-                    subtitle: "Paste link or browse imports",
-                    action: { showingYouTubeImport = true }
-                )
+                    subtitle: "Paste link or browse imports"
+                ) {
+                    showingYouTubeImport = true
+                }
 
                 // Instagram
                 SourceRow(
@@ -139,34 +140,35 @@ struct SourcesView: View {
                     title: "Instagram",
                     subtitle: instagramImportMode == .automatic
                         ? "Import from saved reels"
-                        : "Paste caption text",
-                    action: {
-                        switch instagramImportMode {
-                        case .automatic:
-                            showingInstagramImport = true
-                        case .manual:
-                            showingManualInstagramImport = true
-                        }
+                        : "Paste caption text"
+                ) {
+                    switch instagramImportMode {
+                    case .automatic:
+                        showingInstagramImport = true
+                    case .manual:
+                        showingManualInstagramImport = true
                     }
-                )
+                }
 
                 // TikTok
                 SourceRow(
                     icon: "music.note",
                     iconColor: Color(hex: "00F2EA"),
                     title: "TikTok",
-                    subtitle: "Import workout videos",
-                    action: { showingTikTokImport = true }
-                )
+                    subtitle: "Import workout videos"
+                ) {
+                    showingTikTokImport = true
+                }
 
                 // Plain text
                 SourceRow(
                     icon: "text.alignleft",
                     iconColor: Theme.Colors.accentBlue,
                     title: "Paste workout text",
-                    subtitle: "Captions, notes, or a written plan",
-                    action: { showingPlainTextImport = true }
-                )
+                    subtitle: "Captions, notes, or a written plan"
+                ) {
+                    showingPlainTextImport = true
+                }
 
                 // AI Import
                 SourceRow(
@@ -265,13 +267,15 @@ private struct SourceRow: View {
     let iconColor: Color
     let title: String
     let subtitle: String
-    var badge: String? = nil
+    var badge: String?
     var badgeColor: Color = .clear
     var isGradient: Bool = false
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            action()
+        } label: {
             HStack(spacing: Theme.Spacing.md) {
                 // Icon
                 ZStack {

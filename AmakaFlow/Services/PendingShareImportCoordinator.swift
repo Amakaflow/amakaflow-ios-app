@@ -7,13 +7,12 @@
 //  an editable preview in the main app.
 //
 
-import Foundation
 import Combine
+import Foundation
 
 /// Reads pending share-extension import results and exposes a draft for preview.
 @MainActor
 final class PendingShareImportCoordinator: ObservableObject {
-
     static let suiteName = "group.com.amakaflow.companion"
     static let pendingImportsKey = "pending_workout_imports"
 

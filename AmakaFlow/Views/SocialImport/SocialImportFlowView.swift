@@ -6,8 +6,8 @@
 //  No Instagram scraping — URL + text + image are posted to the ingestor.
 //
 
-import SwiftUI
 import PhotosUI
+import SwiftUI
 
 struct SocialImportFlowView: View {
     enum Mode: Equatable {
@@ -16,7 +16,7 @@ struct SocialImportFlowView: View {
     }
 
     let mode: Mode
-    var onSaved: (() -> Void)? = nil
+    var onSaved: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = SocialImportViewModel()
@@ -29,10 +29,10 @@ struct SocialImportFlowView: View {
                 switch viewModel.phase {
                 case .preview, .saving, .saved:
                     if let draft = viewModel.draft {
-                        SocialImportPreviewView(viewModel: viewModel, draft: draft, onSaved: {
+                        SocialImportPreviewView(viewModel: viewModel, draft: draft) {
                             onSaved?()
                             dismiss()
-                        })
+                        }
                     } else {
                         inputForm
                     }
@@ -91,7 +91,9 @@ struct SocialImportFlowView: View {
             }
 
             Section {
-                Button(action: startImport) {
+                Button {
+                    startImport()
+                } label: {
                     HStack {
                         if viewModel.phase == .importing {
                             ProgressView()
@@ -152,7 +154,7 @@ struct SocialImportFlowView: View {
 
 /// Screenshot / photo import entry (PhotosPicker → ingestSocialImage).
 struct ImageImportView: View {
-    var onSaved: (() -> Void)? = nil
+    var onSaved: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = SocialImportViewModel()
@@ -164,10 +166,10 @@ struct ImageImportView: View {
                 switch viewModel.phase {
                 case .preview, .saving, .saved:
                     if let draft = viewModel.draft {
-                        SocialImportPreviewView(viewModel: viewModel, draft: draft, onSaved: {
+                        SocialImportPreviewView(viewModel: viewModel, draft: draft) {
                             onSaved?()
                             dismiss()
-                        })
+                        }
                     } else {
                         pickerForm
                     }

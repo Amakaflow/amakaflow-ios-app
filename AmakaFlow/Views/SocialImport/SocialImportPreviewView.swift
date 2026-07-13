@@ -11,7 +11,7 @@ import SwiftUI
 struct SocialImportPreviewView: View {
     @ObservedObject var viewModel: SocialImportViewModel
     let draft: SocialImportDraft
-    var onSaved: (() -> Void)? = nil
+    var onSaved: (() -> Void)?
 
     @State private var title: String = ""
     @State private var exercises: [SocialImportExercise] = []
@@ -67,7 +67,9 @@ struct SocialImportPreviewView: View {
             }
 
             Section {
-                Button(action: save) {
+                Button {
+                    save()
+                } label: {
                     HStack {
                         if viewModel.phase == .saving {
                             ProgressView()

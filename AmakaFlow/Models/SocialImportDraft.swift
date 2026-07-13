@@ -16,6 +16,7 @@ enum SocialImportPlatform: String, Codable, CaseIterable, Equatable {
     case youtube
     case manual
     case coach
+    // swiftlint:disable:next identifier_name
     case ai
     case image
     case web
@@ -70,7 +71,7 @@ enum SocialImportPlatform: String, Codable, CaseIterable, Equatable {
 
 /// One editable exercise row in a social-import draft.
 struct SocialImportExercise: Identifiable, Equatable, Codable {
-    var id: UUID = UUID()
+    var id = UUID()
     var name: String
     var sets: Int?
     var reps: Int?
