@@ -67,7 +67,7 @@ env:
 # which lives in MoreView). Navigate explicitly to Home first.
 # ─────────────────────────────────────────────
 - tapOn:
-    text: "Home"
+    text: "Today"
 - waitForAnimationToEnd:
     timeout: 3000
 - takeScreenshot: ama1834-step02a-home-tab

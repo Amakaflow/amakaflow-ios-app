@@ -67,7 +67,7 @@ final class WatchConnectivityE2ETests: XCTestCase {
 
         // Verify we navigated somewhere (tab bar should still be visible)
         let tabBar = TestAuthHelper.tabBar(app)
-        XCTAssertTrue(tabBar.exists || TestAuthHelper.tab(app, "home_tab", label: "Home").exists,
+        XCTAssertTrue(tabBar.exists || TestAuthHelper.tab(app, "today_tab", label: "Today").exists,
                       "Tab bar should still be visible after navigation")
     }
 
@@ -82,7 +82,7 @@ final class WatchConnectivityE2ETests: XCTestCase {
                      "App should load main content")
 
         // Navigate to workouts tab
-        let workoutsTab = TestAuthHelper.tab(app, "workouts_tab", label: "Workouts")
+        let workoutsTab = TestAuthHelper.tab(app, "library_tab", label: "Library")
         if workoutsTab.exists && workoutsTab.isHittable {
             workoutsTab.tap()
         }
@@ -163,7 +163,7 @@ final class WatchConnectivityE2ETests: XCTestCase {
                      "App should load main content")
 
         // Navigate to workouts
-        let workoutsTab = TestAuthHelper.tab(app, "workouts_tab", label: "Workouts")
+        let workoutsTab = TestAuthHelper.tab(app, "library_tab", label: "Library")
         if workoutsTab.exists && workoutsTab.isHittable {
             workoutsTab.tap()
         }
@@ -217,7 +217,7 @@ final class WatchConnectivityE2ETests: XCTestCase {
                      "App should load main content")
 
         // Navigate to workouts
-        let workoutsTab = TestAuthHelper.tab(app, "workouts_tab", label: "Workouts")
+        let workoutsTab = TestAuthHelper.tab(app, "library_tab", label: "Library")
         if workoutsTab.exists {
             workoutsTab.tap()
         }

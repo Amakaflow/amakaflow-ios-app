@@ -5,6 +5,8 @@ appId: com.myamaka.AmakaFlowCompanion
 - runFlow: ../../../_lib/clerk-signin.yaml
 - tapOn:
     id: "profile_tab"
+- tapOn:
+    id: "af_profile_settings_entry"
 - scrollUntilVisible:
     element:
       id: "settings_row_coach_knowledge"

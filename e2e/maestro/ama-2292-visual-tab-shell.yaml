@@ -1,0 +1,64 @@
+# AMA-2292 visual validation — 3-tab shell past auth/onboarding
+#
+# Auth path used here: UITEST_CLERK_TEST_SESSION (AMA-1843 UI mock).
+# UITEST_CLERK_PASSWORD could not be pulled in this environment
+# (Infisical: no valid login session; GitHub Actions secrets are write-only).
+# Next owner: `infisical login` then re-run with -e UITEST_CLERK_PASSWORD=...
+# and optionally switch to _lib/clerk-signin.yaml real-session path.
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2292_visual,email=claude+clerk_test@amakaflow.dev,name=AMA2292 Visual"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- assertVisible:
+    id: "af_tabbar"
+- assertVisible:
+    id: "today_tab"
+- assertVisible:
+    id: "library_tab"
+- assertVisible:
+    id: "profile_tab"
+- assertNotVisible:
+    id: "workouts_tab"
+- takeScreenshot: docs/ama-2292-visual-evidence/01-today-root
+- tapOn:
+    id: "library_tab"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_fab"
+    timeout: 15000
+- assertVisible:
+    id: "af_library_fab"
+- takeScreenshot: docs/ama-2292-visual-evidence/02-library-fab
+- tapOn:
+    id: "profile_tab"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      text: "Daily Driver profile"
+    timeout: 15000
+- assertVisible:
+    text: "Daily Driver profile"
+- assertVisible:
+    text: "Settings"
+- assertVisible:
+    text: "Coach"
+- assertVisible:
+    text: "Activity History"
+- takeScreenshot: docs/ama-2292-visual-evidence/03-profile-hub

@@ -85,15 +85,14 @@ enum TestAuthHelper {
     @discardableResult
     static func waitForMainContent(_ app: XCUIApplication, timeout: TimeInterval = 10) -> Bool {
         // Look for elements that indicate we're past the pairing screen.
-        // AMA-1992 replaced native TabView chrome with a custom six-tab bar,
-        // so the primary indicator is the custom tabbar marker or Home tab.
-        if tabBar(app).waitForExistence(timeout: timeout) || tab(app, "home_tab", label: "Home").exists {
+        // AMA-2292: Today · Library · Profile custom tab bar.
+        if tabBar(app).waitForExistence(timeout: timeout) || tab(app, "today_tab", label: "Today").exists {
             return true
         }
 
-        // Fallback: look for Home tab content elements
-        let homeContent = app.staticTexts["Today's Workouts"]
-        if homeContent.waitForExistence(timeout: 2) {
+        // Fallback: look for Today diary empty/root markers
+        let todayContent = app.staticTexts["No completed activities yet"]
+        if todayContent.waitForExistence(timeout: 2) {
             return true
         }
 

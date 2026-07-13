@@ -5,6 +5,10 @@ appId: com.myamaka.AmakaFlowCompanion
 ---
 - runFlow: ../../../_lib/clerk-signin.yaml
 - tapOn:
+    id: "profile_tab"
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn:
     id: "coach_tab"
 - assertVisible:
     id: "coach_screen"

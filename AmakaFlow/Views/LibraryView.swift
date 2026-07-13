@@ -37,6 +37,10 @@ struct LibraryView: View {
             .navigationDestination(for: String.self) { itemID in
                 LibraryDetailView(itemID: itemID)
             }
+            // AMA-2292: Proto FAB — one tap from Library root to create.
+            .overlay(alignment: .bottomTrailing) {
+                libraryCreateFAB
+            }
         }
         .overlay(alignment: .top) {
             if let error = viewModel.ctaError {
@@ -60,6 +64,25 @@ struct LibraryView: View {
             await viewModel.load()
         }
         .accessibilityIdentifier("library_screen")
+    }
+
+    private var libraryCreateFAB: some View {
+        Button {
+            showingAddToLibrary = true
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundColor(Theme.Colors.primaryForeground)
+                .frame(width: 56, height: 56)
+                .background(Theme.Colors.readyHigh)
+                .clipShape(Circle())
+                .shadow(color: Color.black.opacity(0.18), radius: 10, x: 0, y: 4)
+        }
+        .buttonStyle(.plain)
+        .padding(.trailing, Theme.Spacing.lg)
+        .padding(.bottom, 108)
+        .accessibilityLabel("Create library entry")
+        .accessibilityIdentifier("af_library_fab")
     }
 
     private var loadingView: some View {

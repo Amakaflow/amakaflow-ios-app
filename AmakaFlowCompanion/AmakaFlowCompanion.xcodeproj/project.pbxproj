@@ -190,6 +190,8 @@
 		AMA2054RDVIEW000000B /* ReadinessDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2054RDVIEW000000A /* ReadinessDetailView.swift */; };
 		AMA2004LIBVM0000000B /* LibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2004LIBVM0000000A /* LibraryViewModel.swift */; };
 		AMA2004LIBVIEW00000B /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2004LIBVIEW00000A /* LibraryView.swift */; };
+		AMA2292TODAYVIEW0000B /* TodayDiaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2292TODAYVIEW0000A /* TodayDiaryView.swift */; };
+		AMA2292PROFILEHUB00B /* ProfileHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2292PROFILEHUB00A /* ProfileHubView.swift */; };
 		AMA2005LIBDVM000000B /* LibraryDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2005LIBDVM000000A /* LibraryDetailViewModel.swift */; };
 		AMA2005LIBDVIEW0000B /* LibraryDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2005LIBDVIEW0000A /* LibraryDetailView.swift */; };
 		AMA2027MSGVM0000000B /* MessagingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2027MSGVM0000000A /* MessagingViewModel.swift */; };
@@ -665,6 +667,8 @@
 		AMA2054RDVIEW000000A /* ReadinessDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReadinessDetailView.swift; path = ../AmakaFlow/Views/ReadinessDetailView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2004LIBVM0000000A /* LibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryViewModel.swift; path = ../AmakaFlow/ViewModels/LibraryViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA2004LIBVIEW00000A /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryView.swift; path = ../AmakaFlow/Views/LibraryView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2292TODAYVIEW0000A /* TodayDiaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TodayDiaryView.swift; path = ../AmakaFlow/Views/TodayDiaryView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2292PROFILEHUB00A /* ProfileHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProfileHubView.swift; path = ../AmakaFlow/Views/ProfileHubView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2004LIBTST000000A /* LibraryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryViewModelTests.swift; path = AmakaFlowCompanionTests/LibraryViewModelTests.swift; sourceTree = "<group>"; };
 		AMA2005LIBDVM000000A /* LibraryDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryDetailViewModel.swift; path = ../AmakaFlow/ViewModels/LibraryDetailViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA2005LIBDVIEW0000A /* LibraryDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryDetailView.swift; path = ../AmakaFlow/Views/LibraryDetailView.swift; sourceTree = SOURCE_ROOT; };
@@ -1123,6 +1127,8 @@
 				AMA1996DEVVIEW000000A /* DevicesView.swift */,
 				AMA2054RDVIEW000000A /* ReadinessDetailView.swift */,
 				AMA2004LIBVIEW00000A /* LibraryView.swift */,
+				AMA2292TODAYVIEW0000A /* TodayDiaryView.swift */,
+				AMA2292PROFILEHUB00A /* ProfileHubView.swift */,
 				AMA2005LIBDVIEW0000A /* LibraryDetailView.swift */,
 				AMA2027MSGVIEW000000A /* MessagingView.swift */,
 				AMA16080001 /* BiometricConsentView.swift */,
@@ -1961,6 +1967,8 @@
 				AMA1996DEVVIEW000000B /* DevicesView.swift in Sources */,
 				AMA2054RDVIEW000000B /* ReadinessDetailView.swift in Sources */,
 				AMA2004LIBVIEW00000B /* LibraryView.swift in Sources */,
+				AMA2292TODAYVIEW0000B /* TodayDiaryView.swift in Sources */,
+				AMA2292PROFILEHUB00B /* ProfileHubView.swift in Sources */,
 				AMA2005LIBDVIEW0000B /* LibraryDetailView.swift in Sources */,
 				AMA2027MSGVIEW000000B /* MessagingView.swift in Sources */,
 				AMA16080002 /* BiometricConsentView.swift in Sources */,

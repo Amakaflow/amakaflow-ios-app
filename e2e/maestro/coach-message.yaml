@@ -19,6 +19,10 @@ appId: com.myamaka.AmakaFlowCompanion
     timeout: 5000
 # Navigate to Coach tab.
 - tapOn:
+    id: "profile_tab"
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn:
     id: "coach_tab"
 - waitForAnimationToEnd:
     timeout: 3000
