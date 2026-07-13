@@ -100,6 +100,11 @@
 		AMA2285SOCBLD /* APIService+SocialImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285SOCREF /* APIService+SocialImport.swift */; };
 		AMA2285FIXBLD /* FixtureAPIService+SocialImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285FIXREF /* FixtureAPIService+SocialImport.swift */; };
 		AMA2285TSTBLD /* SocialImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285TSTREF /* SocialImportTests.swift */; };
+		AMA2291STARTSELBLD /* WorkoutStartSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2291STARTSELREF /* WorkoutStartSelection.swift */; };
+		AMA2291LIBDESTBLD /* LibraryDestination.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2291LIBDESTREF /* LibraryDestination.swift */; };
+		AMA2291UNIDETBLD /* UnifiedWorkoutDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2291UNIDETREF /* UnifiedWorkoutDetailView.swift */; };
+		AMA2291STARTSHBLD /* WorkoutStartSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2291STARTSHREF /* WorkoutStartSheet.swift */; };
+		AMA2291STARTSTBLD /* WorkoutStartSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2291STARTSTREF /* WorkoutStartSelectionTests.swift */; };
 		AK00FIX004B /* StravaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX004A /* StravaService.swift */; };
 		AK00FIX005B /* AnalyticsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX005A /* AnalyticsViewModel.swift */; };
 		AK00FIX006B /* CalendarSyncViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX006A /* CalendarSyncViewModel.swift */; };
@@ -584,6 +589,11 @@
 		AMA2285SOCREF /* APIService+SocialImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+SocialImport.swift"; path = "../AmakaFlow/Services/APIService+SocialImport.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2285FIXREF /* FixtureAPIService+SocialImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "FixtureAPIService+SocialImport.swift"; path = "../AmakaFlow/DependencyInjection/FixtureAPIService+SocialImport.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2285TSTREF /* SocialImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialImportTests.swift; path = AmakaFlowCompanionTests/SocialImportTests.swift; sourceTree = "<group>"; };
+		AMA2291STARTSELREF /* WorkoutStartSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutStartSelection.swift; path = ../AmakaFlow/Models/WorkoutStartSelection.swift; sourceTree = SOURCE_ROOT; };
+		AMA2291LIBDESTREF /* LibraryDestination.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryDestination.swift; path = ../AmakaFlow/Models/LibraryDestination.swift; sourceTree = SOURCE_ROOT; };
+		AMA2291UNIDETREF /* UnifiedWorkoutDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UnifiedWorkoutDetailView.swift; path = ../AmakaFlow/Views/UnifiedWorkoutDetailView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2291STARTSHREF /* WorkoutStartSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutStartSheet.swift; path = ../AmakaFlow/Views/Components/WorkoutStartSheet.swift; sourceTree = SOURCE_ROOT; };
+		AMA2291STARTSTREF /* WorkoutStartSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutStartSelectionTests.swift; path = AmakaFlowCompanionTests/WorkoutStartSelectionTests.swift; sourceTree = "<group>"; };
 		AK00FIX004A /* StravaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StravaService.swift; path = ../AmakaFlow/Services/StravaService.swift; sourceTree = "<group>"; };
 		AK00FIX005A /* AnalyticsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AnalyticsViewModel.swift; path = ../AmakaFlow/ViewModels/AnalyticsViewModel.swift; sourceTree = "<group>"; };
 		AK00FIX006A /* CalendarSyncViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarSyncViewModel.swift; path = ../AmakaFlow/ViewModels/CalendarSyncViewModel.swift; sourceTree = "<group>"; };
@@ -1148,6 +1158,8 @@
 				AMA2292TODAYVIEW0000A /* TodayDiaryView.swift */,
 				AMA2292PROFILEHUB00A /* ProfileHubView.swift */,
 				AMA2005LIBDVIEW0000A /* LibraryDetailView.swift */,
+				AMA2291UNIDETREF /* UnifiedWorkoutDetailView.swift */,
+				AMA2291STARTSHREF /* WorkoutStartSheet.swift */,
 				AMA2027MSGVIEW000000A /* MessagingView.swift */,
 				AMA16080001 /* BiometricConsentView.swift */,
 				AMA12650004 /* CoachingProfileOnboardingView.swift */,
@@ -1427,6 +1439,8 @@
 				AK00FIX002A /* TrainingProgram.swift */,
 				AK00FIX003A /* WorkoutSaveRequest.swift */,
 				AMA2285DRFTREF /* SocialImportDraft.swift */,
+				AMA2291STARTSELREF /* WorkoutStartSelection.swift */,
+				AMA2291LIBDESTREF /* LibraryDestination.swift */,
 				AMA2285FAILREF /* SocialImportFailure.swift */,
 				AK00FIX004A /* StravaService.swift */,
 				AK00FIX005A /* AnalyticsViewModel.swift */,
@@ -1467,6 +1481,7 @@
 				AK00TST008A /* InstagramImportModeTests.swift */,
 				AK00TST009A /* ManualInstagramIngestionTests.swift */,
 				AMA2285TSTREF /* SocialImportTests.swift */,
+				AMA2291STARTSTREF /* WorkoutStartSelectionTests.swift */,
 				AK00TST010A /* MockURLProtocol.swift */,
 				AK00TST011A /* PairingTests.swift */,
 				AK00TST012A /* Phase2ViewModelTests.swift */,
@@ -2061,6 +2076,10 @@
 				AMA2285PENDBLD /* PendingShareImportCoordinator.swift in Sources */,
 				AMA2285SOCBLD /* APIService+SocialImport.swift in Sources */,
 				AMA2285FIXBLD /* FixtureAPIService+SocialImport.swift in Sources */,
+				AMA2291STARTSELBLD /* WorkoutStartSelection.swift in Sources */,
+				AMA2291LIBDESTBLD /* LibraryDestination.swift in Sources */,
+				AMA2291UNIDETBLD /* UnifiedWorkoutDetailView.swift in Sources */,
+				AMA2291STARTSHBLD /* WorkoutStartSheet.swift in Sources */,
 				AK00FIX004B /* StravaService.swift in Sources */,
 				AK00FIX005B /* AnalyticsViewModel.swift in Sources */,
 				AK00FIX006B /* CalendarSyncViewModel.swift in Sources */,
@@ -2192,6 +2211,7 @@
 				AK00TST008B /* InstagramImportModeTests.swift in Sources */,
 				AK00TST009B /* ManualInstagramIngestionTests.swift in Sources */,
 				AMA2285TSTBLD /* SocialImportTests.swift in Sources */,
+				AMA2291STARTSTBLD /* WorkoutStartSelectionTests.swift in Sources */,
 				AK00TST010B /* MockURLProtocol.swift in Sources */,
 				AK00TST011B /* PairingTests.swift in Sources */,
 				AK00TST012B /* Phase2ViewModelTests.swift in Sources */,

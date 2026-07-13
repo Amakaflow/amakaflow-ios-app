@@ -1,10 +1,10 @@
 {
   "id": "fixture-emom-001",
-  "name": "EMOM Strength - 20 min",
+  "name": "Manual EMOM Strength",
   "sport": "strength",
   "duration": 1200,
   "description": "Every minute on the minute for 20 minutes",
-  "source": "coach",
+  "source": "manual",
   "intervals": [
     { "kind": "warmup", "seconds": 120 },
     {

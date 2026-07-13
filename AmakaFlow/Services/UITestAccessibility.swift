@@ -37,6 +37,17 @@ struct UITestAccessibility {
     static let historyScreen = "history_screen"
     static let profileScreen = "profile_screen"
     static let settingsScreen = "settings_screen"
+
+    // MARK: - Unified Workout Detail (AMA-2291)
+
+    static let workoutDetailScreen = "af_workout_detail_screen"
+    static let workoutDetailEdit = "af_workout_detail_edit"
+    static let workoutDetailStart = "af_workout_detail_start"
+    static let startSheet = "af_start_sheet"
+    static let startSheetConfirm = "af_start_sheet_confirm"
+    static let startDeviceGarmin = "af_start_device_garmin"
+    static let startDeviceApple = "af_start_device_apple"
+    static let startDevicePhone = "af_start_device_phone"
     
     // MARK: - Workout Controls
     
