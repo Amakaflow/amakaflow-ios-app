@@ -302,7 +302,11 @@ struct LibraryView: View {
         switch destination {
         case .unifiedWorkout(let workoutID):
             if let workout = viewModel.resolveWorkout(for: destination) {
-                UnifiedWorkoutDetailView(workout: workout)
+                UnifiedWorkoutDetailView(workout: workout) {
+                    await viewModel.load()
+                    return viewModel.workout(for: workoutID)
+                        ?? viewModel.resolveWorkout(for: destination)
+                }
             } else {
                 // Honest fallback if workout vanished mid-nav.
                 Text("Workout unavailable")
@@ -489,7 +493,6 @@ private struct LibraryEmptyStateView: View {
         .accessibilityIdentifier("library_empty_state")
     }
 }
-
 #if DEBUG
 #Preview("Library") {
     LibraryView(viewModel: LibraryViewModel(apiService: FixtureAPIService()))

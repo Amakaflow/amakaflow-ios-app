@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct UnifiedWorkoutDetailView: View {
-    let workout: Workout
+    @State private var displayedWorkout: Workout
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -23,6 +23,22 @@ struct UnifiedWorkoutDetailView: View {
     /// Injected for previews / tests. Production reads live managers.
     var garminPairedOverride: Bool?
     var appleWatchReachableOverride: Bool?
+    /// Optional reload after Edit save — Library passes load + resolve by id.
+    var onEditorDismiss: (() async -> Workout?)?
+
+    init(
+        workout: Workout,
+        garminPairedOverride: Bool? = nil,
+        appleWatchReachableOverride: Bool? = nil,
+        onEditorDismiss: (() async -> Workout?)? = nil
+    ) {
+        _displayedWorkout = State(initialValue: workout)
+        self.garminPairedOverride = garminPairedOverride
+        self.appleWatchReachableOverride = appleWatchReachableOverride
+        self.onEditorDismiss = onEditorDismiss
+    }
+
+    private var workout: Workout { displayedWorkout }
 
     private var garminPaired: Bool {
         if let garminPairedOverride { return garminPairedOverride }
@@ -80,10 +96,20 @@ struct UnifiedWorkoutDetailView: View {
             .presentationDetents([.large, .medium])
             .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showingEditor) {
-            // AI never gatekeeps — Edit always opens the structure editor.
-            WorkoutEditorView(workout: workout)
-        }
+        .sheet(
+            isPresented: $showingEditor,
+            onDismiss: {
+                Task {
+                    if let refreshed = await onEditorDismiss?() {
+                        displayedWorkout = refreshed
+                    }
+                }
+            },
+            content: {
+                // AI never gatekeeps — Edit always opens the structure editor.
+                WorkoutEditorView(workout: displayedWorkout)
+            }
+        )
         .fullScreenCover(isPresented: $showingWorkoutPlayer) {
             WorkoutPlayerView()
         }

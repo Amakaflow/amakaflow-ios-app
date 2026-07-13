@@ -68,7 +68,7 @@ appId: com.myamaka.AmakaFlowCompanion
 - assertVisible:
     id: "af_start_gym_unset"
 - tapOn:
-    text: "Close start sheet"
+    id: "af_start_sheet_close"
 - waitForAnimationToEnd:
     timeout: 2000
 - extendedWaitUntil:

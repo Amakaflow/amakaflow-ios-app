@@ -112,6 +112,7 @@ final class LibraryViewModel: ObservableObject {
             } catch {
                 // Knowledge still usable if workout fetch fails — surface toast, keep going.
                 ctaError = CTAError.map(error)
+                lastFailedAction = .load
                 workouts = allWorkouts
             }
 
