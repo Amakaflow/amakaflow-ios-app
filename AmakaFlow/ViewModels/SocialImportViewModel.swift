@@ -65,7 +65,7 @@ final class SocialImportViewModel: ObservableObject {
         }
     }
 
-    func importPlainText(_ text: String, sourceURL: String? = nil) async {
+    func importPlainText(_ text: String, platform: SocialImportPlatform = .manual, sourceURL: String? = nil) async {
         guard ensureAuthenticated() else { return }
 
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -75,11 +75,13 @@ final class SocialImportViewModel: ObservableObject {
         }
 
         phase = .importing
-        let platform: SocialImportPlatform = .manual
 
         do {
             let equipment = await dependencies.apiService.socialImportEquipmentContext()
-            let data = try await dependencies.apiService.ingestSocialText(text: trimmed, source: sourceURL)
+            let data = try await dependencies.apiService.ingestSocialText(
+                text: trimmed,
+                source: sourceURL ?? platform.rawValue
+            )
             let parsed = try SocialImportDraft.fromIngestJSON(
                 data,
                 platform: platform,

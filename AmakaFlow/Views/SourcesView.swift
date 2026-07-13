@@ -43,10 +43,14 @@ struct SourcesView: View {
                     .accessibilityIdentifier("sources_screen")
             }
             .sheet(isPresented: $showingInstagramImport) {
-                InstagramReelIngestionView(apiService: APIService.shared)
+                SocialImportFlowView(mode: .url(platformHint: .instagram)) {
+                    Task { await viewModel.refreshWorkouts() }
+                }
             }
             .sheet(isPresented: $showingManualInstagramImport) {
-                ManualInstagramIngestionView(apiService: APIService.shared)
+                SocialImportFlowView(mode: .plainText(platform: .instagram)) {
+                    Task { await viewModel.refreshWorkouts() }
+                }
             }
             .sheet(isPresented: $showingAIImport) {
                 AIImportView()
@@ -62,7 +66,7 @@ struct SourcesView: View {
                 }
             }
             .sheet(isPresented: $showingPlainTextImport) {
-                SocialImportFlowView(mode: .plainText) {
+                SocialImportFlowView(mode: .plainText(platform: .manual)) {
                     Task { await viewModel.refreshWorkouts() }
                 }
             }

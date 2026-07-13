@@ -12,7 +12,7 @@ import PhotosUI
 struct SocialImportFlowView: View {
     enum Mode: Equatable {
         case url(platformHint: SocialImportPlatform?)
-        case plainText
+        case plainText(platform: SocialImportPlatform)
     }
 
     let mode: Mode
@@ -55,8 +55,8 @@ struct SocialImportFlowView: View {
         switch mode {
         case .url(let hint):
             return "Import from \(hint?.displayName ?? "Link")"
-        case .plainText:
-            return "Paste Workout Text"
+        case .plainText(let platform):
+            return platform == .manual ? "Paste Workout Text" : "Import from \(platform.displayName)"
         }
     }
 
@@ -143,8 +143,8 @@ struct SocialImportFlowView: View {
             switch mode {
             case .url(let hint):
                 await viewModel.importURL(urlText, platformHint: hint)
-            case .plainText:
-                await viewModel.importPlainText(plainText)
+            case .plainText(let platform):
+                await viewModel.importPlainText(plainText, platform: platform)
             }
         }
     }
