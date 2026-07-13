@@ -10,21 +10,27 @@ import Foundation
 /// Centralized accessibility identifiers for automation testing
 struct UITestAccessibility {
     
-    // MARK: - Main Navigation
+    // MARK: - Main Navigation (AMA-2292: Today · Library · Profile)
     
     static let tabBar = "af_tabbar"
-    static let homeTab = "home_tab"
-    static let workoutsTab = "workouts_tab"
-    static let coachTab = "coach_tab"
+    static let todayTab = "today_tab"
+    /// Legacy alias — prefer `todayTab` for new automation.
+    static let homeTab = "today_tab"
     static let libraryTab = "library_tab"
-    static let historyTab = "history_tab"
     static let profileTab = "profile_tab"
+    /// Coach / History are Profile hub rows, not root tabs (AMA-2292).
+    static let coachTab = "coach_tab"
+    static let historyTab = "history_tab"
     static let settingsTab = "settings_tab"
     static let calendarTab = "calendar_tab"
+    /// Removed from root chrome; schedule deferred off Daily Driver Proto IA.
+    static let workoutsTab = "workouts_tab"
     
     // MARK: - Main Screens
     
-    static let homeScreen = "home_screen"
+    static let todayScreen = "today_screen"
+    /// Legacy alias — prefer `todayScreen` for new automation.
+    static let homeScreen = "today_screen"
     static let workoutsScreen = "workouts_screen"
     static let coachScreen = "coach_screen"
     static let libraryScreen = "library_screen"

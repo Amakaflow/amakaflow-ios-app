@@ -117,21 +117,24 @@ final class AMA1839_CJ01_WorkoutLifecycle_CriticalJourneyTests: XCTestCase {
     // MARK: - Step helpers
 
     private func openCoachFromMore() throws {
+        let profileTab = TestAuthHelper.tab(app, "profile_tab", label: "Profile")
+        XCTAssertTrue(profileTab.waitForExistence(timeout: 10),
+                      "Profile tab not found — Coach lives under Profile hub (AMA-2292)")
+        profileTab.tap()
+
         let coachTab = TestAuthHelper.tab(app, "coach_tab", label: "Coach")
         XCTAssertTrue(coachTab.waitForExistence(timeout: 10),
-                      "Coach tab not found — `coach_tab` accessibilityIdentifier missing")
+                      "Coach entry not found — `coach_tab` missing on Profile hub")
         coachTab.tap()
 
-        let coachRoot = app.otherElements["coach_screen"]
+        let coachRoot = app.descendants(matching: .any)["coach_screen"]
         XCTAssertTrue(coachRoot.waitForExistence(timeout: 5),
-                      "Coach root did not render after tapping `coach_tab`")
+                      "Coach root did not render after tapping Profile → Coach")
 
-        // Pop back to Home for the Suggest flow — the Suggest sheet is
-        // launched from the Home tab, not the Coach surface.
-        let homeTab = TestAuthHelper.tab(app, "home_tab", label: "Home")
-        XCTAssertTrue(homeTab.waitForExistence(timeout: 5),
-                      "Home tab not found — `home_tab` accessibilityIdentifier missing")
-        homeTab.tap()
+        let todayTab = TestAuthHelper.tab(app, "today_tab", label: "Today")
+        XCTAssertTrue(todayTab.waitForExistence(timeout: 5),
+                      "Today tab not found — `today_tab` accessibilityIdentifier missing")
+        todayTab.tap()
     }
 
     private func generateAndAcceptWorkout() throws {
@@ -168,26 +171,22 @@ final class AMA1839_CJ01_WorkoutLifecycle_CriticalJourneyTests: XCTestCase {
     }
 
     private func startAndSaveEndWorkout() throws {
-        let start = app.buttons["ama1842.start.button"]
-        XCTAssertTrue(start.waitForExistence(timeout: 10),
-                      "Start workout button not found on Home — `ama1842.start.button` missing")
-        start.tap()
-        app.tap()
+        let endButton = app.buttons["ama1842.endWorkout.button"]
+        if !endButton.exists {
+            let start = app.buttons["ama1842.start.button"]
+            if start.waitForExistence(timeout: 5) {
+                start.tap()
+                app.tap()
+            }
+        }
 
-        // Some builds present a device picker (PreWorkoutDeviceSheet)
-        // before the player launches.
         let phoneOnly = app.buttons["Start on Phone Only"]
         if phoneOnly.waitForExistence(timeout: 5) { phoneOnly.tap() }
 
-        // Tap the End-workout button (the close-X in the player); this
-        // surfaces the "End Workout?" alert with the "Save & End" button.
-        let endButton = app.buttons["ama1842.endWorkout.button"]
         XCTAssertTrue(endButton.waitForExistence(timeout: 30),
                       "End-workout button not found in player — `ama1842.endWorkout.button` missing")
         endButton.tap()
 
-        // Alert button — selected by label, since SwiftUI alert buttons
-        // do not honour arbitrary accessibilityIdentifier strings.
         let saveEnd = app.alerts.buttons["Save & End"]
         XCTAssertTrue(saveEnd.waitForExistence(timeout: 10),
                       "Save & End button not found in End-Workout alert")
@@ -196,13 +195,16 @@ final class AMA1839_CJ01_WorkoutLifecycle_CriticalJourneyTests: XCTestCase {
     }
 
     private func assertWorkoutInActivityHistory(timeout: TimeInterval) throws {
-        let historyTab = TestAuthHelper.tab(app, "history_tab", label: "History")
+        let profileTab = TestAuthHelper.tab(app, "profile_tab", label: "Profile")
+        XCTAssertTrue(profileTab.waitForExistence(timeout: 10),
+                      "Profile tab not visible — cannot open Activity History")
+        profileTab.tap()
+
+        let historyTab = TestAuthHelper.tab(app, "history_tab", label: "Activity History")
         XCTAssertTrue(historyTab.waitForExistence(timeout: 10),
-                      "History tab not visible — cannot navigate to Activity History")
+                      "History entry not visible on Profile hub")
         historyTab.tap()
 
-        // Authoritative assertion: the history screen renders AND
-        // contains the just-saved completion at index 0.
         let firstCell = app.buttons["ama1842.activityHistory.cell.0"]
         let appeared = firstCell.waitForExistence(timeout: timeout)
 
@@ -249,6 +251,6 @@ final class AMA1839_CJ01_WorkoutLifecycle_CriticalJourneyTests: XCTestCase {
 
     private func waitForTabBar(timeout: TimeInterval) -> Bool {
         return TestAuthHelper.tabBar(app).waitForExistence(timeout: timeout)
-            || TestAuthHelper.tab(app, "home_tab", label: "Home").waitForExistence(timeout: 2)
+            || TestAuthHelper.tab(app, "today_tab", label: "Today").waitForExistence(timeout: 2)
     }
 }

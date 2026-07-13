@@ -1,21 +1,18 @@
 # AMA-2260 — Generate My Week journey (PR maestro label, warn-only)
+#
+# AMA-2292: Workouts root tab removed from Daily Driver Proto IA. Schedule /
+# Generate Week chrome is deferred (Today is completed-diary only).
 
 appId: com.myamaka.AmakaFlowCompanion
 ---
 - runFlow: ../../../_lib/clerk-signin.yaml
-- tapOn:
+- assertVisible:
+    id: "af_tabbar"
+- assertVisible:
+    id: "today_tab"
+- assertVisible:
+    id: "library_tab"
+- assertVisible:
+    id: "profile_tab"
+- assertNotVisible:
     id: "workouts_tab"
-- assertVisible:
-    id: "workouts_screen"
-- tapOn:
-    id: "workouts_calendar_button"
-- waitForAnimationToEnd:
-    timeout: 3000
-- assertVisible:
-    id: "af_generate_week"
-- tapOn:
-    id: "af_generate_week"
-- extendedWaitUntil:
-    visible:
-      text: "Proposed Week Plan"
-    timeout: 45000

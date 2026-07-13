@@ -41,9 +41,9 @@ env:
         id: "af_tabbar"
     commands:
       - tapOn:
-          id: "home_tab"
+          id: "today_tab"
       - assertVisible:
-          id: "home_tab"
+          id: "today_tab"
 
 # Wait for AMA-1849 password bypass (CI sims may migrate data 15–20s post-boot).
 - runFlow:
@@ -192,6 +192,6 @@ env:
       id: "af_tabbar"
     timeout: 60000
 - tapOn:
-    id: "home_tab"
+    id: "today_tab"
 - assertVisible:
-    id: "home_tab"
+    id: "today_tab"

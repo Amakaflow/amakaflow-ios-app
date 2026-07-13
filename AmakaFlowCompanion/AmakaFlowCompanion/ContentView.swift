@@ -7,13 +7,10 @@
 
 import SwiftUI
 
-/// Top-level chrome destinations for the AMA-1992 six-tab navigation.
+/// Top-level chrome destinations for the AMA-2292 Daily Driver three-tab IA.
 enum AFTab: String, CaseIterable, Identifiable {
-    case home = "Home"
-    case workouts = "Workouts"
-    case coach = "Coach"
+    case today = "Today"
     case library = "Library"
-    case history = "History"
     case profile = "Profile"
 
     var id: Self { self }
@@ -22,44 +19,32 @@ enum AFTab: String, CaseIterable, Identifiable {
 
     var activeIcon: String {
         switch self {
-        case .home: return "house.fill"
-        case .workouts: return "square.grid.2x2.fill"
-        case .coach: return "bubble.left.and.bubble.right.fill"
+        case .today: return "sun.max.fill"
         case .library: return "bookmark.fill"
-        case .history: return "clock.arrow.circlepath"
         case .profile: return "person.crop.circle.fill"
         }
     }
 
     var inactiveIcon: String {
         switch self {
-        case .home: return "house"
-        case .workouts: return "square.grid.2x2"
-        case .coach: return "bubble.left.and.bubble.right"
+        case .today: return "sun.max"
         case .library: return "bookmark"
-        case .history: return "clock.arrow.circlepath"
         case .profile: return "person.crop.circle"
         }
     }
 
     var accessibilityIdentifier: String {
         switch self {
-        case .home: return "home_tab"
-        case .workouts: return "workouts_tab"
-        case .coach: return "coach_tab"
+        case .today: return "today_tab"
         case .library: return "library_tab"
-        case .history: return "history_tab"
         case .profile: return "profile_tab"
         }
     }
 
     var rootAccessibilityIdentifier: String {
         switch self {
-        case .home: return "home_screen"
-        case .workouts: return "workouts_screen"
-        case .coach: return "coach_screen"
+        case .today: return "today_screen"
         case .library: return "library_screen"
-        case .history: return "history_screen"
         case .profile: return "profile_screen"
         }
     }
@@ -67,13 +52,11 @@ enum AFTab: String, CaseIterable, Identifiable {
     static func destination(forDeepLink name: Notification.Name) -> AFTab? {
         switch name {
         case .deepLinkToCoach:
-            return .coach
+            return .profile
         case .deepLinkToWorkout:
-            return .workouts
+            return .library
         case .deepLinkToCalendar:
-            // Calendar is no longer top-level chrome; route to the closest
-            // planning surface so the deep link lands on a real tab.
-            return .workouts
+            return .profile
         case .deepLinkToSync, .deepLinkToNutrition:
             return .profile
         default:
@@ -91,7 +74,7 @@ struct AFTabSelectionState: Equatable {
     private(set) var selectedTab: AFTab
     private var resetCounts: [AFTab: Int]
 
-    init(selectedTab: AFTab = .home) {
+    init(selectedTab: AFTab = .today) {
         self.selectedTab = selectedTab
         self.resetCounts = Dictionary(uniqueKeysWithValues: AFTab.allCases.map { ($0, 0) })
     }
@@ -117,7 +100,7 @@ struct AFTabSelectionState: Equatable {
 
 struct ContentView: View {
     @EnvironmentObject var viewModel: WorkoutsViewModel
-    @State private var tabState = AFTabSelectionState(selectedTab: .home)
+    @State private var tabState = AFTabSelectionState(selectedTab: .today)
     @State private var showingWorkoutPlayer = false
     @State private var showSyncDashboard = false
     @State private var profilePath = NavigationPath()
@@ -137,7 +120,6 @@ struct ContentView: View {
         }
         .tint(Theme.Colors.readyHigh)
         .task {
-            // Check for pending workouts on app open
             await viewModel.checkPendingWorkouts()
         }
         .onReceive(NotificationCenter.default.publisher(for: .refreshPendingWorkouts)) { _ in
@@ -148,7 +130,6 @@ struct ContentView: View {
         .fullScreenCover(isPresented: $showingWorkoutPlayer) {
             WorkoutPlayerView()
         }
-        // Deep link notification handlers (AMA-1133, AMA-1640)
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToCalendar)) { note in
             routeDeepLink(.deepLinkToCalendar)
             if let date = note.userInfo?["date"] as? String {
@@ -157,6 +138,7 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToCoach)) { note in
             routeDeepLink(.deepLinkToCoach)
+            profilePath.append(ProfileHubRoute.coach)
             if let threadId = note.userInfo?["threadId"] as? String {
                 DispatchQueue.main.async {
                     NotificationCenter.default.post(
@@ -178,10 +160,12 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToSync)) { _ in
             routeDeepLink(.deepLinkToSync)
+            profilePath.append(ProfileHubRoute.settings)
             showSyncDashboard = true
         }
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkToNutrition)) { _ in
             routeDeepLink(.deepLinkToNutrition)
+            profilePath.append(ProfileHubRoute.settings)
         }
     }
 
@@ -201,35 +185,20 @@ struct ContentView: View {
     @ViewBuilder
     private var activeTabDestination: some View {
         switch selectedTab {
-        case .home:
-            tabRoot(.home) {
-                HomeView()
-            }
-        case .workouts:
-            tabRoot(.workouts) {
-                WorkoutsView()
-            }
-        case .coach:
-            tabRoot(.coach) {
-                CoachChatView()
+        case .today:
+            tabRoot(.today) {
+                TodayDiaryView()
             }
         case .library:
             tabRoot(.library) {
                 LibraryView()
             }
-        case .history:
-            tabRoot(.history) {
-                // AMA-1992: top-level History must show real completed
-                // workouts. `HistoryView` is still sample-backed design work;
-                // keep it out of primary chrome until AMA-200x rebuilds it
-                // against production data.
-                ActivityHistoryView()
-            }
         case .profile:
             tabRoot(.profile) {
-                NavigationStack(path: $profilePath) {
-                    SettingsView(navigateToSyncDashboard: $showSyncDashboard)
-                }
+                ProfileHubView(
+                    navigateToSyncDashboard: $showSyncDashboard,
+                    path: $profilePath
+                )
             }
         }
     }
@@ -265,8 +234,6 @@ struct ContentView: View {
         content()
             .id(resetToken(for: tab))
             .overlay(alignment: .top) {
-                // Invisible root marker for XCUITest/Maestro. Some SwiftUI
-                // containers do not expose identifiers reliably on iOS 26.
                 Text(" ")
                     .font(.system(size: 1))
                     .opacity(0.01)
@@ -303,8 +270,6 @@ struct AFTabBar: View {
             Theme.Colors.surface
                 .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: -4)
                 .ignoresSafeArea(edges: .bottom)
-                // Container marker on chrome background only — never on the
-                // button HStack with `.contain` (iOS 26 leaks id to children).
                 .accessibilityIdentifier("af_tabbar")
                 .accessibilityLabel("Tab bar")
                 .accessibilityElement(children: .ignore)
@@ -343,8 +308,6 @@ private struct AFTabBarButton: View {
             }
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
-            // Apply identifiers on the label subtree — iOS 26 often drops
-            // `accessibilityIdentifier` applied to the outer SwiftUI Button.
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(tab.title)
             .accessibilityValue(isSelected ? "Selected" : "Not selected")
@@ -362,13 +325,13 @@ private struct AFTabBarButton: View {
 }
 
 #Preview("AFTabBar · Light") {
-    AFTabBar(selectedTab: .home) { _ in }
+    AFTabBar(selectedTab: .today) { _ in }
         .background(Theme.Colors.background)
         .environment(\.colorScheme, .light)
 }
 
 #Preview("AFTabBar · Dark") {
-    AFTabBar(selectedTab: .coach) { _ in }
+    AFTabBar(selectedTab: .library) { _ in }
         .background(Theme.Colors.background)
         .environment(\.colorScheme, .dark)
 }

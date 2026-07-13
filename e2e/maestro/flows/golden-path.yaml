@@ -143,7 +143,11 @@ appId: com.myamaka.AmakaFlowCompanion
     timeout: 5000
 - takeScreenshot: golden-06-saved-and-ended
 
-# --- Step 6: History tab, assert the workout round-tripped ---
+# --- Step 6: History via Profile hub, assert the workout round-tripped ---
+- tapOn:
+    id: "profile_tab"
+- waitForAnimationToEnd:
+    timeout: 2000
 - tapOn:
     id: "history_tab"
 - waitForAnimationToEnd:
@@ -178,6 +182,10 @@ appId: com.myamaka.AmakaFlowCompanion
 # af_tabbar on a fresh sim session (CI run 27027839705).
 - stopApp
 - runFlow: ../_lib/clerk-signin.yaml
+- tapOn:
+    id: "profile_tab"
+- waitForAnimationToEnd:
+    timeout: 2000
 - tapOn:
     id: "history_tab"
 - waitForAnimationToEnd:

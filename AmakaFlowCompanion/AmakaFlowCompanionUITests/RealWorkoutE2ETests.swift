@@ -102,7 +102,7 @@ class RealWorkoutTestCase: XCTestCase {
             return false
         }
 
-        let workoutsTab = TestAuthHelper.tab(app, "workouts_tab", label: "Workouts")
+        let workoutsTab = TestAuthHelper.tab(app, "library_tab", label: "Library")
         guard workoutsTab.waitForExistence(timeout: 5) else {
             return false
         }
@@ -454,7 +454,7 @@ class RealWorkoutTestCase: XCTestCase {
 
         // Check if we're still in the workout player or back at main screen
         let tabBar = TestAuthHelper.tabBar(app)
-        if tabBar.exists || TestAuthHelper.tab(app, "home_tab", label: "Home").exists {
+        if tabBar.exists || TestAuthHelper.tab(app, "today_tab", label: "Today").exists {
             print("[E2E] Tab bar visible - workout player was dismissed without showing confirmation")
             // The workout may have ended automatically or the close button dismissed it
             // Consider this a "success" if we got back to the main app
@@ -466,10 +466,17 @@ class RealWorkoutTestCase: XCTestCase {
 
     /// Verify workout appears in Activity History
     func verifyWorkoutInHistory() -> Bool {
-        // Navigate to activity history via AMA-1992's top-level History tab.
-        let historyTab = TestAuthHelper.tab(app, "history_tab", label: "History")
+        // Navigate to activity history via Profile hub (AMA-2292).
+        let profileTab = TestAuthHelper.tab(app, "profile_tab", label: "Profile")
+        guard profileTab.waitForExistence(timeout: 5) else {
+            print("[E2E] Could not find Profile tab")
+            return false
+        }
+        profileTab.tap()
+
+        let historyTab = TestAuthHelper.tab(app, "history_tab", label: "Activity History")
         guard historyTab.waitForExistence(timeout: 5) else {
-            print("[E2E] Could not find History tab")
+            print("[E2E] Could not find History entry on Profile hub")
             return false
         }
         historyTab.tap()

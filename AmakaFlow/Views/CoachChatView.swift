@@ -132,6 +132,13 @@ struct CoachChatView: View {
                 UIAccessibility.post(notification: .announcement, argument: "Conversation restored")
             }
         }
+        .overlay(alignment: .top) {
+            // AMA-2292: Coach is no longer a root tab; keep Maestro root marker.
+            Text(" ")
+                .font(.system(size: 1))
+                .opacity(0.01)
+                .accessibilityIdentifier("coach_screen")
+        }
     }
 
     private func requestNewChat() {

@@ -24,6 +24,10 @@ appId: com.myamaka.AmakaFlowCompanion
 
 # Coach tab + one-coach header
 - tapOn:
+    id: "profile_tab"
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn:
     id: "coach_tab"
 - extendedWaitUntil:
     visible:
@@ -76,13 +80,17 @@ appId: com.myamaka.AmakaFlowCompanion
       id: "coach_screen"
     timeout: 5000
 
-# Profile → Coaching → What my coach knows → CKW surface
+# Profile → Settings → Coaching → What my coach knows → CKW surface
 - tapOn:
     id: "profile_tab"
 - waitForAnimationToEnd:
     timeout: 3000
 - assertVisible:
     id: "profile_screen"
+- tapOn:
+    id: "af_profile_settings_entry"
+- waitForAnimationToEnd:
+    timeout: 2000
 - scrollUntilVisible:
     element:
       id: "settings_row_coach_knowledge"
