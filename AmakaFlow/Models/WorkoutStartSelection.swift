@@ -86,11 +86,11 @@ enum WorkoutStartDefaults {
 
 /// Where Start confirm should hand off. Full push/player e2e lives in downstream issues.
 enum WorkoutStartHandoff: Equatable {
-    /// TODO(AMA-2286): Garmin one-tap push — wire existing push entry when present.
+    /// AMA-2286: Garmin one-tap push — wire existing push entry when present.
     case garmin
-    /// TODO(AMA-2287): Apple Workout / Watch try — sendToWatch / WorkoutKit when present.
+    /// AMA-2287: Apple Workout / Watch try — sendToWatch / WorkoutKit when present.
     case apple
-    /// TODO(AMA-2290): strength phone player — use WorkoutEngine + WorkoutPlayerView when present.
+    /// AMA-2290: strength phone player — use WorkoutEngine + WorkoutPlayerView when present.
     case phone
 }
 

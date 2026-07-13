@@ -92,11 +92,13 @@ struct WorkoutStartSheet: View {
 
             ForEach(WorkoutStartGym.allCases) { gym in
                 selectionRow(
-                    title: gym.title,
-                    subtitle: gym.subtitle,
-                    selected: selectedGym == gym,
-                    badge: gym == .unset ? "Continue anyway" : nil,
-                    identifier: gym.accessibilityIdentifier
+                    StartSheetRowModel(
+                        title: gym.title,
+                        subtitle: gym.subtitle,
+                        selected: selectedGym == gym,
+                        badge: gym == .unset ? "Continue anyway" : nil,
+                        identifier: gym.accessibilityIdentifier
+                    )
                 ) {
                     selectedGym = gym
                 }
@@ -113,12 +115,13 @@ struct WorkoutStartSheet: View {
             ForEach(WorkoutStartDevice.allCases) { device in
                 let isDefault = device == WorkoutStartDefaults.preferredDevice(garminPaired: garminPaired)
                 selectionRow(
-                    title: device.title,
-                    subtitle: deviceSubtitle(device),
-                    selected: selectedDevice == device,
-                    badge: badge(for: device, isDefault: isDefault),
-                    identifier: device.accessibilityIdentifier,
-                    disabled: false
+                    StartSheetRowModel(
+                        title: device.title,
+                        subtitle: deviceSubtitle(device),
+                        selected: selectedDevice == device,
+                        badge: badge(for: device, isDefault: isDefault),
+                        identifier: device.accessibilityIdentifier
+                    )
                 ) {
                     selectedDevice = device
                 }
@@ -167,27 +170,19 @@ struct WorkoutStartSheet: View {
         )
     }
 
-    private func selectionRow(
-        title: String,
-        subtitle: String,
-        selected: Bool,
-        badge: String?,
-        identifier: String,
-        disabled: Bool = false,
-        action: @escaping () -> Void
-    ) -> some View {
+    private func selectionRow(_ model: StartSheetRowModel, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: Theme.Spacing.md) {
-                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                Image(systemName: model.selected ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 22, weight: .semibold))
-                    .foregroundColor(selected ? Theme.Colors.readyHigh : Theme.Colors.textTertiary)
+                    .foregroundColor(model.selected ? Theme.Colors.readyHigh : Theme.Colors.textTertiary)
 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: Theme.Spacing.sm) {
-                        Text(title)
+                        Text(model.title)
                             .font(Theme.Typography.bodyBold)
                             .foregroundColor(Theme.Colors.textPrimary)
-                        if let badge {
+                        if let badge = model.badge {
                             Text(badge)
                                 .font(Theme.Typography.footnote)
                                 .foregroundColor(Theme.Colors.accentBlue)
@@ -197,7 +192,7 @@ struct WorkoutStartSheet: View {
                                 .cornerRadius(Theme.CornerRadius.sm)
                         }
                     }
-                    Text(subtitle)
+                    Text(model.subtitle)
                         .font(Theme.Typography.caption)
                         .foregroundColor(Theme.Colors.textSecondary)
                         .multilineTextAlignment(.leading)
@@ -208,16 +203,22 @@ struct WorkoutStartSheet: View {
             .background(Theme.Colors.surfaceElevated)
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
-                    .stroke(selected ? Theme.Colors.readyHigh : Theme.Colors.borderLight, lineWidth: selected ? 2 : 1)
+                    .stroke(model.selected ? Theme.Colors.readyHigh : Theme.Colors.borderLight, lineWidth: model.selected ? 2 : 1)
             )
             .cornerRadius(Theme.CornerRadius.md)
-            .opacity(disabled ? 0.5 : 1)
         }
         .buttonStyle(.plain)
-        .disabled(disabled)
-        .accessibilityIdentifier(identifier)
-        .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityIdentifier(model.identifier)
+        .accessibilityAddTraits(model.selected ? .isSelected : [])
     }
+}
+
+private struct StartSheetRowModel {
+    let title: String
+    let subtitle: String
+    let selected: Bool
+    let badge: String?
+    let identifier: String
 }
 
 #if DEBUG

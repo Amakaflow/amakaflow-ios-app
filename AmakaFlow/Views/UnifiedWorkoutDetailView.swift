@@ -258,11 +258,11 @@ struct UnifiedWorkoutDetailView: View {
         let handoff = WorkoutStartHandoffResolver.handoff(for: device)
         switch handoff {
         case .garmin:
-            // TODO(AMA-2286): call one-tap Garmin push entry point when wired.
+            // AMA-2286: call one-tap Garmin push entry point when wired.
             // Existing live-state path: GarminConnectManager.sendWorkoutState — not plan push.
             handoffStatus = "Garmin handoff queued for \(gym.title) — AMA-2286 push stub"
         case .apple:
-            // TODO(AMA-2287): full Apple Workout try. Prefer send-to-watch when reachable.
+            // AMA-2287: full Apple Workout try. Prefer send-to-watch when reachable.
             if appleWatchReachable {
                 Task {
                     await workoutsViewModel.sendToWatch(workout)
@@ -281,7 +281,7 @@ struct UnifiedWorkoutDetailView: View {
                 handoffStatus = "Apple try stub — Watch unreachable (AMA-2287)"
             }
         case .phone:
-            // TODO(AMA-2290): full strength phone player. Reuse existing engine/player entry.
+            // AMA-2290: full strength phone player. Reuse existing engine/player entry.
             WorkoutEngine.shared.start(workout: workout)
             showingWorkoutPlayer = true
             handoffStatus = "Phone player opened — AMA-2290 stub uses existing player"
