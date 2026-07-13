@@ -55,7 +55,7 @@ class DeepLinkImportViewModel: ObservableObject {
 
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
-        request.timeoutInterval = 30
+        request.timeoutInterval = 15
 
         // Auth headers — Clerk session token
         var headers = ["Content-Type": "application/json"]

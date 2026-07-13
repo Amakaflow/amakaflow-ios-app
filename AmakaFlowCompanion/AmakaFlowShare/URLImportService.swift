@@ -31,8 +31,10 @@ final class URLImportService: NSObject {
 
     private lazy var immediateSession: URLSession = {
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30
-        config.timeoutIntervalForResource = 60
+        // AMA-2285: fail fast — auth/parse/network should surface in ≤3s when possible.
+        config.timeoutIntervalForRequest = 15
+        config.timeoutIntervalForResource = 45
+        config.waitsForConnectivity = false
         return URLSession(configuration: config)
     }()
 
@@ -137,15 +139,21 @@ final class URLImportService: NSObject {
 
         var errorDescription: String? {
             switch self {
-            case .invalidURL: return "Invalid URL"
-            case .invalidResponse: return "Invalid server response"
-            case .unauthorized: return "Not signed in. Open AmakaFlow and sign in first."
+            case .invalidURL: return "That import link looks invalid. Check the URL and try again."
+            case .invalidResponse: return "Unexpected response from the import service. Retry shortly."
+            case .unauthorized: return "Not signed in. Open AmakaFlow, sign in, then share again."
             case .serverError(let code, let body):
-                return "Server error (\(code)): \(body.prefix(200))"
-            case .decodingFailed(let error):
-                return "Failed to parse response: \(error.localizedDescription)"
+                if code == 422 || code == 400 {
+                    return "Couldn't parse that workout (\(code)): \(body.prefix(160))"
+                }
+                if code >= 500 {
+                    return "Import service error (\(code)). Retry in a moment."
+                }
+                return "Import failed (\(code)): \(body.prefix(160))"
+            case .decodingFailed:
+                return "Couldn't read the import response. Retry or paste the link in Sources."
             case .noURLsFound:
-                return "No URLs found in shared content"
+                return "No URLs found in shared content. Share a link or paste text in Sources."
             }
         }
     }

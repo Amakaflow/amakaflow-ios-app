@@ -91,6 +91,13 @@
 		AK00FIX001B /* SocialModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX001A /* SocialModels.swift */; };
 		AK00FIX002B /* TrainingProgram.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX002A /* TrainingProgram.swift */; };
 		AK00FIX003B /* WorkoutSaveRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX003A /* WorkoutSaveRequest.swift */; };
+		AMA2285DRFTBLD /* SocialImportDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285DRFTREF /* SocialImportDraft.swift */; };
+		AMA2285FAILBLD /* SocialImportFailure.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285FAILREF /* SocialImportFailure.swift */; };
+		AMA2285VMBLD /* SocialImportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285VMREF /* SocialImportViewModel.swift */; };
+		AMA2285FLOWBLD /* SocialImportFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285FLOWREF /* SocialImportFlowView.swift */; };
+		AMA2285PREVBLD /* SocialImportPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285PREVREF /* SocialImportPreviewView.swift */; };
+		AMA2285PENDBLD /* PendingShareImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285PENDREF /* PendingShareImportCoordinator.swift */; };
+		AMA2285TSTBLD /* SocialImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285TSTREF /* SocialImportTests.swift */; };
 		AK00FIX004B /* StravaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX004A /* StravaService.swift */; };
 		AK00FIX005B /* AnalyticsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX005A /* AnalyticsViewModel.swift */; };
 		AK00FIX006B /* CalendarSyncViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX006A /* CalendarSyncViewModel.swift */; };
@@ -564,6 +571,13 @@
 		AK00FIX001A /* SocialModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialModels.swift; path = ../AmakaFlow/Models/SocialModels.swift; sourceTree = "<group>"; };
 		AK00FIX002A /* TrainingProgram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TrainingProgram.swift; path = ../AmakaFlow/Models/TrainingProgram.swift; sourceTree = "<group>"; };
 		AK00FIX003A /* WorkoutSaveRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSaveRequest.swift; path = ../AmakaFlow/Models/WorkoutSaveRequest.swift; sourceTree = "<group>"; };
+		AMA2285DRFTREF /* SocialImportDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialImportDraft.swift; path = ../AmakaFlow/Models/SocialImportDraft.swift; sourceTree = SOURCE_ROOT; };
+		AMA2285FAILREF /* SocialImportFailure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialImportFailure.swift; path = ../AmakaFlow/Models/SocialImportFailure.swift; sourceTree = SOURCE_ROOT; };
+		AMA2285VMREF /* SocialImportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialImportViewModel.swift; path = ../AmakaFlow/ViewModels/SocialImportViewModel.swift; sourceTree = SOURCE_ROOT; };
+		AMA2285FLOWREF /* SocialImportFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialImportFlowView.swift; path = ../AmakaFlow/Views/SocialImport/SocialImportFlowView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2285PREVREF /* SocialImportPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialImportPreviewView.swift; path = ../AmakaFlow/Views/SocialImport/SocialImportPreviewView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2285PENDREF /* PendingShareImportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PendingShareImportCoordinator.swift; path = ../AmakaFlow/Services/PendingShareImportCoordinator.swift; sourceTree = SOURCE_ROOT; };
+		AMA2285TSTREF /* SocialImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialImportTests.swift; path = AmakaFlowCompanionTests/SocialImportTests.swift; sourceTree = "<group>"; };
 		AK00FIX004A /* StravaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StravaService.swift; path = ../AmakaFlow/Services/StravaService.swift; sourceTree = "<group>"; };
 		AK00FIX005A /* AnalyticsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AnalyticsViewModel.swift; path = ../AmakaFlow/ViewModels/AnalyticsViewModel.swift; sourceTree = "<group>"; };
 		AK00FIX006A /* CalendarSyncViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarSyncViewModel.swift; path = ../AmakaFlow/ViewModels/CalendarSyncViewModel.swift; sourceTree = "<group>"; };
@@ -1228,6 +1242,7 @@
 				AMA433HKPVDRA /* HealthKitProvider.swift */,
 				AMA435SACCSVCREF /* SuggestionAcceptanceService.swift */,
 				AMA446WCMODREF /* WorkoutCompletionModule.swift */,
+				AMA2285PENDREF /* PendingShareImportCoordinator.swift */,
 				AK00NUT002A /* NutritionViewModel.swift */,
 				AK00AFL005A /* FoodLoggingViewModel.swift */,
 				AK00NUT003A /* NutritionDashboardCard.swift */,
@@ -1399,6 +1414,8 @@
 				AK00FIX001A /* SocialModels.swift */,
 				AK00FIX002A /* TrainingProgram.swift */,
 				AK00FIX003A /* WorkoutSaveRequest.swift */,
+				AMA2285DRFTREF /* SocialImportDraft.swift */,
+				AMA2285FAILREF /* SocialImportFailure.swift */,
 				AK00FIX004A /* StravaService.swift */,
 				AK00FIX005A /* AnalyticsViewModel.swift */,
 				AK00FIX006A /* CalendarSyncViewModel.swift */,
@@ -1409,9 +1426,12 @@
 				AK00FIX008A /* ProgramsViewModel.swift */,
 				AK00FIX009A /* StravaViewModel.swift */,
 				AK00FIX010A /* WorkoutEditorViewModel.swift */,
+				AMA2285VMREF /* SocialImportViewModel.swift */,
 				AK00FIX011A /* AnalyticsView.swift */,
 				AK00FIX012A /* ExportView.swift */,
 				AK00FIX013A /* ImportURLView.swift */,
+				AMA2285FLOWREF /* SocialImportFlowView.swift */,
+				AMA2285PREVREF /* SocialImportPreviewView.swift */,
 				AK00FIX014A /* ProgramDetailView.swift */,
 				AK00FIX015A /* ProgramsListView.swift */,
 				AK00FIX016A /* CalendarSyncView.swift */,
@@ -1434,6 +1454,7 @@
 				AK00TST007A /* FeedViewModelTests.swift */,
 				AK00TST008A /* InstagramImportModeTests.swift */,
 				AK00TST009A /* ManualInstagramIngestionTests.swift */,
+				AMA2285TSTREF /* SocialImportTests.swift */,
 				AK00TST010A /* MockURLProtocol.swift */,
 				AK00TST011A /* PairingTests.swift */,
 				AK00TST012A /* Phase2ViewModelTests.swift */,
@@ -2018,6 +2039,12 @@
 				AK00FIX001B /* SocialModels.swift in Sources */,
 				AK00FIX002B /* TrainingProgram.swift in Sources */,
 				AK00FIX003B /* WorkoutSaveRequest.swift in Sources */,
+				AMA2285DRFTBLD /* SocialImportDraft.swift in Sources */,
+				AMA2285FAILBLD /* SocialImportFailure.swift in Sources */,
+				AMA2285VMBLD /* SocialImportViewModel.swift in Sources */,
+				AMA2285FLOWBLD /* SocialImportFlowView.swift in Sources */,
+				AMA2285PREVBLD /* SocialImportPreviewView.swift in Sources */,
+				AMA2285PENDBLD /* PendingShareImportCoordinator.swift in Sources */,
 				AK00FIX004B /* StravaService.swift in Sources */,
 				AK00FIX005B /* AnalyticsViewModel.swift in Sources */,
 				AK00FIX006B /* CalendarSyncViewModel.swift in Sources */,
@@ -2148,6 +2175,7 @@
 				AK00TST007B /* FeedViewModelTests.swift in Sources */,
 				AK00TST008B /* InstagramImportModeTests.swift in Sources */,
 				AK00TST009B /* ManualInstagramIngestionTests.swift in Sources */,
+				AMA2285TSTBLD /* SocialImportTests.swift in Sources */,
 				AK00TST010B /* MockURLProtocol.swift in Sources */,
 				AK00TST011B /* PairingTests.swift in Sources */,
 				AK00TST012B /* Phase2ViewModelTests.swift in Sources */,

@@ -317,6 +317,54 @@ class FixtureAPIService: APIServiceProviding {
         return IngestTextResponse(name: "Fixture Workout", sport: "strength", source: source)
     }
 
+    func ingestSocialURL(url: String, platform: SocialImportPlatform) async throws -> Data {
+        print("[FixtureAPIService] Stub: ingestSocialURL(\(platform.rawValue))")
+        let payload: [String: Any] = [
+            "title": "Fixture Social Import",
+            "sport": "strength",
+            "source_url": url,
+            "blocks": [
+                ["exercises": [
+                    ["name": "Fixture Squat", "sets": 3, "reps": 10]
+                ]]
+            ]
+        ]
+        return try JSONSerialization.data(withJSONObject: payload)
+    }
+
+    func ingestSocialText(text: String, source: String?) async throws -> Data {
+        print("[FixtureAPIService] Stub: ingestSocialText")
+        let payload: [String: Any] = [
+            "title": "Fixture Text Import",
+            "sport": "strength",
+            "source": source as Any,
+            "blocks": [
+                ["exercises": [
+                    ["name": "Fixture Press", "sets": 3, "reps": 8]
+                ]]
+            ]
+        ]
+        return try JSONSerialization.data(withJSONObject: payload)
+    }
+
+    func ingestSocialImage(imageData: Data, filename: String) async throws -> Data {
+        print("[FixtureAPIService] Stub: ingestSocialImage(\(filename))")
+        let payload: [String: Any] = [
+            "title": "Fixture Screenshot Import",
+            "sport": "strength",
+            "blocks": [
+                ["exercises": [
+                    ["name": "Fixture Row", "sets": 3, "reps": 12]
+                ]]
+            ]
+        ]
+        return try JSONSerialization.data(withJSONObject: payload)
+    }
+
+    func socialImportEquipmentContext() async -> (empty: Bool, note: String?) {
+        (true, "Fixture: no equipment profile — continuing.")
+    }
+
     func transcribeAudio(
         audioData: String,
         provider: String,
@@ -845,8 +893,34 @@ class FixtureAPIService: APIServiceProviding {
     // MARK: - Workout Save (AMA-1231)
 
     func saveWorkout(_ request: WorkoutSaveRequest) async throws -> Workout {
-        print("[FixtureAPIService] Stub: saveWorkout -> fixture workout")
-        return try FixtureLoader.loadWorkouts().first!
+        print("[FixtureAPIService] Stub: saveWorkout -> fixture workout (source=\(request.source ?? "nil"))")
+        let source = request.source.flatMap(WorkoutSource.init(rawValue:)) ?? .manual
+        let intervals: [WorkoutInterval] = request.intervals.compactMap { interval in
+            switch interval.type {
+            case "reps":
+                return .reps(
+                    sets: interval.sets,
+                    reps: interval.reps ?? 10,
+                    name: interval.name ?? "Exercise",
+                    load: interval.load,
+                    restSec: interval.restSeconds,
+                    followAlongUrl: nil
+                )
+            case "time":
+                return .time(seconds: interval.seconds ?? 60, target: interval.target ?? interval.name)
+            default:
+                return nil
+            }
+        }
+        return Workout(
+            id: "fixture-saved-\(UUID().uuidString)",
+            name: request.name,
+            sport: WorkoutSport(rawValue: request.sport) ?? .strength,
+            duration: max(intervals.count * 180, 600),
+            intervals: intervals,
+            source: source,
+            sourceUrl: request.sourceUrl
+        )
     }
 
     // MARK: - Calendar Sync (AMA-1238)

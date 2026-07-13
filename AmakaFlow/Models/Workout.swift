@@ -134,9 +134,8 @@ enum WorkoutSource: String, Codable {
     case stryd
     case gymClass = "gym_class"
 
-    // Legacy / local-only sources that are still present in fixtures and older
-    // saved workouts. They intentionally map to no AMA-1999 provenance badge
-    // unless WorkoutSourceProvenance opts them in.
+    // AMA-2285: youtube / image / ai / coach now show provenance badges.
+    // `amaka` and `other` remain for fixtures / unknown payloads.
     case youtube
     case image
     case ai
@@ -159,6 +158,16 @@ struct WorkoutSourceProvenance: Equatable {
     static func badge(for source: String?) -> WorkoutSourceProvenance? {
         guard let normalized = normalize(source) else { return nil }
         switch normalized {
+        case "manual", "gym_manual_sync":
+            return WorkoutSourceProvenance(rawValue: normalized, label: "Manual")
+        case "ai":
+            return WorkoutSourceProvenance(rawValue: normalized, label: "AI")
+        case "coach":
+            return WorkoutSourceProvenance(rawValue: normalized, label: "Coach")
+        case "youtube":
+            return WorkoutSourceProvenance(rawValue: normalized, label: "YouTube")
+        case "image":
+            return WorkoutSourceProvenance(rawValue: normalized, label: "Screenshot")
         case "smart_planner", "amaka":
             return WorkoutSourceProvenance(rawValue: normalized, label: "AI Coach")
         case "suggestion_accepted":
@@ -186,7 +195,7 @@ struct WorkoutSourceProvenance: Equatable {
 
     static func isExternal(_ source: String?) -> Bool {
         guard let normalized = normalize(source) else { return false }
-        return ["instagram", "tiktok", "garmin", "runna", "stryd"].contains(normalized)
+        return ["instagram", "tiktok", "youtube", "image", "garmin", "runna", "stryd"].contains(normalized)
     }
 
     static func externalLabel(for source: String?) -> String? {
@@ -194,6 +203,8 @@ struct WorkoutSourceProvenance: Equatable {
         switch normalized {
         case "instagram": return "Instagram"
         case "tiktok": return "TikTok"
+        case "youtube": return "YouTube"
+        case "image": return "Screenshot"
         case "garmin": return "Garmin"
         case "runna": return "Runna"
         case "stryd": return "Stryd"

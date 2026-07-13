@@ -15,6 +15,9 @@ struct SourcesView: View {
     @State private var showingImageImport = false
     @State private var showingInstagramImport = false
     @State private var showingManualInstagramImport = false
+    @State private var showingYouTubeImport = false
+    @State private var showingTikTokImport = false
+    @State private var showingPlainTextImport = false
 
     var body: some View {
         NavigationStack {
@@ -47,6 +50,26 @@ struct SourcesView: View {
             }
             .sheet(isPresented: $showingAIImport) {
                 AIImportView()
+            }
+            .sheet(isPresented: $showingYouTubeImport) {
+                SocialImportFlowView(mode: .url(platformHint: .youtube)) {
+                    Task { await viewModel.refreshWorkouts() }
+                }
+            }
+            .sheet(isPresented: $showingTikTokImport) {
+                SocialImportFlowView(mode: .url(platformHint: .tiktok)) {
+                    Task { await viewModel.refreshWorkouts() }
+                }
+            }
+            .sheet(isPresented: $showingPlainTextImport) {
+                SocialImportFlowView(mode: .plainText) {
+                    Task { await viewModel.refreshWorkouts() }
+                }
+            }
+            .sheet(isPresented: $showingImageImport) {
+                ImageImportView {
+                    Task { await viewModel.refreshWorkouts() }
+                }
             }
         }
     }
@@ -102,9 +125,7 @@ struct SourcesView: View {
                     iconColor: Color(hex: "FF0000"),
                     title: "YouTube",
                     subtitle: "Paste link or browse imports",
-                    badge: "3 new",
-                    badgeColor: Theme.Colors.accentOrange,
-                    action: {}
+                    action: { showingYouTubeImport = true }
                 )
 
                 // Instagram
@@ -131,9 +152,16 @@ struct SourcesView: View {
                     iconColor: Color(hex: "00F2EA"),
                     title: "TikTok",
                     subtitle: "Import workout videos",
-                    badge: "1 new",
-                    badgeColor: Theme.Colors.accentOrange,
-                    action: {}
+                    action: { showingTikTokImport = true }
+                )
+
+                // Plain text
+                SourceRow(
+                    icon: "text.alignleft",
+                    iconColor: Theme.Colors.accentBlue,
+                    title: "Paste workout text",
+                    subtitle: "Captions, notes, or a written plan",
+                    action: { showingPlainTextImport = true }
                 )
 
                 // AI Import
