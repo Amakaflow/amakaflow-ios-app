@@ -66,7 +66,6 @@ struct LibraryView: View {
         .accessibilityIdentifier("library_screen")
     }
 
-
     private var libraryCreateFAB: some View {
         Button {
             showingAddToLibrary = true

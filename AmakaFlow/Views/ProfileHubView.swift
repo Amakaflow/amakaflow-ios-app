@@ -59,6 +59,12 @@ struct ProfileHubView: View {
                     ActivityHistoryView()
                 case .coach:
                     CoachChatView()
+                        .overlay(alignment: .top) {
+                            Text(" ")
+                                .font(.system(size: 1))
+                                .opacity(0.01)
+                                .accessibilityIdentifier("coach_screen")
+                        }
                 }
             }
             .task {
