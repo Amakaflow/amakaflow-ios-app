@@ -17,7 +17,7 @@ protocol TelegramLinkAPIProviding {
 }
 
 /// Protocol defining the API service interface for dependency injection
-protocol APIServiceProviding: TelegramLinkAPIProviding {
+protocol APIServiceProviding: TelegramLinkAPIProviding, SocialImportAPIProviding {
     // MARK: - Workouts
 
     /// Fetch workouts from backend

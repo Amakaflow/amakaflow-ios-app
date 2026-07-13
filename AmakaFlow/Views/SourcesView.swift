@@ -15,6 +15,9 @@ struct SourcesView: View {
     @State private var showingImageImport = false
     @State private var showingInstagramImport = false
     @State private var showingManualInstagramImport = false
+    @State private var showingYouTubeImport = false
+    @State private var showingTikTokImport = false
+    @State private var showingPlainTextImport = false
 
     var body: some View {
         NavigationStack {
@@ -40,13 +43,37 @@ struct SourcesView: View {
                     .accessibilityIdentifier("sources_screen")
             }
             .sheet(isPresented: $showingInstagramImport) {
-                InstagramReelIngestionView(apiService: APIService.shared)
+                SocialImportFlowView(mode: .url(platformHint: .instagram)) {
+                    Task { await viewModel.refreshWorkouts() }
+                }
             }
             .sheet(isPresented: $showingManualInstagramImport) {
-                ManualInstagramIngestionView(apiService: APIService.shared)
+                SocialImportFlowView(mode: .plainText(platform: .instagram)) {
+                    Task { await viewModel.refreshWorkouts() }
+                }
             }
             .sheet(isPresented: $showingAIImport) {
                 AIImportView()
+            }
+            .sheet(isPresented: $showingYouTubeImport) {
+                SocialImportFlowView(mode: .url(platformHint: .youtube)) {
+                    Task { await viewModel.refreshWorkouts() }
+                }
+            }
+            .sheet(isPresented: $showingTikTokImport) {
+                SocialImportFlowView(mode: .url(platformHint: .tiktok)) {
+                    Task { await viewModel.refreshWorkouts() }
+                }
+            }
+            .sheet(isPresented: $showingPlainTextImport) {
+                SocialImportFlowView(mode: .plainText(platform: .manual)) {
+                    Task { await viewModel.refreshWorkouts() }
+                }
+            }
+            .sheet(isPresented: $showingImageImport) {
+                ImageImportView {
+                    Task { await viewModel.refreshWorkouts() }
+                }
             }
         }
     }
@@ -101,11 +128,10 @@ struct SourcesView: View {
                     icon: "play.rectangle.fill",
                     iconColor: Color(hex: "FF0000"),
                     title: "YouTube",
-                    subtitle: "Paste link or browse imports",
-                    badge: "3 new",
-                    badgeColor: Theme.Colors.accentOrange,
-                    action: {}
-                )
+                    subtitle: "Paste link or browse imports"
+                ) {
+                    showingYouTubeImport = true
+                }
 
                 // Instagram
                 SourceRow(
@@ -114,27 +140,35 @@ struct SourcesView: View {
                     title: "Instagram",
                     subtitle: instagramImportMode == .automatic
                         ? "Import from saved reels"
-                        : "Paste caption text",
-                    action: {
-                        switch instagramImportMode {
-                        case .automatic:
-                            showingInstagramImport = true
-                        case .manual:
-                            showingManualInstagramImport = true
-                        }
+                        : "Paste caption text"
+                ) {
+                    switch instagramImportMode {
+                    case .automatic:
+                        showingInstagramImport = true
+                    case .manual:
+                        showingManualInstagramImport = true
                     }
-                )
+                }
 
                 // TikTok
                 SourceRow(
                     icon: "music.note",
                     iconColor: Color(hex: "00F2EA"),
                     title: "TikTok",
-                    subtitle: "Import workout videos",
-                    badge: "1 new",
-                    badgeColor: Theme.Colors.accentOrange,
-                    action: {}
-                )
+                    subtitle: "Import workout videos"
+                ) {
+                    showingTikTokImport = true
+                }
+
+                // Plain text
+                SourceRow(
+                    icon: "text.alignleft",
+                    iconColor: Theme.Colors.accentBlue,
+                    title: "Paste workout text",
+                    subtitle: "Captions, notes, or a written plan"
+                ) {
+                    showingPlainTextImport = true
+                }
 
                 // AI Import
                 SourceRow(
@@ -233,13 +267,15 @@ private struct SourceRow: View {
     let iconColor: Color
     let title: String
     let subtitle: String
-    var badge: String? = nil
+    var badge: String?
     var badgeColor: Color = .clear
     var isGradient: Bool = false
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            action()
+        } label: {
             HStack(spacing: Theme.Spacing.md) {
                 // Icon
                 ZStack {

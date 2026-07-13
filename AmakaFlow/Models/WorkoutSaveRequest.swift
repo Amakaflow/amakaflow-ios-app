@@ -25,6 +25,10 @@ struct WorkoutSaveRequest: Codable {
     var name: String
     var sport: String
     var intervals: [WorkoutSaveInterval]
+    /// Provenance raw value (instagram / tiktok / youtube / manual / …). AMA-2285.
+    var source: String?
+    /// Optional origin URL for social imports. AMA-2285.
+    var sourceUrl: String?
 
     /// Convert from existing Workout model for edit mode
     static func from(workout: Workout) -> WorkoutSaveRequest {
@@ -49,7 +53,9 @@ struct WorkoutSaveRequest: Codable {
                     // Flatten repeat groups for now — Phase 1 doesn't support nested editing
                     return WorkoutSaveInterval(type: "rest")
                 }
-            }
+            },
+            source: workout.source.rawValue,
+            sourceUrl: workout.sourceUrl
         )
     }
 }

@@ -318,8 +318,12 @@ final class WorkoutModelTests: XCTestCase {
 
     func testWorkoutSourceBadgeMappingIsExhaustiveForPlannedWorkoutSources() {
         let cases: [(String?, String?)] = [
-            ("manual", nil),
-            ("gym_manual_sync", nil),
+            ("manual", "Manual"),
+            ("gym_manual_sync", "Manual"),
+            ("ai", "AI"),
+            ("coach", "Coach"),
+            ("youtube", "YouTube"),
+            ("image", "Screenshot"),
             ("smart_planner", "AI Coach"),
             ("amaka", "AI Coach"),
             ("suggestion_accepted", "AI Suggestion"),

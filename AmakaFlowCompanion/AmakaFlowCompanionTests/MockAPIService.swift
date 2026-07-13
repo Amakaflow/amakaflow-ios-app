@@ -32,6 +32,10 @@ class MockAPIService: APIServiceProviding {
     var parseVoiceWorkoutResult: Result<VoiceWorkoutParseResponse, Error>?
     var ingestInstagramReelResult: Result<IngestInstagramReelResponse, Error>?
     var ingestTextResult: Result<IngestTextResponse, Error>?
+    var ingestSocialURLResult: Result<Data, Error>?
+    var ingestSocialTextResult: Result<Data, Error>?
+    var ingestSocialImageResult: Result<Data, Error>?
+    var socialImportEquipmentContextResult: (empty: Bool, note: String?) = (true, "Mock: empty equipment")
     var transcribeAudioResult: Result<CloudTranscriptionResponse, Error>?
     var syncPersonalDictionaryResult: Result<PersonalDictionaryResponse, Error> = .success(PersonalDictionaryResponse(corrections: [:], customTerms: []))
     var fetchPersonalDictionaryResult: Result<PersonalDictionaryResponse, Error> = .success(PersonalDictionaryResponse(corrections: [:], customTerms: []))
@@ -56,6 +60,11 @@ class MockAPIService: APIServiceProviding {
     var parseVoiceWorkoutCalled = false
     var ingestInstagramReelCalled = false
     var ingestTextCalled = false
+    var ingestSocialURLCalled = false
+    var ingestSocialTextCalled = false
+    var ingestSocialImageCalled = false
+    var lastSaveWorkoutRequest: WorkoutSaveRequest?
+    var saveWorkoutResult: Result<Workout, Error>?
     var transcribeAudioCalled = false
     var syncPersonalDictionaryCalled = false
     var fetchPersonalDictionaryCalled = false
@@ -142,6 +151,34 @@ class MockAPIService: APIServiceProviding {
             throw APIError.notImplemented
         }
         return try result.get()
+    }
+
+    func ingestSocialURL(url: String, platform: SocialImportPlatform) async throws -> Data {
+        ingestSocialURLCalled = true
+        guard let result = ingestSocialURLResult else {
+            throw APIError.notImplemented
+        }
+        return try result.get()
+    }
+
+    func ingestSocialText(text: String, source: String?) async throws -> Data {
+        ingestSocialTextCalled = true
+        guard let result = ingestSocialTextResult else {
+            throw APIError.notImplemented
+        }
+        return try result.get()
+    }
+
+    func ingestSocialImage(imageData: Data, filename: String) async throws -> Data {
+        ingestSocialImageCalled = true
+        guard let result = ingestSocialImageResult else {
+            throw APIError.notImplemented
+        }
+        return try result.get()
+    }
+
+    func socialImportEquipmentContext() async -> (empty: Bool, note: String?) {
+        socialImportEquipmentContextResult
     }
 
     func transcribeAudio(
@@ -388,7 +425,20 @@ class MockAPIService: APIServiceProviding {
     var saveWorkoutCalled = false
     func saveWorkout(_ request: WorkoutSaveRequest) async throws -> Workout {
         saveWorkoutCalled = true
-        throw APIError.notImplemented
+        lastSaveWorkoutRequest = request
+        if let result = saveWorkoutResult {
+            return try result.get()
+        }
+        let source = request.source.flatMap(WorkoutSource.init(rawValue:)) ?? .manual
+        return Workout(
+            id: "mock-saved-\(UUID().uuidString)",
+            name: request.name,
+            sport: WorkoutSport(rawValue: request.sport) ?? .strength,
+            duration: 1800,
+            intervals: [],
+            source: source,
+            sourceUrl: request.sourceUrl
+        )
     }
 
     // MARK: - Calendar Sync (AMA-1238)

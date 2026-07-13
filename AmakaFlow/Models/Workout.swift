@@ -134,9 +134,8 @@ enum WorkoutSource: String, Codable {
     case stryd
     case gymClass = "gym_class"
 
-    // Legacy / local-only sources that are still present in fixtures and older
-    // saved workouts. They intentionally map to no AMA-1999 provenance badge
-    // unless WorkoutSourceProvenance opts them in.
+    // AMA-2285: youtube / image / ai / coach now show provenance badges.
+    // `amaka` and `other` remain for fixtures / unknown payloads.
     case youtube
     case image
     case ai
@@ -158,35 +157,33 @@ struct WorkoutSourceProvenance: Equatable {
 
     static func badge(for source: String?) -> WorkoutSourceProvenance? {
         guard let normalized = normalize(source) else { return nil }
-        switch normalized {
-        case "smart_planner", "amaka":
-            return WorkoutSourceProvenance(rawValue: normalized, label: "AI Coach")
-        case "suggestion_accepted":
-            return WorkoutSourceProvenance(rawValue: normalized, label: "AI Suggestion")
-        case "training_program", "template":
-            return WorkoutSourceProvenance(rawValue: normalized, label: "Program")
-        case "connected_calendar":
-            return WorkoutSourceProvenance(rawValue: normalized, label: "Calendar")
-        case "instagram":
-            return WorkoutSourceProvenance(rawValue: normalized, label: "Instagram")
-        case "tiktok":
-            return WorkoutSourceProvenance(rawValue: normalized, label: "TikTok")
-        case "garmin":
-            return WorkoutSourceProvenance(rawValue: normalized, label: "Garmin")
-        case "runna":
-            return WorkoutSourceProvenance(rawValue: normalized, label: "Runna")
-        case "stryd":
-            return WorkoutSourceProvenance(rawValue: normalized, label: "Stryd")
-        case "gym_class":
-            return WorkoutSourceProvenance(rawValue: normalized, label: "Gym Class")
-        default:
-            return nil
-        }
+        let labels: [String: String] = [
+            "manual": "Manual",
+            "gym_manual_sync": "Manual",
+            "ai": "AI",
+            "coach": "Coach",
+            "youtube": "YouTube",
+            "image": "Screenshot",
+            "smart_planner": "AI Coach",
+            "amaka": "AI Coach",
+            "suggestion_accepted": "AI Suggestion",
+            "training_program": "Program",
+            "template": "Program",
+            "connected_calendar": "Calendar",
+            "instagram": "Instagram",
+            "tiktok": "TikTok",
+            "garmin": "Garmin",
+            "runna": "Runna",
+            "stryd": "Stryd",
+            "gym_class": "Gym Class"
+        ]
+        guard let label = labels[normalized] else { return nil }
+        return WorkoutSourceProvenance(rawValue: normalized, label: label)
     }
 
     static func isExternal(_ source: String?) -> Bool {
         guard let normalized = normalize(source) else { return false }
-        return ["instagram", "tiktok", "garmin", "runna", "stryd"].contains(normalized)
+        return ["instagram", "tiktok", "youtube", "image", "garmin", "runna", "stryd"].contains(normalized)
     }
 
     static func externalLabel(for source: String?) -> String? {
@@ -194,6 +191,8 @@ struct WorkoutSourceProvenance: Equatable {
         switch normalized {
         case "instagram": return "Instagram"
         case "tiktok": return "TikTok"
+        case "youtube": return "YouTube"
+        case "image": return "Screenshot"
         case "garmin": return "Garmin"
         case "runna": return "Runna"
         case "stryd": return "Stryd"

@@ -23,8 +23,10 @@ struct AmakaFlowCompanionApp: App {
     @StateObject private var watchConnectivity = WatchConnectivityManager.shared
     @StateObject private var garminConnectivity = GarminConnectManager.shared
     @StateObject private var deepLinkManager = DeepLinkManager.shared
+    @StateObject private var pendingShareImport = PendingShareImportCoordinator()
     @Environment(\.scenePhase) private var scenePhase
     @State private var mentalModelGateRefresh = false
+    @StateObject private var sharePreviewViewModel = SocialImportViewModel()
 
     init() {
         #if DEBUG
@@ -204,6 +206,10 @@ struct AmakaFlowCompanionApp: App {
                     Task {
                         await workoutsViewModel.checkPendingWorkouts()
                     }
+                    pendingShareImport.consumePendingImports()
+                    if let draft = pendingShareImport.pendingDraft {
+                        sharePreviewViewModel.loadDraft(draft)
+                    }
                 }
             }
         }
@@ -259,6 +265,12 @@ struct AmakaFlowCompanionApp: App {
                 // Load workouts from API
                 await workoutsViewModel.loadWorkouts()
 
+                // AMA-2285: surface Share Extension results as editable preview
+                pendingShareImport.consumePendingImports()
+                if let draft = pendingShareImport.pendingDraft {
+                    sharePreviewViewModel.loadDraft(draft)
+                }
+
                 // Initialize WatchConnectivity asynchronously (non-blocking)
                 // Skip when UITEST_SKIP_APPLE_WATCH=true to avoid system permission modal (AMA-549)
                 #if DEBUG
@@ -308,6 +320,40 @@ struct AmakaFlowCompanionApp: App {
                         // Refresh workouts after import
                         Task { await workoutsViewModel.refreshWorkouts() }
                     }
+                }
+            }
+            .sheet(isPresented: Binding(
+                get: { pendingShareImport.pendingDraft != nil },
+                set: { presented in
+                    if !presented {
+                        pendingShareImport.clearPresentedDraft()
+                        sharePreviewViewModel.reset()
+                    }
+                }
+            )) {
+                if let draft = pendingShareImport.pendingDraft {
+                    NavigationStack {
+                        SocialImportPreviewView(
+                            viewModel: sharePreviewViewModel,
+                            draft: draft
+                        ) {
+                            pendingShareImport.clearPresentedDraft()
+                            sharePreviewViewModel.reset()
+                            Task { await workoutsViewModel.refreshWorkouts() }
+                        }
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Close") {
+                                    pendingShareImport.clearPresentedDraft()
+                                    sharePreviewViewModel.reset()
+                                }
+                            }
+                        }
+                    }
+                    .onAppear {
+                        sharePreviewViewModel.loadDraft(draft)
+                    }
+                    .accessibilityIdentifier("pending_share_import_sheet")
                 }
             }
             // AMA-1811: alert when a deep link doesn't match

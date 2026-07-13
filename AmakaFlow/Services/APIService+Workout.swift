@@ -568,10 +568,17 @@ extension APIService {
 
     /// Save a new or edited workout
     func saveWorkout(_ request: WorkoutSaveRequest) async throws -> Workout {
+        // AMA-2285: provenance-aware path lives in APIService+SocialImport.
+        if let source = request.source, !source.isEmpty {
+            return try await saveWorkoutWithProvenance(request, source: source)
+        }
+
         guard let url = URL(string: "\(baseURL)/workouts/save") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
+        req.timeoutInterval = 15
         req.allHTTPHeaderFields = try await makeAuthHeaders()
+
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         req.httpBody = try encoder.encode(request)
