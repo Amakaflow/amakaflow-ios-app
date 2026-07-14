@@ -74,4 +74,49 @@ extension WorkoutCompletionDetail {
             ]
         )
     }
+
+    /// AMA-2290: live phone completion recorded during a fixture session.
+    static func phoneLiveSample(
+        id: String,
+        from completion: WorkoutCompletion?,
+        setLogs: [SetLog]?
+    ) -> WorkoutCompletionDetail {
+        let startedAt = completion?.startedAt ?? Date()
+        let endedAt = completion?.endedAt ?? startedAt.addingTimeInterval(
+            TimeInterval(completion?.durationSeconds ?? 1800)
+        )
+        let structure: [WorkoutInterval]? = setLogs?.map { log in
+            .reps(
+                sets: log.sets.count,
+                reps: 0,
+                name: log.exerciseName,
+                load: log.sets.compactMap(\.weight).first.map { "\($0)" },
+                restSec: nil,
+                followAlongUrl: nil
+            )
+        }
+        return WorkoutCompletionDetail(
+            id: id,
+            workoutName: completion?.workoutName ?? "Phone Strength",
+            startedAt: startedAt,
+            endedAt: endedAt,
+            durationSeconds: completion?.durationSeconds ?? 1800,
+            avgHeartRate: completion?.avgHeartRate,
+            maxHeartRate: completion?.maxHeartRate,
+            minHeartRate: nil,
+            activeCalories: completion?.activeCalories,
+            totalCalories: completion?.activeCalories,
+            steps: nil,
+            distanceMeters: nil,
+            source: .phone,
+            deviceInfo: CompletionDeviceInfo(model: "iPhone", platform: "ios", osVersion: nil),
+            heartRateSamples: nil,
+            syncedToStrava: false,
+            stravaActivityId: nil,
+            workoutId: completion?.workoutId,
+            workoutStructure: structure ?? [
+                .reps(sets: 3, reps: 8, name: "Strength", load: nil, restSec: nil, followAlongUrl: nil)
+            ]
+        )
+    }
 }

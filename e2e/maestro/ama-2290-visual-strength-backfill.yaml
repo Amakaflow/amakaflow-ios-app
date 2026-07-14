@@ -1,0 +1,137 @@
+# AMA-2290 visual — phone strength record → backfill → Today (watch optional)
+#
+# Auth: UITEST_CLERK_TEST_SESSION + UITEST_SKIP_ONBOARDING + fixtures.
+# No UITEST_GARMIN_PAIRED → Phone is preferred default on Start sheet.
+# UITEST_SKIP_APPLE_WATCH proves watch-optional path.
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2290_visual,email=claude+clerk_test@amakaflow.dev,name=AMA2290 Visual"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+      UITEST_FIXTURES: "emom_strength"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn:
+    id: "library_tab"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_fab"
+    timeout: 15000
+- tapOn:
+    id: "af_library_kind_workout"
+- waitForAnimationToEnd:
+    timeout: 2000
+- scrollUntilVisible:
+    element:
+      text: "Manual EMOM Strength"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    text: "Manual EMOM Strength"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_workout_detail_screen"
+    timeout: 15000
+- tapOn:
+    id: "af_workout_detail_start"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_start_sheet"
+    timeout: 10000
+- assertVisible:
+    id: "af_start_device_phone"
+- tapOn:
+    id: "af_start_device_phone"
+- waitForAnimationToEnd:
+    timeout: 1000
+- takeScreenshot: docs/ama-2290-visual-evidence/01-phone-player
+- tapOn:
+    text: "Start on Phone"
+- waitForAnimationToEnd:
+    timeout: 4000
+- extendedWaitUntil:
+    visible:
+      id: "workout_player_screen"
+    timeout: 15000
+- takeScreenshot: docs/ama-2290-visual-evidence/01b-player-running
+# End early — trainer path: record then backfill (no Watch required)
+- tapOn:
+    id: "ama1842.endWorkout.button"
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "Save & End"
+    commands:
+      - tapOn:
+          text: "Save & End"
+- waitForAnimationToEnd:
+    timeout: 4000
+- extendedWaitUntil:
+    visible:
+      id: "workout_completion_screen"
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "af_strength_backfill"
+    timeout: 10000
+- takeScreenshot: docs/ama-2290-visual-evidence/02-backfill-ui
+# Swipe up to reveal Save & Done / Done commit CTA
+- swipe:
+    direction: UP
+- swipe:
+    direction: UP
+- waitForAnimationToEnd:
+    timeout: 1000
+- runFlow:
+    when:
+      visible: "Save & Done"
+    commands:
+      - tapOn:
+          text: "Save & Done"
+- runFlow:
+    when:
+      visible:
+        id: "completion_done_button"
+    commands:
+      - tapOn:
+          id: "completion_done_button"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: docs/ama-2290-visual-evidence/03-backfill-saved
+# RPE may appear — dismiss if present
+- runFlow:
+    when:
+      visible: "Skip"
+    commands:
+      - tapOn: "Skip"
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn:
+    id: "today_tab"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "today_screen"
+    timeout: 15000
+- takeScreenshot: docs/ama-2290-visual-evidence/04-today-after-phone
+- assertVisible:
+    text: "Phone"

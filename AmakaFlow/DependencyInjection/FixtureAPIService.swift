@@ -252,8 +252,34 @@ class FixtureAPIService: APIServiceProviding {
     // MARK: - Reads (from fixtures)
 
     func fetchWorkouts(isRetry: Bool) async throws -> [Workout] {
-        try FixtureLoader.loadWorkouts()
+        do {
+            let loaded = try FixtureLoader.loadWorkouts()
+            if !loaded.isEmpty {
+                return loaded
+            }
+            print("[FixtureAPIService] FixtureLoader returned empty — seeding AMA-2290 phone strength workout")
+            return [Self.phoneStrengthFixtureWorkout]
+        } catch {
+            print("[FixtureAPIService] FixtureLoader failed (\(error)) — seeding AMA-2290 phone strength workout")
+            return [Self.phoneStrengthFixtureWorkout]
+        }
     }
+
+    /// Guaranteed strength fixture for phone-first record → backfill visual / dogfood path.
+    static let phoneStrengthFixtureWorkout = Workout(
+        id: "fixture-emom-001",
+        name: "Manual EMOM Strength",
+        sport: .strength,
+        duration: 1200,
+        intervals: [
+            .warmup(seconds: 120, target: nil),
+            .reps(sets: 3, reps: 5, name: "Power Clean", load: "70% 1RM", restSec: 30, followAlongUrl: nil),
+            .reps(sets: 3, reps: 8, name: "Push Press", load: nil, restSec: 45, followAlongUrl: nil),
+            .cooldown(seconds: 120, target: nil)
+        ],
+        description: "Every minute on the minute — phone strength backfill seed (AMA-2290)",
+        source: .manual
+    )
 
     func fetchScheduledWorkouts(isRetry: Bool) async throws -> [ScheduledWorkout] {
         // Wrap first two fixture workouts as scheduled for today/tomorrow
@@ -345,7 +371,11 @@ class FixtureAPIService: APIServiceProviding {
     }
 
     func postWorkoutCompletion(_ completion: WorkoutCompletionRequest, isRetry: Bool, requestID: String?) async throws -> WorkoutCompletionResponse {
-        print("[FixtureAPIService] Stub: postWorkoutCompletion -> success (requestID=\(requestID ?? "nil"))")
+        print("[FixtureAPIService] Stub: postWorkoutCompletion source=\(completion.source) (requestID=\(requestID ?? "nil"))")
+        // AMA-2290: phone completions land on Today diary for fixture e2e.
+        if completion.source == "phone" {
+            return Self.recordPhoneCompletion(request: completion)
+        }
         return WorkoutCompletionResponse(
             completionId: "fixture-completion-001",
             id: "fixture-completion-001",

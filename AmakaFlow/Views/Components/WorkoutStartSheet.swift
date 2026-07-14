@@ -136,7 +136,7 @@ struct WorkoutStartSheet: View {
         case .apple:
             return WorkoutStartDefaults.appleAvailabilityLabel(watchReachable: appleWatchReachable)
         case .phone:
-            return "Phone follow-along"
+            return "Record on phone — Watch optional"
         }
     }
 

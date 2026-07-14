@@ -19,6 +19,14 @@ struct WorkoutCompletionView: View {
     @ObservedObject var engine: WorkoutEngine
 
     @State private var showPulse = true
+    /// AMA-2290: editable post-stop strength drafts (manual; AI never required).
+    @State private var backfillDrafts: [StrengthBackfillExerciseDraft] = []
+    @State private var isCommittingBackfill = false
+
+    private var isSaveInFlight: Bool {
+        if case .inFlight = engine.saveStatus { return true }
+        return false
+    }
 
     var body: some View {
         ZStack {
@@ -36,8 +44,23 @@ struct WorkoutCompletionView: View {
                     // the backend confirmed the save persisted. This
                     // fix splits idle/inFlight/succeeded/failed so
                     // each UI state is explicit.
-                    switch engine.saveStatus {
-                    case .idle, .succeeded:
+                    switch (engine.saveStatus, engine.pendingPhoneCompletion != nil) {
+                    case (.idle, true):
+                        readyToSaveIcon
+                        VStack(spacing: Theme.Spacing.sm) {
+                            Text("Session recorded")
+                                .font(Theme.Typography.title1)
+                                .foregroundColor(Theme.Colors.textPrimary)
+                            Text("Log sets below, then save — AI optional.")
+                                .font(Theme.Typography.body)
+                                .foregroundColor(Theme.Colors.textSecondary)
+                                .multilineTextAlignment(.center)
+                            Text(viewModel.workoutName)
+                                .font(Theme.Typography.caption)
+                                .foregroundColor(Theme.Colors.textTertiary)
+                        }
+                        .accessibilityIdentifier("af_phone_strength_ready_to_save")
+                    case (.idle, false), (.succeeded, _):
                         successIcon
                         VStack(spacing: Theme.Spacing.sm) {
                             Text("Workout Complete!")
@@ -47,7 +70,7 @@ struct WorkoutCompletionView: View {
                                 .font(Theme.Typography.body)
                                 .foregroundColor(Theme.Colors.textSecondary)
                         }
-                    case .inFlight:
+                    case (.inFlight, _):
                         savingIcon
                         VStack(spacing: Theme.Spacing.sm) {
                             Text("Saving workout…")
@@ -57,7 +80,7 @@ struct WorkoutCompletionView: View {
                                 .font(Theme.Typography.body)
                                 .foregroundColor(Theme.Colors.textSecondary)
                         }
-                    case .failed:
+                    case (.failed, _):
                         failureIcon
                         VStack(spacing: Theme.Spacing.sm) {
                             Text("Couldn't save workout")
@@ -80,6 +103,16 @@ struct WorkoutCompletionView: View {
                         EmptyView()
                     } else {
                         noHeartRateDataView
+                    }
+
+                    // AMA-2290: phone-first strength backfill (watch optional; AI never required)
+                    if engine.pendingPhoneCompletion != nil || (!backfillDrafts.isEmpty && engine.offersStrengthBackfill) {
+                        StrengthBackfillView(
+                            drafts: $backfillDrafts,
+                            onSave: { Task { await commitBackfillAndSave() } },
+                            isSaving: isCommittingBackfill || isSaveInFlight
+                        )
+                        .padding(.horizontal, Theme.Spacing.md)
                     }
 
                     Spacer(minLength: Theme.Spacing.xl)
@@ -158,6 +191,9 @@ struct WorkoutCompletionView: View {
             }
         }
         .onAppear {
+            if backfillDrafts.isEmpty, engine.offersStrengthBackfill || engine.pendingPhoneCompletion != nil {
+                backfillDrafts = engine.strengthBackfillDrafts()
+            }
             // Stop pulse animation after initial effect
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                 withAnimation {
@@ -166,7 +202,9 @@ struct WorkoutCompletionView: View {
             }
         }
     }
+}
 
+extension WorkoutCompletionView {
     // MARK: - Success Icon
 
     private var successIcon: some View {
@@ -345,10 +383,11 @@ struct WorkoutCompletionView: View {
                 .font(Theme.Typography.caption)
                 .foregroundColor(Theme.Colors.textSecondary)
 
-            Text("Wear your Apple Watch during workouts to track heart rate")
+            Text("Heart rate is optional — phone strength works without a Watch")
                 .font(Theme.Typography.footnote)
                 .foregroundColor(Theme.Colors.textTertiary)
                 .multilineTextAlignment(.center)
+                .accessibilityIdentifier("af_phone_strength_watch_optional_hint")
         }
         .padding(Theme.Spacing.lg)
         .frame(maxWidth: .infinity)
@@ -384,9 +423,19 @@ struct WorkoutCompletionView: View {
                 .cornerRadius(Theme.CornerRadius.md)
             }
 
-            // Done button
-            Button(action: viewModel.onDone) {
-                Text("Done")
+            // Done / Save — commits deferred phone strength save if still pending
+            Button {
+                Task {
+                    if engine.pendingPhoneCompletion != nil {
+                        await commitBackfillAndSave()
+                        if case .failed = engine.saveStatus {
+                            return
+                        }
+                    }
+                    viewModel.onDone()
+                }
+            } label: {
+                Text(engine.pendingPhoneCompletion != nil ? "Save & Done" : "Done")
                 .font(Theme.Typography.bodyBold)
                 .foregroundColor(Theme.Colors.surface)
                 .frame(maxWidth: .infinity)
@@ -394,8 +443,34 @@ struct WorkoutCompletionView: View {
                 .background(Theme.Colors.textPrimary)
                 .clipShape(Capsule())
             }
+            .disabled(isCommittingBackfill)
             .accessibilityIdentifier("completion_done_button")
         }
+    }
+
+    // MARK: - AMA-2290 Backfill commit
+
+    private var readyToSaveIcon: some View {
+        ZStack {
+            Circle()
+                .fill(Theme.Colors.accentBlue.opacity(0.18))
+                .frame(width: 48, height: 48)
+
+            Image(systemName: "list.bullet.clipboard")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundColor(Theme.Colors.accentBlue)
+        }
+        .accessibilityIdentifier("af_phone_strength_pending_icon")
+    }
+
+    @MainActor
+    private func commitBackfillAndSave() async {
+        guard engine.pendingPhoneCompletion != nil else { return }
+        isCommittingBackfill = true
+        defer { isCommittingBackfill = false }
+        // Manual save is first-class — encode whatever the user entered (weights may be nil).
+        let setLogs = StrengthBackfill.setLogs(from: backfillDrafts)
+        await engine.commitPendingPhoneCompletion(setLogs: setLogs)
     }
 
     // MARK: - Coming Soon Toast
@@ -414,67 +489,4 @@ struct WorkoutCompletionView: View {
         .cornerRadius(Theme.CornerRadius.lg)
         .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
     }
-}
-
-// MARK: - Stat Card
-
-private struct StatCard: View {
-    let icon: String
-    let iconColor: Color
-    let label: String
-    let value: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            HStack(spacing: Theme.Spacing.xs) {
-                Image(systemName: icon)
-                    .font(.system(size: 12))
-                    .foregroundColor(iconColor)
-
-                Text(label)
-                    .font(Theme.Typography.caption)
-                    .foregroundColor(Theme.Colors.textSecondary)
-            }
-
-            Text(value)
-                .font(Theme.Typography.title3)
-                .foregroundColor(Theme.Colors.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Theme.Spacing.md)
-        .background(Theme.Colors.surface)
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
-                .stroke(Theme.Colors.borderLight, lineWidth: 1)
-        )
-        .cornerRadius(Theme.CornerRadius.md)
-    }
-}
-
-// MARK: - Preview
-
-#Preview {
-    let sampleHR = (0..<20).map { i in
-        HeartRateSample(
-            timestamp: Date().addingTimeInterval(Double(i) * 30),
-            value: Int.random(in: 120...160)
-        )
-    }
-
-    return WorkoutCompletionView(
-        viewModel: WorkoutCompletionViewModel(
-            workoutName: "HIIT Cardio Blast",
-            durationSeconds: 2700,
-            deviceMode: .appleWatchPhone,
-            calories: 320,
-            avgHeartRate: 142,
-            maxHeartRate: 175,
-            heartRateSamples: sampleHR,
-            onDismiss: {}
-        ),
-        engine: WorkoutEngine.shared
-    )
-    .preferredColorScheme(.dark)
 }
