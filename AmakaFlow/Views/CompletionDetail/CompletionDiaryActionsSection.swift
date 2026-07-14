@@ -106,7 +106,7 @@ struct CompletionDiaryEnrichSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { viewModel.showingEnrichSheet = false }
+                    Button("Cancel") { viewModel.cancelEnrichNote() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { viewModel.saveEnrichNote() }

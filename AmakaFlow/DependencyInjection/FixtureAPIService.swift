@@ -371,6 +371,14 @@ class FixtureAPIService: APIServiceProviding {
         )
     }
 
+    func fetchCompletions(limit: Int, offset: Int) async throws -> [WorkoutCompletion] {
+        Self.diaryCompletions(limit: limit, offset: offset)
+    }
+
+    func fetchCompletionDetail(id: String) async throws -> WorkoutCompletionDetail {
+        Self.diaryCompletionDetail(id: id)
+    }
+
     // MARK: - Planning (AMA-1147)
 
     func fetchDayStates(from: String, to: String) async throws -> [DayState] { [] }

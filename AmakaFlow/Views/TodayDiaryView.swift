@@ -3,7 +3,8 @@
 //  AmakaFlow
 //
 //  AMA-2292: Daily Driver Today tab — completed-activities diary shell.
-//  AMA-2289: Sync completions (Garmin / phone / Strava-backed) onto the rail.
+//  AMA-2289: Sync completions (Garmin / phone) onto the rail.
+//  Strava landings appear once upstream sync writes completions (mobile BFF TBD).
 //  Plan/schedule chrome is intentionally omitted.
 //
 
@@ -113,7 +114,7 @@ struct TodayDiaryView: View {
                 .font(Theme.Typography.largeTitle)
                 .foregroundColor(Theme.Colors.textPrimary)
                 .accessibilityIdentifier("af_today_empty_state")
-            Text("Today shows finished sessions only — no plan or schedule. Completions sync from Garmin and phone (and Strava when connected) land here automatically.")
+            Text("Today shows finished sessions only — no plan or schedule. Completions sync from Garmin and phone land here automatically.")
                 .font(Theme.Typography.body)
                 .foregroundColor(Theme.Colors.textSecondary)
                 .lineSpacing(3)

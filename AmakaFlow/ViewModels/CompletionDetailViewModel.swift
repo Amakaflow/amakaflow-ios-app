@@ -37,6 +37,9 @@ class CompletionDetailViewModel: ObservableObject {
 
     let completionId: String
     private let dependencies: AppDependencies
+    private var diaryToastTask: Task<Void, Never>?
+    /// Last-saved enrich note so Cancel can discard in-progress edits.
+    private var savedEnrichNote: String = ""
 
     /// User's max heart rate for zone calculations (default: 190)
     var userMaxHR: Int = 190
@@ -338,15 +341,25 @@ class CompletionDetailViewModel: ObservableObject {
         if trimmed.isEmpty {
             presentDiaryToast("Enrich canceled — no note added")
         } else {
+            savedEnrichNote = trimmed
+            enrichNote = trimmed
             presentDiaryToast("Note saved — structure unchanged")
         }
     }
 
+    /// Discard draft enrich text and close the sheet (AMA-2289 CodeRabbit).
+    func cancelEnrichNote() {
+        enrichNote = savedEnrichNote
+        showingEnrichSheet = false
+    }
+
     private func presentDiaryToast(_ message: String) {
+        diaryToastTask?.cancel()
         diaryActionToastMessage = message
         showDiaryActionToast = true
-        Task {
+        diaryToastTask = Task {
             try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard !Task.isCancelled else { return }
             showDiaryActionToast = false
         }
     }

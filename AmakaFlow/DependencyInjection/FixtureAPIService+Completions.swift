@@ -8,19 +8,19 @@
 import Foundation
 
 extension FixtureAPIService {
-    func fetchCompletions(limit: Int, offset: Int) async throws -> [WorkoutCompletion] {
-        // Honest empty diary when UITEST_FIXTURE_STATE=empty
+    /// Fixture completions for Today diary — empty when `UITEST_FIXTURE_STATE=empty`.
+    static func diaryCompletions(limit: Int, offset: Int) -> [WorkoutCompletion] {
         if UITestEnvironment.shared.fixtureState == "empty" {
             print("[FixtureAPIService] UITEST_FIXTURE_STATE=empty → no completions")
             return []
         }
-        // Populated Today diary (Garmin + phone) without live watch pull
         let diary = WorkoutCompletion.todayDiarySampleData()
         if offset >= diary.count { return [] }
         return Array(diary.dropFirst(offset).prefix(limit))
     }
 
-    func fetchCompletionDetail(id: String) async throws -> WorkoutCompletionDetail {
+    /// Fixture completion detail keyed by Today diary ids.
+    static func diaryCompletionDetail(id: String) -> WorkoutCompletionDetail {
         if id == "today-garmin-run" || id.hasPrefix("today-garmin") {
             return WorkoutCompletionDetail.garminTodaySample
         }

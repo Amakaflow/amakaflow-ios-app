@@ -174,6 +174,9 @@ class ActivityHistoryViewModel: ObservableObject {
 
     /// Initial load of completions
     func loadCompletions() async {
+        // AMA-2289: `.workoutCompleted` + pull-to-refresh can overlap; skip re-entrant loads.
+        guard !isLoading else { return }
+
         let hadContent = !completions.isEmpty
         let previousOffset = currentOffset
         let previousHasMoreData = hasMoreData

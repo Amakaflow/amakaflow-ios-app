@@ -148,6 +148,12 @@ final class TodayDiaryTests: XCTestCase {
         XCTAssertFalse(vm.showingEnrichSheet)
         XCTAssertTrue(vm.showDiaryActionToast)
         XCTAssertTrue(vm.diaryActionToastMessage.contains("structure unchanged"))
+
+        vm.performDiaryAction(.enrich)
+        vm.enrichNote = "Draft that should be discarded"
+        vm.cancelEnrichNote()
+        XCTAssertFalse(vm.showingEnrichSheet)
+        XCTAssertEqual(vm.enrichNote, "Felt strong")
     }
 
     func testTodayDiarySampleIncludesGarminAndPhoneWithoutManualEntry() {
@@ -157,6 +163,20 @@ final class TodayDiaryTests: XCTestCase {
         XCTAssertTrue(diary.allSatisfy { calendar.isDate($0.startedAt, inSameDayAs: now) })
         let filtered = TodayDiary.completionsForToday(diary, now: now, calendar: calendar)
         XCTAssertEqual(filtered.map(\.id), ["today-garmin-run", "today-phone-strength"])
+    }
+
+    func testTodayDiarySampleStaysOnSameDayBeforeDawn() {
+        let early = calendar.date(from: DateComponents(year: 2026, month: 7, day: 14, hour: 1, minute: 0))!
+        let diary = WorkoutCompletion.todayDiarySampleData(now: early, calendar: calendar)
+        XCTAssertTrue(diary.allSatisfy { calendar.isDate($0.startedAt, inSameDayAs: early) })
+        XCTAssertTrue(diary.allSatisfy { completion in
+            guard let endedAt = completion.endedAt else { return false }
+            return calendar.isDate(endedAt, inSameDayAs: early)
+        })
+        XCTAssertEqual(
+            TodayDiary.completionsForToday(diary, now: early, calendar: calendar).count,
+            2
+        )
     }
 
     // MARK: - Helpers

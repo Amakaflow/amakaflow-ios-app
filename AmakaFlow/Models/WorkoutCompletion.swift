@@ -212,13 +212,29 @@ struct WeeklySummary {
 
 extension WorkoutCompletion {
     /// AMA-2289 fixture: multi-source “today” diary (Garmin run + phone strength), newest-first ready.
-    static func todayDiarySampleData(now: Date = Date()) -> [WorkoutCompletion] {
-        [
+    /// Timestamps are anchored to the calendar day of `now` so early-morning runs stay on Today.
+    static func todayDiarySampleData(
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) -> [WorkoutCompletion] {
+        let garmin = todayFixtureWindow(
+            dayOf: now,
+            startHour: 10,
+            durationSeconds: 1800,
+            calendar: calendar
+        )
+        let phone = todayFixtureWindow(
+            dayOf: now,
+            startHour: 7,
+            durationSeconds: 1800,
+            calendar: calendar
+        )
+        return [
             WorkoutCompletion(
                 id: "today-garmin-run",
                 workoutName: "Morning Easy Run",
-                startedAt: now.addingTimeInterval(-3600),
-                endedAt: now.addingTimeInterval(-1800),
+                startedAt: garmin.startedAt,
+                endedAt: garmin.endedAt,
                 durationSeconds: 1800,
                 avgHeartRate: 148,
                 maxHeartRate: 165,
@@ -233,8 +249,8 @@ extension WorkoutCompletion {
             WorkoutCompletion(
                 id: "today-phone-strength",
                 workoutName: "Upper Body Strength",
-                startedAt: now.addingTimeInterval(-7200),
-                endedAt: now.addingTimeInterval(-5400),
+                startedAt: phone.startedAt,
+                endedAt: phone.endedAt,
                 durationSeconds: 1800,
                 avgHeartRate: 118,
                 maxHeartRate: 145,
@@ -247,6 +263,19 @@ extension WorkoutCompletion {
                 isSimulated: true
             )
         ]
+    }
+
+    /// Fixed clock-times on `dayOf`'s calendar day (always same-day, never “yesterday before 02:00”).
+    private static func todayFixtureWindow(
+        dayOf: Date,
+        startHour: Int,
+        durationSeconds: TimeInterval,
+        calendar: Calendar
+    ) -> (startedAt: Date, endedAt: Date) {
+        let dayStart = calendar.startOfDay(for: dayOf)
+        let startedAt = calendar.date(byAdding: .hour, value: startHour, to: dayStart) ?? dayStart
+        let endedAt = startedAt.addingTimeInterval(durationSeconds)
+        return (startedAt, endedAt)
     }
 
     static var sampleData: [WorkoutCompletion] {

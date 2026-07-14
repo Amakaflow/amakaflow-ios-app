@@ -10,13 +10,16 @@ import Foundation
 extension WorkoutCompletionDetail {
     /// Garmin-synced run for Today diary fixtures (no structure editor).
     static var garminTodaySample: WorkoutCompletionDetail {
-        let now = Date()
-        let start = now.addingTimeInterval(-3600)
+        let window = WorkoutCompletion.todayDiarySampleData().first {
+            $0.id == "today-garmin-run"
+        }
+        let startedAt = window?.startedAt ?? Date()
+        let endedAt = window?.endedAt ?? startedAt.addingTimeInterval(1800)
         return WorkoutCompletionDetail(
             id: "today-garmin-run",
             workoutName: "Morning Easy Run",
-            startedAt: start,
-            endedAt: now.addingTimeInterval(-1800),
+            startedAt: startedAt,
+            endedAt: endedAt,
             durationSeconds: 1800,
             avgHeartRate: 148,
             maxHeartRate: 165,
@@ -41,13 +44,16 @@ extension WorkoutCompletionDetail {
 
     /// Phone-completed strength for Today diary fixtures.
     static var phoneTodaySample: WorkoutCompletionDetail {
-        let now = Date()
-        let start = now.addingTimeInterval(-7200)
+        let window = WorkoutCompletion.todayDiarySampleData().first {
+            $0.id == "today-phone-strength"
+        }
+        let startedAt = window?.startedAt ?? Date()
+        let endedAt = window?.endedAt ?? startedAt.addingTimeInterval(1800)
         return WorkoutCompletionDetail(
             id: "today-phone-strength",
             workoutName: "Upper Body Strength",
-            startedAt: start,
-            endedAt: now.addingTimeInterval(-5400),
+            startedAt: startedAt,
+            endedAt: endedAt,
             durationSeconds: 1800,
             avgHeartRate: 118,
             maxHeartRate: 145,
