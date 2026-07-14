@@ -301,10 +301,10 @@ extension UnifiedWorkoutDetailView {
         case .apple:
             beginAppleTryHandoff()
         case .phone:
-            // AMA-2290: full strength phone player. Reuse existing engine/player entry.
+            // AMA-2290: phone-first strength record (watch optional).
             WorkoutEngine.shared.start(workout: workout)
             showingWorkoutPlayer = true
-            handoffStatus = "Phone player opened — AMA-2290 stub uses existing player"
+            handoffStatus = "Recording on Phone — stop anytime, then log sets"
         }
     }
 

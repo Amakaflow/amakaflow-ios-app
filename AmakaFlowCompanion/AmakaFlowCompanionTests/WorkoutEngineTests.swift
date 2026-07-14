@@ -589,6 +589,10 @@ final class WorkoutEngineCompletionTests: XCTestCase {
 
         engine.start(workout: workout)
         engine.end(reason: .completed)
+        // AMA-2290: strength sessions defer save for backfill — commit explicitly.
+        if engine.pendingPhoneCompletion != nil {
+            await engine.commitPendingPhoneCompletion(setLogs: engine.buildSetLogs())
+        }
         await waitForTerminalSaveStatus(file: file, line: line)
     }
 

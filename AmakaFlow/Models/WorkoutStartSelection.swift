@@ -27,7 +27,7 @@ enum WorkoutStartDevice: String, CaseIterable, Identifiable, Equatable {
         switch self {
         case .garmin: return "Primary — one-tap CIQ push"
         case .apple: return "Try — Watch / WorkoutKit (AMA-2287)"
-        case .phone: return "Phone follow-along (AMA-2290)"
+        case .phone: return "Record on phone — Watch optional"
         }
     }
 

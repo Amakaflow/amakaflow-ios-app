@@ -78,6 +78,21 @@ class WorkoutEngine: ObservableObject {
     private var exerciseIndexMap: [String: Int] = [:]
     private var nextExerciseIndex: Int = 0
 
+    // AMA-2290: deferred phone strength save so backfill can ride with savePhoneCompletion
+    struct PendingPhoneCompletion {
+        let workoutId: String
+        let workoutName: String
+        let startedAt: Date
+        let durationSeconds: Int
+        let intervals: [WorkoutInterval]?
+        let liveSetLogs: [SetLog]?
+        let executionLog: [String: Any]?
+        let isSimulated: Bool
+    }
+
+    /// When non-nil, Save&End deferred the network POST until `commitPendingPhoneCompletion`.
+    @Published private(set) var pendingPhoneCompletion: PendingPhoneCompletion?
+
     // Execution log tracking (AMA-291)
     /// Builds execution_log for tracking actual workout execution
     private var executionLogBuilder = ExecutionLogBuilder()
@@ -575,6 +590,30 @@ class WorkoutEngine: ObservableObject {
         return logs.sorted { $0.exerciseIndex < $1.exerciseIndex }
     }
 
+    /// AMA-2290: seed post-stop backfill drafts from pending completion + any live set logs.
+    func strengthBackfillDrafts() -> [StrengthBackfillExerciseDraft] {
+        let intervals = pendingPhoneCompletion?.intervals ?? workout?.intervals
+        let liveLogs = pendingPhoneCompletion?.liveSetLogs ?? buildSetLogs()
+        return StrengthBackfill.draft(from: intervals, existingSetLogs: liveLogs)
+    }
+
+    /// Whether the ended session should show the strength backfill editor.
+    var offersStrengthBackfill: Bool {
+        StrengthBackfill.shouldOfferBackfill(intervals: pendingPhoneCompletion?.intervals ?? workout?.intervals)
+    }
+
+    /// AMA-2290: commit a deferred phone completion (optionally with backfilled set logs).
+    /// Empty / partial set logs are allowed — AI is never required.
+    @MainActor
+    func commitPendingPhoneCompletion(setLogs: [SetLog]?) async {
+        guard let pending = pendingPhoneCompletion else {
+            print("🏋️ AMA-2290: commitPendingPhoneCompletion called with nothing pending")
+            return
+        }
+        pendingPhoneCompletion = nil
+        await savePendingPhoneCompletion(pending, setLogs: setLogs ?? pending.liveSetLogs)
+    }
+
     /// Clear set tracking data (called on workout start/reset)
     private func clearSetTracking() {
         exerciseSetEntries.removeAll()
@@ -736,18 +775,40 @@ class WorkoutEngine: ObservableObject {
 
         // Only post workout completion to API if completed or userEnded (not discarded or saved for later)
         if reason == .completed || reason == .userEnded || reason == .error {
-            postWorkoutCompletion(
-                workoutId: workoutData.id,
-                workoutName: workoutData.name,
-                startedAt: workoutData.startTime,
-                durationSeconds: workoutData.duration,
-                intervals: workoutData.intervals,  // (AMA-237) For "Run Again" feature
-                setLogs: workoutData.setLogs,      // (AMA-281) Weight tracking
-                executionLog: workoutData.executionLog  // (AMA-291) Execution tracking
-            )
+            // AMA-2290: defer strength phone save so manual backfill can be included
+            // in the same `savePhoneCompletion` POST (no backend PATCH required).
+            let deferForBackfill = StrengthBackfill.shouldOfferBackfill(intervals: workoutData.intervals)
+            if deferForBackfill,
+               let workoutId = workoutData.id,
+               let startedAt = workoutData.startTime {
+                pendingPhoneCompletion = PendingPhoneCompletion(
+                    workoutId: workoutId,
+                    workoutName: workoutData.name ?? "Workout",
+                    startedAt: startedAt,
+                    durationSeconds: workoutData.duration,
+                    intervals: workoutData.intervals,
+                    liveSetLogs: workoutData.setLogs,
+                    executionLog: workoutData.executionLog,
+                    isSimulated: isSimulation
+                )
+                print("🏋️ AMA-2290: Deferred phone save for strength backfill")
+            } else {
+                pendingPhoneCompletion = nil
+                postWorkoutCompletion(
+                    workoutId: workoutData.id,
+                    workoutName: workoutData.name,
+                    startedAt: workoutData.startTime,
+                    durationSeconds: workoutData.duration,
+                    intervals: workoutData.intervals,
+                    setLogs: workoutData.setLogs,
+                    executionLog: workoutData.executionLog
+                )
+            }
         } else if reason == .discarded {
+            pendingPhoneCompletion = nil
             print("🏋️ Workout discarded - not posting to API")
         } else if reason == .savedForLater {
+            pendingPhoneCompletion = nil
             print("🏋️ Workout saved for later - not posting to API")
         }
 
@@ -759,12 +820,16 @@ class WorkoutEngine: ObservableObject {
         endBackgroundTask()
 
         // Cleanup after brief delay - but only if still in ended state
-        // (a new workout might have started in the meantime)
+        // (a new workout might have started in the meantime).
+        // AMA-2290: do not reset while a deferred phone strength save is pending —
+        // the completion/backfill UI still needs workout + pending payload.
         let endedVersion = stateVersion
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
             guard let self = self else { return }
-            // Only reset if no new workout started
-            if self.stateVersion == endedVersion && self.phase == .ended {
+            // Only reset if no new workout started and no deferred save pending
+            if self.stateVersion == endedVersion
+                && self.phase == .ended
+                && self.pendingPhoneCompletion == nil {
                 self.reset()
             }
         }
@@ -786,6 +851,7 @@ class WorkoutEngine: ObservableObject {
         elapsedSeconds = 0
         stateVersion += 1
         workoutStartTime = nil
+        pendingPhoneCompletion = nil
         clearSetTracking()  // (AMA-281) Clear weight tracking
     }
 
@@ -857,6 +923,33 @@ class WorkoutEngine: ObservableObject {
                 executionLog: executionLog
             )
         }
+    }
+
+    @MainActor
+    private func savePendingPhoneCompletion(
+        _ pending: PendingPhoneCompletion,
+        setLogs: [SetLog]?
+    ) async {
+        let endedAt = pending.isSimulated
+            ? pending.startedAt.addingTimeInterval(Double(pending.durationSeconds))
+            : Date()
+        let (avgHeartRate, activeCalories, hrSamples) = getHealthMetricsWithSamples(
+            durationSeconds: pending.durationSeconds
+        )
+        await completionModule.savePhoneCompletion(
+            workoutId: pending.workoutId,
+            workoutName: pending.workoutName,
+            startedAt: pending.startedAt,
+            endedAt: endedAt,
+            durationSeconds: pending.durationSeconds,
+            avgHeartRate: avgHeartRate,
+            activeCalories: activeCalories,
+            heartRateSamples: hrSamples,
+            workoutStructure: pending.intervals,
+            isSimulated: pending.isSimulated,
+            setLogs: setLogs,
+            executionLog: pending.executionLog
+        )
     }
 
     /// Called by the completion screen when the user dismisses the save-failure
