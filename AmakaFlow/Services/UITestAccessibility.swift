@@ -48,6 +48,17 @@ struct UITestAccessibility {
     static let startDeviceGarmin = "af_start_device_garmin"
     static let startDeviceApple = "af_start_device_apple"
     static let startDevicePhone = "af_start_device_phone"
+
+    // MARK: - Completed Today Diary (AMA-2289)
+
+    static let todayDiaryList = "af_today_diary_list"
+    static let todayEmptyState = "af_today_empty_state"
+    static let completionDetailScreen = "af_completion_detail_screen"
+    static let completionDiaryActions = "af_completion_diary_actions"
+    static let completionActionVerify = "af_completion_action_verify"
+    static let completionActionMap = "af_completion_action_map"
+    static let completionActionEnrich = "af_completion_action_enrich"
+    static let completionEditStructure = "af_completion_edit_structure" // must stay absent on completed
     
     // MARK: - Workout Controls
     

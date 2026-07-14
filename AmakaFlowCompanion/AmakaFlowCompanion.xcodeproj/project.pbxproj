@@ -108,6 +108,8 @@
 		AMA2286GARHANDBLD /* GarminStartHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2286GARHANDREF /* GarminStartHandoff.swift */; };
 		AMA2286GARTESTBLD /* GarminStartHandoffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2286GARTESTREF /* GarminStartHandoffTests.swift */; };
 		AMA2286RUNINTBLD /* running_intervals_4x800.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA2286RUNINTREF /* running_intervals_4x800.json */; };
+		AMA2289DIARYBLD /* TodayDiary.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2289DIARYREF /* TodayDiary.swift */; };
+		AMA2289DIARYTSTBLD /* TodayDiaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2289DIARYTSTREF /* TodayDiaryTests.swift */; };
 		AK00FIX004B /* StravaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX004A /* StravaService.swift */; };
 		AK00FIX005B /* AnalyticsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX005A /* AnalyticsViewModel.swift */; };
 		AK00FIX006B /* CalendarSyncViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX006A /* CalendarSyncViewModel.swift */; };
@@ -599,6 +601,8 @@
 		AMA2291STARTSTREF /* WorkoutStartSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutStartSelectionTests.swift; path = AmakaFlowCompanionTests/WorkoutStartSelectionTests.swift; sourceTree = "<group>"; };
 		AMA2286GARHANDREF /* GarminStartHandoff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminStartHandoff.swift; path = ../AmakaFlow/Services/GarminStartHandoff.swift; sourceTree = SOURCE_ROOT; };
 		AMA2286GARTESTREF /* GarminStartHandoffTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminStartHandoffTests.swift; path = AmakaFlowCompanionTests/GarminStartHandoffTests.swift; sourceTree = "<group>"; };
+		AMA2289DIARYREF /* TodayDiary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TodayDiary.swift; path = ../AmakaFlow/Models/TodayDiary.swift; sourceTree = SOURCE_ROOT; };
+		AMA2289DIARYTSTREF /* TodayDiaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TodayDiaryTests.swift; path = AmakaFlowCompanionTests/TodayDiaryTests.swift; sourceTree = "<group>"; };
 		AMA2286RUNINTREF /* running_intervals_4x800.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = running_intervals_4x800.json; path = ../AmakaFlow/Resources/Fixtures/running_intervals_4x800.json; sourceTree = SOURCE_ROOT; };
 		AK00FIX004A /* StravaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StravaService.swift; path = ../AmakaFlow/Services/StravaService.swift; sourceTree = "<group>"; };
 		AK00FIX005A /* AnalyticsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AnalyticsViewModel.swift; path = ../AmakaFlow/ViewModels/AnalyticsViewModel.swift; sourceTree = "<group>"; };
@@ -1449,6 +1453,7 @@
 				AMA2285DRFTREF /* SocialImportDraft.swift */,
 				AMA2291STARTSELREF /* WorkoutStartSelection.swift */,
 				AMA2291LIBDESTREF /* LibraryDestination.swift */,
+				AMA2289DIARYREF /* TodayDiary.swift */,
 				AMA2285FAILREF /* SocialImportFailure.swift */,
 				AK00FIX004A /* StravaService.swift */,
 				AK00FIX005A /* AnalyticsViewModel.swift */,
@@ -1491,6 +1496,7 @@
 				AMA2285TSTREF /* SocialImportTests.swift */,
 				AMA2291STARTSTREF /* WorkoutStartSelectionTests.swift */,
 				AMA2286GARTESTREF /* GarminStartHandoffTests.swift */,
+				AMA2289DIARYTSTREF /* TodayDiaryTests.swift */,
 				AK00TST010A /* MockURLProtocol.swift */,
 				AK00TST011A /* PairingTests.swift */,
 				AK00TST012A /* Phase2ViewModelTests.swift */,
@@ -2089,6 +2095,7 @@
 				AMA2291STARTSELBLD /* WorkoutStartSelection.swift in Sources */,
 				AMA2286GARHANDBLD /* GarminStartHandoff.swift in Sources */,
 				AMA2291LIBDESTBLD /* LibraryDestination.swift in Sources */,
+				AMA2289DIARYBLD /* TodayDiary.swift in Sources */,
 				AMA2291UNIDETBLD /* UnifiedWorkoutDetailView.swift in Sources */,
 				AMA2291STARTSHBLD /* WorkoutStartSheet.swift in Sources */,
 				AK00FIX004B /* StravaService.swift in Sources */,
@@ -2224,6 +2231,7 @@
 				AMA2285TSTBLD /* SocialImportTests.swift in Sources */,
 				AMA2291STARTSTBLD /* WorkoutStartSelectionTests.swift in Sources */,
 				AMA2286GARTESTBLD /* GarminStartHandoffTests.swift in Sources */,
+				AMA2289DIARYTSTBLD /* TodayDiaryTests.swift in Sources */,
 				AK00TST010B /* MockURLProtocol.swift in Sources */,
 				AK00TST011B /* PairingTests.swift in Sources */,
 				AK00TST012B /* Phase2ViewModelTests.swift in Sources */,
