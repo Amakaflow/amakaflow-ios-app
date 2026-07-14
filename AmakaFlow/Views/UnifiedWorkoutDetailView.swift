@@ -284,9 +284,18 @@ struct UnifiedWorkoutDetailView: View {
         let handoff = WorkoutStartHandoffResolver.handoff(for: device)
         switch handoff {
         case .garmin:
-            // AMA-2286: call one-tap Garmin push entry point when wired.
-            // Existing live-state path: GarminConnectManager.sendWorkoutState — not plan push.
-            handoffStatus = "Garmin handoff queued for \(gym.title) — AMA-2286 push stub"
+            // AMA-2286: CIQ FIT queue (AMA-1387). Not live remote sendWorkoutState; not garth.
+            handoffStatus = "Queueing for Garmin…"
+            Task {
+                let result = await GarminStartHandoffService().push(
+                    workoutId: workout.id,
+                    gymTitle: gym.title
+                )
+                handoffStatus = result.message
+                if result.kind != .failed {
+                    GarminConnectManager.shared.sendOpenAppRequest()
+                }
+            }
         case .apple:
             // AMA-2287: full Apple Workout try. Prefer send-to-watch when reachable.
             if appleWatchReachable {

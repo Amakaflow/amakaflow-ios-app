@@ -309,6 +309,9 @@ protocol APIServiceProviding: TelegramLinkAPIProviding, SocialImportAPIProviding
     /// Resend a workout to the watch through the mobile BFF.
     func resendWatchDelivery(workoutId: String) async throws -> Components.Schemas.WatchResendResult
 
+    /// First-push a Library workout to Garmin CIQ queue (AMA-2286 Start → Garmin).
+    func pushWatchDelivery(workoutId: String) async throws -> Components.Schemas.WatchResendResult
+
     // MARK: - Library (AMA-2004)
 
     /// Fetch saved Library items from the mobile BFF.

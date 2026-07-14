@@ -35,6 +35,7 @@ class FixtureAPIService: APIServiceProviding {
     var setDeviceRolesResult: Result<Components.Schemas.DeviceRolesResult, Error>?
     var watchDeliveryStatusResult: Result<Components.Schemas.WatchDeliveryStatus, Error>?
     var resendWatchDeliveryResult: Result<Components.Schemas.WatchResendResult, Error>?
+    var pushWatchDeliveryResult: Result<Components.Schemas.WatchResendResult, Error>?
     var listMessagingChannelsResult: Result<Components.Schemas.MessagingChannelList, Error>?
     var setChannelPrefsResult: Result<Components.Schemas.ChannelPrefsResult, Error>?
     var listLibraryItemsResult: Result<Components.Schemas.LibraryItemList, Error>?
@@ -622,6 +623,21 @@ class FixtureAPIService: APIServiceProviding {
         )
         print("[FixtureAPIService] Stub: resendWatchDelivery(\(workoutId)) -> success")
         return Components.Schemas.WatchResendResult(deliveryIds: ["fixture-delivery-\(workoutId)"], success: true)
+    }
+
+    func pushWatchDelivery(workoutId: String) async throws -> Components.Schemas.WatchResendResult {
+        if let pushWatchDeliveryResult {
+            return try pushWatchDeliveryResult.get()
+        }
+        fixtureWatchDeliveryStatuses[workoutId] = Components.Schemas.WatchDeliveryStatus(
+            canResend: false,
+            occurredAt: "2026-05-29T13:02:00Z",
+            state: .pushed,
+            subtitle: "Sent to your watch — waiting for sync",
+            title: "Sent to watch"
+        )
+        print("[FixtureAPIService] Stub: pushWatchDelivery(\(workoutId)) -> success")
+        return Components.Schemas.WatchResendResult(deliveryIds: ["fixture-push-\(workoutId)"], success: true)
     }
 
     // MARK: - Library (AMA-2004)
