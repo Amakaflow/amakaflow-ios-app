@@ -83,6 +83,8 @@ final class GarminStartHandoffServiceTests: XCTestCase {
 
         XCTAssertTrue(api.pushWatchDeliveryCalled)
         XCTAssertEqual(api.lastPushWatchDeliveryWorkoutId, "wk-strength")
+        XCTAssertTrue(api.watchDeliveryStatusCalled)
+        XCTAssertEqual(api.lastWatchDeliveryWorkoutId, "wk-strength")
         XCTAssertEqual(result.kind, .sent)
         XCTAssertFalse(result.message.localizedCaseInsensitiveContains("stub"))
         XCTAssertTrue(result.message.localizedCaseInsensitiveContains("garmin")

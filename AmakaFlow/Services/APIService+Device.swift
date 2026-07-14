@@ -42,6 +42,23 @@ extension APIService {
         }
     }
 
+    // MARK: - Watch Delivery Push (AMA-2286)
+    func pushWatchDelivery(workoutId: String) async throws -> Components.Schemas.WatchResendResult {
+        let encodedWorkoutID = try Self.pathSegment(workoutId)
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/devices/watch-delivery/\(encodedWorkoutID)/push",
+            method: "POST",
+            body: try encodeJSONBody([:] as [String: String])
+        )
+        return try await self.request(
+            request,
+            decode: Components.Schemas.WatchResendResult.self,
+            decoder: APIService.makeGeneratedDecoder(),
+            successStatusCodes: 200...200
+        )
+    }
+
     // MARK: - Push Token Registration (AMA-567)
 
     /// Register APNs push token with the backend for silent push notifications
