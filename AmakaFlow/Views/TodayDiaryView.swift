@@ -2,8 +2,10 @@
 //  TodayDiaryView.swift
 //  AmakaFlow
 //
-//  AMA-2292: Daily Driver Today tab — completed-activities diary shell only.
-//  Plan/schedule chrome is intentionally omitted; AMA-2289 fills the diary.
+//  AMA-2292: Daily Driver Today tab — completed-activities diary shell.
+//  AMA-2289: Sync completions (Garmin / phone) onto the rail.
+//  Strava landings appear once upstream sync writes completions (mobile BFF TBD).
+//  Plan/schedule chrome is intentionally omitted.
 //
 
 import SwiftUI
@@ -17,10 +19,7 @@ struct TodayDiaryView: View {
     private var today: Date { Date() }
 
     private var todaysCompletions: [WorkoutCompletion] {
-        let calendar = Calendar.current
-        return historyViewModel.completions
-            .filter { calendar.isDate($0.startedAt, inSameDayAs: today) }
-            .sorted { $0.startedAt > $1.startedAt }
+        historyViewModel.todaysCompletions
     }
 
     var body: some View {
@@ -115,7 +114,7 @@ struct TodayDiaryView: View {
                 .font(Theme.Typography.largeTitle)
                 .foregroundColor(Theme.Colors.textPrimary)
                 .accessibilityIdentifier("af_today_empty_state")
-            Text("Today shows finished sessions only — no plan or schedule. Completions from Garmin, Strava, and in-app workouts land here (AMA-2289).")
+            Text("Today shows finished sessions only — no plan or schedule. Completions sync from Garmin and phone land here automatically.")
                 .font(Theme.Typography.body)
                 .foregroundColor(Theme.Colors.textSecondary)
                 .lineSpacing(3)
@@ -147,6 +146,7 @@ struct TodayDiaryView: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             AFLabel(text: "Completed today")
                 .accessibilityAddTraits(.isHeader)
+                .accessibilityIdentifier("af_today_diary_header")
 
             LazyVStack(spacing: Theme.Spacing.sm) {
                 ForEach(Array(todaysCompletions.enumerated()), id: \.element.id) { index, completion in
@@ -159,6 +159,7 @@ struct TodayDiaryView: View {
                     .accessibilityIdentifier("af_today_completion_\(index)")
                 }
             }
+            .accessibilityIdentifier("af_today_diary_list")
         }
     }
 }

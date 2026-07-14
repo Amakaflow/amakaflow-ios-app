@@ -372,11 +372,11 @@ class FixtureAPIService: APIServiceProviding {
     }
 
     func fetchCompletions(limit: Int, offset: Int) async throws -> [WorkoutCompletion] {
-        return WorkoutCompletion.sampleData
+        Self.diaryCompletions(limit: limit, offset: offset)
     }
 
     func fetchCompletionDetail(id: String) async throws -> WorkoutCompletionDetail {
-        return WorkoutCompletionDetail.sample
+        Self.diaryCompletionDetail(id: id)
     }
 
     // MARK: - Planning (AMA-1147)

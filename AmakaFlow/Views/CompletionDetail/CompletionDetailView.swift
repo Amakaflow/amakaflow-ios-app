@@ -36,6 +36,9 @@ struct CompletionDetailView: View {
                 if viewModel.showSaveToast {
                     saveToast
                 }
+                if viewModel.showDiaryActionToast {
+                    CompletionDiaryActionToast(viewModel: viewModel)
+                }
             }
             // Run Again fullScreenCover - placed here (not on button) to prevent @State reset
             // when view hierarchy changes during workout playback (AMA-240 fix)
@@ -46,6 +49,13 @@ struct CompletionDetailView: View {
                         viewModel.workoutToRerun = nil
                     }
             }
+            .sheet(isPresented: $viewModel.showingMapSheet) {
+                CompletionDiaryMapSheet(viewModel: viewModel)
+            }
+            .sheet(isPresented: $viewModel.showingEnrichSheet) {
+                CompletionDiaryEnrichSheet(viewModel: viewModel)
+            }
+            .accessibilityIdentifier("af_completion_detail_screen")
     }
 
     // MARK: - Content
@@ -106,8 +116,8 @@ struct CompletionDetailView: View {
                 // Sync to Strava Button (AMA-275)
                 stravaButton
 
-                // Edit Workout Button
-                editWorkoutButton
+                // AMA-2289: verify / map / enrich — never structure-edit completed records
+                CompletionDiaryActionsSection(viewModel: viewModel)
 
                 // Done Button (AMA-275)
                 doneButton
@@ -271,25 +281,6 @@ struct CompletionDetailView: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("completion_watch_delivery_link")
-    }
-
-    // MARK: - Edit Workout Button
-
-    private var editWorkoutButton: some View {
-        Button(action: {
-            // TODO: Implement edit workout
-        }) {
-            HStack {
-                Image(systemName: "pencil")
-                Text("Edit Workout")
-            }
-            .font(.headline)
-            .foregroundColor(.primary)
-            .frame(maxWidth: .infinity)
-            .padding()
-            .background(Theme.Colors.surface)
-            .cornerRadius(12)
-        }
     }
 
     // MARK: - Header Section (Updated to match target design AMA-292)

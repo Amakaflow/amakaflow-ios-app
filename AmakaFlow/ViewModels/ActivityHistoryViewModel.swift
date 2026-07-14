@@ -89,6 +89,7 @@ class ActivityHistoryViewModel: ObservableObject {
     private let dependencies: AppDependencies
     private let nowProvider: () -> Date
     private let calendar: Calendar
+    private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Initialization
 
@@ -101,6 +102,15 @@ class ActivityHistoryViewModel: ObservableObject {
         self.dependencies = dependencies
         self.nowProvider = nowProvider
         self.calendar = calendar
+        // AMA-2289: refresh Today/History after phone/Garmin/watch complete posts.
+        NotificationCenter.default.publisher(for: .workoutCompleted)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    await self?.refreshCompletions()
+                }
+            }
+            .store(in: &cancellables)
     }
 
     // MARK: - Computed Properties
@@ -109,6 +119,11 @@ class ActivityHistoryViewModel: ObservableObject {
     var filteredCompletions: [WorkoutCompletion] {
         let now = nowProvider()
         return completions.filter { selectedFilter.includes($0.startedAt, now: now, calendar: calendar) }
+    }
+
+    /// AMA-2289: finished sessions for today only, newest-first (Today diary rail).
+    var todaysCompletions: [WorkoutCompletion] {
+        TodayDiary.completionsForToday(completions, now: nowProvider(), calendar: calendar)
     }
 
     /// Completions grouped by date category
@@ -159,6 +174,9 @@ class ActivityHistoryViewModel: ObservableObject {
 
     /// Initial load of completions
     func loadCompletions() async {
+        // AMA-2289: `.workoutCompleted` + pull-to-refresh can overlap; skip re-entrant loads.
+        guard !isLoading else { return }
+
         let hadContent = !completions.isEmpty
         let previousOffset = currentOffset
         let previousHasMoreData = hasMoreData

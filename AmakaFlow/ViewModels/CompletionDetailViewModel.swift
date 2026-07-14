@@ -25,16 +25,39 @@ class CompletionDetailViewModel: ObservableObject {
     @Published var saveToastMessage: String = ""
     @Published var workoutToRerun: Workout?  // Set to navigate to WorkoutPlayerView (AMA-237)
     @Published var showWorkoutPlayer: Bool = false  // Controls fullScreenCover presentation
+    /// AMA-2289: thin verify / map / enrich feedback (completed records are immutable).
+    @Published var diaryActionToastMessage: String = ""
+    @Published var showDiaryActionToast: Bool = false
+    @Published var verifiedAt: Date?
+    @Published var enrichNote: String = ""
+    @Published var showingEnrichSheet: Bool = false
+    @Published var showingMapSheet: Bool = false
 
     // MARK: - Properties
 
     let completionId: String
     private let dependencies: AppDependencies
+    private var diaryToastTask: Task<Void, Never>?
+    /// Last-saved enrich note so Cancel can discard in-progress edits.
+    private var savedEnrichNote: String = ""
 
     /// User's max heart rate for zone calculations (default: 190)
     var userMaxHR: Int = 190
 
     // MARK: - Computed Properties
+
+    /// Completed diary items never open the structure editor (AMA-2289).
+    var allowsStructureEdit: Bool {
+        TodayDiary.allowsStructureEdit
+    }
+
+    var diaryActions: [TodayDiary.CompletedItemAction] {
+        TodayDiary.diaryActions
+    }
+
+    var isVerified: Bool {
+        verifiedAt != nil
+    }
 
     /// HR zones calculated from the detail data
     var hrZones: [HRZone] {
@@ -295,6 +318,49 @@ class CompletionDetailViewModel: ObservableObject {
             return .running
         } else {
             return .cardio  // Default for time-based workouts
+        }
+    }
+
+    // MARK: - Diary Actions (AMA-2289)
+
+    func performDiaryAction(_ action: TodayDiary.CompletedItemAction) {
+        switch action {
+        case .verify:
+            verifiedAt = Date()
+            presentDiaryToast("Verified — metrics look good")
+        case .map:
+            showingMapSheet = true
+        case .enrich:
+            showingEnrichSheet = true
+        }
+    }
+
+    func saveEnrichNote() {
+        let trimmed = enrichNote.trimmingCharacters(in: .whitespacesAndNewlines)
+        showingEnrichSheet = false
+        if trimmed.isEmpty {
+            presentDiaryToast("Enrich canceled — no note added")
+        } else {
+            savedEnrichNote = trimmed
+            enrichNote = trimmed
+            presentDiaryToast("Note saved — structure unchanged")
+        }
+    }
+
+    /// Discard draft enrich text and close the sheet (AMA-2289 CodeRabbit).
+    func cancelEnrichNote() {
+        enrichNote = savedEnrichNote
+        showingEnrichSheet = false
+    }
+
+    private func presentDiaryToast(_ message: String) {
+        diaryToastTask?.cancel()
+        diaryActionToastMessage = message
+        showDiaryActionToast = true
+        diaryToastTask = Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard !Task.isCancelled else { return }
+            showDiaryActionToast = false
         }
     }
 

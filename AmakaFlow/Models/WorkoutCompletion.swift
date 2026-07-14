@@ -211,14 +211,83 @@ struct WeeklySummary {
 // MARK: - Sample Data
 
 extension WorkoutCompletion {
+    /// AMA-2289 fixture: multi-source “today” diary (Garmin run + phone strength), newest-first ready.
+    /// Timestamps are anchored to the calendar day of `now` so early-morning runs stay on Today.
+    static func todayDiarySampleData(
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) -> [WorkoutCompletion] {
+        let garmin = todayFixtureWindow(
+            dayOf: now,
+            startHour: 10,
+            durationSeconds: 1800,
+            calendar: calendar
+        )
+        let phone = todayFixtureWindow(
+            dayOf: now,
+            startHour: 7,
+            durationSeconds: 1800,
+            calendar: calendar
+        )
+        return [
+            WorkoutCompletion(
+                id: "today-garmin-run",
+                workoutName: "Morning Easy Run",
+                startedAt: garmin.startedAt,
+                endedAt: garmin.endedAt,
+                durationSeconds: 1800,
+                avgHeartRate: 148,
+                maxHeartRate: 165,
+                activeCalories: 310,
+                distanceMeters: 5200,
+                source: .garmin,
+                syncedToStrava: true,
+                workoutId: "workout-garmin-run",
+                originalWorkout: nil,
+                isSimulated: true
+            ),
+            WorkoutCompletion(
+                id: "today-phone-strength",
+                workoutName: "Upper Body Strength",
+                startedAt: phone.startedAt,
+                endedAt: phone.endedAt,
+                durationSeconds: 1800,
+                avgHeartRate: 118,
+                maxHeartRate: 145,
+                activeCalories: 245,
+                distanceMeters: nil,
+                source: .phone,
+                syncedToStrava: false,
+                workoutId: "workout-phone-strength",
+                originalWorkout: nil,
+                isSimulated: true
+            )
+        ]
+    }
+
+    /// Fixed clock-times on `dayOf`'s calendar day (always same-day, never “yesterday before 02:00”).
+    private static func todayFixtureWindow(
+        dayOf: Date,
+        startHour: Int,
+        durationSeconds: TimeInterval,
+        calendar: Calendar
+    ) -> (startedAt: Date, endedAt: Date) {
+        let dayStart = calendar.startOfDay(for: dayOf)
+        let startedAt = calendar.date(byAdding: .hour, value: startHour, to: dayStart) ?? dayStart
+        let endedAt = startedAt.addingTimeInterval(durationSeconds)
+        return (startedAt, endedAt)
+    }
+
     static var sampleData: [WorkoutCompletion] {
         let now = Date()
-        return [
+        return todayDiarySampleData(now: now) + [
             WorkoutCompletion(
                 id: "1",
                 workoutName: "HIIT Cardio Blast",
-                startedAt: now.addingTimeInterval(-3600), // 1 hour ago
-                endedAt: now.addingTimeInterval(-600),
+                // Keep a legacy “today” Apple Watch sample for History grouping tests
+                // when chronologically near `todayDiarySampleData` (still same day).
+                startedAt: now.addingTimeInterval(-4800),
+                endedAt: now.addingTimeInterval(-2100),
                 durationSeconds: 2700,
                 avgHeartRate: 142,
                 maxHeartRate: 178,

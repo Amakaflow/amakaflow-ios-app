@@ -1,0 +1,61 @@
+# AMA-2289 — populated Today diary + completed detail (verify/map/enrich, no Edit structure)
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2289_diary,email=claude+clerk_test@amakaflow.dev,name=AMA2289 Diary"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn:
+    id: "today_tab"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      text: "Completed today"
+    timeout: 15000
+- assertVisible:
+    text: "Morning Easy Run"
+- assertVisible:
+    text: "Upper Body Strength"
+- assertNotVisible:
+    text: "Week plan"
+- takeScreenshot: docs/ama-2289-visual-evidence/02-today-populated
+- tapOn:
+    text: "Morning Easy Run"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      text: "Workout Details"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: "Verify"
+    direction: DOWN
+    timeout: 15000
+- assertVisible:
+    text: "Verify"
+- assertVisible:
+    text: "Map"
+- assertVisible:
+    text: "Enrich"
+- assertNotVisible:
+    text: "Edit Workout"
+- takeScreenshot: docs/ama-2289-visual-evidence/03-completion-detail-no-edit
+- tapOn:
+    text: "Verify"
+- waitForAnimationToEnd:
+    timeout: 1000
+- takeScreenshot: docs/ama-2289-visual-evidence/04-verify-action
