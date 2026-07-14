@@ -140,9 +140,8 @@ struct StrengthBackfillView: View {
                 ],
                 existingSetLogs: nil
             )
-        ),
-        onSave: {}
-    )
+        )
+    ) {}
     .padding()
     .background(Theme.Colors.background)
 }

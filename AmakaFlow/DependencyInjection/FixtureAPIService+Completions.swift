@@ -36,7 +36,7 @@ extension FixtureAPIService {
         if id.hasPrefix("phone-live-") {
             return WorkoutCompletionDetail.phoneLiveSample(
                 id: id,
-                from: livePhoneDiaryCompletions.first(where: { $0.id == id }),
+                from: livePhoneDiaryCompletions.first { $0.id == id },
                 setLogs: livePhoneSetLogsById[id]
             )
         }

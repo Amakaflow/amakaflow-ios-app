@@ -93,7 +93,7 @@ enum StrengthBackfill {
             let log = logsByName[exercise.name.lowercased()]
             let setCount = max(exercise.sets, log?.sets.count ?? 0, 1)
             let sets: [StrengthBackfillSetDraft] = (1...setCount).map { setNumber in
-                let logged = log?.sets.first(where: { $0.setNumber == setNumber })
+                let logged = log?.sets.first { $0.setNumber == setNumber }
                 return StrengthBackfillSetDraft(
                     setNumber: setNumber,
                     reps: exercise.reps,
@@ -150,11 +150,11 @@ enum StrengthBackfill {
         for (lhs, rhs) in zip(drafts, rebuilt) {
             guard lhs.exerciseName == rhs.exerciseName else { return false }
             guard lhs.sets.count == rhs.sets.count else { return false }
-            for (ls, rs) in zip(lhs.sets, rhs.sets) {
-                guard ls.setNumber == rs.setNumber else { return false }
-                guard ls.weight == rs.weight else { return false }
-                if ls.weight != nil {
-                    guard ls.unit == rs.unit else { return false }
+            for (lhsSet, rhsSet) in zip(lhs.sets, rhs.sets) {
+                guard lhsSet.setNumber == rhsSet.setNumber else { return false }
+                guard lhsSet.weight == rhsSet.weight else { return false }
+                if lhsSet.weight != nil {
+                    guard lhsSet.unit == rhsSet.unit else { return false }
                 }
             }
         }

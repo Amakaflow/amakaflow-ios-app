@@ -102,6 +102,7 @@ final class StrengthBackfillTests: XCTestCase {
 
     func testPhoneStartCompleteTodayLoop() async {
         FixtureAPIService.resetLivePhoneDiaryForTesting()
+        defer { FixtureAPIService.resetLivePhoneDiaryForTesting() }
 
         let clock = TestClock()
         let completionModule = WorkoutCompletionModule(
@@ -158,7 +159,6 @@ final class StrengthBackfillTests: XCTestCase {
         let today = TodayDiary.completionsForToday(FixtureAPIService.diaryCompletions(limit: 20, offset: 0))
         XCTAssertTrue(today.contains(where: { $0.source == .phone && $0.workoutName == "Phone Push Day" }))
 
-        FixtureAPIService.resetLivePhoneDiaryForTesting()
         engine.reset()
     }
 
@@ -183,8 +183,9 @@ final class StrengthBackfillTests: XCTestCase {
         )
         engine.start(workout: cardio)
         engine.end(reason: .completed)
-        // Give Task in postWorkoutCompletion a tick
-        try? await Task.sleep(nanoseconds: 50_000_000)
+        await waitUntil(timeoutNanoseconds: 1_000_000_000) {
+            module.savePhoneCompletionCalled
+        }
         XCTAssertNil(engine.pendingPhoneCompletion)
         XCTAssertTrue(module.savePhoneCompletionCalled)
 
@@ -205,6 +206,23 @@ final class StrengthBackfillTests: XCTestCase {
         await engine.commitPendingPhoneCompletion(setLogs: nil)
         XCTAssertTrue(module.savePhoneCompletionCalled)
         engine.reset()
+    }
+
+    private func waitUntil(
+        timeoutNanoseconds: UInt64 = 1_000_000_000,
+        file: StaticString = #filePath,
+        line: UInt = #line,
+        _ condition: @escaping @MainActor () -> Bool
+    ) async {
+        let deadline = ContinuousClock.now + .nanoseconds(Int(timeoutNanoseconds))
+        while true {
+            if condition() { return }
+            if ContinuousClock.now >= deadline {
+                XCTFail("Timed out waiting for condition", file: file, line: line)
+                return
+            }
+            try? await Task.sleep(nanoseconds: 10_000_000)
+        }
     }
 }
 
