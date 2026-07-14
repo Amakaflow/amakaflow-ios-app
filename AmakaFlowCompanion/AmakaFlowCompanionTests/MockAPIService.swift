@@ -667,8 +667,12 @@ class MockAPIService: APIServiceProviding {
     var resendWatchDeliveryResult: Result<Components.Schemas.WatchResendResult, Error> = .success(
         Components.Schemas.WatchResendResult(deliveryIds: ["mock-delivery-1"], success: true)
     )
+    var pushWatchDeliveryResult: Result<Components.Schemas.WatchResendResult, Error> = .success(
+        Components.Schemas.WatchResendResult(deliveryIds: ["mock-push-1"], success: true)
+    )
     var watchDeliveryStatusDelayNanoseconds: UInt64 = 0
     var resendWatchDeliveryDelayNanoseconds: UInt64 = 0
+    var pushWatchDeliveryDelayNanoseconds: UInt64 = 0
     var listLibraryItemsResult: Result<Components.Schemas.LibraryItemList, Error> = .success(
         Components.Schemas.LibraryItemList(
             items: [
@@ -773,6 +777,9 @@ class MockAPIService: APIServiceProviding {
     var watchDeliveryStatusCallCount = 0
     var resendWatchDeliveryCalled = false
     var resendWatchDeliveryCallCount = 0
+    var pushWatchDeliveryCalled = false
+    var pushWatchDeliveryCallCount = 0
+    var lastPushWatchDeliveryWorkoutId: String?
     var listMessagingChannelsCalled = false
     var setChannelPrefsCalled = false
     var setChannelPrefsCallCount = 0
@@ -839,6 +846,16 @@ class MockAPIService: APIServiceProviding {
             try await Task.sleep(nanoseconds: resendWatchDeliveryDelayNanoseconds)
         }
         return try resendWatchDeliveryResult.get()
+    }
+
+    func pushWatchDelivery(workoutId: String) async throws -> Components.Schemas.WatchResendResult {
+        pushWatchDeliveryCalled = true
+        pushWatchDeliveryCallCount += 1
+        lastPushWatchDeliveryWorkoutId = workoutId
+        if pushWatchDeliveryDelayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: pushWatchDeliveryDelayNanoseconds)
+        }
+        return try pushWatchDeliveryResult.get()
     }
 
     func listLibraryItems(

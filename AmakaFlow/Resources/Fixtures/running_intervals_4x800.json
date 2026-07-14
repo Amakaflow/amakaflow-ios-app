@@ -1,0 +1,20 @@
+{
+  "id": "fixture-running-intervals-001",
+  "name": "Track 4x800",
+  "sport": "running",
+  "duration": 2700,
+  "description": "Dogfood run-interval sample for AMA-2286 Garmin one-tap — 4x800m with recoveries",
+  "source": "manual",
+  "intervals": [
+    { "kind": "warmup", "seconds": 600 },
+    {
+      "kind": "repeat",
+      "reps": 4,
+      "intervals": [
+        { "kind": "distance", "meters": 800, "target": "5k pace" },
+        { "kind": "rest", "seconds": 90 }
+      ]
+    },
+    { "kind": "cooldown", "seconds": 600 }
+  ]
+}
