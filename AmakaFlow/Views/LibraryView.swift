@@ -34,8 +34,8 @@ struct LibraryView: View {
                 }
             }
             .navigationBarHidden(true)
-            .navigationDestination(for: String.self) { itemID in
-                LibraryDetailView(itemID: itemID)
+            .navigationDestination(for: LibraryDestination.self) { destination in
+                libraryDestinationView(destination)
             }
             // AMA-2292: Proto FAB — one tap from Library root to create.
             .overlay(alignment: .bottomTrailing) {
@@ -286,14 +286,35 @@ struct LibraryView: View {
                 .accessibilityAddTraits(.isHeader)
 
             LazyVStack(spacing: Theme.Spacing.md) {
-                ForEach(viewModel.items, id: \.id) { item in
-                    NavigationLink(value: item.id) {
-                        LibraryItemCard(item: item)
+                ForEach(viewModel.entries) { entry in
+                    NavigationLink(value: entry.destination) {
+                        LibraryEntryCard(entry: entry)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityIdentifier("af_library_item_\(item.id)")
+                    .accessibilityIdentifier("af_library_item_\(entry.id)")
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func libraryDestinationView(_ destination: LibraryDestination) -> some View {
+        switch destination {
+        case .unifiedWorkout(let workoutID):
+            if let workout = viewModel.resolveWorkout(for: destination) {
+                UnifiedWorkoutDetailView(workout: workout) {
+                    await viewModel.load()
+                    return viewModel.workout(for: workoutID)
+                        ?? viewModel.resolveWorkout(for: destination)
+                }
+            } else {
+                // Honest fallback if workout vanished mid-nav.
+                Text("Workout unavailable")
+                    .afMuted()
+                    .accessibilityIdentifier("af_workout_detail_missing_\(workoutID)")
+            }
+        case .knowledgeDetail(let itemID):
+            LibraryDetailView(itemID: itemID)
         }
     }
 
@@ -305,8 +326,65 @@ struct LibraryView: View {
     }
 }
 
+private struct LibraryEntryCard: View {
+    let entry: LibraryListEntry
+
+    var body: some View {
+        switch entry {
+        case .workout(let workout):
+            LibraryItemCard(
+                kindLabel: "Workout",
+                kindIcon: LibraryViewModel.kindIcon(.workout),
+                title: workout.name,
+                sourceCaption: WorkoutSourceProvenance.badge(for: workout.source.rawValue)?.label
+                    ?? "Workout",
+                tags: provenanceTags(for: workout),
+                placeholderColor: Theme.Colors.readyHigh
+            )
+        case .knowledge(let item):
+            LibraryItemCard(
+                kindLabel: LibraryViewModel.kindSingularLabel(item.kind),
+                kindIcon: LibraryViewModel.kindIcon(item.kind),
+                title: item.title,
+                sourceCaption: knowledgeSourceCaption(item),
+                tags: item.tags ?? [],
+                placeholderColor: knowledgeColor(item.kind)
+            )
+        }
+    }
+
+    private func provenanceTags(for workout: Workout) -> [String] {
+        if let badge = WorkoutSourceProvenance.badge(for: workout.source.rawValue) {
+            return [badge.label]
+        }
+        return []
+    }
+
+    private func knowledgeSourceCaption(_ item: LibraryViewModel.LibraryItem) -> String {
+        guard let sourceDomain = item.sourceDomain?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !sourceDomain.isEmpty else {
+            return LibraryViewModel.kindSingularLabel(item.kind)
+        }
+        return sourceDomain
+    }
+
+    private func knowledgeColor(_ kind: LibraryViewModel.LibraryKind) -> Color {
+        switch kind {
+        case .workout: return Theme.Colors.readyHigh
+        case .video: return Theme.Colors.accentBlue
+        case .article: return Theme.Colors.accentOrange
+        case .plan: return Theme.Colors.readyModerate
+        }
+    }
+}
+
 private struct LibraryItemCard: View {
-    let item: LibraryViewModel.LibraryItem
+    let kindLabel: String
+    let kindIcon: String
+    let title: String
+    let sourceCaption: String
+    let tags: [String]
+    let placeholderColor: Color
 
     var body: some View {
         AFCard(padding: 0) {
@@ -316,7 +394,7 @@ private struct LibraryItemCard: View {
 
                 VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                     HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.sm) {
-                        AFChip(text: LibraryViewModel.kindSingularLabel(item.kind), outline: true)
+                        AFChip(text: kindLabel, outline: true)
                         Spacer()
                         Image(systemName: "ellipsis")
                             .font(.system(size: 16, weight: .semibold))
@@ -324,7 +402,7 @@ private struct LibraryItemCard: View {
                             .accessibilityHidden(true)
                     }
 
-                    Text(item.title)
+                    Text(title)
                         .font(Theme.Typography.title3)
                         .foregroundColor(Theme.Colors.textPrimary)
                         .lineLimit(2)
@@ -333,8 +411,8 @@ private struct LibraryItemCard: View {
                         .font(Theme.Typography.caption)
                         .foregroundColor(Theme.Colors.textSecondary)
 
-                    if let tags = item.tags, !tags.isEmpty {
-                        tagPills(tags)
+                    if !tags.isEmpty {
+                        FlowPills(tags: tags)
                     }
                 }
                 .padding(Theme.Spacing.md)
@@ -349,32 +427,11 @@ private struct LibraryItemCard: View {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            Image(systemName: LibraryViewModel.kindIcon(item.kind))
+            Image(systemName: kindIcon)
                 .font(.system(size: 34, weight: .semibold))
                 .foregroundColor(Theme.Colors.primaryForeground.opacity(0.92))
         }
-        .accessibilityLabel("\(LibraryViewModel.kindSingularLabel(item.kind)) placeholder")
-    }
-
-    private var placeholderColor: Color {
-        switch item.kind {
-        case .workout: return Theme.Colors.readyHigh
-        case .video: return Theme.Colors.accentBlue
-        case .article: return Theme.Colors.accentOrange
-        case .plan: return Theme.Colors.readyModerate
-        }
-    }
-
-    private var sourceCaption: String {
-        guard let sourceDomain = item.sourceDomain?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !sourceDomain.isEmpty else {
-            return LibraryViewModel.kindSingularLabel(item.kind)
-        }
-        return sourceDomain
-    }
-
-    private func tagPills(_ tags: [String]) -> some View {
-        FlowPills(tags: tags)
+        .accessibilityLabel("\(kindLabel) placeholder")
     }
 }
 
@@ -436,7 +493,6 @@ private struct LibraryEmptyStateView: View {
         .accessibilityIdentifier("library_empty_state")
     }
 }
-
 #if DEBUG
 #Preview("Library") {
     LibraryView(viewModel: LibraryViewModel(apiService: FixtureAPIService()))

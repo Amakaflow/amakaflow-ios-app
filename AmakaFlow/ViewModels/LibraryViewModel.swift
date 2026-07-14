@@ -3,6 +3,7 @@
 //  AmakaFlow
 //
 //  AMA-2004: saved-content Library tab state + filters.
+//  AMA-2291: merge saved workouts into Library; route workouts to unified detail.
 //
 
 import Combine
@@ -26,14 +27,19 @@ final class LibraryViewModel: ObservableObject {
     }
 
     @Published private(set) var state: ScreenState = .loading
+    /// Knowledge cards only — retained for existing filters/tests.
     @Published private(set) var items: [LibraryItem] = []
+    /// AMA-2291 unified Library rows (workouts + non-workout knowledge).
+    @Published private(set) var entries: [LibraryListEntry] = []
     @Published private(set) var ctaError: CTAError?
     @Published private(set) var selectedKinds: Set<LibraryKind> = []
     @Published private(set) var selectedTag: String?
     private(set) var lastFailedAction: FailedAction?
+    private(set) var workoutsByID: [String: Workout] = [:]
 
     private let apiService: APIServiceProviding
     private var allItems: [LibraryItem] = []
+    private var allWorkouts: [Workout] = []
 
     init(apiService: APIServiceProviding? = nil) {
         self.apiService = apiService ?? AppDependencies.current.apiService
@@ -46,14 +52,20 @@ final class LibraryViewModel: ObservableObject {
         case .error:
             return "Unable to load"
         default:
-            let total = allItems.count
+            let total = entries.count
             return total == 1 ? "1 saved item" : "\(total) saved items"
         }
     }
 
     var availableTags: [String] {
-        let tags = allItems.flatMap { $0.tags ?? [] }
-            .compactMap(Self.normalizedTag)
+        let knowledgeTags = allItems.flatMap { $0.tags ?? [] }
+        let workoutTags = allWorkouts.compactMap { workout -> [String] in
+            if let badge = WorkoutSourceProvenance.badge(for: workout.source.rawValue) {
+                return [badge.label.lowercased()]
+            }
+            return []
+        }.flatMap { $0 }
+        let tags = (knowledgeTags + workoutTags).compactMap(Self.normalizedTag)
         return Array(Set(tags)).sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
@@ -61,23 +73,56 @@ final class LibraryViewModel: ObservableObject {
         !selectedKinds.isEmpty || selectedTag != nil
     }
 
+    func workout(for id: String) -> Workout? {
+        workoutsByID[id]
+    }
+
+    /// Resolve a Library destination to a concrete Workout (synthetic when knowledge-only).
+    func resolveWorkout(for destination: LibraryDestination) -> Workout? {
+        switch destination {
+        case .unifiedWorkout(let workoutID):
+            if let existing = workoutsByID[workoutID] {
+                return existing
+            }
+            if let knowledge = allItems.first(where: { $0.id == workoutID }) {
+                return Self.syntheticWorkout(from: knowledge)
+            }
+            return nil
+        case .knowledgeDetail:
+            return nil
+        }
+    }
+
     func load() async {
-        let hadContent = !allItems.isEmpty
+        let hadContent = !allItems.isEmpty || !allWorkouts.isEmpty
         if !hadContent { state = .loading }
         ctaError = nil
         lastFailedAction = nil
 
         do {
-            // AMA-2004: fetch all and apply the design's multi-kind filters client-side.
-            // The API accepts a single kind, but this list is intentionally small.
-            let response = try await apiService.listLibraryItems(kind: nil, tag: nil)
+            // AMA-2004: fetch knowledge cards for multi-kind client filtering.
+            // AMA-2291: also fetch saved workouts (social/manual/coach) for unified detail.
+            async let knowledgeTask = apiService.listLibraryItems(kind: nil, tag: nil)
+            async let workoutsTask = apiService.fetchWorkouts(isRetry: false)
+
+            let response = try await knowledgeTask
+            let workouts: [Workout]
+            do {
+                workouts = try await workoutsTask
+            } catch {
+                // Knowledge still usable if workout fetch fails — surface toast, keep going.
+                ctaError = CTAError.map(error)
+                lastFailedAction = .load
+                workouts = allWorkouts
+            }
+
             allItems = response.items ?? []
+            allWorkouts = workouts
+            workoutsByID = Dictionary(uniqueKeysWithValues: workouts.map { ($0.id, $0) })
             applyFilters()
         } catch {
             let mapped = CTAError.map(error)
             ctaError = mapped
-            // Only replace content with full-screen error on initial load (no cached items).
-            // When refreshing over existing content, the toast overlay handles the error.
             if !hadContent { state = .error(mapped) }
             lastFailedAction = .load
         }
@@ -135,7 +180,7 @@ final class LibraryViewModel: ObservableObject {
         let currentError = ctaError
         ctaError = nil
 
-        if lastFailedAction == .load, let currentError, allItems.isEmpty {
+        if lastFailedAction == .load, let currentError, allItems.isEmpty, allWorkouts.isEmpty {
             state = .error(currentError)
         }
     }
@@ -157,7 +202,13 @@ final class LibraryViewModel: ObservableObject {
             selectedKinds: selectedKinds,
             selectedTag: selectedTag
         )
-        state = items.isEmpty ? .empty : .content
+        entries = Self.mergedEntries(
+            workouts: allWorkouts,
+            knowledge: allItems,
+            selectedKinds: selectedKinds,
+            selectedTag: selectedTag
+        )
+        state = entries.isEmpty ? .empty : .content
     }
 
     static func filtered(
@@ -178,6 +229,66 @@ final class LibraryViewModel: ObservableObject {
             }
             return kindMatches && tagMatches
         }
+    }
+
+    /// Workouts first (any source), then non-workout knowledge cards. Knowledge `.workout`
+    /// cards that don't match a saved Workout stay as synthetic workout entries via tap routing.
+    static func mergedEntries(
+        workouts: [Workout],
+        knowledge: [LibraryItem],
+        selectedKinds: Set<LibraryKind>,
+        selectedTag: String?
+    ) -> [LibraryListEntry] {
+        let showWorkouts = selectedKinds.isEmpty || selectedKinds.contains(.workout)
+        let normalizedTag = selectedTag.flatMap(normalizedTag)
+
+        var result: [LibraryListEntry] = []
+
+        if showWorkouts {
+            for workout in workouts {
+                if let normalizedTag {
+                    let badge = WorkoutSourceProvenance.badge(for: workout.source.rawValue)?.label.lowercased()
+                    let matches = badge.map { tagsEqual($0, normalizedTag) } ?? false
+                    if !matches { continue }
+                }
+                result.append(.workout(workout))
+            }
+        }
+
+        let knowledgeFiltered = filtered(knowledge, selectedKinds: selectedKinds, selectedTag: selectedTag)
+        for item in knowledgeFiltered {
+            // Prefer the structured Workout row when IDs collide.
+            if case .workout = item.kind, workouts.contains(where: { $0.id == item.id }) {
+                continue
+            }
+            // Knowledge workout without a matching Workout still appears; detail synthesizes.
+            result.append(.knowledge(item))
+        }
+
+        return result
+    }
+
+    static func syntheticWorkout(from item: LibraryItem) -> Workout {
+        let source = inferredSource(from: item)
+        return Workout(
+            id: item.id,
+            name: item.title,
+            sport: .strength,
+            duration: 0,
+            blocks: [],
+            description: item.sourceDomain,
+            source: source,
+            sourceUrl: item.sourceUrl
+        )
+    }
+
+    static func inferredSource(from item: LibraryItem) -> WorkoutSource {
+        let domain = (item.sourceDomain ?? item.sourceUrl ?? "").lowercased()
+        if domain.contains("instagram") { return .instagram }
+        if domain.contains("tiktok") { return .tiktok }
+        if domain.contains("youtube") || domain.contains("youtu.be") { return .youtube }
+        if domain.contains("coach") || domain.contains("amakaflow") { return .coach }
+        return .manual
     }
 
     private static func normalizedTag(_ tag: String) -> String? {
