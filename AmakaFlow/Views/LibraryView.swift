@@ -9,7 +9,7 @@ import SwiftUI
 
 struct LibraryView: View {
     @StateObject private var viewModel: LibraryViewModel
-    @State private var showingAddToLibrary = false
+    @State private var addDestination: LibraryAddDestination?
 
     init(viewModel: LibraryViewModel? = nil) {
         _viewModel = StateObject(wrappedValue: viewModel ?? LibraryViewModel())
@@ -55,9 +55,32 @@ struct LibraryView: View {
                 .padding(.top, Theme.Spacing.md)
             }
         }
-        .sheet(isPresented: $showingAddToLibrary) {
-            AddKnowledgeView {
-                Task { await viewModel.load() }
+        .sheet(item: $addDestination) { destination in
+            switch destination {
+            case .knowledge:
+                AddKnowledgeView(
+                    onSocialURLDetected: { url in
+                        let next: LibraryAddDestination = .socialImport(
+                            url: SocialImportPlatform.normalizeForIngest(url),
+                            platform: SocialImportPlatform.detect(from: url)
+                        )
+                        // Dismiss knowledge sheet first so social import can present cleanly.
+                        addDestination = nil
+                        DispatchQueue.main.async {
+                            addDestination = next
+                        }
+                    },
+                    onSaved: {
+                        Task { await viewModel.load() }
+                    }
+                )
+            case .socialImport(let url, let platform):
+                SocialImportFlowView(
+                    mode: .url(platformHint: platform),
+                    initialURL: url
+                ) {
+                    Task { await viewModel.load() }
+                }
             }
         }
         .task {
@@ -68,7 +91,7 @@ struct LibraryView: View {
 
     private var libraryCreateFAB: some View {
         Button {
-            showingAddToLibrary = true
+            presentAddSheet()
         } label: {
             Image(systemName: "plus")
                 .font(.system(size: 22, weight: .semibold))
@@ -110,7 +133,7 @@ struct LibraryView: View {
             }
             LibraryEmptyStateView(
                 clearFilters: viewModel.hasActiveFilters ? { viewModel.clearFilters() } : nil,
-                pasteLink: { showingAddToLibrary = true }
+                pasteLink: { presentAddSheet() }
             )
         }
     }
@@ -184,7 +207,7 @@ struct LibraryView: View {
                 .accessibilityHidden(true)
 
             Button {
-                showingAddToLibrary = true
+                presentAddSheet()
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 18, weight: .semibold))
@@ -196,6 +219,11 @@ struct LibraryView: View {
             .accessibilityLabel("Add to Library")
             .accessibilityIdentifier("af_library_add")
         }
+    }
+
+    private func presentAddSheet() {
+        // AMA-2297: IG/TikTok/YouTube clipboard → SocialImportFlowView, never knowledge bookmark.
+        addDestination = LibraryPasteRouter.destination()
     }
 
     private var filterSection: some View {

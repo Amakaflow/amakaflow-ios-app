@@ -16,12 +16,15 @@ struct SocialImportFlowView: View {
     }
 
     let mode: Mode
+    /// Prefill URL field (Library paste / clipboard routing — AMA-2297).
+    var initialURL: String? = nil
     var onSaved: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = SocialImportViewModel()
     @State private var urlText: String = ""
     @State private var plainText: String = ""
+    @State private var didApplyInitialURL = false
 
     var body: some View {
         NavigationStack {
@@ -48,7 +51,19 @@ struct SocialImportFlowView: View {
                 }
             }
             .accessibilityIdentifier("social_import_flow")
+            .onAppear {
+                applyInitialURLIfNeeded()
+            }
         }
+    }
+
+    private func applyInitialURLIfNeeded() {
+        guard !didApplyInitialURL else { return }
+        didApplyInitialURL = true
+        guard case .url = mode,
+              let initialURL,
+              !initialURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        urlText = SocialImportPlatform.normalizeForIngest(initialURL)
     }
 
     private var navigationTitle: String {
@@ -135,7 +150,7 @@ struct SocialImportFlowView: View {
         switch hint {
         case .youtube: return "https://youtube.com/watch?v=…"
         case .tiktok: return "https://tiktok.com/@…/video/…"
-        case .instagram: return "https://instagram.com/reel/…"
+        case .instagram: return "https://instagram.com/reels/…"
         default: return "https://…"
         }
     }

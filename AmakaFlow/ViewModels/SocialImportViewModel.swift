@@ -37,7 +37,9 @@ final class SocialImportViewModel: ObservableObject {
     func importURL(_ urlString: String, platformHint: SocialImportPlatform? = nil) async {
         guard ensureAuthenticated() else { return }
 
-        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = SocialImportPlatform.normalizeForIngest(
+            urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
         guard !trimmed.isEmpty else {
             phase = .failed(.parse(message: "Paste a workout URL first."))
             return
@@ -164,6 +166,15 @@ final class SocialImportViewModel: ObservableObject {
         guard ensureAuthenticated() else { return }
         guard let draft else {
             phase = .failed(.parse(message: "Nothing to save yet — import a workout first."))
+            return
+        }
+
+        let usableExercises = draft.exercises.filter {
+            let name = $0.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            return !name.isEmpty && name.lowercased() != "add exercises"
+        }
+        guard !usableExercises.isEmpty else {
+            phase = .failed(.parse(message: "Add at least one exercise before saving — import didn't extract a usable list."))
             return
         }
 

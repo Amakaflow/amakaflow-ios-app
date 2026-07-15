@@ -61,6 +61,7 @@ class MockAPIService: APIServiceProviding {
     var ingestInstagramReelCalled = false
     var ingestTextCalled = false
     var ingestSocialURLCalled = false
+    var lastIngestSocialURL: String?
     var ingestSocialTextCalled = false
     var ingestSocialImageCalled = false
     var lastSaveWorkoutRequest: WorkoutSaveRequest?
@@ -155,6 +156,7 @@ class MockAPIService: APIServiceProviding {
 
     func ingestSocialURL(url: String, platform: SocialImportPlatform) async throws -> Data {
         ingestSocialURLCalled = true
+        lastIngestSocialURL = url
         guard let result = ingestSocialURLResult else {
             throw APIError.notImplemented
         }

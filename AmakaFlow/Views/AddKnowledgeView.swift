@@ -14,12 +14,16 @@ struct AddKnowledgeView: View {
 
     @StateObject private var viewModel: AddToLibraryViewModel
     private let onSaved: () -> Void
+    /// AMA-2297: if user pastes a social workout URL here, hand off to import — never silent bookmark.
+    private let onSocialURLDetected: ((String) -> Void)?
 
     init(
         viewModel: AddToLibraryViewModel? = nil,
+        onSocialURLDetected: ((String) -> Void)? = nil,
         onSaved: @escaping () -> Void = {}
     ) {
         _viewModel = StateObject(wrappedValue: viewModel ?? AddToLibraryViewModel())
+        self.onSocialURLDetected = onSocialURLDetected
         self.onSaved = onSaved
     }
 
@@ -65,6 +69,10 @@ struct AddKnowledgeView: View {
             }
             .task {
                 viewModel.detectClipboardURL(UIPasteboard.general.string)
+                handOffSocialURLIfNeeded(viewModel.urlText)
+            }
+            .onChange(of: viewModel.urlText) { _, newValue in
+                handOffSocialURLIfNeeded(newValue)
             }
             .onChange(of: viewModel.didSave) { _, didSave in
                 guard didSave else { return }
@@ -74,11 +82,18 @@ struct AddKnowledgeView: View {
         }
     }
 
+    private func handOffSocialURLIfNeeded(_ raw: String) {
+        guard let onSocialURLDetected,
+              let url = AddToLibraryViewModel.normalizedURL(from: raw),
+              SocialImportPlatform.isWorkoutImportURL(url.absoluteString) else { return }
+        onSocialURLDetected(url.absoluteString)
+    }
+
     private var header: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             Text("Save a link")
                 .afH1()
-            Text("Paste a workout, video, article, or plan URL. AmakaFlow will save the real card and show whatever the backend returns in Library.")
+            Text("Paste an article or plan URL. Instagram, TikTok, and YouTube workout links open Import Workout instead.")
                 .afMuted()
         }
     }
@@ -572,6 +587,15 @@ final class AddToLibraryViewModel: ObservableObject {
         commitTagDraft()
         guard let url = Self.normalizedURL(from: urlText) else {
             applyFailure(.unknown(description: "Enter a valid http or https URL."), action: .save)
+            return
+        }
+
+        // AMA-2297: never silently save IG/TikTok/YouTube as knowledge Article bookmark.
+        if SocialImportPlatform.isWorkoutImportURL(url.absoluteString) {
+            applyFailure(
+                .unknown(description: "This looks like a social workout link. Use Import Workout instead of saving as an article."),
+                action: .save
+            )
             return
         }
 

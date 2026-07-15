@@ -181,6 +181,100 @@ final class SocialImportTests: XCTestCase {
         XCTAssertEqual(draft.toWorkoutSaveRequest().source, "youtube")
     }
 
+    func testNormalizeReelsURLToReel() {
+        let plural = "https://www.instagram.com/reels/DMqEsenN6Dl/"
+        let normalized = SocialImportPlatform.normalizeForIngest(plural)
+        XCTAssertEqual(normalized, "https://www.instagram.com/reel/DMqEsenN6Dl/")
+        XCTAssertEqual(
+            SocialImportPlatform.normalizeForIngest("https://www.instagram.com/reel/DMqEsenN6Dl/"),
+            "https://www.instagram.com/reel/DMqEsenN6Dl/"
+        )
+        XCTAssertTrue(SocialImportPlatform.isWorkoutImportURL(plural))
+        XCTAssertFalse(SocialImportPlatform.isWorkoutImportURL("https://www.nytimes.com/article"))
+    }
+
+    func testLibraryPasteRouterRoutesSocialToImport() {
+        let social = LibraryPasteRouter.destination(
+            clipboardString: "https://www.instagram.com/reels/DMqEsenN6Dl/"
+        )
+        guard case .socialImport(let url, let platform) = social else {
+            return XCTFail("Expected socialImport, got \(social)")
+        }
+        XCTAssertEqual(platform, .instagram)
+        XCTAssertEqual(url, "https://www.instagram.com/reel/DMqEsenN6Dl/")
+
+        let article = LibraryPasteRouter.destination(
+            clipboardString: "https://www.trainingpeaks.com/plan/123"
+        )
+        guard case .knowledge = article else {
+            return XCTFail("Expected knowledge for non-social URL, got \(article)")
+        }
+
+        let empty = LibraryPasteRouter.destination(clipboardString: nil)
+        guard case .knowledge = empty else {
+            return XCTFail("Expected knowledge for empty clipboard, got \(empty)")
+        }
+    }
+
+    func testDraftDecodeMapsProvenanceFromIngestJSON() throws {
+        let json = """
+        {
+          "title": "HYROX Upper Body",
+          "sport": "strength",
+          "blocks": [
+            {
+              "exercises": [
+                {"name": "Push-Ups", "sets": 3, "reps": 15},
+                {"name": "Bench Press", "sets": 4, "reps": 8},
+                {"name": "Pull-Ups", "sets": 3, "reps": 10}
+              ]
+            }
+          ],
+          "_provenance": {
+            "mode": "instagram_reel",
+            "creator": "trainwithsmee",
+            "shortcode": "DMqEsenN6Dl",
+            "caption_snippet": "HYROX upper body session — push + pull",
+            "transcript_snippet": "first up push-ups then bench",
+            "source_url": "https://www.instagram.com/reel/DMqEsenN6Dl/"
+          }
+        }
+        """.data(using: .utf8)!
+        let draft = try SocialImportDraft.fromIngestJSON(
+            json,
+            platform: .instagram,
+            sourceURL: "https://www.instagram.com/reels/DMqEsenN6Dl/",
+            equipmentEmpty: false,
+            equipmentNote: nil
+        )
+        XCTAssertEqual(draft.postProvenance?.creatorDisplay, "@trainwithsmee")
+        XCTAssertEqual(draft.postProvenance?.shortcode, "DMqEsenN6Dl")
+        XCTAssertTrue(draft.postProvenance?.contentSnippet?.contains("HYROX") == true)
+        XCTAssertEqual(draft.exercises.count, 3)
+        XCTAssertEqual(draft.exercises[0].name, "Push-Ups")
+    }
+
+    func testTier403MapsToHonestTierFailure() {
+        let body = "{\"detail\":\"Instagram auto-extraction requires a Pro or Trainer subscription.\"}"
+        let failure = SocialImportFailure.map(APIError.serverErrorWithBody(403, body))
+        guard case .tier(let message) = failure else {
+            return XCTFail("Expected tier failure, got \(failure)")
+        }
+        XCTAssertEqual(failure.title, "Pro required")
+        XCTAssertTrue(message.lowercased().contains("pro"))
+    }
+
+    func testImportURLNormalizesReelsBeforeIngest() async {
+        mockAPI.ingestSocialURLResult = .success(sampleIngestJSON())
+
+        await sut.importURL("https://www.instagram.com/reels/DMqEsenN6Dl/", platformHint: .instagram)
+
+        XCTAssertEqual(mockAPI.lastIngestSocialURL, "https://www.instagram.com/reel/DMqEsenN6Dl/")
+        guard case .preview = sut.phase else {
+            return XCTFail("Expected preview, got \(sut.phase)")
+        }
+    }
+
     private func sampleIngestJSON() -> Data {
         """
         {
@@ -193,7 +287,12 @@ final class SocialImportTests: XCTestCase {
                 {"name": "Overhead Press", "sets": 3, "reps": 10}
               ]
             }
-          ]
+          ],
+          "_provenance": {
+            "creator": "fitcoach",
+            "caption_snippet": "Push day — bench and OHP",
+            "shortcode": "abc"
+          }
         }
         """.data(using: .utf8)!
     }
