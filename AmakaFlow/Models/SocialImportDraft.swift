@@ -61,11 +61,92 @@ enum SocialImportPlatform: String, Codable, CaseIterable, Equatable {
     }
 
     static func detect(from urlString: String) -> SocialImportPlatform {
+        if let host = Self.host(from: urlString) {
+            if Self.hostMatches(host, roots: ["youtube.com", "youtu.be"]) { return .youtube }
+            if Self.hostMatches(host, roots: ["instagram.com", "instagr.am"]) { return .instagram }
+            if Self.hostMatches(host, roots: ["tiktok.com"]) { return .tiktok }
+            return .web
+        }
+
+        // Fallback for bare host-like strings without a scheme.
         let lowered = urlString.lowercased()
         if lowered.contains("youtube.com") || lowered.contains("youtu.be") { return .youtube }
         if lowered.contains("instagram.com") || lowered.contains("instagr.am") { return .instagram }
         if lowered.contains("tiktok.com") { return .tiktok }
         return .web
+    }
+
+    /// True when Library paste should open workout import (not knowledge bookmark).
+    static func isWorkoutImportURL(_ urlString: String) -> Bool {
+        switch detect(from: urlString) {
+        case .instagram, .tiktok, .youtube: return true
+        default: return false
+        }
+    }
+
+    /// AMA-2297: normalize IG `/reels/{id}` → `/reel/{id}` before ingest.
+    static func normalizeForIngest(_ urlString: String) -> String {
+        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard detect(from: trimmed) == .instagram else { return trimmed }
+        guard let regex = try? NSRegularExpression(
+            pattern: "(?i)(instagram\\.com/)reels(/)",
+            options: []
+        ) else { return trimmed }
+        let range = NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)
+        return regex.stringByReplacingMatches(
+            in: trimmed,
+            options: [],
+            range: range,
+            withTemplate: "$1reel$2"
+        )
+    }
+
+    /// Parse host structurally so `instagram.com.evil` / `notinstagram.com` are rejected.
+    private static func host(from urlString: String) -> String? {
+        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        if let url = URL(string: trimmed), let host = url.host, !host.isEmpty {
+            return host.lowercased()
+        }
+        let withScheme = trimmed.contains("://") ? trimmed : "https://\(trimmed)"
+        return URL(string: withScheme)?.host?.lowercased()
+    }
+
+    private static func hostMatches(_ host: String, roots: [String]) -> Bool {
+        roots.contains { root in
+            host == root || host.hasSuffix(".\(root)")
+        }
+    }
+}
+
+/// Trust/debug metadata pulled from the original social post (AMA-2297).
+struct SocialImportPostProvenance: Equatable {
+    var creator: String?
+    var captionSnippet: String?
+    var transcriptSnippet: String?
+    var mode: String?
+    var shortcode: String?
+
+    var creatorDisplay: String {
+        guard let creator = creator?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !creator.isEmpty,
+              creator.lowercased() != "unknown" else {
+            return "creator unknown"
+        }
+        return creator.hasPrefix("@") ? creator : "@\(creator)"
+    }
+
+    /// 1–2 line snippet for verifying we fetched real post content.
+    var contentSnippet: String? {
+        let caption = captionSnippet?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let caption, !caption.isEmpty { return String(caption.prefix(180)) }
+        let transcript = transcriptSnippet?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let transcript, !transcript.isEmpty { return String(transcript.prefix(180)) }
+        return nil
+    }
+
+    var hasDisplayableInfo: Bool {
+        creator != nil || contentSnippet != nil || shortcode != nil || mode != nil
     }
 }
 
@@ -89,6 +170,8 @@ struct SocialImportDraft: Equatable {
     var equipmentNote: String?
     /// True when coaching equipment profile is empty — honest empty, continue.
     var equipmentEmpty: Bool
+    /// AMA-2297: what we pulled from the original post (creator / caption / URL).
+    var postProvenance: SocialImportPostProvenance?
 
     var provenanceLabel: String { platform.displayName }
 
@@ -214,6 +297,8 @@ struct SocialImportDraft: Equatable {
             ?? (object["sourceUrl"] as? String)
             ?? (object["source"] as? String).flatMap { $0.hasPrefix("http") ? $0 : nil }
 
+        let postProvenance = Self.postProvenance(from: object)
+
         return SocialImportDraft(
             title: title,
             sport: sport.lowercased(),
@@ -221,7 +306,31 @@ struct SocialImportDraft: Equatable {
             sourceURL: resolvedURL,
             exercises: exercises,
             equipmentNote: equipmentNote,
-            equipmentEmpty: equipmentEmpty
+            equipmentEmpty: equipmentEmpty,
+            postProvenance: postProvenance
         )
+    }
+
+    private static func postProvenance(from object: [String: Any]) -> SocialImportPostProvenance? {
+        let provenance = object["_provenance"] as? [String: Any]
+        let creator = (provenance?["creator"] as? String)
+            ?? (object["creator"] as? String)
+            ?? (object["author"] as? String)
+        let captionSnippet = (provenance?["caption_snippet"] as? String)
+            ?? (provenance?["caption"] as? String)
+            ?? (object["caption"] as? String)
+        let transcriptSnippet = (provenance?["transcript_snippet"] as? String)
+            ?? (provenance?["transcript"] as? String)
+        let mode = provenance?["mode"] as? String
+        let shortcode = provenance?["shortcode"] as? String
+
+        let result = SocialImportPostProvenance(
+            creator: creator,
+            captionSnippet: captionSnippet,
+            transcriptSnippet: transcriptSnippet,
+            mode: mode,
+            shortcode: shortcode
+        )
+        return result.hasDisplayableInfo ? result : nil
     }
 }

@@ -36,6 +36,15 @@ struct SocialImportPreviewView: View {
                 Text("Edit freely before saving — import never blocks edits.")
             }
 
+            // AMA-2297: thin "From post" trust block — creator / caption / source URL.
+            if draft.postProvenance != nil || draft.sourceURL != nil {
+                Section {
+                    fromPostBlock
+                } header: {
+                    Text("From post")
+                }
+            }
+
             if let note = draft.equipmentNote {
                 Section {
                     Label(note, systemImage: draft.equipmentEmpty ? "exclamationmark.circle" : "dumbbell.fill")
@@ -121,6 +130,36 @@ struct SocialImportPreviewView: View {
             }
         }
         .accessibilityIdentifier("social_import_preview")
+    }
+
+    @ViewBuilder
+    private var fromPostBlock: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(draft.postProvenance?.creatorDisplay ?? "creator unknown")
+                .font(Theme.Typography.bodyBold)
+                .foregroundColor(Theme.Colors.textPrimary)
+                .accessibilityIdentifier("social_import_from_post_creator")
+
+            if let snippet = draft.postProvenance?.contentSnippet {
+                Text(snippet)
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textSecondary)
+                    .lineLimit(2)
+                    .accessibilityIdentifier("social_import_from_post_snippet")
+            }
+
+            if let sourceURL = draft.sourceURL,
+               let url = URL(string: sourceURL) {
+                Link(destination: url) {
+                    Label(sourceURL, systemImage: "link")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.accentBlue)
+                        .lineLimit(1)
+                }
+                .accessibilityIdentifier("social_import_from_post_url")
+            }
+        }
+        .accessibilityIdentifier("social_import_from_post")
     }
 
     private var saveButtonLabel: String {

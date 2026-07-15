@@ -3,6 +3,7 @@
 //  AmakaFlow
 //
 //  AMA-2285: typed failure model for social import (auth / parse / network).
+//  AMA-2297: honest 403 Pro-tier messaging — never silent bookmark fallthrough.
 //  Failures must surface clear recoverable copy in ≤3s — never crash.
 //
 
@@ -12,6 +13,8 @@ import Foundation
 enum SocialImportFailure: Error, Equatable {
     /// Not signed in / session expired — fail fast before network.
     case auth(message: String)
+    /// Subscription / tier gate (e.g. Instagram Pro required).
+    case tier(message: String)
     /// Ingestor/mapper could not understand the content (4xx parse).
     case parse(message: String)
     /// Offline, timeout, or transport failure.
@@ -21,6 +24,7 @@ enum SocialImportFailure: Error, Equatable {
     var title: String {
         switch self {
         case .auth: return "Sign in required"
+        case .tier: return "Pro required"
         case .parse: return "Couldn't parse workout"
         case .network: return "Network error"
         }
@@ -29,14 +33,14 @@ enum SocialImportFailure: Error, Equatable {
     /// User-facing body — what failed + why.
     var userMessage: String {
         switch self {
-        case .auth(let message), .parse(let message), .network(let message):
+        case .auth(let message), .tier(let message), .parse(let message), .network(let message):
             return message
         }
     }
 
     var isRetryable: Bool {
         switch self {
-        case .auth: return false
+        case .auth, .tier: return false
         case .parse: return true
         case .network: return true
         }
@@ -80,25 +84,61 @@ enum SocialImportFailure: Error, Equatable {
         case .decoding(let description, _):
             return .parse(message: "Couldn't read the workout response. \(description.prefix(120))")
         case .http(let status, let body, _):
-            if status == 401 || status == 403 {
-                return .auth(message: "Session expired. Sign in again, then retry.")
-            }
-            if status == 400 || status == 422 {
-                let detail = body.flatMap { CTAError.extractField("detail", from: $0) }
-                    ?? body.map { String($0.prefix(160)) }
-                    ?? "That content couldn't be turned into a workout."
-                return .parse(message: detail)
-            }
-            if status >= 500 {
-                return .network(message: "Server error (\(status)). Try again in a moment.")
-            }
-            return .parse(message: body.map { String($0.prefix(160)) } ?? "Import failed (HTTP \(status)).")
+            return mapHTTP(status: status, body: body)
         case .lyingSuccess(let message, let errorCode, _):
             let base = message ?? "Server reported failure"
             if let errorCode { return .parse(message: "\(base) (\(errorCode))") }
             return .parse(message: base)
         case .unknown(let description, _):
             return .parse(message: description)
+        }
+    }
+
+    private static func mapHTTP(status: Int, body: String?) -> SocialImportFailure {
+        if status == 401 {
+            return .auth(message: "Session expired. Sign in again, then retry.")
+        }
+        if status == 403 {
+            let detail = body.flatMap { CTAError.extractField("detail", from: $0) }
+                ?? body.map { String($0.prefix(200)) }
+            if let detail, looksLikeTierGate(detail) {
+                return .tier(message: detail)
+            }
+            return .auth(message: detail ?? "Session expired. Sign in again, then retry.")
+        }
+        if status == 400 || status == 422 {
+            let detail = body.flatMap { CTAError.extractField("detail", from: $0) }
+                ?? body.map { String($0.prefix(160)) }
+                ?? "That content couldn't be turned into a workout."
+            return .parse(message: detail)
+        }
+        if status >= 500 {
+            return .network(message: "Server error (\(status)). Try again in a moment.")
+        }
+        return .parse(message: body.map { String($0.prefix(160)) } ?? "Import failed (HTTP \(status)).")
+    }
+
+    private static func looksLikeTierGate(_ detail: String) -> Bool {
+        let lowered = detail.lowercased()
+        // Prefer entitlement phrases — avoid matching bare "pro" inside unrelated 403s.
+        let phrases = [
+            "pro or trainer",
+            "requires a pro",
+            "requires pro",
+            "pro subscription",
+            "trainer subscription",
+            "subscription required",
+            "upgrade to pro",
+            "tier gate",
+            "billing"
+        ]
+        if phrases.contains(where: { lowered.contains($0) }) {
+            return true
+        }
+        // Word-boundary checks for standalone entitlement tokens.
+        let tokens = ["subscription", "trainer", "tier"]
+        return tokens.contains { token in
+            lowered.range(of: #"\b\#(token)\b"#, options: .regularExpression) != nil
         }
     }
 
