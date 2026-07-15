@@ -309,25 +309,16 @@ extension UnifiedWorkoutDetailView {
     }
 
     fileprivate func beginAppleTryHandoff() {
-        if appleWatchReachable {
-            Task {
-                await workoutsViewModel.sendToWatch(workout)
-                handoffStatus = "Sent to Apple Watch — AMA-2287 try path"
-            }
-            return
+        handoffStatus = appleWatchReachable
+            ? "Sending to Apple Watch…"
+            : "Saving to Apple Fitness…"
+        Task {
+            let result = await AppleStartHandoffService().handoff(
+                workout: workout,
+                watchReachable: appleWatchReachable
+            )
+            handoffStatus = result.message
         }
-        if #available(iOS 18.0, *) {
-            Task {
-                do {
-                    try await WorkoutKitConverter.shared.saveToWorkoutKit(workout)
-                    handoffStatus = "Saved to Apple Fitness (try) — AMA-2287"
-                } catch {
-                    handoffStatus = "Apple try stub — Watch unreachable (\(error.localizedDescription))"
-                }
-            }
-            return
-        }
-        handoffStatus = "Apple try stub — Watch unreachable (AMA-2287)"
     }
 
     fileprivate var provenanceSubtitle: String {
