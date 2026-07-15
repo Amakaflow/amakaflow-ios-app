@@ -5,6 +5,7 @@
 //  AMA-2285: social import fixtures (no scraping).
 //
 
+#if DEBUG
 import Foundation
 
 extension FixtureAPIService {
@@ -56,3 +57,4 @@ extension FixtureAPIService {
         (true, "Fixture: no equipment profile — continuing.")
     }
 }
+#endif

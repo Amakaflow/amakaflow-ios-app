@@ -6,6 +6,7 @@
 //  AMA-2290: append phone completions after player Save so Today refreshes.
 //
 
+#if DEBUG
 import Foundation
 
 extension FixtureAPIService {
@@ -97,3 +98,4 @@ extension FixtureAPIService {
         livePhoneSetLogsById[id]
     }
 }
+#endif
