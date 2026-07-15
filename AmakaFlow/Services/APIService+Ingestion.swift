@@ -130,9 +130,17 @@ extension APIService {
             throw APIError.serverErrorWithBody(400, responseString ?? "Bad request")
         case 401:
             throw APIError.unauthorized
+        case 403:
+            throw APIError.serverErrorWithBody(403, responseString ?? "Forbidden")
         case 422:
             throw APIError.serverErrorWithBody(422, responseString ?? "Could not process Instagram Reel")
         default:
+            if (400..<500).contains(httpResponse.statusCode) {
+                throw APIError.serverErrorWithBody(
+                    httpResponse.statusCode,
+                    responseString ?? "Request failed"
+                )
+            }
             throw APIError.serverError(httpResponse.statusCode)
         }
     }

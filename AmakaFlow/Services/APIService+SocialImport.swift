@@ -181,9 +181,17 @@ extension APIService {
             throw APIError.serverErrorWithBody(400, responseString ?? "Bad request")
         case 401:
             throw APIError.unauthorized
+        case 403:
+            throw APIError.serverErrorWithBody(403, responseString ?? "Forbidden")
         case 422:
             throw APIError.serverErrorWithBody(422, responseString ?? "Could not parse workout")
         default:
+            if (400..<500).contains(httpResponse.statusCode) {
+                throw APIError.serverErrorWithBody(
+                    httpResponse.statusCode,
+                    responseString ?? "Request failed"
+                )
+            }
             throw APIError.serverError(httpResponse.statusCode)
         }
     }
@@ -215,18 +223,7 @@ extension APIService {
         req.timeoutInterval = 15
         req.allHTTPHeaderFields = try await makeAuthHeaders()
 
-        let intervalsPayload = Self.provenanceIntervalsPayload(from: request.intervals)
-        var body: [String: Any] = [
-            "name": request.name,
-            "title": request.name,
-            "sport": request.sport,
-            "intervals": intervalsPayload,
-            "sources": [source],
-            "device": "ios"
-        ]
-        if let sourceUrl = request.sourceUrl {
-            body["source_url"] = sourceUrl
-        }
+        let body = Self.mapperSaveBody(from: request, source: source)
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
 
@@ -257,18 +254,63 @@ extension APIService {
         return Self.synthesizedProvenanceWorkout(from: request, source: source, responseData: data)
     }
 
-    private static func provenanceIntervalsPayload(from intervals: [WorkoutSaveInterval]) -> [[String: Any]] {
-        intervals.map { interval in
-            var item: [String: Any] = ["type": interval.type]
-            if let name = interval.name { item["name"] = name }
-            if let sets = interval.sets { item["sets"] = sets }
-            if let reps = interval.reps { item["reps"] = reps }
-            if let seconds = interval.seconds { item["seconds"] = seconds }
-            if let meters = interval.meters { item["meters"] = meters }
-            if let restSeconds = interval.restSeconds { item["rest_seconds"] = restSeconds }
-            if let load = interval.load { item["load"] = load }
-            if let target = interval.target { item["target"] = target }
-            return item
+    /// POST /workouts/save body for mapper-api (`workout_data` + `sources` + `device`).
+    static func mapperSaveBody(from request: WorkoutSaveRequest, source: String) -> [String: Any] {
+        let exercises = request.intervals.compactMap { provenanceExercise(from: $0) }
+        var workoutData: [String: Any] = [
+            "title": request.name,
+            "workout_type": request.sport,
+            "blocks": [
+                [
+                    "label": "Main",
+                    "exercises": exercises.isEmpty
+                        ? [["name": "Exercise", "sets": 1, "reps": 1]]
+                        : exercises
+                ]
+            ]
+        ]
+        if let sourceUrl = request.sourceUrl {
+            workoutData["metadata"] = ["source_url": sourceUrl]
+        }
+        return [
+            "workout_data": workoutData,
+            "sources": [source],
+            "device": "ios",
+            "title": request.name
+        ]
+    }
+
+    private static func provenanceExercise(from interval: WorkoutSaveInterval) -> [String: Any]? {
+        switch interval.type {
+        case "reps":
+            let name = (interval.name ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty else { return nil }
+            var exercise: [String: Any] = [
+                "name": name,
+                "sets": interval.sets ?? 3,
+                "reps": interval.reps ?? 10
+            ]
+            if let load = interval.load?.trimmingCharacters(in: .whitespacesAndNewlines), !load.isEmpty {
+                exercise["notes"] = load
+            }
+            return exercise
+        case "time", "warmup", "cooldown":
+            let name = (interval.target ?? interval.name ?? "Exercise")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty else { return nil }
+            var exercise: [String: Any] = ["name": name]
+            if let seconds = interval.seconds { exercise["duration_sec"] = seconds }
+            return exercise
+        case "distance":
+            let name = (interval.target ?? interval.name ?? "Exercise")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty else { return nil }
+            var exercise: [String: Any] = ["name": name, "reps": "\(interval.meters ?? 0)m"]
+            return exercise
+        case "rest":
+            return nil
+        default:
+            return nil
         }
     }
 

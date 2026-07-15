@@ -287,6 +287,16 @@ final class SocialImportTests: XCTestCase {
         XCTAssertTrue(message.lowercased().contains("pro"))
     }
 
+    func testBare403WithoutBodyMustNotMasqueradeAsSessionExpired() {
+        // Regression: validateSocialIngestResponse must preserve 403 body;
+        // serverError(403) without body incorrectly mapped to auth in AMA-2297 dogfood.
+        let failure = SocialImportFailure.map(APIError.serverError(403))
+        guard case .auth(let message) = failure else {
+            return XCTFail("Expected auth for body-less 403, got \(failure)")
+        }
+        XCTAssertEqual(message, "Session expired. Sign in again, then retry.")
+    }
+
     func testPrivateProfile403MapsToAuthNotTier() {
         let body = "{\"detail\":\"This profile is private\"}"
         let failure = SocialImportFailure.map(APIError.serverErrorWithBody(403, body))
@@ -329,6 +339,48 @@ final class SocialImportTests: XCTestCase {
             return XCTFail("Expected parse failure, got \(failure)")
         }
         XCTAssertFalse(mockAPI.saveWorkoutCalled)
+    }
+
+    func testMapperSaveBodyUsesWorkoutDataBlocksShape() {
+        let request = WorkoutSaveRequest(
+            name: "Upper Body Strength Day",
+            sport: "strength",
+            intervals: [
+                WorkoutSaveInterval(type: "reps", name: "Dumbbell Bench Press", sets: 5, reps: 5),
+                WorkoutSaveInterval(type: "reps", name: "Sled Pull", sets: 12, reps: 12)
+            ],
+            source: WorkoutSource.instagram.rawValue,
+            sourceUrl: "https://www.instagram.com/reel/DX9abc/"
+        )
+
+        let body = APIService.mapperSaveBody(from: request, source: WorkoutSource.instagram.rawValue)
+        XCTAssertNotNil(body["workout_data"])
+        XCTAssertEqual(body["device"] as? String, "ios")
+        XCTAssertEqual(body["sources"] as? [String], ["instagram"])
+
+        let workoutData = body["workout_data"] as? [String: Any]
+        let blocks = workoutData?["blocks"] as? [[String: Any]]
+        let exercises = blocks?.first?["exercises"] as? [[String: Any]]
+        XCTAssertEqual(exercises?.count, 2)
+        XCTAssertEqual(exercises?.first?["name"] as? String, "Dumbbell Bench Press")
+        XCTAssertEqual(exercises?.first?["sets"] as? Int, 5)
+        XCTAssertEqual(exercises?.first?["reps"] as? Int, 5)
+
+        let metadata = workoutData?["metadata"] as? [String: Any]
+        XCTAssertEqual(metadata?["source_url"] as? String, "https://www.instagram.com/reel/DX9abc/")
+    }
+
+    func testSocialImportFailureFormatsFastAPIValidationDetail() {
+        let body = """
+        {"detail":[{"type":"missing","loc":["body","workout_data"],"msg":"Field required","input":{}}]}
+        """
+        let failure = SocialImportFailure.map(APIError.serverErrorWithBody(422, body))
+        guard case .parse(let message) = failure else {
+            return XCTFail("Expected parse failure, got \(failure)")
+        }
+        XCTAssertTrue(message.contains("workout_data"))
+        XCTAssertTrue(message.contains("Field required"))
+        XCTAssertFalse(message == "loc")
     }
 
     private func sampleIngestJSON() -> Data {
