@@ -84,27 +84,7 @@ enum SocialImportFailure: Error, Equatable {
         case .decoding(let description, _):
             return .parse(message: "Couldn't read the workout response. \(description.prefix(120))")
         case .http(let status, let body, _):
-            if status == 401 {
-                return .auth(message: "Session expired. Sign in again, then retry.")
-            }
-            if status == 403 {
-                let detail = body.flatMap { CTAError.extractField("detail", from: $0) }
-                    ?? body.map { String($0.prefix(200)) }
-                if let detail, looksLikeTierGate(detail) {
-                    return .tier(message: detail)
-                }
-                return .auth(message: detail ?? "Session expired. Sign in again, then retry.")
-            }
-            if status == 400 || status == 422 {
-                let detail = body.flatMap { CTAError.extractField("detail", from: $0) }
-                    ?? body.map { String($0.prefix(160)) }
-                    ?? "That content couldn't be turned into a workout."
-                return .parse(message: detail)
-            }
-            if status >= 500 {
-                return .network(message: "Server error (\(status)). Try again in a moment.")
-            }
-            return .parse(message: body.map { String($0.prefix(160)) } ?? "Import failed (HTTP \(status)).")
+            return mapHTTP(status: status, body: body)
         case .lyingSuccess(let message, let errorCode, _):
             let base = message ?? "Server reported failure"
             if let errorCode { return .parse(message: "\(base) (\(errorCode))") }
@@ -114,12 +94,52 @@ enum SocialImportFailure: Error, Equatable {
         }
     }
 
+    private static func mapHTTP(status: Int, body: String?) -> SocialImportFailure {
+        if status == 401 {
+            return .auth(message: "Session expired. Sign in again, then retry.")
+        }
+        if status == 403 {
+            let detail = body.flatMap { CTAError.extractField("detail", from: $0) }
+                ?? body.map { String($0.prefix(200)) }
+            if let detail, looksLikeTierGate(detail) {
+                return .tier(message: detail)
+            }
+            return .auth(message: detail ?? "Session expired. Sign in again, then retry.")
+        }
+        if status == 400 || status == 422 {
+            let detail = body.flatMap { CTAError.extractField("detail", from: $0) }
+                ?? body.map { String($0.prefix(160)) }
+                ?? "That content couldn't be turned into a workout."
+            return .parse(message: detail)
+        }
+        if status >= 500 {
+            return .network(message: "Server error (\(status)). Try again in a moment.")
+        }
+        return .parse(message: body.map { String($0.prefix(160)) } ?? "Import failed (HTTP \(status)).")
+    }
+
     private static func looksLikeTierGate(_ detail: String) -> Bool {
         let lowered = detail.lowercased()
-        return lowered.contains("pro")
-            || lowered.contains("subscription")
-            || lowered.contains("trainer")
-            || lowered.contains("tier")
+        // Prefer entitlement phrases — avoid matching bare "pro" inside unrelated 403s.
+        let phrases = [
+            "pro or trainer",
+            "requires a pro",
+            "requires pro",
+            "pro subscription",
+            "trainer subscription",
+            "subscription required",
+            "upgrade to pro",
+            "tier gate",
+            "billing"
+        ]
+        if phrases.contains(where: { lowered.contains($0) }) {
+            return true
+        }
+        // Word-boundary checks for standalone entitlement tokens.
+        let tokens = ["subscription", "trainer", "tier"]
+        return tokens.contains { token in
+            lowered.range(of: #"\b\#(token)\b"#, options: .regularExpression) != nil
+        }
     }
 
     private static func networkMessage(for code: URLError.Code) -> String {

@@ -203,6 +203,29 @@ final class SocialImportTests: XCTestCase {
         XCTAssertEqual(platform, .instagram)
         XCTAssertEqual(url, "https://www.instagram.com/reel/DMqEsenN6Dl/")
 
+        let tiktok = LibraryPasteRouter.destination(
+            clipboardString: "https://www.tiktok.com/@coach/video/123"
+        )
+        guard case .socialImport(_, let ttPlatform) = tiktok else {
+            return XCTFail("Expected socialImport for TikTok, got \(tiktok)")
+        }
+        XCTAssertEqual(ttPlatform, .tiktok)
+
+        let youtube = LibraryPasteRouter.destination(
+            clipboardString: "https://www.youtube.com/watch?v=abc123"
+        )
+        guard case .socialImport(_, let ytPlatform) = youtube else {
+            return XCTFail("Expected socialImport for YouTube, got \(youtube)")
+        }
+        XCTAssertEqual(ytPlatform, .youtube)
+
+        let lookalike = LibraryPasteRouter.destination(
+            clipboardString: "https://instagram.com.evil/phishing"
+        )
+        guard case .knowledge = lookalike else {
+            return XCTFail("Expected knowledge for lookalike host, got \(lookalike)")
+        }
+
         let article = LibraryPasteRouter.destination(
             clipboardString: "https://www.trainingpeaks.com/plan/123"
         )
@@ -264,6 +287,14 @@ final class SocialImportTests: XCTestCase {
         XCTAssertTrue(message.lowercased().contains("pro"))
     }
 
+    func testPrivateProfile403MapsToAuthNotTier() {
+        let body = "{\"detail\":\"This profile is private\"}"
+        let failure = SocialImportFailure.map(APIError.serverErrorWithBody(403, body))
+        guard case .auth = failure else {
+            return XCTFail("Expected auth (not tier) for private profile 403, got \(failure)")
+        }
+    }
+
     func testImportURLNormalizesReelsBeforeIngest() async {
         mockAPI.ingestSocialURLResult = .success(sampleIngestJSON())
 
@@ -273,6 +304,31 @@ final class SocialImportTests: XCTestCase {
         guard case .preview = sut.phase else {
             return XCTFail("Expected preview, got \(sut.phase)")
         }
+    }
+
+    func testSaveRejectsPlaceholderOnlyExercises() async {
+        sut.loadDraft(
+            SocialImportDraft(
+                title: "Thin",
+                sport: "strength",
+                platform: .instagram,
+                sourceURL: "https://www.instagram.com/reel/x/",
+                exercises: [SocialImportExercise(name: "Add exercises", sets: 3, reps: 10)],
+                equipmentNote: nil,
+                equipmentEmpty: false,
+                postProvenance: nil
+            )
+        )
+
+        await sut.saveToLibrary()
+
+        guard case .failed(let failure) = sut.phase else {
+            return XCTFail("Expected failed, got \(sut.phase)")
+        }
+        guard case .parse = failure else {
+            return XCTFail("Expected parse failure, got \(failure)")
+        }
+        XCTAssertFalse(mockAPI.saveWorkoutCalled)
     }
 
     private func sampleIngestJSON() -> Data {

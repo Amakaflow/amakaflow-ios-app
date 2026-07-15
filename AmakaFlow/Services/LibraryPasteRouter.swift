@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import SwiftUI
 import UIKit
 
 enum LibraryAddDestination: Identifiable, Equatable {
@@ -56,5 +57,64 @@ enum LibraryPasteRouter {
         }
 
         return AddToLibraryViewModel.normalizedURL(from: trimmed)?.absoluteString
+    }
+}
+
+struct LibraryEmptyStateView: View {
+    let clearFilters: (() -> Void)?
+    let pasteLink: () -> Void
+
+    var body: some View {
+        AFCard {
+            VStack(spacing: Theme.Spacing.md) {
+                Image(systemName: "bookmark.badge.plus")
+                    .font(.system(size: 36, weight: .semibold))
+                    .foregroundColor(Theme.Colors.readyHigh)
+                Text(LibraryCopy.emptyTitle)
+                    .afH2()
+                    .multilineTextAlignment(.center)
+                Text(LibraryCopy.emptySubtitle)
+                    .afMuted()
+                    .multilineTextAlignment(.center)
+
+                Button(action: pasteLink) {
+                    Text(LibraryCopy.pasteLink)
+                }
+                .buttonStyle(AFPrimaryButtonStyle(size: .md))
+                .accessibilityIdentifier("af_library_empty_paste")
+
+                if let clearFilters {
+                    Button("Clear filters", action: clearFilters)
+                        .buttonStyle(AFGhostButtonStyle(size: .sm, isWide: false))
+                        .accessibilityIdentifier("af_library_clear_filters")
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .accessibilityIdentifier("library_empty_state")
+    }
+}
+
+struct LibraryFlowPills: View {
+    let tags: [String]
+
+    var body: some View {
+        // Keep the first row compact for v1; detailed tag browsing follows in AMA-2005/2006.
+        HStack(spacing: Theme.Spacing.xs) {
+            ForEach(tags.prefix(3), id: \.self) { tag in
+                Text(tag)
+                    .font(Theme.Typography.label)
+                    .foregroundColor(Theme.Colors.textSecondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Theme.Colors.chipBackground)
+                    .clipShape(Capsule())
+            }
+            if tags.count > 3 {
+                Text("+\(tags.count - 3)")
+                    .font(Theme.Typography.label)
+                    .foregroundColor(Theme.Colors.textTertiary)
+            }
+        }
     }
 }

@@ -16,6 +16,7 @@ struct AddKnowledgeView: View {
     private let onSaved: () -> Void
     /// AMA-2297: if user pastes a social workout URL here, hand off to import — never silent bookmark.
     private let onSocialURLDetected: ((String) -> Void)?
+    @State private var didHandOffSocialURL = false
 
     init(
         viewModel: AddToLibraryViewModel? = nil,
@@ -69,7 +70,7 @@ struct AddKnowledgeView: View {
             }
             .task {
                 viewModel.detectClipboardURL(UIPasteboard.general.string)
-                handOffSocialURLIfNeeded(viewModel.urlText)
+                // onChange(of: urlText) fires for the clipboard fill — avoid double handoff.
             }
             .onChange(of: viewModel.urlText) { _, newValue in
                 handOffSocialURLIfNeeded(newValue)
@@ -86,6 +87,9 @@ struct AddKnowledgeView: View {
         guard let onSocialURLDetected,
               let url = AddToLibraryViewModel.normalizedURL(from: raw),
               SocialImportPlatform.isWorkoutImportURL(url.absoluteString) else { return }
+        // Fire once per sheet presentation — re-entry while swapping sheets is ignored.
+        guard !didHandOffSocialURL else { return }
+        didHandOffSocialURL = true
         onSocialURLDetected(url.absoluteString)
     }
 

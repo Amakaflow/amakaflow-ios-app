@@ -10,6 +10,8 @@ import SwiftUI
 struct LibraryView: View {
     @StateObject private var viewModel: LibraryViewModel
     @State private var addDestination: LibraryAddDestination?
+    /// Queued after knowledge sheet dismisses so social import presents cleanly (AMA-2297 CR).
+    @State private var pendingSocialDestination: LibraryAddDestination?
 
     init(viewModel: LibraryViewModel? = nil) {
         _viewModel = StateObject(wrappedValue: viewModel ?? LibraryViewModel())
@@ -55,41 +57,55 @@ struct LibraryView: View {
                 .padding(.top, Theme.Spacing.md)
             }
         }
-        .sheet(item: $addDestination) { destination in
-            switch destination {
-            case .knowledge:
-                AddKnowledgeView(
-                    onSocialURLDetected: { url in
-                        let next: LibraryAddDestination = .socialImport(
-                            url: SocialImportPlatform.normalizeForIngest(url),
-                            platform: SocialImportPlatform.detect(from: url)
-                        )
-                        // Dismiss knowledge sheet first so social import can present cleanly.
-                        addDestination = nil
-                        DispatchQueue.main.async {
-                            addDestination = next
-                        }
-                    },
-                    onSaved: {
-                        Task { await viewModel.load() }
-                    }
-                )
-            case .socialImport(let url, let platform):
-                SocialImportFlowView(
-                    mode: .url(platformHint: platform),
-                    initialURL: url
-                ) {
-                    Task { await viewModel.load() }
-                }
-            }
+        .sheet(item: $addDestination, onDismiss: presentPendingSocialImportIfNeeded) { destination in
+            libraryAddSheet(destination)
         }
         .task {
             await viewModel.load()
         }
         .accessibilityIdentifier("library_screen")
     }
+}
 
-    private var libraryCreateFAB: some View {
+extension LibraryView {
+    @ViewBuilder
+    fileprivate func libraryAddSheet(_ destination: LibraryAddDestination) -> some View {
+        switch destination {
+        case .knowledge:
+            AddKnowledgeView(
+                onSocialURLDetected: { url in
+                    pendingSocialDestination = .socialImport(
+                        url: SocialImportPlatform.normalizeForIngest(url),
+                        platform: SocialImportPlatform.detect(from: url)
+                    )
+                    addDestination = nil
+                },
+                onSaved: {
+                    Task { await viewModel.load() }
+                }
+            )
+        case .socialImport(let url, let platform):
+            SocialImportFlowView(
+                mode: .url(platformHint: platform),
+                initialURL: url
+            ) {
+                Task { await viewModel.load() }
+            }
+        }
+    }
+
+    fileprivate func presentPendingSocialImportIfNeeded() {
+        guard let pending = pendingSocialDestination else { return }
+        pendingSocialDestination = nil
+        addDestination = pending
+    }
+
+    fileprivate func presentAddSheet() {
+        // AMA-2297: IG/TikTok/YouTube clipboard → SocialImportFlowView, never knowledge bookmark.
+        addDestination = LibraryPasteRouter.destination()
+    }
+
+    fileprivate var libraryCreateFAB: some View {
         Button {
             presentAddSheet()
         } label: {
@@ -107,7 +123,9 @@ struct LibraryView: View {
         .accessibilityLabel("Create library entry")
         .accessibilityIdentifier("af_library_fab")
     }
+}
 
+extension LibraryView {
     private var loadingView: some View {
         VStack(spacing: Theme.Spacing.md) {
             ProgressView()
@@ -132,9 +150,10 @@ struct LibraryView: View {
                 filterSection
             }
             LibraryEmptyStateView(
-                clearFilters: viewModel.hasActiveFilters ? { viewModel.clearFilters() } : nil,
-                pasteLink: { presentAddSheet() }
-            )
+                clearFilters: viewModel.hasActiveFilters ? { viewModel.clearFilters() } : nil
+            ) {
+                presentAddSheet()
+            }
         }
     }
 
@@ -219,11 +238,6 @@ struct LibraryView: View {
             .accessibilityLabel("Add to Library")
             .accessibilityIdentifier("af_library_add")
         }
-    }
-
-    private func presentAddSheet() {
-        // AMA-2297: IG/TikTok/YouTube clipboard → SocialImportFlowView, never knowledge bookmark.
-        addDestination = LibraryPasteRouter.destination()
     }
 
     private var filterSection: some View {
@@ -440,7 +454,7 @@ private struct LibraryItemCard: View {
                         .foregroundColor(Theme.Colors.textSecondary)
 
                     if !tags.isEmpty {
-                        FlowPills(tags: tags)
+                        LibraryFlowPills(tags: tags)
                     }
                 }
                 .padding(Theme.Spacing.md)
@@ -462,67 +476,3 @@ private struct LibraryItemCard: View {
         .accessibilityLabel("\(kindLabel) placeholder")
     }
 }
-
-private struct FlowPills: View {
-    let tags: [String]
-
-    var body: some View {
-        // Keep the first row compact for v1; detailed tag browsing follows in AMA-2005/2006.
-        HStack(spacing: Theme.Spacing.xs) {
-            ForEach(tags.prefix(3), id: \.self) { tag in
-                Text(tag)
-                    .font(Theme.Typography.label)
-                    .foregroundColor(Theme.Colors.textSecondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Theme.Colors.chipBackground)
-                    .clipShape(Capsule())
-            }
-            if tags.count > 3 {
-                Text("+\(tags.count - 3)")
-                    .font(Theme.Typography.label)
-                    .foregroundColor(Theme.Colors.textTertiary)
-            }
-        }
-    }
-}
-
-private struct LibraryEmptyStateView: View {
-    let clearFilters: (() -> Void)?
-    let pasteLink: () -> Void
-
-    var body: some View {
-        AFCard {
-            VStack(spacing: Theme.Spacing.md) {
-                Image(systemName: "bookmark.badge.plus")
-                    .font(.system(size: 36, weight: .semibold))
-                    .foregroundColor(Theme.Colors.readyHigh)
-                Text(LibraryCopy.emptyTitle)
-                    .afH2()
-                    .multilineTextAlignment(.center)
-                Text(LibraryCopy.emptySubtitle)
-                    .afMuted()
-                    .multilineTextAlignment(.center)
-
-                Button(action: pasteLink) {
-                    Text(LibraryCopy.pasteLink)
-                }
-                .buttonStyle(AFPrimaryButtonStyle(size: .md))
-                .accessibilityIdentifier("af_library_empty_paste")
-
-                if let clearFilters {
-                    Button("Clear filters", action: clearFilters)
-                        .buttonStyle(AFGhostButtonStyle(size: .sm, isWide: false))
-                        .accessibilityIdentifier("af_library_clear_filters")
-                }
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .accessibilityIdentifier("library_empty_state")
-    }
-}
-#if DEBUG
-#Preview("Library") {
-    LibraryView(viewModel: LibraryViewModel(apiService: FixtureAPIService()))
-}
-#endif

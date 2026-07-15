@@ -17,7 +17,7 @@ struct SocialImportFlowView: View {
 
     let mode: Mode
     /// Prefill URL field (Library paste / clipboard routing — AMA-2297).
-    var initialURL: String? = nil
+    var initialURL: String?
     var onSaved: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
@@ -25,6 +25,16 @@ struct SocialImportFlowView: View {
     @State private var urlText: String = ""
     @State private var plainText: String = ""
     @State private var didApplyInitialURL = false
+
+    init(
+        mode: Mode,
+        initialURL: String? = nil,
+        onSaved: (() -> Void)? = nil
+    ) {
+        self.mode = mode
+        self.initialURL = initialURL
+        self.onSaved = onSaved
+    }
 
     var body: some View {
         NavigationStack {

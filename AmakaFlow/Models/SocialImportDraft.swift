@@ -61,6 +61,14 @@ enum SocialImportPlatform: String, Codable, CaseIterable, Equatable {
     }
 
     static func detect(from urlString: String) -> SocialImportPlatform {
+        if let host = Self.host(from: urlString) {
+            if Self.hostMatches(host, roots: ["youtube.com", "youtu.be"]) { return .youtube }
+            if Self.hostMatches(host, roots: ["instagram.com", "instagr.am"]) { return .instagram }
+            if Self.hostMatches(host, roots: ["tiktok.com"]) { return .tiktok }
+            return .web
+        }
+
+        // Fallback for bare host-like strings without a scheme.
         let lowered = urlString.lowercased()
         if lowered.contains("youtube.com") || lowered.contains("youtu.be") { return .youtube }
         if lowered.contains("instagram.com") || lowered.contains("instagr.am") { return .instagram }
@@ -91,6 +99,23 @@ enum SocialImportPlatform: String, Codable, CaseIterable, Equatable {
             range: range,
             withTemplate: "$1reel$2"
         )
+    }
+
+    /// Parse host structurally so `instagram.com.evil` / `notinstagram.com` are rejected.
+    private static func host(from urlString: String) -> String? {
+        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        if let url = URL(string: trimmed), let host = url.host, !host.isEmpty {
+            return host.lowercased()
+        }
+        let withScheme = trimmed.contains("://") ? trimmed : "https://\(trimmed)"
+        return URL(string: withScheme)?.host?.lowercased()
+    }
+
+    private static func hostMatches(_ host: String, roots: [String]) -> Bool {
+        roots.contains { root in
+            host == root || host.hasSuffix(".\(root)")
+        }
     }
 }
 
@@ -146,7 +171,7 @@ struct SocialImportDraft: Equatable {
     /// True when coaching equipment profile is empty — honest empty, continue.
     var equipmentEmpty: Bool
     /// AMA-2297: what we pulled from the original post (creator / caption / URL).
-    var postProvenance: SocialImportPostProvenance? = nil
+    var postProvenance: SocialImportPostProvenance?
 
     var provenanceLabel: String { platform.displayName }
 

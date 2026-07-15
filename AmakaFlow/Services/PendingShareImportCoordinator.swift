@@ -84,7 +84,8 @@ final class PendingShareImportCoordinator: ObservableObject {
             sourceURL: result.url,
             exercises: [SocialImportExercise(name: "Add exercises", sets: 3, reps: 10)],
             equipmentNote: "Imported from Share Extension — edit structure before saving.",
-            equipmentEmpty: true
+            equipmentEmpty: true,
+            postProvenance: nil
         )
     }
 
