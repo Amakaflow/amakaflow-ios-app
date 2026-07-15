@@ -288,21 +288,21 @@ final class SocialImportTests: XCTestCase {
     }
 
     func testBare403WithoutBodyMustNotMasqueradeAsSessionExpired() {
-        // Regression: validateSocialIngestResponse must preserve 403 body;
-        // serverError(403) without body incorrectly mapped to auth in AMA-2297 dogfood.
         let failure = SocialImportFailure.map(APIError.serverError(403))
-        guard case .auth(let message) = failure else {
-            return XCTFail("Expected auth for body-less 403, got \(failure)")
+        guard case .parse(let message) = failure else {
+            return XCTFail("Expected parse for body-less 403, got \(failure)")
         }
-        XCTAssertEqual(message, "Session expired. Sign in again, then retry.")
+        XCTAssertFalse(message.lowercased().contains("session expired"))
+        XCTAssertTrue(message.lowercased().contains("forbidden"))
     }
 
-    func testPrivateProfile403MapsToAuthNotTier() {
+    func testPrivateProfile403MapsToParseNotTier() {
         let body = "{\"detail\":\"This profile is private\"}"
         let failure = SocialImportFailure.map(APIError.serverErrorWithBody(403, body))
-        guard case .auth = failure else {
-            return XCTFail("Expected auth (not tier) for private profile 403, got \(failure)")
+        guard case .parse(let message) = failure else {
+            return XCTFail("Expected parse (not tier) for private profile 403, got \(failure)")
         }
+        XCTAssertTrue(message.lowercased().contains("private"))
     }
 
     func testImportURLNormalizesReelsBeforeIngest() async {
@@ -341,7 +341,7 @@ final class SocialImportTests: XCTestCase {
         XCTAssertFalse(mockAPI.saveWorkoutCalled)
     }
 
-    func testMapperSaveBodyUsesWorkoutDataBlocksShape() {
+    func testMapperSaveBodyUsesWorkoutDataBlocksShape() throws {
         let request = WorkoutSaveRequest(
             name: "Upper Body Strength Day",
             sport: "strength",
@@ -353,7 +353,7 @@ final class SocialImportTests: XCTestCase {
             sourceUrl: "https://www.instagram.com/reel/DX9abc/"
         )
 
-        let body = APIService.mapperSaveBody(from: request, source: WorkoutSource.instagram.rawValue)
+        let body = try APIService.mapperSaveBody(from: request, source: WorkoutSource.instagram.rawValue)
         XCTAssertNotNil(body["workout_data"])
         XCTAssertEqual(body["device"] as? String, "ios")
         XCTAssertEqual(body["sources"] as? [String], ["instagram"])
@@ -368,6 +368,22 @@ final class SocialImportTests: XCTestCase {
 
         let metadata = workoutData?["metadata"] as? [String: Any]
         XCTAssertEqual(metadata?["source_url"] as? String, "https://www.instagram.com/reel/DX9abc/")
+    }
+
+    func testMapperSaveBodyRejectsEmptyExerciseList() {
+        let request = WorkoutSaveRequest(
+            name: "Empty",
+            sport: "strength",
+            intervals: [WorkoutSaveInterval(type: "rest", seconds: 60)],
+            source: WorkoutSource.instagram.rawValue
+        )
+
+        XCTAssertThrowsError(try APIService.mapperSaveBody(from: request, source: "instagram")) { error in
+            guard case APIError.serverErrorWithBody(422, let message) = error else {
+                return XCTFail("Expected 422 body error, got \(error)")
+            }
+            XCTAssertTrue(message.lowercased().contains("exercise"))
+        }
     }
 
     func testSocialImportFailureFormatsFastAPIValidationDetail() {

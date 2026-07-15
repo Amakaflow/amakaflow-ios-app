@@ -223,7 +223,7 @@ extension APIService {
         req.timeoutInterval = 15
         req.allHTTPHeaderFields = try await makeAuthHeaders()
 
-        let body = Self.mapperSaveBody(from: request, source: source)
+        let body = try Self.mapperSaveBody(from: request, source: source)
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
 
@@ -255,17 +255,21 @@ extension APIService {
     }
 
     /// POST /workouts/save body for mapper-api (`workout_data` + `sources` + `device`).
-    static func mapperSaveBody(from request: WorkoutSaveRequest, source: String) -> [String: Any] {
+    static func mapperSaveBody(from request: WorkoutSaveRequest, source: String) throws -> [String: Any] {
         let exercises = request.intervals.compactMap { provenanceExercise(from: $0) }
+        guard !exercises.isEmpty else {
+            throw APIError.serverErrorWithBody(
+                422,
+                "Add at least one exercise before saving — import didn't extract a usable list."
+            )
+        }
         var workoutData: [String: Any] = [
             "title": request.name,
             "workout_type": request.sport,
             "blocks": [
                 [
                     "label": "Main",
-                    "exercises": exercises.isEmpty
-                        ? [["name": "Exercise", "sets": 1, "reps": 1]]
-                        : exercises
+                    "exercises": exercises
                 ]
             ]
         ]
