@@ -86,13 +86,18 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     /// Send workout to Apple Watch
     /// Note: Does NOT run on main actor to avoid blocking (AMA-1075)
     func sendWorkout(_ workout: Workout) async {
+        _ = await sendWorkoutWithOutcome(workout)
+    }
+
+    /// AMA-2287: Honest send outcome for Start → Apple try path.
+    func sendWorkoutWithOutcome(_ workout: Workout) async -> WatchWorkoutSendOutcome {
         guard let session = session else {
             print("⌚️ WatchConnectivity not supported on this device")
             await MainActor.run {
                 lastError = WatchConnectivityError.sessionNotAvailable
             }
             logWatchError("Session not available", details: "WatchConnectivity not supported on this device")
-            return
+            return .failed(.sessionNotAvailable)
         }
 
         guard session.activationState == .activated else {
@@ -101,7 +106,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
                 lastError = WatchConnectivityError.sessionNotAvailable
             }
             logWatchError("Session not activated", details: "Activation state: \(session.activationState.rawValue)")
-            return
+            return .failed(.sessionNotAvailable)
         }
 
         guard session.isWatchAppInstalled else {
@@ -110,7 +115,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
                 lastError = WatchConnectivityError.watchNotReachable
             }
             logWatchError("Watch app not installed", details: "Please install the watch app first")
-            return
+            return .failed(.watchNotReachable)
         }
 
         guard session.isReachable else {
@@ -119,47 +124,60 @@ class WatchConnectivityManager: NSObject, ObservableObject {
                 lastError = WatchConnectivityError.watchNotReachable
             }
             logWatchError("Watch not reachable", details: "Make sure your watch is nearby and unlocked")
-            return
+            return .failed(.watchNotReachable)
         }
-        
+
         do {
-            // Encode workout to JSON
             let encoder = JSONEncoder()
             let workoutData = try encoder.encode(workout)
-            
+
             guard let workoutDict = try JSONSerialization.jsonObject(with: workoutData) as? [String: Any] else {
                 await MainActor.run {
                     lastError = WatchConnectivityError.encodingFailed
                 }
-                throw WatchConnectivityError.encodingFailed
+                return .failed(.encodingFailed)
             }
-            
-            // Send to watch - this can block, so run on background (AMA-1075)
-            await withCheckedContinuation { continuation in
+
+            let outcome: WatchWorkoutSendOutcome = await withCheckedContinuation { continuation in
                 session.sendMessage(
                     ["action": "receiveWorkout", "workout": workoutDict],
                     replyHandler: { reply in
                         print("⌚️ Watch received workout: \(reply)")
-                        continuation.resume()
+                        if let status = reply["status"] as? String, status == "received" {
+                            continuation.resume(returning: .sent)
+                        } else if let status = reply["status"] as? String, status == "error" {
+                            let message = reply["message"] as? String ?? "watch rejected payload"
+                            continuation.resume(returning: .watchRejected(message))
+                        } else {
+                            continuation.resume(returning: .watchRejected("unexpected watch reply"))
+                        }
                     },
                     errorHandler: { [weak self] error in
                         print("⌚️ Failed to send workout: \(error.localizedDescription)")
                         Task { @MainActor in
                             self?.lastError = error
-                            self?.logWatchError("Send workout failed", details: error.localizedDescription, metadata: ["Workout": workout.name])
+                            self?.logWatchError(
+                                "Send workout failed",
+                                details: error.localizedDescription,
+                                metadata: ["Workout": workout.name]
+                            )
                         }
-                        continuation.resume()
+                        continuation.resume(returning: .failed(.watchNotReachable))
                     }
                 )
             }
-            
-            print("⌚️ Sent workout to watch: \(workout.name)")
+
+            if case .sent = outcome {
+                print("⌚️ Sent workout to watch: \(workout.name)")
+            }
+            return outcome
         } catch {
             print("⌚️ Failed to encode workout: \(error.localizedDescription)")
             await MainActor.run {
                 lastError = error
             }
             logWatchError("Encode workout failed", details: error.localizedDescription, metadata: ["Workout": workout.name])
+            return .failed(.encodingFailed)
         }
     }
     
