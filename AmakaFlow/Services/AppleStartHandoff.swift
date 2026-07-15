@@ -38,39 +38,51 @@ enum AppleStartHandoffFailureCode: String, Equatable {
 
 /// Pure mapping for unit tests — keep recoverable copy ≤ a few seconds to read.
 enum AppleStartHandoffCopy {
+    private static let failureMessages: [AppleStartHandoffFailureCode: String] = [
+        .watchNotReachable: "Apple Watch not reachable — unlock watch, open AmakaFlowWatch, keep iPhone nearby.",
+        .watchAppNotInstalled: "AmakaFlowWatch not installed — install the watch app from the Watch app on iPhone.",
+        .sessionNotAvailable: "Watch connectivity unavailable — restart both apps and try again.",
+        .encodingFailed: "Could not encode workout for Watch — edit structure and retry.",
+        .watchDecodeFailed: "Watch could not read workout — simplify intervals and retry.",
+        .authorizationDenied: "Apple Fitness permission denied — Settings → Health → Data Access → AmakaFlow, allow Workouts.",
+        .iosVersionUnsupported: "Requires iOS 18 for Apple Fitness save — update iPhone or send while Watch is reachable.",
+        .emptyWorkout: "Workout has no steps — add exercises or intervals in Edit, then retry."
+    ]
+
+    private static func messageWithOptionalDetail(prefix: String, detail: String?, fallback: String) -> String {
+        if let detail, !detail.isEmpty {
+            return "\(prefix) — \(detail)"
+        }
+        return "\(prefix) — \(fallback)"
+    }
+
     static func failureMessage(code: AppleStartHandoffFailureCode, detail: String? = nil) -> String {
         switch code {
-        case .watchNotReachable:
-            return "Apple Watch not reachable — unlock watch, open AmakaFlowWatch, keep iPhone nearby."
-        case .watchAppNotInstalled:
-            return "AmakaFlowWatch not installed — install the watch app from the Watch app on iPhone."
-        case .sessionNotAvailable:
-            return "Watch connectivity unavailable — restart both apps and try again."
-        case .encodingFailed:
-            return "Could not encode workout for Watch — edit structure and retry."
         case .watchSendFailed:
-            if let detail, !detail.isEmpty {
-                return "Watch send failed — \(detail)"
-            }
-            return "Watch send failed — confirm AmakaFlowWatch is open, then retry."
-        case .watchDecodeFailed:
-            return "Watch could not read workout — simplify intervals and retry."
-        case .authorizationDenied:
-            return "Apple Fitness permission denied — Settings → Health → Data Access → AmakaFlow, allow Workouts."
+            return messageWithOptionalDetail(
+                prefix: "Watch send failed",
+                detail: detail,
+                fallback: "confirm AmakaFlowWatch is open, then retry."
+            )
         case .conversionFailed:
-            if let detail, !detail.isEmpty {
-                return "WorkoutKit conversion failed — \(detail)"
-            }
-            return "WorkoutKit conversion failed — check intervals use supported step types."
-        case .iosVersionUnsupported:
-            return "Requires iOS 18 for Apple Fitness save — update iPhone or send while Watch is reachable."
-        case .emptyWorkout:
-            return "Workout has no steps — add exercises or intervals in Edit, then retry."
+            return messageWithOptionalDetail(
+                prefix: "WorkoutKit conversion failed",
+                detail: detail,
+                fallback: "check intervals use supported step types."
+            )
         case .unknown:
-            if let detail, !detail.isEmpty {
-                return "Apple try failed — \(detail)"
-            }
-            return "Apple try failed — check Watch pairing and retry."
+            return messageWithOptionalDetail(
+                prefix: "Apple try failed",
+                detail: detail,
+                fallback: "check Watch pairing and retry."
+            )
+        default:
+            return failureMessages[code]
+                ?? messageWithOptionalDetail(
+                    prefix: "Apple try failed",
+                    detail: detail,
+                    fallback: "check Watch pairing and retry."
+                )
         }
     }
 
