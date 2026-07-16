@@ -2,8 +2,7 @@
 //  ProfileHubView.swift
 //  AmakaFlow
 //
-//  AMA-2292: Daily Driver Profile tab — identity + summary stubs + Settings.
-//  Coach and History moved here from top-level tabs (see relocation note).
+//  AMA-2292: Daily Driver Profile tab — identity, stat tiles, week activity.
 //
 
 import SwiftUI
@@ -21,6 +20,10 @@ struct ProfileHubView: View {
     @EnvironmentObject private var pairingService: PairingService
     @AppStorage(DefaultsKey.userDisplayName.rawValue) private var displayNameOverride: String = ""
     @StateObject private var historyViewModel = ActivityHistoryViewModel()
+    @State private var weekExpanded = false
+    @State private var showingBackfill = false
+    @State private var backfillDrafts: [StrengthBackfillExerciseDraft] = []
+    @AppStorage("dd_profile_backfill_completed") private var backfillCompleted = false
 
     private var displayName: String {
         let trimmed = displayNameOverride.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -37,20 +40,28 @@ struct ProfileHubView: View {
         historyViewModel.weeklySummary
     }
 
+    private var weekCompletions: [WorkoutCompletion] {
+        historyViewModel.filteredCompletions.filter {
+            ActivityHistoryFilter.thisWeek.includes(
+                $0.startedAt,
+                now: Date(),
+                calendar: .current
+            )
+        }
+    }
+
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
-                VStack(spacing: Theme.Spacing.lg) {
-                    identityHeader
-                    summaryGrid
-                    destinationsSection
+                VStack(alignment: .leading, spacing: 0) {
+                    profileHeader
+                    screenPad
                 }
-                .padding(.horizontal, Theme.Spacing.lg)
-                .padding(.vertical, Theme.Spacing.lg)
-                .padding(.bottom, 100)
+                .padding(.bottom, 120)
             }
-            .background(Theme.Colors.background.ignoresSafeArea())
+            .background(DailyDriver.screenBackground.ignoresSafeArea())
             .navigationBarHidden(true)
+            .preferredColorScheme(.dark)
             .navigationDestination(for: ProfileHubRoute.self) { route in
                 switch route {
                 case .settings:
@@ -76,195 +87,329 @@ struct ProfileHubView: View {
                     .opacity(0.01)
                     .accessibilityIdentifier("profile_screen")
             }
+            .sheet(isPresented: $showingBackfill) {
+                NavigationStack {
+                    StrengthBackfillView(
+                        drafts: $backfillDrafts,
+                        onSave: {
+                            backfillCompleted = true
+                            showingBackfill = false
+                        }
+                    )
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Close") { showingBackfill = false }
+                        }
+                    }
+                }
+                .onAppear {
+                    if backfillDrafts.isEmpty {
+                        backfillDrafts = StrengthBackfill.draft(
+                            from: [
+                                .reps(sets: 3, reps: 8, name: "Back Squat", load: nil, restSec: 90, followAlongUrl: nil),
+                                .reps(sets: 3, reps: 10, name: "Romanian Deadlift", load: nil, restSec: 60, followAlongUrl: nil)
+                            ],
+                            existingSetLogs: nil
+                        )
+                    }
+                }
+            }
         }
     }
 
-    private var identityHeader: some View {
-        HStack(alignment: .center, spacing: Theme.Spacing.md) {
-            ZStack {
-                Circle()
-                    .fill(Theme.Colors.readyHigh.opacity(0.22))
-                    .frame(width: 56, height: 56)
-                Text(String(displayName.prefix(1)).uppercased())
-                    .font(.system(size: 22, weight: .semibold, design: .rounded))
-                    .foregroundColor(Theme.Colors.textPrimary)
-            }
+    private var profileHeader: some View {
+        HStack(alignment: .center) {
+            Text("Profile")
+                .ddDisplayText(32, weight: .heavy)
+                .foregroundColor(DailyDriver.foreground)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(displayName)
-                    .font(Theme.Typography.title2)
-                    .foregroundColor(Theme.Colors.textPrimary)
-                    .accessibilityIdentifier("af_profile_identity_name")
-                Text("Daily Driver profile")
-                    .font(Theme.Typography.caption)
-                    .foregroundColor(Theme.Colors.textSecondary)
-            }
+            Spacer()
 
-            Spacer(minLength: 0)
+            Button {
+                path.append(ProfileHubRoute.settings)
+            } label: {
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(DailyDriver.foreground)
+                    .frame(width: 38, height: 38)
+                    .background(DailyDriver.card2)
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("af_profile_settings_entry")
         }
-        .padding(Theme.Spacing.lg)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.Colors.surfaceElevated)
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.lg, style: .continuous)
-                .stroke(Theme.Colors.borderLight, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.lg, style: .continuous))
+        .padding(.horizontal, 18)
+        .padding(.top, 8)
+    }
+
+    private var screenPad: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            identityRow
+                .padding(.top, 10)
+
+            statGrid
+                .padding(.top, 14)
+
+            weekDots
+                .padding(.top, 12)
+
+            if !backfillCompleted {
+                DDInsightBanner(
+                    title: "Monday's strength needs weights",
+                    subtitle: "2-minute backfill"
+                ) {
+                    showingBackfill = true
+                }
+                .padding(.top, 14)
+            }
+
+            coachAndHistorySection
+                .padding(.top, 20)
+
+            thisWeekSection
+                .padding(.top, 8)
+        }
+        .padding(.horizontal, 18)
+    }
+
+    private var identityRow: some View {
+        HStack(spacing: 12) {
+            Text(String(displayName.prefix(1)).uppercased())
+                .ddDisplayText(17, weight: .heavy)
+                .foregroundColor(DailyDriver.ink)
+                .frame(width: 44, height: 44)
+                .background(DailyDriver.lime)
+                .clipShape(Circle())
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(displayName)
+                    .ddDisplayText(16, weight: .heavy)
+                    .foregroundColor(DailyDriver.foreground)
+                    .accessibilityIdentifier("af_profile_identity_name")
+                Text("Hyrox prep · Week 3 of 12")
+                    .font(.system(size: 10.5))
+                    .foregroundColor(DailyDriver.foregroundMuted)
+            }
+        }
         .accessibilityIdentifier("af_profile_identity")
     }
 
-    private var summaryGrid: some View {
-        VStack(spacing: Theme.Spacing.sm) {
-            HStack(spacing: Theme.Spacing.sm) {
-                summaryStub(
-                    title: "Streak",
-                    value: "—",
-                    subtitle: "Coming soon",
-                    identifier: "af_profile_summary_streak"
-                ) {
-                    path.append(ProfileHubRoute.history)
-                }
-                summaryStub(
-                    title: "This week",
-                    value: weekSummary.workoutCount > 0 ? "\(weekSummary.workoutCount)" : "—",
-                    subtitle: weekSummary.workoutCount > 0 ? weekSummary.formattedDuration : "No sessions",
-                    identifier: "af_profile_summary_week"
-                ) {
-                    path.append(ProfileHubRoute.history)
-                }
+    private var statGrid: some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+            DDStatTile(
+                value: weekSummary.workoutCount > 0 ? "\(weekSummary.workoutCount)/5" : "—",
+                label: "sessions this week",
+                valueColor: DailyDriver.lime
+            ) {
+                weekExpanded = true
+                path.append(ProfileHubRoute.history)
             }
-            HStack(spacing: Theme.Spacing.sm) {
-                summaryStub(
-                    title: "Calendar",
-                    value: "Open",
-                    subtitle: "Training calendar",
-                    identifier: "af_profile_summary_calendar"
-                ) {
-                    path.append(ProfileHubRoute.settings)
-                }
-                summaryStub(
-                    title: "Totals",
-                    value: weekSummary.totalCalories > 0 ? weekSummary.formattedCalories : "—",
-                    subtitle: "Week kcal",
-                    identifier: "af_profile_summary_totals"
-                ) {
-                    path.append(ProfileHubRoute.history)
-                }
+            .accessibilityIdentifier("af_profile_summary_week")
+
+            DDStatTile(
+                value: weekSummary.workoutCount > 0 ? weekSummary.formattedDuration : "—",
+                label: "training time"
+            ) {
+                path.append(ProfileHubRoute.history)
             }
+            .accessibilityIdentifier("af_profile_summary_totals")
+
+            DDStatTile(
+                value: "—",
+                label: "day streak · best —"
+            ) {
+                path.append(ProfileHubRoute.history)
+            }
+            .accessibilityIdentifier("af_profile_summary_streak")
+
+            DDStatTile(
+                value: weekSummary.workoutCount > 0 ? "\(weekSummary.workoutCount)" : "—",
+                label: "sessions this month"
+            ) {
+                path.append(ProfileHubRoute.history)
+            }
+            .accessibilityIdentifier("af_profile_summary_calendar")
         }
         .accessibilityIdentifier("af_profile_summaries")
     }
 
-    private func summaryStub(
-        title: String,
-        value: String,
-        subtitle: String,
-        identifier: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                AFLabel(text: title.uppercased())
-                Text(value)
-                    .font(.system(size: 22, weight: .medium, design: .monospaced))
-                    .foregroundColor(Theme.Colors.textPrimary)
-                Text(subtitle)
-                    .font(Theme.Typography.caption)
-                    .foregroundColor(Theme.Colors.textSecondary)
-                    .lineLimit(1)
-            }
-            .padding(Theme.Spacing.md)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.Colors.surfaceElevated)
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous)
-                    .stroke(Theme.Colors.borderLight, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier(identifier)
+    private var weekDots: some View {
+        let labels = ["M", "T", "W", "T", "F", "S", "S"]
+        let calendar = Calendar.current
+        let activeDays = Set(
+            weekCompletions.map { calendar.component(.weekday, from: $0.startedAt) }
+                .map { weekdayIndex(from: $0) }
+        )
+        return DDWeekDots(labels: labels, activeIndices: activeDays)
     }
 
-    private var destinationsSection: some View {
-        VStack(spacing: 0) {
-            destinationRow(
-                title: "Coach",
-                subtitle: "Chat, fatigue, readiness — was top-level Coach tab",
+    private func weekdayIndex(from weekday: Int) -> Int {
+        // Calendar weekday: 1 = Sunday. Design labels start Monday.
+        ((weekday + 5) % 7)
+    }
+
+    private var coachAndHistorySection: some View {
+        VStack(spacing: 8) {
+            profileLinkRow(
                 icon: "bubble.left.and.bubble.right.fill",
+                iconBackground: DailyDriver.blue,
+                title: "Coach",
+                subtitle: "Chat, fatigue, readiness",
                 identifier: "coach_tab"
             ) {
                 path.append(ProfileHubRoute.coach)
             }
 
-            SettingsRowDivider()
-
-            destinationRow(
-                title: "Activity History",
-                subtitle: "Completed sessions — was top-level History tab",
+            profileLinkRow(
                 icon: "clock.arrow.circlepath",
+                iconBackground: DailyDriver.purple,
+                title: "Activity History",
+                subtitle: "Completed sessions",
                 identifier: "history_tab"
             ) {
                 path.append(ProfileHubRoute.history)
             }
-
-            SettingsRowDivider()
-
-            destinationRow(
-                title: "Settings",
-                subtitle: "Connections, coaching prefs, account",
-                icon: "gearshape.fill",
-                identifier: "af_profile_settings_entry"
-            ) {
-                path.append(ProfileHubRoute.settings)
-            }
         }
-        .padding(.vertical, Theme.Spacing.xs)
-        .background(Theme.Colors.surfaceElevated)
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.lg, style: .continuous)
-                .stroke(Theme.Colors.borderLight, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.lg, style: .continuous))
         .accessibilityIdentifier("af_profile_destinations")
     }
 
-    private func destinationRow(
+    private var thisWeekSection: some View {
+        let entries = weekCompletions
+        let shown = weekExpanded ? entries : Array(entries.prefix(3))
+
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("This week")
+                    .ddDisplayText(15, weight: .bold)
+                    .foregroundColor(DailyDriver.foreground)
+                Spacer()
+                if entries.count > 3 {
+                    Button(weekExpanded ? "Show less" : "See all (\(entries.count))") {
+                        weekExpanded.toggle()
+                    }
+                    .ddDisplayText(12, weight: .bold)
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                }
+            }
+
+            if shown.isEmpty {
+                Text("No sessions yet this week.")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                    .padding(.vertical, 8)
+            } else {
+                ForEach(shown) { completion in
+                    weekActivityRow(completion)
+                }
+            }
+        }
+    }
+
+    private func weekActivityRow(_ completion: WorkoutCompletion) -> some View {
+        Button {
+            path.append(ProfileHubRoute.history)
+        } label: {
+            HStack(spacing: 12) {
+                DDIconChip(
+                    systemName: completion.workoutTypeIconName,
+                    background: DailyDriver.purple,
+                    size: 34
+                )
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(completion.workoutName)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(DailyDriver.foreground)
+                        .lineLimit(1)
+                    Text(completion.profileMetaLine)
+                        .font(.system(size: 10))
+                        .foregroundColor(DailyDriver.foregroundDim)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                VStack(alignment: .trailing, spacing: 0) {
+                    Text(completion.profileBigValue)
+                        .ddDisplayText(18, weight: .heavy)
+                        .foregroundColor(DailyDriver.foreground)
+                    Text(completion.profileUnitLabel)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(DailyDriver.foregroundDim)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(DailyDriver.foregroundDim)
+            }
+            .padding(.horizontal, 13)
+            .padding(.vertical, 11)
+            .background(DailyDriver.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(DailyDriver.border, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func profileLinkRow(
+        icon: String,
+        iconBackground: Color,
         title: String,
         subtitle: String,
-        icon: String,
         identifier: String,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            HStack(spacing: Theme.Spacing.md) {
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(Theme.Colors.readyHigh)
-                    .frame(width: 28)
-
+            HStack(spacing: 12) {
+                DDIconChip(systemName: icon, background: iconBackground, size: 34)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(Theme.Typography.bodyBold)
-                        .foregroundColor(Theme.Colors.textPrimary)
+                        .ddDisplayText(14, weight: .bold)
+                        .foregroundColor(DailyDriver.foreground)
                     Text(subtitle)
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                        .lineLimit(2)
+                        .font(.system(size: 10.5))
+                        .foregroundColor(DailyDriver.foregroundMuted)
                 }
-
-                Spacer(minLength: Theme.Spacing.sm)
-
+                Spacer(minLength: 0)
                 Image(systemName: "chevron.right")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(Theme.Colors.textTertiary)
+                    .foregroundColor(DailyDriver.foregroundDim)
             }
-            .padding(.horizontal, Theme.Spacing.md)
-            .padding(.vertical, Theme.Spacing.md)
-            .contentShape(Rectangle())
+            .padding(.horizontal, 13)
+            .padding(.vertical, 11)
+            .background(DailyDriver.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(DailyDriver.border, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(identifier)
+    }
+}
+
+private extension WorkoutCompletion {
+    var workoutTypeIconName: String {
+        if distanceMeters != nil { return "figure.run" }
+        return "dumbbell.fill"
+    }
+
+    var profileBigValue: String {
+        if let distanceMeters, distanceMeters > 0 {
+            return String(format: "%.1f", Double(distanceMeters) / 1000.0)
+        }
+        let minutes = durationSeconds / 60
+        return "\(minutes)"
+    }
+
+    var profileUnitLabel: String {
+        distanceMeters != nil ? "KM" : "MIN"
+    }
+
+    var profileMetaLine: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE · HH:mm"
+        return formatter.string(from: startedAt).uppercased()
     }
 }
 

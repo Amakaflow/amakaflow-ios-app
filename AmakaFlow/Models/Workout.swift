@@ -270,6 +270,9 @@ struct Workout: Identifiable, Codable, Hashable {
     let description: String?
     let source: WorkoutSource
     let sourceUrl: String?
+    /// Creator / coach name from import metadata when available.
+    let creatorName: String?
+    let createdAt: Date?
 
     /// Computed flat interval list for playback (backward-compatible).
     var intervals: [WorkoutInterval] {
@@ -294,7 +297,9 @@ struct Workout: Identifiable, Codable, Hashable {
         blocks: [Block] = [],
         description: String? = nil,
         source: WorkoutSource,
-        sourceUrl: String? = nil
+        sourceUrl: String? = nil,
+        creatorName: String? = nil,
+        createdAt: Date? = nil
     ) {
         self.id = id
         self.name = name
@@ -304,6 +309,8 @@ struct Workout: Identifiable, Codable, Hashable {
         self.description = description
         self.source = source
         self.sourceUrl = sourceUrl
+        self.creatorName = creatorName
+        self.createdAt = createdAt
     }
 
     /// Legacy convenience init that accepts intervals and wraps them in blocks.
@@ -315,7 +322,9 @@ struct Workout: Identifiable, Codable, Hashable {
         intervals: [WorkoutInterval],
         description: String? = nil,
         source: WorkoutSource,
-        sourceUrl: String? = nil
+        sourceUrl: String? = nil,
+        creatorName: String? = nil,
+        createdAt: Date? = nil
     ) {
         self.id = id
         self.name = name
@@ -325,6 +334,8 @@ struct Workout: Identifiable, Codable, Hashable {
         self.description = description
         self.source = source
         self.sourceUrl = sourceUrl
+        self.creatorName = creatorName
+        self.createdAt = createdAt
     }
 
     // Custom decoder to handle missing/null fields gracefully
@@ -337,6 +348,10 @@ struct Workout: Identifiable, Codable, Hashable {
         description = try container.decodeIfPresent(String.self, forKey: .description)
         source = try container.decodeIfPresent(WorkoutSource.self, forKey: .source) ?? .other
         sourceUrl = try container.decodeIfPresent(String.self, forKey: .sourceUrl)
+        creatorName = try container.decodeIfPresent(String.self, forKey: .creatorName)
+            ?? (try? container.decodeIfPresent(String.self, forKey: .creator))
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
+            ?? (try? container.decodeIfPresent(Date.self, forKey: .pushedAt))
 
         // Try blocks first (new format), fall back to legacy intervals
         if let decodedBlocks = try container.decodeIfPresent([Block].self, forKey: .blocks), !decodedBlocks.isEmpty {
@@ -358,10 +373,13 @@ struct Workout: Identifiable, Codable, Hashable {
         try container.encodeIfPresent(description, forKey: .description)
         try container.encode(source, forKey: .source)
         try container.encodeIfPresent(sourceUrl, forKey: .sourceUrl)
+        try container.encodeIfPresent(creatorName, forKey: .creatorName)
+        try container.encodeIfPresent(createdAt, forKey: .createdAt)
     }
 
     enum CodingKeys: String, CodingKey {
         case id, name, sport, duration, blocks, intervals, description, source, sourceUrl
+        case creatorName, creator, createdAt, pushedAt
     }
 
     /// Convert legacy flat WorkoutInterval array into Block array.
@@ -410,12 +428,12 @@ struct Workout: Identifiable, Codable, Hashable {
                 ))
 
             case .reps(let sets, let reps, let name, let load, let restSec, _):
-                let exerciseLoad = load.flatMap { Workout.parseLegacyLoad($0) }
+                let resolved = Workout.resolveLegacyLoadAndInstruction(from: load)
                 mainExercises.append(Exercise(
                     name: name,
                     canonicalName: nil, sets: sets, reps: "\(reps)",
-                    durationSeconds: nil, load: exerciseLoad, restSeconds: restSec,
-                    distance: nil, notes: nil, supersetGroup: nil
+                    durationSeconds: nil, load: resolved.load, restSeconds: restSec,
+                    distance: nil, notes: resolved.instruction, focus: nil, supersetGroup: nil
                 ))
 
             case .distance(let meters, let target):
@@ -452,10 +470,10 @@ struct Workout: Identifiable, Codable, Hashable {
     private static func exerciseFromLegacyInterval(_ interval: WorkoutInterval) -> Exercise? {
         switch interval {
         case .reps(let sets, let r, let name, let load, let restSec, _):
-            let exerciseLoad = load.flatMap { parseLegacyLoad($0) }
+            let resolved = resolveLegacyLoadAndInstruction(from: load)
             return Exercise(name: name, canonicalName: nil, sets: sets, reps: "\(r)",
-                            durationSeconds: nil, load: exerciseLoad, restSeconds: restSec,
-                            distance: nil, notes: nil, supersetGroup: nil)
+                            durationSeconds: nil, load: resolved.load, restSeconds: restSec,
+                            distance: nil, notes: resolved.instruction, focus: nil, supersetGroup: nil)
         case .time(let seconds, let target):
             return Exercise(name: target ?? "Timed Work", canonicalName: nil, sets: nil, reps: nil,
                             durationSeconds: seconds, load: nil, restSeconds: nil,
@@ -470,6 +488,18 @@ struct Workout: Identifiable, Codable, Hashable {
         default:
             return nil
         }
+    }
+
+    /// Split a legacy interval `load` field into numeric load vs free-text instruction.
+    static func resolveLegacyLoadAndInstruction(from loadString: String?) -> (load: ExerciseLoad?, instruction: String?) {
+        guard let loadString else { return (nil, nil) }
+        let trimmed = loadString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return (nil, nil) }
+        let parsed = parseLegacyLoad(trimmed)
+        if parsed.value > 0 {
+            return (parsed, nil)
+        }
+        return (nil, trimmed)
     }
 
     /// Parse a legacy load string like "80kg" or "135lbs" into an ExerciseLoad.

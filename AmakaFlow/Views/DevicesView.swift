@@ -21,7 +21,7 @@ struct DevicesView: View {
 
     var body: some View {
         ZStack {
-            Theme.Colors.background.ignoresSafeArea()
+            DailyDriver.screenBackground.ignoresSafeArea()
 
             Group {
                 switch viewModel.state {
@@ -37,6 +37,7 @@ struct DevicesView: View {
             }
         }
         .navigationBarHidden(true)
+        .preferredColorScheme(.dark)
         .overlay(alignment: .top) {
             if let error = viewModel.ctaError {
                 ErrorToast(
@@ -81,7 +82,7 @@ struct DevicesView: View {
     private var loadingView: some View {
         VStack(spacing: Theme.Spacing.md) {
             ProgressView()
-                .tint(Theme.Colors.textPrimary)
+                .tint(DailyDriver.foreground)
             Text("Loading connected devices")
                 .afMuted()
         }
@@ -105,7 +106,7 @@ struct DevicesView: View {
                 VStack(spacing: Theme.Spacing.md) {
                     Image(systemName: "watch")
                         .font(.system(size: 32, weight: .semibold))
-                        .foregroundColor(Theme.Colors.readyHigh)
+                        .foregroundColor(DailyDriver.lime)
                     Text("No devices paired.")
                         .afH2()
                     Text("Add one to sync workouts.")
@@ -240,14 +241,14 @@ struct DevicesView: View {
                                 .lineLimit(2)
                             Spacer(minLength: 0)
                             Circle()
-                                .fill(Theme.Colors.readyHigh)
+                                .fill(DailyDriver.lime)
                                 .frame(width: 8, height: 8)
                                 .accessibilityLabel("Synced")
                         }
 
                         Text(display.modelSyncCaption)
                             .font(Theme.Typography.mono)
-                            .foregroundColor(Theme.Colors.textSecondary)
+                            .foregroundColor(DailyDriver.foregroundMuted)
                             .lineLimit(2)
                     }
                 }
@@ -270,7 +271,7 @@ struct DevicesView: View {
                 .frame(width: 48, height: 48)
             Image(systemName: symbolName)
                 .font(.system(size: 22, weight: .semibold))
-                .foregroundColor(Theme.Colors.readyHigh)
+                .foregroundColor(DailyDriver.lime)
         }
     }
 
@@ -286,12 +287,12 @@ struct DevicesView: View {
                 } label: {
                     Text(DevicesViewModel.roleLabel(role))
                         .font(Theme.Typography.footnote.weight(.semibold))
-                        .foregroundColor(selected ? Theme.Colors.primaryForeground : Theme.Colors.textPrimary)
+                        .foregroundColor(selected ? Theme.Colors.primaryForeground : DailyDriver.foreground)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .background(selected ? Theme.Colors.primary : Color.clear)
                         .overlay(
-                            Capsule().stroke(selected ? Theme.Colors.primary : Theme.Colors.borderMedium, lineWidth: 1)
+                            Capsule().stroke(selected ? Theme.Colors.primary : DailyDriver.borderStrong, lineWidth: 1)
                         )
                         .clipShape(Capsule())
                 }
@@ -339,7 +340,7 @@ struct DevicesView: View {
         AFCard {
             HStack(alignment: .top, spacing: Theme.Spacing.md) {
                 Image(systemName: "info.circle.fill")
-                    .foregroundColor(Theme.Colors.textSecondary)
+                    .foregroundColor(DailyDriver.foregroundMuted)
                 Text("Roles decide which device feeds which metric. If two devices fight for the same role, the most-recently-synced wins.")
                     .afMuted()
                     .fixedSize(horizontal: false, vertical: true)
@@ -365,7 +366,7 @@ private struct PairDeviceSheet: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            Theme.Colors.background.ignoresSafeArea()
+            DailyDriver.screenBackground.ignoresSafeArea()
 
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                 VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
@@ -378,20 +379,20 @@ private struct PairDeviceSheet: View {
                 VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                     Text("6-digit code")
                         .font(Theme.Typography.footnote.weight(.semibold))
-                        .foregroundColor(Theme.Colors.textSecondary)
+                        .foregroundColor(DailyDriver.foregroundMuted)
                     TextField("ABC123", text: $shortCode)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
                         .keyboardType(.asciiCapable)
                         .font(.system(size: 24, weight: .bold, design: .monospaced))
-                        .foregroundColor(Theme.Colors.textPrimary)
-                        .tint(Theme.Colors.readyHigh)
+                        .foregroundColor(DailyDriver.foreground)
+                        .tint(DailyDriver.lime)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)
                         .background(Theme.Colors.inputBackground)
                         .overlay(
                             RoundedRectangle(cornerRadius: Theme.CornerRadius.sm, style: .continuous)
-                                .stroke(Theme.Colors.borderMedium, lineWidth: 1)
+                                .stroke(DailyDriver.borderStrong, lineWidth: 1)
                         )
                         .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.sm, style: .continuous))
                         .onChange(of: shortCode) { value in
@@ -438,7 +439,7 @@ private struct PairDeviceSheet: View {
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
-        .presentationBackground(Theme.Colors.background)
+        .presentationBackground(DailyDriver.screenBackground)
     }
 
     private func submit() async {

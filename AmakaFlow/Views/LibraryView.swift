@@ -3,24 +3,47 @@
 //  AmakaFlow
 //
 //  AMA-2004: saved-content Library tab.
+//  Daily Driver: DDBuildScreen — search, source pills, unified provenance rows.
 //
 
 import SwiftUI
 
 struct LibraryView: View {
     @StateObject private var viewModel: LibraryViewModel
-    @State private var addDestination: LibraryAddDestination?
-    /// Queued after knowledge sheet dismisses so social import presents cleanly (AMA-2297 CR).
-    @State private var pendingSocialDestination: LibraryAddDestination?
+    @Environment(\.openCreateSheet) private var openCreateSheet
+    @State private var searchText = ""
+    @State private var sourceFilter: DDPlatform = .all
 
     init(viewModel: LibraryViewModel? = nil) {
         _viewModel = StateObject(wrappedValue: viewModel ?? LibraryViewModel())
     }
 
+    private var filteredEntries: [LibraryListEntry] {
+        viewModel.entries.filter { entry in
+            let matchesSource: Bool
+            let title: String
+            let creator: String
+
+            switch entry {
+            case .workout(let workout):
+                matchesSource = sourceFilter.matches(workout: workout)
+                title = workout.name
+                creator = DDLibraryPresentation.creatorLabel(for: workout)
+            case .knowledge(let item):
+                matchesSource = sourceFilter.matches(knowledge: item)
+                title = item.title
+                creator = item.sourceDomain ?? ""
+            }
+
+            guard matchesSource else { return false }
+            return DDLibraryPresentation.matchesSearch(searchText, title: title, creator: creator)
+        }
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.Colors.background.ignoresSafeArea()
+                DailyDriver.screenBackground.ignoresSafeArea()
 
                 Group {
                     switch viewModel.state {
@@ -39,11 +62,8 @@ struct LibraryView: View {
             .navigationDestination(for: LibraryDestination.self) { destination in
                 libraryDestinationView(destination)
             }
-            // AMA-2292: Proto FAB — one tap from Library root to create.
-            .overlay(alignment: .bottomTrailing) {
-                libraryCreateFAB
-            }
         }
+        .preferredColorScheme(.dark)
         .overlay(alignment: .top) {
             if let error = viewModel.ctaError {
                 ErrorToast(
@@ -57,71 +77,19 @@ struct LibraryView: View {
                 .padding(.top, Theme.Spacing.md)
             }
         }
-        .sheet(item: $addDestination, onDismiss: presentPendingSocialImportIfNeeded) { destination in
-            libraryAddSheet(destination)
-        }
         .task {
             await viewModel.load()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .libraryContentDidChange)) { _ in
+            Task { await viewModel.load() }
         }
         .accessibilityIdentifier("library_screen")
     }
 }
 
 extension LibraryView {
-    @ViewBuilder
-    fileprivate func libraryAddSheet(_ destination: LibraryAddDestination) -> some View {
-        switch destination {
-        case .knowledge:
-            AddKnowledgeView(
-                onSocialURLDetected: { url in
-                    pendingSocialDestination = .socialImport(
-                        url: SocialImportPlatform.normalizeForIngest(url),
-                        platform: SocialImportPlatform.detect(from: url)
-                    )
-                    addDestination = nil
-                },
-                onSaved: {
-                    Task { await viewModel.load() }
-                }
-            )
-        case .socialImport(let url, let platform):
-            SocialImportFlowView(
-                mode: .url(platformHint: platform),
-                initialURL: url
-            ) {
-                Task { await viewModel.load() }
-            }
-        }
-    }
-
-    fileprivate func presentPendingSocialImportIfNeeded() {
-        guard let pending = pendingSocialDestination else { return }
-        pendingSocialDestination = nil
-        addDestination = pending
-    }
-
     fileprivate func presentAddSheet() {
-        // AMA-2297: IG/TikTok/YouTube clipboard → SocialImportFlowView, never knowledge bookmark.
-        addDestination = LibraryPasteRouter.destination()
-    }
-
-    fileprivate var libraryCreateFAB: some View {
-        Button {
-            presentAddSheet()
-        } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundColor(Theme.Colors.primaryForeground)
-                .frame(width: 56, height: 56)
-                .background(Theme.Colors.readyHigh)
-                .clipShape(Circle())
-                .shadow(color: Color.black.opacity(0.18), radius: 10, x: 0, y: 4)
-        }
-        .buttonStyle(.plain)
-        .padding(.trailing, Theme.Spacing.lg)
-        .padding(.bottom, 108)
-        .accessibilityLabel("Create library entry")
-        .accessibilityIdentifier("af_library_fab")
+        openCreateSheet()
     }
 }
 
@@ -129,213 +97,162 @@ extension LibraryView {
     private var loadingView: some View {
         VStack(spacing: Theme.Spacing.md) {
             ProgressView()
-                .tint(Theme.Colors.textPrimary)
+                .tint(DailyDriver.foreground)
             Text("Loading your Library")
-                .afMuted()
+                .font(Theme.Typography.caption)
+                .foregroundColor(DailyDriver.foregroundMuted)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier("library_loading")
     }
 
     private var contentView: some View {
-        scrollContainer {
-            filterSection
-            itemList
+        VStack(spacing: 0) {
+            DDScreenHeader(title: "Library") {
+                DDLibraryHeaderAddButton(action: presentAddSheet)
+            }
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    DDSearchField(text: $searchText)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 8)
+
+                    DDSourceFilterPills(selection: $sourceFilter)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 10)
+
+                    itemList
+                        .padding(.horizontal, 18)
+                        .padding(.top, 14)
+                }
+                .padding(.bottom, 100)
+            }
+            .refreshable {
+                await viewModel.load()
+            }
         }
     }
 
     private var emptyView: some View {
-        scrollContainer {
-            if viewModel.hasActiveFilters {
-                filterSection
+        VStack(spacing: 0) {
+            DDScreenHeader(title: "Library") {
+                DDLibraryHeaderAddButton(action: presentAddSheet)
             }
-            LibraryEmptyStateView(
-                clearFilters: viewModel.hasActiveFilters ? { viewModel.clearFilters() } : nil
-            ) {
-                presentAddSheet()
+
+            ScrollView {
+                VStack(spacing: Theme.Spacing.lg) {
+                    if hasLocalFilters {
+                        DDSearchField(text: $searchText)
+                        DDSourceFilterPills(selection: $sourceFilter)
+                    }
+
+                    if hasLocalFilters && !filteredEntries.isEmpty {
+                        itemList
+                    } else if hasLocalFilters {
+                        ddNoMatchesMessage
+                    } else {
+                        LibraryEmptyStateView(clearFilters: nil) {
+                            presentAddSheet()
+                        }
+                    }
+                }
+                .padding(.horizontal, 18)
+                .padding(.bottom, 100)
             }
         }
+    }
+
+    private var hasLocalFilters: Bool {
+        !searchText.isEmpty || sourceFilter != .all
+    }
+
+    private var ddNoMatchesMessage: some View {
+        Text("Nothing matches — clear the filter or import something new with ＋")
+            .font(Theme.Typography.caption)
+            .foregroundColor(DailyDriver.foregroundDim)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 30)
     }
 
     private var loadErrorView: some View {
         VStack(spacing: Theme.Spacing.lg) {
-            topBar
+            DDScreenHeader(title: "Library")
 
             Spacer()
 
-            AFCard {
-                VStack(spacing: Theme.Spacing.md) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 30, weight: .semibold))
-                        .foregroundColor(Theme.Colors.accentRed)
-                    Text("We couldn't load your Library.")
-                        .afH2()
-                        .multilineTextAlignment(.center)
-                    Text("Retry when you’re back online. Saved items stay unchanged.")
-                        .afMuted()
-                        .multilineTextAlignment(.center)
-                    if loadError?.isRetryable == true {
-                        Button {
-                            Task { await viewModel.load() }
-                        } label: {
-                            Text("Retry")
-                        }
-                        .buttonStyle(AFPrimaryButtonStyle(size: .md))
-                        .accessibilityIdentifier("library_retry_load")
+            VStack(spacing: Theme.Spacing.md) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundColor(DailyDriver.coral)
+                Text("We couldn't load your Library.")
+                    .ddDisplayText(18, weight: .bold)
+                    .multilineTextAlignment(.center)
+                Text("Retry when you’re back online. Saved items stay unchanged.")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                    .multilineTextAlignment(.center)
+                if loadError?.isRetryable == true {
+                    Button {
+                        Task { await viewModel.load() }
+                    } label: {
+                        Text("Retry")
                     }
+                    .buttonStyle(AFPrimaryButtonStyle(size: .md))
+                    .accessibilityIdentifier("library_retry_load")
                 }
-                .frame(maxWidth: .infinity)
             }
-            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(Theme.Spacing.lg)
+            .background(DailyDriver.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(DailyDriver.border, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.horizontal, 18)
 
             Spacer()
+        }
+    }
+
+    private var itemList: some View {
+        LazyVStack(spacing: 9) {
+            ForEach(filteredEntries) { entry in
+                NavigationLink(value: entry.destination) {
+                    ddRow(for: entry)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_library_item_\(entry.id)")
+            }
+
+            if filteredEntries.isEmpty {
+                ddNoMatchesMessage
+            }
         }
     }
 
     @ViewBuilder
-    private func scrollContainer<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                topBar
-                    .padding(.horizontal, -Theme.Spacing.lg)
-
-                content()
-            }
-            .padding(.horizontal, Theme.Spacing.lg)
-            .padding(.bottom, 100)
-        }
-        .refreshable {
-            await viewModel.load()
-        }
-    }
-
-    private var topBar: some View {
-        AFTopBar(
-            title: "Library",
-            subtitle: viewModel.savedSubtitle,
-            left: { EmptyView() },
-            right: { topBarActions }
-        )
-    }
-
-    private var topBarActions: some View {
-        HStack(spacing: Theme.Spacing.sm) {
-            Image(systemName: "line.3.horizontal.decrease.circle")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(Theme.Colors.textSecondary)
-                .accessibilityHidden(true)
-
-            Button {
-                presentAddSheet()
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 18, weight: .semibold))
-                    .frame(width: 34, height: 34)
-                    .background(Theme.Colors.chipBackground)
-                    .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Add to Library")
-            .accessibilityIdentifier("af_library_add")
-        }
-    }
-
-    private var filterSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            kindChips
-            if !viewModel.availableTags.isEmpty {
-                tagChips
-            }
-        }
-    }
-
-    private var kindChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Theme.Spacing.sm) {
-                filterChip(
-                    title: "All",
-                    selected: viewModel.selectedKinds.isEmpty,
-                    identifier: "af_library_kind_all"
-                ) {
-                    viewModel.clearKindFilters()
-                }
-
-                ForEach(LibraryViewModel.displayKinds, id: \.self) { kind in
-                    filterChip(
-                        title: LibraryViewModel.kindLabel(kind),
-                        selected: viewModel.isKindSelected(kind),
-                        identifier: "af_library_kind_\(kind.rawValue)"
-                    ) {
-                        viewModel.toggleKind(kind)
-                    }
-                }
-            }
-            .padding(.vertical, 2)
-        }
-    }
-
-    private var tagChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Theme.Spacing.sm) {
-                filterChip(
-                    title: "All tags",
-                    selected: viewModel.selectedTag == nil,
-                    identifier: "af_library_tag_all"
-                ) {
-                    viewModel.selectTag(nil)
-                }
-
-                ForEach(viewModel.availableTags, id: \.self) { tag in
-                    filterChip(
-                        title: tag,
-                        selected: viewModel.isTagSelected(tag),
-                        identifier: "af_library_tag_\(tag)"
-                    ) {
-                        viewModel.selectTag(tag)
-                    }
-                }
-            }
-            .padding(.vertical, 2)
-        }
-    }
-
-    private func filterChip(
-        title: String,
-        selected: Bool,
-        identifier: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(Theme.Typography.footnote.weight(.semibold))
-                .foregroundColor(selected ? Theme.Colors.primaryForeground : Theme.Colors.textPrimary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(selected ? Theme.Colors.primary : Theme.Colors.chipBackground)
-                .overlay(
-                    Capsule().stroke(selected ? Color.clear : Theme.Colors.borderLight, lineWidth: 1)
-                )
-                .clipShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier(identifier)
-        .accessibilityAddTraits(selected ? .isSelected : [])
-    }
-
-    private var itemList: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            AFLabel(text: "Saved Content")
-                .accessibilityAddTraits(.isHeader)
-
-            LazyVStack(spacing: Theme.Spacing.md) {
-                ForEach(viewModel.entries) { entry in
-                    NavigationLink(value: entry.destination) {
-                        LibraryEntryCard(entry: entry)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("af_library_item_\(entry.id)")
-                }
-            }
+    private func ddRow(for entry: LibraryListEntry) -> some View {
+        switch entry {
+        case .workout(let workout):
+            let row = DDLibraryPresentation.row(for: workout)
+            DDLibraryRow(
+                title: workout.name,
+                metaLine: row.meta,
+                platform: row.platform,
+                thumbIcon: row.icon,
+                gradientColors: row.gradient
+            )
+        case .knowledge(let item):
+            let row = DDLibraryPresentation.row(for: item)
+            DDLibraryRow(
+                title: item.title,
+                metaLine: row.meta,
+                platform: row.platform,
+                thumbIcon: row.icon,
+                gradientColors: row.gradient
+            )
         }
     }
 
@@ -350,9 +267,9 @@ extension LibraryView {
                         ?? viewModel.resolveWorkout(for: destination)
                 }
             } else {
-                // Honest fallback if workout vanished mid-nav.
                 Text("Workout unavailable")
-                    .afMuted()
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(DailyDriver.foregroundMuted)
                     .accessibilityIdentifier("af_workout_detail_missing_\(workoutID)")
             }
         case .knowledgeDetail(let itemID):
@@ -365,114 +282,5 @@ extension LibraryView {
             return error
         }
         return viewModel.ctaError
-    }
-}
-
-private struct LibraryEntryCard: View {
-    let entry: LibraryListEntry
-
-    var body: some View {
-        switch entry {
-        case .workout(let workout):
-            LibraryItemCard(
-                kindLabel: "Workout",
-                kindIcon: LibraryViewModel.kindIcon(.workout),
-                title: workout.name,
-                sourceCaption: WorkoutSourceProvenance.badge(for: workout.source.rawValue)?.label
-                    ?? "Workout",
-                tags: provenanceTags(for: workout),
-                placeholderColor: Theme.Colors.readyHigh
-            )
-        case .knowledge(let item):
-            LibraryItemCard(
-                kindLabel: LibraryViewModel.kindSingularLabel(item.kind),
-                kindIcon: LibraryViewModel.kindIcon(item.kind),
-                title: item.title,
-                sourceCaption: knowledgeSourceCaption(item),
-                tags: item.tags ?? [],
-                placeholderColor: knowledgeColor(item.kind)
-            )
-        }
-    }
-
-    private func provenanceTags(for workout: Workout) -> [String] {
-        if let badge = WorkoutSourceProvenance.badge(for: workout.source.rawValue) {
-            return [badge.label]
-        }
-        return []
-    }
-
-    private func knowledgeSourceCaption(_ item: LibraryViewModel.LibraryItem) -> String {
-        guard let sourceDomain = item.sourceDomain?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !sourceDomain.isEmpty else {
-            return LibraryViewModel.kindSingularLabel(item.kind)
-        }
-        return sourceDomain
-    }
-
-    private func knowledgeColor(_ kind: LibraryViewModel.LibraryKind) -> Color {
-        switch kind {
-        case .workout: return Theme.Colors.readyHigh
-        case .video: return Theme.Colors.accentBlue
-        case .article: return Theme.Colors.accentOrange
-        case .plan: return Theme.Colors.readyModerate
-        }
-    }
-}
-
-private struct LibraryItemCard: View {
-    let kindLabel: String
-    let kindIcon: String
-    let title: String
-    let sourceCaption: String
-    let tags: [String]
-    let placeholderColor: Color
-
-    var body: some View {
-        AFCard(padding: 0) {
-            VStack(alignment: .leading, spacing: 0) {
-                placeholder
-                    .aspectRatio(16 / 9, contentMode: .fit)
-
-                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                    HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.sm) {
-                        AFChip(text: kindLabel, outline: true)
-                        Spacer()
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(Theme.Colors.textTertiary)
-                            .accessibilityHidden(true)
-                    }
-
-                    Text(title)
-                        .font(Theme.Typography.title3)
-                        .foregroundColor(Theme.Colors.textPrimary)
-                        .lineLimit(2)
-
-                    Text(sourceCaption)
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.textSecondary)
-
-                    if !tags.isEmpty {
-                        LibraryFlowPills(tags: tags)
-                    }
-                }
-                .padding(Theme.Spacing.md)
-            }
-        }
-    }
-
-    private var placeholder: some View {
-        ZStack {
-            LinearGradient(
-                colors: [placeholderColor.opacity(0.95), placeholderColor.opacity(0.40)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            Image(systemName: kindIcon)
-                .font(.system(size: 34, weight: .semibold))
-                .foregroundColor(Theme.Colors.primaryForeground.opacity(0.92))
-        }
-        .accessibilityLabel("\(kindLabel) placeholder")
     }
 }

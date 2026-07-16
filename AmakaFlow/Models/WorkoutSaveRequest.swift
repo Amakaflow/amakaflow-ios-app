@@ -29,6 +29,12 @@ struct WorkoutSaveRequest: Codable {
     var source: String?
     /// Optional origin URL for social imports. AMA-2285.
     var sourceUrl: String?
+    /// Workout description from post / coach share.
+    var description: String?
+    /// Creator handle or coach name from post provenance.
+    var creatorName: String?
+    /// Block structure from social ingest (preserves section labels).
+    var blocks: [SocialImportBlock]?
 
     /// Convert from existing Workout model for edit mode
     static func from(workout: Workout) -> WorkoutSaveRequest {

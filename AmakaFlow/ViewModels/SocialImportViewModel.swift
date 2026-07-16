@@ -182,6 +182,8 @@ final class SocialImportViewModel: ObservableObject {
         do {
             let request = draft.toWorkoutSaveRequest()
             let workout = try await dependencies.apiService.saveWorkout(request)
+            let enriched = WorkoutLibraryDetailStore.enrichFromDraft(workout, draft: draft)
+            WorkoutLibraryDetailStore.save(enriched)
             self.draft = draft
             canEdit = true
             phase = .saved(workoutId: workout.id)

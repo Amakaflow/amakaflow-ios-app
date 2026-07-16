@@ -40,14 +40,26 @@ enum WorkoutStartDevice: String, CaseIterable, Identifiable, Equatable {
 enum WorkoutStartGym: String, CaseIterable, Identifiable, Equatable {
     case home
     case commercial
+    case hotel
     case unset
 
     var id: String { rawValue }
 
+    /// Daily Driver Start sheet pill labels (StartSheet in standalone proto).
+    var pillLabel: String {
+        switch self {
+        case .home: return "Home gym"
+        case .commercial: return "24hr Katy"
+        case .hotel: return "Hotel"
+        case .unset: return "No gym set"
+        }
+    }
+
     var title: String {
         switch self {
         case .home: return "Home gym"
-        case .commercial: return "Commercial gym"
+        case .commercial: return "24hr Katy"
+        case .hotel: return "Hotel"
         case .unset: return "No gym set"
         }
     }
@@ -55,10 +67,14 @@ enum WorkoutStartGym: String, CaseIterable, Identifiable, Equatable {
     var subtitle: String {
         switch self {
         case .home: return "Use home equipment profile"
-        case .commercial: return "Use gym equipment profile"
+        case .commercial: return "Use commercial equipment profile"
+        case .hotel: return "Use travel / hotel equipment profile"
         case .unset: return "Continue without a gym — honest empty"
         }
     }
+
+    /// Gyms shown as horizontal pills on the DD Start sheet.
+    static let startSheetPills: [WorkoutStartGym] = [.home, .commercial, .hotel]
 
     var accessibilityIdentifier: String {
         "af_start_gym_\(rawValue)"

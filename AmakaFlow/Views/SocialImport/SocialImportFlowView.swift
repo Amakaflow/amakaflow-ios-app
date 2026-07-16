@@ -3,7 +3,7 @@
 //  AmakaFlow
 //
 //  AMA-2285: URL / plain-text / screenshot entry sheets for social import.
-//  No Instagram scraping — URL + text + image are posted to the ingestor.
+//  Daily Driver chrome: pill URL input, processing animation, bottom-sheet layout.
 //
 
 import PhotosUI
@@ -16,7 +16,6 @@ struct SocialImportFlowView: View {
     }
 
     let mode: Mode
-    /// Prefill URL field (Library paste / clipboard routing — AMA-2297).
     var initialURL: String?
     var onSaved: (() -> Void)?
 
@@ -25,6 +24,14 @@ struct SocialImportFlowView: View {
     @State private var urlText: String = ""
     @State private var plainText: String = ""
     @State private var didApplyInitialURL = false
+    @State private var processingStep = 0
+
+    private let importSteps = [
+        "Fetching your link…",
+        "Reading caption & video…",
+        "Extracting exercises & sets…",
+        "Building your workout…"
+    ]
 
     init(
         mode: Mode,
@@ -37,34 +44,167 @@ struct SocialImportFlowView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Group {
-                switch viewModel.phase {
-                case .preview, .saving, .saved:
-                    if let draft = viewModel.draft {
-                        SocialImportPreviewView(viewModel: viewModel, draft: draft) {
-                            onSaved?()
-                            dismiss()
-                        }
-                    } else {
-                        inputForm
-                    }
-                default:
-                    inputForm
-                }
-            }
-            .navigationTitle(navigationTitle)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-            }
-            .accessibilityIdentifier("social_import_flow")
-            .onAppear {
-                applyInitialURLIfNeeded()
+        Group {
+            switch contentPhase {
+            case .importing:
+                importingSheet
+            case .preview:
+                previewSheet
+            case .input:
+                inputSheet
             }
         }
+        .accessibilityIdentifier("social_import_flow")
+        .onAppear { applyInitialURLIfNeeded() }
+        .task(id: viewModel.phase) {
+            await animateImportStepsWhileImporting()
+        }
+    }
+
+    private enum ContentPhase {
+        case input
+        case importing
+        case preview
+    }
+
+    private var contentPhase: ContentPhase {
+        switch viewModel.phase {
+        case .importing:
+            return .importing
+        case .preview, .saving, .saved:
+            return viewModel.draft == nil ? .input : .preview
+        default:
+            return .input
+        }
+    }
+
+    private var sheetTitle: String {
+        switch contentPhase {
+        case .importing:
+            return "Importing…"
+        case .preview:
+            return "Review & save"
+        case .input:
+            switch mode {
+            case .url:
+                return "Import from URL"
+            case .plainText(let platform):
+                return platform == .manual ? "Paste workout text" : "Import from \(platform.displayName)"
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var inputSheet: some View {
+        DDBottomSheetChrome(title: sheetTitle) {
+            VStack(alignment: .leading, spacing: 16) {
+                switch mode {
+                case .url(let hint):
+                    DDURLPillInput(
+                        text: $urlText,
+                        placeholder: urlPlaceholder(for: hint)
+                    ) {
+                        if let clip = UIPasteboard.general.string {
+                            urlText = SocialImportPlatform.normalizeForIngest(clip)
+                        }
+                    }
+                    .accessibilityIdentifier("social_import_url_field")
+
+                    Text("Instagram, TikTok, or YouTube — we pull the workout out of the post.")
+                        .font(.system(size: 10.5))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                        .padding(.horizontal, 4)
+
+                case .plainText:
+                    TextEditor(text: $plainText)
+                        .font(Theme.Typography.body)
+                        .frame(minHeight: 140)
+                        .padding(12)
+                        .background(DailyDriver.card)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.CornerRadius.lg, style: .continuous)
+                                .stroke(Theme.Colors.borderLight, lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.lg, style: .continuous))
+                        .accessibilityIdentifier("social_import_text_editor")
+
+                    Text("Captions, notes, or a written plan. You can edit everything before saving.")
+                        .font(.system(size: 10.5))
+                        .foregroundColor(Theme.Colors.textTertiary)
+                }
+
+                if case .failed(let failure) = viewModel.phase {
+                    importErrorBlock(failure)
+                }
+
+                HStack {
+                    Button("Cancel") { dismiss() }
+                        .buttonStyle(AFGhostButtonStyle(size: .md, isWide: false))
+
+                    Spacer()
+
+                    Button {
+                        startImport()
+                    } label: {
+                        Text("Import workout")
+                    }
+                    .buttonStyle(AFPrimaryButtonStyle(size: .md))
+                    .disabled(!canSubmit || viewModel.phase == .importing)
+                    .accessibilityIdentifier("social_import_submit")
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var importingSheet: some View {
+        DDBottomSheetChrome(title: sheetTitle) {
+            DDImportProcessingView(
+                urlPreview: truncatedURLPreview,
+                stepIndex: $processingStep,
+                steps: importSteps
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var previewSheet: some View {
+        if let draft = viewModel.draft {
+            SocialImportDetailPreviewView(
+                viewModel: viewModel,
+                draft: draft,
+                onLibraryReload: { onSaved?() },
+                onDismiss: {
+                    onSaved?()
+                    dismiss()
+                }
+            )
+        } else {
+            inputSheet
+        }
+    }
+
+    private var truncatedURLPreview: String {
+        let raw = urlText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard raw.count > 34 else { return raw.isEmpty ? "your link" : raw }
+        return String(raw.prefix(31)) + "…"
+    }
+
+    @ViewBuilder
+    private func importErrorBlock(_ failure: SocialImportFailure) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(failure.title)
+                .font(Theme.Typography.bodyBold)
+                .foregroundColor(Theme.Colors.accentOrange)
+            Text(failure.userMessage)
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.textSecondary)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DailyDriver.orange.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityIdentifier("social_import_error")
     }
 
     private func applyInitialURLIfNeeded() {
@@ -74,77 +214,6 @@ struct SocialImportFlowView: View {
               let initialURL,
               !initialURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         urlText = SocialImportPlatform.normalizeForIngest(initialURL)
-    }
-
-    private var navigationTitle: String {
-        switch mode {
-        case .url(let hint):
-            return "Import from \(hint?.displayName ?? "Link")"
-        case .plainText(let platform):
-            return platform == .manual ? "Paste Workout Text" : "Import from \(platform.displayName)"
-        }
-    }
-
-    @ViewBuilder
-    private var inputForm: some View {
-        Form {
-            switch mode {
-            case .url(let hint):
-                Section {
-                    TextField(urlPlaceholder(for: hint), text: $urlText)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
-                        .textContentType(.URL)
-                        .autocorrectionDisabled()
-                        .accessibilityIdentifier("social_import_url_field")
-                } header: {
-                    Text("Paste a workout URL")
-                } footer: {
-                    Text("We send the link to AmakaFlow's import service — no on-device scraping.")
-                }
-
-            case .plainText:
-                Section {
-                    TextEditor(text: $plainText)
-                        .frame(minHeight: 140)
-                        .accessibilityIdentifier("social_import_text_editor")
-                } header: {
-                    Text("Paste workout text")
-                } footer: {
-                    Text("Captions, notes, or a written plan. You can edit everything before saving.")
-                }
-            }
-
-            Section {
-                Button {
-                    startImport()
-                } label: {
-                    HStack {
-                        if viewModel.phase == .importing {
-                            ProgressView()
-                                .padding(.trailing, 8)
-                        }
-                        Text(viewModel.phase == .importing ? "Importing…" : "Import Workout")
-                    }
-                }
-                .disabled(!canSubmit || viewModel.phase == .importing)
-                .accessibilityIdentifier("social_import_submit")
-            }
-
-            if case .failed(let failure) = viewModel.phase {
-                Section {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(failure.title)
-                            .font(Theme.Typography.bodyBold)
-                            .foregroundColor(Theme.Colors.accentOrange)
-                        Text(failure.userMessage)
-                            .font(Theme.Typography.caption)
-                            .foregroundColor(Theme.Colors.textSecondary)
-                    }
-                    .accessibilityIdentifier("social_import_error")
-                }
-            }
-        }
     }
 
     private var canSubmit: Bool {
@@ -161,11 +230,12 @@ struct SocialImportFlowView: View {
         case .youtube: return "https://youtube.com/watch?v=…"
         case .tiktok: return "https://tiktok.com/@…/video/…"
         case .instagram: return "https://instagram.com/reels/…"
-        default: return "https://…"
+        default: return "Paste a workout link…"
         }
     }
 
     private func startImport() {
+        processingStep = 0
         Task {
             switch mode {
             case .url(let hint):
@@ -173,6 +243,16 @@ struct SocialImportFlowView: View {
             case .plainText(let platform):
                 await viewModel.importPlainText(plainText, platform: platform)
             }
+        }
+    }
+
+    private func animateImportStepsWhileImporting() async {
+        guard case .importing = viewModel.phase else { return }
+        processingStep = 0
+        for step in 0..<(importSteps.count - 1) {
+            try? await Task.sleep(nanoseconds: 850_000_000)
+            guard case .importing = viewModel.phase else { return }
+            processingStep = step + 1
         }
     }
 }
@@ -184,65 +264,75 @@ struct ImageImportView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = SocialImportViewModel()
     @State private var pickerItem: PhotosPickerItem?
+    @State private var processingStep = 0
+
+    private let importSteps = [
+        "Reading your screenshot…",
+        "Detecting exercises…",
+        "Building your workout…"
+    ]
 
     var body: some View {
-        NavigationStack {
-            Group {
-                switch viewModel.phase {
-                case .preview, .saving, .saved:
-                    if let draft = viewModel.draft {
-                        SocialImportPreviewView(viewModel: viewModel, draft: draft) {
+        Group {
+            switch viewModel.phase {
+            case .importing:
+                DDBottomSheetChrome(title: "Importing…") {
+                    DDImportProcessingView(
+                        urlPreview: "screenshot",
+                        stepIndex: $processingStep,
+                        steps: importSteps
+                    )
+                }
+            case .preview, .saving, .saved:
+                if let draft = viewModel.draft {
+                    SocialImportDetailPreviewView(
+                        viewModel: viewModel,
+                        draft: draft,
+                        onLibraryReload: { onSaved?() },
+                        onDismiss: {
                             onSaved?()
                             dismiss()
                         }
-                    } else {
-                        pickerForm
-                    }
-                default:
-                    pickerForm
+                    )
+                } else {
+                    pickerSheet
                 }
+            default:
+                pickerSheet
             }
-            .navigationTitle("Image Import")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-            }
-            .accessibilityIdentifier("image_import_sheet")
-            .onChange(of: pickerItem) { _, newItem in
-                Task { await loadAndImport(newItem) }
-            }
+        }
+        .accessibilityIdentifier("image_import_sheet")
+        .onChange(of: pickerItem) { _, newItem in
+            Task { await loadAndImport(newItem) }
+        }
+        .task(id: viewModel.phase) {
+            await animateImportStepsWhileImporting()
         }
     }
 
-    private var pickerForm: some View {
-        Form {
-            Section {
+    private var pickerSheet: some View {
+        DDBottomSheetChrome(title: "Screenshot") {
+            VStack(spacing: 12) {
                 PhotosPicker(
                     selection: $pickerItem,
                     matching: .images,
                     photoLibrary: .shared()
                 ) {
-                    Label(
-                        viewModel.phase == .importing ? "Importing…" : "Choose Screenshot",
-                        systemImage: "photo.on.rectangle.angled"
-                    )
+                    DDDoorRow(
+                        icon: "photo.on.rectangle.angled",
+                        iconBackground: DailyDriver.purple,
+                        title: "Choose screenshot",
+                        subtitle: "Workout photo → editable draft"
+                    ) {}
                 }
                 .disabled(viewModel.phase == .importing)
                 .accessibilityIdentifier("image_import_picker")
-            } footer: {
-                Text("Pick a workout screenshot. We send the image to the import service — you can edit the result before saving.")
-            }
 
-            if viewModel.phase == .importing {
-                Section {
-                    ProgressView("Reading workout from image…")
-                }
-            }
+                Text("We send the image to the import service — you can edit the result before saving.")
+                    .font(.system(size: 11))
+                    .foregroundColor(Theme.Colors.textSecondary)
 
-            if case .failed(let failure) = viewModel.phase {
-                Section {
+                if case .failed(let failure) = viewModel.phase {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(failure.title)
                             .font(Theme.Typography.bodyBold)
@@ -253,12 +343,17 @@ struct ImageImportView: View {
                     }
                     .accessibilityIdentifier("image_import_error")
                 }
+
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(AFGhostButtonStyle(size: .md))
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
 
     private func loadAndImport(_ item: PhotosPickerItem?) async {
         guard let item else { return }
+        processingStep = 0
         do {
             guard let data = try await item.loadTransferable(type: Data.self) else {
                 viewModel.phase = .failed(.parse(message: "Couldn't read that photo. Try another screenshot."))
@@ -267,6 +362,16 @@ struct ImageImportView: View {
             await viewModel.importImageData(data, filename: "screenshot.jpg")
         } catch {
             viewModel.phase = .failed(SocialImportFailure.map(error))
+        }
+    }
+
+    private func animateImportStepsWhileImporting() async {
+        guard case .importing = viewModel.phase else { return }
+        processingStep = 0
+        for step in 0..<(importSteps.count - 1) {
+            try? await Task.sleep(nanoseconds: 850_000_000)
+            guard case .importing = viewModel.phase else { return }
+            processingStep = step + 1
         }
     }
 }

@@ -893,6 +893,28 @@ class FixtureAPIService: APIServiceProviding {
     func saveWorkout(_ request: WorkoutSaveRequest) async throws -> Workout {
         print("[FixtureAPIService] Stub: saveWorkout -> fixture workout (source=\(request.source ?? "nil"))")
         let source = request.source.flatMap(WorkoutSource.init(rawValue:)) ?? .manual
+        if let blocks = request.blocks, !blocks.isEmpty {
+            let mappedBlocks = blocks.map { block in
+                Block(
+                    label: block.label,
+                    structure: .straight,
+                    rounds: max(1, block.rounds),
+                    exercises: block.exercises.map { $0.toExercise() }
+                )
+            }
+            return Workout(
+                id: "fixture-saved-\(UUID().uuidString)",
+                name: request.name,
+                sport: WorkoutSport(rawValue: request.sport) ?? .strength,
+                duration: max(mappedBlocks.flatMap(\.exercises).count * 180, 600),
+                blocks: mappedBlocks,
+                description: request.description,
+                source: source,
+                sourceUrl: request.sourceUrl,
+                creatorName: request.creatorName,
+                createdAt: Date()
+            )
+        }
         let intervals: [WorkoutInterval] = request.intervals.compactMap { interval in
             switch interval.type {
             case "reps":

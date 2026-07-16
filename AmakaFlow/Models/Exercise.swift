@@ -15,6 +15,8 @@ struct Exercise: Codable, Hashable, Identifiable {
     let restSeconds: Int?
     let distance: Double?
     let notes: String?
+    /// Target muscles / focus from post or mapper (e.g. "Quads · Glutes").
+    let focus: String?
     let supersetGroup: Int?
 
     /// Stable unique identity. Stored UUID avoids collisions when the same
@@ -27,8 +29,11 @@ struct Exercise: Codable, Hashable, Identifiable {
     // id is excluded — generated locally, not in API JSON.
     enum CodingKeys: String, CodingKey {
         case name, canonicalName, sets, reps
-        case durationSeconds, load
+        case durationSeconds, durationSec
+        case load
         case restSeconds, distance, notes
+        case focus, muscleGroup, muscleGroups
+        case weight, weightUnit
         case supersetGroup
     }
 
@@ -42,6 +47,7 @@ struct Exercise: Codable, Hashable, Identifiable {
         restSeconds: Int?,
         distance: Double?,
         notes: String?,
+        focus: String? = nil,
         supersetGroup: Int?
     ) {
         self.id = UUID().uuidString
@@ -54,6 +60,7 @@ struct Exercise: Codable, Hashable, Identifiable {
         self.restSeconds = restSeconds
         self.distance = distance
         self.notes = notes
+        self.focus = focus
         self.supersetGroup = supersetGroup
     }
 
@@ -63,13 +70,84 @@ struct Exercise: Codable, Hashable, Identifiable {
         self.name = try container.decode(String.self, forKey: .name)
         self.canonicalName = try container.decodeIfPresent(String.self, forKey: .canonicalName)
         self.sets = try container.decodeIfPresent(Int.self, forKey: .sets)
-        self.reps = try container.decodeIfPresent(String.self, forKey: .reps)
+        if let repsString = try? container.decode(String.self, forKey: .reps) {
+            self.reps = repsString
+        } else if let repsInt = try? container.decode(Int.self, forKey: .reps) {
+            self.reps = String(repsInt)
+        } else {
+            self.reps = nil
+        }
         self.durationSeconds = try container.decodeIfPresent(Int.self, forKey: .durationSeconds)
-        self.load = try container.decodeIfPresent(ExerciseLoad.self, forKey: .load)
+            ?? (try? container.decodeIfPresent(Int.self, forKey: .durationSec))
+        if let decodedLoad = try container.decodeIfPresent(ExerciseLoad.self, forKey: .load) {
+            self.load = decodedLoad
+        } else if let weight = try container.decodeIfPresent(Double.self, forKey: .weight) {
+            let unit = try container.decodeIfPresent(String.self, forKey: .weightUnit) ?? "kg"
+            self.load = ExerciseLoad(value: weight, unit: unit)
+        } else {
+            self.load = nil
+        }
         self.restSeconds = try container.decodeIfPresent(Int.self, forKey: .restSeconds)
         self.distance = try container.decodeIfPresent(Double.self, forKey: .distance)
-        self.notes = try container.decodeIfPresent(String.self, forKey: .notes)
+        var decodedNotes = try container.decodeIfPresent(String.self, forKey: .notes)
+        var decodedFocus = Self.decodeFocus(from: container)
+        if decodedFocus == nil,
+           let notes = decodedNotes,
+           Self.looksLikeMuscleFocus(notes) {
+            decodedFocus = Self.formatFocusLabel(notes)
+            decodedNotes = nil
+        }
+        self.notes = decodedNotes
+        self.focus = decodedFocus
         self.supersetGroup = try container.decodeIfPresent(Int.self, forKey: .supersetGroup)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(name, forKey: .name)
+        try container.encodeIfPresent(canonicalName, forKey: .canonicalName)
+        try container.encodeIfPresent(sets, forKey: .sets)
+        try container.encodeIfPresent(reps, forKey: .reps)
+        try container.encodeIfPresent(durationSeconds, forKey: .durationSeconds)
+        try container.encodeIfPresent(load, forKey: .load)
+        try container.encodeIfPresent(restSeconds, forKey: .restSeconds)
+        try container.encodeIfPresent(distance, forKey: .distance)
+        try container.encodeIfPresent(notes, forKey: .notes)
+        try container.encodeIfPresent(focus, forKey: .focus)
+        try container.encodeIfPresent(supersetGroup, forKey: .supersetGroup)
+    }
+
+    private static func decodeFocus(from container: KeyedDecodingContainer<CodingKeys>) -> String? {
+        if let explicit = try? container.decode(String.self, forKey: .focus),
+           !explicit.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return formatFocusLabel(explicit)
+        }
+        if let muscleGroup = try? container.decode(String.self, forKey: .muscleGroup),
+           !muscleGroup.isEmpty {
+            return formatFocusLabel(muscleGroup)
+        }
+        if let groups = try? container.decode([String].self, forKey: .muscleGroups), !groups.isEmpty {
+            return groups.map(formatFocusLabel).joined(separator: " · ")
+        }
+        return nil
+    }
+
+    static func looksLikeMuscleFocus(_ text: String) -> Bool {
+        let lowered = text.lowercased()
+        let keywords = [
+            "quad", "glute", "hamstring", "chest", "back", "shoulder", "bicep", "tricep",
+            "core", "abs", "lat", "hip", "calve", "full body", "aerobic", "legs"
+        ]
+        return keywords.contains { lowered.contains($0) }
+    }
+
+    private static func formatFocusLabel(_ raw: String) -> String {
+        raw.split(separator: "·").map { part in
+            part.trimmingCharacters(in: .whitespacesAndNewlines)
+                .split(separator: " ")
+                .map { $0.prefix(1).uppercased() + $0.dropFirst().lowercased() }
+                .joined(separator: " ")
+        }.joined(separator: " · ")
     }
 
     var formattedDetail: String {

@@ -2,14 +2,15 @@
 //  UnifiedWorkoutDetailView.swift
 //  AmakaFlow
 //
-//  AMA-2291: One Library → detail layout for every workout source.
-//  Edit always available (AI never gatekeeps). Start opens gym + device sheet.
+//  AMA-2291: Library workout detail — Daily Driver layout (DDDetailScreen).
+//  Edit always available. Start opens gym + device sheet.
 //
 
 import SwiftUI
 
 struct UnifiedWorkoutDetailView: View {
     @State private var displayedWorkout: Workout
+    @AppStorage(DefaultsKey.userDisplayName.rawValue) private var userDisplayName = ""
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -19,23 +20,29 @@ struct UnifiedWorkoutDetailView: View {
     @State private var showingEditor = false
     @State private var showingWorkoutPlayer = false
     @State private var handoffStatus: String?
+    @State private var isSavingImport = false
 
-    /// Injected for previews / tests. Production reads live managers.
     var garminPairedOverride: Bool?
     var appleWatchReachableOverride: Bool?
-    /// Optional reload after Edit save — Library passes load + resolve by id.
     var onEditorDismiss: (() async -> Workout?)?
+    /// When set, this detail is showing an unsaved social-import draft (SPEC § Create → detail).
+    var importContext: WorkoutDetailImportContext?
+    var onClose: (() -> Void)?
 
     init(
         workout: Workout,
         garminPairedOverride: Bool? = nil,
         appleWatchReachableOverride: Bool? = nil,
-        onEditorDismiss: (() async -> Workout?)? = nil
+        onEditorDismiss: (() async -> Workout?)? = nil,
+        importContext: WorkoutDetailImportContext? = nil,
+        onClose: (() -> Void)? = nil
     ) {
         _displayedWorkout = State(initialValue: workout)
         self.garminPairedOverride = garminPairedOverride
         self.appleWatchReachableOverride = appleWatchReachableOverride
         self.onEditorDismiss = onEditorDismiss
+        self.importContext = importContext
+        self.onClose = onClose
     }
 
     private var workout: Workout { displayedWorkout }
@@ -56,31 +63,22 @@ struct UnifiedWorkoutDetailView: View {
     }
 
     var body: some View {
-        ZStack {
-            Theme.Colors.background.ignoresSafeArea()
+        ZStack(alignment: .bottom) {
+            DailyDriver.screenBackground.ignoresSafeArea()
 
             ScrollView {
-                VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                    topBar
-                        .padding(.horizontal, -Theme.Spacing.lg)
-
+                VStack(alignment: .leading, spacing: 0) {
                     hero
-                    titleBlock
-                    pillsRow
-                    creditRow
-                    primaryActions
-                    blockList
-                    if let handoffStatus {
-                        Text(handoffStatus)
-                            .font(Theme.Typography.caption)
-                            .foregroundColor(Theme.Colors.textSecondary)
-                            .accessibilityIdentifier("af_workout_detail_handoff_status")
-                    }
+                    contentBody
                 }
-                .padding(.horizontal, Theme.Spacing.lg)
                 .padding(.bottom, 120)
             }
+            .scrollIndicators(.hidden)
+
+            bottomActionBar
         }
+        .preferredColorScheme(.dark)
+        .ddSuppressFloatingChrome()
         .navigationBarHidden(true)
         .sheet(isPresented: $showingStartSheet) {
             WorkoutStartSheet(
@@ -94,7 +92,8 @@ struct UnifiedWorkoutDetailView: View {
                 onClose: { showingStartSheet = false }
             )
             .presentationDetents([.large, .medium])
-            .presentationDragIndicator(.visible)
+            .presentationDragIndicator(.hidden)
+            .presentationBackground(DailyDriver.screenBackground)
         }
         .sheet(
             isPresented: $showingEditor,
@@ -106,7 +105,6 @@ struct UnifiedWorkoutDetailView: View {
                 }
             },
             content: {
-                // AI never gatekeeps — Edit always opens the structure editor.
                 WorkoutEditorView(workout: displayedWorkout)
             }
         )
@@ -116,177 +114,519 @@ struct UnifiedWorkoutDetailView: View {
         .accessibilityIdentifier("af_workout_detail_screen")
     }
 
-    private var topBar: some View {
-        AFTopBar(
-            title: "Workout",
-            subtitle: provenanceSubtitle,
-            backIdentifier: "af_workout_detail_back",
-            backAction: { dismiss() },
-            right: { EmptyView() }
-        )
-    }
+    // MARK: - Hero
 
     private var hero: some View {
-        ZStack(alignment: .bottomLeading) {
+        ZStack {
             LinearGradient(
-                colors: [Theme.Colors.readyHigh.opacity(0.95), Theme.Colors.readyHigh.opacity(0.35)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                colors: heroGradientColors,
+                startPoint: UnitPoint(x: 0.2, y: 0),
+                endPoint: UnitPoint(x: 0.8, y: 1)
             )
-            Image(systemName: sportIcon)
-                .font(.system(size: 44, weight: .semibold))
-                .foregroundColor(Theme.Colors.primaryForeground.opacity(0.92))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            if let badge = WorkoutSourceProvenance.badge(for: workout.source.rawValue) {
-                AFChip(text: badge.label, outline: false)
-                    .padding(Theme.Spacing.md)
+            Image(systemName: heroIcon)
+                .font(.system(size: 38, weight: .semibold))
+                .foregroundColor(.white.opacity(0.7))
+
+            VStack {
+                HStack {
+                    Button {
+                        closeDetail()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 36, height: 36)
+                            .background(Color.black.opacity(0.5))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("af_workout_detail_back")
+                    Spacer()
+                }
+                .padding(.horizontal, 14)
+                .padding(.top, 12)
+
+                Spacer()
+
+                HStack(spacing: 7) {
+                    ForEach(heroPills, id: \.self) { pill in
+                        Text(pill)
+                            .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 4)
+                            .background(Color.black.opacity(0.5))
+                            .clipShape(Capsule())
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
             }
         }
-        .aspectRatio(16 / 9, contentMode: .fit)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.lg, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.lg, style: .continuous)
-                .stroke(Theme.Colors.borderLight, lineWidth: 1)
-        )
+        .frame(height: 190)
+        .frame(maxWidth: .infinity)
         .accessibilityIdentifier("af_workout_detail_hero")
     }
 
-    private var titleBlock: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+    // MARK: - Body
+
+    private var contentBody: some View {
+        VStack(alignment: .leading, spacing: 0) {
             Text(workout.name)
-                .font(Theme.Typography.title1)
-                .foregroundColor(Theme.Colors.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
+                .ddDisplayText(24, weight: .heavy)
+                .foregroundColor(DailyDriver.foreground)
+                .lineSpacing(2)
                 .accessibilityIdentifier("af_workout_detail_title")
 
-            if let description = workout.description, !description.isEmpty {
+            if let description = displayDescription, !description.isEmpty {
                 Text(description)
-                    .font(Theme.Typography.body)
+                    .font(.system(size: 12.5))
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                    .lineSpacing(4)
+                    .padding(.top, 8)
+            }
+
+            creditRow
+                .padding(.top, 12)
+
+            blockList
+                .padding(.top, 4)
+
+            if let handoffStatus {
+                Text(handoffStatus)
+                    .font(Theme.Typography.caption)
                     .foregroundColor(Theme.Colors.textSecondary)
+                    .padding(.top, Theme.Spacing.md)
+                    .accessibilityIdentifier("af_workout_detail_handoff_status")
             }
         }
+        .padding(.horizontal, 18)
+        .padding(.top, 16)
     }
 
-    private var pillsRow: some View {
-        HStack(spacing: Theme.Spacing.sm) {
-            AFChip(text: workout.sport.rawValue.capitalized, outline: true)
-            AFChip(text: workout.formattedDuration, outline: true)
-            if workout.exerciseCount > 0 {
-                AFChip(text: "\(workout.exerciseCount) exercises", outline: true)
-            }
-            Spacer(minLength: 0)
-        }
-        .accessibilityIdentifier("af_workout_detail_pills")
-    }
-
-    @ViewBuilder
     private var creditRow: some View {
-        if LibraryDetailRouting.showsSocialCreditRow(source: workout.source) {
-            HStack(spacing: Theme.Spacing.md) {
-                Image(systemName: "person.crop.circle")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundColor(Theme.Colors.accentBlue)
+        HStack(spacing: 10) {
+            Text(creditInitial)
+                .ddDisplayText(13, weight: .heavy)
+                .foregroundColor(creditInk)
+                .frame(width: 32, height: 32)
+                .background(creditBackground)
+                .clipShape(Circle())
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(creditCreatorLabel)
-                        .font(Theme.Typography.bodyBold)
-                        .foregroundColor(Theme.Colors.textPrimary)
-
-                    if let label = WorkoutSourceProvenance.externalLabel(for: workout.source.rawValue),
-                       let url = WorkoutSourceProvenance.externalURL(for: workout) {
-                        Button {
-                            openURL(url)
-                        } label: {
-                            HStack(spacing: 4) {
-                                Text("Open in \(label)")
-                                Image(systemName: "arrow.up.right")
-                                    .font(.system(size: 11, weight: .semibold))
-                            }
-                            .font(Theme.Typography.caption)
-                            .foregroundColor(Theme.Colors.accentBlue)
-                        }
-                        .accessibilityIdentifier(creditOpenIdentifier(for: label))
-                    } else {
-                        Text("Source link unavailable")
-                            .font(Theme.Typography.caption)
-                            .foregroundColor(Theme.Colors.textSecondary)
-                            .accessibilityIdentifier("af_credit_open_absent")
-                    }
-                }
-
-                Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(creditName)
+                    .ddDisplayText(12.5, weight: .bold)
+                    .foregroundColor(DailyDriver.foreground)
+                Text(creditSubtitle)
+                    .font(.system(size: 10))
+                    .foregroundColor(DailyDriver.foregroundMuted)
             }
-            .padding(Theme.Spacing.md)
-            .background(Theme.Colors.surface)
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
-                    .stroke(Theme.Colors.borderLight, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md))
-            .accessibilityIdentifier("af_workout_detail_credit_row")
+
+            Spacer(minLength: 0)
+
+            if let action = creditActionLabel {
+                Button {
+                    if let url = creditOpenURL {
+                        openURL(url)
+                    }
+                } label: {
+                    Text(action)
+                        .ddDisplayText(11, weight: .bold)
+                        .foregroundColor(DailyDriver.foreground)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(DailyDriver.card2)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier(creditOpenIdentifier(for: action))
+            }
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(DailyDriver.card)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(DailyDriver.border, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityIdentifier("af_workout_detail_credit_row")
     }
 
     private var blockList: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            Text("Structure")
-                .font(Theme.Typography.title2)
-                .foregroundColor(Theme.Colors.textPrimary)
-
-            if workout.blocks.isEmpty {
-                AFCard {
-                    Text("No blocks yet — tap Edit to build the structure.")
-                        .afMuted()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .accessibilityIdentifier("af_workout_detail_blocks_empty")
+        Group {
+            let sections = DDWorkoutDisplayGrouping.sections(for: workout)
+            if sections.isEmpty {
+                Text("No blocks yet — tap Edit to build the structure.")
+                    .font(.system(size: 10.5, design: .monospaced))
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                    .padding(.top, 18)
+                    .accessibilityIdentifier("af_workout_detail_blocks_empty")
             } else {
-                VStack(spacing: Theme.Spacing.sm) {
-                    ForEach(Array(workout.blocks.enumerated()), id: \.element.id) { index, block in
-                        BlockSectionView(block: block, blockIndex: index)
-                    }
+                ForEach(sections) { section in
+                    DDWorkoutBlockSectionView(section: section)
+                        .padding(.top, 18)
                 }
                 .accessibilityIdentifier("af_workout_detail_blocks")
             }
         }
     }
 
-    private var primaryActions: some View {
-        HStack(spacing: Theme.Spacing.md) {
-            Button {
-                showingEditor = true
-            } label: {
-                Text("Edit")
-                    .font(Theme.Typography.bodyBold)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
-            }
-            .buttonStyle(AFGhostButtonStyle(size: .md))
-            .accessibilityIdentifier("af_workout_detail_edit")
+    // MARK: - Bottom CTAs
 
-            Button {
-                showingStartSheet = true
-            } label: {
-                Text("Start")
-                    .font(Theme.Typography.bodyBold)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
+    private var bottomActionBar: some View {
+        GeometryReader { proxy in
+            let gap: CGFloat = 8
+            let editWidth = (proxy.size.width - gap) * (1 / 2.2)
+            let startWidth = (proxy.size.width - gap) * (1.2 / 2.2)
+
+            HStack(spacing: gap) {
+                Button {
+                    showingEditor = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("Edit")
+                            .ddDisplayText(15, weight: .bold)
+                    }
+                    .foregroundColor(DailyDriver.foreground)
+                    .frame(width: editWidth)
+                    .padding(.vertical, 16)
+                    .background(DailyDriver.tabBarBackground)
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(DailyDriver.borderStrong, lineWidth: 1)
+                    )
+                    .clipShape(Capsule(style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_workout_detail_edit")
+
+                Button {
+                    Task { await handleStartTapped() }
+                } label: {
+                    HStack(spacing: 6) {
+                        if isSavingImport {
+                            ProgressView()
+                                .tint(DailyDriver.ink)
+                        } else {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        Text("Start")
+                            .ddDisplayText(15, weight: .bold)
+                    }
+                    .foregroundColor(DailyDriver.ink)
+                    .frame(width: startWidth)
+                    .padding(.vertical, 16)
+                    .background(DailyDriver.lime)
+                    .clipShape(Capsule(style: .continuous))
+                    .ddLimeGlow()
+                }
+                .disabled(isSavingImport)
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_workout_detail_start")
             }
-            .buttonStyle(AFPrimaryButtonStyle(size: .md))
-            .accessibilityIdentifier("af_workout_detail_start")
         }
+        .frame(height: 52)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 12)
     }
 }
 
-// MARK: - Start handoffs + helpers (separate type body for SwiftLint)
+// MARK: - Start handoffs + helpers
 
 extension UnifiedWorkoutDetailView {
+    fileprivate var displayDescription: String? {
+        workout.description
+    }
+
+    fileprivate func closeDetail() {
+        if let onClose {
+            onClose()
+        } else {
+            dismiss()
+        }
+    }
+
+    fileprivate func handleStartTapped() async {
+        if let importContext, !importContext.isSaved {
+            isSavingImport = true
+            await importContext.viewModel.saveToLibrary()
+            isSavingImport = false
+            if case .saved(let workoutId) = importContext.viewModel.phase {
+                importContext.onLibraryReload()
+                displayedWorkout = withSavedId(workoutId)
+            } else {
+                return
+            }
+        }
+        showingStartSheet = true
+    }
+
+    /// Resolve provenance from source + URL (imports may arrive as `.amaka` / `.other`).
+    fileprivate var resolvedSourceKey: String {
+        if workout.source != .other && workout.source != .amaka {
+            return workout.source.rawValue
+        }
+        if let url = workout.sourceUrl, !url.isEmpty {
+            return SocialImportPlatform.detect(from: url).rawValue
+        }
+        return workout.source.rawValue
+    }
+
+    fileprivate var heroPills: [String] {
+        var pills: [String] = [sourceHeroPill]
+
+        if workout.exerciseCount > 0 {
+            pills.append("\(workout.exerciseCount) EXERCISES · \(ddHeroDurationLabel)")
+        } else if workout.blockCount > 0 {
+            pills.append("\(workout.blockCount) BLOCKS · \(ddHeroDurationLabel)")
+        } else {
+            pills.append(ddHeroDurationLabel)
+        }
+
+        pills.append(sportHeroPill)
+        return pills
+    }
+
+    fileprivate var ddHeroDurationLabel: String {
+        let minutes = max(1, workout.duration / 60)
+        return "~\(minutes) MIN"
+    }
+
+    fileprivate var sourceHeroPill: String {
+        if workout.source == .coach {
+            return "FROM TRAINER"
+        }
+        if workout.source == .manual || workout.source == .gymManualSync {
+            return "CREATED BY YOU"
+        }
+        if let badge = WorkoutSourceProvenance.badge(for: resolvedSourceKey) {
+            if WorkoutSourceProvenance.isExternal(resolvedSourceKey) {
+                return "FROM \(badge.label)".uppercased()
+            }
+            if workout.source == .ai || workout.source == .smartPlanner || workout.source == .amaka {
+                return "FROM AI COACH"
+            }
+            return "FROM \(badge.label)".uppercased()
+        }
+        return "CREATED BY YOU"
+    }
+
+    fileprivate var sportHeroPill: String {
+        if workout.name.localizedCaseInsensitiveContains("hyrox") {
+            return "HYROX"
+        }
+        switch workout.sport {
+        case .strength: return "STRENGTH"
+        case .running: return "RUN"
+        case .cycling: return "RIDE"
+        case .cardio: return "HIIT"
+        case .mobility: return "MOBILITY"
+        case .swimming: return "SWIM"
+        case .other: return "WORKOUT"
+        }
+    }
+
+    fileprivate var heroGradientColors: [Color] {
+        switch DDPlatform.resolve(source: workout.source, sourceUrl: workout.sourceUrl) {
+        case .instagram:
+            return [Color(hex: "3A1145"), Color(hex: "1A0A22"), Color(hex: "0A0A0B")]
+        case .tiktok:
+            return [Color(hex: "0D3830"), Color(hex: "062019"), Color(hex: "0A0A0B")]
+        case .coach:
+            return [Color(hex: "33240A"), Color(hex: "1D1405"), Color(hex: "0A0A0B")]
+        case .ai:
+            return [Color(hex: "101C30"), Color(hex: "060A12"), Color(hex: "0A0A0B")]
+        case .manual, .all:
+            switch workout.sport {
+            case .running, .cycling, .swimming:
+                return [Color(hex: "0D2438"), Color(hex: "071522"), Color(hex: "0A0A0B")]
+            case .cardio:
+                return [Color(hex: "2A3505"), Color(hex: "141B03"), Color(hex: "0A0A0B")]
+            default:
+                return [Color(hex: "2A3505"), Color(hex: "141B03"), Color(hex: "0A0A0B")]
+            }
+        }
+    }
+
+    fileprivate var heroIcon: String {
+        if WorkoutSourceProvenance.isExternal(resolvedSourceKey) {
+            return "play.fill"
+        }
+        switch workout.sport {
+        case .running: return "figure.run"
+        case .cycling: return "bicycle"
+        case .strength, .mobility: return "dumbbell.fill"
+        case .swimming: return "figure.pool.swim"
+        case .cardio: return "flame.fill"
+        case .other: return "dumbbell.fill"
+        }
+    }
+
+    fileprivate var storedCreatorName: String? {
+        let trimmed = workout.creatorName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    fileprivate var resolvedCreatorName: String? {
+        if let storedCreatorName { return storedCreatorName }
+        if workout.source == .coach {
+            let coach = creatorHandle.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !coach.isEmpty, coach.lowercased() != "you" { return coach }
+        }
+        return nil
+    }
+
+    fileprivate var creditDateSuffix: String? {
+        workout.createdAt?.formatted(.dateTime.month(.abbreviated).day())
+    }
+
+    fileprivate var creatorHandle: String {
+        if let url = workout.sourceUrl?.trimmingCharacters(in: .whitespacesAndNewlines), !url.isEmpty {
+            if url.hasPrefix("@") {
+                return String(url.dropFirst())
+            }
+            if let host = URL(string: url)?.host?.replacingOccurrences(of: "www.", with: "") {
+                let path = URL(string: url)?.pathComponents.filter { $0 != "/" } ?? []
+                if let first = path.first, !first.isEmpty, !first.contains(".") {
+                    return first
+                }
+                return host
+            }
+            if !url.contains("://") {
+                return url
+            }
+        }
+        return DDLibraryPresentation.creatorLabel(for: workout)
+    }
+
+    fileprivate var coachDisplayName: String {
+        let handle = resolvedCreatorName ?? creatorHandle
+        if handle == "you" || handle.isEmpty {
+            return "Coach"
+        }
+        if handle.localizedCaseInsensitiveContains("coach") {
+            let parts = handle.split(separator: " ").map(String.init)
+            if parts.count >= 2 {
+                return parts.joined(separator: " ")
+            }
+            return "Coach \(handle.capitalized)"
+        }
+        if handle.contains(" ") {
+            return "Coach \(handle)"
+        }
+        return "Coach \(handle)"
+    }
+
+    fileprivate var creditInitial: String {
+        if workout.source == .coach {
+            return String(coachDisplayName.prefix(1)).uppercased()
+        }
+        if WorkoutSourceProvenance.isExternal(resolvedSourceKey) {
+            return String(creatorHandle.prefix(1)).lowercased()
+        }
+        let trimmed = userDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            return String(trimmed.prefix(1)).uppercased()
+        }
+        return "Y"
+    }
+
+    fileprivate var creditBackground: Color {
+        switch resolvedSourceKey.lowercased() {
+        case "instagram": return DailyDriver.purple
+        case "tiktok": return Color(hex: "4AD9D9")
+        case "youtube": return DailyDriver.red
+        case "manual", "gym_manual_sync": return DailyDriver.lime
+        case "coach": return DailyDriver.orange
+        default: return DailyDriver.lime
+        }
+    }
+
+    fileprivate var creditInk: Color {
+        switch resolvedSourceKey.lowercased() {
+        case "tiktok": return Color(hex: "00211F")
+        case "manual", "gym_manual_sync": return DailyDriver.ink
+        default:
+            return creditBackground == DailyDriver.lime ? DailyDriver.ink : .white
+        }
+    }
+
+    fileprivate var creditName: String {
+        if workout.source == .manual || workout.source == .gymManualSync {
+            return "You"
+        }
+        if workout.source == .coach {
+            return coachDisplayName
+        }
+        if WorkoutSourceProvenance.isExternal(resolvedSourceKey) {
+            if let creator = resolvedCreatorName {
+                let trimmed = creator.hasPrefix("@") ? String(creator.dropFirst()) : creator
+                return trimmed
+            }
+            return creatorHandle
+        }
+        if workout.source == .ai || workout.source == .smartPlanner || workout.source == .amaka {
+            return "AmakaFlow AI"
+        }
+        return "You"
+    }
+
+    fileprivate var creditSubtitle: String {
+        if workout.source == .manual || workout.source == .gymManualSync {
+            if let date = creditDateSuffix {
+                return "Created manually · \(date)"
+            }
+            return "Created manually"
+        }
+        if workout.source == .coach {
+            if let date = creditDateSuffix {
+                return "Shared with you · \(date)"
+            }
+            return "Shared with you"
+        }
+        if WorkoutSourceProvenance.isExternal(resolvedSourceKey) {
+            return "Workout by"
+        }
+        if workout.source == .ai || workout.source == .smartPlanner {
+            return "Built by AI Coach"
+        }
+        return "Created manually"
+    }
+
+    fileprivate var creditActionLabel: String? {
+        if workout.source == .coach {
+            return "Message"
+        }
+        if creditOpenURL != nil,
+           let label = WorkoutSourceProvenance.externalLabel(for: resolvedSourceKey) {
+            return "Open in \(label)"
+        }
+        return nil
+    }
+
+    fileprivate var creditOpenURL: URL? {
+        if let url = WorkoutSourceProvenance.externalURL(for: workout) {
+            return url
+        }
+        guard let sourceUrl = workout.sourceUrl,
+              let url = URL(string: sourceUrl),
+              let scheme = url.scheme?.lowercased(),
+              ["http", "https"].contains(scheme) else {
+            return nil
+        }
+        return url
+    }
+
     fileprivate func handleStartConfirm(gym: WorkoutStartGym, device: WorkoutStartDevice) {
         let handoff = WorkoutStartHandoffResolver.handoff(for: device)
         switch handoff {
         case .garmin:
-            // AMA-2286: CIQ FIT queue (AMA-1387). Not live remote sendWorkoutState; not garth.
             handoffStatus = "Queueing for Garmin…"
             Task {
                 let result = await GarminStartHandoffService().push(
@@ -301,7 +641,6 @@ extension UnifiedWorkoutDetailView {
         case .apple:
             beginAppleTryHandoff()
         case .phone:
-            // AMA-2290: phone-first strength record (watch optional).
             WorkoutEngine.shared.start(workout: workout)
             showingWorkoutPlayer = true
             handoffStatus = "Recording on Phone — stop anytime, then log sets"
@@ -321,36 +660,28 @@ extension UnifiedWorkoutDetailView {
         }
     }
 
-    fileprivate var provenanceSubtitle: String {
-        WorkoutSourceProvenance.badge(for: workout.source.rawValue)?.label ?? "Library"
-    }
-
-    fileprivate var creditCreatorLabel: String {
-        if let label = WorkoutSourceProvenance.externalLabel(for: workout.source.rawValue) {
-            return "From \(label)"
-        }
-        return "Imported workout"
-    }
-
     fileprivate func creditOpenIdentifier(for label: String) -> String {
         switch label.lowercased() {
-        case "instagram": return "af_credit_open_instagram"
-        case "tiktok": return "af_credit_open_tiktok"
-        case "youtube": return "af_credit_open_youtube"
+        case let s where s.contains("instagram"): return "af_credit_open_instagram"
+        case let s where s.contains("tiktok"): return "af_credit_open_tiktok"
+        case let s where s.contains("youtube"): return "af_credit_open_youtube"
         default: return "af_credit_open_external"
         }
     }
 
-    fileprivate var sportIcon: String {
-        switch workout.sport {
-        case .running: return "figure.run"
-        case .cycling: return "bicycle"
-        case .strength: return "dumbbell.fill"
-        case .mobility: return "figure.yoga"
-        case .swimming: return "figure.pool.swim"
-        case .cardio: return "figure.mixed.cardio"
-        case .other: return "figure.elliptical"
-        }
+    fileprivate func withSavedId(_ id: String) -> Workout {
+        Workout(
+            id: id,
+            name: displayedWorkout.name,
+            sport: displayedWorkout.sport,
+            duration: displayedWorkout.duration,
+            blocks: displayedWorkout.blocks,
+            description: displayedWorkout.description,
+            source: displayedWorkout.source,
+            sourceUrl: displayedWorkout.sourceUrl,
+            creatorName: displayedWorkout.creatorName,
+            createdAt: displayedWorkout.createdAt
+        )
     }
 }
 
@@ -359,12 +690,31 @@ extension UnifiedWorkoutDetailView {
     NavigationStack {
         UnifiedWorkoutDetailView(
             workout: Workout(
-                name: "IG Push Day",
+                name: "DB Full-body AMRAP",
                 sport: .strength,
-                duration: 2400,
-                intervals: [
-                    .reps(sets: 3, reps: 8, name: "Bench", load: nil, restSec: 90, followAlongUrl: nil)
+                duration: 1200,
+                blocks: [
+                    Block(
+                        label: "Main block",
+                        structure: .circuit,
+                        rounds: 3,
+                        exercises: [
+                            Exercise(
+                                name: "Wall balls",
+                                canonicalName: nil,
+                                sets: 1,
+                                reps: "20",
+                                durationSeconds: nil,
+                                load: nil,
+                                restSeconds: nil,
+                                distance: nil,
+                                notes: "Full body",
+                                supersetGroup: nil
+                            )
+                        ]
+                    )
                 ],
+                description: "Five rounds of full-body conditioning — parsed from the reel.",
                 source: .instagram,
                 sourceUrl: "https://instagram.com/reel/abc"
             ),
@@ -375,14 +725,110 @@ extension UnifiedWorkoutDetailView {
     }
 }
 
+#Preview("Coach") {
+    NavigationStack {
+        UnifiedWorkoutDetailView(
+            workout: Workout(
+                name: "Lower body — posterior",
+                sport: .strength,
+                duration: 3120,
+                blocks: [
+                    Block(
+                        label: "Main lifts",
+                        structure: .straight,
+                        rounds: 1,
+                        exercises: [
+                            Exercise(
+                                name: "Back squat",
+                                canonicalName: nil,
+                                sets: 3,
+                                reps: "5",
+                                durationSeconds: nil,
+                                load: nil,
+                                restSeconds: nil,
+                                distance: nil,
+                                notes: "build to heavy",
+                                focus: "Quads · Glutes",
+                                supersetGroup: nil
+                            ),
+                            Exercise(
+                                name: "Romanian deadlift",
+                                canonicalName: nil,
+                                sets: 3,
+                                reps: "8",
+                                durationSeconds: nil,
+                                load: ExerciseLoad(value: 70, unit: "kg"),
+                                restSeconds: nil,
+                                distance: nil,
+                                notes: nil,
+                                focus: "Hamstrings · Glutes",
+                                supersetGroup: nil
+                            )
+                        ]
+                    ),
+                    Block(
+                        label: "Accessories",
+                        structure: .straight,
+                        rounds: 1,
+                        exercises: [
+                            Exercise(
+                                name: "Split squat",
+                                canonicalName: nil,
+                                sets: 2,
+                                reps: "10",
+                                durationSeconds: nil,
+                                load: nil,
+                                restSeconds: nil,
+                                distance: nil,
+                                notes: nil,
+                                focus: "Quads · Glutes",
+                                supersetGroup: nil
+                            )
+                        ]
+                    )
+                ],
+                description: "Posterior-chain strength: squat, hinge, single-leg. From your trainer.",
+                source: .coach,
+                sourceUrl: "Coach Mike",
+                creatorName: "Coach Mike",
+                createdAt: Calendar.current.date(from: DateComponents(year: 2026, month: 7, day: 1))
+            ),
+            garminPairedOverride: false,
+            appleWatchReachableOverride: false
+        )
+        .environmentObject(WorkoutsViewModel())
+    }
+}
+
 #Preview("Manual") {
     NavigationStack {
         UnifiedWorkoutDetailView(
             workout: Workout(
-                name: "Manual Full Body",
-                sport: .strength,
-                duration: 1800,
-                intervals: [],
+                name: "Hyrox Sim — Stations 1–4",
+                sport: .cardio,
+                duration: 2700,
+                blocks: [
+                    Block(
+                        label: "Stations 1–4",
+                        structure: .circuit,
+                        rounds: 2,
+                        exercises: [
+                            Exercise(
+                                name: "SkiErg",
+                                canonicalName: nil,
+                                sets: nil,
+                                reps: nil,
+                                durationSeconds: nil,
+                                load: nil,
+                                restSeconds: nil,
+                                distance: 250,
+                                notes: "Full body",
+                                supersetGroup: nil
+                            )
+                        ]
+                    )
+                ],
+                description: "Race-pace simulation of the first four stations with run intervals between each.",
                 source: .manual
             ),
             garminPairedOverride: false,

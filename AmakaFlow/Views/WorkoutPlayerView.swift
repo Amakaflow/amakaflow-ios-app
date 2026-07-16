@@ -22,8 +22,8 @@ struct WorkoutPlayerView: View {
 
     var body: some View {
         ZStack {
-            // Background - always visible
-            Theme.Colors.background.ignoresSafeArea()
+            // Background - DD player uses pure black per dd-player-dark.png
+            playerBackground.ignoresSafeArea()
 
             // Debug: Show if no workout loaded
             if engine.workout == nil {
@@ -44,11 +44,12 @@ struct WorkoutPlayerView: View {
                 }
             } else {
                 VStack(spacing: 0) {
-                    // Header
-                    header
+                    if !usesDDPlayerChrome {
+                        header
+                    }
 
                     // Simulation mode banner (AMA-271)
-                    if engine.isSimulation {
+                    if engine.isSimulation, !usesDDPlayerChrome {
                         SimulationBannerView(speed: engine.simulationSpeed)
                     }
 
@@ -91,6 +92,17 @@ struct WorkoutPlayerView: View {
                     // Rest screen between exercises
                     RestPeriodView(engine: engine)
                         .id("rest-\(engine.currentStepIndex)")
+                } else if engine.phase == .running || engine.phase == .paused {
+                    DDActivePlayerView(
+                        engine: engine,
+                        watchManager: watchManager,
+                        onEnd: {
+                            if engine.phase == .running {
+                                engine.pause()
+                            }
+                            showEndConfirmation = true
+                        }
+                    )
                 } else {
                     ScrollView {
                         VStack(spacing: Theme.Spacing.lg) {
@@ -180,6 +192,14 @@ struct WorkoutPlayerView: View {
                 // Otherwise keep metrics for display in completion view
             }
         }
+    }
+
+    private var usesDDPlayerChrome: Bool {
+        engine.phase == .running || engine.phase == .paused
+    }
+
+    private var playerBackground: Color {
+        usesDDPlayerChrome ? .black : Theme.Colors.background
     }
 
     // MARK: - Header

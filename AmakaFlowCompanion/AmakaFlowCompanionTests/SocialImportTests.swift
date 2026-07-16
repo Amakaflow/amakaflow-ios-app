@@ -324,6 +324,7 @@ final class SocialImportTests: XCTestCase {
                 platform: .instagram,
                 sourceURL: "https://www.instagram.com/reel/x/",
                 exercises: [SocialImportExercise(name: "Add exercises", sets: 3, reps: 10)],
+                blocks: [],
                 equipmentNote: nil,
                 equipmentEmpty: false,
                 postProvenance: nil

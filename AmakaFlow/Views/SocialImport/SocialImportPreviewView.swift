@@ -11,106 +11,30 @@ import SwiftUI
 struct SocialImportPreviewView: View {
     @ObservedObject var viewModel: SocialImportViewModel
     let draft: SocialImportDraft
+    var dailyDriverChrome: Bool = false
     var onSaved: (() -> Void)?
 
     @State private var title: String = ""
     @State private var exercises: [SocialImportExercise] = []
 
     var body: some View {
-        Form {
-            Section {
-                HStack {
-                    TextField("Workout title", text: $title)
-                        .font(Theme.Typography.bodyBold)
-                        .disabled(!viewModel.canEdit)
-                        .accessibilityIdentifier("social_import_preview_title")
-                        .onChange(of: title) { _, newValue in
-                            viewModel.updateTitle(newValue)
-                        }
-
-                    WorkoutSourceBadge(source: draft.platform.workoutSourceRawValue)
-                }
-            } header: {
-                Text("Preview")
-            } footer: {
-                Text("Edit freely before saving — import never blocks edits.")
-            }
-
-            // AMA-2297: thin "From post" trust block — creator / caption / source URL.
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            titleSection
             if draft.postProvenance != nil || draft.sourceURL != nil {
-                Section {
-                    fromPostBlock
-                } header: {
-                    Text("From post")
-                }
+                fromPostSection
             }
-
             if let note = draft.equipmentNote {
-                Section {
-                    Label(note, systemImage: draft.equipmentEmpty ? "exclamationmark.circle" : "dumbbell.fill")
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                        .accessibilityIdentifier("social_import_equipment_banner")
-                } header: {
-                    Text(draft.equipmentEmpty ? "Equipment" : "Adapted to your equipment")
-                }
+                equipmentSection(note: note)
             }
-
-            Section {
-                ForEach(Array(exercises.indices), id: \.self) { index in
-                    exerciseRow(at: index)
-                }
-                .onDelete(perform: deleteExercises)
-
-                if viewModel.canEdit {
-                    Button {
-                        viewModel.addExercise()
-                        syncFromViewModel()
-                    } label: {
-                        Label("Add exercise", systemImage: "plus.circle")
-                    }
-                    .accessibilityIdentifier("social_import_add_exercise")
-                }
-            } header: {
-                Text("Exercises")
-            }
-
-            Section {
-                Button {
-                    save()
-                } label: {
-                    HStack {
-                        if viewModel.phase == .saving {
-                            ProgressView()
-                                .padding(.trailing, 8)
-                        }
-                        Text(saveButtonLabel)
-                    }
-                }
-                .disabled(viewModel.phase == .saving || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .accessibilityIdentifier("social_import_save")
-            }
-
+            exercisesSection
+            saveSection
             if case .failed(let failure) = viewModel.phase {
-                Section {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(failure.title)
-                            .font(Theme.Typography.bodyBold)
-                            .foregroundColor(Theme.Colors.accentOrange)
-                        Text(failure.userMessage)
-                            .font(Theme.Typography.caption)
-                            .foregroundColor(Theme.Colors.textSecondary)
-                    }
-                    .accessibilityIdentifier("social_import_preview_error")
-                }
+                failureSection(failure)
             }
-
             if case .saved = viewModel.phase {
-                Section {
-                    Label("Saved to Library", systemImage: "checkmark.circle.fill")
-                        .foregroundColor(Theme.Colors.accentGreen)
-                        .accessibilityIdentifier("social_import_saved")
-                }
+                Label("Saved to Library", systemImage: "checkmark.circle.fill")
+                    .foregroundColor(Theme.Colors.accentGreen)
+                    .accessibilityIdentifier("social_import_saved")
             }
         }
         .onAppear {
@@ -130,6 +54,105 @@ struct SocialImportPreviewView: View {
             }
         }
         .accessibilityIdentifier("social_import_preview")
+    }
+
+    private var titleSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Preview")
+                .font(Theme.Typography.label)
+                .foregroundColor(Theme.Colors.textSecondary)
+            HStack {
+                TextField("Workout title", text: $title)
+                    .font(Theme.Typography.bodyBold)
+                    .disabled(!viewModel.canEdit)
+                    .accessibilityIdentifier("social_import_preview_title")
+                    .onChange(of: title) { _, newValue in
+                        viewModel.updateTitle(newValue)
+                    }
+                WorkoutSourceBadge(source: draft.platform.workoutSourceRawValue)
+            }
+            Text("Edit freely before saving — import never blocks edits.")
+                .font(.system(size: 10.5))
+                .foregroundColor(Theme.Colors.textTertiary)
+        }
+        .ddCardPadding()
+    }
+
+    private var fromPostSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("From post")
+                .font(Theme.Typography.label)
+                .foregroundColor(Theme.Colors.textSecondary)
+            fromPostBlock
+        }
+        .ddCardPadding()
+    }
+
+    private func equipmentSection(note: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(draft.equipmentEmpty ? "Equipment" : "Adapted to your equipment")
+                .font(Theme.Typography.label)
+                .foregroundColor(Theme.Colors.textSecondary)
+            Label(note, systemImage: draft.equipmentEmpty ? "exclamationmark.circle" : "dumbbell.fill")
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.textSecondary)
+                .accessibilityIdentifier("social_import_equipment_banner")
+        }
+        .ddCardPadding()
+    }
+
+    private var exercisesSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Exercises")
+                .font(Theme.Typography.label)
+                .foregroundColor(Theme.Colors.textSecondary)
+            ForEach(Array(exercises.indices), id: \.self) { index in
+                exerciseRow(at: index)
+                if index < exercises.count - 1 {
+                    Divider()
+                }
+            }
+            if viewModel.canEdit {
+                Button {
+                    viewModel.addExercise()
+                    syncFromViewModel()
+                } label: {
+                    Label("Add exercise", systemImage: "plus.circle")
+                }
+                .accessibilityIdentifier("social_import_add_exercise")
+            }
+        }
+        .ddCardPadding()
+    }
+
+    private var saveSection: some View {
+        Button {
+            save()
+        } label: {
+            HStack {
+                if viewModel.phase == .saving {
+                    ProgressView()
+                        .padding(.trailing, 8)
+                }
+                Text(saveButtonLabel)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(AFPrimaryButtonStyle(size: .md))
+        .disabled(viewModel.phase == .saving || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        .accessibilityIdentifier("social_import_save")
+    }
+
+    private func failureSection(_ failure: SocialImportFailure) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(failure.title)
+                .font(Theme.Typography.bodyBold)
+                .foregroundColor(Theme.Colors.accentOrange)
+            Text(failure.userMessage)
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.textSecondary)
+        }
+        .accessibilityIdentifier("social_import_preview_error")
     }
 
     @ViewBuilder
@@ -256,5 +279,18 @@ struct SocialImportPreviewView: View {
         Task {
             await viewModel.saveToLibrary()
         }
+    }
+}
+
+private extension View {
+    func ddCardPadding() -> some View {
+        padding(Theme.Spacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(DailyDriver.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Theme.Colors.borderLight, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }

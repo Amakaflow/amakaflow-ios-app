@@ -13,7 +13,7 @@ struct Theme {
     // MARK: - Colors
     struct Colors {
         // Primary surfaces
-        static let background = Color(light: Color(hex: "FFFFFF"), dark: Color(hex: "0A0A0A"))
+        static let background = Color(light: Color(hex: "FFFFFF"), dark: Color(hex: "050506"))
         static let backgroundSubtle = Color(light: Color(hex: "F7F7F8"), dark: Color(hex: "1C1C1C"))
         static let surface = Color(light: Color(hex: "FFFFFF"), dark: Color(hex: "1F1F1F"))
         static let surfaceElevated = Color(light: Color(hex: "FFFFFF"), dark: Color(hex: "1F1F1F"))

@@ -18,7 +18,7 @@ struct EquipmentProfileView: View {
 
     var body: some View {
         ZStack {
-            Theme.Colors.background.ignoresSafeArea()
+            DailyDriver.screenBackground.ignoresSafeArea()
 
             Group {
                 switch viewModel.state {
@@ -32,6 +32,7 @@ struct EquipmentProfileView: View {
             }
         }
         .navigationBarHidden(true)
+        .preferredColorScheme(.dark)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if shouldShowSaveBar {
                 saveBar
@@ -77,7 +78,7 @@ struct EquipmentProfileView: View {
     private var loadingView: some View {
         VStack(spacing: Theme.Spacing.md) {
             ProgressView()
-                .tint(Theme.Colors.textPrimary)
+                .tint(DailyDriver.lime)
             Text("Loading your equipment")
                 .afMuted()
         }
@@ -367,27 +368,16 @@ struct EquipmentProfileView: View {
     }
 
     private var saveBar: some View {
-        VStack(spacing: Theme.Spacing.sm) {
-            Divider().background(Theme.Colors.borderLight)
-            Button {
-                Task { await viewModel.save() }
-            } label: {
-                HStack(spacing: Theme.Spacing.sm) {
-                    if viewModel.isSaving {
-                        ProgressView()
-                            .tint(Theme.Colors.primaryForeground)
-                    }
-                    Text(viewModel.isSaving ? "Saving…" : "Save equipment")
-                }
-            }
-            .buttonStyle(AFPrimaryButtonStyle(size: .lg))
-            .disabled(!viewModel.saveEnabled)
-            .accessibilityIdentifier(viewModel.saveAccessibilityIdentifier)
-            .padding(.horizontal, Theme.Spacing.lg)
-            .padding(.bottom, Theme.Spacing.sm)
-            .padding(.top, Theme.Spacing.sm)
+        DDEditorSaveBar(
+            title: viewModel.isSaving ? "Saving…" : "Save equipment",
+            isSaving: viewModel.isSaving
+        ) {
+            Task { await viewModel.save() }
         }
-        .background(Theme.Colors.background)
+        .disabled(!viewModel.saveEnabled)
+        .opacity(viewModel.saveEnabled ? 1 : 0.5)
+        .background(DailyDriver.screenBackground)
+        .accessibilityIdentifier(viewModel.saveAccessibilityIdentifier)
     }
 
     private func selectedCount(in category: EquipmentProfileViewModel.Category) -> Int {

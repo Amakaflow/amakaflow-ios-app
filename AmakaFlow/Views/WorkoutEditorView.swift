@@ -22,9 +22,14 @@ struct WorkoutEditorView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        ZStack(alignment: .bottom) {
+            DailyDriver.screenBackground.ignoresSafeArea()
+
             ScrollView {
                 VStack(spacing: Theme.Spacing.lg) {
+                    ddEditorHeader
+                    defaultRestLine
+
                     // Workout Name
                     VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                         Text("Workout Name")
@@ -133,61 +138,60 @@ struct WorkoutEditorView: View {
                         .padding(.horizontal, Theme.Spacing.lg)
                     }
 
-                    // Save Button
-                    Button(action: {
-                        Task { await viewModel.save() }
-                    }) {
-                        HStack(spacing: 8) {
-                            if viewModel.isSaving {
-                                ProgressView()
-                                    .tint(.white)
-                            } else {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 16))
-                            }
-                            Text(viewModel.isEditMode ? "Save Changes" : "Create Workout")
-                                .font(Theme.Typography.bodyBold)
-                        }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 48)
-                        .background(
-                            LinearGradient(
-                                colors: [Theme.Colors.accentBlue, Theme.Colors.accentGreen],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(Theme.CornerRadius.md)
-                    }
-                    .disabled(viewModel.isSaving)
-                    .padding(.horizontal, Theme.Spacing.lg)
-                    .accessibilityIdentifier("save_workout_button")
-
-                    Spacer(minLength: 40)
+                    Spacer(minLength: 100)
                 }
                 .padding(.top, Theme.Spacing.md)
             }
             .scrollContentBackground(.hidden)
-            .background(Theme.Colors.background.ignoresSafeArea())
-            .navigationTitle(viewModel.isEditMode ? "Edit Workout" : "New Workout")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundColor(Theme.Colors.textSecondary)
-                }
+
+            DDEditorSaveBar(
+                title: viewModel.isEditMode ? "Save workout" : "Create workout",
+                isSaving: viewModel.isSaving
+            ) {
+                Task { await viewModel.save() }
             }
-            .onChange(of: viewModel.didSave) { _, saved in
-                if saved { dismiss() }
-            }
-            .overlay(alignment: .top) {
-                Text(" ")
-                    .font(.system(size: 1))
-                    .opacity(0.01)
-                    .accessibilityIdentifier("workout_editor_screen")
-            }
+            .accessibilityIdentifier("save_workout_button")
         }
+        .preferredColorScheme(.dark)
+        .onChange(of: viewModel.didSave) { _, saved in
+            if saved { dismiss() }
+        }
+        .overlay(alignment: .top) {
+            Text(" ")
+                .font(.system(size: 1))
+                .opacity(0.01)
+                .accessibilityIdentifier("workout_editor_screen")
+        }
+    }
+
+    private var ddEditorHeader: some View {
+        HStack(spacing: 12) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                    .frame(width: 36, height: 36)
+            }
+            .buttonStyle(.plain)
+
+            Text(viewModel.isEditMode ? "Edit workout" : "New workout")
+                .ddDisplayText(20, weight: .heavy)
+                .foregroundColor(DailyDriver.foreground)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, Theme.Spacing.lg)
+        .padding(.top, 4)
+    }
+
+    private var defaultRestLine: some View {
+        Text("DEFAULT REST 60S · APPLIED UNLESS OVERRIDDEN")
+            .font(.system(size: 9, weight: .medium, design: .monospaced))
+            .foregroundColor(DailyDriver.foregroundDim)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Theme.Spacing.lg)
     }
 
     // MARK: - Subviews

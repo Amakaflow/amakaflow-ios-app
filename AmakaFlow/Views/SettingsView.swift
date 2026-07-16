@@ -135,26 +135,21 @@ struct SettingsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: Theme.Spacing.xl) {
-                AFTopBar(title: "Profile") {
-                    EmptyView()
-                } right: {
-                    EmptyView()
-                }
-
-                settingsHero
+            VStack(spacing: 10) {
+                ddSettingsHeader
                 connectionsSection
                 profileTrainingSection
                 coachingSection
                 nutritionActivitySection
                 appSection
             }
-            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.horizontal, 18)
             .padding(.vertical, Theme.Spacing.lg)
             .padding(.bottom, 100)
             }
-            .background(Theme.Colors.background.ignoresSafeArea())
+            .background(DailyDriver.screenBackground.ignoresSafeArea())
             .navigationBarHidden(true)
+            .preferredColorScheme(.dark)
             .alert("Sign Out", isPresented: $accountViewModel.showSignOutAlert) {
                 Button("Cancel", role: .cancel) {}
                 Button("Sign Out", role: .destructive) {
@@ -256,68 +251,31 @@ struct SettingsView: View {
             }
     }
 
-    // MARK: - Refresh Header
+    // MARK: - Daily Driver header
 
-    private var settingsHero: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-            HStack(alignment: .top, spacing: Theme.Spacing.md) {
-                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+    @Environment(\.dismiss) private var dismiss
+
+    private var ddSettingsHeader: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                dismiss()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
                     Text("Profile")
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
-                        .foregroundColor(Theme.Colors.textPrimary)
-
-                    Text("Profile, training, coaching, and app controls grouped for quick scanning.")
-                        .font(Theme.Typography.body)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .font(.system(size: 13, weight: .semibold))
                 }
-
-                Spacer()
-
-                ZStack {
-                    RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
-                        .fill(Theme.Colors.accentBlue.opacity(0.14))
-                        .frame(width: 56, height: 56)
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundColor(Theme.Colors.accentBlue)
-                }
+                .foregroundColor(DailyDriver.foregroundMuted)
             }
+            .buttonStyle(.plain)
 
-            HStack(spacing: Theme.Spacing.sm) {
-                SettingsStatusPill(
-                    icon: deviceMode.iconName,
-                    title: deviceMode.title,
-                    tint: deviceMode.accentColor
-                )
-                SettingsStatusPill(
-                    icon: isTelegramLinked ? "paperplane.fill" : "paperplane",
-                    title: isTelegramLinked ? "Telegram on" : "Telegram off",
-                    tint: Color(hex: "29B6F6")
-                )
-                SettingsStatusPill(
-                    icon: voiceCuesEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill",
-                    title: voiceCuesEnabled ? "Voice cues" : "Quiet mode",
-                    tint: Theme.Colors.accentBlue
-                )
-            }
+            Text("Settings")
+                .ddDisplayText(28, weight: .heavy)
+                .foregroundColor(DailyDriver.foreground)
         }
-        .padding(Theme.Spacing.lg)
-        .background(
-            LinearGradient(
-                colors: [
-                    Theme.Colors.surface,
-                    Theme.Colors.surfaceElevated.opacity(0.92)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
-                .stroke(Theme.Colors.borderLight, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.xl))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.bottom, 4)
         .accessibilityIdentifier("settings_refresh_header")
     }
 
@@ -360,8 +318,11 @@ struct SettingsView: View {
 
     private var connectionsSection: some View {
         SettingsSectionCard(
-            title: settingsSectionTitle("connections", fallback: "Connections"),
-            subtitle: "Watches, messaging, delivery, and calendar in one status hub."
+            title: settingsSectionTitle("connections", fallback: "Connected wearables"),
+            subtitle: ConnectionsHubViewModel(statusProvider: connectionsStatusSnapshot).summaryText,
+            icon: "applewatch",
+            iconBackground: Theme.Colors.readyHigh,
+            rowCount: 1
         ) {
             NavigationLink(destination: connectionsHub) {
                 HStack(spacing: Theme.Spacing.md) {
@@ -407,7 +368,10 @@ struct SettingsView: View {
     private var coachingSection: some View {
         SettingsSectionCard(
             title: settingsSectionTitle("coaching", fallback: "Coaching"),
-            subtitle: "Readiness signals and how your coach reaches you."
+            subtitle: "Readiness signals and how your coach reaches you.",
+            icon: "bubble.left.and.bubble.right.fill",
+            iconBackground: DailyDriver.purple,
+            rowCount: settingsRows(in: "coaching", includeDebug: false).count + 1
         ) {
             VStack(spacing: 0) {
                 let rows = settingsRows(in: "coaching", includeDebug: false)
@@ -434,7 +398,10 @@ struct SettingsView: View {
     private var appSection: some View {
         SettingsSectionCard(
             title: settingsSectionTitle("app", fallback: "App"),
-            subtitle: "Diagnostics, privacy, export, and account actions."
+            subtitle: "Diagnostics, privacy, export, and account actions.",
+            icon: "slider.horizontal.3",
+            iconBackground: DailyDriver.purple,
+            rowCount: settingsRows(in: "app", includeDebug: false).count
         ) {
             VStack(spacing: 0) {
                 #if DEBUG
@@ -463,7 +430,10 @@ struct SettingsView: View {
     ) -> some View {
         SettingsSectionCard(
             title: settingsSectionTitle(id, fallback: fallbackTitle),
-            subtitle: subtitle
+            subtitle: subtitle,
+            icon: id == "profile_training" ? "person.crop.circle.fill" : "figure.run",
+            iconBackground: id == "profile_training" ? DailyDriver.blue : DailyDriver.orange,
+            rowCount: settingsRows(in: id, includeDebug: false).count
         ) {
             VStack(spacing: 0) {
                 let rows = settingsRows(in: id, includeDebug: false)
@@ -2735,43 +2705,36 @@ struct SettingsRefreshSectionModel: Equatable, Identifiable {
 struct SettingsSectionCard<Content: View>: View {
     let title: String
     let subtitle: String?
+    var icon: String = "gearshape.fill"
+    var iconBackground: Color = DailyDriver.card2
+    var rowCount: Int = 1
     @ViewBuilder let content: Content
 
     init(
         title: String,
         subtitle: String? = nil,
+        icon: String = "gearshape.fill",
+        iconBackground: Color = DailyDriver.card2,
+        rowCount: Int = 1,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.subtitle = subtitle
+        self.icon = icon
+        self.iconBackground = iconBackground
+        self.rowCount = rowCount
         self.content = content()
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text(title.uppercased())
-                    .font(Theme.Typography.footnote)
-                    .foregroundColor(Theme.Colors.textSecondary)
-                    .tracking(1)
-
-                if let subtitle {
-                    Text(subtitle)
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .padding(.horizontal, Theme.Spacing.xs)
-
+        DDSettingsGroup(
+            title: title,
+            summary: subtitle ?? "",
+            icon: icon,
+            iconBackground: iconBackground,
+            rowCount: rowCount
+        ) {
             content
-                .padding(Theme.Spacing.md)
-                .background(Theme.Colors.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
-                        .stroke(Theme.Colors.borderLight, lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.lg))
         }
     }
 }
