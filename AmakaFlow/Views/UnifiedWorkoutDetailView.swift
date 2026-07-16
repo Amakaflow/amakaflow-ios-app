@@ -124,9 +124,12 @@ struct UnifiedWorkoutDetailView: View {
                 endPoint: UnitPoint(x: 0.8, y: 1)
             )
 
-            Image(systemName: heroIcon)
-                .font(.system(size: 38, weight: .semibold))
-                .foregroundColor(.white.opacity(0.7))
+            Image(systemName: "play.fill")
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundColor(.white.opacity(0.85))
+                .frame(width: 56, height: 56)
+                .background(Color.white.opacity(0.14))
+                .clipShape(Circle())
 
             VStack {
                 HStack {

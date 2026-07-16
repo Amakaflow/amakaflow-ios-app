@@ -2746,33 +2746,21 @@ struct SettingsNavigationRow: View {
     let subtitle: String
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.md) {
-            ZStack {
-                RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
-                    .fill(tint.opacity(0.12))
-                    .frame(width: 44, height: 44)
-
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(tint)
-            }
-
-            VStack(alignment: .leading, spacing: 3) {
+        HStack(spacing: 10) {
+            DDIconChip(systemName: icon, background: tint, size: 26)
+            VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(Theme.Typography.bodyBold)
-                    .foregroundColor(Theme.Colors.textPrimary)
-
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(DailyDriver.foreground)
                 Text(subtitle)
-                    .font(Theme.Typography.caption)
-                    .foregroundColor(Theme.Colors.textSecondary)
+                    .font(.system(size: 10))
+                    .foregroundColor(DailyDriver.foregroundDim)
                     .fixedSize(horizontal: false, vertical: true)
             }
-
-            Spacer(minLength: Theme.Spacing.md)
-
+            Spacer(minLength: 0)
             Image(systemName: "chevron.right")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Theme.Colors.textTertiary)
+                .foregroundColor(DailyDriver.foregroundDim)
         }
         .contentShape(Rectangle())
     }

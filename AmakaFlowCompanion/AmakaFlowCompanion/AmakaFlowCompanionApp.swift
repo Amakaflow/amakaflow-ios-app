@@ -322,7 +322,7 @@ struct AmakaFlowCompanionApp: App {
                     }
                 }
             }
-            .sheet(isPresented: Binding(
+            .fullScreenCover(isPresented: Binding(
                 get: { pendingShareImport.pendingDraft != nil },
                 set: { presented in
                     if !presented {
@@ -332,24 +332,19 @@ struct AmakaFlowCompanionApp: App {
                 }
             )) {
                 if let draft = pendingShareImport.pendingDraft {
-                    NavigationStack {
-                        SocialImportPreviewView(
-                            viewModel: sharePreviewViewModel,
-                            draft: draft
-                        ) {
+                    SocialImportDetailPreviewView(
+                        viewModel: sharePreviewViewModel,
+                        draft: draft,
+                        onLibraryReload: {
+                            NotificationCenter.default.post(name: .libraryContentDidChange, object: nil)
+                        },
+                        onDismiss: {
                             pendingShareImport.clearPresentedDraft()
                             sharePreviewViewModel.reset()
                             Task { await workoutsViewModel.refreshWorkouts() }
                         }
-                        .toolbar {
-                            ToolbarItem(placement: .cancellationAction) {
-                                Button("Close") {
-                                    pendingShareImport.clearPresentedDraft()
-                                    sharePreviewViewModel.reset()
-                                }
-                            }
-                        }
-                    }
+                    )
+                    .environmentObject(workoutsViewModel)
                     .onAppear {
                         sharePreviewViewModel.loadDraft(draft)
                     }

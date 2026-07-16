@@ -206,6 +206,16 @@ class ActivityHistoryViewModel: ObservableObject {
         do {
             logger.info("loadCompletions: Fetching from API...")
             let fetched = try await dependencies.apiService.fetchCompletions(limit: pageSize, offset: 0)
+            #if DEBUG
+            if fetched.isEmpty {
+                completions = WorkoutCompletion.todayDiarySampleData(now: nowProvider(), calendar: calendar)
+                hasMoreData = false
+                currentOffset = completions.count
+                logger.info("loadCompletions: seeded DEBUG today diary sample (empty API)")
+                isLoading = false
+                return
+            }
+            #endif
             completions = fetched
             hasMoreData = fetched.count >= pageSize
             currentOffset = fetched.count

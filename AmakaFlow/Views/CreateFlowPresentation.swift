@@ -11,6 +11,7 @@ enum CreateFlowPresentation: Identifiable, Equatable {
     case socialImport(url: String?, platform: SocialImportPlatform?)
     case screenshot
     case knowledge
+    case manualEditor
 
     var id: String {
         switch self {
@@ -20,6 +21,8 @@ enum CreateFlowPresentation: Identifiable, Equatable {
             return "screenshot"
         case .knowledge:
             return "knowledge"
+        case .manualEditor:
+            return "manual-editor"
         }
     }
 }
@@ -53,7 +56,9 @@ struct CreateFlowSheetsModifier: ViewModifier {
                         activeFlow = .socialImport(url: nil, platform: nil)
                     case .screenshot:
                         activeFlow = .screenshot
-                    case .speak, .manual:
+                    case .manual:
+                        activeFlow = .manualEditor
+                    case .speak:
                         break
                     }
                 }
@@ -78,6 +83,9 @@ struct CreateFlowSheetsModifier: ViewModifier {
                         },
                         onSaved: onLibraryReload
                     )
+                case .manualEditor:
+                    WorkoutEditorView()
+                        .ddSuppressFloatingChrome()
                 }
             }
     }
