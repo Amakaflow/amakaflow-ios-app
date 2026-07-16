@@ -12,16 +12,16 @@ import UIKit
 struct Theme {
     // MARK: - Colors
     struct Colors {
-        // Primary surfaces
-        static let background = Color(light: Color(hex: "FFFFFF"), dark: Color(hex: "050506"))
-        static let backgroundSubtle = Color(light: Color(hex: "F7F7F8"), dark: Color(hex: "1C1C1C"))
-        static let surface = Color(light: Color(hex: "FFFFFF"), dark: Color(hex: "1F1F1F"))
-        static let surfaceElevated = Color(light: Color(hex: "FFFFFF"), dark: Color(hex: "1F1F1F"))
+        // Primary surfaces — dark values aligned with DailyDriver (DESIGN.md)
+        static let background = Color(light: Color(hex: "FFFFFF"), dark: Color(hex: "0A0A0A"))
+        static let backgroundSubtle = Color(light: Color(hex: "F7F7F8"), dark: Color(hex: "121212"))
+        static let surface = Color(light: Color(hex: "FFFFFF"), dark: Color.white.opacity(0.055))
+        static let surfaceElevated = Color(light: Color(hex: "FFFFFF"), dark: Color.white.opacity(0.09))
 
         // Text
         static let textPrimary = Color(light: Color(hex: "0A0A0A"), dark: Color(hex: "FAFAFA"))
-        static let textSecondary = Color(light: Color(hex: "66667A"), dark: Color(hex: "B5B5B5"))
-        static let textTertiary = Color(light: Color(hex: "9093A0"), dark: Color(hex: "7A7A7A"))
+        static let textSecondary = Color(light: Color(hex: "66667A"), dark: Color(hex: "A4A4A4"))
+        static let textTertiary = Color(light: Color(hex: "9093A0"), dark: Color(hex: "696969"))
 
         // Accents
         static let accentBlue = Color(hex: "3A8BFF")
@@ -40,9 +40,9 @@ struct Theme {
         // Borders + controls
         static let borderLight = Color(light: Color.black.opacity(0.08), dark: Color.white.opacity(0.09))
         static let borderMedium = Color(light: Color.black.opacity(0.14), dark: Color.white.opacity(0.16))
-        static let inputBackground = Color(light: Color(hex: "F3F3F5"), dark: Color(hex: "3D3D3D"))
-        static let chipBackground = Color(light: Color(hex: "ECECF0"), dark: Color(hex: "3D3D3D"))
-        static let accentBackground = Color(light: Color(hex: "ECECF0"), dark: Color(hex: "3D3D3D"))
+        static let inputBackground = Color(light: Color(hex: "F3F3F5"), dark: Color(hex: "1F1F1F"))
+        static let chipBackground = Color(light: Color(hex: "ECECF0"), dark: Color.white.opacity(0.09))
+        static let accentBackground = Color(light: Color(hex: "ECECF0"), dark: Color.white.opacity(0.09))
         static let primary = Color(light: Color(hex: "030213"), dark: Color(hex: "FFFFFF"))
         static let primaryForeground = Color(light: Color(hex: "FFFFFF"), dark: Color(hex: "1F1F1F"))
     }
@@ -292,12 +292,12 @@ struct AFCard<Content: View>: View {
     var body: some View {
         content
             .padding(padding)
-            .background(Theme.Colors.surfaceElevated)
+            .background(DailyDriver.card)
             .overlay(
-                RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous)
-                    .stroke(Theme.Colors.borderLight, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(DailyDriver.border, lineWidth: 1)
             )
-            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
@@ -327,10 +327,10 @@ enum AFButtonSize {
 
     var font: Font {
         switch self {
-        case .sm: return Font.geist(12, .medium)
-        case .md: return Font.geist(13, .medium)
-        case .lg: return Font.geist(15, .medium)
-        case .xl: return Font.geist(16, .medium)
+        case .sm: return .ddDisplay(12, weight: .bold)
+        case .md: return .ddDisplay(13, weight: .bold)
+        case .lg: return .ddDisplay(15, weight: .bold)
+        case .xl: return .ddDisplay(16, weight: .bold)
         }
     }
 
@@ -362,12 +362,13 @@ struct AFPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(size.font)
-            .foregroundColor(Theme.Colors.primaryForeground)
+            .foregroundColor(DailyDriver.ink)
             .padding(.horizontal, size.horizontalPadding)
             .padding(.vertical, size.verticalPadding)
             .frame(maxWidth: isWide ? .infinity : nil)
-            .background(Theme.Colors.primary)
-            .clipShape(Capsule())
+            .background(DailyDriver.lime)
+            .clipShape(Capsule(style: .continuous))
+            .ddLimeGlow()
             .opacity(isEnabled ? 1 : 0.52)
             .scaleEffect(configuration.isPressed ? 0.985 : 1)
     }
@@ -382,13 +383,13 @@ struct AFGhostButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(size.font)
-            .foregroundColor(Theme.Colors.textPrimary)
+            .foregroundColor(DailyDriver.foreground)
             .padding(.horizontal, size.horizontalPadding)
             .padding(.vertical, size.verticalPadding)
             .frame(maxWidth: isWide ? .infinity : nil)
-            .background(configuration.isPressed ? Theme.Colors.accentBackground : Color.clear)
-            .overlay(Capsule().stroke(Theme.Colors.borderMedium, lineWidth: 1))
-            .clipShape(Capsule())
+            .background(configuration.isPressed ? DailyDriver.card2 : Color.clear)
+            .overlay(Capsule(style: .continuous).stroke(DailyDriver.borderStrong, lineWidth: 1))
+            .clipShape(Capsule(style: .continuous))
             .opacity(isEnabled ? 1 : 0.52)
             .scaleEffect(configuration.isPressed ? 0.985 : 1)
     }
@@ -413,13 +414,13 @@ struct AFTopBar<Left: View, Right: View>: View {
 
             if let title {
                 Text(title)
-                    .font(Theme.Typography.title1)
-                    .foregroundColor(Theme.Colors.textPrimary)
+                    .ddDisplayText(20, weight: .heavy)
+                    .foregroundColor(DailyDriver.foreground)
             }
             if let subtitle {
                 Text(subtitle)
-                    .font(Theme.Typography.caption)
-                    .foregroundColor(Theme.Colors.textSecondary)
+                    .font(.system(size: 11))
+                    .foregroundColor(DailyDriver.foregroundMuted)
             }
         }
         .padding(.horizontal, Theme.Spacing.lg)
