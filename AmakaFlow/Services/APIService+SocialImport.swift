@@ -23,6 +23,10 @@ protocol SocialImportAPIProviding {
 }
 
 extension APIService {
+    /// Apify + LLM reel ingest often exceeds 15s; align with ingestor smoke (90s) plus headroom.
+    private static let socialURLIngestTimeoutInterval: TimeInterval = 120
+    private static let socialSaveTimeoutInterval: TimeInterval = 30
+
     // MARK: - Social Import (AMA-2285)
 
     /// POST /ingest/{platform.ingestPath} with a URL. Returns raw JSON for draft parsing.
@@ -39,7 +43,7 @@ extension APIService {
 
         var request = URLRequest(url: requestURL)
         request.httpMethod = "POST"
-        request.timeoutInterval = 15
+        request.timeoutInterval = Self.socialURLIngestTimeoutInterval
         request.allHTTPHeaderFields = try await makeAuthHeaders()
         request.httpBody = try JSONSerialization.data(withJSONObject: ["url": url])
 
@@ -216,11 +220,12 @@ extension APIService {
     // MARK: - Provenance-aware workout save (AMA-2285)
 
     /// Mapper-compatible save when `source` is set (`sources` + `device`).
+    /// After save, pushes to iOS Companion so `/workouts/incoming` (Library) can see it.
     func saveWorkoutWithProvenance(_ request: WorkoutSaveRequest, source: String) async throws -> Workout {
         guard let url = URL(string: "\(baseURL)/workouts/save") else { throw APIError.invalidURL }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.timeoutInterval = 15
+        req.timeoutInterval = Self.socialSaveTimeoutInterval
         req.allHTTPHeaderFields = try await makeAuthHeaders()
 
         let body = try Self.mapperSaveBody(from: request, source: source)
@@ -233,6 +238,62 @@ extension APIService {
             if httpResponse.statusCode == 401 { throw APIError.unauthorized }
             let responseString = String(data: data, encoding: .utf8)
             throw APIError.serverErrorWithBody(httpResponse.statusCode, responseString ?? "Save failed")
+        }
+
+        let workout = try Self.parseProvenanceSaveResponse(
+            data: data,
+            request: request,
+            source: source
+        )
+        try await pushSavedWorkoutToIOSCompanion(workoutId: workout.id)
+        return workout
+    }
+
+    /// Marks a saved workout visible to Library via GET /workouts/incoming (ios_companion_synced_at).
+    private func pushSavedWorkoutToIOSCompanion(workoutId: String) async throws {
+        let encodedID = try Self.pathSegment(workoutId)
+        guard let url = URL(string: "\(baseURL)/workouts/\(encodedID)/push/ios-companion") else {
+            throw APIError.invalidURL
+        }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.timeoutInterval = Self.socialSaveTimeoutInterval
+        req.allHTTPHeaderFields = try await makeAuthHeaders()
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONSerialization.data(withJSONObject: [String: String]())
+
+        print("[APIService] pushSavedWorkoutToIOSCompanion - \(url.absoluteString)")
+
+        let (data, response) = try await session.data(for: req)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard httpResponse.statusCode == 200 else {
+            if httpResponse.statusCode == 401 { throw APIError.unauthorized }
+            let responseString = String(data: data, encoding: .utf8)
+            throw APIError.serverErrorWithBody(
+                httpResponse.statusCode,
+                responseString ?? "Saved workout but couldn't add it to Library."
+            )
+        }
+
+        if let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let success = object["success"] as? Bool,
+           !success {
+            let message = object["message"] as? String ?? "Saved workout but couldn't add it to Library."
+            throw APIError.serverErrorWithBody(500, message)
+        }
+    }
+
+    private static func parseProvenanceSaveResponse(
+        data: Data,
+        request: WorkoutSaveRequest,
+        source: String
+    ) throws -> Workout {
+        if let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let success = object["success"] as? Bool,
+           !success {
+            let message = object["message"] as? String ?? "Save failed"
+            throw APIError.serverErrorWithBody(500, message)
         }
 
         if let decoded = try? APIService.makeDecoder().decode(Workout.self, from: data) {
@@ -251,7 +312,7 @@ extension APIService {
             return decoded
         }
 
-        return Self.synthesizedProvenanceWorkout(from: request, source: source, responseData: data)
+        return synthesizedProvenanceWorkout(from: request, source: source, responseData: data)
     }
 
     /// POST /workouts/save body for mapper-api (`workout_data` + `sources` + `device`).

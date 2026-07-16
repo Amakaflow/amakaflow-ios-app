@@ -419,3 +419,101 @@ final class SocialImportTests: XCTestCase {
         """.data(using: .utf8)!
     }
 }
+
+// MARK: - APIService contract (AMA-2297 save → Library visibility)
+
+@MainActor
+final class APIServiceSocialImportContractTests: XCTestCase {
+    private var api: APIService!
+    private var savedIsPaired: Bool!
+
+    override func setUp() {
+        super.setUp()
+        MockURLProtocol.reset()
+        api = APIService(session: MockURLProtocol.mockSession())
+        savedIsPaired = PairingService.shared.isPaired
+        PairingService.shared.isPaired = true
+    }
+
+    override func tearDown() {
+        PairingService.shared.isPaired = savedIsPaired
+        api = nil
+        MockURLProtocol.reset()
+        super.tearDown()
+    }
+
+    func testIngestSocialURLUsesExtendedTimeoutForReelFetch() async throws {
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.timeoutInterval, 120, accuracy: 0.001)
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            let data = """
+            {"title":"Hyrox","sport":"strength","blocks":[{"exercises":[{"name":"Sled Push","sets":4,"reps":1}]}]}
+            """.data(using: .utf8)!
+            return (response, data)
+        }
+
+        _ = try await api.ingestSocialURL(
+            url: "https://www.instagram.com/reel/DMYIJsTMVMC/",
+            platform: .instagram
+        )
+
+        XCTAssertEqual(MockURLProtocol.interceptedRequests.count, 1)
+        XCTAssertTrue(
+            MockURLProtocol.interceptedRequests[0].url?.path.contains("instagram_reel") == true
+        )
+    }
+
+    func testSaveWorkoutWithProvenancePushesToIOSCompanionForLibrary() async throws {
+        MockURLProtocol.requestHandler = { request in
+            let path = request.url?.path ?? ""
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": "application/json"]
+            )!
+
+            if path.hasSuffix("/workouts/save") {
+                let data = """
+                {"success":true,"workout_id":"wk-social-1","message":"Workout saved successfully","is_update":false}
+                """.data(using: .utf8)!
+                return (response, data)
+            }
+
+            if path.contains("/push/ios-companion") {
+                XCTAssertEqual(request.httpMethod, "POST")
+                let data = """
+                {"success":true,"iosCompanionWorkoutId":"wk-social-1","status":"queued"}
+                """.data(using: .utf8)!
+                return (response, data)
+            }
+
+            XCTFail("Unexpected path: \(path)")
+            return (response, Data())
+        }
+
+        let request = WorkoutSaveRequest(
+            name: "Hyrox Import",
+            sport: "strength",
+            intervals: [WorkoutSaveInterval(type: "reps", name: "Sled Push", sets: 4, reps: 1)],
+            source: WorkoutSource.instagram.rawValue,
+            sourceUrl: "https://www.instagram.com/reel/DMYIJsTMVMC/"
+        )
+
+        let workout = try await api.saveWorkout(request)
+
+        XCTAssertEqual(workout.id, "wk-social-1")
+        XCTAssertEqual(MockURLProtocol.interceptedRequests.count, 2)
+        XCTAssertTrue(
+            MockURLProtocol.interceptedRequests[0].url?.path.hasSuffix("/workouts/save") == true
+        )
+        XCTAssertTrue(
+            MockURLProtocol.interceptedRequests[1].url?.path.contains("/push/ios-companion") == true
+        )
+    }
+}
