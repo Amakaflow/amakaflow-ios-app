@@ -104,7 +104,7 @@ enum SocialImportFailure: Error, Equatable {
             if let detail, looksLikeTierGate(detail) {
                 return .tier(message: detail)
             }
-            return .parse(message: detail ?? "Import was forbidden. Check your subscription or try again.")
+            return .parse(message: detail ?? "Import was forbidden. Try again or edit manually.")
         }
         if status == 400 || status == 422 {
             let detail = body.flatMap { formatValidationDetail(from: $0) }

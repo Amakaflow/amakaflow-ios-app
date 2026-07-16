@@ -394,9 +394,7 @@ final class SocialImportTests: XCTestCase {
         guard case .parse(let message) = failure else {
             return XCTFail("Expected parse failure, got \(failure)")
         }
-        XCTAssertTrue(message.contains("workout_data"))
-        XCTAssertTrue(message.contains("Field required"))
-        XCTAssertFalse(message == "loc")
+        XCTAssertEqual(message, "workout_data: Field required")
     }
 
     private func sampleIngestJSON() -> Data {
