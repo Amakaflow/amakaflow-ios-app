@@ -287,12 +287,22 @@ final class SocialImportTests: XCTestCase {
         XCTAssertTrue(message.lowercased().contains("pro"))
     }
 
-    func testPrivateProfile403MapsToAuthNotTier() {
+    func testBare403WithoutBodyMustNotMasqueradeAsSessionExpired() {
+        let failure = SocialImportFailure.map(APIError.serverError(403))
+        guard case .parse(let message) = failure else {
+            return XCTFail("Expected parse for body-less 403, got \(failure)")
+        }
+        XCTAssertFalse(message.lowercased().contains("session expired"))
+        XCTAssertTrue(message.lowercased().contains("forbidden"))
+    }
+
+    func testPrivateProfile403MapsToParseNotTier() {
         let body = "{\"detail\":\"This profile is private\"}"
         let failure = SocialImportFailure.map(APIError.serverErrorWithBody(403, body))
-        guard case .auth = failure else {
-            return XCTFail("Expected auth (not tier) for private profile 403, got \(failure)")
+        guard case .parse(let message) = failure else {
+            return XCTFail("Expected parse (not tier) for private profile 403, got \(failure)")
         }
+        XCTAssertTrue(message.lowercased().contains("private"))
     }
 
     func testImportURLNormalizesReelsBeforeIngest() async {
@@ -329,6 +339,62 @@ final class SocialImportTests: XCTestCase {
             return XCTFail("Expected parse failure, got \(failure)")
         }
         XCTAssertFalse(mockAPI.saveWorkoutCalled)
+    }
+
+    func testMapperSaveBodyUsesWorkoutDataBlocksShape() throws {
+        let request = WorkoutSaveRequest(
+            name: "Upper Body Strength Day",
+            sport: "strength",
+            intervals: [
+                WorkoutSaveInterval(type: "reps", name: "Dumbbell Bench Press", sets: 5, reps: 5),
+                WorkoutSaveInterval(type: "reps", name: "Sled Pull", sets: 12, reps: 12)
+            ],
+            source: WorkoutSource.instagram.rawValue,
+            sourceUrl: "https://www.instagram.com/reel/DX9abc/"
+        )
+
+        let body = try APIService.mapperSaveBody(from: request, source: WorkoutSource.instagram.rawValue)
+        XCTAssertNotNil(body["workout_data"])
+        XCTAssertEqual(body["device"] as? String, "ios")
+        XCTAssertEqual(body["sources"] as? [String], ["instagram"])
+
+        let workoutData = body["workout_data"] as? [String: Any]
+        let blocks = workoutData?["blocks"] as? [[String: Any]]
+        let exercises = blocks?.first?["exercises"] as? [[String: Any]]
+        XCTAssertEqual(exercises?.count, 2)
+        XCTAssertEqual(exercises?.first?["name"] as? String, "Dumbbell Bench Press")
+        XCTAssertEqual(exercises?.first?["sets"] as? Int, 5)
+        XCTAssertEqual(exercises?.first?["reps"] as? Int, 5)
+
+        let metadata = workoutData?["metadata"] as? [String: Any]
+        XCTAssertEqual(metadata?["source_url"] as? String, "https://www.instagram.com/reel/DX9abc/")
+    }
+
+    func testMapperSaveBodyRejectsEmptyExerciseList() {
+        let request = WorkoutSaveRequest(
+            name: "Empty",
+            sport: "strength",
+            intervals: [WorkoutSaveInterval(type: "rest", seconds: 60)],
+            source: WorkoutSource.instagram.rawValue
+        )
+
+        XCTAssertThrowsError(try APIService.mapperSaveBody(from: request, source: "instagram")) { error in
+            guard case APIError.serverErrorWithBody(422, let message) = error else {
+                return XCTFail("Expected 422 body error, got \(error)")
+            }
+            XCTAssertTrue(message.lowercased().contains("exercise"))
+        }
+    }
+
+    func testSocialImportFailureFormatsFastAPIValidationDetail() {
+        let body = """
+        {"detail":[{"type":"missing","loc":["body","workout_data"],"msg":"Field required","input":{}}]}
+        """
+        let failure = SocialImportFailure.map(APIError.serverErrorWithBody(422, body))
+        guard case .parse(let message) = failure else {
+            return XCTFail("Expected parse failure, got \(failure)")
+        }
+        XCTAssertEqual(message, "workout_data: Field required")
     }
 
     private func sampleIngestJSON() -> Data {

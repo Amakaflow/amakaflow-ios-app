@@ -104,11 +104,10 @@ enum SocialImportFailure: Error, Equatable {
             if let detail, looksLikeTierGate(detail) {
                 return .tier(message: detail)
             }
-            return .auth(message: detail ?? "Session expired. Sign in again, then retry.")
+            return .parse(message: detail ?? "Import was forbidden. Try again or edit manually.")
         }
         if status == 400 || status == 422 {
-            let detail = body.flatMap { CTAError.extractField("detail", from: $0) }
-                ?? body.map { String($0.prefix(160)) }
+            let detail = body.flatMap { formatValidationDetail(from: $0) }
                 ?? "That content couldn't be turned into a workout."
             return .parse(message: detail)
         }
@@ -140,6 +139,40 @@ enum SocialImportFailure: Error, Equatable {
         return tokens.contains { token in
             lowered.range(of: #"\b\#(token)\b"#, options: .regularExpression) != nil
         }
+    }
+
+    /// FastAPI/Pydantic validation bodies use `detail: [{loc, msg}]` — not a plain string.
+    private static func formatValidationDetail(from body: String) -> String? {
+        guard let data = body.data(using: .utf8),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return body.isEmpty ? nil : String(body.prefix(160))
+        }
+
+        if let detail = object["detail"] as? String, !detail.isEmpty {
+            return detail
+        }
+
+        if let errors = object["detail"] as? [[String: Any]], !errors.isEmpty {
+            let messages = errors.compactMap { error -> String? in
+                let msg = error["msg"] as? String
+                let locParts = (error["loc"] as? [Any])?
+                    .dropFirst()
+                    .map { String(describing: $0) }
+                if let locParts, !locParts.isEmpty, let msg {
+                    return "\(locParts.joined(separator: ".")): \(msg)"
+                }
+                return msg
+            }
+            if !messages.isEmpty {
+                return messages.joined(separator: "; ")
+            }
+        }
+
+        if let message = object["message"] as? String, !message.isEmpty {
+            return message
+        }
+
+        return body.isEmpty ? nil : String(body.prefix(160))
     }
 
     private static func networkMessage(for code: URLError.Code) -> String {

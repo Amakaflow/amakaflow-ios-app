@@ -126,13 +126,20 @@ extension APIService {
                 print("[APIService] ingestInstagramReel decoding error: \(error)")
                 throw APIError.decodingError(error)
             }
-        case 400:
-            throw APIError.serverErrorWithBody(400, responseString ?? "Bad request")
         case 401:
             throw APIError.unauthorized
-        case 422:
-            throw APIError.serverErrorWithBody(422, responseString ?? "Could not process Instagram Reel")
+        case 400, 403, 422:
+            throw APIError.serverErrorWithBody(
+                httpResponse.statusCode,
+                responseString ?? "Could not process Instagram Reel"
+            )
         default:
+            if (400..<500).contains(httpResponse.statusCode) {
+                throw APIError.serverErrorWithBody(
+                    httpResponse.statusCode,
+                    responseString ?? "Request failed"
+                )
+            }
             throw APIError.serverError(httpResponse.statusCode)
         }
     }
