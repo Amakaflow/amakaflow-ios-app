@@ -147,9 +147,11 @@ struct DDActivityDetailView: View {
     }
 
     private func missingMetricsGuidance(for detail: WorkoutCompletionDetail) -> String {
-        let source = detail.sourceLabel?.lowercased() ?? ""
-        if source.contains("strava") {
+        if detail.hasStravaPartialMetrics {
             return "Strava only sent time and calories. Map it to a workout you know, or add what you did."
+        }
+        if detail.hasStrydDeviceEvidence {
+            return "Stryd sent partial metrics. Map it to a workout you know, or add what you did."
         }
         return "Some metrics were missing from the import. Map it to a workout you know, or add what you did."
     }
@@ -219,6 +221,26 @@ private extension WorkoutCompletionDetail {
 
     var sourceLabel: String? {
         if isSyncedToStrava { return "Imported from Strava" }
-        return nil
+        if hasStrydDeviceEvidence { return "Imported from Stryd" }
+        switch source {
+        case .garmin: return "Garmin"
+        case .appleWatch: return "Apple Watch"
+        case .phone: return "Phone"
+        case .manual: return "Manual"
+        }
+    }
+
+    /// Strava sync with calories/time but no distance or average heart rate.
+    var hasStravaPartialMetrics: Bool {
+        isSyncedToStrava
+            && activeCalories != nil
+            && distanceMeters == nil
+            && avgHeartRate == nil
+    }
+
+    var hasStrydDeviceEvidence: Bool {
+        let platform = deviceInfo?.platform?.lowercased() ?? ""
+        let model = deviceInfo?.model?.lowercased() ?? ""
+        return platform.contains("stryd") || model.contains("stryd")
     }
 }

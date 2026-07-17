@@ -89,11 +89,10 @@ struct DDHRZonesCard: View {
                         ForEach(Array(zones.enumerated()), id: \.element.id) { index, zone in
                             let isPeak = zone.percentageOfWorkout == zones.map(\.percentageOfWorkout).max()
                             let share = zoneTotal > 0 ? zone.percentageOfWorkout / zoneTotal : 0
-                            let width = max(4, availableWidth * CGFloat(share))
                             RoundedRectangle(cornerRadius: 99, style: .continuous)
                                 .fill(Self.zoneColors[safe: index] ?? DailyDriver.card2)
                                 .opacity(isPeak ? 1 : 0.45)
-                                .frame(width: width)
+                                .frame(width: availableWidth * CGFloat(share))
                         }
                     }
                 }

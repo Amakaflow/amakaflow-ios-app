@@ -46,7 +46,7 @@ struct CreateWorkoutSheet: View {
                     icon: "mic.fill",
                     iconBackground: DailyDriver.blue,
                     title: "Speak or describe it",
-                    subtitle: "Coach turns it into a draft"
+                    subtitle: "Coming soon — use URL or scratch for now"
                 ) {
                     dismissThen { onSelect(.speak) }
                 }
