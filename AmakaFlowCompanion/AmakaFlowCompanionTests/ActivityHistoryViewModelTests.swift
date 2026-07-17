@@ -68,6 +68,30 @@ final class ActivityHistoryViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.completions.first?.id, testCompletion.id)
     }
 
+    func testLoadCompletionsSeedsTodaySampleWhenAPINonTodayOnly() async {
+        let calendar = Calendar.current
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: testNow)!
+        let staleCompletion = makeCompletion(id: "stale-yesterday", startedAt: yesterday)
+
+        mockAPIService.fetchCompletionsResult = .success([staleCompletion])
+
+        await viewModel.loadCompletions()
+
+        #if DEBUG
+        XCTAssertTrue(mockAPIService.fetchCompletionsCalled)
+        XCTAssertEqual(viewModel.completions.count, 2)
+        XCTAssertEqual(viewModel.completions.map(\.id), ["today-lunch-run", "today-lunch-workout"])
+        XCTAssertTrue(viewModel.completions.allSatisfy(\.wasSimulated))
+        XCTAssertEqual(viewModel.todaysCompletions.count, 2)
+        #else
+        XCTAssertEqual(viewModel.completions.count, 1)
+        XCTAssertEqual(viewModel.completions.first?.id, "stale-yesterday")
+        XCTAssertTrue(viewModel.todaysCompletions.isEmpty)
+        #endif
+        XCTAssertFalse(viewModel.isLoading)
+        XCTAssertNil(viewModel.errorMessage)
+    }
+
     func testLoadCompletionsErrorShowsMessage() async {
         mockAPIService.fetchCompletionsResult = .failure(APIError.serverError(500))
 
