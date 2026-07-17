@@ -271,7 +271,7 @@ struct SettingsView: View {
             .buttonStyle(.plain)
 
             Text("Settings")
-                .ddDisplayText(28, weight: .heavy)
+                .ddDisplayText(32, weight: .heavy)
                 .foregroundColor(DailyDriver.foreground)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
