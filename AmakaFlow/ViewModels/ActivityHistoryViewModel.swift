@@ -199,10 +199,7 @@ class ActivityHistoryViewModel: ObservableObject {
         // DEBUG: seed handoff timeline so simulator verification works without pairing/backend.
         if !hasAuth {
             #if DEBUG
-            completions = WorkoutCompletion.todayDiarySampleData(now: nowProvider(), calendar: calendar)
-            hasMoreData = false
-            currentOffset = completions.count
-            logger.info("loadCompletions: seeded DEBUG today diary sample (unpaired)")
+            seedDebugTodayDiarySample(reason: "unpaired")
             #else
             completions = []
             hasMoreData = false
@@ -217,10 +214,7 @@ class ActivityHistoryViewModel: ObservableObject {
             #if DEBUG
             let now = nowProvider()
             if TodayDiary.completionsForToday(fetched, now: now, calendar: calendar).isEmpty {
-                completions = WorkoutCompletion.todayDiarySampleData(now: now, calendar: calendar)
-                hasMoreData = false
-                currentOffset = completions.count
-                logger.info("loadCompletions: seeded DEBUG today diary sample (no today completions from API)")
+                seedDebugTodayDiarySample(reason: "no today completions from API")
                 isLoading = false
                 return
             }
@@ -248,11 +242,7 @@ class ActivityHistoryViewModel: ObservableObject {
                 case .unauthorized:
                     break
                 default:
-                    completions = WorkoutCompletion.todayDiarySampleData(now: nowProvider(), calendar: calendar)
-                    hasMoreData = false
-                    currentOffset = completions.count
-                    errorMessage = nil
-                    logger.info("loadCompletions: seeded DEBUG today diary sample (API error)")
+                    seedDebugTodayDiarySample(reason: "API error", clearError: true)
                     isLoading = false
                     return
                 }
@@ -272,11 +262,7 @@ class ActivityHistoryViewModel: ObservableObject {
         } catch {
             #if DEBUG
             if !hadContent {
-                completions = WorkoutCompletion.todayDiarySampleData(now: nowProvider(), calendar: calendar)
-                hasMoreData = false
-                currentOffset = completions.count
-                errorMessage = nil
-                logger.info("loadCompletions: seeded DEBUG today diary sample (load error)")
+                seedDebugTodayDiarySample(reason: "load error", clearError: true)
                 isLoading = false
                 return
             }
@@ -346,6 +332,20 @@ class ActivityHistoryViewModel: ObservableObject {
 
         isLoadingMore = false
     }
+
+    // MARK: - DEBUG Today fixtures
+
+#if DEBUG
+    private func seedDebugTodayDiarySample(reason: String, clearError: Bool = false) {
+        completions = WorkoutCompletion.todayDiarySampleData(now: nowProvider(), calendar: calendar)
+        hasMoreData = false
+        currentOffset = completions.count
+        if clearError {
+            errorMessage = nil
+        }
+        logger.info("loadCompletions: seeded DEBUG today diary sample (\(reason))")
+    }
+#endif
 
     // MARK: - Error Handling
 
