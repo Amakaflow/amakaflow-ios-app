@@ -13,6 +13,12 @@ private struct DDGymEquipmentItem: Identifiable, Equatable {
     var isPresent: Bool
 }
 
+private struct DDGymEquipmentSeed {
+    let id: String
+    let label: String
+    let isPresent: Bool
+}
+
 struct DDGymDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var isShared = true
@@ -26,44 +32,44 @@ struct DDGymDetailView: View {
 
     private static var defaultFreeWeights: [DDGymEquipmentItem] {
         handoffEquipment(
-            free: [
-                ("dumbbells", "Dumbbells to 50 kg", true),
-                ("barbells", "Barbells + plates", true),
-                ("kettlebells", "Kettlebells", true),
-                ("ez-bar", "EZ bar", false)
+            seeds: [
+                DDGymEquipmentSeed(id: "dumbbells", label: "Dumbbells to 50 kg", isPresent: true),
+                DDGymEquipmentSeed(id: "barbells", label: "Barbells + plates", isPresent: true),
+                DDGymEquipmentSeed(id: "kettlebells", label: "Kettlebells", isPresent: true),
+                DDGymEquipmentSeed(id: "ez-bar", label: "EZ bar", isPresent: false)
             ]
         )
     }
 
     private static var defaultMachines: [DDGymEquipmentItem] {
         handoffEquipment(
-            free: [
-                ("cable", "Cable crossover", true),
-                ("leg-press", "Leg press", true),
-                ("lat-pulldown", "Lat pulldown", true),
-                ("chest-row", "Chest-supported row", true),
-                ("hack-squat", "Hack squat", false)
+            seeds: [
+                DDGymEquipmentSeed(id: "cable", label: "Cable crossover", isPresent: true),
+                DDGymEquipmentSeed(id: "leg-press", label: "Leg press", isPresent: true),
+                DDGymEquipmentSeed(id: "lat-pulldown", label: "Lat pulldown", isPresent: true),
+                DDGymEquipmentSeed(id: "chest-row", label: "Chest-supported row", isPresent: true),
+                DDGymEquipmentSeed(id: "hack-squat", label: "Hack squat", isPresent: false)
             ]
         )
     }
 
     private static var defaultCardio: [DDGymEquipmentItem] {
         handoffEquipment(
-            free: [
-                ("rower", "Rower", true),
-                ("skierg", "SkiErg", true),
-                ("assault-bike", "Assault bike", true),
-                ("sled", "Sled + turf", false),
-                ("treadmill", "Treadmill", true)
+            seeds: [
+                DDGymEquipmentSeed(id: "rower", label: "Rower", isPresent: true),
+                DDGymEquipmentSeed(id: "skierg", label: "SkiErg", isPresent: true),
+                DDGymEquipmentSeed(id: "assault-bike", label: "Assault bike", isPresent: true),
+                DDGymEquipmentSeed(id: "sled", label: "Sled + turf", isPresent: false),
+                DDGymEquipmentSeed(id: "treadmill", label: "Treadmill", isPresent: true)
             ]
         )
     }
 
-    private static func handoffEquipment(free: [(String, String, Bool)]) -> [DDGymEquipmentItem] {
+    private static func handoffEquipment(seeds: [DDGymEquipmentSeed]) -> [DDGymEquipmentItem] {
         guard DDHandoffFixtures.isEnabled else {
             return [DDGymEquipmentItem(id: "bodyweight", label: "Bodyweight", isPresent: true)]
         }
-        return free.map { DDGymEquipmentItem(id: $0.0, label: $0.1, isPresent: $0.2) }
+        return seeds.map { DDGymEquipmentItem(id: $0.id, label: $0.label, isPresent: $0.isPresent) }
     }
 
     var body: some View {
