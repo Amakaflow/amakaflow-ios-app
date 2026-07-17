@@ -85,7 +85,7 @@ struct TodayDiaryView: View {
                 .accessibilityIdentifier("af_today_title")
             Spacer(minLength: 0)
             NavigationLink {
-                DevicesView()
+                DDDeviceDetailView()
                     .ddSuppressFloatingChrome()
             } label: {
                 DDWatchReadinessPill(isConnected: watchConnected)

@@ -228,6 +228,9 @@
 		AMA2293DDCOMP0000B /* DailyDriverComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2293DDCOMP0000A /* DailyDriverComponents.swift */; };
 		AMA2293DDACT00000B /* DDActivityDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2293DDACT00000A /* DDActivityDetailView.swift */; };
 		AMA2293DDPLAY00000B /* DDActivePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2293DDPLAY00000A /* DDActivePlayerView.swift */; };
+		AMA2293DDEDIT00000B /* DDEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2293DDEDIT00000A /* DDEditorView.swift */; };
+		AMA2293DDDEV000000B /* DDDeviceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2293DDDEV000000A /* DDDeviceDetailView.swift */; };
+		AMA2297DDGYM00000B /* DDGymDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2297DDGYM00000A /* DDGymDetailView.swift */; };
 		AMA2292DDCREATE00B /* CreateWorkoutSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2292DDCREATE00A /* CreateWorkoutSheet.swift */; };
 		AMA2292DDFLOW00000B /* CreateFlowPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2292DDFLOW00000A /* CreateFlowPresentation.swift */; };
 		AMA2005LIBDVM000000B /* LibraryDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2005LIBDVM000000A /* LibraryDetailViewModel.swift */; };
@@ -743,6 +746,9 @@
 		AMA2293DDCOMP0000A /* DailyDriverComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DailyDriverComponents.swift; path = ../AmakaFlow/DailyDriverComponents.swift; sourceTree = SOURCE_ROOT; };
 		AMA2293DDACT00000A /* DDActivityDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDActivityDetailView.swift; path = ../AmakaFlow/Views/DDActivityDetailView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2293DDPLAY00000A /* DDActivePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDActivePlayerView.swift; path = ../AmakaFlow/Views/DDActivePlayerView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2293DDEDIT00000A /* DDEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDEditorView.swift; path = ../AmakaFlow/Views/DDEditorView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2293DDDEV000000A /* DDDeviceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDDeviceDetailView.swift; path = ../AmakaFlow/Views/DDDeviceDetailView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2297DDGYM00000A /* DDGymDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDGymDetailView.swift; path = ../AmakaFlow/Views/DDGymDetailView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2292DDCREATE00A /* CreateWorkoutSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CreateWorkoutSheet.swift; path = ../AmakaFlow/Views/CreateWorkoutSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2292DDFLOW00000A /* CreateFlowPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CreateFlowPresentation.swift; path = ../AmakaFlow/Views/CreateFlowPresentation.swift; sourceTree = SOURCE_ROOT; };
 		AMA2004LIBTST000000A /* LibraryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryViewModelTests.swift; path = AmakaFlowCompanionTests/LibraryViewModelTests.swift; sourceTree = "<group>"; };
@@ -1214,6 +1220,9 @@
 				AMA2291UNIDETREF /* UnifiedWorkoutDetailView.swift */,
 				AMA2293DDACT00000A /* DDActivityDetailView.swift */,
 				AMA2293DDPLAY00000A /* DDActivePlayerView.swift */,
+				AMA2293DDEDIT00000A /* DDEditorView.swift */,
+				AMA2293DDDEV000000A /* DDDeviceDetailView.swift */,
+				AMA2297DDGYM00000A /* DDGymDetailView.swift */,
 				AMA2290BFVIEWREF /* StrengthBackfillView.swift */,
 				AMA2290WCVCOMPREF /* WorkoutCompletionView+Components.swift */,
 				AMA2291STARTSHREF /* WorkoutStartSheet.swift */,
@@ -2089,6 +2098,9 @@
 				AMA2293DDCOMP0000B /* DailyDriverComponents.swift in Sources */,
 				AMA2293DDACT00000B /* DDActivityDetailView.swift in Sources */,
 				AMA2293DDPLAY00000B /* DDActivePlayerView.swift in Sources */,
+				AMA2293DDEDIT00000B /* DDEditorView.swift in Sources */,
+				AMA2293DDDEV000000B /* DDDeviceDetailView.swift in Sources */,
+				AMA2297DDGYM00000B /* DDGymDetailView.swift in Sources */,
 				AMA2292DDCREATE00B /* CreateWorkoutSheet.swift in Sources */,
 				AMA2292DDFLOW00000B /* CreateFlowPresentation.swift in Sources */,
 				AMA2005LIBDVIEW0000B /* LibraryDetailView.swift in Sources */,

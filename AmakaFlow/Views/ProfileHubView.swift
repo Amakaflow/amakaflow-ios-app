@@ -22,7 +22,6 @@ struct ProfileHubView: View {
     @StateObject private var historyViewModel = ActivityHistoryViewModel()
     @State private var weekExpanded = false
     @State private var showingBackfill = false
-    @State private var backfillDrafts: [StrengthBackfillExerciseDraft] = []
     @AppStorage("dd_profile_backfill_completed") private var backfillCompleted = false
 
     private var displayName: String {
@@ -87,32 +86,11 @@ struct ProfileHubView: View {
                     .opacity(0.01)
                     .accessibilityIdentifier("profile_screen")
             }
-            .sheet(isPresented: $showingBackfill) {
-                NavigationStack {
-                    StrengthBackfillView(
-                        drafts: $backfillDrafts,
-                        onSave: {
-                            backfillCompleted = true
-                            showingBackfill = false
-                        }
-                    )
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Close") { showingBackfill = false }
-                        }
-                    }
+            .fullScreenCover(isPresented: $showingBackfill) {
+                DDEditorView(mode: .backfill) {
+                    backfillCompleted = true
                 }
-                .onAppear {
-                    if backfillDrafts.isEmpty {
-                        backfillDrafts = StrengthBackfill.draft(
-                            from: [
-                                .reps(sets: 3, reps: 8, name: "Back Squat", load: nil, restSec: 90, followAlongUrl: nil),
-                                .reps(sets: 3, reps: 10, name: "Romanian Deadlift", load: nil, restSec: 60, followAlongUrl: nil)
-                            ],
-                            existingSetLogs: nil
-                        )
-                    }
-                }
+                .ddSuppressFloatingChrome()
             }
         }
     }

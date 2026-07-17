@@ -307,7 +307,7 @@ struct SettingsView: View {
                     tint: DailyDriver.blue,
                     title: "24 Hour Fitness — Katy",
                     subtitle: "Shared · 12 members keep it in sync",
-                    destination: AnyView(EquipmentProfileView())
+                    destination: AnyView(DDGymDetailView())
                 )
                 ddSettingsDivider
                 ddSettingsLinkRow(
@@ -342,7 +342,7 @@ struct SettingsView: View {
                     tint: DailyDriver.lime,
                     title: "Amazfit T-Rex 3",
                     subtitle: "Hyrox / HIIT · synced 2m · 78%",
-                    destination: AnyView(connectionsHub)
+                    destination: AnyView(DDDeviceDetailView())
                 )
                 ddSettingsDivider
                 ddSettingsLinkRow(
