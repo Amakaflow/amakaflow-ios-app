@@ -44,6 +44,8 @@ final class LibraryViewModel: ObservableObject {
     private var allWorkouts: [Workout] = []
     /// Serializes delete so a second tap cannot race the optimistic restore path.
     private var isDeleting = false
+    /// Bumped when a delete starts so in-flight `load()` results are dropped.
+    private var contentEpoch = 0
 
     init(apiService: APIServiceProviding? = nil) {
         self.apiService = apiService ?? AppDependencies.current.apiService
@@ -108,6 +110,10 @@ final class LibraryViewModel: ObservableObject {
     }
 
     func load() async {
+        // Avoid stomping an in-flight optimistic delete.
+        guard !isDeleting else { return }
+
+        let epoch = contentEpoch
         let hadContent = !allItems.isEmpty || !allWorkouts.isEmpty
         if !hadContent { state = .loading }
         ctaError = nil
@@ -120,21 +126,26 @@ final class LibraryViewModel: ObservableObject {
             async let workoutsTask = apiService.fetchWorkouts(isRetry: false)
 
             let response = try await knowledgeTask
+            guard epoch == contentEpoch, !isDeleting else { return }
+
             let workouts: [Workout]
             do {
                 workouts = try await workoutsTask
             } catch {
+                guard epoch == contentEpoch, !isDeleting else { return }
                 // Knowledge still usable if workout fetch fails — surface toast, keep going.
                 ctaError = CTAError.map(error)
                 lastFailedAction = .load
                 workouts = allWorkouts
             }
 
+            guard epoch == contentEpoch, !isDeleting else { return }
             allItems = response.items ?? []
             allWorkouts = WorkoutLibraryDetailStore.enrichCollection(workouts)
             workoutsByID = Dictionary(uniqueKeysWithValues: allWorkouts.map { ($0.id, $0) })
             applyFilters()
         } catch {
+            guard epoch == contentEpoch, !isDeleting else { return }
             let mapped = CTAError.map(error)
             ctaError = mapped
             if !hadContent { state = .error(mapped) }
@@ -176,6 +187,9 @@ final class LibraryViewModel: ObservableObject {
     func deleteEntry(_ entry: LibraryListEntry) async -> Bool {
         guard !isDeleting else { return false }
         isDeleting = true
+        // Invalidate in-flight loads so they cannot re-add the row mid-delete.
+        contentEpoch += 1
+        let epoch = contentEpoch
         defer { isDeleting = false }
 
         let startedAt = CFAbsoluteTimeGetCurrent()
@@ -189,9 +203,8 @@ final class LibraryViewModel: ObservableObject {
         case .knowledge(let item):
             allItems.removeAll { $0.id == item.id }
         case .workout(let workout):
+            // Keep any ID-colliding knowledge card; it reappears after workout delete.
             allWorkouts.removeAll { $0.id == workout.id }
-            // ID-colliding knowledge row was hidden in the list; drop it too.
-            allItems.removeAll { $0.id == workout.id }
         }
         workoutsByID = Dictionary(uniqueKeysWithValues: allWorkouts.map { ($0.id, $0) })
         applyFilters()
@@ -219,10 +232,13 @@ final class LibraryViewModel: ObservableObject {
             NotificationCenter.default.post(name: .libraryContentDidChange, object: self)
             return true
         } catch {
-            allItems = previousItems
-            allWorkouts = previousWorkouts
-            workoutsByID = Dictionary(uniqueKeysWithValues: allWorkouts.map { ($0.id, $0) })
-            applyFilters()
+            // Only restore if this delete is still the latest content mutation.
+            if epoch == contentEpoch {
+                allItems = previousItems
+                allWorkouts = previousWorkouts
+                workoutsByID = Dictionary(uniqueKeysWithValues: allWorkouts.map { ($0.id, $0) })
+                applyFilters()
+            }
             if let urlError = error as? URLError, urlError.code == .cancelled {
                 return false
             }

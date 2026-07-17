@@ -324,15 +324,12 @@ extension LibraryView {
                     .accessibilityIdentifier("af_workout_detail_missing_\(workoutID)")
             }
         case .knowledgeDetail(let itemID):
-            LibraryDetailView(
-                itemID: itemID,
-                onDelete: {
-                    guard let target = viewModel.deleteTarget(forKnowledgeID: itemID) else {
-                        return false
-                    }
-                    return await viewModel.deleteEntry(target)
+            LibraryDetailView(itemID: itemID) {
+                guard let target = viewModel.deleteTarget(forKnowledgeID: itemID) else {
+                    return false
                 }
-            )
+                return await viewModel.deleteEntry(target)
+            }
         }
     }
 

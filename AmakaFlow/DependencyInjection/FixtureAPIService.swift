@@ -268,6 +268,7 @@ class FixtureAPIService: APIServiceProviding {
         if let fixtureWorkoutsCache {
             return fixtureWorkoutsCache
         }
+        let fallback = [Self.phoneStrengthFixtureWorkout]
         do {
             let loaded = try FixtureLoader.loadWorkouts()
             if !loaded.isEmpty {
@@ -275,12 +276,12 @@ class FixtureAPIService: APIServiceProviding {
                 return loaded
             }
             print("[FixtureAPIService] FixtureLoader returned empty — seeding AMA-2290 phone strength workout")
-            fixtureWorkoutsCache = [Self.phoneStrengthFixtureWorkout]
-            return fixtureWorkoutsCache!
+            fixtureWorkoutsCache = fallback
+            return fallback
         } catch {
             print("[FixtureAPIService] FixtureLoader failed (\(error)) — seeding AMA-2290 phone strength workout")
-            fixtureWorkoutsCache = [Self.phoneStrengthFixtureWorkout]
-            return fixtureWorkoutsCache!
+            fixtureWorkoutsCache = fallback
+            return fallback
         }
     }
 
