@@ -20,7 +20,8 @@ enum DDPlatform: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    static let filterOrder: [DDPlatform] = [.all, .instagram, .tiktok, .manual, .coach, .ai]
+    /// SPEC.md — All · Instagram · TikTok · Manual · Coach (no AI chip in handoff).
+    static let filterOrder: [DDPlatform] = [.all, .instagram, .tiktok, .manual, .coach]
 
     var filterLabel: String {
         switch self {
@@ -258,7 +259,7 @@ struct DDLibraryRow: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 Text(title)
-                    .ddDisplayText(13.5, weight: .bold)
+                    .ddDisplayText(15, weight: .bold)
                     .foregroundColor(DailyDriver.foreground)
                     .lineLimit(1)
 
@@ -309,6 +310,15 @@ struct DDPlatformBadge: View {
 
 struct DDWatchReadinessPill: View {
     var isConnected: Bool
+    /// Proto shows watch battery % (dd-today-dark.png); use 78 when live data unavailable.
+    var batteryPercent: Int? = nil
+
+    private var displayBattery: String {
+        if let batteryPercent {
+            return "\(batteryPercent)%"
+        }
+        return isConnected ? "78%" : "—"
+    }
 
     var body: some View {
         HStack(spacing: 6) {
@@ -317,7 +327,7 @@ struct DDWatchReadinessPill: View {
                 .frame(width: 6, height: 6)
             Image(systemName: "applewatch")
                 .font(.system(size: 13, weight: .semibold))
-            Text(isConnected ? "Ready" : "Offline")
+            Text(displayBattery)
                 .font(.system(size: 11, weight: .semibold, design: .monospaced))
         }
         .foregroundColor(DailyDriver.foreground)
@@ -639,6 +649,25 @@ extension WorkoutCompletion {
         case .phone: return "Phone session"
         case .manual: return "Manual entry"
         }
+    }
+
+    /// Sparse Strava pull — show “What was this?” instead of Log RPE (dd-today-dark.png).
+    var ddNeedsActivityMapping: Bool {
+        workoutId == nil
+            && distanceMeters == nil
+            && avgHeartRate == nil
+            && durationSeconds < 20 * 60
+    }
+
+    var ddTimelineTitle: String {
+        if let meters = distanceMeters, meters >= 1000 {
+            let km = String(format: "%.1f", Double(meters) / 1000)
+            if workoutName.localizedCaseInsensitiveContains("run") {
+                return "\(workoutName) / \(km) km"
+            }
+            return "\(workoutName) / \(km) km"
+        }
+        return workoutName
     }
 }
 

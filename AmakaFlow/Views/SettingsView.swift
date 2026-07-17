@@ -137,11 +137,11 @@ struct SettingsView: View {
         ScrollView {
             VStack(spacing: 10) {
                 ddSettingsHeader
-                connectionsSection
-                profileTrainingSection
-                coachingSection
-                nutritionActivitySection
-                appSection
+                ddMyGymsSection
+                ddConnectedWearablesSection
+                ddConnectedAppsSection
+                ddHandoffAppSection
+                ddAccountDataSection
             }
             .padding(.horizontal, 18)
             .padding(.vertical, Theme.Spacing.lg)
@@ -277,6 +277,270 @@ struct SettingsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, 4)
         .accessibilityIdentifier("settings_refresh_header")
+    }
+
+    private var accountEmail: String {
+        pairingService.userProfile?.email ?? "Account"
+    }
+
+    // MARK: - Daily Driver handoff sections (dd-settings-dark.png)
+
+    private var ddMyGymsSection: some View {
+        SettingsSectionCard(
+            title: "My Gyms",
+            subtitle: "Home gym active · builder adapts to it",
+            icon: "house.fill",
+            iconBackground: DailyDriver.orange,
+            rowCount: 4
+        ) {
+            VStack(spacing: 0) {
+                ddSettingsLinkRow(
+                    icon: "house.fill",
+                    tint: DailyDriver.lime,
+                    title: "Home gym",
+                    subtitle: "ACTIVE · DBs to 32 · KB 24 · rower · private",
+                    destination: AnyView(EquipmentProfileView())
+                )
+                ddSettingsDivider
+                ddSettingsLinkRow(
+                    icon: "map.fill",
+                    tint: DailyDriver.blue,
+                    title: "24 Hour Fitness — Katy",
+                    subtitle: "Shared · 12 members keep it in sync",
+                    destination: AnyView(EquipmentProfileView())
+                )
+                ddSettingsDivider
+                ddSettingsLinkRow(
+                    icon: "bookmark.fill",
+                    tint: DailyDriver.card2,
+                    title: "Hotel / travel",
+                    subtitle: "Bodyweight + bands preset",
+                    destination: AnyView(EquipmentProfileView())
+                )
+                ddSettingsDivider
+                ddSettingsButtonRow(
+                    icon: "plus",
+                    tint: DailyDriver.card2,
+                    title: "＋ Add gym",
+                    subtitle: "Scan the room once — everyone after you skips it"
+                ) {}
+            }
+        }
+    }
+
+    private var ddConnectedWearablesSection: some View {
+        SettingsSectionCard(
+            title: "Connected wearables",
+            subtitle: "T-Rex 3 + Garmin · sessions set per watch",
+            icon: "applewatch",
+            iconBackground: DailyDriver.lime,
+            rowCount: 3
+        ) {
+            VStack(spacing: 0) {
+                ddSettingsLinkRow(
+                    icon: "applewatch",
+                    tint: DailyDriver.lime,
+                    title: "Amazfit T-Rex 3",
+                    subtitle: "Hyrox / HIIT · synced 2m · 78%",
+                    destination: AnyView(connectionsHub)
+                )
+                ddSettingsDivider
+                ddSettingsLinkRow(
+                    icon: "applewatch",
+                    tint: DailyDriver.blue,
+                    title: "Garmin",
+                    subtitle: garminConnectivity.isConnected
+                        ? "Runs + strength · connected"
+                        : "Runs + strength · not connected",
+                    destination: AnyView(connectionsHub)
+                )
+                ddSettingsDivider
+                ddSettingsButtonRow(
+                    icon: "plus",
+                    tint: DailyDriver.card2,
+                    title: "＋ Pair a wearable",
+                    subtitle: "Optional — the phone covers everything"
+                ) {}
+            }
+        }
+    }
+
+    private var ddConnectedAppsSection: some View {
+        SettingsSectionCard(
+            title: "Connected apps",
+            subtitle: "Garmin pull ON · Strava off · Telegram",
+            icon: "link",
+            iconBackground: DailyDriver.blue,
+            rowCount: 3
+        ) {
+            VStack(spacing: 0) {
+                ddSettingsToggleRow(
+                    icon: "arrow.down.circle.fill",
+                    tint: DailyDriver.blue,
+                    title: "Garmin activities",
+                    subtitle: "Pulls runs into Progress",
+                    isOn: garminConnectivity.isConnected
+                )
+                ddSettingsDivider
+                ddSettingsToggleRow(
+                    icon: "figure.run",
+                    tint: DailyDriver.orange,
+                    title: "Strava",
+                    subtitle: "Not connected",
+                    isOn: false
+                )
+                ddSettingsDivider
+                ddSettingsButtonRow(
+                    icon: "paperplane.fill",
+                    tint: DailyDriver.purple,
+                    title: "Telegram",
+                    subtitle: isTelegramLinked ? "Coach + friction log" : "Not connected"
+                ) {
+                    showingTelegramSetup = true
+                }
+            }
+        }
+    }
+
+    private var ddHandoffAppSection: some View {
+        SettingsSectionCard(
+            title: "App",
+            subtitle: "Notifications · kg/km · dark",
+            icon: "slider.horizontal.3",
+            iconBackground: DailyDriver.purple,
+            rowCount: 3
+        ) {
+            VStack(spacing: 0) {
+                ddSettingsLinkRow(
+                    icon: "bell.badge.fill",
+                    tint: DailyDriver.lime,
+                    title: "Notifications",
+                    subtitle: "Session reminders · push results",
+                    destination: AnyView(NotificationPreferencesView())
+                )
+                ddSettingsDivider
+                ddSettingsLinkRow(
+                    icon: "slider.horizontal.3",
+                    tint: DailyDriver.card2,
+                    title: "Units",
+                    subtitle: "kg · km",
+                    destination: AnyView(EditProfileView(initialNameFallback: pairingService.userProfile?.name))
+                )
+                ddSettingsDivider
+                ddSettingsButtonRow(
+                    icon: "moon.fill",
+                    tint: DailyDriver.card2,
+                    title: "Appearance",
+                    subtitle: "Dark"
+                ) {}
+            }
+        }
+    }
+
+    private var ddAccountDataSection: some View {
+        SettingsSectionCard(
+            title: "Account & data",
+            subtitle: accountEmail,
+            icon: "person.fill",
+            iconBackground: DailyDriver.card2,
+            rowCount: 3
+        ) {
+            VStack(spacing: 0) {
+                ddSettingsButtonRow(
+                    icon: "person.fill",
+                    tint: DailyDriver.card2,
+                    title: "Account",
+                    subtitle: accountEmail
+                ) {}
+                ddSettingsDivider
+                ddSettingsButtonRow(
+                    icon: "square.and.arrow.up",
+                    tint: DailyDriver.card2,
+                    title: "Export my data",
+                    subtitle: nil
+                ) {
+                    Task { await accountViewModel.exportData() }
+                }
+                ddSettingsDivider
+                ddSettingsButtonRow(
+                    icon: "rectangle.portrait.and.arrow.right",
+                    tint: DailyDriver.red,
+                    title: "Sign out",
+                    subtitle: nil
+                ) {
+                    accountViewModel.showSignOutAlert = true
+                }
+            }
+        }
+    }
+
+    private var ddSettingsDivider: some View {
+        Rectangle()
+            .fill(DailyDriver.border)
+            .frame(height: 1)
+    }
+
+    private func ddSettingsLinkRow(
+        icon: String,
+        tint: Color,
+        title: String,
+        subtitle: String,
+        destination: AnyView
+    ) -> some View {
+        NavigationLink(destination: destination) {
+            DDSettingsRow(
+                icon: icon,
+                iconBackground: tint,
+                title: title,
+                detail: subtitle
+            ) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(DailyDriver.foregroundDim)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func ddSettingsButtonRow(
+        icon: String,
+        tint: Color,
+        title: String,
+        subtitle: String?,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            DDSettingsRow(
+                icon: icon,
+                iconBackground: tint,
+                title: title,
+                detail: subtitle
+            ) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(DailyDriver.foregroundDim)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func ddSettingsToggleRow(
+        icon: String,
+        tint: Color,
+        title: String,
+        subtitle: String,
+        isOn: Bool
+    ) -> some View {
+        DDSettingsRow(
+            icon: icon,
+            iconBackground: tint,
+            title: title,
+            detail: subtitle
+        ) {
+            Text(isOn ? "ON" : "OFF")
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundColor(isOn ? DailyDriver.lime : DailyDriver.foregroundDim)
+        }
     }
 
     // MARK: - Grouped Profile Sections

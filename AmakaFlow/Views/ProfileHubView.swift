@@ -163,11 +163,8 @@ struct ProfileHubView: View {
                 .padding(.top, 14)
             }
 
-            coachAndHistorySection
-                .padding(.top, 20)
-
             thisWeekSection
-                .padding(.top, 8)
+                .padding(.top, 20)
         }
         .padding(.horizontal, 18)
     }
@@ -215,22 +212,78 @@ struct ProfileHubView: View {
             .accessibilityIdentifier("af_profile_summary_totals")
 
             DDStatTile(
-                value: "—",
-                label: "day streak · best —"
+                value: streakDisplay.value,
+                label: streakDisplay.label
             ) {
                 path.append(ProfileHubRoute.history)
             }
             .accessibilityIdentifier("af_profile_summary_streak")
 
             DDStatTile(
-                value: weekSummary.workoutCount > 0 ? "\(weekSummary.workoutCount)" : "—",
-                label: "sessions this month"
+                value: monthSessionCount,
+                label: monthSessionsLabel
             ) {
                 path.append(ProfileHubRoute.history)
             }
             .accessibilityIdentifier("af_profile_summary_calendar")
         }
         .accessibilityIdentifier("af_profile_summaries")
+    }
+
+    private var monthSessionsLabel: String {
+        let month = today.formatted(.dateTime.month(.wide))
+        return "sessions in \(month)"
+    }
+
+    private var monthSessionCount: String {
+        let calendar = Calendar.current
+        let monthCompletions = historyViewModel.completions.filter {
+            calendar.isDate($0.startedAt, equalTo: today, toGranularity: .month)
+        }
+        return monthCompletions.isEmpty ? "—" : "\(monthCompletions.count)"
+    }
+
+    private var today: Date { Date() }
+
+    private var streakDisplay: (value: String, label: String) {
+        let streak = computeDayStreak()
+        if streak.current > 0 {
+            return ("\(streak.current) 🔥", "day streak · best \(streak.best)")
+        }
+        return ("—", "day streak · best —")
+    }
+
+    private func computeDayStreak() -> (current: Int, best: Int) {
+        let calendar = Calendar.current
+        let activeDays = Set(
+            historyViewModel.completions.map { calendar.startOfDay(for: $0.startedAt) }
+        )
+        guard !activeDays.isEmpty else { return (0, 0) }
+
+        var current = 0
+        var cursor = calendar.startOfDay(for: today)
+        while activeDays.contains(cursor) {
+            current += 1
+            guard let previous = calendar.date(byAdding: .day, value: -1, to: cursor) else { break }
+            cursor = previous
+        }
+
+        let sortedDays = activeDays.sorted()
+        var best = 0
+        var run = 0
+        var prior: Date?
+        for day in sortedDays {
+            if let prior,
+               let next = calendar.date(byAdding: .day, value: 1, to: prior),
+               calendar.isDate(day, inSameDayAs: next) {
+                run += 1
+            } else {
+                run = 1
+            }
+            best = max(best, run)
+            prior = day
+        }
+        return (current, best)
     }
 
     private var weekDots: some View {
@@ -246,31 +299,6 @@ struct ProfileHubView: View {
     private func weekdayIndex(from weekday: Int) -> Int {
         // Calendar weekday: 1 = Sunday. Design labels start Monday.
         ((weekday + 5) % 7)
-    }
-
-    private var coachAndHistorySection: some View {
-        VStack(spacing: 8) {
-            profileLinkRow(
-                icon: "bubble.left.and.bubble.right.fill",
-                iconBackground: DailyDriver.blue,
-                title: "Coach",
-                subtitle: "Chat, fatigue, readiness",
-                identifier: "coach_tab"
-            ) {
-                path.append(ProfileHubRoute.coach)
-            }
-
-            profileLinkRow(
-                icon: "clock.arrow.circlepath",
-                iconBackground: DailyDriver.purple,
-                title: "Activity History",
-                subtitle: "Completed sessions",
-                identifier: "history_tab"
-            ) {
-                path.append(ProfileHubRoute.history)
-            }
-        }
-        .accessibilityIdentifier("af_profile_destinations")
     }
 
     private var thisWeekSection: some View {
@@ -311,8 +339,8 @@ struct ProfileHubView: View {
         } label: {
             HStack(spacing: 12) {
                 DDIconChip(
-                    systemName: completion.workoutTypeIconName,
-                    background: DailyDriver.purple,
+                    systemName: completion.profileIconName,
+                    background: completion.profileIconBackground,
                     size: 34
                 )
                 VStack(alignment: .leading, spacing: 2) {
@@ -349,46 +377,21 @@ struct ProfileHubView: View {
         }
         .buttonStyle(.plain)
     }
-
-    private func profileLinkRow(
-        icon: String,
-        iconBackground: Color,
-        title: String,
-        subtitle: String,
-        identifier: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                DDIconChip(systemName: icon, background: iconBackground, size: 34)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .ddDisplayText(14, weight: .bold)
-                        .foregroundColor(DailyDriver.foreground)
-                    Text(subtitle)
-                        .font(.system(size: 10.5))
-                        .foregroundColor(DailyDriver.foregroundMuted)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(DailyDriver.foregroundDim)
-            }
-            .padding(.horizontal, 13)
-            .padding(.vertical, 11)
-            .background(DailyDriver.card)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(DailyDriver.border, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier(identifier)
-    }
 }
 
 private extension WorkoutCompletion {
+    var profileIconName: String {
+        if distanceMeters != nil { return "figure.run" }
+        if workoutName.localizedCaseInsensitiveContains("amrap") { return "bolt.fill" }
+        return "figure.cooldown"
+    }
+
+    var profileIconBackground: Color {
+        if distanceMeters != nil { return DailyDriver.blue }
+        if workoutName.localizedCaseInsensitiveContains("amrap") { return DailyDriver.purple }
+        return DailyDriver.blue
+    }
+
     var workoutTypeIconName: String {
         if distanceMeters != nil { return "figure.run" }
         return "dumbbell.fill"
@@ -407,9 +410,26 @@ private extension WorkoutCompletion {
     }
 
     var profileMetaLine: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEE · HH:mm"
-        return formatter.string(from: startedAt).uppercased()
+        let day = startedAt.formatted(.dateTime.weekday(.abbreviated)).uppercased()
+        let minutes = max(1, durationSeconds / 60)
+        let duration: String
+        if minutes >= 60 {
+            duration = "\(minutes / 60)H \(minutes % 60)M"
+        } else {
+            duration = "\(minutes) MIN"
+        }
+        var parts = [day, duration]
+        if let hr = avgHeartRate {
+            parts.append("RPE \(min(10, max(1, hr / 15)))")
+        }
+        switch source {
+        case .garmin: parts.append("GARMIN")
+        case .appleWatch: parts.append("APPLE WATCH")
+        case .phone: parts.append("ON PHONE")
+        default:
+            if isSyncedToStrava { parts.append("GARMIN") }
+        }
+        return parts.joined(separator: " · ")
     }
 }
 

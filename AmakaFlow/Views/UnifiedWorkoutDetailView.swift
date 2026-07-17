@@ -290,7 +290,7 @@ struct UnifiedWorkoutDetailView: View {
                     showingEditor = true
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: "pencil")
+                        Text("✎")
                             .font(.system(size: 14, weight: .semibold))
                         Text("Edit")
                             .ddDisplayText(15, weight: .bold)
@@ -316,7 +316,7 @@ struct UnifiedWorkoutDetailView: View {
                             ProgressView()
                                 .tint(DailyDriver.ink)
                         } else {
-                            Image(systemName: "play.fill")
+                            Text("▶")
                                 .font(.system(size: 13, weight: .semibold))
                         }
                         Text("Start")
@@ -385,7 +385,12 @@ extension UnifiedWorkoutDetailView {
         var pills: [String] = [sourceHeroPill]
 
         if workout.exerciseCount > 0 {
-            pills.append("\(workout.exerciseCount) EXERCISES · \(ddHeroDurationLabel)")
+            let rounds = workout.blocks.compactMap(\.rounds).max() ?? 1
+            if rounds > 1 {
+                pills.append("\(rounds) ROUNDS · \(ddHeroDurationLabel)")
+            } else {
+                pills.append("\(workout.exerciseCount) EXERCISES · \(ddHeroDurationLabel)")
+            }
         } else if workout.blockCount > 0 {
             pills.append("\(workout.blockCount) BLOCKS · \(ddHeroDurationLabel)")
         } else {

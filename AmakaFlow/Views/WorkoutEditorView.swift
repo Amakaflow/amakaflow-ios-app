@@ -145,7 +145,7 @@ struct WorkoutEditorView: View {
             .scrollContentBackground(.hidden)
 
             DDEditorSaveBar(
-                title: viewModel.isEditMode ? "Save workout" : "Create workout",
+                title: viewModel.isEditMode ? "Save workout" : "Save workout",
                 isSaving: viewModel.isSaving
             ) {
                 Task { await viewModel.save() }
@@ -165,22 +165,38 @@ struct WorkoutEditorView: View {
     }
 
     private var ddEditorHeader: some View {
-        HStack(spacing: 12) {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 16, weight: .semibold))
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 12) {
+                Button {
+                    dismiss()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Back")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
                     .foregroundColor(DailyDriver.foregroundMuted)
-                    .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.plain)
+
+                Spacer(minLength: 0)
+
+                Button("COLLAPSE ALL") {}
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .foregroundColor(DailyDriver.foregroundDim)
+                    .disabled(true)
+
+                Button("EXPAND ALL") {}
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .foregroundColor(DailyDriver.foregroundDim)
+                    .disabled(true)
             }
-            .buttonStyle(.plain)
 
-            Text(viewModel.isEditMode ? "Edit workout" : "New workout")
-                .ddDisplayText(20, weight: .heavy)
+            Text(viewModel.name.isEmpty ? "Untitled workout" : viewModel.name)
+                .ddDisplayText(24, weight: .heavy)
                 .foregroundColor(DailyDriver.foreground)
-
-            Spacer(minLength: 0)
+                .padding(.top, 8)
         }
         .padding(.horizontal, Theme.Spacing.lg)
         .padding(.top, 4)

@@ -146,13 +146,26 @@ struct DDActivePlayerView: View {
                 Button {
                     engine.togglePlayPause()
                 } label: {
-                    Image(systemName: engine.phase == .running ? "pause.fill" : "play.fill")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundColor(DailyDriver.ink)
-                        .frame(width: 64, height: 64)
-                        .background(DailyDriver.lime)
-                        .clipShape(Circle())
-                        .ddLimeGlow()
+                    Group {
+                        if engine.phase == .running {
+                            HStack(spacing: 6) {
+                                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                    .fill(DailyDriver.ink)
+                                    .frame(width: 5, height: 20)
+                                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                    .fill(DailyDriver.ink)
+                                    .frame(width: 5, height: 20)
+                            }
+                        } else {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundColor(DailyDriver.ink)
+                        }
+                    }
+                    .frame(width: 64, height: 64)
+                    .background(DailyDriver.lime)
+                    .clipShape(Circle())
+                    .ddLimeGlow()
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("dd_player_play_pause")

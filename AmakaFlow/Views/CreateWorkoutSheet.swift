@@ -55,19 +55,12 @@ struct CreateWorkoutSheet: View {
                 DDDoorRow(
                     icon: "square.and.pencil",
                     iconBackground: DailyDriver.card2,
-                    title: "Create manually",
+                    title: "Build from scratch",
                     subtitle: "From scratch, exercise by exercise"
                 ) {
                     dismissThen { onSelect(.manual) }
                 }
                 .accessibilityIdentifier("create_door_manual")
-
-                Text("Every door lands in the same editor — always editable, always saveable.")
-                    .font(.system(size: 11))
-                    .foregroundColor(DailyDriver.foregroundMuted)
-                    .lineSpacing(3)
-                    .padding(.horizontal, 4)
-                    .padding(.top, 2)
             }
         }
         .accessibilityIdentifier("create_workout_sheet")

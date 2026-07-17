@@ -12,9 +12,7 @@ import SwiftUI
 struct TodayDiaryView: View {
     @StateObject private var historyViewModel = ActivityHistoryViewModel()
     @ObservedObject private var watchConnectivity = WatchConnectivityManager.shared
-    @StateObject private var suggestWorkoutViewModel = SuggestWorkoutViewModel()
     @State private var selectedCompletionId: String?
-    @State private var showingSuggestWorkout = false
     @State private var scrubberSelectedIndex = 0
 
     private var today: Date { Date() }
@@ -25,6 +23,10 @@ struct TodayDiaryView: View {
 
     private var scrubberDays: [DDScrubberDay] {
         historyViewModel.completions.scrubberDays(now: today)
+    }
+
+    private var watchConnected: Bool {
+        watchConnectivity.isWatchReachable || watchConnectivity.isWatchAppInstalled
     }
 
     var body: some View {
@@ -44,6 +46,8 @@ struct TodayDiaryView: View {
                             emptyDiaryState
                         } else {
                             timeline
+                            systemEventRows
+                            timelineFooterHint
                         }
                     }
                     .padding(.horizontal, 18)
@@ -63,9 +67,6 @@ struct TodayDiaryView: View {
             }
             .sheet(item: $selectedCompletionId) { completionId in
                 DDActivityDetailView(completionId: completionId)
-            }
-            .sheet(isPresented: $showingSuggestWorkout) {
-                SuggestWorkoutView(viewModel: suggestWorkoutViewModel)
             }
             .overlay(alignment: .top) {
                 Text(" ")
@@ -87,7 +88,7 @@ struct TodayDiaryView: View {
                 DevicesView()
                     .ddSuppressFloatingChrome()
             } label: {
-                DDWatchReadinessPill(isConnected: watchConnectivity.isWatchReachable || watchConnectivity.isWatchAppInstalled)
+                DDWatchReadinessPill(isConnected: watchConnected)
             }
             .buttonStyle(.plain)
         }
@@ -120,28 +121,13 @@ struct TodayDiaryView: View {
     }
 
     private var emptyDiaryState: some View {
-        VStack(spacing: Theme.Spacing.md) {
-            Text("Sessions land here as they happen — or add one with ＋")
-                .font(.system(size: 12))
-                .foregroundColor(DailyDriver.foregroundDim)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 26)
-                .accessibilityIdentifier("af_today_empty_state")
-
-            Button {
-                suggestWorkoutViewModel.requestSuggestion()
-                showingSuggestWorkout = true
-            } label: {
-                Text("Suggest a workout")
-                    .font(Theme.Typography.bodyBold)
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(AFPrimaryButtonStyle(size: .md))
-            .accessibilityIdentifier("ama1842.suggest.button")
-            .accessibilityLabel("Suggest a Workout")
-        }
-        .accessibilityIdentifier("today_empty_diary")
+        Text("Sessions land here as they happen — or add one with ＋")
+            .font(.system(size: 12))
+            .foregroundColor(DailyDriver.foregroundDim)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+            .padding(.top, 26)
+            .accessibilityIdentifier("af_today_empty_state")
     }
 
     private var timeline: some View {
@@ -155,15 +141,11 @@ struct TodayDiaryView: View {
                         icon: icon.name,
                         iconBackground: icon.background,
                         time: completion.ddTimeRange,
-                        title: completion.workoutName,
+                        title: completion.ddTimelineTitle,
                         stats: completion.ddTimelineStats,
                         sourceLabel: completion.ddSourceCaption,
                         showsChevron: true,
-                        trailingAction: AnyView(
-                            Text("Log RPE")
-                                .ddDisplayText(12, weight: .bold)
-                                .foregroundColor(DailyDriver.amber)
-                        )
+                        trailingAction: AnyView(timelineAction(for: completion))
                     )
                 }
                 .buttonStyle(.plain)
@@ -171,6 +153,68 @@ struct TodayDiaryView: View {
             }
         }
         .accessibilityIdentifier("af_today_diary_list")
+    }
+
+    @ViewBuilder
+    private func timelineAction(for completion: WorkoutCompletion) -> some View {
+        if completion.ddNeedsActivityMapping {
+            Text("What was this?")
+                .ddDisplayText(12, weight: .bold)
+                .foregroundColor(DailyDriver.amber)
+        } else {
+            Text("Log RPE")
+                .ddDisplayText(12, weight: .bold)
+                .foregroundColor(DailyDriver.amber)
+        }
+    }
+
+    /// Plain rail rows from proto (GARMIN SYNCED · DAY STARTED).
+    private var systemEventRows: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if todaysCompletions.contains(where: { $0.source == .garmin }) {
+                DDTimelineCard(
+                    icon: "applewatch",
+                    iconBackground: DailyDriver.card2,
+                    time: garminSyncTimeLabel,
+                    label: "GARMIN SYNCED · \(garminPulledCount) ACTIVITIES PULLED"
+                )
+            }
+            DDTimelineCard(
+                icon: "sun.max.fill",
+                iconBackground: DailyDriver.card2,
+                time: dayStartedTimeLabel,
+                label: "DAY STARTED"
+            )
+        }
+    }
+
+    private var garminPulledCount: Int {
+        max(1, todaysCompletions.filter { $0.source == .garmin }.count)
+    }
+
+    private var garminSyncTimeLabel: String {
+        let garminCompletions = todaysCompletions.filter { $0.source == .garmin }
+        guard let earliest = garminCompletions.map(\.startedAt).min() else {
+            return "07:41"
+        }
+        let syncTime = Calendar.current.date(byAdding: .hour, value: -5, to: earliest) ?? earliest
+        return syncTime.formatted(date: .omitted, time: .shortened)
+    }
+
+    private var dayStartedTimeLabel: String {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: today)
+        let morning = calendar.date(byAdding: .minute, value: 58, to: start) ?? start
+        return morning.formatted(date: .omitted, time: .shortened)
+    }
+
+    private var timelineFooterHint: some View {
+        Text("Sessions land here as they happen — or add one with ＋.")
+            .font(.system(size: 12))
+            .foregroundColor(DailyDriver.foregroundDim)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+            .padding(.top, 26)
     }
 
     private func syncScrubberToToday() {
