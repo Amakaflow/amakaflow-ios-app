@@ -4,6 +4,7 @@
 //
 //  AMA-2004: saved-content Library tab.
 //  Daily Driver: DDBuildScreen — search, source pills, unified provenance rows.
+//  AMA-2298: swipe / context / detail delete with confirmation.
 //
 
 import SwiftUI
@@ -13,6 +14,8 @@ struct LibraryView: View {
     @Environment(\.openCreateSheet) private var openCreateSheet
     @State private var searchText = ""
     @State private var sourceFilter: DDPlatform = .all
+    @State private var pendingDelete: LibraryListEntry?
+    @State private var navigationPath: [LibraryDestination] = []
 
     init(viewModel: LibraryViewModel? = nil) {
         _viewModel = StateObject(wrappedValue: viewModel ?? LibraryViewModel())
@@ -41,7 +44,7 @@ struct LibraryView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 DailyDriver.screenBackground.ignoresSafeArea()
 
@@ -67,9 +70,24 @@ struct LibraryView: View {
         .overlay(alignment: .top) {
             if let error = viewModel.ctaError {
                 ErrorToast(
-                    actionTitle: "Couldn't load Library",
+                    actionTitle: viewModel.errorToastTitle,
                     error: error,
-                    onRetry: error.isRetryable ? { Task { await viewModel.retryLastAction() } } : nil,
+                    onRetry: error.isRetryable ? {
+                        Task {
+                            // Capture before retry clears `lastFailedAction`.
+                            let failedDestination: LibraryDestination?
+                            if case .delete(let entry) = viewModel.lastFailedAction {
+                                failedDestination = entry.destination
+                            } else {
+                                failedDestination = nil
+                            }
+                            let deleted = await viewModel.retryLastAction()
+                            // Only pop if the visible detail still belongs to that entry.
+                            if deleted, navigationPath.last == failedDestination {
+                                navigationPath.removeLast()
+                            }
+                        }
+                    } : nil,
                     onReport: { viewModel.reportError() },
                     onDismiss: { viewModel.dismissError() }
                 )
@@ -77,10 +95,34 @@ struct LibraryView: View {
                 .padding(.top, Theme.Spacing.md)
             }
         }
+        .alert(
+            "Delete from Library?",
+            isPresented: Binding(
+                get: { pendingDelete != nil },
+                set: { if !$0 { pendingDelete = nil } }
+            )
+        ) {
+            Button("Delete", role: .destructive) {
+                guard let entry = pendingDelete else { return }
+                pendingDelete = nil
+                Task { await viewModel.deleteEntry(entry) }
+            }
+            .accessibilityIdentifier("af_library_delete_confirm")
+            Button("Cancel", role: .cancel) {
+                pendingDelete = nil
+            }
+            .accessibilityIdentifier("af_library_delete_cancel")
+        } message: {
+            if let pendingDelete {
+                Text("“\(pendingDelete.title)” will be removed. You can import it again later.")
+            }
+        }
         .task {
             await viewModel.load()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .libraryContentDidChange)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .libraryContentDidChange)) { note in
+            // Skip reload when this VM just deleted — entries already updated locally.
+            if note.object as AnyObject? === viewModel { return }
             Task { await viewModel.load() }
         }
         .accessibilityIdentifier("library_screen")
@@ -224,6 +266,22 @@ extension LibraryView {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("af_library_item_\(entry.id)")
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button(role: .destructive) {
+                        pendingDelete = entry
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                    .accessibilityIdentifier("af_library_delete_\(entry.id)")
+                }
+                .contextMenu {
+                    Button(role: .destructive) {
+                        pendingDelete = entry
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                    .accessibilityIdentifier("af_library_delete_\(entry.id)")
+                }
             }
 
             if filteredEntries.isEmpty {
@@ -261,11 +319,20 @@ extension LibraryView {
         switch destination {
         case .unifiedWorkout(let workoutID):
             if let workout = viewModel.resolveWorkout(for: destination) {
-                UnifiedWorkoutDetailView(workout: workout) {
-                    await viewModel.load()
-                    return viewModel.workout(for: workoutID)
-                        ?? viewModel.resolveWorkout(for: destination)
-                }
+                UnifiedWorkoutDetailView(
+                    workout: workout,
+                    onEditorDismiss: {
+                        await viewModel.load()
+                        return viewModel.workout(for: workoutID)
+                            ?? viewModel.resolveWorkout(for: destination)
+                    },
+                    onDelete: {
+                        guard let target = viewModel.deleteTarget(forWorkoutID: workoutID) else {
+                            return false
+                        }
+                        return await viewModel.deleteEntry(target)
+                    }
+                )
             } else {
                 Text("Workout unavailable")
                     .font(Theme.Typography.caption)
@@ -273,7 +340,12 @@ extension LibraryView {
                     .accessibilityIdentifier("af_workout_detail_missing_\(workoutID)")
             }
         case .knowledgeDetail(let itemID):
-            LibraryDetailView(itemID: itemID)
+            LibraryDetailView(itemID: itemID) {
+                guard let target = viewModel.deleteTarget(forKnowledgeID: itemID) else {
+                    return false
+                }
+                return await viewModel.deleteEntry(target)
+            }
         }
     }
 

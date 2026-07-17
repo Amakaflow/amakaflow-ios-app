@@ -267,6 +267,98 @@ final class LibraryViewModelTests: XCTestCase {
         XCTAssertTrue(empty.items?.isEmpty == true)
     }
 
+    // MARK: - AMA-2298 delete
+
+    func testDeleteKnowledgeEntryRemovesFromListOptimistically() async {
+        let knowledge = item(id: "article-1", kind: .article, title: "Zone two")
+        api.listLibraryItemsResult = .success(Components.Schemas.LibraryItemList(items: [knowledge], total: 1))
+        api.fetchWorkoutsResult = .success([])
+
+        await viewModel.load()
+        XCTAssertEqual(viewModel.entries.count, 1)
+
+        let deleted = await viewModel.deleteEntry(.knowledge(knowledge))
+
+        XCTAssertTrue(deleted)
+        XCTAssertTrue(api.deleteKnowledgeCardCalled)
+        XCTAssertEqual(api.lastDeletedKnowledgeCardID, "article-1")
+        XCTAssertEqual(viewModel.state, .empty)
+        XCTAssertTrue(viewModel.entries.isEmpty)
+        XCTAssertNil(viewModel.ctaError)
+    }
+
+    func testDeleteWorkoutEntryRemovesFromListOptimistically() async {
+        let workout = makeWorkout(id: "wo-1", name: "HIIT Follow-Along")
+        api.listLibraryItemsResult = .success(Components.Schemas.LibraryItemList(items: [], total: 0))
+        api.fetchWorkoutsResult = .success([workout])
+
+        await viewModel.load()
+        XCTAssertEqual(viewModel.entries.count, 1)
+
+        let deleted = await viewModel.deleteEntry(.workout(workout))
+
+        XCTAssertTrue(deleted)
+        XCTAssertTrue(api.deleteWorkoutCalled)
+        XCTAssertEqual(api.lastDeletedWorkoutID, "wo-1")
+        XCTAssertEqual(viewModel.state, .empty)
+        XCTAssertTrue(viewModel.entries.isEmpty)
+    }
+
+    func testDeleteFailureRestoresEntryAndSurfacesToast() async {
+        let knowledge = item(id: "article-1", kind: .article, title: "Zone two")
+        api.listLibraryItemsResult = .success(Components.Schemas.LibraryItemList(items: [knowledge], total: 1))
+        api.fetchWorkoutsResult = .success([])
+        api.deleteKnowledgeCardResult = .failure(URLError(.notConnectedToInternet))
+
+        await viewModel.load()
+        let deleted = await viewModel.deleteEntry(.knowledge(knowledge))
+
+        XCTAssertFalse(deleted)
+        XCTAssertEqual(viewModel.entries.count, 1)
+        XCTAssertEqual(viewModel.state, .content)
+        XCTAssertNotNil(viewModel.ctaError)
+        XCTAssertEqual(viewModel.lastFailedAction, .delete(.knowledge(knowledge)))
+        XCTAssertEqual(viewModel.errorToastTitle, "Couldn't delete Library item")
+        XCTAssertTrue(viewModel.ctaError?.isRetryable == true)
+
+        api.deleteKnowledgeCardResult = .success(())
+        let retried = await viewModel.retryLastAction()
+        XCTAssertTrue(retried, "Successful delete retry must report true so detail can dismiss")
+        XCTAssertTrue(viewModel.entries.isEmpty)
+        XCTAssertEqual(viewModel.state, .empty)
+        XCTAssertNil(viewModel.ctaError)
+    }
+
+    func testDeleteLastItemShowsEmptyState() async {
+        let workout = makeWorkout(id: "only", name: "Solo")
+        api.listLibraryItemsResult = .success(Components.Schemas.LibraryItemList(items: [], total: 0))
+        api.fetchWorkoutsResult = .success([workout])
+
+        await viewModel.load()
+        XCTAssertEqual(viewModel.state, .content)
+
+        _ = await viewModel.deleteEntry(.workout(workout))
+        XCTAssertEqual(viewModel.state, .empty)
+        XCTAssertEqual(viewModel.savedSubtitle, "0 saved items")
+    }
+
+    func testFixtureDeleteMutatesLibraryAndWorkoutsWithoutRelaunch() async throws {
+        let fixture = FixtureAPIService()
+        let beforeLibrary = try await fixture.listLibraryItems(kind: nil, tag: nil)
+        let articleID = "fixture-zone-two-article"
+        XCTAssertTrue(beforeLibrary.items?.contains(where: { $0.id == articleID }) == true)
+
+        try await fixture.deleteKnowledgeCard(id: articleID)
+        let afterLibrary = try await fixture.listLibraryItems(kind: nil, tag: nil)
+        XCTAssertFalse(afterLibrary.items?.contains(where: { $0.id == articleID }) == true)
+
+        let beforeWorkouts = try await fixture.fetchWorkouts(isRetry: false)
+        let workoutID = try XCTUnwrap(beforeWorkouts.first?.id)
+        try await fixture.deleteWorkout(id: workoutID)
+        let afterWorkouts = try await fixture.fetchWorkouts(isRetry: false)
+        XCTAssertFalse(afterWorkouts.contains(where: { $0.id == workoutID }))
+    }
+
     func testAddToLibraryURLNormalizationAndHTMLPreviewParsing() throws {
         let normalized = try XCTUnwrap(AddToLibraryViewModel.normalizedURL(from: " example.com/workout "))
         XCTAssertEqual(normalized.absoluteString, "https://example.com/workout")
@@ -458,6 +550,18 @@ final class LibraryViewModelTests: XCTestCase {
             tags: tags,
             thumbnailUrl: nil,
             title: title
+        )
+    }
+
+    private func makeWorkout(id: String, name: String) -> Workout {
+        Workout(
+            id: id,
+            name: name,
+            sport: .strength,
+            duration: 600,
+            blocks: [],
+            description: nil,
+            source: .instagram
         )
     }
 }

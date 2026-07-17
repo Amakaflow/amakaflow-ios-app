@@ -1,0 +1,102 @@
+# AMA-2298 visual validation — Library delete for existing imports
+#
+# Proves knowledge + workout Library rows can be deleted with confirmation,
+# list updates without relaunch, and fixture deletes persist across reload.
+# Auth: UITEST_CLERK_TEST_SESSION + UITEST_SKIP_ONBOARDING + fixtures.
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2298_visual,email=claude+clerk_test@amakaflow.dev,name=AMA2298 Visual"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn:
+    text: "Library"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "library_screen"
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_fab"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: "Why zone two still matters"
+    direction: DOWN
+    timeout: 20000
+- assertVisible:
+    id: "af_library_item_knowledge:fixture-zone-two-article"
+- takeScreenshot: docs/ama-2298-visual-evidence/01-before-delete
+# Open knowledge article detail → Delete
+- tapOn:
+    id: "af_library_item_knowledge:fixture-zone-two-article"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "library_detail_screen"
+    timeout: 15000
+- tapOn:
+    id: "af_library_detail_delete"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible: "Delete from Library?"
+    timeout: 10000
+- takeScreenshot: docs/ama-2298-visual-evidence/02-confirm-alert
+# Alert action buttons: prefer text (system alerts often omit a11y ids).
+- tapOn: "Delete"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_fab"
+    timeout: 15000
+- assertNotVisible:
+    text: "Why zone two still matters"
+- takeScreenshot: docs/ama-2298-visual-evidence/03-after-knowledge-delete
+# Delete a workout import from unified detail
+- scrollUntilVisible:
+    element:
+      text: "HIIT Follow-Along"
+    direction: UP
+    timeout: 20000
+- tapOn:
+    id: "af_library_item_workout:fixture-hiit-001"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_workout_detail_screen"
+    timeout: 15000
+- tapOn:
+    id: "af_workout_detail_delete"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible: "Delete from Library?"
+    timeout: 10000
+- tapOn: "Delete"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_fab"
+    timeout: 15000
+- assertNotVisible:
+    text: "HIIT Follow-Along"
+- takeScreenshot: docs/ama-2298-visual-evidence/04-after-workout-delete

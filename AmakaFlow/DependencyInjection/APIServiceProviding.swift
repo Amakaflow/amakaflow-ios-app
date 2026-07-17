@@ -323,6 +323,14 @@ protocol APIServiceProviding: TelegramLinkAPIProviding, SocialImportAPIProviding
     /// Fetch a saved Library item detail from the mobile BFF.
     func getLibraryItem(id: String) async throws -> Components.Schemas.LibraryItemDetail
 
+    /// Delete a knowledge card (Library knowledge import) via mobile BFF.
+    /// AMA-2298: `DELETE /v1/knowledge/cards/{card_id}`.
+    func deleteKnowledgeCard(id: String) async throws
+
+    /// Delete a saved workout import via mapper-api.
+    /// AMA-2298: `DELETE /workouts/{workout_id}`.
+    func deleteWorkout(id: String) async throws
+
     // MARK: - Messaging Channels (AMA-2027)
 
     /// Fetch messaging channels and coaching-delivery prefs from the mobile BFF.

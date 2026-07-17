@@ -3,6 +3,7 @@
 //  AmakaFlow
 //
 //  AMA-2005: saved-content Library detail screen.
+//  AMA-2298: Delete knowledge Library imports with confirmation.
 //
 
 import SwiftUI
@@ -13,9 +14,18 @@ struct LibraryDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @State private var loadedItemID: String?
+    @State private var showingDeleteConfirm = false
+    @State private var isDeleting = false
+    /// AMA-2298: delete saved knowledge import; return `true` to dismiss.
+    var onDelete: (() async -> Bool)?
 
-    init(itemID: String, viewModel: LibraryDetailViewModel? = nil) {
+    init(
+        itemID: String,
+        viewModel: LibraryDetailViewModel? = nil,
+        onDelete: (() async -> Bool)? = nil
+    ) {
         self.itemID = itemID
+        self.onDelete = onDelete
         _viewModel = StateObject(wrappedValue: viewModel ?? LibraryDetailViewModel())
     }
 
@@ -53,6 +63,24 @@ struct LibraryDetailView: View {
                 .padding(.horizontal, Theme.Spacing.lg)
                 .padding(.top, Theme.Spacing.md)
             }
+        }
+        .alert("Delete from Library?", isPresented: $showingDeleteConfirm) {
+            Button("Delete", role: .destructive) {
+                Task {
+                    guard let onDelete else { return }
+                    isDeleting = true
+                    let deleted = await onDelete()
+                    isDeleting = false
+                    if deleted {
+                        dismiss()
+                    }
+                }
+            }
+            .accessibilityIdentifier("af_library_delete_confirm")
+            Button("Cancel", role: .cancel) {}
+                .accessibilityIdentifier("af_library_delete_cancel")
+        } message: {
+            Text("“\(viewModel.item?.title ?? "This item")” will be removed. You can import it again later.")
         }
         .task(id: itemID) {
             guard loadedItemID != itemID else { return }
@@ -165,7 +193,21 @@ struct LibraryDetailView: View {
             subtitle: viewModel.sourceCaption,
             backIdentifier: "af_library_detail_back",
             backAction: { dismiss() },
-            right: { EmptyView() }
+            right: {
+                if onDelete != nil {
+                    Button {
+                        showingDeleteConfirm = true
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(Theme.Colors.accentRed)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isDeleting)
+                    .accessibilityLabel("Delete")
+                    .accessibilityIdentifier("af_library_detail_delete")
+                }
+            }
         )
     }
 

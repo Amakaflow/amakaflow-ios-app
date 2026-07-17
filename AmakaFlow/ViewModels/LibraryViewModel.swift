@@ -4,6 +4,8 @@
 //
 //  AMA-2004: saved-content Library tab state + filters.
 //  AMA-2291: merge saved workouts into Library; route workouts to unified detail.
+//  AMA-2298: delete knowledge + workout Library imports (optimistic, recoverable).
+//  AMA-2297: suppress Library -999 cancelled errors on superseded reloads.
 //
 
 import Combine
@@ -27,6 +29,7 @@ final class LibraryViewModel: ObservableObject {
 
     enum FailedAction: Equatable {
         case load
+        case delete(LibraryListEntry)
     }
 
     @Published private(set) var state: ScreenState = .loading
@@ -43,11 +46,25 @@ final class LibraryViewModel: ObservableObject {
     private let apiService: APIServiceProviding
     private var allItems: [LibraryItem] = []
     private var allWorkouts: [Workout] = []
+    /// Serializes delete so a second tap cannot race the optimistic restore path.
+    private var isDeleting = false
+    /// Bumped when a delete starts so in-flight `load()` results are dropped.
+    private var contentEpoch = 0
     /// Bumps on each load(); stale completions ignore cancelled superseded requests.
     private var loadGeneration = 0
 
     init(apiService: APIServiceProviding? = nil) {
         self.apiService = apiService ?? AppDependencies.current.apiService
+    }
+
+    /// Toast title for the current recoverable error (load vs delete).
+    var errorToastTitle: String {
+        switch lastFailedAction {
+        case .delete:
+            return "Couldn't delete Library item"
+        case .load, .none:
+            return "Couldn't load Library"
+        }
     }
 
     var savedSubtitle: String {
@@ -99,14 +116,20 @@ final class LibraryViewModel: ObservableObject {
     }
 
     func load() async {
+        // Avoid stomping an in-flight optimistic delete.
+        guard !isDeleting else { return }
+
         loadGeneration += 1
         let generation = loadGeneration
+        let epoch = contentEpoch
         let hadContent = !allItems.isEmpty || !allWorkouts.isEmpty
         if !hadContent { state = .loading }
         ctaError = nil
         lastFailedAction = nil
 
-        func isStale() -> Bool { generation != loadGeneration }
+        func isStale() -> Bool {
+            generation != loadGeneration || epoch != contentEpoch || isDeleting
+        }
 
         do {
             // AMA-2004: fetch knowledge cards for multi-kind client filtering.
@@ -148,7 +171,6 @@ final class LibraryViewModel: ObservableObject {
                 logSuppressedLoad(reason: "stale_before_apply", generation: generation)
                 return
             }
-
             allItems = response.items ?? []
             allWorkouts = WorkoutLibraryDetailStore.enrichCollection(workouts)
             workoutsByID = Dictionary(uniqueKeysWithValues: allWorkouts.map { ($0.id, $0) })
@@ -173,12 +195,101 @@ final class LibraryViewModel: ObservableObject {
         }
     }
 
-    func retryLastAction() async {
+    /// - Returns: `true` when a delete retry removed the entry (detail should dismiss).
+    @discardableResult
+    func retryLastAction() async -> Bool {
         switch lastFailedAction {
         case .load:
             await load()
+            return false
+        case .delete(let entry):
+            return await deleteEntry(entry)
         case .none:
-            break
+            return false
+        }
+    }
+
+    /// Resolve which delete API a unified-workout detail should call.
+    func deleteTarget(forWorkoutID workoutID: String) -> LibraryListEntry? {
+        if let workout = workoutsByID[workoutID] {
+            return .workout(workout)
+        }
+        if let knowledge = allItems.first(where: { $0.id == workoutID }) {
+            return .knowledge(knowledge)
+        }
+        return nil
+    }
+
+    /// Knowledge detail delete target.
+    func deleteTarget(forKnowledgeID itemID: String) -> LibraryListEntry? {
+        guard let knowledge = allItems.first(where: { $0.id == itemID }) else { return nil }
+        return .knowledge(knowledge)
+    }
+
+    /// Optimistic remove from Library; restores row + toast on API failure.
+    /// - Returns: `true` when the remote delete succeeded.
+    @discardableResult
+    func deleteEntry(_ entry: LibraryListEntry) async -> Bool {
+        guard !isDeleting else { return false }
+        isDeleting = true
+        // Invalidate in-flight loads so they cannot re-add the row mid-delete.
+        contentEpoch += 1
+        let epoch = contentEpoch
+        defer { isDeleting = false }
+
+        let startedAt = CFAbsoluteTimeGetCurrent()
+        ctaError = nil
+        lastFailedAction = nil
+
+        let previousItems = allItems
+        let previousWorkouts = allWorkouts
+
+        switch entry {
+        case .knowledge(let item):
+            allItems.removeAll { $0.id == item.id }
+        case .workout(let workout):
+            // Keep any ID-colliding knowledge card; it reappears after workout delete.
+            allWorkouts.removeAll { $0.id == workout.id }
+        }
+        workoutsByID = Dictionary(uniqueKeysWithValues: allWorkouts.map { ($0.id, $0) })
+        applyFilters()
+
+        do {
+            switch entry {
+            case .knowledge(let item):
+                try await apiService.deleteKnowledgeCard(id: item.id)
+            case .workout(let workout):
+                try await apiService.deleteWorkout(id: workout.id)
+            }
+
+            let elapsedMs = Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1000)
+            DebugLogService.shared.log(
+                "Library delete",
+                details: "entry=\(entry.id) elapsedMs=\(elapsedMs)",
+                metadata: [
+                    "entryId": entry.id,
+                    "elapsedMs": "\(elapsedMs)"
+                ]
+            )
+
+            // Notify other surfaces. `object: self` lets LibraryView skip a redundant
+            // full refetch after its own optimistic remove (efficiency bar).
+            NotificationCenter.default.post(name: .libraryContentDidChange, object: self)
+            return true
+        } catch {
+            // Only restore if this delete is still the latest content mutation.
+            if epoch == contentEpoch {
+                allItems = previousItems
+                allWorkouts = previousWorkouts
+                workoutsByID = Dictionary(uniqueKeysWithValues: allWorkouts.map { ($0.id, $0) })
+                applyFilters()
+            }
+            if CTAError.isCancellation(error) {
+                return false
+            }
+            ctaError = CTAError.map(error)
+            lastFailedAction = .delete(entry)
+            return false
         }
     }
 
@@ -225,7 +336,7 @@ final class LibraryViewModel: ObservableObject {
         let currentError = ctaError
         ctaError = nil
 
-        if lastFailedAction == .load, let currentError, allItems.isEmpty, allWorkouts.isEmpty {
+        if case .load = lastFailedAction, let currentError, allItems.isEmpty, allWorkouts.isEmpty {
             state = .error(currentError)
         }
     }
@@ -233,10 +344,25 @@ final class LibraryViewModel: ObservableObject {
     func reportError(reporter: ErrorReporting? = nil) {
         guard let ctaError else { return }
         let reporter = reporter ?? ErrorReporter.shared
+        let action: String
+        let endpoint: String
+        switch lastFailedAction {
+        case .delete(let entry):
+            action = "library_item_delete"
+            switch entry {
+            case .knowledge:
+                endpoint = "/v1/knowledge/cards/{card_id}"
+            case .workout:
+                endpoint = "/workouts/{workout_id}"
+            }
+        case .load, .none:
+            action = "library_items_load"
+            endpoint = "/v1/library/items"
+        }
         reporter.report(
-            action: "library_items_load",
+            action: action,
             error: ctaError,
-            endpoint: "/v1/library/items",
+            endpoint: endpoint,
             userId: PairingService.shared.userProfile?.id
         )
     }
@@ -247,7 +373,8 @@ final class LibraryViewModel: ObservableObject {
         var metadata: [String: String] = [
             "reason": reason,
             "generation": "\(generation)",
-            "currentGeneration": "\(loadGeneration)"
+            "currentGeneration": "\(loadGeneration)",
+            "contentEpoch": "\(contentEpoch)"
         ]
         if let error {
             metadata["error"] = String(describing: error)

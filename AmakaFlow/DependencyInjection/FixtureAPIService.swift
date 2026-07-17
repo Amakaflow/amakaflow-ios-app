@@ -57,6 +57,15 @@ class FixtureAPIService: APIServiceProviding {
     ]
     var libraryItemsEmpty = false
     var libraryItemDetail404 = false
+    /// AMA-2298: injectable delete results for Library unit / Maestro failure paths.
+    var deleteKnowledgeCardResult: Result<Void, Error> = .success(())
+    var deleteWorkoutResult: Result<Void, Error> = .success(())
+    private(set) var deleteKnowledgeCardCalled = false
+    private(set) var deleteWorkoutCalled = false
+    private(set) var lastDeletedKnowledgeCardID: String?
+    private(set) var lastDeletedWorkoutID: String?
+    /// In-memory workout cache so fixture deletes survive reload without app relaunch.
+    private var fixtureWorkoutsCache: [Workout]?
     private var fixtureMessagingDeliveryLive = false
     private var fixtureMessagingChannels: [Components.Schemas.MessagingChannel] = [
         Components.Schemas.MessagingChannel(
@@ -252,17 +261,18 @@ class FixtureAPIService: APIServiceProviding {
     // MARK: - Reads (from fixtures)
 
     func fetchWorkouts(isRetry: Bool) async throws -> [Workout] {
-        do {
-            let loaded = try FixtureLoader.loadWorkouts()
-            if !loaded.isEmpty {
-                return loaded
-            }
-            print("[FixtureAPIService] FixtureLoader returned empty — seeding AMA-2290 phone strength workout")
-            return [Self.phoneStrengthFixtureWorkout]
-        } catch {
-            print("[FixtureAPIService] FixtureLoader failed (\(error)) — seeding AMA-2290 phone strength workout")
-            return [Self.phoneStrengthFixtureWorkout]
+        try loadedFixtureWorkouts()
+    }
+
+    /// Cache-backed fixture workouts so deletes persist without relaunch.
+    /// Preserves `UITEST_FIXTURE_STATE=empty` (`[]`) and `=error` (throws).
+    private func loadedFixtureWorkouts() throws -> [Workout] {
+        if let fixtureWorkoutsCache {
+            return fixtureWorkoutsCache
         }
+        let loaded = try FixtureLoader.loadWorkouts()
+        fixtureWorkoutsCache = loaded
+        return loaded
     }
 
     /// Guaranteed strength fixture for phone-first record → backfill visual / dogfood path.
@@ -702,6 +712,27 @@ class FixtureAPIService: APIServiceProviding {
             throw APIError.serverErrorWithBody(404, "{\"detail\":\"Library item not found\"}")
         }
         return item
+    }
+
+    /// AMA-2298: mutate in-memory library fixtures (no network).
+    func deleteKnowledgeCard(id: String) async throws {
+        deleteKnowledgeCardCalled = true
+        lastDeletedKnowledgeCardID = id
+        try deleteKnowledgeCardResult.get()
+        fixtureLibraryItems.removeAll { $0.id == id }
+        fixtureLibraryItemDetails.removeValue(forKey: id)
+        print("[FixtureAPIService] Stub: deleteKnowledgeCard(\(id)) -> success")
+    }
+
+    /// AMA-2298: mutate in-memory workout fixtures (no network).
+    func deleteWorkout(id: String) async throws {
+        deleteWorkoutCalled = true
+        lastDeletedWorkoutID = id
+        try deleteWorkoutResult.get()
+        var workouts = try loadedFixtureWorkouts()
+        workouts.removeAll { $0.id == id }
+        fixtureWorkoutsCache = workouts
+        print("[FixtureAPIService] Stub: deleteWorkout(\(id)) -> success")
     }
 
     // MARK: - Messaging Channels (AMA-2027)
