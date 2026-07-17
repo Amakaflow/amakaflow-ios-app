@@ -39,7 +39,7 @@ struct ThemeTests {
         #expect(hexString(for: Theme.Colors.textPrimary, style: .dark) == "#FAFAFA")
 
         #expect(hexString(for: Theme.Colors.inputBackground, style: .light) == "#F3F3F5")
-        #expect(hexString(for: Theme.Colors.inputBackground, style: .dark) == "#3D3D3D")
+        #expect(hexString(for: Theme.Colors.inputBackground, style: .dark) == "#1F1F1F")
     }
 
     @Test func geistFontsAreBundledAndLoadableByPostScriptName() {
