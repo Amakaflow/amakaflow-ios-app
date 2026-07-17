@@ -156,6 +156,8 @@ struct SocialImportExercise: Identifiable, Equatable, Codable {
     var name: String
     var sets: Int?
     var reps: Int?
+    /// Textual rep prescription when not a plain integer (e.g. "8-10").
+    var repsRange: String?
     var seconds: Int?
     var distanceMeters: Int?
     /// Load / tempo / instruction line (e.g. "70 kg", "build to heavy").
@@ -269,7 +271,7 @@ struct SocialImportDraft: Equatable {
     }
 
     func toPreviewWorkout() -> Workout {
-        let mappedBlocks: [Block] = blocks.map { block in
+        let mappedBlocks: [Block] = blocksForPersistence().map { block in
             Block(
                 label: block.label,
                 structure: Self.previewStructure(for: block),
@@ -392,7 +394,11 @@ struct SocialImportDraft: Equatable {
         guard let name, !name.isEmpty else { return nil }
 
         let sets = item["sets"] as? Int ?? defaultSets(from: item)
-        let reps = item["reps"] as? Int ?? (item["reps"] as? String).flatMap(Int.init)
+        let repsRaw = item["reps"]
+        let repsString = repsRaw as? String
+        let reps = repsRaw as? Int ?? repsString.flatMap(Int.init)
+        let repsRange = (item["reps_range"] as? String)
+            ?? repsString.flatMap { Int($0) == nil ? $0 : nil }
         let seconds = item["duration_sec"] as? Int ?? item["duration_seconds"] as? Int ?? item["seconds"] as? Int
         let distanceMeters = item["distance_m"] as? Int ?? item["distanceMeters"] as? Int
 
@@ -408,6 +414,7 @@ struct SocialImportDraft: Equatable {
             name: name,
             sets: sets,
             reps: reps,
+            repsRange: repsRange,
             seconds: seconds,
             distanceMeters: distanceMeters,
             load: load ?? instruction,
@@ -507,7 +514,7 @@ extension SocialImportExercise {
             name: name,
             canonicalName: nil,
             sets: sets,
-            reps: reps.map(String.init),
+            reps: repsRange ?? reps.map(String.init),
             durationSeconds: seconds,
             load: resolved.load,
             restSeconds: 60,

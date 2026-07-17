@@ -217,7 +217,7 @@ class ActivityHistoryViewModel: ObservableObject {
                 let sample = WorkoutCompletion.todayDiarySampleData(now: now, calendar: calendar)
                 completions = fetched + sample
                 hasMoreData = fetched.count >= pageSize
-                currentOffset = completions.count
+                currentOffset = fetched.count
                 isLoading = false
                 logger.info("loadCompletions: appended DEBUG today diary sample to \(fetched.count) API completions")
                 return

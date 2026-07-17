@@ -378,6 +378,9 @@ extension APIService {
             object["distance_m"] = meters
         } else {
             if let sets = exercise.sets { object["sets"] = sets }
+            if let range = exercise.repsRange?.trimmingCharacters(in: .whitespacesAndNewlines), !range.isEmpty {
+                object["reps_range"] = range
+            }
             if let reps = exercise.reps { object["reps"] = reps }
         }
         if let loadText = exercise.load?.trimmingCharacters(in: .whitespacesAndNewlines), !loadText.isEmpty {

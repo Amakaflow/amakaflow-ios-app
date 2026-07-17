@@ -74,24 +74,39 @@ struct WorkoutSaveRequest: Codable {
             SocialImportBlock(
                 label: block.label,
                 rounds: max(1, block.rounds),
-                exercises: block.exercises.map { exercise in
-                    SocialImportExercise(
-                        name: exercise.name,
-                        sets: exercise.sets,
-                        reps: Int(exercise.reps ?? ""),
-                        seconds: exercise.durationSeconds,
-                        distanceMeters: exercise.distance.map { Int($0) },
-                        load: exercise.load.flatMap { load in
-                            if load.value > 0, !load.unit.isEmpty {
-                                return "\(load.value) \(load.unit)"
-                            }
-                            return load.unit.isEmpty ? nil : load.unit
-                        },
-                        focus: exercise.focus,
-                        notes: exercise.notes
-                    )
-                }
+                exercises: block.exercises.map { socialImportExercise(from: $0) }
             )
         }
+    }
+
+    private static func socialImportExercise(from exercise: Exercise) -> SocialImportExercise {
+        let repsText = exercise.reps?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let numericReps: Int? = {
+            guard let repsText, !repsText.isEmpty else { return nil }
+            if let value = Int(repsText) { return value }
+            let parsed = BlockToIntervalConverter.parseReps(repsText)
+            return parsed > 0 ? parsed : nil
+        }()
+        let repsRange: String? = {
+            guard let repsText, !repsText.isEmpty, Int(repsText) == nil else { return nil }
+            return repsText
+        }()
+
+        return SocialImportExercise(
+            name: exercise.name,
+            sets: exercise.sets,
+            reps: numericReps,
+            repsRange: repsRange,
+            seconds: exercise.durationSeconds,
+            distanceMeters: exercise.distance.map { Int($0) },
+            load: exercise.load.flatMap { load in
+                if load.value > 0, !load.unit.isEmpty {
+                    return "\(load.value) \(load.unit)"
+                }
+                return load.unit.isEmpty ? nil : load.unit
+            },
+            focus: exercise.focus,
+            notes: exercise.notes
+        )
     }
 }

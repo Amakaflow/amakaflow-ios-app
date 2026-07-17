@@ -371,6 +371,36 @@ final class SocialImportTests: XCTestCase {
         XCTAssertEqual(metadata?["source_url"] as? String, "https://www.instagram.com/reel/DX9abc/")
     }
 
+    func testMapperSaveBodyPreservesTextualRepsRange() throws {
+        let request = WorkoutSaveRequest(
+            name: "Range Day",
+            sport: "strength",
+            intervals: [],
+            source: WorkoutSource.manual.rawValue,
+            blocks: [
+                SocialImportBlock(
+                    label: "Main",
+                    rounds: 1,
+                    exercises: [
+                        SocialImportExercise(
+                            name: "Squat",
+                            sets: 3,
+                            reps: 10,
+                            repsRange: "8-10"
+                        )
+                    ]
+                )
+            ]
+        )
+
+        let body = try APIService.mapperSaveBody(from: request, source: WorkoutSource.manual.rawValue)
+        let workoutData = body["workout_data"] as? [String: Any]
+        let blocks = workoutData?["blocks"] as? [[String: Any]]
+        let exercises = blocks?.first?["exercises"] as? [[String: Any]]
+        XCTAssertEqual(exercises?.first?["reps_range"] as? String, "8-10")
+        XCTAssertEqual(exercises?.first?["reps"] as? Int, 10)
+    }
+
     func testMapperSaveBodyRejectsEmptyExerciseList() {
         let request = WorkoutSaveRequest(
             name: "Empty",

@@ -8,7 +8,10 @@
 
 import Combine
 import Foundation
+import os.log
 import SwiftUI
+
+private let logger = Logger(subsystem: "com.myamaka.AmakaFlowCompanion", category: "SocialImport")
 
 @MainActor
 final class SocialImportViewModel: ObservableObject {
@@ -188,8 +191,16 @@ final class SocialImportViewModel: ObservableObject {
                 self.draft = draft
                 canEdit = true
                 phase = .saved(workoutId: workout.id)
-            case .failure:
-                phase = .failed(.parse(message: "Saved to the server but local detail cache failed — try again."))
+            case .failure(let error):
+                logger.warning("saveToLibrary: server save succeeded but local detail cache failed — \(String(describing: error))")
+                DebugLogService.shared.log(
+                    "Social import: local detail cache failed after server save",
+                    details: String(describing: error),
+                    metadata: ["workoutId": workout.id]
+                )
+                self.draft = draft
+                canEdit = true
+                phase = .saved(workoutId: workout.id)
             }
         } catch {
             phase = .failed(SocialImportFailure.map(error))
