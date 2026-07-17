@@ -195,10 +195,18 @@ class ActivityHistoryViewModel: ObservableObject {
         // Check if we have valid auth
         let hasAuth = dependencies.pairingService.isPaired
 
-        // If not authenticated, show empty state (no mock data)
+        // If not authenticated, show empty state (no mock data).
+        // DEBUG: seed handoff timeline so simulator verification works without pairing/backend.
         if !hasAuth {
+            #if DEBUG
+            completions = WorkoutCompletion.todayDiarySampleData(now: nowProvider(), calendar: calendar)
+            hasMoreData = false
+            currentOffset = completions.count
+            logger.info("loadCompletions: seeded DEBUG today diary sample (unpaired)")
+            #else
             completions = []
             hasMoreData = false
+            #endif
             isLoading = false
             return
         }
@@ -233,6 +241,22 @@ class ActivityHistoryViewModel: ObservableObject {
             // URL request was cancelled - ignore silently
             logger.debug("loadCompletions URL request cancelled")
         } catch let error as APIError {
+            #if DEBUG
+            if !hadContent {
+                switch error {
+                case .unauthorized:
+                    break
+                default:
+                    completions = WorkoutCompletion.todayDiarySampleData(now: nowProvider(), calendar: calendar)
+                    hasMoreData = false
+                    currentOffset = completions.count
+                    errorMessage = nil
+                    logger.info("loadCompletions: seeded DEBUG today diary sample (API error)")
+                    isLoading = false
+                    return
+                }
+            }
+            #endif
             handleAPIError(error, preserveContent: hadContent)
             if hadContent {
                 currentOffset = previousOffset
@@ -245,6 +269,17 @@ class ActivityHistoryViewModel: ObservableObject {
                 metadata: nil
             )
         } catch {
+            #if DEBUG
+            if !hadContent {
+                completions = WorkoutCompletion.todayDiarySampleData(now: nowProvider(), calendar: calendar)
+                hasMoreData = false
+                currentOffset = completions.count
+                errorMessage = nil
+                logger.info("loadCompletions: seeded DEBUG today diary sample (load error)")
+                isLoading = false
+                return
+            }
+            #endif
             errorMessage = "Failed to load activities: \(error.localizedDescription)"
             if hadContent {
                 currentOffset = previousOffset

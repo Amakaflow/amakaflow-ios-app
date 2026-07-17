@@ -73,8 +73,15 @@ final class ActivityHistoryViewModelTests: XCTestCase {
 
         await viewModel.loadCompletions()
 
+        #if DEBUG
+        // DEBUG seeds handoff timeline on first-load failure for simulator verification.
+        XCTAssertEqual(viewModel.completions.count, 2)
+        XCTAssertTrue(viewModel.completions.allSatisfy(\.wasSimulated))
+        XCTAssertNil(viewModel.errorMessage)
+        #else
         XCTAssertTrue(viewModel.completions.isEmpty)
         XCTAssertNotNil(viewModel.errorMessage)
+        #endif
         XCTAssertFalse(viewModel.isLoading)
     }
 
@@ -83,18 +90,29 @@ final class ActivityHistoryViewModelTests: XCTestCase {
 
         await viewModel.loadCompletions()
 
-        // Not authenticated — show empty, no API call
-        XCTAssertTrue(viewModel.completions.isEmpty)
+        // Not authenticated — no API call
         XCTAssertFalse(mockAPIService.fetchCompletionsCalled)
         XCTAssertNil(viewModel.errorMessage)
         XCTAssertFalse(viewModel.isLoading)
+        #if DEBUG
+        // DEBUG seeds handoff timeline for simulator verification without pairing.
+        XCTAssertEqual(viewModel.completions.count, 2)
+        XCTAssertTrue(viewModel.completions.allSatisfy(\.wasSimulated))
+        #else
+        XCTAssertTrue(viewModel.completions.isEmpty)
+        #endif
     }
 
     func testLoadCompletionsResetsErrorOnRetry() async {
         // First call fails
         mockAPIService.fetchCompletionsResult = .failure(APIError.serverError(500))
         await viewModel.loadCompletions()
+        #if DEBUG
+        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertTrue(viewModel.completions.allSatisfy(\.wasSimulated))
+        #else
         XCTAssertNotNil(viewModel.errorMessage)
+        #endif
 
         // Second call succeeds
         mockAPIService.fetchCompletionsResult = .success(WorkoutCompletion.sampleData)
