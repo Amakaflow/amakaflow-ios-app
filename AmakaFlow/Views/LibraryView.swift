@@ -74,8 +74,16 @@ struct LibraryView: View {
                     error: error,
                     onRetry: error.isRetryable ? {
                         Task {
+                            // Capture before retry clears `lastFailedAction`.
+                            let failedDestination: LibraryDestination?
+                            if case .delete(let entry) = viewModel.lastFailedAction {
+                                failedDestination = entry.destination
+                            } else {
+                                failedDestination = nil
+                            }
                             let deleted = await viewModel.retryLastAction()
-                            if deleted, !navigationPath.isEmpty {
+                            // Only pop if the visible detail still belongs to that entry.
+                            if deleted, navigationPath.last == failedDestination {
                                 navigationPath.removeLast()
                             }
                         }
