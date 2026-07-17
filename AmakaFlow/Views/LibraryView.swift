@@ -15,7 +15,7 @@ struct LibraryView: View {
     @State private var searchText = ""
     @State private var sourceFilter: DDPlatform = .all
     @State private var pendingDelete: LibraryListEntry?
-    @State private var navigationPath = NavigationPath()
+    @State private var navigationPath: [LibraryDestination] = []
 
     init(viewModel: LibraryViewModel? = nil) {
         _viewModel = StateObject(wrappedValue: viewModel ?? LibraryViewModel())
