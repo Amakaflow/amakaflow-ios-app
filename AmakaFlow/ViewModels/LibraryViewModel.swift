@@ -8,6 +8,9 @@
 
 import Combine
 import Foundation
+import os.log
+
+private let libraryLogger = Logger(subsystem: "com.myamaka.AmakaFlowCompanion", category: "Library")
 
 @MainActor
 final class LibraryViewModel: ObservableObject {
@@ -40,6 +43,8 @@ final class LibraryViewModel: ObservableObject {
     private let apiService: APIServiceProviding
     private var allItems: [LibraryItem] = []
     private var allWorkouts: [Workout] = []
+    /// Bumps on each load(); stale completions ignore cancelled superseded requests.
+    private var loadGeneration = 0
 
     init(apiService: APIServiceProviding? = nil) {
         self.apiService = apiService ?? AppDependencies.current.apiService
@@ -94,10 +99,14 @@ final class LibraryViewModel: ObservableObject {
     }
 
     func load() async {
+        loadGeneration += 1
+        let generation = loadGeneration
         let hadContent = !allItems.isEmpty || !allWorkouts.isEmpty
         if !hadContent { state = .loading }
         ctaError = nil
         lastFailedAction = nil
+
+        func isStale() -> Bool { generation != loadGeneration }
 
         do {
             // AMA-2004: fetch knowledge cards for multi-kind client filtering.
@@ -106,14 +115,38 @@ final class LibraryViewModel: ObservableObject {
             async let workoutsTask = apiService.fetchWorkouts(isRetry: false)
 
             let response = try await knowledgeTask
+            guard !isStale() else {
+                logSuppressedLoad(reason: "stale_after_listLibraryItems", generation: generation)
+                return
+            }
+
             let workouts: [Workout]
             do {
                 workouts = try await workoutsTask
             } catch {
-                // Knowledge still usable if workout fetch fails — surface toast, keep going.
-                ctaError = CTAError.map(error)
-                lastFailedAction = .load
-                workouts = allWorkouts
+                guard !isStale() else {
+                    logSuppressedLoad(reason: "stale_after_fetchWorkouts", generation: generation)
+                    return
+                }
+                if CTAError.isCancellation(error) {
+                    // Superseded request — keep whatever workouts we already had.
+                    logSuppressedLoad(
+                        reason: "fetchWorkouts_cancelled",
+                        generation: generation,
+                        error: error
+                    )
+                    workouts = allWorkouts
+                } else {
+                    // Knowledge still usable if workout fetch fails — surface toast, keep going.
+                    ctaError = CTAError.map(error)
+                    lastFailedAction = .load
+                    workouts = allWorkouts
+                }
+            }
+
+            guard !isStale() else {
+                logSuppressedLoad(reason: "stale_before_apply", generation: generation)
+                return
             }
 
             allItems = response.items ?? []
@@ -121,6 +154,18 @@ final class LibraryViewModel: ObservableObject {
             workoutsByID = Dictionary(uniqueKeysWithValues: allWorkouts.map { ($0.id, $0) })
             applyFilters()
         } catch {
+            guard !isStale() else {
+                logSuppressedLoad(reason: "stale_listLibraryItems_error", generation: generation)
+                return
+            }
+            if CTAError.isCancellation(error) {
+                logSuppressedLoad(
+                    reason: "listLibraryItems_cancelled",
+                    generation: generation,
+                    error: error
+                )
+                return
+            }
             let mapped = CTAError.map(error)
             ctaError = mapped
             if !hadContent { state = .error(mapped) }
@@ -193,6 +238,32 @@ final class LibraryViewModel: ObservableObject {
             error: ctaError,
             endpoint: "/v1/library/items",
             userId: PairingService.shared.userProfile?.id
+        )
+    }
+
+    /// Debug-only trail when a superseded Library reload is dropped (incl. URLError -999).
+    /// Surfaces in Console (os.Logger) and Settings → Debug Log for TestFlight diagnosis.
+    private func logSuppressedLoad(reason: String, generation: Int, error: Error? = nil) {
+        var metadata: [String: String] = [
+            "reason": reason,
+            "generation": "\(generation)",
+            "currentGeneration": "\(loadGeneration)"
+        ]
+        if let error {
+            metadata["error"] = String(describing: error)
+            if let urlError = error as? URLError {
+                metadata["urlErrorCode"] = "\(urlError.code.rawValue)"
+            }
+        }
+        let details = metadata
+            .sorted { $0.key < $1.key }
+            .map { "\($0.key)=\($0.value)" }
+            .joined(separator: ", ")
+        libraryLogger.debug("load suppressed (\(reason)): \(details)")
+        DebugLogService.shared.log(
+            "Library reload superseded",
+            details: details,
+            metadata: metadata
         )
     }
 
