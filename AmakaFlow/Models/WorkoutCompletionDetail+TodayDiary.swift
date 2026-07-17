@@ -8,70 +8,67 @@
 import Foundation
 
 extension WorkoutCompletionDetail {
-    /// Garmin-synced run for Today diary fixtures (no structure editor).
+    /// Strava-imported lunch run for Today diary fixtures (no structure editor).
     static var garminTodaySample: WorkoutCompletionDetail {
         let window = WorkoutCompletion.todayDiarySampleData().first {
-            $0.id == "today-garmin-run"
+            $0.id == "today-lunch-run"
         }
         let startedAt = window?.startedAt ?? Date()
-        let endedAt = window?.endedAt ?? startedAt.addingTimeInterval(1800)
+        let endedAt = window?.endedAt ?? startedAt.addingTimeInterval(59 * 60)
         return WorkoutCompletionDetail(
-            id: "today-garmin-run",
-            workoutName: "Morning Easy Run",
+            id: "today-lunch-run",
+            workoutName: "Lunch Run",
             startedAt: startedAt,
             endedAt: endedAt,
-            durationSeconds: 1800,
-            avgHeartRate: 148,
+            durationSeconds: 59 * 60,
+            avgHeartRate: 143,
             maxHeartRate: 165,
             minHeartRate: 110,
-            activeCalories: 310,
-            totalCalories: 340,
-            steps: 6200,
-            distanceMeters: 5200,
+            activeCalories: 677,
+            totalCalories: 710,
+            steps: 9800,
+            distanceMeters: 8200,
             source: .garmin,
             deviceInfo: CompletionDeviceInfo(model: "Forerunner 965", platform: "garmin", osVersion: nil),
             heartRateSamples: nil,
             syncedToStrava: true,
-            stravaActivityId: "strava-fixture-run",
-            workoutId: "workout-garmin-run",
+            stravaActivityId: "strava-fixture-lunch-run",
+            workoutId: "workout-lunch-run",
             workoutStructure: [
                 .warmup(seconds: 300, target: "Easy"),
-                .distance(meters: 4000, target: "Z2"),
+                .distance(meters: 7200, target: "Z2"),
                 .cooldown(seconds: 300, target: "Walk")
             ]
         )
     }
 
-    /// Phone-completed strength for Today diary fixtures.
+    /// Sparse Strava lunch workout — needs activity mapping (dd-today-dark.png).
     static var phoneTodaySample: WorkoutCompletionDetail {
         let window = WorkoutCompletion.todayDiarySampleData().first {
-            $0.id == "today-phone-strength"
+            $0.id == "today-lunch-workout"
         }
         let startedAt = window?.startedAt ?? Date()
-        let endedAt = window?.endedAt ?? startedAt.addingTimeInterval(1800)
+        let endedAt = window?.endedAt ?? startedAt.addingTimeInterval(8 * 60)
         return WorkoutCompletionDetail(
-            id: "today-phone-strength",
-            workoutName: "Upper Body Strength",
+            id: "today-lunch-workout",
+            workoutName: "Lunch Workout",
             startedAt: startedAt,
             endedAt: endedAt,
-            durationSeconds: 1800,
-            avgHeartRate: 118,
-            maxHeartRate: 145,
-            minHeartRate: 90,
-            activeCalories: 245,
-            totalCalories: 270,
+            durationSeconds: 8 * 60,
+            avgHeartRate: nil,
+            maxHeartRate: nil,
+            minHeartRate: nil,
+            activeCalories: 50,
+            totalCalories: 55,
             steps: nil,
             distanceMeters: nil,
-            source: .phone,
+            source: .manual,
             deviceInfo: CompletionDeviceInfo(model: "iPhone", platform: "ios", osVersion: "18.0"),
             heartRateSamples: nil,
-            syncedToStrava: false,
-            stravaActivityId: nil,
-            workoutId: "workout-phone-strength",
-            workoutStructure: [
-                .reps(sets: 3, reps: 10, name: "Bench Press", load: "135 lb", restSec: 90, followAlongUrl: nil),
-                .reps(sets: 3, reps: 12, name: "Rows", load: "95 lb", restSec: 75, followAlongUrl: nil)
-            ]
+            syncedToStrava: true,
+            stravaActivityId: "strava-fixture-lunch-workout",
+            workoutId: nil,
+            workoutStructure: nil
         )
     }
 

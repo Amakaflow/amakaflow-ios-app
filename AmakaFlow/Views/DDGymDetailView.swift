@@ -7,69 +7,98 @@
 
 import SwiftUI
 
+private struct DDGymEquipmentItem: Identifiable, Equatable {
+    let id: String
+    let label: String
+    var isPresent: Bool
+}
+
 struct DDGymDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var isShared = true
+    @State private var toastMessage: String?
 
-    private let freeWeights: [(String, Bool)] = [
-        ("Dumbbells to 50 kg", true),
-        ("Barbells + plates", true),
-        ("Kettlebells", true),
-        ("EZ bar", false)
+    @State private var freeWeights: [DDGymEquipmentItem] = [
+        .init(id: "dumbbells", label: "Dumbbells to 50 kg", isPresent: true),
+        .init(id: "barbells", label: "Barbells + plates", isPresent: true),
+        .init(id: "kettlebells", label: "Kettlebells", isPresent: true),
+        .init(id: "ez-bar", label: "EZ bar", isPresent: false)
     ]
-    private let machines: [(String, Bool)] = [
-        ("Cable crossover", true),
-        ("Leg press", true),
-        ("Lat pulldown", true),
-        ("Chest-supported row", true),
-        ("Hack squat", false)
+    @State private var machines: [DDGymEquipmentItem] = [
+        .init(id: "cable", label: "Cable crossover", isPresent: true),
+        .init(id: "leg-press", label: "Leg press", isPresent: true),
+        .init(id: "lat-pulldown", label: "Lat pulldown", isPresent: true),
+        .init(id: "chest-row", label: "Chest-supported row", isPresent: true),
+        .init(id: "hack-squat", label: "Hack squat", isPresent: false)
     ]
-    private let cardio: [(String, Bool)] = [
-        ("Rower", true),
-        ("SkiErg", true),
-        ("Assault bike", true),
-        ("Sled + turf", false),
-        ("Treadmill", true)
+    @State private var cardio: [DDGymEquipmentItem] = [
+        .init(id: "rower", label: "Rower", isPresent: true),
+        .init(id: "skierg", label: "SkiErg", isPresent: true),
+        .init(id: "assault-bike", label: "Assault bike", isPresent: true),
+        .init(id: "sled", label: "Sled + turf", isPresent: false),
+        .init(id: "treadmill", label: "Treadmill", isPresent: true)
     ]
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                backButton
-                    .padding(.horizontal, 18)
-                    .padding(.top, 10)
-
+        ZStack(alignment: .bottom) {
+            ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    headerRow
-                        .padding(.top, 8)
+                    backButton
+                        .padding(.horizontal, 18)
+                        .padding(.top, 10)
 
-                    sharedGymCard
-                        .padding(.top, 14)
+                    VStack(alignment: .leading, spacing: 0) {
+                        headerRow
+                            .padding(.top, 8)
 
-                    Button {} label: {
-                        Text("Set as active gym")
-                            .ddDisplayText(14.5, weight: .bold)
-                            .foregroundColor(DailyDriver.ink)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(DailyDriver.lime)
-                            .clipShape(Capsule(style: .continuous))
-                            .ddLimeGlow()
+                        sharedGymCard
+                            .padding(.top, 14)
+
+                        Button {
+                            toastMessage = "Now the active gym — builder + swaps adapt to it"
+                        } label: {
+                            Text("Set as active gym")
+                                .ddDisplayText(14.5, weight: .bold)
+                                .foregroundColor(DailyDriver.ink)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(DailyDriver.lime)
+                                .clipShape(Capsule(style: .continuous))
+                                .ddLimeGlow()
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.top, 12)
+                        .accessibilityIdentifier("dd_gym_set_active")
+
+                        equipmentSection(title: "FREE WEIGHTS", items: $freeWeights)
+                        equipmentSection(title: "MACHINES", items: $machines)
+                        equipmentSection(title: "CARDIO & CONDITIONING", items: $cardio)
                     }
-                    .buttonStyle(.plain)
-                    .padding(.top, 12)
-
-                    equipmentSection(title: "FREE WEIGHTS", items: freeWeights)
-                    equipmentSection(title: "MACHINES", items: machines)
-                    equipmentSection(title: "CARDIO & CONDITIONING", items: cardio)
+                    .padding(.horizontal, 18)
+                    .padding(.bottom, 100)
                 }
-                .padding(.horizontal, 18)
-                .padding(.bottom, 100)
+            }
+            .background(DailyDriver.screenBackground.ignoresSafeArea())
+            .navigationBarHidden(true)
+            .preferredColorScheme(.dark)
+
+            if let toastMessage {
+                Text(toastMessage)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(DailyDriver.foreground)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(DailyDriver.backgroundElevated)
+                    .clipShape(Capsule())
+                    .padding(.bottom, 24)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            withAnimation { self.toastMessage = nil }
+                        }
+                    }
             }
         }
-        .background(DailyDriver.screenBackground.ignoresSafeArea())
-        .navigationBarHidden(true)
-        .preferredColorScheme(.dark)
         .accessibilityIdentifier("dd_gym_detail_screen")
     }
 
@@ -133,7 +162,7 @@ struct DDGymDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
-    private func equipmentSection(title: String, items: [(String, Bool)]) -> some View {
+    private func equipmentSection(title: String, items: Binding<[DDGymEquipmentItem]>) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.system(size: 10, weight: .medium, design: .monospaced))
@@ -141,8 +170,15 @@ struct DDGymDetailView: View {
                 .padding(.top, 14)
 
             FlowWrap(spacing: 7) {
-                ForEach(items, id: \.0) { item in
-                    equipmentChip(label: item.0, isPresent: item.1)
+                ForEach(items.wrappedValue.indices, id: \.self) { index in
+                    Button {
+                        items.wrappedValue[index].isPresent.toggle()
+                    } label: {
+                        let item = items.wrappedValue[index]
+                        equipmentChip(label: item.label, isPresent: item.isPresent)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("dd_gym_equipment_\(items.wrappedValue[index].id)")
                 }
             }
         }

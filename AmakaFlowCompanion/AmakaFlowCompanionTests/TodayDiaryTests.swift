@@ -113,7 +113,7 @@ final class TodayDiaryTests: XCTestCase {
             watchSession: MockWatchSession(),
             chatStreamService: MockChatStreamService()
         )
-        let vm = CompletionDetailViewModel(completionId: "today-garmin-run", dependencies: deps)
+        let vm = CompletionDetailViewModel(completionId: "today-lunch-run", dependencies: deps)
         await vm.loadDetail()
 
         XCTAssertFalse(vm.isVerified)
@@ -135,7 +135,7 @@ final class TodayDiaryTests: XCTestCase {
             watchSession: MockWatchSession(),
             chatStreamService: MockChatStreamService()
         )
-        let vm = CompletionDetailViewModel(completionId: "today-phone-strength", dependencies: deps)
+        let vm = CompletionDetailViewModel(completionId: "today-lunch-workout", dependencies: deps)
 
         vm.performDiaryAction(.map)
         XCTAssertTrue(vm.showingMapSheet)
@@ -156,13 +156,16 @@ final class TodayDiaryTests: XCTestCase {
         XCTAssertEqual(vm.enrichNote, "Felt strong")
     }
 
-    func testTodayDiarySampleIncludesGarminAndPhoneWithoutManualEntry() {
+    func testTodayDiarySampleMatchesHandoffTimeline() {
         let diary = WorkoutCompletion.todayDiarySampleData(now: now)
         XCTAssertEqual(diary.count, 2)
-        XCTAssertEqual(diary.map(\.source), [.garmin, .phone])
-        XCTAssertTrue(diary.allSatisfy { calendar.isDate($0.startedAt, inSameDayAs: now) })
+        XCTAssertEqual(diary.map(\.id), ["today-lunch-run", "today-lunch-workout"])
+        XCTAssertEqual(diary.map(\.workoutName), ["Lunch Run", "Lunch Workout"])
+        XCTAssertTrue(diary.allSatisfy(\.wasSimulated))
+        XCTAssertTrue(diary[0].isSyncedToStrava)
+        XCTAssertTrue(diary[1].ddNeedsActivityMapping)
         let filtered = TodayDiary.completionsForToday(diary, now: now, calendar: calendar)
-        XCTAssertEqual(filtered.map(\.id), ["today-garmin-run", "today-phone-strength"])
+        XCTAssertEqual(filtered.map(\.id), ["today-lunch-run", "today-lunch-workout"])
     }
 
     func testTodayDiarySampleStaysOnSameDayBeforeDawn() {
@@ -177,6 +180,15 @@ final class TodayDiaryTests: XCTestCase {
             TodayDiary.completionsForToday(diary, now: early, calendar: calendar).count,
             2
         )
+    }
+
+    func testImportReviewModeSeedsSwapSuggestions() {
+        let seed = DDEditorSeed.initialState(mode: .importReview, workout: nil)
+        XCTAssertEqual(seed.title, "DB Full-body AMRAP")
+        let swapCount = seed.blocks.reduce(0) { partial, block in
+            partial + block.exercises.filter { $0.swapMessage != nil }.count
+        }
+        XCTAssertEqual(swapCount, 2)
     }
 
     // MARK: - Helpers

@@ -9,12 +9,9 @@ import SwiftUI
 
 struct DDDeviceDetailView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var sessionToggles: [String: Bool] = [
-        "Hyrox / HIIT": true,
-        "Runs": false,
-        "Strength": false,
-        "Everything else": false
-    ]
+    @State private var sessionToggles: [String: Bool] = Dictionary(
+        uniqueKeysWithValues: DDDeviceFixture.sessionTypes.map { ($0.key, $0.defaultOn) }
+    )
     @State private var showingImportEditor = false
 
     var body: some View {
@@ -25,12 +22,12 @@ struct DDDeviceDetailView: View {
                     .padding(.top, 10)
 
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("● CONNECTED · SYNCED 2M AGO")
+                    Text(DDDeviceFixture.statusLine)
                         .font(.system(size: 10.5, weight: .medium, design: .monospaced))
                         .foregroundColor(DailyDriver.lime)
                         .padding(.top, 8)
 
-                    Text("Amazfit T-Rex 3")
+                    Text(DDDeviceFixture.deviceName)
                         .ddDisplayText(28, weight: .heavy)
                         .foregroundColor(DailyDriver.foreground)
                         .padding(.top, 6)
@@ -90,13 +87,13 @@ struct DDDeviceDetailView: View {
 
     private var batteryHero: some View {
         HStack(alignment: .lastTextBaseline, spacing: 8) {
-            Text("78")
+            Text("\(DDDeviceFixture.batteryPercent)")
                 .ddDisplayText(64, weight: .heavy)
                 .foregroundColor(DailyDriver.lime)
             Text("%")
                 .ddDisplayText(20, weight: .heavy)
                 .foregroundColor(DailyDriver.lime)
-            Text("battery — enough for tonight")
+            Text(DDDeviceFixture.batteryCaption)
                 .font(.system(size: 12))
                 .foregroundColor(DailyDriver.foregroundMuted)
                 .padding(.leading, 4)
@@ -107,10 +104,10 @@ struct DDDeviceDetailView: View {
         HStack(spacing: 12) {
             DDIconChip(systemName: "checkmark", background: DailyDriver.lime, size: 34)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Hyrox Sim — Stations 1–4")
+                Text(DDDeviceFixture.deliveredTitle)
                     .ddDisplayText(13, weight: .bold)
                     .foregroundColor(DailyDriver.foreground)
-                Text("DELIVERED 6:14 PM")
+                Text(DDDeviceFixture.deliveredTime)
                     .font(.system(size: 9.5, weight: .medium, design: .monospaced))
                     .foregroundColor(DailyDriver.lime)
             }
@@ -131,7 +128,7 @@ struct DDDeviceDetailView: View {
             HStack(spacing: 12) {
                 DDIconChip(systemName: "xmark", background: DailyDriver.red, size: 34)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("DB Full-body AMRAP")
+                    Text(DDDeviceFixture.failedTitle)
                         .ddDisplayText(13, weight: .bold)
                         .foregroundColor(DailyDriver.foreground)
                     Text("FAILED")
@@ -141,7 +138,7 @@ struct DDDeviceDetailView: View {
                 Spacer(minLength: 0)
             }
 
-            Text("Block 4 uses “open reps” — the follow-along needs a fixed count or time.")
+            Text(DDDeviceFixture.failedReason)
                 .font(.system(size: 11.5))
                 .foregroundColor(DailyDriver.foregroundMuted)
                 .lineSpacing(3)
@@ -171,10 +168,15 @@ struct DDDeviceDetailView: View {
 
     private var sessionToggleCard: some View {
         VStack(spacing: 0) {
-            sessionRow(title: "Hyrox / HIIT", icon: "flame.fill", color: DailyDriver.lime, key: "Hyrox / HIIT", isFirst: true)
-            sessionRow(title: "Runs", icon: "figure.run", color: DailyDriver.blue, key: "Runs", isFirst: false)
-            sessionRow(title: "Strength", icon: "dumbbell.fill", color: DailyDriver.purple, key: "Strength", isFirst: false)
-            sessionRow(title: "Everything else", icon: "ellipsis.message.fill", color: DailyDriver.card2, key: "Everything else", isFirst: false)
+            ForEach(Array(DDDeviceFixture.sessionTypes.enumerated()), id: \.element.key) { index, session in
+                sessionRow(
+                    title: session.title,
+                    icon: session.icon,
+                    color: sessionColor(for: session.key),
+                    key: session.key,
+                    isFirst: index == 0
+                )
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 4)
@@ -184,6 +186,15 @@ struct DDDeviceDetailView: View {
                 .stroke(DailyDriver.border, lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func sessionColor(for key: String) -> Color {
+        switch key {
+        case "Hyrox / HIIT": return DailyDriver.lime
+        case "Runs": return DailyDriver.blue
+        case "Strength": return DailyDriver.purple
+        default: return DailyDriver.card2
+        }
     }
 
     private func sessionRow(title: String, icon: String, color: Color, key: String, isFirst: Bool) -> some View {

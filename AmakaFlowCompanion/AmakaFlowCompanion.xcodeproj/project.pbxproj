@@ -229,6 +229,8 @@
 		AMA2293DDACT00000B /* DDActivityDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2293DDACT00000A /* DDActivityDetailView.swift */; };
 		AMA2293DDPLAY00000B /* DDActivePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2293DDPLAY00000A /* DDActivePlayerView.swift */; };
 		AMA2293DDEDIT00000B /* DDEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2293DDEDIT00000A /* DDEditorView.swift */; };
+		AMA2297DDEXEDIT00B /* DDExerciseEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2297DDEXEDIT00A /* DDExerciseEditSheet.swift */; };
+		AMA2297DDDEVFIX00B /* DDDeviceFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2297DDDEVFIX00A /* DDDeviceFixture.swift */; };
 		AMA2293DDDEV000000B /* DDDeviceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2293DDDEV000000A /* DDDeviceDetailView.swift */; };
 		AMA2297DDGYM00000B /* DDGymDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2297DDGYM00000A /* DDGymDetailView.swift */; };
 		AMA2292DDCREATE00B /* CreateWorkoutSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2292DDCREATE00A /* CreateWorkoutSheet.swift */; };
@@ -747,6 +749,8 @@
 		AMA2293DDACT00000A /* DDActivityDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDActivityDetailView.swift; path = ../AmakaFlow/Views/DDActivityDetailView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2293DDPLAY00000A /* DDActivePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDActivePlayerView.swift; path = ../AmakaFlow/Views/DDActivePlayerView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2293DDEDIT00000A /* DDEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDEditorView.swift; path = ../AmakaFlow/Views/DDEditorView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2297DDEXEDIT00A /* DDExerciseEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDExerciseEditSheet.swift; path = ../AmakaFlow/Views/DDExerciseEditSheet.swift; sourceTree = SOURCE_ROOT; };
+		AMA2297DDDEVFIX00A /* DDDeviceFixture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDDeviceFixture.swift; path = ../AmakaFlow/Models/DDDeviceFixture.swift; sourceTree = SOURCE_ROOT; };
 		AMA2293DDDEV000000A /* DDDeviceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDDeviceDetailView.swift; path = ../AmakaFlow/Views/DDDeviceDetailView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2297DDGYM00000A /* DDGymDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDGymDetailView.swift; path = ../AmakaFlow/Views/DDGymDetailView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2292DDCREATE00A /* CreateWorkoutSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CreateWorkoutSheet.swift; path = ../AmakaFlow/Views/CreateWorkoutSheet.swift; sourceTree = SOURCE_ROOT; };
@@ -1221,7 +1225,9 @@
 				AMA2293DDACT00000A /* DDActivityDetailView.swift */,
 				AMA2293DDPLAY00000A /* DDActivePlayerView.swift */,
 				AMA2293DDEDIT00000A /* DDEditorView.swift */,
+				AMA2297DDEXEDIT00A /* DDExerciseEditSheet.swift */,
 				AMA2293DDDEV000000A /* DDDeviceDetailView.swift */,
+				AMA2297DDDEVFIX00A /* DDDeviceFixture.swift */,
 				AMA2297DDGYM00000A /* DDGymDetailView.swift */,
 				AMA2290BFVIEWREF /* StrengthBackfillView.swift */,
 				AMA2290WCVCOMPREF /* WorkoutCompletionView+Components.swift */,
@@ -2099,7 +2105,9 @@
 				AMA2293DDACT00000B /* DDActivityDetailView.swift in Sources */,
 				AMA2293DDPLAY00000B /* DDActivePlayerView.swift in Sources */,
 				AMA2293DDEDIT00000B /* DDEditorView.swift in Sources */,
+				AMA2297DDEXEDIT00B /* DDExerciseEditSheet.swift in Sources */,
 				AMA2293DDDEV000000B /* DDDeviceDetailView.swift in Sources */,
+				AMA2297DDDEVFIX00B /* DDDeviceFixture.swift in Sources */,
 				AMA2297DDGYM00000B /* DDGymDetailView.swift in Sources */,
 				AMA2292DDCREATE00B /* CreateWorkoutSheet.swift in Sources */,
 				AMA2292DDFLOW00000B /* CreateFlowPresentation.swift in Sources */,

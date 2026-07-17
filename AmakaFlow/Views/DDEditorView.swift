@@ -96,6 +96,7 @@ struct DDEditorExerciseDraft: Identifiable, Equatable {
     var durationSeconds: Int?
     var distanceMeters: Int?
     var weightKg: Double?
+    var calories: Int?
     var restSeconds: Int?
     var showsLastTime: Bool
     var swapMessage: String?
@@ -109,6 +110,7 @@ struct DDEditorExerciseDraft: Identifiable, Equatable {
         durationSeconds: Int? = nil,
         distanceMeters: Int? = nil,
         weightKg: Double? = nil,
+        calories: Int? = nil,
         restSeconds: Int? = 60,
         showsLastTime: Bool = false,
         swapMessage: String? = nil,
@@ -121,6 +123,7 @@ struct DDEditorExerciseDraft: Identifiable, Equatable {
         self.durationSeconds = durationSeconds
         self.distanceMeters = distanceMeters
         self.weightKg = weightKg
+        self.calories = calories
         self.restSeconds = restSeconds
         self.showsLastTime = showsLastTime
         self.swapMessage = swapMessage
@@ -135,6 +138,7 @@ struct DDEditorExerciseDraft: Identifiable, Equatable {
             parts.append(durationSeconds >= 60 ? "\(durationSeconds / 60) MIN" : "\(durationSeconds)S")
         }
         if let distanceMeters { parts.append("\(distanceMeters) M") }
+        if let calories { parts.append("\(calories) CAL") }
         if let weightKg {
             let text = weightKg.truncatingRemainder(dividingBy: 1) == 0
                 ? String(Int(weightKg))
@@ -361,6 +365,7 @@ struct DDEditorView: View {
     @State private var blocks: [DDEditorBlockDraft]
     @State private var blockPickerOpen: Bool
     @State private var toastMessage: String?
+    @State private var exerciseEditTarget: DDExerciseEditTarget?
 
     init(mode: DDEditorMode = .new, workout: Workout? = nil, onBackfillSaved: (() -> Void)? = nil) {
         self.mode = mode
@@ -431,6 +436,12 @@ struct DDEditorView: View {
         }
         .onChange(of: saveModel.didSave) { _, saved in
             if saved { dismiss() }
+        }
+        .sheet(item: $exerciseEditTarget) { target in
+            DDExerciseEditSheet(blocks: $blocks, target: target) {
+                exerciseEditTarget = nil
+            }
+            .presentationDetents([.medium, .large])
         }
     }
 
@@ -506,6 +517,9 @@ struct DDEditorView: View {
                     },
                     onSwap: { exerciseIndex in
                         applySwap(blockIndex: index, exerciseIndex: exerciseIndex)
+                    },
+                    onEdit: { exerciseIndex in
+                        exerciseEditTarget = DDExerciseEditTarget(blockIndex: index, exerciseIndex: exerciseIndex)
                     }
                 )
             }
@@ -638,6 +652,7 @@ private struct DDEditorBlockCard: View {
     let onDeleteExercise: (Int) -> Void
     let onMoveExercise: (Int, Int) -> Void
     let onSwap: (Int) -> Void
+    let onEdit: (Int) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -701,7 +716,8 @@ private struct DDEditorBlockCard: View {
                             onMoveUp: { onMoveExercise(index, -1) },
                             onMoveDown: { onMoveExercise(index, 1) },
                             onDelete: { onDeleteExercise(index) },
-                            onSwap: { onSwap(index) }
+                            onSwap: { onSwap(index) },
+                            onEdit: { onEdit(index) }
                         )
                         if index < block.exercises.count - 1 {
                             Divider().overlay(DailyDriver.border)
@@ -752,6 +768,7 @@ private struct DDEditorExerciseRow: View {
     let onMoveDown: () -> Void
     let onDelete: () -> Void
     let onSwap: () -> Void
+    let onEdit: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -789,10 +806,14 @@ private struct DDEditorExerciseRow: View {
 
             Spacer(minLength: 0)
 
-            Image(systemName: "pencil")
-                .font(.system(size: 13))
-                .foregroundColor(DailyDriver.foregroundDim)
-                .padding(3)
+            Button(action: onEdit) {
+                Image(systemName: "pencil")
+                    .font(.system(size: 13))
+                    .foregroundColor(DailyDriver.foregroundDim)
+                    .padding(3)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("dd_editor_exercise_edit")
 
             Button(action: onDelete) {
                 Image(systemName: "xmark")

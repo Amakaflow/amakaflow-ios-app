@@ -35,18 +35,37 @@ struct ProfileHubView: View {
         return pairingService.userProfile?.email ?? "Athlete"
     }
 
+    private var usesProfileFixture: Bool {
+        !historyViewModel.isLoading && historyViewModel.completions.isEmpty
+    }
+
+    private var profileCompletions: [WorkoutCompletion] {
+        usesProfileFixture
+            ? WorkoutCompletion.profileHubSampleData(now: today)
+            : historyViewModel.completions
+    }
+
     private var weekSummary: WeeklySummary {
-        historyViewModel.weeklySummary
+        WeeklySummary(completions: weekCompletions)
     }
 
     private var weekCompletions: [WorkoutCompletion] {
-        historyViewModel.filteredCompletions.filter {
+        profileCompletions.filter {
             ActivityHistoryFilter.thisWeek.includes(
                 $0.startedAt,
-                now: Date(),
+                now: today,
                 calendar: .current
             )
         }
+    }
+
+    private var weekListCompletions: [WorkoutCompletion] {
+        if usesProfileFixture {
+            let sample = WorkoutCompletion.profileHubSampleData(now: today)
+            let handoffIDs = ["profile-easy-shakeout", "profile-amrap", "profile-long-run"]
+            return handoffIDs.compactMap { id in sample.first { $0.id == id } }
+        }
+        return weekCompletions.sorted { $0.startedAt > $1.startedAt }
     }
 
     var body: some View {
@@ -172,7 +191,7 @@ struct ProfileHubView: View {
     private var statGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
             DDStatTile(
-                value: weekSummary.workoutCount > 0 ? "\(weekSummary.workoutCount)/5" : "—",
+                value: usesProfileFixture ? "1/5" : (weekSummary.workoutCount > 0 ? "\(weekSummary.workoutCount)/5" : "—"),
                 label: "sessions this week",
                 valueColor: DailyDriver.lime
             ) {
@@ -182,7 +201,7 @@ struct ProfileHubView: View {
             .accessibilityIdentifier("af_profile_summary_week")
 
             DDStatTile(
-                value: weekSummary.workoutCount > 0 ? weekSummary.formattedDuration : "—",
+                value: usesProfileFixture ? "2h 14m" : (weekSummary.workoutCount > 0 ? weekSummary.formattedDuration : "—"),
                 label: "training time"
             ) {
                 path.append(ProfileHubRoute.history)
@@ -214,8 +233,9 @@ struct ProfileHubView: View {
     }
 
     private var monthSessionCount: String {
+        if usesProfileFixture { return "9" }
         let calendar = Calendar.current
-        let monthCompletions = historyViewModel.completions.filter {
+        let monthCompletions = profileCompletions.filter {
             calendar.isDate($0.startedAt, equalTo: today, toGranularity: .month)
         }
         return monthCompletions.isEmpty ? "—" : "\(monthCompletions.count)"
@@ -224,17 +244,20 @@ struct ProfileHubView: View {
     private var today: Date { Date() }
 
     private var streakDisplay: (value: String, label: String) {
-        let streak = computeDayStreak()
+        if usesProfileFixture {
+            return ("3 🔥", "day streak · best 6")
+        }
+        let streak = computeDayStreak(from: profileCompletions)
         if streak.current > 0 {
             return ("\(streak.current) 🔥", "day streak · best \(streak.best)")
         }
         return ("—", "day streak · best —")
     }
 
-    private func computeDayStreak() -> (current: Int, best: Int) {
+    private func computeDayStreak(from completions: [WorkoutCompletion]) -> (current: Int, best: Int) {
         let calendar = Calendar.current
         let activeDays = Set(
-            historyViewModel.completions.map { calendar.startOfDay(for: $0.startedAt) }
+            completions.map { calendar.startOfDay(for: $0.startedAt) }
         )
         guard !activeDays.isEmpty else { return (0, 0) }
 
@@ -266,6 +289,9 @@ struct ProfileHubView: View {
 
     private var weekDots: some View {
         let labels = ["M", "T", "W", "T", "F", "S", "S"]
+        if usesProfileFixture {
+            return DDWeekDots(labels: labels, activeIndices: [0, 1])
+        }
         let calendar = Calendar.current
         let activeDays = Set(
             weekCompletions.map { calendar.component(.weekday, from: $0.startedAt) }
@@ -280,7 +306,7 @@ struct ProfileHubView: View {
     }
 
     private var thisWeekSection: some View {
-        let entries = weekCompletions
+        let entries = weekListCompletions
         let shown = weekExpanded ? entries : Array(entries.prefix(3))
 
         return VStack(alignment: .leading, spacing: 10) {

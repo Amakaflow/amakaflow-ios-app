@@ -21,6 +21,10 @@ struct TodayDiaryView: View {
         historyViewModel.todaysCompletions
     }
 
+    private var usesTodayFixture: Bool {
+        todaysCompletions.contains(where: \.wasSimulated)
+    }
+
     private var scrubberDays: [DDScrubberDay] {
         historyViewModel.completions.scrubberDays(now: today)
     }
@@ -88,7 +92,10 @@ struct TodayDiaryView: View {
                 DDDeviceDetailView()
                     .ddSuppressFloatingChrome()
             } label: {
-                DDWatchReadinessPill(isConnected: watchConnected)
+                DDWatchReadinessPill(
+                    isConnected: watchConnected || usesTodayFixture,
+                    batteryPercent: usesTodayFixture ? DDDeviceFixture.batteryPercent : nil
+                )
             }
             .buttonStyle(.plain)
         }
@@ -171,7 +178,7 @@ struct TodayDiaryView: View {
     /// Plain rail rows from proto (GARMIN SYNCED · DAY STARTED).
     private var systemEventRows: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if todaysCompletions.contains(where: { $0.source == .garmin }) {
+            if showsGarminSyncRow {
                 DDTimelineCard(
                     icon: "applewatch",
                     iconBackground: DailyDriver.card2,
@@ -188,11 +195,18 @@ struct TodayDiaryView: View {
         }
     }
 
+    private var showsGarminSyncRow: Bool {
+        todaysCompletions.contains(where: { $0.source == .garmin }) || usesTodayFixture
+    }
+
     private var garminPulledCount: Int {
-        max(1, todaysCompletions.filter { $0.source == .garmin }.count)
+        let garminCount = todaysCompletions.filter { $0.source == .garmin }.count
+        if garminCount > 0 { return max(2, garminCount) }
+        return usesTodayFixture ? 2 : 1
     }
 
     private var garminSyncTimeLabel: String {
+        if usesTodayFixture { return "07:41" }
         let garminCompletions = todaysCompletions.filter { $0.source == .garmin }
         guard let earliest = garminCompletions.map(\.startedAt).min() else {
             return "07:41"
@@ -202,6 +216,7 @@ struct TodayDiaryView: View {
     }
 
     private var dayStartedTimeLabel: String {
+        if usesTodayFixture { return "06:58" }
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: today)
         let morning = calendar.date(byAdding: .minute, value: 58, to: start) ?? start

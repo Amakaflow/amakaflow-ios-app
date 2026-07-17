@@ -630,7 +630,7 @@ extension WorkoutCompletion {
         if lowered.contains("run") {
             return ("figure.run", DailyDriver.blue)
         }
-        if lowered.contains("strength") || lowered.contains("lift") {
+        if lowered.contains("workout") || lowered.contains("strength") || lowered.contains("lift") {
             return ("dumbbell.fill", DailyDriver.card2)
         }
         if source == .garmin || source == .appleWatch {
