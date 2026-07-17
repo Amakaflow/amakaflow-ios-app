@@ -173,7 +173,9 @@ struct DDGymDetailView: View {
                     Text("Shared gym")
                         .ddDisplayText(13.5, weight: .bold)
                         .foregroundColor(DailyDriver.foreground)
-                    Text("12 members keep this list in sync — new machines show up for everyone. Nobody enters this gym twice.")
+                    Text(usesHandoffFixture
+                        ? "12 members keep this list in sync — new machines show up for everyone. Nobody enters this gym twice."
+                        : "Share this gym's equipment list with your group. Sync coming soon.")
                         .font(.system(size: 11))
                         .foregroundColor(DailyDriver.foregroundMuted)
                         .lineSpacing(3)
@@ -184,10 +186,12 @@ struct DDGymDetailView: View {
                     .tint(DailyDriver.lime)
             }
 
-            Text("LAST UPDATE · “CABLE CROSSOVER ADDED” · MARIA R · 2D AGO")
-                .font(.system(size: 9.5, weight: .medium, design: .monospaced))
-                .foregroundColor(DailyDriver.foregroundMuted)
-                .padding(.top, 9)
+            if usesHandoffFixture {
+                Text("LAST UPDATE · “CABLE CROSSOVER ADDED” · MARIA R · 2D AGO")
+                    .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                    .padding(.top, 9)
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 13)

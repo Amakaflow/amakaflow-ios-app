@@ -56,8 +56,8 @@ struct DDHRZonesCard: View {
     var note: String?
 
     private static let zoneColors: [Color] = [
-        Color(hex: "5AB8F4"),
-        Color(hex: "4AD97F"),
+        DailyDriver.blue,
+        DailyDriver.zoneGreen,
         DailyDriver.lime,
         DailyDriver.amber,
         DailyDriver.red
@@ -163,6 +163,13 @@ struct DDStatusBanner: View {
             case .lime, .verified: return DailyDriver.lime
             }
         }
+
+        var titleColor: Color {
+            switch self {
+            case .verified: return DailyDriver.lime
+            case .amber, .lime: return DailyDriver.foreground
+            }
+        }
     }
 
     let style: Style
@@ -177,7 +184,7 @@ struct DDStatusBanner: View {
                 }
                 Text(style.title)
                     .ddDisplayText(13, weight: .bold)
-                    .foregroundColor(style.accent == DailyDriver.lime && style.title.contains("Verified") ? DailyDriver.lime : DailyDriver.foreground)
+                    .foregroundColor(style.titleColor)
             }
             if let body = style.body, !body.isEmpty {
                 Text(body)
