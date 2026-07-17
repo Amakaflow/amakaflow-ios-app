@@ -14,7 +14,7 @@ extension FixtureAPIService {
         let payload: [String: Any] = [
             "title": "DB Full-body AMRAP",
             "sport": "cardio",
-            "description": "Five rounds of full-body conditioning — wall balls, thrusters and jumps, with a sled finisher. Parsed from the reel; nothing saved yet.",
+            "description": "Four main rounds of full-body conditioning plus a sled finisher. Parsed from the reel; nothing saved yet.",
             "source_url": url,
             "creator": "gospelofgainz",
             "blocks": [

@@ -47,6 +47,8 @@ struct CreateFlowSheetsModifier: ViewModifier {
     @Binding var activeFlow: CreateFlowPresentation?
     var onLibraryReload: () -> Void
 
+    @State private var speakUnavailableAlert = false
+
     func body(content: Content) -> some View {
         content
             .ddBottomSheet(isPresented: $showCreateSheet, detents: [.medium]) {
@@ -59,9 +61,14 @@ struct CreateFlowSheetsModifier: ViewModifier {
                     case .manual:
                         activeFlow = .manualEditor
                     case .speak:
-                        break
+                        speakUnavailableAlert = true
                     }
                 }
+            }
+            .alert("Voice import not available yet", isPresented: $speakUnavailableAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Use Import from URL or Build from scratch for now.")
             }
             .fullScreenCover(item: $activeFlow) { flow in
                 switch flow {

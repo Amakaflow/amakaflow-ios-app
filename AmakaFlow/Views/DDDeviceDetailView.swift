@@ -9,12 +9,50 @@ import SwiftUI
 
 struct DDDeviceDetailView: View {
     @Environment(\.dismiss) private var dismiss
+    private var usesHandoffFixture: Bool { DDHandoffFixtures.isEnabled }
+
     @State private var sessionToggles: [String: Bool] = Dictionary(
         uniqueKeysWithValues: DDDeviceFixture.sessionTypes.map { ($0.key, $0.defaultOn) }
     )
     @State private var showingImportEditor = false
 
     var body: some View {
+        Group {
+            if usesHandoffFixture {
+                fixtureContent
+            } else {
+                livePlaceholder
+            }
+        }
+        .background(DailyDriver.screenBackground.ignoresSafeArea())
+        .navigationBarHidden(true)
+        .preferredColorScheme(.dark)
+        .fullScreenCover(isPresented: $showingImportEditor) {
+            DDEditorView(mode: .importReview)
+                .ddSuppressFloatingChrome()
+        }
+        .accessibilityIdentifier("dd_device_detail_screen")
+    }
+
+    private var livePlaceholder: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                backButton
+                    .padding(.horizontal, 18)
+                    .padding(.top, 10)
+                Text("No wearable selected")
+                    .ddDisplayText(22, weight: .heavy)
+                    .foregroundColor(DailyDriver.foreground)
+                    .padding(.horizontal, 18)
+                Text("Pair a watch in Settings → Connected wearables.")
+                    .font(.system(size: 13))
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                    .padding(.horizontal, 18)
+            }
+        }
+    }
+
+    private var fixtureContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 backButton
@@ -62,14 +100,6 @@ struct DDDeviceDetailView: View {
                 .padding(.bottom, 100)
             }
         }
-        .background(DailyDriver.screenBackground.ignoresSafeArea())
-        .navigationBarHidden(true)
-        .preferredColorScheme(.dark)
-        .fullScreenCover(isPresented: $showingImportEditor) {
-            DDEditorView(mode: .importReview)
-                .ddSuppressFloatingChrome()
-        }
-        .accessibilityIdentifier("dd_device_detail_screen")
     }
 
     private var backButton: some View {

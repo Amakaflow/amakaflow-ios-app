@@ -37,10 +37,14 @@ enum DailyDriver {
     static let red = Color(hex: "F4564A")
     static let tabBarBackground = Color(red: 16 / 255, green: 16 / 255, blue: 18 / 255).opacity(0.96)
 
+    /// Player dock — dd-player-dark.png
+    static let playerElapsed = Color(hex: "F5D90A")
+    static let playerDockBackground = Color(hex: "101012")
+
     enum Typography {
-        /// Poppins when bundled; SF Rounded acceptable until font files land.
+        /// Bundled Poppins for Daily Driver display type (DESIGN.md).
         static func display(size: CGFloat, weight: Font.Weight = .bold) -> Font {
-            .system(size: size, weight: weight, design: .rounded)
+            .poppins(size, weight)
         }
     }
 }

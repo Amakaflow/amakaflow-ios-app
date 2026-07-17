@@ -133,12 +133,25 @@ struct Exercise: Codable, Hashable, Identifiable {
     }
 
     static func looksLikeMuscleFocus(_ text: String) -> Bool {
-        let lowered = text.lowercased()
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed.count <= 64 else { return false }
+        let parts = trimmed.split(separator: "·").map {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        guard !parts.isEmpty, parts.allSatisfy({ !$0.isEmpty && $0.count <= 24 }) else { return false }
+        return parts.allSatisfy(partMatchesKnownMuscle)
+    }
+
+    private static func partMatchesKnownMuscle(_ part: String) -> Bool {
+        let lowered = part.lowercased()
         let keywords = [
-            "quad", "glute", "hamstring", "chest", "back", "shoulder", "bicep", "tricep",
-            "core", "abs", "lat", "hip", "calve", "full body", "aerobic", "legs"
+            "quad", "quads", "glute", "glutes", "hamstring", "hamstrings", "chest", "back",
+            "shoulder", "shoulders", "bicep", "biceps", "tricep", "triceps", "core", "abs",
+            "lat", "lats", "hip", "hips", "calve", "calves", "full body", "aerobic", "legs"
         ]
-        return keywords.contains { lowered.contains($0) }
+        return keywords.contains { keyword in
+            lowered == keyword || lowered == keyword.trimmingCharacters(in: .whitespaces)
+        }
     }
 
     private static func formatFocusLabel(_ raw: String) -> String {

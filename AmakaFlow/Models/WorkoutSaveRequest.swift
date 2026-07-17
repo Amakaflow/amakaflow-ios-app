@@ -61,7 +61,37 @@ struct WorkoutSaveRequest: Codable {
                 }
             },
             source: workout.source.rawValue,
-            sourceUrl: workout.sourceUrl
+            sourceUrl: workout.sourceUrl,
+            description: workout.description,
+            creatorName: workout.creatorName,
+            blocks: blocksFromWorkout(workout)
         )
+    }
+
+    private static func blocksFromWorkout(_ workout: Workout) -> [SocialImportBlock]? {
+        guard !workout.blocks.isEmpty else { return nil }
+        return workout.blocks.map { block in
+            SocialImportBlock(
+                label: block.label,
+                rounds: max(1, block.rounds),
+                exercises: block.exercises.map { exercise in
+                    SocialImportExercise(
+                        name: exercise.name,
+                        sets: exercise.sets,
+                        reps: Int(exercise.reps ?? ""),
+                        seconds: exercise.durationSeconds,
+                        distanceMeters: exercise.distance.map { Int($0) },
+                        load: exercise.load.flatMap { load in
+                            if load.value > 0, !load.unit.isEmpty {
+                                return "\(load.value) \(load.unit)"
+                            }
+                            return load.unit.isEmpty ? nil : load.unit
+                        },
+                        focus: exercise.focus,
+                        notes: exercise.notes
+                    )
+                }
+            )
+        }
     }
 }

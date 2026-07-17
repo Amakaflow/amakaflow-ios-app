@@ -62,14 +62,14 @@ struct DDExerciseEditSheet: View {
                     HStack(spacing: 8) {
                         switch kind {
                         case .setsReps:
-                            DDEditorStepper(label: "Sets", value: bindingInt(\.sets), range: 0...10)
-                            DDEditorStepper(label: "Reps", value: bindingInt(\.reps), range: 0...50)
+                            DDEditorStepper(label: "Sets", value: bindingInt(\.sets), range: 1...10)
+                            DDEditorStepper(label: "Reps", value: bindingInt(\.reps), range: 1...50)
                             DDEditorWeightStepper(weightKg: $draft.weightKg)
                         case .duration:
                             DDEditorStepper(
                                 label: "Duration",
                                 value: bindingInt(\.durationSeconds),
-                                range: 0...600,
+                                range: 1...600,
                                 step: 5,
                                 format: DDEditorFormatting.duration
                             )
@@ -77,14 +77,14 @@ struct DDExerciseEditSheet: View {
                             DDEditorStepper(
                                 label: "Distance m",
                                 value: bindingInt(\.distanceMeters),
-                                range: 0...5000,
+                                range: 1...5000,
                                 step: 50
                             )
                         case .calories:
                             DDEditorStepper(
                                 label: "Calories",
                                 value: bindingInt(\.calories),
-                                range: 0...500,
+                                range: 1...500,
                                 step: 5
                             )
                         }

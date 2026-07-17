@@ -79,9 +79,9 @@ final class ActivityHistoryViewModelTests: XCTestCase {
 
         #if DEBUG
         XCTAssertTrue(mockAPIService.fetchCompletionsCalled)
-        XCTAssertEqual(viewModel.completions.count, 2)
-        XCTAssertEqual(viewModel.completions.map(\.id), ["today-lunch-run", "today-lunch-workout"])
-        XCTAssertTrue(viewModel.completions.allSatisfy(\.wasSimulated))
+        XCTAssertEqual(viewModel.completions.count, 3)
+        XCTAssertEqual(viewModel.completions.first?.id, "stale-yesterday")
+        XCTAssertTrue(viewModel.todaysCompletions.allSatisfy(\.wasSimulated))
         XCTAssertEqual(viewModel.todaysCompletions.count, 2)
         #else
         XCTAssertEqual(viewModel.completions.count, 1)

@@ -108,6 +108,15 @@ struct SocialImportPreviewView: View {
                 .foregroundColor(Theme.Colors.textSecondary)
             ForEach(Array(exercises.indices), id: \.self) { index in
                 exerciseRow(at: index)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        if viewModel.canEdit {
+                            Button(role: .destructive) {
+                                deleteExercises(at: IndexSet(integer: index))
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
                 if index < exercises.count - 1 {
                     Divider()
                 }
@@ -139,8 +148,17 @@ struct SocialImportPreviewView: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(AFPrimaryButtonStyle(size: .md))
-        .disabled(viewModel.phase == .saving || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        .disabled(
+            viewModel.phase == .saving
+            || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || isAlreadySaved
+        )
         .accessibilityIdentifier("social_import_save")
+    }
+
+    private var isAlreadySaved: Bool {
+        if case .saved = viewModel.phase { return true }
+        return false
     }
 
     private func failureSection(_ failure: SocialImportFailure) -> some View {

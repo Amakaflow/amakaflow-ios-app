@@ -121,6 +121,9 @@ struct SettingsView: View {
     @ObservedObject private var watchConnectivity = WatchConnectivityManager.shared
     @State private var syncQueueSummary = SyncQueueSummary.healthy
     @State private var showingNutritionSettings = false
+    @State private var settingsInfoMessage: String?
+
+    private var usesHandoffFixture: Bool { DDHandoffFixtures.isEnabled }
     @State private var showingErrorLogSheet = false
     @State private var showDebugSettings = false
     @State private var debugTapCount = 0
@@ -162,6 +165,14 @@ struct SettingsView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(garminDebugMessage)
+            }
+            .alert("Settings", isPresented: Binding(
+                get: { settingsInfoMessage != nil },
+                set: { if !$0 { settingsInfoMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) { settingsInfoMessage = nil }
+            } message: {
+                Text(settingsInfoMessage ?? "")
             }
             .alert("Privacy", isPresented: $accountViewModel.showError) {
                 Button("OK", role: .cancel) {}
@@ -288,42 +299,47 @@ struct SettingsView: View {
     private var ddMyGymsSection: some View {
         SettingsSectionCard(
             title: "My Gyms",
-            subtitle: "Home gym active · builder adapts to it",
+            subtitle: usesHandoffFixture ? "Home gym active · builder adapts to it" : "Manage equipment profiles",
             icon: "house.fill",
             iconBackground: DailyDriver.orange,
-            rowCount: 4
+            rowCount: usesHandoffFixture ? 4 : 2
         ) {
             VStack(spacing: 0) {
                 ddSettingsLinkRow(
                     icon: "house.fill",
                     tint: DailyDriver.lime,
                     title: "Home gym",
-                    subtitle: "ACTIVE · DBs to 32 · KB 24 · rower · private",
+                    subtitle: usesHandoffFixture
+                        ? "ACTIVE · DBs to 32 · KB 24 · rower · private"
+                        : "Your default equipment profile",
                     destination: AnyView(EquipmentProfileView())
                 )
+                if usesHandoffFixture {
+                    ddSettingsDivider
+                    ddSettingsLinkRow(
+                        icon: "map.fill",
+                        tint: DailyDriver.blue,
+                        title: "24 Hour Fitness — Katy",
+                        subtitle: "Shared · 12 members keep it in sync",
+                        destination: AnyView(DDGymDetailView())
+                    )
+                    ddSettingsDivider
+                    ddSettingsLinkRow(
+                        icon: "bookmark.fill",
+                        tint: DailyDriver.card2,
+                        title: "Hotel / travel",
+                        subtitle: "Bodyweight + bands preset",
+                        destination: AnyView(EquipmentProfileView())
+                    )
+                }
                 ddSettingsDivider
                 ddSettingsLinkRow(
-                    icon: "map.fill",
-                    tint: DailyDriver.blue,
-                    title: "24 Hour Fitness — Katy",
-                    subtitle: "Shared · 12 members keep it in sync",
-                    destination: AnyView(DDGymDetailView())
-                )
-                ddSettingsDivider
-                ddSettingsLinkRow(
-                    icon: "bookmark.fill",
-                    tint: DailyDriver.card2,
-                    title: "Hotel / travel",
-                    subtitle: "Bodyweight + bands preset",
-                    destination: AnyView(EquipmentProfileView())
-                )
-                ddSettingsDivider
-                ddSettingsButtonRow(
                     icon: "plus",
                     tint: DailyDriver.card2,
                     title: "＋ Add gym",
-                    subtitle: "Scan the room once — everyone after you skips it"
-                ) {}
+                    subtitle: "Scan the room once — everyone after you skips it",
+                    destination: AnyView(EquipmentProfileView())
+                )
             }
         }
     }
@@ -331,20 +347,24 @@ struct SettingsView: View {
     private var ddConnectedWearablesSection: some View {
         SettingsSectionCard(
             title: "Connected wearables",
-            subtitle: "T-Rex 3 + Garmin · sessions set per watch",
+            subtitle: garminConnectivity.isConnected
+                ? "Garmin connected"
+                : "Pair a watch in Connections",
             icon: "applewatch",
             iconBackground: DailyDriver.lime,
-            rowCount: 3
+            rowCount: usesHandoffFixture ? 3 : 2
         ) {
             VStack(spacing: 0) {
-                ddSettingsLinkRow(
-                    icon: "applewatch",
-                    tint: DailyDriver.lime,
-                    title: "Amazfit T-Rex 3",
-                    subtitle: "Hyrox / HIIT · synced 2m · 78%",
-                    destination: AnyView(DDDeviceDetailView())
-                )
-                ddSettingsDivider
+                if usesHandoffFixture {
+                    ddSettingsLinkRow(
+                        icon: "applewatch",
+                        tint: DailyDriver.lime,
+                        title: "Amazfit T-Rex 3",
+                        subtitle: "Hyrox / HIIT · synced 2m · 78%",
+                        destination: AnyView(DDDeviceDetailView())
+                    )
+                    ddSettingsDivider
+                }
                 ddSettingsLinkRow(
                     icon: "applewatch",
                     tint: DailyDriver.blue,
@@ -355,12 +375,13 @@ struct SettingsView: View {
                     destination: AnyView(connectionsHub)
                 )
                 ddSettingsDivider
-                ddSettingsButtonRow(
+                ddSettingsLinkRow(
                     icon: "plus",
                     tint: DailyDriver.card2,
                     title: "＋ Pair a wearable",
-                    subtitle: "Optional — the phone covers everything"
-                ) {}
+                    subtitle: "Optional — the phone covers everything",
+                    destination: AnyView(connectionsHub)
+                )
             }
         }
     }
@@ -374,20 +395,20 @@ struct SettingsView: View {
             rowCount: 3
         ) {
             VStack(spacing: 0) {
-                ddSettingsToggleRow(
+                ddSettingsLinkRow(
                     icon: "arrow.down.circle.fill",
                     tint: DailyDriver.blue,
                     title: "Garmin activities",
-                    subtitle: "Pulls runs into Progress",
-                    isOn: garminConnectivity.isConnected
+                    subtitle: garminConnectivity.isConnected ? "Pulls runs into Progress" : "Connect Garmin in Connections",
+                    destination: AnyView(connectionsHub)
                 )
                 ddSettingsDivider
-                ddSettingsToggleRow(
+                ddSettingsLinkRow(
                     icon: "figure.run",
                     tint: DailyDriver.orange,
                     title: "Strava",
-                    subtitle: "Not connected",
-                    isOn: false
+                    subtitle: "Manage in Connections",
+                    destination: AnyView(connectionsHub)
                 )
                 ddSettingsDivider
                 ddSettingsButtonRow(
@@ -432,7 +453,9 @@ struct SettingsView: View {
                     tint: DailyDriver.card2,
                     title: "Appearance",
                     subtitle: "Dark"
-                ) {}
+                ) {
+                    settingsInfoMessage = "Daily Driver currently uses dark mode only."
+                }
             }
         }
     }
@@ -446,12 +469,13 @@ struct SettingsView: View {
             rowCount: 3
         ) {
             VStack(spacing: 0) {
-                ddSettingsButtonRow(
+                ddSettingsLinkRow(
                     icon: "person.fill",
                     tint: DailyDriver.card2,
                     title: "Account",
-                    subtitle: accountEmail
-                ) {}
+                    subtitle: accountEmail,
+                    destination: AnyView(EditProfileView(initialNameFallback: pairingService.userProfile?.name))
+                )
                 ddSettingsDivider
                 ddSettingsButtonRow(
                     icon: "square.and.arrow.up",

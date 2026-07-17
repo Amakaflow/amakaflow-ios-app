@@ -240,13 +240,32 @@ struct SocialImportDraft: Equatable {
                 )
             ]
         }
-        return blocks.map { block in
-            SocialImportBlock(
+        return reconciledMultiBlocks()
+    }
+
+    /// Reconcile multi-block rows with the flat editable list by exercise id.
+    private func reconciledMultiBlocks() -> [SocialImportBlock] {
+        let flatByID = Dictionary(uniqueKeysWithValues: exercises.map { ($0.id, $0) })
+        var assignedIDs = Set<SocialImportExercise.ID>()
+        var reconciled = blocks.map { block -> SocialImportBlock in
+            let reconciledExercises = block.exercises.compactMap { flatByID[$0.id] }
+            assignedIDs.formUnion(reconciledExercises.map(\.id))
+            return SocialImportBlock(
                 label: block.label,
                 rounds: max(1, block.rounds),
-                exercises: block.exercises
+                exercises: reconciledExercises
             )
         }
+        let unassigned = exercises.filter { !assignedIDs.contains($0.id) }
+        if !unassigned.isEmpty, let firstIndex = reconciled.indices.first {
+            let block = reconciled[firstIndex]
+            reconciled[firstIndex] = SocialImportBlock(
+                label: block.label,
+                rounds: block.rounds,
+                exercises: block.exercises + unassigned
+            )
+        }
+        return reconciled
     }
 
     func toPreviewWorkout() -> Workout {
@@ -420,16 +439,31 @@ struct SocialImportDraft: Equatable {
         if let weight = item["weight"] {
             let unit = (item["weight_unit"] as? String) ?? (item["weightUnit"] as? String) ?? "kg"
             if let doubleWeight = weight as? Double {
-                return "\(Int(doubleWeight)) \(unit)"
+                return formatWeight(doubleWeight, unit: unit)
             }
             if let intWeight = weight as? Int {
-                return "\(intWeight) \(unit)"
+                return formatWeight(Double(intWeight), unit: unit)
             }
             if let stringWeight = weight as? String, !stringWeight.isEmpty {
+                if Self.stringContainsLoadUnit(stringWeight) {
+                    return stringWeight
+                }
                 return "\(stringWeight) \(unit)"
             }
         }
         return nil
+    }
+
+    private static func formatWeight(_ value: Double, unit: String) -> String {
+        if value.truncatingRemainder(dividingBy: 1) == 0 {
+            return "\(Int(value)) \(unit)"
+        }
+        return String(format: "%.1f", value) + " \(unit)"
+    }
+
+    private static func stringContainsLoadUnit(_ text: String) -> Bool {
+        let lowered = text.lowercased()
+        return ["kg", "lb", "lbs", "%", "bw", "bodyweight"].contains { lowered.contains($0) }
     }
 
     static func looksLikeMuscleFocus(_ text: String) -> Bool {

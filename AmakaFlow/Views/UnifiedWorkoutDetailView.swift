@@ -353,7 +353,11 @@ extension UnifiedWorkoutDetailView {
     }
 
     fileprivate func handleStartTapped() async {
-        if let importContext, !importContext.isSaved {
+        if let importContext {
+            if importContext.isSaved {
+                showingStartSheet = true
+                return
+            }
             isSavingImport = true
             await importContext.viewModel.saveToLibrary()
             isSavingImport = false
@@ -405,12 +409,15 @@ extension UnifiedWorkoutDetailView {
 
     /// Whole-workout round count for hero chips (dd-detail-dark: "5 ROUNDS · ~20 MIN").
     fileprivate var heroRoundCount: Int {
+        let workBlocks = workout.blocks.filter { !Self.isWarmupOrCooldown($0) }
+        if !workBlocks.isEmpty {
+            let structuredTotal = workBlocks.reduce(0) { $0 + max(1, $1.rounds) }
+            if structuredTotal > 1 { return structuredTotal }
+        }
         if let parsed = Self.parseRoundCount(from: workout.description) {
             return parsed
         }
-        let workBlocks = workout.blocks.filter { !Self.isWarmupOrCooldown($0) }
-        let rounds = workBlocks.map(\.rounds).max() ?? 1
-        return max(1, rounds)
+        return max(1, workBlocks.map(\.rounds).max() ?? 1)
     }
 
     fileprivate static func parseRoundCount(from description: String?) -> Int? {
@@ -536,7 +543,11 @@ extension UnifiedWorkoutDetailView {
             }
             if let host = URL(string: url)?.host?.replacingOccurrences(of: "www.", with: "") {
                 let path = URL(string: url)?.pathComponents.filter { $0 != "/" } ?? []
-                if let first = path.first, !first.isEmpty, !first.contains(".") {
+                let reserved = Set(["reel", "reels", "watch", "video", "p", "t", "shorts"])
+                if let first = path.first,
+                   !first.isEmpty,
+                   !first.contains("."),
+                   !reserved.contains(first.lowercased()) {
                     return first
                 }
                 return host
@@ -643,9 +654,6 @@ extension UnifiedWorkoutDetailView {
     }
 
     fileprivate var creditActionLabel: String? {
-        if workout.source == .coach {
-            return "Message"
-        }
         if creditOpenURL != nil,
            let label = WorkoutSourceProvenance.externalLabel(for: resolvedSourceKey) {
             return "Open in \(label)"
@@ -804,7 +812,7 @@ extension UnifiedWorkoutDetailView {
                         ]
                     )
                 ],
-                description: "Five rounds of full-body conditioning — wall balls, thrusters and jumps, with a sled finisher. Parsed from the reel; nothing saved yet.",
+                description: "Four main rounds of full-body conditioning plus a sled finisher. Parsed from the reel; nothing saved yet.",
                 source: .instagram,
                 sourceUrl: "https://instagram.com/reel/abc",
                 creatorName: "gospelofgainz"

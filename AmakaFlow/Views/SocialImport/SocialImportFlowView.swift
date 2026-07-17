@@ -73,6 +73,8 @@ struct SocialImportFlowView: View {
             return .importing
         case .preview, .saving, .saved:
             return viewModel.draft == nil ? .input : .preview
+        case .failed:
+            return viewModel.draft == nil ? .input : .preview
         default:
             return .input
         }
@@ -111,7 +113,7 @@ struct SocialImportFlowView: View {
                     .accessibilityIdentifier("social_import_url_field")
 
                     Text("Instagram, TikTok, or YouTube — we pull the workout out of the post.")
-                        .font(.system(size: 10.5))
+                        .font(Theme.Typography.footnote)
                         .foregroundColor(Theme.Colors.textTertiary)
                         .padding(.horizontal, 4)
 
@@ -129,7 +131,7 @@ struct SocialImportFlowView: View {
                         .accessibilityIdentifier("social_import_text_editor")
 
                     Text("Captions, notes, or a written plan. You can edit everything before saving.")
-                        .font(.system(size: 10.5))
+                        .font(Theme.Typography.footnote)
                         .foregroundColor(Theme.Colors.textTertiary)
                 }
 
@@ -203,7 +205,7 @@ struct SocialImportFlowView: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(DailyDriver.orange.opacity(0.12))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.lg, style: .continuous))
         .accessibilityIdentifier("social_import_error")
     }
 
@@ -250,7 +252,13 @@ struct SocialImportFlowView: View {
         guard case .importing = viewModel.phase else { return }
         processingStep = 0
         for step in 0..<(importSteps.count - 1) {
-            try? await Task.sleep(nanoseconds: 850_000_000)
+            do {
+                try await Task.sleep(nanoseconds: 850_000_000)
+            } catch is CancellationError {
+                return
+            } catch {
+                return
+            }
             guard case .importing = viewModel.phase else { return }
             processingStep = step + 1
         }
@@ -284,6 +292,20 @@ struct ImageImportView: View {
                     )
                 }
             case .preview, .saving, .saved:
+                if let draft = viewModel.draft {
+                    SocialImportDetailPreviewView(
+                        viewModel: viewModel,
+                        draft: draft,
+                        onLibraryReload: { onSaved?() },
+                        onDismiss: {
+                            onSaved?()
+                            dismiss()
+                        }
+                    )
+                } else {
+                    pickerSheet
+                }
+            case .failed:
                 if let draft = viewModel.draft {
                     SocialImportDetailPreviewView(
                         viewModel: viewModel,
@@ -369,7 +391,13 @@ struct ImageImportView: View {
         guard case .importing = viewModel.phase else { return }
         processingStep = 0
         for step in 0..<(importSteps.count - 1) {
-            try? await Task.sleep(nanoseconds: 850_000_000)
+            do {
+                try await Task.sleep(nanoseconds: 850_000_000)
+            } catch is CancellationError {
+                return
+            } catch {
+                return
+            }
             guard case .importing = viewModel.phase else { return }
             processingStep = step + 1
         }

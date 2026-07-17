@@ -136,14 +136,22 @@ struct DDActivityDetailView: View {
         } else if detail.activeCalories != nil && detail.distanceMeters == nil && detail.avgHeartRate == nil {
             DDStatusBanner(style: .amber(
                 title: "What was this?",
-                body: "Strava only sent time and calories. Map it to a workout you know, or add what you did."
+                body: missingMetricsGuidance(for: detail)
             ))
         } else {
             DDStatusBanner(style: .amber(
                 title: "Not linked to a workout yet",
-                body: "Map it to the workout it actually was — Stryd has one at the same time."
+                body: "Map it to the workout it actually was, or add what you did manually."
             ))
         }
+    }
+
+    private func missingMetricsGuidance(for detail: WorkoutCompletionDetail) -> String {
+        let source = detail.sourceLabel?.lowercased() ?? ""
+        if source.contains("strava") {
+            return "Strava only sent time and calories. Map it to a workout you know, or add what you did."
+        }
+        return "Some metrics were missing from the import. Map it to a workout you know, or add what you did."
     }
 
     private func metricTiles(for detail: WorkoutCompletionDetail) -> [(String, String)] {

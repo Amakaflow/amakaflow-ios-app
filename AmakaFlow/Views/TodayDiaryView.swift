@@ -201,18 +201,17 @@ struct TodayDiaryView: View {
 
     private var garminPulledCount: Int {
         let garminCount = todaysCompletions.filter { $0.source == .garmin }.count
-        if garminCount > 0 { return max(2, garminCount) }
-        return usesTodayFixture ? 2 : 1
+        if usesTodayFixture { return max(2, garminCount) }
+        return max(1, garminCount)
     }
 
     private var garminSyncTimeLabel: String {
         if usesTodayFixture { return "07:41" }
         let garminCompletions = todaysCompletions.filter { $0.source == .garmin }
         guard let earliest = garminCompletions.map(\.startedAt).min() else {
-            return "07:41"
+            return "—"
         }
-        let syncTime = Calendar.current.date(byAdding: .hour, value: -5, to: earliest) ?? earliest
-        return syncTime.formatted(date: .omitted, time: .shortened)
+        return earliest.formatted(date: .omitted, time: .shortened)
     }
 
     private var dayStartedTimeLabel: String {

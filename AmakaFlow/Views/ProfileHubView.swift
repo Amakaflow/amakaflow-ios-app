@@ -36,7 +36,7 @@ struct ProfileHubView: View {
     }
 
     private var usesProfileFixture: Bool {
-        !historyViewModel.isLoading && historyViewModel.completions.isEmpty
+        DDHandoffFixtures.isEnabled && !historyViewModel.isLoading && historyViewModel.completions.isEmpty
     }
 
     private var profileCompletions: [WorkoutCompletion] {
@@ -183,6 +183,8 @@ struct ProfileHubView: View {
                 Text("Hyrox prep · Week 3 of 12")
                     .font(.system(size: 10.5))
                     .foregroundColor(DailyDriver.foregroundMuted)
+                    .opacity(usesProfileFixture ? 1 : 0)
+                    .frame(height: usesProfileFixture ? nil : 0)
             }
         }
         .accessibilityIdentifier("af_profile_identity")
@@ -424,14 +426,16 @@ private extension WorkoutCompletion {
         }
         var parts = [day, duration]
         if let hr = avgHeartRate {
-            parts.append("RPE \(min(10, max(1, hr / 15)))")
+            parts.append("\(hr) BPM")
         }
         switch source {
         case .garmin: parts.append("GARMIN")
         case .appleWatch: parts.append("APPLE WATCH")
         case .phone: parts.append("ON PHONE")
-        default:
-            if isSyncedToStrava { parts.append("GARMIN") }
+        case .manual: break
+        }
+        if isSyncedToStrava, source != .garmin {
+            parts.append("STRAVA")
         }
         return parts.joined(separator: " · ")
     }

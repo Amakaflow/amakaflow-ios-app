@@ -189,7 +189,7 @@ class WorkoutsViewModel: ObservableObject {
             let serverExtras = workouts.filter {
                 !localIDs.contains($0.id) && !tombstonedIDs.contains($0.id)
             }
-            incomingWorkouts = localIncoming + serverExtras.map { WorkoutLibraryDetailStore.enrich($0) }
+            incomingWorkouts = localIncoming + WorkoutLibraryDetailStore.enrichCollection(serverExtras)
             upcomingWorkouts = scheduled
         } catch let error as APIError {
             print("[WorkoutsViewModel] API error: \(error.localizedDescription)")

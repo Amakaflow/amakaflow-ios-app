@@ -120,7 +120,7 @@ struct DDActivePlayerView: View {
 
                 Text(engine.formattedElapsedTime)
                     .font(.system(size: 24, weight: .semibold, design: .monospaced))
-                    .foregroundColor(Color(hex: "F5D90A"))
+                    .foregroundColor(DailyDriver.playerElapsed)
                     .monospacedDigit()
 
                 Text("ELAPSED")
@@ -144,7 +144,7 @@ struct DDActivePlayerView: View {
                 .opacity(currentIndex == 0 ? 0.35 : 1)
 
                 Button {
-                    engine.togglePlayPause()
+                    handlePlayPauseTapped()
                 } label: {
                     Group {
                         if engine.phase == .running {
@@ -156,10 +156,14 @@ struct DDActivePlayerView: View {
                                     .fill(DailyDriver.ink)
                                     .frame(width: 5, height: 20)
                             }
-                        } else {
+                        } else if engine.phase == .paused {
                             Image(systemName: "play.fill")
                                 .font(.system(size: 22, weight: .bold))
                                 .foregroundColor(DailyDriver.ink)
+                        } else {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundColor(DailyDriver.ink.opacity(0.35))
                         }
                     }
                     .frame(width: 64, height: 64)
@@ -168,6 +172,7 @@ struct DDActivePlayerView: View {
                     .ddLimeGlow()
                 }
                 .buttonStyle(.plain)
+                .disabled(engine.phase != .running && engine.phase != .paused)
                 .accessibilityIdentifier("dd_player_play_pause")
 
                 playerCircleButton(systemName: "chevron.right") {
@@ -183,7 +188,7 @@ struct DDActivePlayerView: View {
                 .padding(.bottom, 16)
         }
         .background(
-            Color(hex: "101012")
+            DailyDriver.playerDockBackground
                 .overlay(alignment: .top) {
                     Rectangle()
                         .fill(DailyDriver.border)
@@ -206,6 +211,15 @@ struct DDActivePlayerView: View {
     }
 
     // MARK: - Helpers
+
+    private func handlePlayPauseTapped() {
+        switch engine.phase {
+        case .running, .paused:
+            engine.togglePlayPause()
+        default:
+            break
+        }
+    }
 
     private var sessionMeta: String {
         let name = (engine.workout?.name ?? "WORKOUT").uppercased()

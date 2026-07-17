@@ -496,10 +496,22 @@ struct Workout: Identifiable, Codable, Hashable {
         let trimmed = loadString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return (nil, nil) }
         let parsed = parseLegacyLoad(trimmed)
-        if parsed.value > 0 {
+        if parsed.value > 0, isRecognizedLoadUnit(parsed.unit) {
             return (parsed, nil)
         }
         return (nil, trimmed)
+    }
+
+    private static let recognizedLoadUnits: Set<String> = [
+        "kg", "kgs", "kilogram", "kilograms", "lb", "lbs", "lbm", "pound", "pounds",
+        "%", "bw", "bodyweight", "plate", "plates"
+    ]
+
+    static func isRecognizedLoadUnit(_ unit: String) -> Bool {
+        let normalized = unit.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalized.isEmpty else { return false }
+        if recognizedLoadUnits.contains(normalized) { return true }
+        return recognizedLoadUnits.contains { normalized.hasSuffix($0) }
     }
 
     /// Parse a legacy load string like "80kg" or "135lbs" into an ExerciseLoad.

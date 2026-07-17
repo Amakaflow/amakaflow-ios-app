@@ -183,10 +183,14 @@ final class SocialImportViewModel: ObservableObject {
             let request = draft.toWorkoutSaveRequest()
             let workout = try await dependencies.apiService.saveWorkout(request)
             let enriched = WorkoutLibraryDetailStore.enrichFromDraft(workout, draft: draft)
-            WorkoutLibraryDetailStore.save(enriched)
-            self.draft = draft
-            canEdit = true
-            phase = .saved(workoutId: workout.id)
+            switch WorkoutLibraryDetailStore.save(enriched) {
+            case .success:
+                self.draft = draft
+                canEdit = true
+                phase = .saved(workoutId: workout.id)
+            case .failure:
+                phase = .failed(.parse(message: "Saved to the server but local detail cache failed — try again."))
+            }
         } catch {
             phase = .failed(SocialImportFailure.map(error))
         }

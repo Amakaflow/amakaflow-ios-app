@@ -317,7 +317,7 @@ struct DDWatchReadinessPill: View {
         if let batteryPercent {
             return "\(batteryPercent)%"
         }
-        return isConnected ? "78%" : "—"
+        return isConnected ? "—" : "—"
     }
 
     var body: some View {
@@ -361,7 +361,7 @@ struct DDDayScrubber: View {
                             .foregroundColor(DailyDriver.foregroundMuted)
                         Text("\(day.dayNumber)")
                             .ddDisplayText(13, weight: .bold)
-                            .foregroundColor(day.isToday ? DailyDriver.foreground : DailyDriver.foregroundMuted)
+                            .foregroundColor(index == selectedIndex ? DailyDriver.foreground : DailyDriver.foregroundMuted)
                         Circle()
                             .fill(dotColor(for: day))
                             .frame(width: 4, height: 4)
@@ -369,10 +369,10 @@ struct DDDayScrubber: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
-                    .background(day.isToday ? DailyDriver.card2 : Color.clear)
+                    .background(index == selectedIndex ? DailyDriver.card2 : Color.clear)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(day.isToday ? DailyDriver.border.opacity(0.9) : Color.clear, lineWidth: 1)
+                            .stroke(index == selectedIndex ? DailyDriver.border.opacity(0.9) : Color.clear, lineWidth: 1)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .opacity(day.isFuture ? 0.4 : 1)
@@ -683,7 +683,7 @@ struct DDWorkoutDisplaySection: Identifiable {
 enum DDWorkoutDisplayGrouping {
     /// One handoff section per block (`DDDetailScreen` — jsx L1697).
     static func sections(for workout: Workout) -> [DDWorkoutDisplaySection] {
-        let blocks = workout.blocks.filter { !isWarmupOrCooldown($0) && !$0.exercises.isEmpty }
+        let blocks = workout.blocks.filter { !$0.exercises.isEmpty }
         guard !blocks.isEmpty else { return [] }
 
         let totalExercises = max(1, blocks.reduce(0) { $0 + $1.exercises.count })
@@ -699,12 +699,17 @@ enum DDWorkoutDisplayGrouping {
         }
     }
 
-    private static func isWarmupOrCooldown(_ block: Block) -> Bool {
+    static func isWarmupOrCooldown(_ block: Block) -> Bool {
         let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
         return label == "warm-up" || label == "warmup" || label == "cool-down" || label == "cooldown"
     }
 
     private static func sectionTitle(for block: Block, index: Int) -> String {
+        if isWarmupOrCooldown(block) {
+            let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if !label.isEmpty { return label.capitalized }
+            return index == 0 ? "Warm-up" : "Cool-down"
+        }
         if let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines), !label.isEmpty {
             if !isGenericLabel(label) {
                 return label

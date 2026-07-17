@@ -18,26 +18,53 @@ struct DDGymDetailView: View {
     @State private var isShared = true
     @State private var toastMessage: String?
 
-    @State private var freeWeights: [DDGymEquipmentItem] = [
-        .init(id: "dumbbells", label: "Dumbbells to 50 kg", isPresent: true),
-        .init(id: "barbells", label: "Barbells + plates", isPresent: true),
-        .init(id: "kettlebells", label: "Kettlebells", isPresent: true),
-        .init(id: "ez-bar", label: "EZ bar", isPresent: false)
-    ]
-    @State private var machines: [DDGymEquipmentItem] = [
-        .init(id: "cable", label: "Cable crossover", isPresent: true),
-        .init(id: "leg-press", label: "Leg press", isPresent: true),
-        .init(id: "lat-pulldown", label: "Lat pulldown", isPresent: true),
-        .init(id: "chest-row", label: "Chest-supported row", isPresent: true),
-        .init(id: "hack-squat", label: "Hack squat", isPresent: false)
-    ]
-    @State private var cardio: [DDGymEquipmentItem] = [
-        .init(id: "rower", label: "Rower", isPresent: true),
-        .init(id: "skierg", label: "SkiErg", isPresent: true),
-        .init(id: "assault-bike", label: "Assault bike", isPresent: true),
-        .init(id: "sled", label: "Sled + turf", isPresent: false),
-        .init(id: "treadmill", label: "Treadmill", isPresent: true)
-    ]
+    private var usesHandoffFixture: Bool { DDHandoffFixtures.isEnabled }
+
+    @State private var freeWeights: [DDGymEquipmentItem] = DDGymDetailView.defaultFreeWeights
+    @State private var machines: [DDGymEquipmentItem] = DDGymDetailView.defaultMachines
+    @State private var cardio: [DDGymEquipmentItem] = DDGymDetailView.defaultCardio
+
+    private static var defaultFreeWeights: [DDGymEquipmentItem] {
+        handoffEquipment(
+            free: [
+                ("dumbbells", "Dumbbells to 50 kg", true),
+                ("barbells", "Barbells + plates", true),
+                ("kettlebells", "Kettlebells", true),
+                ("ez-bar", "EZ bar", false)
+            ]
+        )
+    }
+
+    private static var defaultMachines: [DDGymEquipmentItem] {
+        handoffEquipment(
+            free: [
+                ("cable", "Cable crossover", true),
+                ("leg-press", "Leg press", true),
+                ("lat-pulldown", "Lat pulldown", true),
+                ("chest-row", "Chest-supported row", true),
+                ("hack-squat", "Hack squat", false)
+            ]
+        )
+    }
+
+    private static var defaultCardio: [DDGymEquipmentItem] {
+        handoffEquipment(
+            free: [
+                ("rower", "Rower", true),
+                ("skierg", "SkiErg", true),
+                ("assault-bike", "Assault bike", true),
+                ("sled", "Sled + turf", false),
+                ("treadmill", "Treadmill", true)
+            ]
+        )
+    }
+
+    private static func handoffEquipment(free: [(String, String, Bool)]) -> [DDGymEquipmentItem] {
+        guard DDHandoffFixtures.isEnabled else {
+            return [DDGymEquipmentItem(id: "bodyweight", label: "Bodyweight", isPresent: true)]
+        }
+        return free.map { DDGymEquipmentItem(id: $0.0, label: $0.1, isPresent: $0.2) }
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -55,7 +82,11 @@ struct DDGymDetailView: View {
                             .padding(.top, 14)
 
                         Button {
-                            toastMessage = "Now the active gym — builder + swaps adapt to it"
+                            if usesHandoffFixture {
+                                toastMessage = "Now the active gym — builder + swaps adapt to it"
+                            } else {
+                                toastMessage = "Active gym saved locally — sync coming soon"
+                            }
                         } label: {
                             Text("Set as active gym")
                                 .ddDisplayText(14.5, weight: .bold)
@@ -119,10 +150,10 @@ struct DDGymDetailView: View {
         HStack(spacing: 12) {
             DDIconChip(systemName: "map.fill", background: DailyDriver.blue, size: 38)
             VStack(alignment: .leading, spacing: 3) {
-                Text("24 Hour Fitness — Katy")
+                Text(usesHandoffFixture ? "24 Hour Fitness — Katy" : "Commercial gym")
                     .ddDisplayText(22, weight: .heavy)
                     .foregroundColor(DailyDriver.foreground)
-                Text("KATY, TX · 1.2 MI AWAY")
+                Text(usesHandoffFixture ? "KATY, TX · 1.2 MI AWAY" : "Configure equipment for this gym")
                     .font(.system(size: 9.5, weight: .medium, design: .monospaced))
                     .foregroundColor(DailyDriver.foregroundDim)
             }

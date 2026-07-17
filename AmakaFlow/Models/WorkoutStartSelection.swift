@@ -49,7 +49,7 @@ enum WorkoutStartGym: String, CaseIterable, Identifiable, Equatable {
     var pillLabel: String {
         switch self {
         case .home: return "Home gym"
-        case .commercial: return "24hr Katy"
+        case .commercial: return DDHandoffFixtures.isEnabled ? "24hr Katy" : "Commercial gym"
         case .hotel: return "Hotel"
         case .unset: return "No gym set"
         }
@@ -58,7 +58,7 @@ enum WorkoutStartGym: String, CaseIterable, Identifiable, Equatable {
     var title: String {
         switch self {
         case .home: return "Home gym"
-        case .commercial: return "24hr Katy"
+        case .commercial: return DDHandoffFixtures.isEnabled ? "24hr Katy" : "Commercial gym"
         case .hotel: return "Hotel"
         case .unset: return "No gym set"
         }

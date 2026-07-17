@@ -117,7 +117,7 @@ final class LibraryViewModel: ObservableObject {
             }
 
             allItems = response.items ?? []
-            allWorkouts = workouts.map { WorkoutLibraryDetailStore.enrich($0) }
+            allWorkouts = WorkoutLibraryDetailStore.enrichCollection(workouts)
             workoutsByID = Dictionary(uniqueKeysWithValues: allWorkouts.map { ($0.id, $0) })
             applyFilters()
         } catch {

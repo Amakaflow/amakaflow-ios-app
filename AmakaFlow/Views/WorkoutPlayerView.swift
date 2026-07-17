@@ -17,6 +17,7 @@ struct WorkoutPlayerView: View {
     @State private var showStepList = false
     @State private var deviceMode: DevicePreference = .phoneOnly
     @State private var shouldDismissImmediately = false  // Track if workout was discarded or saved for later
+    @State private var pausedForEndConfirmation = false
     @State private var showRPEFeedback = false  // AMA-1266: Show RPE prompt after completion
     @State private var showSwapSheet = false
 
@@ -97,6 +98,7 @@ struct WorkoutPlayerView: View {
                         engine: engine,
                         watchManager: watchManager,
                         onEnd: {
+                            pausedForEndConfirmation = engine.phase == .running
                             if engine.phase == .running {
                                 engine.pause()
                             }
@@ -155,10 +157,10 @@ struct WorkoutPlayerView: View {
                 engine.end(reason: .discarded)
             }
             Button("Cancel", role: .cancel) {
-                // Resume workout if it was paused for the confirmation dialog
-                if engine.phase == .paused {
+                if pausedForEndConfirmation, engine.phase == .paused {
                     engine.resume()
                 }
+                pausedForEndConfirmation = false
             }
         } message: {
             Text("Save progress, resume later, or discard.")
@@ -208,7 +210,7 @@ struct WorkoutPlayerView: View {
         HStack {
             // Close button
             Button {
-                // Pause while showing confirmation to stop timer updates
+                pausedForEndConfirmation = engine.phase == .running
                 if engine.phase == .running {
                     engine.pause()
                 }

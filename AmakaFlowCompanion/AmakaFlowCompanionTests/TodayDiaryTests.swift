@@ -157,7 +157,7 @@ final class TodayDiaryTests: XCTestCase {
     }
 
     func testTodayDiarySampleMatchesHandoffTimeline() {
-        let diary = WorkoutCompletion.todayDiarySampleData(now: now)
+        let diary = WorkoutCompletion.todayDiarySampleData(now: now, calendar: calendar)
         XCTAssertEqual(diary.count, 2)
         XCTAssertEqual(diary.map(\.id), ["today-lunch-run", "today-lunch-workout"])
         XCTAssertEqual(diary.map(\.workoutName), ["Lunch Run", "Lunch Workout"])

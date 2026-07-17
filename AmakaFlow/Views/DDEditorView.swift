@@ -346,8 +346,12 @@ enum DDEditorSeed {
 
     private static func parseLoad(_ load: String?) -> Double? {
         guard let load else { return nil }
-        let digits = load.filter { $0.isNumber || $0 == "." }
-        return Double(digits)
+        let trimmed = load.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let match = trimmed.range(
+            of: #"^(\d+(?:\.\d+)?)"#,
+            options: .regularExpression
+        ) else { return nil }
+        return Double(trimmed[match])
     }
 }
 
@@ -616,6 +620,10 @@ struct DDEditorView: View {
 
     private func saveTapped() {
         if mode == .backfill {
+            DDEditorBackfillStore.save(
+                title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+                blocks: blocks
+            )
             onBackfillSaved?()
             toastMessage = "Weights saved to Monday's log"
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { dismiss() }
@@ -629,15 +637,52 @@ struct DDEditorView: View {
 
     private static func intervals(from block: DDEditorBlockDraft) -> [WorkoutSaveInterval] {
         block.exercises.map { exercise in
-            WorkoutSaveInterval(
-                type: "reps",
+            interval(for: exercise, block: block)
+        }
+    }
+
+    private static func interval(for exercise: DDEditorExerciseDraft, block: DDEditorBlockDraft) -> WorkoutSaveInterval {
+        let load = exercise.weightKg.map { weight in
+            weight.truncatingRemainder(dividingBy: 1) == 0
+                ? "\(Int(weight)) kg"
+                : String(format: "%.1f kg", weight)
+        }
+        if let seconds = exercise.durationSeconds, seconds > 0,
+           exercise.reps == nil, exercise.sets == nil, exercise.distanceMeters == nil {
+            return WorkoutSaveInterval(
+                type: "time",
                 name: exercise.name,
-                sets: exercise.sets ?? block.rounds,
-                reps: exercise.reps ?? 10,
-                restSeconds: exercise.restSeconds ?? 60,
-                load: exercise.weightKg.map { "\(Int($0)) kg" }
+                seconds: seconds,
+                restSeconds: exercise.restSeconds,
+                load: load
             )
         }
+        if let meters = exercise.distanceMeters, meters > 0 {
+            return WorkoutSaveInterval(
+                type: "distance",
+                name: exercise.name,
+                meters: meters,
+                restSeconds: exercise.restSeconds,
+                load: load
+            )
+        }
+        if let calories = exercise.calories, calories > 0 {
+            return WorkoutSaveInterval(
+                type: "time",
+                name: exercise.name,
+                seconds: calories,
+                restSeconds: exercise.restSeconds,
+                target: "\(calories) cal"
+            )
+        }
+        return WorkoutSaveInterval(
+            type: "reps",
+            name: exercise.name,
+            sets: exercise.sets ?? block.rounds,
+            reps: exercise.reps ?? 10,
+            restSeconds: exercise.restSeconds ?? 60,
+            load: load
+        )
     }
 }
 

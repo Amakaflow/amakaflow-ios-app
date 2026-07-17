@@ -71,6 +71,9 @@
 		<string>GeistMono-Medium.ttf</string>
 		<string>GeistMono-SemiBold.ttf</string>
 		<string>GeistMono-Bold.ttf</string>
+		<string>Poppins-SemiBold.ttf</string>
+		<string>Poppins-Bold.ttf</string>
+		<string>Poppins-ExtraBold.ttf</string>
 	</array>
 </dict>
 </plist>

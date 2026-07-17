@@ -79,14 +79,21 @@ struct DDHRZonesCard: View {
             }
 
             if !zones.isEmpty {
+                let spacing: CGFloat = 3
+                let zoneTotal = zones.reduce(0.0) { $0 + $1.percentageOfWorkout }
                 GeometryReader { geo in
-                    HStack(spacing: 3) {
+                    let segmentCount = zones.count
+                    let totalSpacing = spacing * CGFloat(max(segmentCount - 1, 0))
+                    let availableWidth = max(0, geo.size.width - totalSpacing)
+                    HStack(spacing: spacing) {
                         ForEach(Array(zones.enumerated()), id: \.element.id) { index, zone in
                             let isPeak = zone.percentageOfWorkout == zones.map(\.percentageOfWorkout).max()
+                            let share = zoneTotal > 0 ? zone.percentageOfWorkout / zoneTotal : 0
+                            let width = max(4, availableWidth * CGFloat(share))
                             RoundedRectangle(cornerRadius: 99, style: .continuous)
                                 .fill(Self.zoneColors[safe: index] ?? DailyDriver.card2)
                                 .opacity(isPeak ? 1 : 0.45)
-                                .frame(width: max(4, geo.size.width * CGFloat(zone.percentageOfWorkout / 100)))
+                                .frame(width: width)
                         }
                     }
                 }

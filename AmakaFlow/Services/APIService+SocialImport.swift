@@ -371,11 +371,15 @@ extension APIService {
     }
 
     private static func provenanceExercise(from exercise: SocialImportExercise) -> [String: Any] {
-        var object: [String: Any] = [
-            "name": exercise.name,
-            "sets": exercise.sets ?? 3,
-            "reps": exercise.reps ?? 10
-        ]
+        var object: [String: Any] = ["name": exercise.name]
+        if let seconds = exercise.seconds, seconds > 0 {
+            object["duration_sec"] = seconds
+        } else if let meters = exercise.distanceMeters, meters > 0 {
+            object["distance_m"] = meters
+        } else {
+            if let sets = exercise.sets { object["sets"] = sets }
+            if let reps = exercise.reps { object["reps"] = reps }
+        }
         if let loadText = exercise.load?.trimmingCharacters(in: .whitespacesAndNewlines), !loadText.isEmpty {
             let parsed = Workout.resolveLegacyLoadAndInstruction(from: loadText)
             if let parsedLoad = parsed.load, parsedLoad.value > 0 {
@@ -391,9 +395,6 @@ extension APIService {
         }
         if let focus = exercise.focus?.trimmingCharacters(in: .whitespacesAndNewlines), !focus.isEmpty {
             object["muscle_group"] = focus
-        }
-        if let seconds = exercise.seconds, seconds > 0 {
-            object["duration_sec"] = seconds
         }
         return object
     }

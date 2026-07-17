@@ -96,6 +96,7 @@ extension Theme {
         enum Family {
             case geist
             case geistMono
+            case poppins
         }
 
         private static let fontFiles = [
@@ -106,18 +107,48 @@ extension Theme {
             "GeistMono-Regular.ttf",
             "GeistMono-Medium.ttf",
             "GeistMono-SemiBold.ttf",
-            "GeistMono-Bold.ttf"
+            "GeistMono-Bold.ttf",
+            "Poppins-SemiBold.ttf",
+            "Poppins-Bold.ttf",
+            "Poppins-ExtraBold.ttf"
         ]
 
         private static var didAttemptRegistration = false
 
         static let allPostScriptNames = fontFiles.map { $0.replacingOccurrences(of: ".ttf", with: "") }
 
+        private static func fontWeightName(for weight: Font.Weight) -> String {
+            if weight == .bold || weight == .heavy || weight == .black {
+                return "Bold"
+            }
+            if weight == .semibold {
+                return "SemiBold"
+            }
+            if weight == .medium {
+                return "Medium"
+            }
+            return "Regular"
+        }
+
+        static func poppinsWeightName(for weight: Font.Weight) -> String {
+            if weight == .heavy || weight == .black {
+                return "ExtraBold"
+            }
+            if weight == .bold {
+                return "Bold"
+            }
+            return "SemiBold"
+        }
+
         static func postScriptName(family: Family, weight: Font.Weight) -> String {
             let prefix: String
             switch family {
             case .geist: prefix = "Geist"
             case .geistMono: prefix = "GeistMono"
+            case .poppins: prefix = "Poppins"
+            }
+            if family == .poppins {
+                return "\(prefix)-\(poppinsWeightName(for: weight))"
             }
             return "\(prefix)-\(fontWeightName(for: weight))"
         }
@@ -148,19 +179,6 @@ extension Theme {
             #else
             _ = areLoaded()
             #endif
-        }
-
-        private static func fontWeightName(for weight: Font.Weight) -> String {
-            if weight == .bold || weight == .heavy || weight == .black {
-                return "Bold"
-            }
-            if weight == .semibold {
-                return "SemiBold"
-            }
-            if weight == .medium {
-                return "Medium"
-            }
-            return "Regular"
         }
 
         private static func registerFont(named filename: String) {
@@ -222,6 +240,11 @@ extension Font {
     static func geistMono(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
         Theme.Fonts.assertLoaded()
         return .custom(Theme.Fonts.postScriptName(family: .geistMono, weight: weight), size: size)
+    }
+
+    static func poppins(_ size: CGFloat, _ weight: Font.Weight = .bold) -> Font {
+        Theme.Fonts.ensureRegistered()
+        return .custom(Theme.Fonts.postScriptName(family: .poppins, weight: weight), size: size)
     }
 }
 
@@ -292,10 +315,10 @@ struct AFCard<Content: View>: View {
     var body: some View {
         content
             .padding(padding)
-            .background(DailyDriver.card)
+            .background(Theme.Colors.surface)
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(DailyDriver.border, lineWidth: 1)
+                    .stroke(Theme.Colors.borderLight, lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
@@ -362,11 +385,11 @@ struct AFPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(size.font)
-            .foregroundColor(DailyDriver.ink)
+            .foregroundColor(Theme.Colors.primaryForeground)
             .padding(.horizontal, size.horizontalPadding)
             .padding(.vertical, size.verticalPadding)
             .frame(maxWidth: isWide ? .infinity : nil)
-            .background(DailyDriver.lime)
+            .background(Theme.Colors.accentGreen)
             .clipShape(Capsule(style: .continuous))
             .ddLimeGlow()
             .opacity(isEnabled ? 1 : 0.52)
@@ -383,12 +406,12 @@ struct AFGhostButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(size.font)
-            .foregroundColor(DailyDriver.foreground)
+            .foregroundColor(Theme.Colors.textPrimary)
             .padding(.horizontal, size.horizontalPadding)
             .padding(.vertical, size.verticalPadding)
             .frame(maxWidth: isWide ? .infinity : nil)
-            .background(configuration.isPressed ? DailyDriver.card2 : Color.clear)
-            .overlay(Capsule(style: .continuous).stroke(DailyDriver.borderStrong, lineWidth: 1))
+            .background(configuration.isPressed ? Theme.Colors.surfaceElevated : Color.clear)
+            .overlay(Capsule(style: .continuous).stroke(Theme.Colors.borderMedium, lineWidth: 1))
             .clipShape(Capsule(style: .continuous))
             .opacity(isEnabled ? 1 : 0.52)
             .scaleEffect(configuration.isPressed ? 0.985 : 1)
@@ -415,12 +438,12 @@ struct AFTopBar<Left: View, Right: View>: View {
             if let title {
                 Text(title)
                     .ddDisplayText(20, weight: .heavy)
-                    .foregroundColor(DailyDriver.foreground)
+                    .foregroundColor(Theme.Colors.textPrimary)
             }
             if let subtitle {
                 Text(subtitle)
                     .font(.system(size: 11))
-                    .foregroundColor(DailyDriver.foregroundMuted)
+                    .foregroundColor(Theme.Colors.textSecondary)
             }
         }
         .padding(.horizontal, Theme.Spacing.lg)

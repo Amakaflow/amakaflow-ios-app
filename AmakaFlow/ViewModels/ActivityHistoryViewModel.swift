@@ -214,8 +214,12 @@ class ActivityHistoryViewModel: ObservableObject {
             #if DEBUG
             let now = nowProvider()
             if TodayDiary.completionsForToday(fetched, now: now, calendar: calendar).isEmpty {
-                seedDebugTodayDiarySample(reason: "no today completions from API")
+                let sample = WorkoutCompletion.todayDiarySampleData(now: now, calendar: calendar)
+                completions = fetched + sample
+                hasMoreData = fetched.count >= pageSize
+                currentOffset = completions.count
                 isLoading = false
+                logger.info("loadCompletions: appended DEBUG today diary sample to \(fetched.count) API completions")
                 return
             }
             #endif

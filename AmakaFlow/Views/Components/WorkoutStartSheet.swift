@@ -208,7 +208,11 @@ struct WorkoutStartSheet: View {
         subtitle: String,
         tag: String?
     ) -> some View {
-        Button {
+        let isGarminUnavailable = device == .garmin && !garminPaired
+        return Button {
+            if isGarminUnavailable {
+                return
+            }
             onConfirm(selectedGym, device)
         } label: {
             HStack(spacing: 13) {
@@ -248,6 +252,8 @@ struct WorkoutStartSheet: View {
             .clipShape(Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
+        .disabled(isGarminUnavailable)
+        .opacity(isGarminUnavailable ? 0.45 : 1)
         .accessibilityIdentifier(device.accessibilityIdentifier)
     }
 }
