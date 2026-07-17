@@ -8,6 +8,9 @@
 
 import Combine
 import Foundation
+import os.log
+
+private let libraryLogger = Logger(subsystem: "com.myamaka.AmakaFlowCompanion", category: "Library")
 
 @MainActor
 final class LibraryViewModel: ObservableObject {
@@ -112,15 +115,26 @@ final class LibraryViewModel: ObservableObject {
             async let workoutsTask = apiService.fetchWorkouts(isRetry: false)
 
             let response = try await knowledgeTask
-            guard !isStale() else { return }
+            guard !isStale() else {
+                logSuppressedLoad(reason: "stale_after_listLibraryItems", generation: generation)
+                return
+            }
 
             let workouts: [Workout]
             do {
                 workouts = try await workoutsTask
             } catch {
-                guard !isStale() else { return }
+                guard !isStale() else {
+                    logSuppressedLoad(reason: "stale_after_fetchWorkouts", generation: generation)
+                    return
+                }
                 if CTAError.isCancellation(error) {
                     // Superseded request — keep whatever workouts we already had.
+                    logSuppressedLoad(
+                        reason: "fetchWorkouts_cancelled",
+                        generation: generation,
+                        error: error
+                    )
                     workouts = allWorkouts
                 } else {
                     // Knowledge still usable if workout fetch fails — surface toast, keep going.
@@ -130,15 +144,28 @@ final class LibraryViewModel: ObservableObject {
                 }
             }
 
-            guard !isStale() else { return }
+            guard !isStale() else {
+                logSuppressedLoad(reason: "stale_before_apply", generation: generation)
+                return
+            }
 
             allItems = response.items ?? []
             allWorkouts = WorkoutLibraryDetailStore.enrichCollection(workouts)
             workoutsByID = Dictionary(uniqueKeysWithValues: allWorkouts.map { ($0.id, $0) })
             applyFilters()
         } catch {
-            guard !isStale() else { return }
-            if CTAError.isCancellation(error) { return }
+            guard !isStale() else {
+                logSuppressedLoad(reason: "stale_listLibraryItems_error", generation: generation)
+                return
+            }
+            if CTAError.isCancellation(error) {
+                logSuppressedLoad(
+                    reason: "listLibraryItems_cancelled",
+                    generation: generation,
+                    error: error
+                )
+                return
+            }
             let mapped = CTAError.map(error)
             ctaError = mapped
             if !hadContent { state = .error(mapped) }
@@ -211,6 +238,32 @@ final class LibraryViewModel: ObservableObject {
             error: ctaError,
             endpoint: "/v1/library/items",
             userId: PairingService.shared.userProfile?.id
+        )
+    }
+
+    /// Debug-only trail when a superseded Library reload is dropped (incl. URLError -999).
+    /// Surfaces in Console (os.Logger) and Settings → Debug Log for TestFlight diagnosis.
+    private func logSuppressedLoad(reason: String, generation: Int, error: Error? = nil) {
+        var metadata: [String: String] = [
+            "reason": reason,
+            "generation": "\(generation)",
+            "currentGeneration": "\(loadGeneration)"
+        ]
+        if let error {
+            metadata["error"] = String(describing: error)
+            if let urlError = error as? URLError {
+                metadata["urlErrorCode"] = "\(urlError.code.rawValue)"
+            }
+        }
+        let details = metadata
+            .sorted { $0.key < $1.key }
+            .map { "\($0.key)=\($0.value)" }
+            .joined(separator: ", ")
+        libraryLogger.debug("load suppressed (\(reason)): \(details)")
+        DebugLogService.shared.log(
+            "Library reload superseded",
+            details: details,
+            metadata: metadata
         )
     }
 
