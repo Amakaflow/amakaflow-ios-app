@@ -233,6 +233,7 @@
 		AMA2297DDDEVFIX00B /* DDDeviceFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2297DDDEVFIX00A /* DDDeviceFixture.swift */; };
 		AMA2297DDHANDFIX00B /* DDHandoffFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2297DDHANDFIX00A /* DDHandoffFixtures.swift */; };
 		AMA2297DDBFILL000B /* DDEditorBackfillStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2297DDBFILL000A /* DDEditorBackfillStore.swift */; };
+		AMA2297DDGYMST00B /* DDActiveGymStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2297DDGYMST00A /* DDActiveGymStore.swift */; };
 		AMA2293DDDEV000000B /* DDDeviceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2293DDDEV000000A /* DDDeviceDetailView.swift */; };
 		AMA2297DDGYM00000B /* DDGymDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2297DDGYM00000A /* DDGymDetailView.swift */; };
 		AMA2292DDCREATE00B /* CreateWorkoutSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2292DDCREATE00A /* CreateWorkoutSheet.swift */; };
@@ -755,6 +756,7 @@
 		AMA2297DDDEVFIX00A /* DDDeviceFixture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDDeviceFixture.swift; path = ../AmakaFlow/Models/DDDeviceFixture.swift; sourceTree = SOURCE_ROOT; };
 		AMA2297DDHANDFIX00A /* DDHandoffFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDHandoffFixtures.swift; path = ../AmakaFlow/Models/DDHandoffFixtures.swift; sourceTree = SOURCE_ROOT; };
 		AMA2297DDBFILL000A /* DDEditorBackfillStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDEditorBackfillStore.swift; path = ../AmakaFlow/Services/DDEditorBackfillStore.swift; sourceTree = SOURCE_ROOT; };
+		AMA2297DDGYMST00A /* DDActiveGymStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDActiveGymStore.swift; path = ../AmakaFlow/Services/DDActiveGymStore.swift; sourceTree = SOURCE_ROOT; };
 		AMA2293DDDEV000000A /* DDDeviceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDDeviceDetailView.swift; path = ../AmakaFlow/Views/DDDeviceDetailView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2297DDGYM00000A /* DDGymDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDGymDetailView.swift; path = ../AmakaFlow/Views/DDGymDetailView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2292DDCREATE00A /* CreateWorkoutSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CreateWorkoutSheet.swift; path = ../AmakaFlow/Views/CreateWorkoutSheet.swift; sourceTree = SOURCE_ROOT; };
@@ -1234,6 +1236,7 @@
 				AMA2297DDDEVFIX00A /* DDDeviceFixture.swift */,
 				AMA2297DDHANDFIX00A /* DDHandoffFixtures.swift */,
 				AMA2297DDBFILL000A /* DDEditorBackfillStore.swift */,
+				AMA2297DDGYMST00A /* DDActiveGymStore.swift */,
 				AMA2297DDGYM00000A /* DDGymDetailView.swift */,
 				AMA2290BFVIEWREF /* StrengthBackfillView.swift */,
 				AMA2290WCVCOMPREF /* WorkoutCompletionView+Components.swift */,
@@ -2116,6 +2119,7 @@
 				AMA2297DDDEVFIX00B /* DDDeviceFixture.swift in Sources */,
 				AMA2297DDHANDFIX00B /* DDHandoffFixtures.swift in Sources */,
 				AMA2297DDBFILL000B /* DDEditorBackfillStore.swift in Sources */,
+				AMA2297DDGYMST00B /* DDActiveGymStore.swift in Sources */,
 				AMA2297DDGYM00000B /* DDGymDetailView.swift in Sources */,
 				AMA2292DDCREATE00B /* CreateWorkoutSheet.swift in Sources */,
 				AMA2292DDFLOW00000B /* CreateFlowPresentation.swift in Sources */,

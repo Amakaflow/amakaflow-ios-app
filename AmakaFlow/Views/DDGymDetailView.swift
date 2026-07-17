@@ -26,6 +26,14 @@ struct DDGymDetailView: View {
 
     private var usesHandoffFixture: Bool { DDHandoffFixtures.isEnabled }
 
+    private var gymId: String {
+        usesHandoffFixture ? "24-hour-fitness-katy" : "commercial-gym"
+    }
+
+    private var gymName: String {
+        usesHandoffFixture ? "24 Hour Fitness — Katy" : "Commercial gym"
+    }
+
     @State private var freeWeights: [DDGymEquipmentItem] = DDGymDetailView.defaultFreeWeights
     @State private var machines: [DDGymEquipmentItem] = DDGymDetailView.defaultMachines
     @State private var cardio: [DDGymEquipmentItem] = DDGymDetailView.defaultCardio
@@ -88,6 +96,7 @@ struct DDGymDetailView: View {
                             .padding(.top, 14)
 
                         Button {
+                            DDActiveGymStore.save(id: gymId, name: gymName)
                             if usesHandoffFixture {
                                 toastMessage = "Now the active gym — builder + swaps adapt to it"
                             } else {
@@ -156,7 +165,7 @@ struct DDGymDetailView: View {
         HStack(spacing: 12) {
             DDIconChip(systemName: "map.fill", background: DailyDriver.blue, size: 38)
             VStack(alignment: .leading, spacing: 3) {
-                Text(usesHandoffFixture ? "24 Hour Fitness — Katy" : "Commercial gym")
+                Text(gymName)
                     .ddDisplayText(22, weight: .heavy)
                     .foregroundColor(DailyDriver.foreground)
                 Text(usesHandoffFixture ? "KATY, TX · 1.2 MI AWAY" : "Configure equipment for this gym")

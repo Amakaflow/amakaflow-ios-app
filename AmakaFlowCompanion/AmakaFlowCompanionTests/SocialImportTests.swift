@@ -401,6 +401,38 @@ final class SocialImportTests: XCTestCase {
         XCTAssertEqual(exercises?.first?["reps"] as? Int, 10)
     }
 
+    func testWorkoutSaveRequestPreservesPositiveLoadWithoutUnit() {
+        let workout = Workout(
+            name: "Load Day",
+            sport: .strength,
+            duration: 1800,
+            blocks: [
+                Block(
+                    label: "Main",
+                    exercises: [
+                        Exercise(
+                            name: "Squat",
+                            canonicalName: nil,
+                            sets: 3,
+                            reps: "5",
+                            durationSeconds: nil,
+                            load: ExerciseLoad(value: 225, unit: ""),
+                            restSeconds: nil,
+                            distance: nil,
+                            notes: nil,
+                            supersetGroup: nil
+                        )
+                    ]
+                )
+            ],
+            source: .manual
+        )
+
+        let request = WorkoutSaveRequest.from(workout: workout)
+        let load = request.blocks?.first?.exercises.first?.load
+        XCTAssertEqual(load, "225")
+    }
+
     func testMapperSaveBodyRejectsEmptyExerciseList() {
         let request = WorkoutSaveRequest(
             name: "Empty",

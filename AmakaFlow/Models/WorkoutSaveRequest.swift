@@ -68,6 +68,19 @@ struct WorkoutSaveRequest: Codable {
         )
     }
 
+    private static func formattedLoad(_ load: ExerciseLoad) -> String? {
+        if load.value > 0 {
+            if load.unit == "bodyweight" { return "bodyweight" }
+            let valueText = load.value.truncatingRemainder(dividingBy: 1) == 0
+                ? String(Int(load.value))
+                : String(load.value)
+            let unit = load.unit.trimmingCharacters(in: .whitespacesAndNewlines)
+            return unit.isEmpty ? valueText : "\(valueText) \(unit)"
+        }
+        let unit = load.unit.trimmingCharacters(in: .whitespacesAndNewlines)
+        return unit.isEmpty ? nil : unit
+    }
+
     private static func blocksFromWorkout(_ workout: Workout) -> [SocialImportBlock]? {
         guard !workout.blocks.isEmpty else { return nil }
         return workout.blocks.map { block in
@@ -99,12 +112,7 @@ struct WorkoutSaveRequest: Codable {
             repsRange: repsRange,
             seconds: exercise.durationSeconds,
             distanceMeters: exercise.distance.map { Int($0) },
-            load: exercise.load.flatMap { load in
-                if load.value > 0, !load.unit.isEmpty {
-                    return "\(load.value) \(load.unit)"
-                }
-                return load.unit.isEmpty ? nil : load.unit
-            },
+            load: exercise.load.flatMap { formattedLoad($0) },
             focus: exercise.focus,
             notes: exercise.notes
         )
