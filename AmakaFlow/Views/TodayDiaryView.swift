@@ -196,7 +196,7 @@ struct TodayDiaryView: View {
     }
 
     private var showsGarminSyncRow: Bool {
-        todaysCompletions.contains(where: { $0.source == .garmin }) || usesTodayFixture
+        todaysCompletions.contains { $0.source == .garmin } || usesTodayFixture
     }
 
     private var garminPulledCount: Int {

@@ -249,7 +249,7 @@ private struct DDEditorStepper: View {
     var format: ((Int) -> String)?
 
     var body: some View {
-        stepperContent(value: value, onChange: { value = $0 })
+        stepperContent(value: value) { value = $0 }
     }
 
     private func stepperContent(value: Int, onChange: @escaping (Int) -> Void) -> some View {
