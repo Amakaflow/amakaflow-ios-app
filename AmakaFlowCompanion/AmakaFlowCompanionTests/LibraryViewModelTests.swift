@@ -309,7 +309,8 @@ final class LibraryViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.ctaError?.isRetryable == true)
 
         api.deleteKnowledgeCardResult = .success(())
-        await viewModel.retryLastAction()
+        let retried = await viewModel.retryLastAction()
+        XCTAssertTrue(retried, "Successful delete retry must report true so detail can dismiss")
         XCTAssertTrue(viewModel.entries.isEmpty)
         XCTAssertEqual(viewModel.state, .empty)
         XCTAssertNil(viewModel.ctaError)

@@ -264,25 +264,15 @@ class FixtureAPIService: APIServiceProviding {
         try loadedFixtureWorkouts()
     }
 
+    /// Cache-backed fixture workouts so deletes persist without relaunch.
+    /// Preserves `UITEST_FIXTURE_STATE=empty` (`[]`) and `=error` (throws).
     private func loadedFixtureWorkouts() throws -> [Workout] {
         if let fixtureWorkoutsCache {
             return fixtureWorkoutsCache
         }
-        let fallback = [Self.phoneStrengthFixtureWorkout]
-        do {
-            let loaded = try FixtureLoader.loadWorkouts()
-            if !loaded.isEmpty {
-                fixtureWorkoutsCache = loaded
-                return loaded
-            }
-            print("[FixtureAPIService] FixtureLoader returned empty — seeding AMA-2290 phone strength workout")
-            fixtureWorkoutsCache = fallback
-            return fallback
-        } catch {
-            print("[FixtureAPIService] FixtureLoader failed (\(error)) — seeding AMA-2290 phone strength workout")
-            fixtureWorkoutsCache = fallback
-            return fallback
-        }
+        let loaded = try FixtureLoader.loadWorkouts()
+        fixtureWorkoutsCache = loaded
+        return loaded
     }
 
     /// Guaranteed strength fixture for phone-first record → backfill visual / dogfood path.

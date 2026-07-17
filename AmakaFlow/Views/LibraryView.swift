@@ -15,6 +15,7 @@ struct LibraryView: View {
     @State private var searchText = ""
     @State private var sourceFilter: DDPlatform = .all
     @State private var pendingDelete: LibraryListEntry?
+    @State private var navigationPath = NavigationPath()
 
     init(viewModel: LibraryViewModel? = nil) {
         _viewModel = StateObject(wrappedValue: viewModel ?? LibraryViewModel())
@@ -43,7 +44,7 @@ struct LibraryView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 DailyDriver.screenBackground.ignoresSafeArea()
 
@@ -71,7 +72,14 @@ struct LibraryView: View {
                 ErrorToast(
                     actionTitle: viewModel.errorToastTitle,
                     error: error,
-                    onRetry: error.isRetryable ? { Task { await viewModel.retryLastAction() } } : nil,
+                    onRetry: error.isRetryable ? {
+                        Task {
+                            let deleted = await viewModel.retryLastAction()
+                            if deleted, !navigationPath.isEmpty {
+                                navigationPath.removeLast()
+                            }
+                        }
+                    } : nil,
                     onReport: { viewModel.reportError() },
                     onDismiss: { viewModel.dismissError() }
                 )

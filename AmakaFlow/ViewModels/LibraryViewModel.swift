@@ -153,14 +153,17 @@ final class LibraryViewModel: ObservableObject {
         }
     }
 
-    func retryLastAction() async {
+    /// - Returns: `true` when a delete retry removed the entry (detail should dismiss).
+    @discardableResult
+    func retryLastAction() async -> Bool {
         switch lastFailedAction {
         case .load:
             await load()
+            return false
         case .delete(let entry):
-            await deleteEntry(entry)
+            return await deleteEntry(entry)
         case .none:
-            break
+            return false
         }
     }
 
