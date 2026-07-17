@@ -91,7 +91,7 @@ enum SocialImportPlatform: String, Codable, CaseIterable, Equatable {
 
         var normalized = trimmed
         if let regex = try? NSRegularExpression(
-            pattern: "(?i)(instagram\\.com/)reels(/)",
+            pattern: "(?i)((?:instagram\\.com|instagr\\.am)/)reels(/)",
             options: []
         ) {
             let range = NSRange(normalized.startIndex..<normalized.endIndex, in: normalized)

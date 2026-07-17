@@ -38,6 +38,15 @@ final class URLImportService: NSObject {
         return URLSession(configuration: config)
     }()
 
+    /// Instagram reel ingest (Apify + LLM) can exceed 45s — align request + resource with main app (120s).
+    private lazy var instagramSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 120
+        config.timeoutIntervalForResource = 120
+        config.waitsForConnectivity = false
+        return URLSession(configuration: config)
+    }()
+
     private override init() {
         super.init()
     }
@@ -52,7 +61,8 @@ final class URLImportService: NSObject {
             : urlString
         let request = try buildRequest(for: normalized, platform: platform)
 
-        let (data, response) = try await immediateSession.data(for: request)
+        let session = platform == .instagram ? instagramSession : immediateSession
+        let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw ImportError.invalidResponse

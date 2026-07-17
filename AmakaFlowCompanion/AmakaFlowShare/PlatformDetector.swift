@@ -96,7 +96,7 @@ enum PlatformDetector {
     static func normalizeInstagramURL(_ urlString: String) -> String {
         var normalized = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
         if let regex = try? NSRegularExpression(
-            pattern: "(?i)(instagram\\.com/)reels(/)",
+            pattern: "(?i)((?:instagram\\.com|instagr\\.am)/)reels(/)",
             options: []
         ) {
             let range = NSRange(normalized.startIndex..<normalized.endIndex, in: normalized)

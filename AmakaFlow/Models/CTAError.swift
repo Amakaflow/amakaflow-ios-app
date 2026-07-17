@@ -210,9 +210,7 @@ public extension CTAError {
         if let apiError = error as? APIError {
             switch apiError {
             case .network(let underlying), .networkError(let underlying):
-                if let urlError = underlying as? URLError, urlError.code == .cancelled {
-                    return true
-                }
+                return isCancellation(underlying)
             default:
                 break
             }
@@ -241,53 +239,8 @@ public extension CTAError {
             return map(annotated.underlying, requestId: annotated.requestId ?? requestId)
         }
 
-        // AMA-271 detects success:false in the response body and rethrows
-        // as APIError.serverErrorWithBody(200, body). Pull that apart.
         if let apiError = error as? APIError {
-            switch apiError {
-            case .unauthorized:
-                return .unauthenticated(requestId: requestId)
-            case .notFound:
-                // CR-fix on PR #181: APIError.notFound is a real
-                // 404 — surface it as `.http(404)` so the View shows
-                // the same "couldn't find that on the server"
-                // verdict as any other 4xx, AND so isRetryable
-                // correctly returns false (404 is deterministic;
-                // collapsing into .unknown previously made the
-                // toast generic and Retry-eligible by accident).
-                return .http(status: 404, body: nil, requestId: requestId)
-            case .invalidURL, .invalidResponse, .notImplemented, .unknown:
-                return .unknown(
-                    description: apiError.errorDescription ?? "Unexpected error",
-                    requestId: requestId
-                )
-            case .network(let underlying), .networkError(let underlying):
-                if let urlError = underlying as? URLError {
-                    return .network(code: urlError.code, requestId: requestId)
-                }
-                return .unknown(
-                    description: underlying.localizedDescription,
-                    requestId: requestId
-                )
-            case .decoding(let underlying), .decodingError(let underlying):
-                return .decoding(
-                    description: underlying.localizedDescription,
-                    requestId: requestId
-                )
-            case .server(let code), .serverError(let code):
-                return .http(status: code, body: nil, requestId: requestId)
-            case .serverErrorWithBody(let code, let body):
-                // AMA-271: for 200 responses with `success: false`,
-                // APIService re-throws this with status=200. Detect the
-                // lying-success path and surface it as such; the toast
-                // copy + Retry behaviour differ from a real HTTP error.
-                if (200...299).contains(code), body.contains("\"success\":false") || body.contains("\"success\": false") {
-                    let message = Self.extractField("message", from: body)
-                    let errorCode = Self.extractField("error_code", from: body)
-                    return .lyingSuccess(message: message, errorCode: errorCode, requestId: requestId)
-                }
-                return .http(status: code, body: body, requestId: requestId)
-            }
+            return mapFromAPIError(apiError, requestId: requestId)
         }
 
         if let urlError = error as? URLError {
@@ -295,6 +248,47 @@ public extension CTAError {
         }
 
         return .unknown(description: error.localizedDescription, requestId: requestId)
+    }
+
+    private static func mapFromAPIError(_ apiError: APIError, requestId: String?) -> CTAError {
+        switch apiError {
+        case .unauthorized:
+            return .unauthenticated(requestId: requestId)
+        case .notFound:
+            return .http(status: 404, body: nil, requestId: requestId)
+        case .invalidURL, .invalidResponse, .notImplemented, .unknown:
+            return .unknown(
+                description: apiError.errorDescription ?? "Unexpected error",
+                requestId: requestId
+            )
+        case .network(let underlying), .networkError(let underlying):
+            if let urlError = underlying as? URLError {
+                return .network(code: urlError.code, requestId: requestId)
+            }
+            return .unknown(
+                description: underlying.localizedDescription,
+                requestId: requestId
+            )
+        case .decoding(let underlying), .decodingError(let underlying):
+            return .decoding(
+                description: underlying.localizedDescription,
+                requestId: requestId
+            )
+        case .server(let code), .serverError(let code):
+            return .http(status: code, body: nil, requestId: requestId)
+        case .serverErrorWithBody(let code, let body):
+            return mapServerErrorWithBody(status: code, body: body, requestId: requestId)
+        }
+    }
+
+    private static func mapServerErrorWithBody(status: Int, body: String, requestId: String?) -> CTAError {
+        if (200...299).contains(status),
+           body.contains("\"success\":false") || body.contains("\"success\": false") {
+            let message = extractField("message", from: body)
+            let errorCode = extractField("error_code", from: body)
+            return .lyingSuccess(message: message, errorCode: errorCode, requestId: requestId)
+        }
+        return .http(status: status, body: body, requestId: requestId)
     }
 
     /// Pull a single string field out of a JSON body.

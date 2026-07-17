@@ -335,6 +335,7 @@ final class CTAErrorTests: XCTestCase {
         XCTAssertTrue(CTAError.isCancellation(URLError(.cancelled)))
         XCTAssertTrue(CTAError.isCancellation(CancellationError()))
         XCTAssertTrue(CTAError.isCancellation(APIError.networkError(URLError(.cancelled))))
+        XCTAssertTrue(CTAError.isCancellation(APIError.network(underlying: CancellationError())))
         XCTAssertFalse(CTAError.isCancellation(URLError(.timedOut)))
     }
 

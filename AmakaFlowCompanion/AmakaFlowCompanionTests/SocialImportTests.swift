@@ -191,6 +191,10 @@ final class SocialImportTests: XCTestCase {
             SocialImportPlatform.normalizeForIngest("https://www.instagram.com/reel/DMqEsenN6Dl/"),
             "https://www.instagram.com/reel/DMqEsenN6Dl/"
         )
+        XCTAssertEqual(
+            SocialImportPlatform.normalizeForIngest("https://instagr.am/reels/DMqEsenN6Dl/"),
+            "https://instagr.am/reel/DMqEsenN6Dl/"
+        )
         XCTAssertTrue(SocialImportPlatform.isWorkoutImportURL(plural))
         XCTAssertFalse(SocialImportPlatform.isWorkoutImportURL("https://www.nytimes.com/article"))
     }
