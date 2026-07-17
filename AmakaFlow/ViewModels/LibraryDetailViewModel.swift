@@ -87,6 +87,7 @@ final class LibraryDetailViewModel: ObservableObject {
             item = fetched
             state = Self.hasBody(fetched) ? .content : .empty
         } catch {
+            if CTAError.isCancellation(error) { return }
             let mapped = CTAError.map(error)
             ctaError = mapped
             state = .error(mapped)

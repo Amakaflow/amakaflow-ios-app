@@ -84,21 +84,36 @@ enum SocialImportPlatform: String, Codable, CaseIterable, Equatable {
         }
     }
 
-    /// AMA-2297: normalize IG `/reels/{id}` → `/reel/{id}` before ingest.
+    /// AMA-2297: normalize IG `/reels/{id}` → `/reel/{id}` and drop share tracking params (`igsh`, etc.) before ingest.
     static func normalizeForIngest(_ urlString: String) -> String {
         let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard detect(from: trimmed) == .instagram else { return trimmed }
-        guard let regex = try? NSRegularExpression(
+
+        var normalized = trimmed
+        if let regex = try? NSRegularExpression(
             pattern: "(?i)(instagram\\.com/)reels(/)",
             options: []
-        ) else { return trimmed }
-        let range = NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)
-        return regex.stringByReplacingMatches(
-            in: trimmed,
-            options: [],
-            range: range,
-            withTemplate: "$1reel$2"
-        )
+        ) {
+            let range = NSRange(normalized.startIndex..<normalized.endIndex, in: normalized)
+            normalized = regex.stringByReplacingMatches(
+                in: normalized,
+                options: [],
+                range: range,
+                withTemplate: "$1reel$2"
+            )
+        }
+
+        normalized = stripURLQueryAndFragment(normalized)
+        return normalized
+    }
+
+    /// Canonical ingest URL — path only, no `igsh` / UTM query noise from share sheets.
+    private static func stripURLQueryAndFragment(_ urlString: String) -> String {
+        let withScheme = urlString.contains("://") ? urlString : "https://\(urlString)"
+        guard var components = URLComponents(string: withScheme) else { return urlString }
+        components.query = nil
+        components.fragment = nil
+        return components.url?.absoluteString ?? urlString
     }
 
     /// Parse host structurally so `instagram.com.evil` / `notinstagram.com` are rejected.

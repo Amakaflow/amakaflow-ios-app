@@ -92,6 +92,30 @@ enum PlatformDetector {
         }
     }
 
+    /// Normalize Instagram share URLs: `/reels/` → `/reel/`, strip `igsh` tracking params.
+    static func normalizeInstagramURL(_ urlString: String) -> String {
+        var normalized = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let regex = try? NSRegularExpression(
+            pattern: "(?i)(instagram\\.com/)reels(/)",
+            options: []
+        ) {
+            let range = NSRange(normalized.startIndex..<normalized.endIndex, in: normalized)
+            normalized = regex.stringByReplacingMatches(
+                in: normalized,
+                options: [],
+                range: range,
+                withTemplate: "$1reel$2"
+            )
+        }
+        let withScheme = normalized.contains("://") ? normalized : "https://\(normalized)"
+        if var components = URLComponents(string: withScheme) {
+            components.query = nil
+            components.fragment = nil
+            normalized = components.url?.absoluteString ?? normalized
+        }
+        return normalized
+    }
+
     /// Determine the ingest source identifier for the backend API.
     /// Maps to the /ingest/{source} endpoint path component.
     static func ingestSource(for platform: DetectedPlatform) -> String {

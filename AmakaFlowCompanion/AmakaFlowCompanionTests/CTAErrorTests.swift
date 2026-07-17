@@ -331,6 +331,24 @@ final class CTAErrorTests: XCTestCase {
         XCTAssertEqual(code, .timedOut)
     }
 
+    func test_isCancellation_detects_URLError_cancelled_and_CancellationError() {
+        XCTAssertTrue(CTAError.isCancellation(URLError(.cancelled)))
+        XCTAssertTrue(CTAError.isCancellation(CancellationError()))
+        XCTAssertTrue(CTAError.isCancellation(APIError.networkError(URLError(.cancelled))))
+        XCTAssertFalse(CTAError.isCancellation(URLError(.timedOut)))
+    }
+
+    func test_map_cancelled_does_not_classify_as_network_minus_999() {
+        let cta = CTAError.map(URLError(.cancelled))
+        guard case .unknown(let description, _) = cta else {
+            return XCTFail("expected .unknown for cancelled, got \(cta)")
+        }
+        XCTAssertTrue(description.lowercased().contains("cancel"))
+        if case .network(let code, _) = cta {
+            XCTFail("cancelled must not map to .network(\(code.rawValue))")
+        }
+    }
+
     // MARK: - Decoding
 
     func test_map_decoding_error_classifies_as_decoding() {

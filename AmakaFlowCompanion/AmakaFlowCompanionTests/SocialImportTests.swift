@@ -136,17 +136,19 @@ final class SocialImportTests: XCTestCase {
 
     func testSocialImportFailureMapCoversAPIErrorURLErrorCTAError() {
         XCTAssertEqual(
-            SocialImportFailure.map(APIError.unauthorized).title,
+            SocialImportFailure.map(APIError.unauthorized)?.title,
             "Sign in required"
         )
         XCTAssertEqual(
-            SocialImportFailure.map(URLError(.notConnectedToInternet)).title,
+            SocialImportFailure.map(URLError(.notConnectedToInternet))?.title,
             "Network error"
         )
         XCTAssertEqual(
-            SocialImportFailure.map(CTAError.decoding(description: "bad json")).title,
+            SocialImportFailure.map(CTAError.decoding(description: "bad json"))?.title,
             "Couldn't parse workout"
         )
+        XCTAssertNil(SocialImportFailure.map(URLError(.cancelled)))
+        XCTAssertNil(SocialImportFailure.map(CancellationError()))
     }
 
     func testDraftDecodeFromIngestJSONWithBlocks() throws {
@@ -191,6 +193,31 @@ final class SocialImportTests: XCTestCase {
         )
         XCTAssertTrue(SocialImportPlatform.isWorkoutImportURL(plural))
         XCTAssertFalse(SocialImportPlatform.isWorkoutImportURL("https://www.nytimes.com/article"))
+    }
+
+    func testNormalizeInstagramReelStripsIgshQueryParam() {
+        let shared = "https://www.instagram.com/reel/DRaP9QwCbGk/?igsh=MTMzeGNyZW5uZjBzNA=="
+        XCTAssertEqual(
+            SocialImportPlatform.normalizeForIngest(shared),
+            "https://www.instagram.com/reel/DRaP9QwCbGk/"
+        )
+    }
+
+    func testImportURLStripsIgshBeforeIngest() async {
+        mockAPI.ingestSocialURLResult = .success(sampleIngestJSON())
+
+        await sut.importURL(
+            "https://www.instagram.com/reel/DRaP9QwCbGk/?igsh=MTMzeGNyZW5uZjBzNA==",
+            platformHint: .instagram
+        )
+
+        XCTAssertEqual(
+            mockAPI.lastIngestSocialURL,
+            "https://www.instagram.com/reel/DRaP9QwCbGk/"
+        )
+        guard case .preview = sut.phase else {
+            return XCTFail("Expected preview, got \(sut.phase)")
+        }
     }
 
     func testLibraryPasteRouterRoutesSocialToImport() {
@@ -279,18 +306,18 @@ final class SocialImportTests: XCTestCase {
 
     func testTier403MapsToHonestTierFailure() {
         let body = "{\"detail\":\"Instagram auto-extraction requires a Pro or Trainer subscription.\"}"
-        let failure = SocialImportFailure.map(APIError.serverErrorWithBody(403, body))
-        guard case .tier(let message) = failure else {
-            return XCTFail("Expected tier failure, got \(failure)")
+        let mapped = SocialImportFailure.map(APIError.serverErrorWithBody(403, body))
+        guard let failure = mapped, case .tier(let message) = failure else {
+            return XCTFail("Expected tier failure, got \(String(describing: mapped))")
         }
         XCTAssertEqual(failure.title, "Pro required")
         XCTAssertTrue(message.lowercased().contains("pro"))
     }
 
     func testBare403WithoutBodyMustNotMasqueradeAsSessionExpired() {
-        let failure = SocialImportFailure.map(APIError.serverError(403))
-        guard case .parse(let message) = failure else {
-            return XCTFail("Expected parse for body-less 403, got \(failure)")
+        let mapped = SocialImportFailure.map(APIError.serverError(403))
+        guard let failure = mapped, case .parse(let message) = failure else {
+            return XCTFail("Expected parse for body-less 403, got \(String(describing: mapped))")
         }
         XCTAssertFalse(message.lowercased().contains("session expired"))
         XCTAssertTrue(message.lowercased().contains("forbidden"))
@@ -298,9 +325,9 @@ final class SocialImportTests: XCTestCase {
 
     func testPrivateProfile403MapsToParseNotTier() {
         let body = "{\"detail\":\"This profile is private\"}"
-        let failure = SocialImportFailure.map(APIError.serverErrorWithBody(403, body))
-        guard case .parse(let message) = failure else {
-            return XCTFail("Expected parse (not tier) for private profile 403, got \(failure)")
+        let mapped = SocialImportFailure.map(APIError.serverErrorWithBody(403, body))
+        guard let failure = mapped, case .parse(let message) = failure else {
+            return XCTFail("Expected parse (not tier) for private profile 403, got \(String(describing: mapped))")
         }
         XCTAssertTrue(message.lowercased().contains("private"))
     }
@@ -453,9 +480,9 @@ final class SocialImportTests: XCTestCase {
         let body = """
         {"detail":[{"type":"missing","loc":["body","workout_data"],"msg":"Field required","input":{}}]}
         """
-        let failure = SocialImportFailure.map(APIError.serverErrorWithBody(422, body))
-        guard case .parse(let message) = failure else {
-            return XCTFail("Expected parse failure, got \(failure)")
+        let mapped = SocialImportFailure.map(APIError.serverErrorWithBody(422, body))
+        guard let failure = mapped, case .parse(let message) = failure else {
+            return XCTFail("Expected parse failure, got \(String(describing: mapped))")
         }
         XCTAssertEqual(message, "workout_data: Field required")
     }

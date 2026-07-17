@@ -192,12 +192,46 @@ public extension CTAError {
     }
 }
 
+// MARK: - Cancellation (NSURLError -999)
+
+public extension CTAError {
+    /// True when a request was cancelled because a newer load superseded it,
+    /// SwiftUI `.task` was torn down, or the user navigated away — not a real outage.
+    static func isCancellation(_ error: Error) -> Bool {
+        if error is CancellationError {
+            return true
+        }
+        if let urlError = error as? URLError, urlError.code == .cancelled {
+            return true
+        }
+        if let annotated = error as? AnnotatedAPIError {
+            return isCancellation(annotated.underlying)
+        }
+        if let apiError = error as? APIError {
+            switch apiError {
+            case .network(let underlying), .networkError(let underlying):
+                if let urlError = underlying as? URLError, urlError.code == .cancelled {
+                    return true
+                }
+            default:
+                break
+            }
+        }
+        return false
+    }
+}
+
 // MARK: - Mapping from APIError / URLError
 
 public extension CTAError {
     /// Translate an underlying error from APIService into a CTAError.
     /// Centralised so view-models never see the raw error type.
     static func map(_ error: Error, requestId: String? = nil) -> CTAError {
+        if isCancellation(error) {
+            // Callers should guard with isCancellation before map; this keeps
+            // accidental map(cancelled) from surfacing "Network error (-999)".
+            return .unknown(description: "Request cancelled", requestId: requestId)
+        }
         // AMA-1808: AnnotatedAPIError carries the X-Request-ID extracted
         // at the failing HTTPURLResponse so the user-facing Report
         // breadcrumb can join AMA-1805's server alerts. Unwrap and use
