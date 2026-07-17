@@ -38,6 +38,15 @@ final class URLImportService: NSObject {
         return URLSession(configuration: config)
     }()
 
+    /// Instagram reel ingest (Apify + LLM) can exceed 45s — align request + resource with main app (120s).
+    private lazy var instagramSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 120
+        config.timeoutIntervalForResource = 120
+        config.waitsForConnectivity = false
+        return URLSession(configuration: config)
+    }()
+
     private override init() {
         super.init()
     }
@@ -47,9 +56,13 @@ final class URLImportService: NSObject {
     /// Import a single URL using an immediate (non-background) request.
     /// Returns the parsed response inline.
     func importURL(_ urlString: String, platform: DetectedPlatform) async throws -> ShareIngestResponse {
-        let request = try buildRequest(for: urlString, platform: platform)
+        let normalized = platform == .instagram
+            ? PlatformDetector.normalizeInstagramURL(urlString)
+            : urlString
+        let request = try buildRequest(for: normalized, platform: platform)
 
-        let (data, response) = try await immediateSession.data(for: request)
+        let session = platform == .instagram ? instagramSession : immediateSession
+        let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw ImportError.invalidResponse
@@ -90,6 +103,8 @@ final class URLImportService: NSObject {
 
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
+        // Instagram reel ingest (Apify + LLM) exceeds 15s — align with main app (120s).
+        request.timeoutInterval = platform == .instagram ? 120 : 15
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         // Auth headers: main app stores the latest Clerk bearer token in the shared container.

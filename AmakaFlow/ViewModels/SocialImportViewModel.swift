@@ -65,7 +65,8 @@ final class SocialImportViewModel: ObservableObject {
             canEdit = true
             phase = .preview
         } catch {
-            phase = .failed(SocialImportFailure.map(error))
+            guard let failure = SocialImportFailure.map(error) else { return }
+            phase = .failed(failure)
         }
     }
 
@@ -97,7 +98,8 @@ final class SocialImportViewModel: ObservableObject {
             canEdit = true
             phase = .preview
         } catch {
-            phase = .failed(SocialImportFailure.map(error))
+            guard let failure = SocialImportFailure.map(error) else { return }
+            phase = .failed(failure)
         }
     }
 
@@ -125,7 +127,8 @@ final class SocialImportViewModel: ObservableObject {
             canEdit = true
             phase = .preview
         } catch {
-            phase = .failed(SocialImportFailure.map(error))
+            guard let failure = SocialImportFailure.map(error) else { return }
+            phase = .failed(failure)
         }
     }
 
@@ -203,7 +206,8 @@ final class SocialImportViewModel: ObservableObject {
                 phase = .saved(workoutId: workout.id)
             }
         } catch {
-            phase = .failed(SocialImportFailure.map(error))
+            guard let failure = SocialImportFailure.map(error) else { return }
+            phase = .failed(failure)
         }
     }
 

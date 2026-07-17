@@ -5,10 +5,14 @@
 //  AMA-2004: saved-content Library tab state + filters.
 //  AMA-2291: merge saved workouts into Library; route workouts to unified detail.
 //  AMA-2298: delete knowledge + workout Library imports (optimistic, recoverable).
+//  AMA-2297: suppress Library -999 cancelled errors on superseded reloads.
 //
 
 import Combine
 import Foundation
+import os.log
+
+private let libraryLogger = Logger(subsystem: "com.myamaka.AmakaFlowCompanion", category: "Library")
 
 @MainActor
 final class LibraryViewModel: ObservableObject {
@@ -46,6 +50,8 @@ final class LibraryViewModel: ObservableObject {
     private var isDeleting = false
     /// Bumped when a delete starts so in-flight `load()` results are dropped.
     private var contentEpoch = 0
+    /// Bumps on each load(); stale completions ignore cancelled superseded requests.
+    private var loadGeneration = 0
 
     init(apiService: APIServiceProviding? = nil) {
         self.apiService = apiService ?? AppDependencies.current.apiService
@@ -113,11 +119,17 @@ final class LibraryViewModel: ObservableObject {
         // Avoid stomping an in-flight optimistic delete.
         guard !isDeleting else { return }
 
+        loadGeneration += 1
+        let generation = loadGeneration
         let epoch = contentEpoch
         let hadContent = !allItems.isEmpty || !allWorkouts.isEmpty
         if !hadContent { state = .loading }
         ctaError = nil
         lastFailedAction = nil
+
+        func isStale() -> Bool {
+            generation != loadGeneration || epoch != contentEpoch || isDeleting
+        }
 
         do {
             // AMA-2004: fetch knowledge cards for multi-kind client filtering.
@@ -126,26 +138,56 @@ final class LibraryViewModel: ObservableObject {
             async let workoutsTask = apiService.fetchWorkouts(isRetry: false)
 
             let response = try await knowledgeTask
-            guard epoch == contentEpoch, !isDeleting else { return }
+            guard !isStale() else {
+                logSuppressedLoad(reason: "stale_after_listLibraryItems", generation: generation)
+                return
+            }
 
             let workouts: [Workout]
             do {
                 workouts = try await workoutsTask
             } catch {
-                guard epoch == contentEpoch, !isDeleting else { return }
-                // Knowledge still usable if workout fetch fails — surface toast, keep going.
-                ctaError = CTAError.map(error)
-                lastFailedAction = .load
-                workouts = allWorkouts
+                guard !isStale() else {
+                    logSuppressedLoad(reason: "stale_after_fetchWorkouts", generation: generation)
+                    return
+                }
+                if CTAError.isCancellation(error) {
+                    // Superseded request — keep whatever workouts we already had.
+                    logSuppressedLoad(
+                        reason: "fetchWorkouts_cancelled",
+                        generation: generation,
+                        error: error
+                    )
+                    workouts = allWorkouts
+                } else {
+                    // Knowledge still usable if workout fetch fails — surface toast, keep going.
+                    ctaError = CTAError.map(error)
+                    lastFailedAction = .load
+                    workouts = allWorkouts
+                }
             }
 
-            guard epoch == contentEpoch, !isDeleting else { return }
+            guard !isStale() else {
+                logSuppressedLoad(reason: "stale_before_apply", generation: generation)
+                return
+            }
             allItems = response.items ?? []
             allWorkouts = WorkoutLibraryDetailStore.enrichCollection(workouts)
             workoutsByID = Dictionary(uniqueKeysWithValues: allWorkouts.map { ($0.id, $0) })
             applyFilters()
         } catch {
-            guard epoch == contentEpoch, !isDeleting else { return }
+            guard !isStale() else {
+                logSuppressedLoad(reason: "stale_listLibraryItems_error", generation: generation)
+                return
+            }
+            if CTAError.isCancellation(error) {
+                logSuppressedLoad(
+                    reason: "listLibraryItems_cancelled",
+                    generation: generation,
+                    error: error
+                )
+                return
+            }
             let mapped = CTAError.map(error)
             ctaError = mapped
             if !hadContent { state = .error(mapped) }
@@ -242,7 +284,7 @@ final class LibraryViewModel: ObservableObject {
                 workoutsByID = Dictionary(uniqueKeysWithValues: allWorkouts.map { ($0.id, $0) })
                 applyFilters()
             }
-            if let urlError = error as? URLError, urlError.code == .cancelled {
+            if CTAError.isCancellation(error) {
                 return false
             }
             ctaError = CTAError.map(error)
@@ -322,6 +364,33 @@ final class LibraryViewModel: ObservableObject {
             error: ctaError,
             endpoint: endpoint,
             userId: PairingService.shared.userProfile?.id
+        )
+    }
+
+    /// Debug-only trail when a superseded Library reload is dropped (incl. URLError -999).
+    /// Surfaces in Console (os.Logger) and Settings → Debug Log for TestFlight diagnosis.
+    private func logSuppressedLoad(reason: String, generation: Int, error: Error? = nil) {
+        var metadata: [String: String] = [
+            "reason": reason,
+            "generation": "\(generation)",
+            "currentGeneration": "\(loadGeneration)",
+            "contentEpoch": "\(contentEpoch)"
+        ]
+        if let error {
+            metadata["error"] = String(describing: error)
+            if let urlError = error as? URLError {
+                metadata["urlErrorCode"] = "\(urlError.code.rawValue)"
+            }
+        }
+        let details = metadata
+            .sorted { $0.key < $1.key }
+            .map { "\($0.key)=\($0.value)" }
+            .joined(separator: ", ")
+        libraryLogger.debug("load suppressed (\(reason)): \(details)")
+        DebugLogService.shared.log(
+            "Library reload superseded",
+            details: details,
+            metadata: metadata
         )
     }
 

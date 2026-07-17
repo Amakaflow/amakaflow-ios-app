@@ -47,7 +47,12 @@ enum SocialImportFailure: Error, Equatable {
     }
 
     /// Map API / URL / CTA errors into a social-import failure category.
-    static func map(_ error: Error) -> SocialImportFailure {
+    /// Returns nil when the underlying request was cancelled (superseded load / dismiss).
+    static func map(_ error: Error) -> SocialImportFailure? {
+        if CTAError.isCancellation(error) {
+            return nil
+        }
+
         if let failure = error as? SocialImportFailure {
             return failure
         }
@@ -177,6 +182,8 @@ enum SocialImportFailure: Error, Equatable {
 
     private static func networkMessage(for code: URLError.Code) -> String {
         switch code {
+        case .cancelled:
+            return "Import was interrupted. Retry if the workout didn't appear."
         case .notConnectedToInternet, .networkConnectionLost:
             return "No internet connection. Check connectivity and retry."
         case .timedOut:

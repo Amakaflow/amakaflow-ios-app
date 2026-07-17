@@ -383,7 +383,8 @@ struct ImageImportView: View {
             }
             await viewModel.importImageData(data, filename: "screenshot.jpg")
         } catch {
-            viewModel.phase = .failed(SocialImportFailure.map(error))
+            guard let failure = SocialImportFailure.map(error) else { return }
+            viewModel.phase = .failed(failure)
         }
     }
 

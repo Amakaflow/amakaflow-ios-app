@@ -171,6 +171,19 @@ final class LibraryViewModelTests: XCTestCase {
         }
     }
 
+    func testLoadCancelledWorkoutFetchDoesNotSurfaceNetworkErrorToast() async {
+        api.listLibraryItemsResult = .success(Components.Schemas.LibraryItemList(
+            items: [item(id: "item-1")],
+            total: 1
+        ))
+        api.fetchWorkoutsResult = .failure(URLError(.cancelled))
+
+        await viewModel.load()
+
+        XCTAssertEqual(viewModel.state, .content)
+        XCTAssertNil(viewModel.ctaError, "Cancelled fetchWorkouts must not show Network error (-999) toast")
+    }
+
     func testLoadRefreshFailurePreservesExistingItemsAndUsesToast() async {
         // Initial successful load
         api.listLibraryItemsResult = .success(Components.Schemas.LibraryItemList(
