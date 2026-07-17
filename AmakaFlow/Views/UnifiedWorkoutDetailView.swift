@@ -148,10 +148,12 @@ struct UnifiedWorkoutDetailView: View {
                 startPoint: UnitPoint(x: 0.2, y: 0),
                 endPoint: UnitPoint(x: 0.8, y: 1)
             )
+            .accessibilityHidden(true)
 
             Image(systemName: heroIcon)
                 .font(.system(size: 38, weight: .semibold))
                 .foregroundColor(.white.opacity(0.7))
+                .accessibilityHidden(true)
 
             VStack {
                 HStack {
@@ -168,7 +170,7 @@ struct UnifiedWorkoutDetailView: View {
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("af_workout_detail_back")
                     Spacer()
-                    if onDelete != nil, importContext == nil {
+                    if canDeleteFromLibrary {
                         Button {
                             showingDeleteConfirm = true
                         } label: {
@@ -181,12 +183,13 @@ struct UnifiedWorkoutDetailView: View {
                         }
                         .buttonStyle(.plain)
                         .disabled(isDeleting)
-                        .accessibilityLabel("Delete")
-                        .accessibilityIdentifier("af_workout_detail_delete")
+                        .accessibilityLabel("Delete from Library")
+                        .accessibilityIdentifier("af_workout_detail_delete_icon")
                     }
                 }
                 .padding(.horizontal, 14)
                 .padding(.top, 12)
+                .zIndex(1)
 
                 Spacer()
 
@@ -204,11 +207,17 @@ struct UnifiedWorkoutDetailView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 12)
+                .accessibilityHidden(true)
             }
         }
         .frame(height: 190)
         .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("af_workout_detail_hero")
+    }
+
+    private var canDeleteFromLibrary: Bool {
+        onDelete != nil && importContext == nil
     }
 
     // MARK: - Body
@@ -231,6 +240,20 @@ struct UnifiedWorkoutDetailView: View {
 
             creditRow
                 .padding(.top, 12)
+
+            if canDeleteFromLibrary {
+                Button {
+                    showingDeleteConfirm = true
+                } label: {
+                    Label("Delete from Library", systemImage: "trash")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(DailyDriver.coral)
+                }
+                .buttonStyle(.plain)
+                .disabled(isDeleting)
+                .padding(.top, 12)
+                .accessibilityIdentifier("af_workout_detail_delete")
+            }
 
             blockList
                 .padding(.top, 4)
