@@ -124,12 +124,9 @@ struct UnifiedWorkoutDetailView: View {
                 endPoint: UnitPoint(x: 0.8, y: 1)
             )
 
-            Image(systemName: "play.fill")
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundColor(.white.opacity(0.85))
-                .frame(width: 56, height: 56)
-                .background(Color.white.opacity(0.14))
-                .clipShape(Circle())
+            Image(systemName: heroIcon)
+                .font(.system(size: 38, weight: .semibold))
+                .foregroundColor(.white.opacity(0.7))
 
             VStack {
                 HStack {
@@ -290,7 +287,7 @@ struct UnifiedWorkoutDetailView: View {
                     showingEditor = true
                 } label: {
                     HStack(spacing: 6) {
-                        Text("✎")
+                        Image(systemName: "pencil")
                             .font(.system(size: 14, weight: .semibold))
                         Text("Edit")
                             .ddDisplayText(15, weight: .bold)
@@ -385,7 +382,7 @@ extension UnifiedWorkoutDetailView {
         var pills: [String] = [sourceHeroPill]
 
         if workout.exerciseCount > 0 {
-            let rounds = workout.blocks.compactMap(\.rounds).max() ?? 1
+            let rounds = heroRoundCount
             if rounds > 1 {
                 pills.append("\(rounds) ROUNDS · \(ddHeroDurationLabel)")
             } else {
@@ -404,6 +401,44 @@ extension UnifiedWorkoutDetailView {
     fileprivate var ddHeroDurationLabel: String {
         let minutes = max(1, workout.duration / 60)
         return "~\(minutes) MIN"
+    }
+
+    /// Whole-workout round count for hero chips (dd-detail-dark: "5 ROUNDS · ~20 MIN").
+    fileprivate var heroRoundCount: Int {
+        if let parsed = Self.parseRoundCount(from: workout.description) {
+            return parsed
+        }
+        let workBlocks = workout.blocks.filter { !Self.isWarmupOrCooldown($0) }
+        let rounds = workBlocks.map(\.rounds).max() ?? 1
+        return max(1, rounds)
+    }
+
+    fileprivate static func parseRoundCount(from description: String?) -> Int? {
+        guard let description else { return nil }
+        let lowered = description.lowercased()
+        let wordMap = [
+            "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+            "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10
+        ]
+        for (word, value) in wordMap where lowered.contains("\(word) rounds") {
+            return value
+        }
+        guard let regex = try? NSRegularExpression(pattern: "(\\d+)\\s+rounds", options: .caseInsensitive) else {
+            return nil
+        }
+        let range = NSRange(lowered.startIndex..<lowered.endIndex, in: lowered)
+        guard let match = regex.firstMatch(in: lowered, options: [], range: range),
+              match.numberOfRanges > 1,
+              let swiftRange = Range(match.range(at: 1), in: lowered),
+              let value = Int(lowered[swiftRange]) else {
+            return nil
+        }
+        return value
+    }
+
+    fileprivate static func isWarmupOrCooldown(_ block: Block) -> Bool {
+        let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+        return label == "warm-up" || label == "warmup" || label == "cool-down" || label == "cooldown"
     }
 
     fileprivate var sourceHeroPill: String {
@@ -699,32 +734,80 @@ extension UnifiedWorkoutDetailView {
         UnifiedWorkoutDetailView(
             workout: Workout(
                 name: "DB Full-body AMRAP",
-                sport: .strength,
+                sport: .cardio,
                 duration: 1200,
                 blocks: [
                     Block(
-                        label: "Main block",
-                        structure: .circuit,
+                        label: "Round 1–3",
+                        structure: .amrap,
                         rounds: 3,
                         exercises: [
                             Exercise(
                                 name: "Wall balls",
                                 canonicalName: nil,
-                                sets: 1,
+                                sets: nil,
                                 reps: "20",
                                 durationSeconds: nil,
-                                load: nil,
+                                load: ExerciseLoad(value: 0, unit: "med ball 6 kg"),
                                 restSeconds: nil,
                                 distance: nil,
-                                notes: "Full body",
+                                notes: nil,
+                                focus: "Quads · Shoulders",
+                                supersetGroup: nil
+                            ),
+                            Exercise(
+                                name: "Barbell thrusters",
+                                canonicalName: nil,
+                                sets: nil,
+                                reps: "12",
+                                durationSeconds: nil,
+                                load: ExerciseLoad(value: 40, unit: "kg"),
+                                restSeconds: nil,
+                                distance: nil,
+                                notes: nil,
+                                focus: "Full body",
+                                supersetGroup: nil
+                            ),
+                            Exercise(
+                                name: "Burpee broad jumps",
+                                canonicalName: nil,
+                                sets: nil,
+                                reps: "10",
+                                durationSeconds: nil,
+                                load: ExerciseLoad(value: 0, unit: "bodyweight"),
+                                restSeconds: nil,
+                                distance: nil,
+                                notes: nil,
+                                focus: "Full body",
+                                supersetGroup: nil
+                            )
+                        ]
+                    ),
+                    Block(
+                        label: "Finisher",
+                        structure: .circuit,
+                        rounds: 1,
+                        exercises: [
+                            Exercise(
+                                name: "Sled push",
+                                canonicalName: nil,
+                                sets: 2,
+                                reps: nil,
+                                durationSeconds: nil,
+                                load: ExerciseLoad(value: 80, unit: "kg"),
+                                restSeconds: nil,
+                                distance: 20,
+                                notes: nil,
+                                focus: "Legs · Core",
                                 supersetGroup: nil
                             )
                         ]
                     )
                 ],
-                description: "Five rounds of full-body conditioning — parsed from the reel.",
+                description: "Five rounds of full-body conditioning — wall balls, thrusters and jumps, with a sled finisher. Parsed from the reel; nothing saved yet.",
                 source: .instagram,
-                sourceUrl: "https://instagram.com/reel/abc"
+                sourceUrl: "https://instagram.com/reel/abc",
+                creatorName: "gospelofgainz"
             ),
             garminPairedOverride: true,
             appleWatchReachableOverride: false

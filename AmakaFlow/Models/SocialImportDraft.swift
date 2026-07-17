@@ -157,6 +157,7 @@ struct SocialImportExercise: Identifiable, Equatable, Codable {
     var sets: Int?
     var reps: Int?
     var seconds: Int?
+    var distanceMeters: Int?
     /// Load / tempo / instruction line (e.g. "70 kg", "build to heavy").
     var load: String?
     /// Target muscles from post (e.g. "Quads · Glutes").
@@ -252,7 +253,7 @@ struct SocialImportDraft: Equatable {
         let mappedBlocks: [Block] = blocks.map { block in
             Block(
                 label: block.label,
-                structure: .straight,
+                structure: Self.previewStructure(for: block),
                 rounds: max(1, block.rounds),
                 exercises: block.exercises.map { $0.toExercise() }
             )
@@ -261,10 +262,11 @@ struct SocialImportDraft: Equatable {
             ? [Block(label: "Main block", structure: .straight, rounds: 1, exercises: exercises.map { $0.toExercise() })]
             : mappedBlocks
         let source = WorkoutSource(rawValue: platform.workoutSourceRawValue) ?? .other
+        let resolvedSport = WorkoutSport(rawValue: sport) ?? .strength
         return Workout(
             id: "draft-\(UUID().uuidString)",
             name: title,
-            sport: WorkoutSport(rawValue: sport) ?? .strength,
+            sport: resolvedSport,
             duration: max(exercises.count * 180, 600),
             blocks: resolvedBlocks,
             description: workoutDescription ?? postProvenance?.contentSnippet,
@@ -272,6 +274,14 @@ struct SocialImportDraft: Equatable {
             sourceUrl: sourceURL,
             creatorName: postProvenance?.creator
         )
+    }
+
+    private static func previewStructure(for block: SocialImportBlock) -> BlockStructure {
+        let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+        if label == "finisher" { return .circuit }
+        if label == "amrap" || label.contains("amrap") { return .amrap }
+        if block.rounds > 1 { return .circuit }
+        return .straight
     }
 
     /// Lenient decode of ingestor JSON (title/name/blocks or thin title/source).
@@ -365,6 +375,7 @@ struct SocialImportDraft: Equatable {
         let sets = item["sets"] as? Int ?? defaultSets(from: item)
         let reps = item["reps"] as? Int ?? (item["reps"] as? String).flatMap(Int.init)
         let seconds = item["duration_sec"] as? Int ?? item["duration_seconds"] as? Int ?? item["seconds"] as? Int
+        let distanceMeters = item["distance_m"] as? Int ?? item["distanceMeters"] as? Int
 
         let focus = parseFocus(from: item)
         let load = parseLoad(from: item)
@@ -379,6 +390,7 @@ struct SocialImportDraft: Equatable {
             sets: sets,
             reps: reps,
             seconds: seconds,
+            distanceMeters: distanceMeters,
             load: load ?? instruction,
             focus: focus,
             notes: notes
@@ -465,7 +477,7 @@ extension SocialImportExercise {
             durationSeconds: seconds,
             load: resolved.load,
             restSeconds: 60,
-            distance: nil,
+            distance: distanceMeters.map(Double.init),
             notes: resolved.instruction,
             focus: focus,
             supersetGroup: nil

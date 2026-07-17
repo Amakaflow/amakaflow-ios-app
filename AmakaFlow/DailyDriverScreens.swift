@@ -681,85 +681,78 @@ struct DDWorkoutDisplaySection: Identifiable {
 }
 
 enum DDWorkoutDisplayGrouping {
-    /// Collapse consecutive single-exercise blocks into one section (proto "Main lifts" card).
+    /// One handoff section per block (`DDDetailScreen` — jsx L1697).
     static func sections(for workout: Workout) -> [DDWorkoutDisplaySection] {
-        guard !workout.blocks.isEmpty else { return [] }
+        let blocks = workout.blocks.filter { !isWarmupOrCooldown($0) && !$0.exercises.isEmpty }
+        guard !blocks.isEmpty else { return [] }
 
-        var sections: [DDWorkoutDisplaySection] = []
-        var singletonRun: [Block] = []
-        let totalExercises = max(1, workout.exerciseCount)
+        let totalExercises = max(1, blocks.reduce(0) { $0 + $1.exercises.count })
 
-        func explicitTitle(for block: Block, fallbackIndex: Int) -> String {
-            if let trimmed = block.label?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty {
-                return trimmed
-            }
-            switch block.structure {
-            case .amrap: return "AMRAP"
-            case .emom: return "EMOM"
-            case .tabata: return "Tabata"
-            case .superset: return "Superset"
-            default: return fallbackIndex == 0 ? "Main block" : "Block \(fallbackIndex + 1)"
-            }
-        }
-
-        func isMergeableSingleton(_ block: Block) -> Bool {
-            guard block.exercises.count == 1 else { return false }
-            if let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines), !label.isEmpty {
-                // Legacy/manual saves often auto-label each exercise "Block N" — still merge.
-                return label.range(of: #"^Block \d+$"#, options: .regularExpression) != nil
-            }
-            return true
-        }
-
-        func durationShare(for exerciseCount: Int) -> Int {
-            let ratio = Double(exerciseCount) / Double(totalExercises)
-            return max(60, Int(Double(workout.duration) * ratio))
-        }
-
-        func appendSection(title: String, blocks: [Block]) {
-            let exercises = blocks.flatMap(\.exercises)
-            guard !exercises.isEmpty else { return }
-            let rounds = blocks.first?.rounds ?? 1
-            let seconds = durationShare(for: exercises.count)
-            let note = sectionNote(exerciseCount: exercises.count, rounds: rounds, durationSeconds: seconds)
-            sections.append(
-                DDWorkoutDisplaySection(
-                    id: "\(title)-\(sections.count)-\(blocks.first?.id ?? UUID().uuidString)",
-                    title: title,
-                    note: note,
-                    exercises: exercises
-                )
+        return blocks.enumerated().map { index, block in
+            let seconds = durationShare(for: block, totalExercises: totalExercises, workoutDuration: workout.duration)
+            return DDWorkoutDisplaySection(
+                id: block.id,
+                title: sectionTitle(for: block, index: index),
+                note: sectionNote(for: block, durationSeconds: seconds),
+                exercises: block.exercises
             )
         }
-
-        func flushSingletonRun() {
-            guard !singletonRun.isEmpty else { return }
-            let title = sections.isEmpty ? "Main block" : "Block \(sections.count + 1)"
-            appendSection(title: title, blocks: singletonRun)
-            singletonRun = []
-        }
-
-        for block in workout.blocks {
-            if isMergeableSingleton(block) {
-                singletonRun.append(block)
-            } else {
-                flushSingletonRun()
-                appendSection(title: explicitTitle(for: block, fallbackIndex: sections.count), blocks: [block])
-            }
-        }
-        flushSingletonRun()
-
-        return sections
     }
 
-    private static func sectionNote(exerciseCount: Int, rounds: Int, durationSeconds: Int) -> String {
+    private static func isWarmupOrCooldown(_ block: Block) -> Bool {
+        let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+        return label == "warm-up" || label == "warmup" || label == "cool-down" || label == "cooldown"
+    }
+
+    private static func sectionTitle(for block: Block, index: Int) -> String {
+        if let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines), !label.isEmpty {
+            if !isGenericLabel(label) {
+                return label
+            }
+            if label.caseInsensitiveCompare("AMRAP") == .orderedSame, block.rounds > 1 {
+                return "Round 1–\(block.rounds)"
+            }
+        }
+
+        switch block.structure {
+        case .amrap, .circuit, .emom, .tabata:
+            if block.rounds > 1 {
+                return "Round 1–\(block.rounds)"
+            }
+        default:
+            break
+        }
+
+        if let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines), !label.isEmpty {
+            return label
+        }
+        return index == 0 ? "Main block" : "Block \(index + 1)"
+    }
+
+    private static func isGenericLabel(_ label: String) -> Bool {
+        label.range(
+            of: #"^(Main block|Block \d+|AMRAP)$"#,
+            options: [.regularExpression, .caseInsensitive]
+        ) != nil
+    }
+
+    private static func durationShare(for block: Block, totalExercises: Int, workoutDuration: Int) -> Int {
+        let ratio = Double(block.exercises.count) / Double(totalExercises)
+        return max(60, Int(Double(workoutDuration) * ratio))
+    }
+
+    private static func sectionNote(for block: Block, durationSeconds: Int) -> String {
         let minutes = max(1, durationSeconds / 60)
-        if exerciseCount > 1 && rounds <= 1 {
-            return "~\(minutes) min"
+        let rounds = max(1, block.rounds)
+        let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+
+        if label == "finisher" {
+            return "\(rounds) round · ~\(minutes) min"
         }
         if rounds > 1 {
             return "\(rounds) rounds · ~\(minutes) min"
         }
+        let exerciseCount = block.exercises.count
         if exerciseCount > 1 {
             return "\(exerciseCount) exercises · ~\(minutes) min"
         }
@@ -806,7 +799,7 @@ struct DDWorkoutBlockSectionView: View {
 
                     if index < section.exercises.count - 1 {
                         Divider()
-                            .overlay(DailyDriver.card2)
+                            .overlay(DailyDriver.border)
                     }
                 }
             }
@@ -825,7 +818,12 @@ struct DDWorkoutBlockSectionView: View {
 extension Exercise {
     var ddDetailLine: String {
         var parts: [String] = []
-        if let sets, let reps {
+        if let sets, sets > 0, let distance {
+            let distText = distance >= 1000
+                ? String(format: "%.1f km", distance / 1000)
+                : "\(Int(distance)) m"
+            parts.append("\(sets) × \(distText)")
+        } else if let sets, let reps {
             parts.append("\(sets) × \(reps)")
         } else if let reps {
             parts.append("\(reps) reps")
@@ -853,7 +851,7 @@ extension Exercise {
 
         if let notes {
             let trimmed = notes.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmed.isEmpty, !Exercise.looksLikeMuscleFocus(trimmed) {
+            if !trimmed.isEmpty, !Exercise.looksLikeMuscleFocus(trimmed), parts.isEmpty || !parts.contains(where: { $0.localizedCaseInsensitiveContains(trimmed) }) {
                 parts.append(trimmed)
             }
         }
