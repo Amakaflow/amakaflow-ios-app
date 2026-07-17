@@ -41,10 +41,10 @@ extension FixtureAPIService {
                 setLogs: livePhoneSetLogsById[id]
             )
         }
-        if id == "today-garmin-run" || id.hasPrefix("today-garmin") {
+        if id == "today-lunch-run" || id == "today-garmin-run" || id.hasPrefix("today-garmin") {
             return WorkoutCompletionDetail.garminTodaySample
         }
-        if id == "today-phone-strength" || id.hasPrefix("today-phone") {
+        if id == "today-lunch-workout" || id == "today-phone-strength" || id.hasPrefix("today-phone") {
             return WorkoutCompletionDetail.phoneTodaySample
         }
         return WorkoutCompletionDetail.sample

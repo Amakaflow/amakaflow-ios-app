@@ -29,6 +29,12 @@ struct WorkoutSaveRequest: Codable {
     var source: String?
     /// Optional origin URL for social imports. AMA-2285.
     var sourceUrl: String?
+    /// Workout description from post / coach share.
+    var description: String?
+    /// Creator handle or coach name from post provenance.
+    var creatorName: String?
+    /// Block structure from social ingest (preserves section labels).
+    var blocks: [SocialImportBlock]?
 
     /// Convert from existing Workout model for edit mode
     static func from(workout: Workout) -> WorkoutSaveRequest {
@@ -55,7 +61,60 @@ struct WorkoutSaveRequest: Codable {
                 }
             },
             source: workout.source.rawValue,
-            sourceUrl: workout.sourceUrl
+            sourceUrl: workout.sourceUrl,
+            description: workout.description,
+            creatorName: workout.creatorName,
+            blocks: blocksFromWorkout(workout)
+        )
+    }
+
+    private static func formattedLoad(_ load: ExerciseLoad) -> String? {
+        if load.value > 0 {
+            if load.unit == "bodyweight" { return "bodyweight" }
+            let valueText = load.value.truncatingRemainder(dividingBy: 1) == 0
+                ? String(Int(load.value))
+                : String(load.value)
+            let unit = load.unit.trimmingCharacters(in: .whitespacesAndNewlines)
+            return unit.isEmpty ? valueText : "\(valueText) \(unit)"
+        }
+        let unit = load.unit.trimmingCharacters(in: .whitespacesAndNewlines)
+        return unit.isEmpty ? nil : unit
+    }
+
+    private static func blocksFromWorkout(_ workout: Workout) -> [SocialImportBlock]? {
+        guard !workout.blocks.isEmpty else { return nil }
+        return workout.blocks.map { block in
+            SocialImportBlock(
+                label: block.label,
+                rounds: max(1, block.rounds),
+                exercises: block.exercises.map { socialImportExercise(from: $0) }
+            )
+        }
+    }
+
+    private static func socialImportExercise(from exercise: Exercise) -> SocialImportExercise {
+        let repsText = exercise.reps?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let numericReps: Int? = {
+            guard let repsText, !repsText.isEmpty else { return nil }
+            if let value = Int(repsText) { return value }
+            let parsed = BlockToIntervalConverter.parseReps(repsText)
+            return parsed > 0 ? parsed : nil
+        }()
+        let repsRange: String? = {
+            guard let repsText, !repsText.isEmpty, Int(repsText) == nil else { return nil }
+            return repsText
+        }()
+
+        return SocialImportExercise(
+            name: exercise.name,
+            sets: exercise.sets,
+            reps: numericReps,
+            repsRange: repsRange,
+            seconds: exercise.durationSeconds,
+            distanceMeters: exercise.distance.map { Int($0) },
+            load: exercise.load.flatMap { formattedLoad($0) },
+            focus: exercise.focus,
+            notes: exercise.notes
         )
     }
 }

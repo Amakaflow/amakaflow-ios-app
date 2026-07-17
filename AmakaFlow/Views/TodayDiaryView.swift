@@ -4,17 +4,16 @@
 //
 //  AMA-2292: Daily Driver Today tab — completed-activities diary shell.
 //  AMA-2289: Sync completions (Garmin / phone) onto the rail.
-//  Strava landings appear once upstream sync writes completions (mobile BFF TBD).
-//  Plan/schedule chrome is intentionally omitted.
+//  Daily Driver Proto: DDTodayScreen — day scrubber + timeline cards.
 //
 
 import SwiftUI
 
 struct TodayDiaryView: View {
     @StateObject private var historyViewModel = ActivityHistoryViewModel()
-    @StateObject private var suggestWorkoutViewModel = SuggestWorkoutViewModel()
+    @ObservedObject private var watchConnectivity = WatchConnectivityManager.shared
     @State private var selectedCompletionId: String?
-    @State private var showingSuggestWorkout = false
+    @State private var scrubberSelectedIndex = 0
 
     private var today: Date { Date() }
 
@@ -22,45 +21,56 @@ struct TodayDiaryView: View {
         historyViewModel.todaysCompletions
     }
 
+    private var usesTodayFixture: Bool {
+        todaysCompletions.contains(where: \.wasSimulated)
+    }
+
+    private var scrubberDays: [DDScrubberDay] {
+        historyViewModel.completions.scrubberDays(now: today)
+    }
+
+    private var watchConnected: Bool {
+        watchConnectivity.isWatchReachable || watchConnectivity.isWatchAppInstalled
+    }
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                    header
+            VStack(spacing: 0) {
+                headerRow
 
-                    if historyViewModel.isLoading && historyViewModel.completions.isEmpty {
-                        loadingState
-                    } else if todaysCompletions.isEmpty {
-                        emptyDiaryState
-                    } else {
-                        diaryList
-                    }
+                if !scrubberDays.isEmpty {
+                    DDDayScrubber(days: scrubberDays, selectedIndex: $scrubberSelectedIndex)
                 }
-                .padding(.horizontal, Theme.Spacing.lg)
-                .padding(.bottom, 100)
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        if historyViewModel.isLoading && historyViewModel.completions.isEmpty {
+                            loadingState
+                        } else if todaysCompletions.isEmpty {
+                            emptyDiaryState
+                        } else {
+                            timeline
+                            systemEventRows
+                            timelineFooterHint
+                        }
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.top, 14)
+                    .padding(.bottom, 100)
+                }
             }
-            .background(Theme.Colors.background.ignoresSafeArea())
+            .background(DailyDriver.screenBackground.ignoresSafeArea())
             .navigationBarHidden(true)
+            .preferredColorScheme(.dark)
             .task {
                 await historyViewModel.loadCompletions()
+                syncScrubberToToday()
             }
             .refreshable {
                 await historyViewModel.refreshCompletions()
             }
             .sheet(item: $selectedCompletionId) { completionId in
-                NavigationStack {
-                    CompletionDetailView(completionId: completionId)
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("Done") {
-                                    selectedCompletionId = nil
-                                }
-                            }
-                        }
-                }
-            }
-            .sheet(isPresented: $showingSuggestWorkout) {
-                SuggestWorkoutView(viewModel: suggestWorkoutViewModel)
+                DDActivityDetailView(completionId: completionId)
             }
             .overlay(alignment: .top) {
                 Text(" ")
@@ -71,95 +81,159 @@ struct TodayDiaryView: View {
         }
     }
 
-    private var header: some View {
-        VStack(spacing: 2) {
+    private var headerRow: some View {
+        HStack(alignment: .center) {
             Text("Today")
-                .font(Theme.Typography.title2)
-                .foregroundColor(Theme.Colors.textPrimary)
+                .ddDisplayText(32, weight: .heavy)
+                .foregroundColor(DailyDriver.foreground)
                 .accessibilityIdentifier("af_today_title")
-            AFLabel(
-                text: today.formatted(.dateTime.weekday(.abbreviated)).uppercased()
-                    + " · "
-                    + today.formatted(.dateTime.month(.abbreviated).day()).uppercased()
-            )
+            Spacer(minLength: 0)
+            NavigationLink {
+                DDDeviceDetailView()
+                    .ddSuppressFloatingChrome()
+            } label: {
+                DDWatchReadinessPill(
+                    isConnected: watchConnected || usesTodayFixture,
+                    batteryPercent: usesTodayFixture ? DDDeviceFixture.batteryPercent : nil
+                )
+            }
+            .buttonStyle(.plain)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.top, Theme.Spacing.sm)
-        .padding(.bottom, Theme.Spacing.xs)
+        .padding(.horizontal, 18)
+        .padding(.top, 8)
+        .padding(.bottom, 6)
     }
 
     private var loadingState: some View {
-        AFCard(padding: Theme.Spacing.lg) {
-            HStack(spacing: Theme.Spacing.md) {
-                ProgressView()
-                    .tint(Theme.Colors.accentGreen)
-                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                    Text("Loading today’s diary")
-                        .font(Theme.Typography.title3)
-                        .foregroundColor(Theme.Colors.textPrimary)
-                    Text("Pulling completed activities only — no schedule.")
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                }
-                Spacer()
+        HStack(spacing: Theme.Spacing.md) {
+            ProgressView()
+                .tint(DailyDriver.lime)
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text("Loading today’s diary")
+                    .ddDisplayText(15, weight: .bold)
+                Text("Pulling completed activities only — no schedule.")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(DailyDriver.foregroundMuted)
             }
+            Spacer()
         }
+        .padding(Theme.Spacing.lg)
+        .background(DailyDriver.card)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(DailyDriver.border, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .accessibilityIdentifier("af_today_loading")
     }
 
     private var emptyDiaryState: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            AFLabel(text: "Completed diary")
-            Text("No completed activities yet")
-                .font(Theme.Typography.largeTitle)
-                .foregroundColor(Theme.Colors.textPrimary)
-                .accessibilityIdentifier("af_today_empty_state")
-            Text("Today shows finished sessions only — no plan or schedule. Completions sync from Garmin and phone land here automatically.")
-                .font(Theme.Typography.body)
-                .foregroundColor(Theme.Colors.textSecondary)
-                .lineSpacing(3)
-
-            Button {
-                suggestWorkoutViewModel.requestSuggestion()
-                showingSuggestWorkout = true
-            } label: {
-                Text("Suggest a workout")
-                    .font(Theme.Typography.bodyBold)
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(AFPrimaryButtonStyle(size: .md))
-            .accessibilityIdentifier("ama1842.suggest.button")
-            .accessibilityLabel("Suggest a Workout")
-        }
-        .padding(Theme.Spacing.lg)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.Colors.surfaceElevated)
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.lg, style: .continuous)
-                .stroke(Theme.Colors.borderLight, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.lg, style: .continuous))
-        .accessibilityIdentifier("today_empty_diary")
+        Text("Sessions land here as they happen — or add one with ＋")
+            .font(.system(size: 12))
+            .foregroundColor(DailyDriver.foregroundDim)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+            .padding(.top, 26)
+            .accessibilityIdentifier("af_today_empty_state")
     }
 
-    private var diaryList: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            AFLabel(text: "Completed today")
-                .accessibilityAddTraits(.isHeader)
-                .accessibilityIdentifier("af_today_diary_header")
-
-            LazyVStack(spacing: Theme.Spacing.sm) {
-                ForEach(Array(todaysCompletions.enumerated()), id: \.element.id) { index, completion in
-                    Button {
-                        selectedCompletionId = completion.id
-                    } label: {
-                        CompletionRowView(completion: completion)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("af_today_completion_\(index)")
+    private var timeline: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(todaysCompletions.enumerated()), id: \.element.id) { index, completion in
+                Button {
+                    selectedCompletionId = completion.id
+                } label: {
+                    let icon = completion.ddTimelineIcon
+                    DDTimelineCard(
+                        icon: icon.name,
+                        iconBackground: icon.background,
+                        time: completion.ddTimeRange,
+                        title: completion.ddTimelineTitle,
+                        stats: completion.ddTimelineStats,
+                        sourceLabel: completion.ddSourceCaption,
+                        showsChevron: true,
+                        trailingAction: AnyView(timelineAction(for: completion))
+                    )
                 }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_today_completion_\(index)")
             }
-            .accessibilityIdentifier("af_today_diary_list")
+        }
+        .accessibilityIdentifier("af_today_diary_list")
+    }
+
+    @ViewBuilder
+    private func timelineAction(for completion: WorkoutCompletion) -> some View {
+        if completion.ddNeedsActivityMapping {
+            Text("What was this?")
+                .ddDisplayText(12, weight: .bold)
+                .foregroundColor(DailyDriver.amber)
+        } else {
+            Text("Log RPE")
+                .ddDisplayText(12, weight: .bold)
+                .foregroundColor(DailyDriver.amber)
+        }
+    }
+
+    /// Plain rail rows from proto (GARMIN SYNCED · DAY STARTED).
+    private var systemEventRows: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if showsGarminSyncRow {
+                DDTimelineCard(
+                    icon: "applewatch",
+                    iconBackground: DailyDriver.card2,
+                    time: garminSyncTimeLabel,
+                    label: "GARMIN SYNCED · \(garminPulledCount) ACTIVITIES PULLED"
+                )
+            }
+            DDTimelineCard(
+                icon: "sun.max.fill",
+                iconBackground: DailyDriver.card2,
+                time: dayStartedTimeLabel,
+                label: "DAY STARTED"
+            )
+        }
+    }
+
+    private var showsGarminSyncRow: Bool {
+        todaysCompletions.contains { $0.source == .garmin } || usesTodayFixture
+    }
+
+    private var garminPulledCount: Int {
+        let garminCount = todaysCompletions.filter { $0.source == .garmin }.count
+        if usesTodayFixture { return max(2, garminCount) }
+        return max(1, garminCount)
+    }
+
+    private var garminSyncTimeLabel: String {
+        if usesTodayFixture { return "07:41" }
+        let garminCompletions = todaysCompletions.filter { $0.source == .garmin }
+        guard let earliest = garminCompletions.map(\.startedAt).min() else {
+            return "—"
+        }
+        return earliest.formatted(date: .omitted, time: .shortened)
+    }
+
+    private var dayStartedTimeLabel: String {
+        if usesTodayFixture { return "06:58" }
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: today)
+        let morning = calendar.date(byAdding: .minute, value: 58, to: start) ?? start
+        return morning.formatted(date: .omitted, time: .shortened)
+    }
+
+    private var timelineFooterHint: some View {
+        Text("Sessions land here as they happen — or add one with ＋.")
+            .font(.system(size: 12))
+            .foregroundColor(DailyDriver.foregroundDim)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+            .padding(.top, 26)
+    }
+
+    private func syncScrubberToToday() {
+        if let todayIndex = scrubberDays.firstIndex(where: { $0.isToday }) {
+            scrubberSelectedIndex = todayIndex
         }
     }
 }

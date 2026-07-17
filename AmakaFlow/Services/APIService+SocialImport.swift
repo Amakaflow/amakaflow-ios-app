@@ -297,19 +297,21 @@ extension APIService {
         }
 
         if let decoded = try? APIService.makeDecoder().decode(Workout.self, from: data) {
-            if decoded.source == .other || decoded.source.rawValue.isEmpty {
-                return Workout(
-                    id: decoded.id,
-                    name: decoded.name,
-                    sport: decoded.sport,
-                    duration: decoded.duration,
-                    blocks: decoded.blocks,
-                    description: decoded.description,
-                    source: WorkoutSource(rawValue: source) ?? .other,
-                    sourceUrl: request.sourceUrl ?? decoded.sourceUrl
-                )
-            }
-            return decoded
+            let resolvedSource = decoded.source == .other || decoded.source.rawValue.isEmpty
+                ? (WorkoutSource(rawValue: source) ?? .other)
+                : decoded.source
+            return Workout(
+                id: decoded.id,
+                name: decoded.name,
+                sport: decoded.sport,
+                duration: decoded.duration,
+                blocks: decoded.blocks,
+                description: decoded.description ?? request.description,
+                source: resolvedSource,
+                sourceUrl: request.sourceUrl ?? decoded.sourceUrl,
+                creatorName: decoded.creatorName ?? request.creatorName,
+                createdAt: decoded.createdAt
+            )
         }
 
         return synthesizedProvenanceWorkout(from: request, source: source, responseData: data)
@@ -317,25 +319,48 @@ extension APIService {
 
     /// POST /workouts/save body for mapper-api (`workout_data` + `sources` + `device`).
     static func mapperSaveBody(from request: WorkoutSaveRequest, source: String) throws -> [String: Any] {
-        let exercises = request.intervals.compactMap { provenanceExercise(from: $0) }
-        guard !exercises.isEmpty else {
-            throw APIError.serverErrorWithBody(
-                422,
-                "Add at least one exercise before saving — import didn't extract a usable list."
-            )
+        let blockPayload: [[String: Any]]
+        if let blocks = request.blocks, !blocks.isEmpty {
+            blockPayload = blocks.map { block in
+                var object: [String: Any] = [
+                    "exercises": block.exercises.map { provenanceExercise(from: $0) }
+                ]
+                if let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines), !label.isEmpty {
+                    object["label"] = label
+                }
+                if block.rounds > 1 {
+                    object["rounds"] = block.rounds
+                }
+                return object
+            }
+        } else {
+            let exercises = request.intervals.compactMap { provenanceExercise(from: $0) }
+            guard !exercises.isEmpty else {
+                throw APIError.serverErrorWithBody(
+                    422,
+                    "Add at least one exercise before saving — import didn't extract a usable list."
+                )
+            }
+            blockPayload = [["label": "Main", "exercises": exercises]]
         }
+
         var workoutData: [String: Any] = [
             "title": request.name,
             "workout_type": request.sport,
-            "blocks": [
-                [
-                    "label": "Main",
-                    "exercises": exercises
-                ]
-            ]
+            "blocks": blockPayload
         ]
+        if let description = request.description?.trimmingCharacters(in: .whitespacesAndNewlines), !description.isEmpty {
+            workoutData["description"] = description
+        }
+        var metadata: [String: Any] = [:]
         if let sourceUrl = request.sourceUrl {
-            workoutData["metadata"] = ["source_url": sourceUrl]
+            metadata["source_url"] = sourceUrl
+        }
+        if let creator = request.creatorName?.trimmingCharacters(in: .whitespacesAndNewlines), !creator.isEmpty {
+            metadata["creator"] = creator
+        }
+        if !metadata.isEmpty {
+            workoutData["metadata"] = metadata
         }
         return [
             "workout_data": workoutData,
@@ -343,6 +368,38 @@ extension APIService {
             "device": "ios",
             "title": request.name
         ]
+    }
+
+    private static func provenanceExercise(from exercise: SocialImportExercise) -> [String: Any] {
+        var object: [String: Any] = ["name": exercise.name]
+        if let seconds = exercise.seconds, seconds > 0 {
+            object["duration_sec"] = seconds
+        } else if let meters = exercise.distanceMeters, meters > 0 {
+            object["distance_m"] = meters
+        } else {
+            if let sets = exercise.sets { object["sets"] = sets }
+            if let range = exercise.repsRange?.trimmingCharacters(in: .whitespacesAndNewlines), !range.isEmpty {
+                object["reps_range"] = range
+            }
+            if let reps = exercise.reps { object["reps"] = reps }
+        }
+        if let loadText = exercise.load?.trimmingCharacters(in: .whitespacesAndNewlines), !loadText.isEmpty {
+            let parsed = Workout.resolveLegacyLoadAndInstruction(from: loadText)
+            if let parsedLoad = parsed.load, parsedLoad.value > 0 {
+                object["weight"] = parsedLoad.value
+                object["weight_unit"] = parsedLoad.unit
+            } else {
+                object["notes"] = loadText
+            }
+        } else if let notes = exercise.notes?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !notes.isEmpty,
+                  !Exercise.looksLikeMuscleFocus(notes) {
+            object["notes"] = notes
+        }
+        if let focus = exercise.focus?.trimmingCharacters(in: .whitespacesAndNewlines), !focus.isEmpty {
+            object["muscle_group"] = focus
+        }
+        return object
     }
 
     private static func provenanceExercise(from interval: WorkoutSaveInterval) -> [String: Any]? {
@@ -388,6 +445,29 @@ extension APIService {
         let workoutId = (object?["workout_id"] as? String)
             ?? (object?["id"] as? String)
             ?? UUID().uuidString
+
+        if let blocks = request.blocks, !blocks.isEmpty {
+            let mappedBlocks = blocks.map { block in
+                Block(
+                    label: block.label,
+                    structure: .straight,
+                    rounds: max(1, block.rounds),
+                    exercises: block.exercises.map { $0.toExercise() }
+                )
+            }
+            return Workout(
+                id: workoutId,
+                name: request.name,
+                sport: WorkoutSport(rawValue: request.sport) ?? .strength,
+                duration: max(mappedBlocks.flatMap(\.exercises).count * 180, 600),
+                blocks: mappedBlocks,
+                description: request.description,
+                source: WorkoutSource(rawValue: source) ?? .other,
+                sourceUrl: request.sourceUrl,
+                creatorName: request.creatorName
+            )
+        }
+
         let intervals: [WorkoutInterval] = request.intervals.compactMap { interval in
             switch interval.type {
             case "time":
@@ -419,8 +499,10 @@ extension APIService {
             sport: WorkoutSport(rawValue: request.sport) ?? .strength,
             duration: max(intervals.count * 180, 600),
             intervals: intervals,
+            description: request.description,
             source: WorkoutSource(rawValue: source) ?? .other,
-            sourceUrl: request.sourceUrl
+            sourceUrl: request.sourceUrl,
+            creatorName: request.creatorName
         )
     }
 }

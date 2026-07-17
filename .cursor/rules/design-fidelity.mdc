@@ -1,0 +1,37 @@
+---
+description: Design fidelity rules for all UI work — the Daily Driver design is defined in design-handoff/, not by your taste
+globs:
+  - "AmakaFlow/Views/**"
+  - "AmakaFlow/**/*View*.swift"
+alwaysApply: false
+---
+
+# Design fidelity — non-negotiable
+
+The visual design for this app is ALREADY DECIDED. It lives in `design-handoff/`:
+
+- `design-handoff/screenshots/*.png` — rendered ground truth for every screen (dark = primary)
+- `design-handoff/DESIGN.md` — the ONLY allowed colors, fonts, sizes, radii, shadows
+- `design-handoff/SPEC.md` — per-screen layout, states, and interactions
+- `design-handoff/reference/` — the exact prototype source (JSX + tokens.css)
+
+## Rules
+
+1. **Before writing or changing ANY UI code**: open the screen's PNG in
+   `design-handoff/screenshots/` and read its section in `SPEC.md`. If no screenshot
+   exists for what you're building, STOP and say so — do not improvise a design.
+2. **Use ONLY tokens from `DESIGN.md`.** NEVER write a raw hex color, font size,
+   corner radius, or shadow that is not listed there. If a value seems missing,
+   check `design-handoff/reference/` for the exact value — do not guess.
+3. **Never substitute your own aesthetic.** No gradients, colors, SF Symbols weights,
+   or spacing "improvements" beyond the reference. Match the screenshot, pixel by pixel.
+4. **Ignore stale designs.** Any file from the old "Hi-fi" design (AmakaFlow Hi-fi*.html,
+   screens-v2/v3/main/agent/flow/marketing) is DEAD. `design-handoff/` is current.
+5. **Typography**: Poppins (bundled) for display text, SF Pro for body, monospaced digits
+   for all numerics/timestamps — per the table in `DESIGN.md`.
+6. **Verify before claiming done**: build, screenshot the simulator, and compare
+   side-by-side against the reference PNG. List every visible difference and fix them.
+   "Looks close" is not done; matching is done.
+7. When the design and iOS platform conventions genuinely conflict (safe areas,
+   navigation transitions, dynamic type), keep the design's visual voice and say
+   explicitly what you adapted and why.

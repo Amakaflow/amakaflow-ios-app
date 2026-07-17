@@ -211,69 +211,222 @@ struct WeeklySummary {
 // MARK: - Sample Data
 
 extension WorkoutCompletion {
-    /// AMA-2289 fixture: multi-source “today” diary (Garmin run + phone strength), newest-first ready.
-    /// Timestamps are anchored to the calendar day of `now` so early-morning runs stay on Today.
+    /// AMA-2289 / AMA-2297 fixture: Today diary matching `dd-today-dark.png` (newest-first).
+    /// Lunch Run + Lunch Workout (Strava imports) — system rows GARMIN SYNCED / DAY STARTED
+    /// are rendered by `TodayDiaryView` when `isSimulated` fixtures are present.
     static func todayDiarySampleData(
         now: Date = Date(),
         calendar: Calendar = .current
     ) -> [WorkoutCompletion] {
-        let garmin = todayFixtureWindow(
+        let lunchRun = todayFixtureWindow(
             dayOf: now,
-            startHour: 10,
-            durationSeconds: 1800,
+            startHour: 12,
+            startMinute: 53,
+            durationSeconds: 59 * 60,
             calendar: calendar
         )
-        let phone = todayFixtureWindow(
+        let lunchWorkout = todayFixtureWindow(
             dayOf: now,
-            startHour: 7,
-            durationSeconds: 1800,
+            startHour: 12,
+            startMinute: 44,
+            durationSeconds: 8 * 60,
             calendar: calendar
         )
         return [
             WorkoutCompletion(
-                id: "today-garmin-run",
-                workoutName: "Morning Easy Run",
-                startedAt: garmin.startedAt,
-                endedAt: garmin.endedAt,
-                durationSeconds: 1800,
-                avgHeartRate: 148,
+                id: "today-lunch-run",
+                workoutName: "Lunch Run",
+                startedAt: lunchRun.startedAt,
+                endedAt: lunchRun.endedAt,
+                durationSeconds: 59 * 60,
+                avgHeartRate: 143,
                 maxHeartRate: 165,
-                activeCalories: 310,
-                distanceMeters: 5200,
+                activeCalories: 677,
+                distanceMeters: 8200,
                 source: .garmin,
                 syncedToStrava: true,
-                workoutId: "workout-garmin-run",
+                workoutId: "workout-lunch-run",
                 originalWorkout: nil,
                 isSimulated: true
             ),
             WorkoutCompletion(
-                id: "today-phone-strength",
-                workoutName: "Upper Body Strength",
-                startedAt: phone.startedAt,
-                endedAt: phone.endedAt,
-                durationSeconds: 1800,
-                avgHeartRate: 118,
-                maxHeartRate: 145,
-                activeCalories: 245,
+                id: "today-lunch-workout",
+                workoutName: "Lunch Workout",
+                startedAt: lunchWorkout.startedAt,
+                endedAt: lunchWorkout.endedAt,
+                durationSeconds: 8 * 60,
+                avgHeartRate: nil,
+                maxHeartRate: nil,
+                activeCalories: 50,
                 distanceMeters: nil,
-                source: .phone,
-                syncedToStrava: false,
-                workoutId: "workout-phone-strength",
+                source: .manual,
+                syncedToStrava: true,
+                workoutId: nil,
                 originalWorkout: nil,
                 isSimulated: true
             )
         ]
     }
 
+    /// Profile tab fixture when API returns no completions — matches `dd-profile-dark.png`.
+    static func profileHubSampleData(
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) -> [WorkoutCompletion] {
+        func dayOffset(_ weekday: Int, hour: Int, minute: Int = 0) -> Date {
+            let todayWeekday = calendar.component(.weekday, from: now)
+            let delta = weekday - todayWeekday
+            let base = calendar.date(byAdding: .day, value: delta, to: calendar.startOfDay(for: now)) ?? now
+            return calendar.date(byAdding: .minute, value: hour * 60 + minute, to: base) ?? base
+        }
+
+        // Monday = 2 in Calendar weekday (Sunday = 1)
+        let monday = dayOffset(2, hour: 7, minute: 30)
+        let sunday = dayOffset(1, hour: 10)
+        let saturday = dayOffset(7, hour: 8)
+        let streakDay1 = calendar.date(byAdding: .day, value: -2, to: calendar.startOfDay(for: now)) ?? now
+        let streakDay2 = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: now)) ?? now
+        let thisWeekSession = calendar.date(byAdding: .hour, value: -3, to: now) ?? now
+
+        var entries: [WorkoutCompletion] = [
+            WorkoutCompletion(
+                id: "profile-easy-shakeout",
+                workoutName: "Easy shakeout",
+                startedAt: monday,
+                endedAt: monday.addingTimeInterval(32 * 60),
+                durationSeconds: 32 * 60,
+                avgHeartRate: 125,
+                maxHeartRate: 140,
+                activeCalories: 280,
+                distanceMeters: 5100,
+                source: .garmin,
+                syncedToStrava: false,
+                workoutId: "workout-shakeout",
+                originalWorkout: nil,
+                isSimulated: true
+            ),
+            WorkoutCompletion(
+                id: "profile-amrap",
+                workoutName: "DB Full-body AMRAP",
+                startedAt: sunday,
+                endedAt: sunday.addingTimeInterval(21 * 60),
+                durationSeconds: 21 * 60,
+                avgHeartRate: 132,
+                maxHeartRate: 158,
+                activeCalories: 190,
+                distanceMeters: nil,
+                source: .phone,
+                syncedToStrava: false,
+                workoutId: "workout-amrap",
+                originalWorkout: nil,
+                isSimulated: true
+            ),
+            WorkoutCompletion(
+                id: "profile-long-run",
+                workoutName: "Long endurance run",
+                startedAt: saturday,
+                endedAt: saturday.addingTimeInterval(98 * 60),
+                durationSeconds: 98 * 60,
+                avgHeartRate: 138,
+                maxHeartRate: 162,
+                activeCalories: 920,
+                distanceMeters: 14600,
+                source: .garmin,
+                syncedToStrava: false,
+                workoutId: "workout-long-run",
+                originalWorkout: nil,
+                isSimulated: true
+            ),
+            WorkoutCompletion(
+                id: "profile-streak-1",
+                workoutName: "Tempo run",
+                startedAt: streakDay1.addingTimeInterval(3600 * 7),
+                endedAt: streakDay1.addingTimeInterval(3600 * 7 + 2400),
+                durationSeconds: 2400,
+                avgHeartRate: 145,
+                maxHeartRate: 168,
+                activeCalories: 350,
+                distanceMeters: 6000,
+                source: .garmin,
+                syncedToStrava: false,
+                workoutId: nil,
+                originalWorkout: nil,
+                isSimulated: true
+            ),
+            WorkoutCompletion(
+                id: "profile-streak-2",
+                workoutName: "Recovery jog",
+                startedAt: streakDay2.addingTimeInterval(3600 * 8),
+                endedAt: streakDay2.addingTimeInterval(3600 * 8 + 1800),
+                durationSeconds: 1800,
+                avgHeartRate: 128,
+                maxHeartRate: 145,
+                activeCalories: 220,
+                distanceMeters: 4500,
+                source: .garmin,
+                syncedToStrava: false,
+                workoutId: nil,
+                originalWorkout: nil,
+                isSimulated: true
+            ),
+            WorkoutCompletion(
+                id: "profile-this-week",
+                workoutName: "Hyrox prep session",
+                startedAt: thisWeekSession,
+                endedAt: thisWeekSession.addingTimeInterval(44 * 60),
+                durationSeconds: 44 * 60,
+                avgHeartRate: 151,
+                maxHeartRate: 172,
+                activeCalories: 486,
+                distanceMeters: nil,
+                source: .phone,
+                syncedToStrava: false,
+                workoutId: "workout-hyrox",
+                originalWorkout: nil,
+                isSimulated: true
+            )
+        ]
+
+        // Pad July month count toward handoff “9 sessions in July”.
+        let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: now)) ?? now
+        for offset in 0..<3 {
+            guard let day = calendar.date(byAdding: .day, value: offset + 1, to: monthStart) else { continue }
+            let started = calendar.date(byAdding: .hour, value: 9, to: day) ?? day
+            entries.append(
+                WorkoutCompletion(
+                    id: "profile-july-\(offset)",
+                    workoutName: "July session \(offset + 1)",
+                    startedAt: started,
+                    endedAt: started.addingTimeInterval(1800),
+                    durationSeconds: 1800,
+                    avgHeartRate: 130,
+                    maxHeartRate: 150,
+                    activeCalories: 200,
+                    distanceMeters: 4000,
+                    source: .garmin,
+                    syncedToStrava: false,
+                    workoutId: nil,
+                    originalWorkout: nil,
+                    isSimulated: true
+                )
+            )
+        }
+        return entries
+    }
+
     /// Fixed clock-times on `dayOf`'s calendar day (always same-day, never “yesterday before 02:00”).
     private static func todayFixtureWindow(
         dayOf: Date,
         startHour: Int,
+        startMinute: Int = 0,
         durationSeconds: TimeInterval,
         calendar: Calendar
     ) -> (startedAt: Date, endedAt: Date) {
         let dayStart = calendar.startOfDay(for: dayOf)
-        let startedAt = calendar.date(byAdding: .hour, value: startHour, to: dayStart) ?? dayStart
+        var components = DateComponents()
+        components.hour = startHour
+        components.minute = startMinute
+        let startedAt = calendar.date(byAdding: components, to: dayStart) ?? dayStart
         let endedAt = startedAt.addingTimeInterval(durationSeconds)
         return (startedAt, endedAt)
     }

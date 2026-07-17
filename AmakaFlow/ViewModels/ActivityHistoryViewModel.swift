@@ -195,10 +195,15 @@ class ActivityHistoryViewModel: ObservableObject {
         // Check if we have valid auth
         let hasAuth = dependencies.pairingService.isPaired
 
-        // If not authenticated, show empty state (no mock data)
+        // If not authenticated, show empty state (no mock data).
+        // DEBUG: seed handoff timeline so simulator verification works without pairing/backend.
         if !hasAuth {
+            #if DEBUG
+            seedDebugTodayDiarySample(reason: "unpaired")
+            #else
             completions = []
             hasMoreData = false
+            #endif
             isLoading = false
             return
         }
@@ -206,6 +211,18 @@ class ActivityHistoryViewModel: ObservableObject {
         do {
             logger.info("loadCompletions: Fetching from API...")
             let fetched = try await dependencies.apiService.fetchCompletions(limit: pageSize, offset: 0)
+            #if DEBUG
+            let now = nowProvider()
+            if TodayDiary.completionsForToday(fetched, now: now, calendar: calendar).isEmpty {
+                let sample = WorkoutCompletion.todayDiarySampleData(now: now, calendar: calendar)
+                completions = fetched + sample
+                hasMoreData = fetched.count >= pageSize
+                currentOffset = fetched.count
+                isLoading = false
+                logger.info("loadCompletions: appended DEBUG today diary sample to \(fetched.count) API completions")
+                return
+            }
+            #endif
             completions = fetched
             hasMoreData = fetched.count >= pageSize
             currentOffset = fetched.count
@@ -223,6 +240,18 @@ class ActivityHistoryViewModel: ObservableObject {
             // URL request was cancelled - ignore silently
             logger.debug("loadCompletions URL request cancelled")
         } catch let error as APIError {
+            #if DEBUG
+            if !hadContent {
+                switch error {
+                case .unauthorized:
+                    break
+                default:
+                    seedDebugTodayDiarySample(reason: "API error", clearError: true)
+                    isLoading = false
+                    return
+                }
+            }
+            #endif
             handleAPIError(error, preserveContent: hadContent)
             if hadContent {
                 currentOffset = previousOffset
@@ -235,6 +264,13 @@ class ActivityHistoryViewModel: ObservableObject {
                 metadata: nil
             )
         } catch {
+            #if DEBUG
+            if !hadContent {
+                seedDebugTodayDiarySample(reason: "load error", clearError: true)
+                isLoading = false
+                return
+            }
+            #endif
             errorMessage = "Failed to load activities: \(error.localizedDescription)"
             if hadContent {
                 currentOffset = previousOffset
@@ -300,6 +336,20 @@ class ActivityHistoryViewModel: ObservableObject {
 
         isLoadingMore = false
     }
+
+    // MARK: - DEBUG Today fixtures
+
+#if DEBUG
+    private func seedDebugTodayDiarySample(reason: String, clearError: Bool = false) {
+        completions = WorkoutCompletion.todayDiarySampleData(now: nowProvider(), calendar: calendar)
+        hasMoreData = false
+        currentOffset = completions.count
+        if clearError {
+            errorMessage = nil
+        }
+        logger.info("loadCompletions: seeded DEBUG today diary sample (\(reason))")
+    }
+#endif
 
     // MARK: - Error Handling
 

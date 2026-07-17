@@ -17,13 +17,14 @@ struct WorkoutPlayerView: View {
     @State private var showStepList = false
     @State private var deviceMode: DevicePreference = .phoneOnly
     @State private var shouldDismissImmediately = false  // Track if workout was discarded or saved for later
+    @State private var pausedForEndConfirmation = false
     @State private var showRPEFeedback = false  // AMA-1266: Show RPE prompt after completion
     @State private var showSwapSheet = false
 
     var body: some View {
         ZStack {
-            // Background - always visible
-            Theme.Colors.background.ignoresSafeArea()
+            // Background - DD player uses pure black per dd-player-dark.png
+            playerBackground.ignoresSafeArea()
 
             // Debug: Show if no workout loaded
             if engine.workout == nil {
@@ -44,11 +45,12 @@ struct WorkoutPlayerView: View {
                 }
             } else {
                 VStack(spacing: 0) {
-                    // Header
-                    header
+                    if !usesDDPlayerChrome {
+                        header
+                    }
 
                     // Simulation mode banner (AMA-271)
-                    if engine.isSimulation {
+                    if engine.isSimulation, !usesDDPlayerChrome {
                         SimulationBannerView(speed: engine.simulationSpeed)
                     }
 
@@ -91,6 +93,18 @@ struct WorkoutPlayerView: View {
                     // Rest screen between exercises
                     RestPeriodView(engine: engine)
                         .id("rest-\(engine.currentStepIndex)")
+                } else if engine.phase == .running || engine.phase == .paused {
+                    DDActivePlayerView(
+                        engine: engine,
+                        watchManager: watchManager,
+                        onEnd: {
+                            pausedForEndConfirmation = engine.phase == .running
+                            if engine.phase == .running {
+                                engine.pause()
+                            }
+                            showEndConfirmation = true
+                        }
+                    )
                 } else {
                     ScrollView {
                         VStack(spacing: Theme.Spacing.lg) {
@@ -143,10 +157,10 @@ struct WorkoutPlayerView: View {
                 engine.end(reason: .discarded)
             }
             Button("Cancel", role: .cancel) {
-                // Resume workout if it was paused for the confirmation dialog
-                if engine.phase == .paused {
+                if pausedForEndConfirmation, engine.phase == .paused {
                     engine.resume()
                 }
+                pausedForEndConfirmation = false
             }
         } message: {
             Text("Save progress, resume later, or discard.")
@@ -182,13 +196,21 @@ struct WorkoutPlayerView: View {
         }
     }
 
+    private var usesDDPlayerChrome: Bool {
+        engine.phase == .running || engine.phase == .paused
+    }
+
+    private var playerBackground: Color {
+        usesDDPlayerChrome ? .black : Theme.Colors.background
+    }
+
     // MARK: - Header
 
     private var header: some View {
         HStack {
             // Close button
             Button {
-                // Pause while showing confirmation to stop timer updates
+                pausedForEndConfirmation = engine.phase == .running
                 if engine.phase == .running {
                     engine.pause()
                 }

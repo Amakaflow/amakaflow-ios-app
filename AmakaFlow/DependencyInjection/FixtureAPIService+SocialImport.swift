@@ -12,13 +12,51 @@ extension FixtureAPIService {
     func ingestSocialURL(url: String, platform: SocialImportPlatform) async throws -> Data {
         print("[FixtureAPIService] Stub: ingestSocialURL(\(platform.rawValue))")
         let payload: [String: Any] = [
-            "title": "Fixture Social Import",
-            "sport": "strength",
+            "title": "DB Full-body AMRAP",
+            "sport": "cardio",
+            "description": "Four main rounds of full-body conditioning plus a sled finisher. Parsed from the reel; nothing saved yet.",
             "source_url": url,
+            "creator": "gospelofgainz",
             "blocks": [
-                ["exercises": [
-                    ["name": "Fixture Squat", "sets": 3, "reps": 10]
-                ]]
+                [
+                    "label": "Round 1–3",
+                    "rounds": 3,
+                    "exercises": [
+                        [
+                            "name": "Wall balls",
+                            "reps": 20,
+                            "load": "med ball 6 kg",
+                            "focus": "Quads · Shoulders"
+                        ],
+                        [
+                            "name": "Barbell thrusters",
+                            "reps": 12,
+                            "weight": 40,
+                            "weight_unit": "kg",
+                            "focus": "Full body"
+                        ],
+                        [
+                            "name": "Burpee broad jumps",
+                            "reps": 10,
+                            "load": "bodyweight",
+                            "focus": "Full body"
+                        ]
+                    ]
+                ],
+                [
+                    "label": "Finisher",
+                    "rounds": 1,
+                    "exercises": [
+                        [
+                            "name": "Sled push",
+                            "sets": 2,
+                            "distance_m": 20,
+                            "weight": 80,
+                            "weight_unit": "kg",
+                            "focus": "Legs · Core"
+                        ]
+                    ]
+                ]
             ]
         ]
         return try JSONSerialization.data(withJSONObject: payload)

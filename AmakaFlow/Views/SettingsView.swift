@@ -121,6 +121,9 @@ struct SettingsView: View {
     @ObservedObject private var watchConnectivity = WatchConnectivityManager.shared
     @State private var syncQueueSummary = SyncQueueSummary.healthy
     @State private var showingNutritionSettings = false
+    @State private var settingsInfoMessage: String?
+
+    private var usesHandoffFixture: Bool { DDHandoffFixtures.isEnabled }
     @State private var showingErrorLogSheet = false
     @State private var showDebugSettings = false
     @State private var debugTapCount = 0
@@ -135,26 +138,21 @@ struct SettingsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: Theme.Spacing.xl) {
-                AFTopBar(title: "Profile") {
-                    EmptyView()
-                } right: {
-                    EmptyView()
-                }
-
-                settingsHero
-                connectionsSection
-                profileTrainingSection
-                coachingSection
-                nutritionActivitySection
-                appSection
+            VStack(spacing: 10) {
+                ddSettingsHeader
+                ddMyGymsSection
+                ddConnectedWearablesSection
+                ddConnectedAppsSection
+                ddHandoffAppSection
+                ddAccountDataSection
             }
-            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.horizontal, 18)
             .padding(.vertical, Theme.Spacing.lg)
             .padding(.bottom, 100)
             }
-            .background(Theme.Colors.background.ignoresSafeArea())
+            .background(DailyDriver.screenBackground.ignoresSafeArea())
             .navigationBarHidden(true)
+            .preferredColorScheme(.dark)
             .alert("Sign Out", isPresented: $accountViewModel.showSignOutAlert) {
                 Button("Cancel", role: .cancel) {}
                 Button("Sign Out", role: .destructive) {
@@ -167,6 +165,14 @@ struct SettingsView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(garminDebugMessage)
+            }
+            .alert("Settings", isPresented: Binding(
+                get: { settingsInfoMessage != nil },
+                set: { if !$0 { settingsInfoMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) { settingsInfoMessage = nil }
+            } message: {
+                Text(settingsInfoMessage ?? "")
             }
             .alert("Privacy", isPresented: $accountViewModel.showError) {
                 Button("OK", role: .cancel) {}
@@ -256,69 +262,309 @@ struct SettingsView: View {
             }
     }
 
-    // MARK: - Refresh Header
+    // MARK: - Daily Driver header
 
-    private var settingsHero: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-            HStack(alignment: .top, spacing: Theme.Spacing.md) {
-                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+    @Environment(\.dismiss) private var dismiss
+
+    private var ddSettingsHeader: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                dismiss()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
                     Text("Profile")
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
-                        .foregroundColor(Theme.Colors.textPrimary)
-
-                    Text("Profile, training, coaching, and app controls grouped for quick scanning.")
-                        .font(Theme.Typography.body)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .font(.system(size: 13, weight: .semibold))
                 }
-
-                Spacer()
-
-                ZStack {
-                    RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
-                        .fill(Theme.Colors.accentBlue.opacity(0.14))
-                        .frame(width: 56, height: 56)
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundColor(Theme.Colors.accentBlue)
-                }
+                .foregroundColor(DailyDriver.foregroundMuted)
             }
+            .buttonStyle(.plain)
 
-            HStack(spacing: Theme.Spacing.sm) {
-                SettingsStatusPill(
-                    icon: deviceMode.iconName,
-                    title: deviceMode.title,
-                    tint: deviceMode.accentColor
+            Text("Settings")
+                .ddDisplayText(32, weight: .heavy)
+                .foregroundColor(DailyDriver.foreground)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.bottom, 4)
+        .accessibilityIdentifier("settings_refresh_header")
+    }
+
+    private var accountEmail: String {
+        pairingService.userProfile?.email ?? "Account"
+    }
+
+    // MARK: - Daily Driver handoff sections (dd-settings-dark.png)
+
+    private var ddMyGymsSection: some View {
+        SettingsSectionCard(
+            title: "My Gyms",
+            subtitle: usesHandoffFixture ? "Home gym active · builder adapts to it" : "Manage equipment profiles",
+            icon: "house.fill",
+            iconBackground: DailyDriver.orange,
+            rowCount: usesHandoffFixture ? 4 : 2
+        ) {
+            VStack(spacing: 0) {
+                ddSettingsLinkRow(
+                    icon: "house.fill",
+                    tint: DailyDriver.lime,
+                    title: "Home gym",
+                    subtitle: usesHandoffFixture
+                        ? "ACTIVE · DBs to 32 · KB 24 · rower · private"
+                        : "Your default equipment profile",
+                    destination: AnyView(EquipmentProfileView())
                 )
-                SettingsStatusPill(
-                    icon: isTelegramLinked ? "paperplane.fill" : "paperplane",
-                    title: isTelegramLinked ? "Telegram on" : "Telegram off",
-                    tint: Color(hex: "29B6F6")
-                )
-                SettingsStatusPill(
-                    icon: voiceCuesEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill",
-                    title: voiceCuesEnabled ? "Voice cues" : "Quiet mode",
-                    tint: Theme.Colors.accentBlue
+                if usesHandoffFixture {
+                    ddSettingsDivider
+                    ddSettingsLinkRow(
+                        icon: "map.fill",
+                        tint: DailyDriver.blue,
+                        title: "24 Hour Fitness — Katy",
+                        subtitle: "Shared · 12 members keep it in sync",
+                        destination: AnyView(DDGymDetailView())
+                    )
+                    ddSettingsDivider
+                    ddSettingsLinkRow(
+                        icon: "bookmark.fill",
+                        tint: DailyDriver.card2,
+                        title: "Hotel / travel",
+                        subtitle: "Bodyweight + bands preset",
+                        destination: AnyView(EquipmentProfileView())
+                    )
+                }
+                ddSettingsDivider
+                ddSettingsLinkRow(
+                    icon: "plus",
+                    tint: DailyDriver.card2,
+                    title: "＋ Add gym",
+                    subtitle: "Scan the room once — everyone after you skips it",
+                    destination: AnyView(EquipmentProfileView())
                 )
             }
         }
-        .padding(Theme.Spacing.lg)
-        .background(
-            LinearGradient(
-                colors: [
-                    Theme.Colors.surface,
-                    Theme.Colors.surfaceElevated.opacity(0.92)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.xl)
-                .stroke(Theme.Colors.borderLight, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.xl))
-        .accessibilityIdentifier("settings_refresh_header")
+    }
+
+    private var ddConnectedWearablesSection: some View {
+        SettingsSectionCard(
+            title: "Connected wearables",
+            subtitle: garminConnectivity.isConnected
+                ? "Garmin connected"
+                : "Pair a watch in Connections",
+            icon: "applewatch",
+            iconBackground: DailyDriver.lime,
+            rowCount: usesHandoffFixture ? 3 : 2
+        ) {
+            VStack(spacing: 0) {
+                if usesHandoffFixture {
+                    ddSettingsLinkRow(
+                        icon: "applewatch",
+                        tint: DailyDriver.lime,
+                        title: "Amazfit T-Rex 3",
+                        subtitle: "Hyrox / HIIT · synced 2m · 78%",
+                        destination: AnyView(DDDeviceDetailView())
+                    )
+                    ddSettingsDivider
+                }
+                ddSettingsLinkRow(
+                    icon: "applewatch",
+                    tint: DailyDriver.blue,
+                    title: "Garmin",
+                    subtitle: garminConnectivity.isConnected
+                        ? "Runs + strength · connected"
+                        : "Runs + strength · not connected",
+                    destination: AnyView(connectionsHub)
+                )
+                ddSettingsDivider
+                ddSettingsLinkRow(
+                    icon: "plus",
+                    tint: DailyDriver.card2,
+                    title: "＋ Pair a wearable",
+                    subtitle: "Optional — the phone covers everything",
+                    destination: AnyView(connectionsHub)
+                )
+            }
+        }
+    }
+
+    private var ddConnectedAppsSection: some View {
+        SettingsSectionCard(
+            title: "Connected apps",
+            subtitle: "Garmin pull ON · Strava off · Telegram",
+            icon: "link",
+            iconBackground: DailyDriver.blue,
+            rowCount: 3
+        ) {
+            VStack(spacing: 0) {
+                ddSettingsLinkRow(
+                    icon: "arrow.down.circle.fill",
+                    tint: DailyDriver.blue,
+                    title: "Garmin activities",
+                    subtitle: garminConnectivity.isConnected ? "Pulls runs into Progress" : "Connect Garmin in Connections",
+                    destination: AnyView(connectionsHub)
+                )
+                ddSettingsDivider
+                ddSettingsLinkRow(
+                    icon: "figure.run",
+                    tint: DailyDriver.orange,
+                    title: "Strava",
+                    subtitle: "Manage in Connections",
+                    destination: AnyView(connectionsHub)
+                )
+                ddSettingsDivider
+                ddSettingsButtonRow(
+                    icon: "paperplane.fill",
+                    tint: DailyDriver.purple,
+                    title: "Telegram",
+                    subtitle: isTelegramLinked ? "Coach + friction log" : "Not connected"
+                ) {
+                    showingTelegramSetup = true
+                }
+            }
+        }
+    }
+
+    private var ddHandoffAppSection: some View {
+        SettingsSectionCard(
+            title: "App",
+            subtitle: "Notifications · kg/km · dark",
+            icon: "slider.horizontal.3",
+            iconBackground: DailyDriver.purple,
+            rowCount: 3
+        ) {
+            VStack(spacing: 0) {
+                ddSettingsLinkRow(
+                    icon: "bell.badge.fill",
+                    tint: DailyDriver.lime,
+                    title: "Notifications",
+                    subtitle: "Session reminders · push results",
+                    destination: AnyView(NotificationPreferencesView())
+                )
+                ddSettingsDivider
+                ddSettingsLinkRow(
+                    icon: "slider.horizontal.3",
+                    tint: DailyDriver.card2,
+                    title: "Units",
+                    subtitle: "kg · km",
+                    destination: AnyView(EditProfileView(initialNameFallback: pairingService.userProfile?.name))
+                )
+                ddSettingsDivider
+                ddSettingsButtonRow(
+                    icon: "moon.fill",
+                    tint: DailyDriver.card2,
+                    title: "Appearance",
+                    subtitle: "Dark"
+                ) {
+                    settingsInfoMessage = "Daily Driver currently uses dark mode only."
+                }
+            }
+        }
+    }
+
+    private var ddAccountDataSection: some View {
+        SettingsSectionCard(
+            title: "Account & data",
+            subtitle: accountEmail,
+            icon: "person.fill",
+            iconBackground: DailyDriver.card2,
+            rowCount: 3
+        ) {
+            VStack(spacing: 0) {
+                ddSettingsLinkRow(
+                    icon: "person.fill",
+                    tint: DailyDriver.card2,
+                    title: "Account",
+                    subtitle: accountEmail,
+                    destination: AnyView(EditProfileView(initialNameFallback: pairingService.userProfile?.name))
+                )
+                ddSettingsDivider
+                ddSettingsButtonRow(
+                    icon: "square.and.arrow.up",
+                    tint: DailyDriver.card2,
+                    title: "Export my data",
+                    subtitle: nil
+                ) {
+                    Task { await accountViewModel.exportData() }
+                }
+                ddSettingsDivider
+                ddSettingsButtonRow(
+                    icon: "rectangle.portrait.and.arrow.right",
+                    tint: DailyDriver.red,
+                    title: "Sign out",
+                    subtitle: nil
+                ) {
+                    accountViewModel.showSignOutAlert = true
+                }
+            }
+        }
+    }
+
+    private var ddSettingsDivider: some View {
+        Rectangle()
+            .fill(DailyDriver.border)
+            .frame(height: 1)
+    }
+
+    private func ddSettingsLinkRow(
+        icon: String,
+        tint: Color,
+        title: String,
+        subtitle: String,
+        destination: AnyView
+    ) -> some View {
+        NavigationLink(destination: destination) {
+            DDSettingsRow(
+                icon: icon,
+                iconBackground: tint,
+                title: title,
+                detail: subtitle
+            ) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(DailyDriver.foregroundDim)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func ddSettingsButtonRow(
+        icon: String,
+        tint: Color,
+        title: String,
+        subtitle: String?,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            DDSettingsRow(
+                icon: icon,
+                iconBackground: tint,
+                title: title,
+                detail: subtitle
+            ) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(DailyDriver.foregroundDim)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func ddSettingsToggleRow(
+        icon: String,
+        tint: Color,
+        title: String,
+        subtitle: String,
+        isOn: Bool
+    ) -> some View {
+        DDSettingsRow(
+            icon: icon,
+            iconBackground: tint,
+            title: title,
+            detail: subtitle
+        ) {
+            Text(isOn ? "ON" : "OFF")
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundColor(isOn ? DailyDriver.lime : DailyDriver.foregroundDim)
+        }
     }
 
     // MARK: - Grouped Profile Sections
@@ -360,8 +606,11 @@ struct SettingsView: View {
 
     private var connectionsSection: some View {
         SettingsSectionCard(
-            title: settingsSectionTitle("connections", fallback: "Connections"),
-            subtitle: "Watches, messaging, delivery, and calendar in one status hub."
+            title: settingsSectionTitle("connections", fallback: "Connected wearables"),
+            subtitle: ConnectionsHubViewModel(statusProvider: connectionsStatusSnapshot).summaryText,
+            icon: "applewatch",
+            iconBackground: Theme.Colors.readyHigh,
+            rowCount: 1
         ) {
             NavigationLink(destination: connectionsHub) {
                 HStack(spacing: Theme.Spacing.md) {
@@ -407,7 +656,10 @@ struct SettingsView: View {
     private var coachingSection: some View {
         SettingsSectionCard(
             title: settingsSectionTitle("coaching", fallback: "Coaching"),
-            subtitle: "Readiness signals and how your coach reaches you."
+            subtitle: "Readiness signals and how your coach reaches you.",
+            icon: "bubble.left.and.bubble.right.fill",
+            iconBackground: DailyDriver.purple,
+            rowCount: settingsRows(in: "coaching", includeDebug: false).count + 1
         ) {
             VStack(spacing: 0) {
                 let rows = settingsRows(in: "coaching", includeDebug: false)
@@ -434,7 +686,10 @@ struct SettingsView: View {
     private var appSection: some View {
         SettingsSectionCard(
             title: settingsSectionTitle("app", fallback: "App"),
-            subtitle: "Diagnostics, privacy, export, and account actions."
+            subtitle: "Diagnostics, privacy, export, and account actions.",
+            icon: "slider.horizontal.3",
+            iconBackground: DailyDriver.purple,
+            rowCount: settingsRows(in: "app", includeDebug: false).count
         ) {
             VStack(spacing: 0) {
                 #if DEBUG
@@ -463,7 +718,10 @@ struct SettingsView: View {
     ) -> some View {
         SettingsSectionCard(
             title: settingsSectionTitle(id, fallback: fallbackTitle),
-            subtitle: subtitle
+            subtitle: subtitle,
+            icon: id == "profile_training" ? "person.crop.circle.fill" : "figure.run",
+            iconBackground: id == "profile_training" ? DailyDriver.blue : DailyDriver.orange,
+            rowCount: settingsRows(in: id, includeDebug: false).count
         ) {
             VStack(spacing: 0) {
                 let rows = settingsRows(in: id, includeDebug: false)
@@ -2735,43 +2993,36 @@ struct SettingsRefreshSectionModel: Equatable, Identifiable {
 struct SettingsSectionCard<Content: View>: View {
     let title: String
     let subtitle: String?
+    var icon: String = "gearshape.fill"
+    var iconBackground: Color = DailyDriver.card2
+    var rowCount: Int = 1
     @ViewBuilder let content: Content
 
     init(
         title: String,
         subtitle: String? = nil,
+        icon: String = "gearshape.fill",
+        iconBackground: Color = DailyDriver.card2,
+        rowCount: Int = 1,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.subtitle = subtitle
+        self.icon = icon
+        self.iconBackground = iconBackground
+        self.rowCount = rowCount
         self.content = content()
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text(title.uppercased())
-                    .font(Theme.Typography.footnote)
-                    .foregroundColor(Theme.Colors.textSecondary)
-                    .tracking(1)
-
-                if let subtitle {
-                    Text(subtitle)
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .padding(.horizontal, Theme.Spacing.xs)
-
+        DDSettingsGroup(
+            title: title,
+            summary: subtitle ?? "",
+            icon: icon,
+            iconBackground: iconBackground,
+            rowCount: rowCount
+        ) {
             content
-                .padding(Theme.Spacing.md)
-                .background(Theme.Colors.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.CornerRadius.lg)
-                        .stroke(Theme.Colors.borderLight, lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.lg))
         }
     }
 }
@@ -2783,33 +3034,21 @@ struct SettingsNavigationRow: View {
     let subtitle: String
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.md) {
-            ZStack {
-                RoundedRectangle(cornerRadius: Theme.CornerRadius.md)
-                    .fill(tint.opacity(0.12))
-                    .frame(width: 44, height: 44)
-
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(tint)
-            }
-
-            VStack(alignment: .leading, spacing: 3) {
+        HStack(spacing: 10) {
+            DDIconChip(systemName: icon, background: tint, size: 26)
+            VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(Theme.Typography.bodyBold)
-                    .foregroundColor(Theme.Colors.textPrimary)
-
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(DailyDriver.foreground)
                 Text(subtitle)
-                    .font(Theme.Typography.caption)
-                    .foregroundColor(Theme.Colors.textSecondary)
+                    .font(.system(size: 10))
+                    .foregroundColor(DailyDriver.foregroundDim)
                     .fixedSize(horizontal: false, vertical: true)
             }
-
-            Spacer(minLength: Theme.Spacing.md)
-
+            Spacer(minLength: 0)
             Image(systemName: "chevron.right")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Theme.Colors.textTertiary)
+                .foregroundColor(DailyDriver.foregroundDim)
         }
         .contentShape(Rectangle())
     }

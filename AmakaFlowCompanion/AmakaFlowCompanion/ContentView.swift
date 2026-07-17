@@ -104,6 +104,9 @@ struct ContentView: View {
     @State private var showingWorkoutPlayer = false
     @State private var showSyncDashboard = false
     @State private var profilePath = NavigationPath()
+    @State private var showCreateSheet = false
+    @State private var activeCreateFlow: CreateFlowPresentation?
+    @State private var suppressFloatingChrome = false
     @State private var resetTokens: [AFTab: UUID] = Dictionary(
         uniqueKeysWithValues: AFTab.allCases.map { ($0, UUID()) }
     )
@@ -112,13 +115,37 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            Theme.Colors.background.ignoresSafeArea()
+            DailyDriver.screenBackground.ignoresSafeArea()
             activeDestination
+
+            if !suppressFloatingChrome {
+                VStack {
+                    Spacer()
+                    DDFloatingTabBar(selectedTab: selectedTab, onSelect: selectTab)
+                }
+
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        DDCreateFAB {
+                            showCreateSheet = true
+                        }
+                        .padding(.trailing, 18)
+                        .padding(.bottom, 92)
+                    }
+                }
+            }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            AFTabBar(selectedTab: selectedTab, onSelect: selectTab)
-        }
-        .tint(Theme.Colors.readyHigh)
+        .preferredColorScheme(.dark)
+        .onPreferenceChange(SuppressDDChromeKey.self) { suppressFloatingChrome = $0 }
+        .environment(\.openCreateSheet, openCreateEntry)
+        .createFlowSheets(
+            showCreateSheet: $showCreateSheet,
+            activeFlow: $activeCreateFlow,
+            onLibraryReload: notifyLibraryReload
+        )
+        .tint(DailyDriver.lime)
         .task {
             await viewModel.checkPendingWorkouts()
         }
@@ -221,6 +248,19 @@ struct ContentView: View {
             showSyncDashboard = false
         }
         resetTokens[tab] = UUID()
+    }
+
+    private func openCreateEntry() {
+        switch LibraryPasteRouter.destination() {
+        case .socialImport(let url, let platform):
+            activeCreateFlow = .socialImport(url: url, platform: platform)
+        case .knowledge:
+            showCreateSheet = true
+        }
+    }
+
+    private func notifyLibraryReload() {
+        NotificationCenter.default.post(name: .libraryContentDidChange, object: nil)
     }
 
     private func resetToken(for tab: AFTab) -> UUID {
