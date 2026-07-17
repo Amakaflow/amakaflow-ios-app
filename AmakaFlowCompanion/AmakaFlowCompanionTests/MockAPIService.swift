@@ -876,6 +876,25 @@ class MockAPIService: APIServiceProviding {
         return try getLibraryItemResult.get()
     }
 
+    var deleteKnowledgeCardResult: Result<Void, Error> = .success(())
+    var deleteWorkoutResult: Result<Void, Error> = .success(())
+    var deleteKnowledgeCardCalled = false
+    var deleteWorkoutCalled = false
+    var lastDeletedKnowledgeCardID: String?
+    var lastDeletedWorkoutID: String?
+
+    func deleteKnowledgeCard(id: String) async throws {
+        deleteKnowledgeCardCalled = true
+        lastDeletedKnowledgeCardID = id
+        try deleteKnowledgeCardResult.get()
+    }
+
+    func deleteWorkout(id: String) async throws {
+        deleteWorkoutCalled = true
+        lastDeletedWorkoutID = id
+        try deleteWorkoutResult.get()
+    }
+
     func listMessagingChannels() async throws -> Components.Schemas.MessagingChannelList {
         listMessagingChannelsCalled = true
         return try listMessagingChannelsResult.get()

@@ -20,6 +20,7 @@
 //    GET    /workouts/completions                 (fetchCompletions)
 //    GET    /workouts/completions/{id}            (fetchCompletionDetail)
 //    POST   /workouts/save                        (saveWorkout)
+//    DELETE /workouts/{id}                        (deleteWorkout)  AMA-2298
 //    GET    /workouts/{id}/export/fit             (exportWorkoutFIT)
 //    GET    /workouts/{id}/export/csv             (exportWorkoutCSV)
 //
@@ -562,6 +563,18 @@ extension APIService {
             throw APIError.serverErrorWithBody(200, "GET /workouts/completions/{id} returned success=false")
         }
         return wrapped.completion
+    }
+
+    // MARK: - Library workout delete (AMA-2298)
+
+    /// Delete a saved workout import (mapper-api `DELETE /workouts/{workout_id}`).
+    func deleteWorkout(id: String) async throws {
+        let encodedID = try Self.pathSegment(id)
+        let request = try await makeAPIRequest(
+            path: "/workouts/\(encodedID)",
+            method: "DELETE"
+        )
+        try await requestVoid(request, successStatusCodes: 200...299)
     }
 
     // MARK: - Workout Editor (AMA-1231)

@@ -197,6 +197,18 @@ extension APIService {
         )
     }
 
+    /// AMA-2298: delete knowledge-card imports reused by Daily Driver Library.
+    func deleteKnowledgeCard(id: String) async throws {
+        let encodedID = try Self.pathSegment(id)
+        let request = try await makeAPIRequest(
+            baseURL: bffURL,
+            path: "/knowledge/cards/\(encodedID)",
+            method: "DELETE"
+        )
+        // 204 No Content (and any 2xx) — nothing to decode.
+        try await requestVoid(request, successStatusCodes: 200...299)
+    }
+
     // MARK: - Messaging Channels (AMA-2027)
 
     func listMessagingChannels() async throws -> Components.Schemas.MessagingChannelList {

@@ -4,6 +4,7 @@
 //
 //  AMA-2291: Library workout detail — Daily Driver layout (DDDetailScreen).
 //  Edit always available. Start opens gym + device sheet.
+//  AMA-2298: Delete saved Library workout imports with confirmation.
 //
 
 import SwiftUI
@@ -21,6 +22,8 @@ struct UnifiedWorkoutDetailView: View {
     @State private var showingWorkoutPlayer = false
     @State private var handoffStatus: String?
     @State private var isSavingImport = false
+    @State private var showingDeleteConfirm = false
+    @State private var isDeleting = false
 
     var garminPairedOverride: Bool?
     var appleWatchReachableOverride: Bool?
@@ -28,6 +31,8 @@ struct UnifiedWorkoutDetailView: View {
     /// When set, this detail is showing an unsaved social-import draft (SPEC § Create → detail).
     var importContext: WorkoutDetailImportContext?
     var onClose: (() -> Void)?
+    /// AMA-2298: delete saved Library import; return `true` to dismiss.
+    var onDelete: (() async -> Bool)?
 
     init(
         workout: Workout,
@@ -35,7 +40,8 @@ struct UnifiedWorkoutDetailView: View {
         appleWatchReachableOverride: Bool? = nil,
         onEditorDismiss: (() async -> Workout?)? = nil,
         importContext: WorkoutDetailImportContext? = nil,
-        onClose: (() -> Void)? = nil
+        onClose: (() -> Void)? = nil,
+        onDelete: (() async -> Bool)? = nil
     ) {
         _displayedWorkout = State(initialValue: workout)
         self.garminPairedOverride = garminPairedOverride
@@ -43,6 +49,7 @@ struct UnifiedWorkoutDetailView: View {
         self.onEditorDismiss = onEditorDismiss
         self.importContext = importContext
         self.onClose = onClose
+        self.onDelete = onDelete
     }
 
     private var workout: Workout { displayedWorkout }
@@ -111,6 +118,24 @@ struct UnifiedWorkoutDetailView: View {
         .fullScreenCover(isPresented: $showingWorkoutPlayer) {
             WorkoutPlayerView()
         }
+        .alert("Delete from Library?", isPresented: $showingDeleteConfirm) {
+            Button("Delete", role: .destructive) {
+                Task {
+                    guard let onDelete else { return }
+                    isDeleting = true
+                    let deleted = await onDelete()
+                    isDeleting = false
+                    if deleted {
+                        closeDetail()
+                    }
+                }
+            }
+            .accessibilityIdentifier("af_library_delete_confirm")
+            Button("Cancel", role: .cancel) {}
+                .accessibilityIdentifier("af_library_delete_cancel")
+        } message: {
+            Text("“\(workout.name)” will be removed. You can import it again later.")
+        }
         .accessibilityIdentifier("af_workout_detail_screen")
     }
 
@@ -143,6 +168,22 @@ struct UnifiedWorkoutDetailView: View {
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("af_workout_detail_back")
                     Spacer()
+                    if onDelete != nil, importContext == nil {
+                        Button {
+                            showingDeleteConfirm = true
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(width: 36, height: 36)
+                                .background(Color.black.opacity(0.5))
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isDeleting)
+                        .accessibilityLabel("Delete")
+                        .accessibilityIdentifier("af_workout_detail_delete")
+                    }
                 }
                 .padding(.horizontal, 14)
                 .padding(.top, 12)
