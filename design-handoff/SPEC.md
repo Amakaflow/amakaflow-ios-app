@@ -93,7 +93,13 @@ For pulled-but-unlinked activities: back "‹ Today" · icon chip + title + mono
 HR zones card (♥ "Most time in Zone 3", stacked zone bar Z1–Z5 w/ % labels) · lime XL
 "Map to a workout" + ghost "Add details manually". Matched variant shows linked workout instead.
 
-### 11. Editor (`dd-editor-*.png`, jsx L703) — one screen, 4 modes
+### 11. Editor — SUPERSEDED for edit/import/new (2026-07-20, ADR-017)
+> The block-accordion editor below now applies to **backfill mode only**
+> (`dd-editor-backfill-dark.png`). Edit, post-import fix-up, and create-from-scratch
+> use **Editor v2** (§13) per ADR-017. The `dd-editor-dark.png` / `dd-editor-import-dark.png`
+> / `dd-editor-new-dark.png` screenshots are historical — do not build from them.
+
+#### 11-legacy. Old editor (`dd-editor-backfill-dark.png`, jsx L703)
 Shared: back, COLLAPSE/EXPAND ALL, title, "DEFAULT REST 60S · APPLIED UNLESS OVERRIDDEN",
 block cards with **left color spine + type chip** (CIRCUIT green / ROUNDS green / AMRAP
 amber / FOR TIME purple / SETS gray — full type menu: Circuit·EMOM·AMRAP·Tabata·For Time·
@@ -106,6 +112,62 @@ lime save bar.
   DB thrusters 2×16?" + amber **Swap** pill.
 - **backfill**: pre-filled from program ("LAST TIME" values), CTA "Save log" → toast
   "Weights saved to Monday's log" → Profile.
+
+### 12. Check the structure — import clarify step (`rig-clarify-states.png`, `reference/screens-clarify.jsx`) — AMA-2305
+Every social import (URL / screenshot / voice) lands HERE between the processing
+animation and save. Decision + rationale: `amakaflow-docs/decisions/ADR-017-structure-intervene-and-calm-editor.md`.
+- Header: "Check the structure" + honest subline ("grouping was implied, not stated"),
+  provenance card (creator avatar chip, "@TRAINWITHSMEE · REEL CAPTION PARSED",
+  lime "✓ Confirm all (N)" when pending > 0).
+- **Suggested groups**: card per group, left spine in structure color, amber
+  `SUGGESTED · SUPERSET` mono tag, member rows with A1/A2 (superset) or station numbers,
+  footer: lime **✓ Confirm** + gray **Undo**. Confirm → tag flips lime `SUPERSET ✓`,
+  footer becomes "SAVES AS A SUPERSET BLOCK" + Ungroup. Undo dissolves to flat rows.
+  Circuits carry an inline `− ×N ＋` rounds stepper.
+- **Flat rows**: checkbox circle, name, mono summary, `NOT GROUPED` tag. Select 2+ →
+  chip bar slides in: `Superset` / `Circuit ×4` / Cancel (1 selected = chips at 40%
+  opacity + "PICK ANOTHER TO GROUP THEM").
+- **"Not right? Describe it"** dashed door → sheet: helper copy, 3-row textarea,
+  tappable example utterances, **Apply to workout** (disabled when empty) →
+  ~1.3s "Reading your note…" spinner (lime arc) → sheet closes, list regroups, affected
+  groups get blue `FROM YOUR NOTE · <TYPE>` tags + same Confirm affordance.
+- Footer dual CTA (detail-screen anatomy): dark "Leave flat" + lime glowing
+  "Save · N blocks ✓" (or "Looks right — Save" at 0 confirmed). Above it, honesty line:
+  "Unconfirmed groups save as a flat list — we never guess silently."
+- Rules: inferred structure is NEVER persisted unconfirmed; "Leave flat" is a valid
+  confirmed answer; re-labeling replaces, never stacks. Provenance = the UI face of
+  `structure_source` (explicit / inferred / user_confirmed / user_note / unknown).
+
+### 13. Editor v2 — calm list (`rig-editor2-*.png`, `reference/screens-editor2.jsx`) — AMA-2307
+Replaces the block accordion for edit / import fix-up / creation (Hevy pattern,
+Mobbin-verified — see ADR-017). One structure model shared with §12: colored rail +
+pill label, same type colors.
+- **Exercise card**: name + mono summary + ⋯ ONLY (max 2 tap targets per row).
+  Tap body → focused edit sheet; tap ⋯ → verb menu.
+- **Groups**: pill row above the run (`SUPERSET A` colored pill + `4 ROUNDS · 3 MIN REST`
+  mono meta + sliders icon, whole row tappable) over a railed card containing member rows.
+- **⋯ menu** (sheet, one verb per row, icons): Reorder exercises / Replace exercise /
+  Add to superset ↔ Remove from superset (contextual) / Add a set / Remove exercise (red).
+- **Superset picker**: "Superset <X> with:" list of other exercises → tap → src moves
+  adjacent to target, joins (or creates) the superset. Toast confirms.
+- **Focused edit sheet**: only that exercise's fields as big steppers
+  (Sets/Reps/Distance/Weight/Rest — whichever are non-nil). Done.
+- **Group config sheet**: "RUNS AS" type chips (Superset·Circuit·EMOM·AMRAP·Tabata·For
+  time) + only that type's steppers (EMOM=Minutes; AMRAP/For time=Cap min;
+  Tabata=Work/Rest/Rounds; Superset=Rounds+Rest; Circuit=Rounds) + Done +
+  "Ungroup — back to straight sets".
+- **Reorder mode** (header `⇅ Reorder` ↔ `✓ Done`): list collapses to compact rows
+  (name + group label + grip icon, left spine keeps group color), drag-and-drop,
+  lime Done. No persistent reorder chrome anywhere else.
+- **Creation (mode=new)**: empty state "Start with any exercise" + defaults copy +
+  optional "KNOW THE FORMAT ALREADY?" chips (EMOM/AMRAP/Tabata/For time/Circuit).
+  Chip → pins a format group pill + dashed "Timing's set — add the moves" placeholder;
+  subsequent adds land inside as plain reps. No chip → adds land flat as 3×10 · 60s.
+  Add-exercise sheet: search, equipment-aware rows (barbell = amber "NOT IN YOUR GYM"),
+  "＋ Create <query>", defaults footnote, "Done adding" once non-empty.
+- **Guards**: never ask block type before the first exercise; rest is captured as
+  seconds (intent) ONLY — no timed/lap-button toggle (open question on AMA-2300);
+  backfill keeps the legacy editor (§11-legacy).
 
 ## State model (prototype)
 
