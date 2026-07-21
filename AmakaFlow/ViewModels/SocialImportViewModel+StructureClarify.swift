@@ -8,6 +8,48 @@
 import Foundation
 
 extension SocialImportViewModel {
+    func confirmClarifyGroup(_ id: UUID) {
+        guard var session = clarifySession else { return }
+        session.confirm(groupID: id)
+        clarifySession = session
+    }
+
+    func confirmAllClarifyGroups() {
+        guard var session = clarifySession else { return }
+        session.confirmAll()
+        clarifySession = session
+    }
+
+    func undoClarifyGroup(_ id: UUID) {
+        guard var session = clarifySession else { return }
+        session.undo(groupID: id)
+        clarifySession = session
+    }
+
+    func bumpClarifyRounds(_ id: UUID, delta: Int) {
+        guard var session = clarifySession else { return }
+        session.bumpRounds(groupID: id, delta: delta)
+        clarifySession = session
+    }
+
+    func toggleClarifyRow(_ id: UUID) {
+        guard var session = clarifySession else { return }
+        session.toggleRowSelection(id)
+        clarifySession = session
+    }
+
+    func clearClarifySelection() {
+        guard var session = clarifySession else { return }
+        session.clearSelection()
+        clarifySession = session
+    }
+
+    func groupClarifySelection(as type: StructureBlockType) {
+        guard var session = clarifySession else { return }
+        session.groupSelected(as: type)
+        clarifySession = session
+    }
+
     /// Text fed to structure/suggest — caption preferred, else reconstructed list.
     func structureSuggestText(for draft: SocialImportDraft) -> String {
         if let caption = draft.postProvenance?.captionSnippet?

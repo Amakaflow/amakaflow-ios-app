@@ -623,3 +623,142 @@ final class APIServiceSocialImportContractTests: XCTestCase {
         )
     }
 }
+
+// MARK: - Simulator network probe (staging reachability / false offline)
+
+/// Offline copy/unit probes always run. Live staging hits require `RUN_NETWORK_PROBES=1`.
+/// Example:
+///   RUN_NETWORK_PROBES=1 xcodebuild test … -only-testing:AmakaFlowCompanionTests/SocialImportNetworkProbeTests
+final class SocialImportNetworkProbeTests: XCTestCase {
+
+    private let stagingBase = "https://workout-ingestor-api.staging.amakaflow.com"
+    private let developmentBase = "http://localhost:8004"
+
+    private var liveNetworkProbesEnabled: Bool {
+        ProcessInfo.processInfo.environment["RUN_NETWORK_PROBES"] == "1"
+    }
+
+    func test_staging_healthz_reachable_from_simulator() async throws {
+        try XCTSkipUnless(
+            liveNetworkProbesEnabled,
+            "Set RUN_NETWORK_PROBES=1 to hit staging (skipped in default CI)"
+        )
+        let url = URL(string: "\(stagingBase)/healthz/live")!
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 15
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let http = try XCTUnwrap(response as? HTTPURLResponse)
+        XCTAssertEqual(http.statusCode, 200, "body=\(String(data: data, encoding: .utf8) ?? "")")
+        NSLog("%@", "[PROBE] staging healthz OK status=\(http.statusCode)")
+    }
+
+    func test_staging_instagram_reel_unauth_is_401_not_offline() async throws {
+        try XCTSkipUnless(
+            liveNetworkProbesEnabled,
+            "Set RUN_NETWORK_PROBES=1 to hit staging (skipped in default CI)"
+        )
+        let url = URL(string: "\(stagingBase)/ingest/instagram_reel")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "url": "https://www.instagram.com/reel/DMqEsenN6Dl/"
+        ])
+        request.timeoutInterval = 15
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            let http = try XCTUnwrap(response as? HTTPURLResponse)
+            let body = String(data: data.prefix(200), encoding: .utf8) ?? ""
+            NSLog("%@", "[PROBE] staging ingest status=\(http.statusCode) body=\(body)")
+            XCTAssertEqual(
+                http.statusCode,
+                401,
+                "Expected unauth 401 from staging ingest (proves not offline). body=\(body)"
+            )
+        } catch let urlError as URLError {
+            XCTFail(
+                "Staging ingest should not be offline; got URLError.\(urlError.code) raw=\(urlError.code.rawValue) desc=\(urlError.localizedDescription)"
+            )
+        }
+    }
+
+    func test_sanitizedTelemetryURL_strips_query_user_and_fragment() {
+        let raw = "https://user:secret@workout-ingestor-api.staging.amakaflow.com/ingest/instagram_reel?token=abc#frag"
+        let safe = SocialImportTransportDiagnostics.sanitizedTelemetryURL(raw)
+        XCTAssertFalse(safe.contains("secret"))
+        XCTAssertFalse(safe.contains("token="))
+        XCTAssertFalse(safe.contains("#frag"))
+        XCTAssertTrue(safe.contains("workout-ingestor-api.staging.amakaflow.com"))
+        XCTAssertTrue(safe.contains("/ingest/instagram_reel"))
+    }
+
+    func test_app_environment_ingestor_urls() {
+        XCTAssertEqual(
+            AppEnvironment.staging.ingestorAPIURL,
+            stagingBase
+        )
+        print("[PROBE] AppEnvironment.current=\(AppEnvironment.current.rawValue) ingestor=\(AppEnvironment.current.ingestorAPIURL)")
+        print("[PROBE] development ingestor=\(AppEnvironment.development.ingestorAPIURL)")
+    }
+
+    func test_development_localhost_error_code_when_ingestor_down() async throws {
+        let url = URL(string: "\(developmentBase)/ingest/instagram_reel")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = Data("{}".utf8)
+        request.timeoutInterval = 5
+
+        var probeNote = "no error"
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            let http = response as? HTTPURLResponse
+            probeNote = "localhost:8004 UP status=\(http?.statusCode ?? -1)"
+        } catch let urlError as URLError {
+            probeNote = "localhost:8004 URLError raw=\(urlError.code.rawValue) code=\(urlError.code) desc=\(urlError.localizedDescription)"
+            // Document for dogfood: Debug+Development on sim with no local ingestor.
+            // Expected: cannotConnectToHost (-1004), NOT notConnectedToInternet (-1009).
+            XCTAssertNotEqual(
+                urlError.code,
+                .notConnectedToInternet,
+                "Development/localhost mapped to false offline (-1009). Detail: \(probeNote)"
+            )
+            XCTAssertTrue(
+                [
+                    URLError.cannotConnectToHost,
+                    URLError.timedOut,
+                    URLError.networkConnectionLost,
+                ].contains(urlError.code),
+                "Unexpected localhost error. Detail: \(probeNote)"
+            )
+        }
+        // Force the probe string into the failure stream for xcresult readability.
+        XCTAssertFalse(probeNote.isEmpty, probeNote)
+        NSLog("%@", "[PROBE] \(probeNote)")
+    }
+
+    func test_offline_banner_copy_from_minus_1009() {
+        let mapped = SocialImportFailure.map(URLError(.notConnectedToInternet))
+        XCTAssertEqual(mapped?.title, "Network error")
+        let message = mapped?.userMessage ?? ""
+        XCTAssertTrue(message.contains("−1009") || message.contains("-1009"), message)
+        XCTAssertTrue(message.lowercased().contains("safari") || message.contains("/docs"), message)
+        XCTAssertFalse(message.hasPrefix("No internet connection"))
+        NSLog("%@", "[PROBE] offline banner=\(message)")
+    }
+
+    func test_dataNotAllowed_banner_is_distinct_from_offline() {
+        let mapped = SocialImportFailure.map(URLError(.dataNotAllowed))
+        let message = mapped?.userMessage ?? ""
+        XCTAssertTrue(message.contains("−1020") || message.contains("-1020"), message)
+        XCTAssertTrue(message.lowercased().contains("cellular"), message)
+        XCTAssertFalse(message.hasPrefix("No internet connection"))
+    }
+
+    func test_connectionLost_banner_includes_minus_1005() {
+        let mapped = SocialImportFailure.map(URLError(.networkConnectionLost))
+        let message = mapped?.userMessage ?? ""
+        XCTAssertTrue(message.contains("−1005") || message.contains("-1005"), message)
+    }
+}

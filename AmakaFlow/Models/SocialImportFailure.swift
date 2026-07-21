@@ -4,10 +4,17 @@
 //
 //  AMA-2285: typed failure model for social import (auth / parse / network).
 //  AMA-2297: honest 403 Pro-tier messaging — never silent bookmark fallthrough.
+//  AMA-2308: honest −1009 copy + transport diagnostics (never bare "No internet").
 //  Failures must surface clear recoverable copy in ≤3s — never crash.
 //
 
 import Foundation
+import os.log
+
+private let socialImportTransportLogger = Logger(
+    subsystem: "com.myamaka.AmakaFlowCompanion",
+    category: "SocialImportTransport"
+)
 
 /// Recoverable failure categories for social → library import.
 enum SocialImportFailure: Error, Equatable {
@@ -184,14 +191,114 @@ enum SocialImportFailure: Error, Equatable {
         switch code {
         case .cancelled:
             return "Import was interrupted. Retry if the workout didn't appear."
-        case .notConnectedToInternet, .networkConnectionLost:
-            return "No internet connection. Check connectivity and retry."
+        case .notConnectedToInternet:
+            // AMA-2308: −1009 means CFNetwork could not start the request
+            // (DNS/routing/policy) — Wi‑Fi icon can still look fine.
+            return "Can't reach the import service (−1009). Wi‑Fi may still show connected — open https://workout-ingestor-api.staging.amakaflow.com/docs in Safari, then retry."
+        case .networkConnectionLost:
+            return "Connection dropped mid-import (−1005). Retry — if it keeps failing, check VPN/Private Relay."
+        case .dataNotAllowed:
+            return "Cellular data is blocked for AmakaFlow (−1020). Enable Cellular Data for this app (or join Wi‑Fi), then retry."
         case .timedOut:
-            return "The request timed out. Retry — import should fail fast, not hang."
+            return "The request timed out (−1001). Retry — import should fail fast, not hang."
         case .cannotConnectToHost, .cannotFindHost, .dnsLookupFailed:
-            return "Couldn't reach the import service. Retry shortly."
+            return "Couldn't reach the import service (\(code.rawValue)). Retry shortly."
         default:
-            return "Network error (\(code.rawValue)). Retry when you're back online."
+            return "Network error (\(code.rawValue)). Retry when the path is clear."
         }
+    }
+}
+
+// MARK: - AMA-2308 transport diagnostics
+
+/// Bundled tags for Sentry (keeps `captureSocialImportTransport` ≤5 params).
+struct SocialImportTransportContext: Equatable {
+    let urlErrorCode: Int?
+    let failingURL: String?
+    let appEnvironment: String
+    let ingestorBase: String
+    let operation: String
+}
+
+enum SocialImportTransportDiagnostics {
+    /// Record structured tags for dogfood — Console + Sentry.
+    /// Call from `@MainActor` import paths before mapping to UI failure.
+    @MainActor
+    static func record(
+        _ error: Error,
+        operation: String,
+        intendedURL: String? = nil
+    ) {
+        if CTAError.isCancellation(error) { return }
+
+        let urlError = Self.extractURLError(from: error)
+        let codeRaw = urlError.map { String($0.code.rawValue) } ?? "none"
+        let rawFailingURL =
+            urlError?.failingURL?.absoluteString
+            ?? intendedURL
+        let safeFailingURL = sanitizedTelemetryURL(rawFailingURL)
+        let environment = AppEnvironment.current.rawValue
+        let ingestor = AppEnvironment.current.ingestorAPIURL
+        let errorKind = urlError.map { "URLError.\($0.code)" } ?? String(describing: type(of: error))
+
+        socialImportTransportLogger.error(
+            """
+            social_import_transport_fail op=\(operation, privacy: .public) \
+            url_error_code=\(codeRaw, privacy: .public) \
+            failing_url=\(safeFailingURL, privacy: .public) \
+            app_environment=\(environment, privacy: .public) \
+            ingestor_base=\(ingestor, privacy: .public) \
+            error_kind=\(errorKind, privacy: .public)
+            """
+        )
+
+        SentryService.shared.captureSocialImportTransport(
+            error: error,
+            context: SocialImportTransportContext(
+                urlErrorCode: urlError.map(\.code.rawValue),
+                failingURL: safeFailingURL,
+                appEnvironment: environment,
+                ingestorBase: ingestor,
+                operation: operation
+            )
+        )
+    }
+
+    /// Scheme + host + path only — strip query, fragment, user, and password.
+    static func sanitizedTelemetryURL(_ raw: String?) -> String {
+        guard let raw, !raw.isEmpty else { return "unknown" }
+        guard var components = URLComponents(string: raw) else {
+            return "unknown"
+        }
+        components.user = nil
+        components.password = nil
+        components.query = nil
+        components.fragment = nil
+        // Prefer host+path; drop opaque junk.
+        if components.host == nil, components.path.isEmpty {
+            return "unknown"
+        }
+        return components.string ?? "unknown"
+    }
+
+    private static func extractURLError(from error: Error) -> URLError? {
+        if let urlError = error as? URLError {
+            return urlError
+        }
+        if let annotated = error as? AnnotatedAPIError {
+            return extractURLError(from: annotated.underlying)
+        }
+        if let api = error as? APIError {
+            switch api {
+            case .network(let underlying), .networkError(let underlying):
+                return extractURLError(from: underlying)
+            default:
+                return nil
+            }
+        }
+        if let cta = error as? CTAError, case .network(let code, _) = cta {
+            return URLError(code)
+        }
+        return nil
     }
 }

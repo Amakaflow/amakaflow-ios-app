@@ -714,7 +714,12 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     }
     XCTAssertEqual(code, .notConnectedToInternet)
     XCTAssertTrue(cta.isRetryable, "offline is transient — must offer Retry")
-    XCTAssertEqual(cta.userMessage, "No internet connection.")
+    // AMA-2308: honest −1009 copy (not bare "No internet connection.")
+    XCTAssertTrue(
+      cta.userMessage.contains("−1009") || cta.userMessage.contains("-1009"),
+      cta.userMessage
+    )
+    XCTAssertNotEqual(cta.userMessage, "No internet connection.")
   }
 
   func testSuggest_decodingError_publishesNonRetryableDecodingCTAError() async {

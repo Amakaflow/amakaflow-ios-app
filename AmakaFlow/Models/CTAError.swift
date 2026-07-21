@@ -59,10 +59,15 @@ public extension CTAError {
         switch self {
         case .network(let code, _):
             switch code {
-            case .notConnectedToInternet, .networkConnectionLost:
-                return "No internet connection."
+            case .notConnectedToInternet:
+                // AMA-2308: −1009 ≠ "Wi‑Fi off" — CFNetwork could not start the request.
+                return "Can't reach the server (−1009). Wi‑Fi may still show connected — retry or check VPN/DNS."
+            case .networkConnectionLost:
+                return "Connection dropped (−1005). Retry shortly."
+            case .dataNotAllowed:
+                return "Cellular data blocked for this app (−1020). Enable Cellular Data or use Wi‑Fi."
             case .timedOut:
-                return "The request timed out."
+                return "The request timed out (−1001)."
             default:
                 return "Network error (\(code.rawValue))."
             }
