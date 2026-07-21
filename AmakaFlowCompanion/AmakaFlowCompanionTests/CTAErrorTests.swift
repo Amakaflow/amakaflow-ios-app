@@ -396,9 +396,18 @@ final class CTAErrorTests: XCTestCase {
         XCTAssertEqual(cta.userMessage, "Failed to save (UNKNOWN_ERROR)")
     }
 
-    func test_userMessage_offline_is_friendly_not_raw_code() {
+    func test_userMessage_offline_is_honest_not_bare_wifi_claim() {
+        // AMA-2308: −1009 must not claim bare "No internet" (false offline UX).
         let cta = CTAError.network(code: .notConnectedToInternet)
-        XCTAssertEqual(cta.userMessage, "No internet connection.")
+        XCTAssertTrue(cta.userMessage.contains("−1009") || cta.userMessage.contains("-1009"))
+        XCTAssertFalse(cta.userMessage == "No internet connection.")
+        XCTAssertTrue(cta.userMessage.lowercased().contains("reach"))
+    }
+
+    func test_userMessage_dataNotAllowed_mentions_cellular() {
+        let cta = CTAError.network(code: .dataNotAllowed)
+        XCTAssertTrue(cta.userMessage.contains("−1020") || cta.userMessage.contains("-1020"))
+        XCTAssertTrue(cta.userMessage.lowercased().contains("cellular"))
     }
 
     func test_userMessage_500_includes_status_and_truncated_body() {

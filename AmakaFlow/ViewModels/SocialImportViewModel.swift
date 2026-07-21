@@ -70,8 +70,11 @@ final class SocialImportViewModel: ObservableObject {
             canEdit = true
             await enterClarify(for: parsed)
         } catch {
-            guard let failure = SocialImportFailure.map(error) else { return }
-            phase = .failed(failure)
+            failImport(
+                error,
+                operation: "importURL",
+                intendedURL: "\(AppEnvironment.current.ingestorAPIURL)/ingest/\(platform.ingestPath)"
+            )
         }
     }
 
@@ -103,8 +106,11 @@ final class SocialImportViewModel: ObservableObject {
             canEdit = true
             await enterClarify(for: parsed)
         } catch {
-            guard let failure = SocialImportFailure.map(error) else { return }
-            phase = .failed(failure)
+            failImport(
+                error,
+                operation: "importPlainText",
+                intendedURL: "\(AppEnvironment.current.ingestorAPIURL)/ingest/text"
+            )
         }
     }
 
@@ -132,8 +138,11 @@ final class SocialImportViewModel: ObservableObject {
             canEdit = true
             await enterClarify(for: parsed)
         } catch {
-            guard let failure = SocialImportFailure.map(error) else { return }
-            phase = .failed(failure)
+            failImport(
+                error,
+                operation: "importImage",
+                intendedURL: "\(AppEnvironment.current.ingestorAPIURL)/ingest/image"
+            )
         }
     }
 
@@ -233,8 +242,11 @@ final class SocialImportViewModel: ObservableObject {
             clarifySession = session
             phase = .clarify
         } catch {
-            guard let failure = SocialImportFailure.map(error) else { return }
-            phase = .failed(failure)
+            failImport(
+                error,
+                operation: "applyDescribeNote",
+                intendedURL: "\(AppEnvironment.current.mobileBFFURL)/v1/ingest/structure/apply"
+            )
         }
     }
 
@@ -326,8 +338,11 @@ final class SocialImportViewModel: ObservableObject {
                 phase = .saved(workoutId: workout.id)
             }
         } catch {
-            guard let failure = SocialImportFailure.map(error) else { return }
-            phase = .failed(failure)
+            failImport(
+                error,
+                operation: "saveToLibrary",
+                intendedURL: "\(AppEnvironment.current.mobileBFFURL)/v1/workouts/save"
+            )
         }
     }
 
@@ -344,6 +359,18 @@ final class SocialImportViewModel: ObservableObject {
         clarifySession = nil
         isReadingNote = false
         describeNote = ""
+    }
+
+    // MARK: - Failure (AMA-2308)
+
+    private func failImport(_ error: Error, operation: String, intendedURL: String?) {
+        SocialImportTransportDiagnostics.record(
+            error,
+            operation: operation,
+            intendedURL: intendedURL
+        )
+        guard let failure = SocialImportFailure.map(error) else { return }
+        phase = .failed(failure)
     }
 
     // MARK: - Auth
