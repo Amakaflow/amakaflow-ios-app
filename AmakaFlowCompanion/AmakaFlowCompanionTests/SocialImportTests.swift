@@ -626,22 +626,37 @@ final class APIServiceSocialImportContractTests: XCTestCase {
 
 // MARK: - Simulator network probe (staging reachability / false offline)
 
-/// Live URLSession probes from the iOS Simulator — no TestFlight needed.
-/// Run: `-only-testing:AmakaFlowCompanionTests/SocialImportNetworkProbeTests`
+/// Offline copy/unit probes always run. Live staging hits require `RUN_NETWORK_PROBES=1`.
+/// Example:
+///   RUN_NETWORK_PROBES=1 xcodebuild test … -only-testing:AmakaFlowCompanionTests/SocialImportNetworkProbeTests
 final class SocialImportNetworkProbeTests: XCTestCase {
 
     private let stagingBase = "https://workout-ingestor-api.staging.amakaflow.com"
     private let developmentBase = "http://localhost:8004"
 
+    private var liveNetworkProbesEnabled: Bool {
+        ProcessInfo.processInfo.environment["RUN_NETWORK_PROBES"] == "1"
+    }
+
     func test_staging_healthz_reachable_from_simulator() async throws {
+        try XCTSkipUnless(
+            liveNetworkProbesEnabled,
+            "Set RUN_NETWORK_PROBES=1 to hit staging (skipped in default CI)"
+        )
         let url = URL(string: "\(stagingBase)/healthz/live")!
-        let (data, response) = try await URLSession.shared.data(from: url)
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 15
+        let (data, response) = try await URLSession.shared.data(for: request)
         let http = try XCTUnwrap(response as? HTTPURLResponse)
         XCTAssertEqual(http.statusCode, 200, "body=\(String(data: data, encoding: .utf8) ?? "")")
-        print("[PROBE] staging healthz OK status=\(http.statusCode)")
+        NSLog("%@", "[PROBE] staging healthz OK status=\(http.statusCode)")
     }
 
     func test_staging_instagram_reel_unauth_is_401_not_offline() async throws {
+        try XCTSkipUnless(
+            liveNetworkProbesEnabled,
+            "Set RUN_NETWORK_PROBES=1 to hit staging (skipped in default CI)"
+        )
         let url = URL(string: "\(stagingBase)/ingest/instagram_reel")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -649,7 +664,7 @@ final class SocialImportNetworkProbeTests: XCTestCase {
         request.httpBody = try JSONSerialization.data(withJSONObject: [
             "url": "https://www.instagram.com/reel/DMqEsenN6Dl/"
         ])
-        request.timeoutInterval = 30
+        request.timeoutInterval = 15
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
@@ -666,6 +681,16 @@ final class SocialImportNetworkProbeTests: XCTestCase {
                 "Staging ingest should not be offline; got URLError.\(urlError.code) raw=\(urlError.code.rawValue) desc=\(urlError.localizedDescription)"
             )
         }
+    }
+
+    func test_sanitizedTelemetryURL_strips_query_user_and_fragment() {
+        let raw = "https://user:secret@workout-ingestor-api.staging.amakaflow.com/ingest/instagram_reel?token=abc#frag"
+        let safe = SocialImportTransportDiagnostics.sanitizedTelemetryURL(raw)
+        XCTAssertFalse(safe.contains("secret"))
+        XCTAssertFalse(safe.contains("token="))
+        XCTAssertFalse(safe.contains("#frag"))
+        XCTAssertTrue(safe.contains("workout-ingestor-api.staging.amakaflow.com"))
+        XCTAssertTrue(safe.contains("/ingest/instagram_reel"))
     }
 
     func test_app_environment_ingestor_urls() {

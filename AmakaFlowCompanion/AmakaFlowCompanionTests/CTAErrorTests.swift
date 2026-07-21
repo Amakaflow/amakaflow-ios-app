@@ -410,6 +410,12 @@ final class CTAErrorTests: XCTestCase {
         XCTAssertTrue(cta.userMessage.lowercased().contains("cellular"))
     }
 
+    func test_userMessage_connectionLost_includes_minus_1005_and_retry() {
+        let cta = CTAError.network(code: .networkConnectionLost)
+        XCTAssertTrue(cta.userMessage.contains("−1005") || cta.userMessage.contains("-1005"))
+        XCTAssertTrue(cta.userMessage.lowercased().contains("retry"))
+    }
+
     func test_userMessage_500_includes_status_and_truncated_body() {
         let cta = CTAError.http(status: 500, body: "boom", requestId: nil)
         XCTAssertTrue(cta.userMessage.contains("500"))

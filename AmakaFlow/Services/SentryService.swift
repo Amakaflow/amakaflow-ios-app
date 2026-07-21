@@ -59,25 +59,19 @@ final class SentryService {
     }
 
     /// AMA-2308: social-import transport failures (false-offline triage).
-    func captureSocialImportTransport(
-        error: Error,
-        urlErrorCode: Int?,
-        failingURL: String?,
-        appEnvironment: String,
-        ingestorBase: String,
-        operation: String
-    ) {
+    func captureSocialImportTransport(error: Error, context: SocialImportTransportContext) {
+        let safeURL = SocialImportTransportDiagnostics.sanitizedTelemetryURL(context.failingURL)
         SentrySDK.capture(error: error) { scope in
             scope.setTag(value: "social_import_transport", key: "error_category")
-            scope.setTag(value: operation, key: "social_import_operation")
-            scope.setTag(value: appEnvironment, key: "app_environment")
-            if let code = urlErrorCode {
+            scope.setTag(value: context.operation, key: "social_import_operation")
+            scope.setTag(value: context.appEnvironment, key: "app_environment")
+            if let code = context.urlErrorCode {
                 scope.setTag(value: String(code), key: "url_error_code")
             }
-            if let failingURL, !failingURL.isEmpty {
-                scope.setTag(value: String(failingURL.prefix(200)), key: "failing_url")
+            if safeURL != "unknown" {
+                scope.setTag(value: String(safeURL.prefix(200)), key: "failing_url")
             }
-            scope.setExtra(value: ingestorBase, key: "ingestor_base")
+            scope.setExtra(value: context.ingestorBase, key: "ingestor_base")
             scope.setLevel(SentryLevel.warning)
         }
     }

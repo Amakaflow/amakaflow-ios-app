@@ -211,6 +211,15 @@ enum SocialImportFailure: Error, Equatable {
 
 // MARK: - AMA-2308 transport diagnostics
 
+/// Bundled tags for Sentry (keeps `captureSocialImportTransport` ≤5 params).
+struct SocialImportTransportContext: Equatable {
+    let urlErrorCode: Int?
+    let failingURL: String?
+    let appEnvironment: String
+    let ingestorBase: String
+    let operation: String
+}
+
 enum SocialImportTransportDiagnostics {
     /// Record structured tags for dogfood — Console + Sentry.
     /// Call from `@MainActor` import paths before mapping to UI failure.
@@ -224,32 +233,52 @@ enum SocialImportTransportDiagnostics {
 
         let urlError = Self.extractURLError(from: error)
         let codeRaw = urlError.map { String($0.code.rawValue) } ?? "none"
-        let failingURL =
+        let rawFailingURL =
             urlError?.failingURL?.absoluteString
             ?? intendedURL
-            ?? "unknown"
+        let safeFailingURL = sanitizedTelemetryURL(rawFailingURL)
         let environment = AppEnvironment.current.rawValue
         let ingestor = AppEnvironment.current.ingestorAPIURL
+        let errorKind = urlError.map { "URLError.\($0.code)" } ?? String(describing: type(of: error))
 
         socialImportTransportLogger.error(
             """
             social_import_transport_fail op=\(operation, privacy: .public) \
             url_error_code=\(codeRaw, privacy: .public) \
-            failing_url=\(failingURL, privacy: .public) \
+            failing_url=\(safeFailingURL, privacy: .public) \
             app_environment=\(environment, privacy: .public) \
             ingestor_base=\(ingestor, privacy: .public) \
-            error=\(String(describing: error), privacy: .public)
+            error_kind=\(errorKind, privacy: .public)
             """
         )
 
         SentryService.shared.captureSocialImportTransport(
             error: error,
-            urlErrorCode: urlError.map(\.code.rawValue),
-            failingURL: failingURL,
-            appEnvironment: environment,
-            ingestorBase: ingestor,
-            operation: operation
+            context: SocialImportTransportContext(
+                urlErrorCode: urlError.map(\.code.rawValue),
+                failingURL: safeFailingURL,
+                appEnvironment: environment,
+                ingestorBase: ingestor,
+                operation: operation
+            )
         )
+    }
+
+    /// Scheme + host + path only — strip query, fragment, user, and password.
+    static func sanitizedTelemetryURL(_ raw: String?) -> String {
+        guard let raw, !raw.isEmpty else { return "unknown" }
+        guard var components = URLComponents(string: raw) else {
+            return "unknown"
+        }
+        components.user = nil
+        components.password = nil
+        components.query = nil
+        components.fragment = nil
+        // Prefer host+path; drop opaque junk.
+        if components.host == nil, components.path.isEmpty {
+            return "unknown"
+        }
+        return components.string ?? "unknown"
     }
 
     private static func extractURLError(from error: Error) -> URLError? {
