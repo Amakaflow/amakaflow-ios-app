@@ -146,6 +146,43 @@ final class StructureClarifyTests: XCTestCase {
         XCTAssertTrue(saved.allSatisfy { $0.type == .sets })
     }
 
+    func testBlocksForPersistenceFlattensInferredAndExplicit() {
+        let curl = SocialImportExercise(name: "Curl", sets: 3, reps: 12)
+        let bench = SocialImportExercise(name: "Bench", reps: 8)
+        let pull = SocialImportExercise(name: "Pull", reps: 8)
+        let draft = SocialImportDraft(
+            title: "Guard",
+            sport: "strength",
+            platform: .instagram,
+            sourceURL: nil,
+            exercises: [bench, pull, curl],
+            blocks: [
+                SocialImportBlock(
+                    label: "Superset",
+                    rounds: 4,
+                    exercises: [bench, pull],
+                    type: "superset",
+                    restSec: 180,
+                    structureSource: StructureSource.inferred.rawValue
+                ),
+                SocialImportBlock(
+                    label: "Explicit pair",
+                    rounds: 3,
+                    exercises: [curl],
+                    type: "sets",
+                    structureSource: StructureSource.explicit.rawValue
+                )
+            ],
+            equipmentNote: nil,
+            equipmentEmpty: true
+        )
+        let persisted = draft.blocksForPersistence()
+        XCTAssertTrue(persisted.allSatisfy { $0.structureSource != StructureSource.inferred.rawValue })
+        XCTAssertTrue(persisted.allSatisfy { $0.structureSource != StructureSource.explicit.rawValue })
+        XCTAssertTrue(persisted.allSatisfy { ($0.type ?? "sets") == "sets" })
+        XCTAssertEqual(persisted.count, 3)
+    }
+
     func testChipGroupSelectedRows() {
         var session = StructureClarifySession.fromSuggest(StructureClarifyFixtures.dmqSuggestResult)
         let benchGroup = session.groups.first { $0.label.contains("Bench") }!

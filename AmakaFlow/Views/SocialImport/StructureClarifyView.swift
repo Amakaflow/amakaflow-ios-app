@@ -272,6 +272,15 @@ struct StructureClarifyView: View {
 
     // MARK: - Footer
 
+    private var isSaveInFlight: Bool {
+        switch viewModel.phase {
+        case .saving, .saved:
+            return true
+        default:
+            return false
+        }
+    }
+
     private var footerCTAs: some View {
         HStack(spacing: 8) {
             Button {
@@ -291,12 +300,14 @@ struct StructureClarifyView: View {
                     )
             }
             .buttonStyle(.plain)
+            .disabled(isSaveInFlight)
+            .opacity(isSaveInFlight ? 0.55 : 1)
             .accessibilityIdentifier("structure_clarify_leave_flat")
 
             Button {
                 Task { await viewModel.saveFromClarify(leaveFlat: false) }
             } label: {
-                Text(saveLabel)
+                Text(isSaveInFlight ? "Saving…" : saveLabel)
                     .ddDisplayText(14.5, weight: .bold)
                     .foregroundColor(DailyDriver.ink)
                     .frame(maxWidth: .infinity)
@@ -304,6 +315,8 @@ struct StructureClarifyView: View {
                     .background(Capsule().fill(DailyDriver.lime))
             }
             .buttonStyle(.plain)
+            .disabled(isSaveInFlight)
+            .opacity(isSaveInFlight ? 0.55 : 1)
             .ddLimeGlow()
             .frame(maxWidth: .infinity)
             .layoutPriority(1)

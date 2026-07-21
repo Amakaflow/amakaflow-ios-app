@@ -240,15 +240,15 @@ final class SocialImportViewModel: ObservableObject {
 
     /// Looks right — Save / Leave flat. Applies confirmed structure then saves.
     func saveFromClarify(leaveFlat: Bool) async {
-        guard var draft, var session = clarifySession else {
+        guard var draft, let session = clarifySession else {
             phase = .failed(.parse(message: "Nothing to save yet — import a workout first."))
             return
         }
+        guard phase != .saving else { return }
         let blocks = session.blocksForSave(leaveFlat: leaveFlat)
-            .filter { $0.structureSource != .inferred }
+            .filter { $0.structureSource != .inferred && $0.structureSource != .explicit }
         applyConfirmedStructure(blocks, to: &draft)
         self.draft = draft
-        clarifySession = session
         await saveToLibrary()
     }
 

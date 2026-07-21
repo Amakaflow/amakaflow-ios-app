@@ -3,15 +3,18 @@
 //  AmakaFlow
 //
 //  AMA-2305 — preserve structureSource / type / restSec on Library save.
+//  Hard guard: never persist inferred / explicit (unconfirmed) structure.
 //
 
 import Foundation
 
 extension SocialImportDraft {
     /// Blocks sent to mapper — keep section labels but refresh exercise rows from the flat list.
+    /// Unconfirmed provenance (`inferred` / `explicit`) is flattened to `sets` + `unknown`.
     func blocksForPersistence() -> [SocialImportBlock] {
-        guard !blocks.isEmpty else {
-            return [
+        let reconciled: [SocialImportBlock]
+        if blocks.isEmpty {
+            reconciled = [
                 SocialImportBlock(
                     label: "Main block",
                     rounds: 1,
@@ -20,10 +23,9 @@ extension SocialImportDraft {
                     structureSource: "unknown"
                 )
             ]
-        }
-        if blocks.count == 1 {
+        } else if blocks.count == 1 {
             let block = blocks[0]
-            return [
+            reconciled = [
                 SocialImportBlock(
                     label: block.label ?? "Main block",
                     rounds: max(1, block.rounds),
@@ -33,8 +35,29 @@ extension SocialImportDraft {
                     structureSource: block.structureSource
                 )
             ]
+        } else {
+            reconciled = reconciledMultiBlocks()
         }
-        return reconciledMultiBlocks()
+        return reconciled.flatMap(Self.sanitizeUnconfirmedStructure)
+    }
+
+    /// ADR-017: inferred/explicit must never reach `/workouts/save` as structured blocks.
+    static func sanitizeUnconfirmedStructure(_ block: SocialImportBlock) -> [SocialImportBlock] {
+        let source = block.structureSource?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard source == StructureSource.inferred.rawValue
+            || source == StructureSource.explicit.rawValue else {
+            return [block]
+        }
+        return block.exercises.map { exercise in
+            SocialImportBlock(
+                label: nil,
+                rounds: 1,
+                exercises: [exercise],
+                type: "sets",
+                restSec: nil,
+                structureSource: StructureSource.unknown.rawValue
+            )
+        }
     }
 
     /// Reconcile multi-block rows with the flat editable list by exercise id.
