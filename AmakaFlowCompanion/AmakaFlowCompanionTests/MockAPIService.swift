@@ -183,6 +183,31 @@ class MockAPIService: APIServiceProviding {
         socialImportEquipmentContextResult
     }
 
+    var suggestStructureResult: Result<StructureSuggestResult, Error>?
+    var applyStructureResult: Result<ApplyStructureResult, Error>?
+    var suggestStructureCalled = false
+    var applyStructureCalled = false
+    var lastSuggestStructureText: String?
+    var lastApplyStructureRequest: ApplyStructureRequest?
+
+    func suggestStructure(text: String, source: String?) async throws -> StructureSuggestResult {
+        suggestStructureCalled = true
+        lastSuggestStructureText = text
+        guard let result = suggestStructureResult else {
+            throw APIError.notImplemented
+        }
+        return try result.get()
+    }
+
+    func applyStructure(_ request: ApplyStructureRequest) async throws -> ApplyStructureResult {
+        applyStructureCalled = true
+        lastApplyStructureRequest = request
+        guard let result = applyStructureResult else {
+            throw APIError.notImplemented
+        }
+        return try result.get()
+    }
+
     func transcribeAudio(
         audioData: String,
         provider: String,

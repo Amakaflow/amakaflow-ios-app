@@ -20,6 +20,12 @@ protocol SocialImportAPIProviding {
 
     /// Read coaching equipment for import adaptation (honest empty when missing).
     func socialImportEquipmentContext() async -> (empty: Bool, note: String?)
+
+    /// AMA-2305 / ADR-017 — BFF structure suggestions after social parse.
+    func suggestStructure(text: String, source: String?) async throws -> StructureSuggestResult
+
+    /// AMA-2305 — apply Describe note / ops (live BFF, not a stub).
+    func applyStructure(_ request: ApplyStructureRequest) async throws -> ApplyStructureResult
 }
 
 extension APIService {
@@ -330,6 +336,16 @@ extension APIService {
                 }
                 if block.rounds > 1 {
                     object["rounds"] = block.rounds
+                }
+                if let type = block.type?.trimmingCharacters(in: .whitespacesAndNewlines), !type.isEmpty {
+                    object["type"] = type
+                }
+                if let restSec = block.restSec, restSec > 0 {
+                    object["rest_sec"] = restSec
+                }
+                if let structureSource = block.structureSource?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !structureSource.isEmpty {
+                    object["structure_source"] = structureSource
                 }
                 return object
             }

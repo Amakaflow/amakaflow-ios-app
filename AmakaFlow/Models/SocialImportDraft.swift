@@ -187,6 +187,34 @@ struct SocialImportBlock: Equatable, Codable {
     var label: String?
     var rounds: Int
     var exercises: [SocialImportExercise]
+    /// ADR-017 block type (`sets` / `superset` / `circuit` / …).
+    var type: String?
+    /// Programmed rest intent in seconds (no timed/button toggle).
+    var restSec: Int?
+    /// Provenance: explicit | inferred | user_confirmed | user_note | unknown.
+    var structureSource: String?
+
+    enum CodingKeys: String, CodingKey {
+        case label, rounds, exercises, type
+        case restSec
+        case structureSource
+    }
+
+    init(
+        label: String? = nil,
+        rounds: Int,
+        exercises: [SocialImportExercise],
+        type: String? = nil,
+        restSec: Int? = nil,
+        structureSource: String? = nil
+    ) {
+        self.label = label
+        self.rounds = rounds
+        self.exercises = exercises
+        self.type = type
+        self.restSec = restSec
+        self.structureSource = structureSource
+    }
 }
 
 /// Editable workout draft produced by ingest before Library save.
@@ -245,7 +273,15 @@ struct SocialImportDraft: Equatable {
     /// Blocks sent to mapper — keep section labels but refresh exercise rows from the flat list.
     func blocksForPersistence() -> [SocialImportBlock] {
         guard !blocks.isEmpty else {
-            return [SocialImportBlock(label: "Main block", rounds: 1, exercises: exercises)]
+            return [
+                SocialImportBlock(
+                    label: "Main block",
+                    rounds: 1,
+                    exercises: exercises,
+                    type: "sets",
+                    structureSource: "unknown"
+                )
+            ]
         }
         if blocks.count == 1 {
             let block = blocks[0]
@@ -253,7 +289,10 @@ struct SocialImportDraft: Equatable {
                 SocialImportBlock(
                     label: block.label ?? "Main block",
                     rounds: max(1, block.rounds),
-                    exercises: exercises
+                    exercises: exercises,
+                    type: block.type,
+                    restSec: block.restSec,
+                    structureSource: block.structureSource
                 )
             ]
         }
@@ -270,7 +309,10 @@ struct SocialImportDraft: Equatable {
             return SocialImportBlock(
                 label: block.label,
                 rounds: max(1, block.rounds),
-                exercises: reconciledExercises
+                exercises: reconciledExercises,
+                type: block.type,
+                restSec: block.restSec,
+                structureSource: block.structureSource
             )
         }
         let unassigned = exercises.filter { !assignedIDs.contains($0.id) }
@@ -279,7 +321,10 @@ struct SocialImportDraft: Equatable {
             reconciled[firstIndex] = SocialImportBlock(
                 label: block.label,
                 rounds: block.rounds,
-                exercises: block.exercises + unassigned
+                exercises: block.exercises + unassigned,
+                type: block.type,
+                restSec: block.restSec,
+                structureSource: block.structureSource
             )
         }
         return reconciled

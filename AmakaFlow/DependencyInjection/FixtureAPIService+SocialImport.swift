@@ -94,5 +94,23 @@ extension FixtureAPIService {
     func socialImportEquipmentContext() async -> (empty: Bool, note: String?) {
         (true, "Fixture: no equipment profile — continuing.")
     }
+
+    func suggestStructure(text: String, source: String?) async throws -> StructureSuggestResult {
+        print("[FixtureAPIService] Stub: suggestStructure")
+        return StructureClarifyFixtures.dmqSuggestResult
+    }
+
+    func applyStructure(_ request: ApplyStructureRequest) async throws -> ApplyStructureResult {
+        print("[FixtureAPIService] Stub: applyStructure note=\(request.note ?? "nil")")
+        if let note = request.note?.lowercased(), note.contains("leave it flat") {
+            let flat = request.blocks.flatMap { block in
+                block.exercises.map {
+                    StructureBlockModel(type: .sets, exercises: [$0], structureSource: .userConfirmed)
+                }
+            }
+            return ApplyStructureResult(blocks: flat)
+        }
+        return ApplyStructureResult(blocks: StructureClarifyFixtures.dmqNoteAppliedBlocks)
+    }
 }
 #endif

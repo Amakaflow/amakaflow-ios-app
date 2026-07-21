@@ -18,6 +18,7 @@ final class SocialImportViewModel: ObservableObject {
     enum Phase: Equatable {
         case idle
         case importing
+        case clarify
         case preview
         case saving
         case saved(workoutId: String)
@@ -28,6 +29,10 @@ final class SocialImportViewModel: ObservableObject {
     @Published var draft: SocialImportDraft?
     /// Edit is always allowed once a draft exists — never gated on AI success.
     @Published private(set) var canEdit: Bool = true
+    /// AMA-2305 clarify session (nil until suggest completes or falls back flat).
+    @Published var clarifySession: StructureClarifySession?
+    @Published var isReadingNote: Bool = false
+    @Published var describeNote: String = ""
 
     private let dependencies: AppDependencies
 
@@ -63,7 +68,7 @@ final class SocialImportViewModel: ObservableObject {
             )
             draft = parsed
             canEdit = true
-            phase = .preview
+            await enterClarify(for: parsed)
         } catch {
             guard let failure = SocialImportFailure.map(error) else { return }
             phase = .failed(failure)
@@ -96,7 +101,7 @@ final class SocialImportViewModel: ObservableObject {
             )
             draft = parsed
             canEdit = true
-            phase = .preview
+            await enterClarify(for: parsed)
         } catch {
             guard let failure = SocialImportFailure.map(error) else { return }
             phase = .failed(failure)
@@ -125,11 +130,126 @@ final class SocialImportViewModel: ObservableObject {
             )
             draft = parsed
             canEdit = true
-            phase = .preview
+            await enterClarify(for: parsed)
         } catch {
             guard let failure = SocialImportFailure.map(error) else { return }
             phase = .failed(failure)
         }
+    }
+
+    // MARK: - Clarify (AMA-2305)
+
+    /// After parse — always land on clarify (never silent structural commit).
+    func enterClarify(for draft: SocialImportDraft) async {
+        let text = structureSuggestText(for: draft)
+        let fallback = fallbackStructureExercises(from: draft)
+        do {
+            let result = try await dependencies.apiService.suggestStructure(
+                text: text.isEmpty
+                    ? fallback.map(\.name).joined(separator: "\n")
+                    : text,
+                source: draft.sourceURL ?? draft.platform.rawValue
+            )
+            let merged = result.exercises.isEmpty
+                ? StructureSuggestResult(
+                    exercises: fallback,
+                    suggestions: result.suggestions,
+                    blocks: result.blocks
+                )
+                : result
+            clarifySession = StructureClarifySession.fromSuggest(merged, fallbackExercises: fallback)
+        } catch {
+            // Missing BFF → flat rows (MOCK/SKIP), never crash the import path.
+            logger.warning("structure/suggest failed — falling back to flat clarify: \(String(describing: error))")
+            clarifySession = StructureClarifySession.fromSuggest(
+                StructureSuggestResult(exercises: fallback, suggestions: [], blocks: []),
+                fallbackExercises: fallback
+            )
+        }
+        phase = .clarify
+    }
+
+    func confirmClarifyGroup(_ id: UUID) {
+        guard var session = clarifySession else { return }
+        session.confirm(groupID: id)
+        clarifySession = session
+    }
+
+    func confirmAllClarifyGroups() {
+        guard var session = clarifySession else { return }
+        session.confirmAll()
+        clarifySession = session
+    }
+
+    func undoClarifyGroup(_ id: UUID) {
+        guard var session = clarifySession else { return }
+        session.undo(groupID: id)
+        clarifySession = session
+    }
+
+    func bumpClarifyRounds(_ id: UUID, delta: Int) {
+        guard var session = clarifySession else { return }
+        session.bumpRounds(groupID: id, delta: delta)
+        clarifySession = session
+    }
+
+    func toggleClarifyRow(_ id: UUID) {
+        guard var session = clarifySession else { return }
+        session.toggleRowSelection(id)
+        clarifySession = session
+    }
+
+    func clearClarifySelection() {
+        guard var session = clarifySession else { return }
+        session.clearSelection()
+        clarifySession = session
+    }
+
+    func groupClarifySelection(as type: StructureBlockType) {
+        guard var session = clarifySession else { return }
+        session.groupSelected(as: type)
+        clarifySession = session
+    }
+
+    /// Describe sheet → live structure/apply (replaces units; never stacks).
+    func applyDescribeNote() async {
+        guard ensureAuthenticated() else { return }
+        guard var session = clarifySession else { return }
+        let note = describeNote.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !note.isEmpty else { return }
+
+        isReadingNote = true
+        defer { isReadingNote = false }
+
+        let request = ApplyStructureRequest(
+            blocks: session.workingBlocksForApply(),
+            ops: nil,
+            note: note
+        )
+        do {
+            let result = try await dependencies.apiService.applyStructure(request)
+            // Idempotent replace — never append/stack on prior groups.
+            session.replace(withAppliedBlocks: result.blocks)
+            clarifySession = session
+            phase = .clarify
+        } catch {
+            guard let failure = SocialImportFailure.map(error) else { return }
+            phase = .failed(failure)
+        }
+    }
+
+    /// Looks right — Save / Leave flat. Applies confirmed structure then saves.
+    func saveFromClarify(leaveFlat: Bool) async {
+        guard var draft, var session = clarifySession else {
+            phase = .failed(.parse(message: "Nothing to save yet — import a workout first."))
+            return
+        }
+        let blocks = session.blocksForSave(leaveFlat: leaveFlat)
+            .filter { $0.structureSource != .inferred }
+        applyConfirmedStructure(blocks, to: &draft)
+        self.draft = draft
+        clarifySession = session
+        await saveToLibrary()
     }
 
     // MARK: - Edit
@@ -221,6 +341,9 @@ final class SocialImportViewModel: ObservableObject {
         phase = .idle
         draft = nil
         canEdit = true
+        clarifySession = nil
+        isReadingNote = false
+        describeNote = ""
     }
 
     // MARK: - Auth
