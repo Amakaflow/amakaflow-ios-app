@@ -346,33 +346,6 @@ final class SocialImportViewModel: ObservableObject {
         }
     }
 
-    func loadDraft(_ draft: SocialImportDraft) {
-        self.draft = draft
-        canEdit = true
-        phase = .preview
-    }
-
-    func reset() {
-        phase = .idle
-        draft = nil
-        canEdit = true
-        clarifySession = nil
-        isReadingNote = false
-        describeNote = ""
-    }
-
-    // MARK: - Failure (AMA-2308)
-
-    private func failImport(_ error: Error, operation: String, intendedURL: String?) {
-        SocialImportTransportDiagnostics.record(
-            error,
-            operation: operation,
-            intendedURL: intendedURL
-        )
-        guard let failure = SocialImportFailure.map(error) else { return }
-        phase = .failed(failure)
-    }
-
     // MARK: - Auth
 
     @discardableResult

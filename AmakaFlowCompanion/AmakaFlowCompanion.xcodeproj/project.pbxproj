@@ -112,6 +112,7 @@
 		AMA2305PERBLD /* SocialImportDraft+Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305PERREF /* SocialImportDraft+Persistence.swift */; };
 		AMA2305APIBLD /* APIService+Structure.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305APIREF /* APIService+Structure.swift */; };
 		AMA2305VMXBLD /* SocialImportViewModel+StructureClarify.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305VMXREF /* SocialImportViewModel+StructureClarify.swift */; };
+		AMA2308VMXBLD /* SocialImportViewModel+Failure.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2308VMXREF /* SocialImportViewModel+Failure.swift */; };
 		AMA2305VWBLD /* StructureClarifyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305VWREF /* StructureClarifyView.swift */; };
 		AMA2305TSTBLD /* StructureClarifyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305TSTREF /* StructureClarifyTests.swift */; };
 		AMA2285TSTBLD /* SocialImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285TSTREF /* SocialImportTests.swift */; };
@@ -645,6 +646,7 @@
 		AMA2305PERREF /* SocialImportDraft+Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "SocialImportDraft+Persistence.swift"; path = "../AmakaFlow/Models/SocialImportDraft+Persistence.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2305APIREF /* APIService+Structure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+Structure.swift"; path = "../AmakaFlow/Services/APIService+Structure.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2305VMXREF /* SocialImportViewModel+StructureClarify.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "SocialImportViewModel+StructureClarify.swift"; path = "../AmakaFlow/ViewModels/SocialImportViewModel+StructureClarify.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2308VMXREF /* SocialImportViewModel+Failure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "SocialImportViewModel+Failure.swift"; path = "../AmakaFlow/ViewModels/SocialImportViewModel+Failure.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2305VWREF /* StructureClarifyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StructureClarifyView.swift; path = ../AmakaFlow/Views/SocialImport/StructureClarifyView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2305TSTREF /* StructureClarifyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StructureClarifyTests.swift; path = AmakaFlowCompanionTests/StructureClarifyTests.swift; sourceTree = "<group>"; };
 		AMA2285TSTREF /* SocialImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialImportTests.swift; path = AmakaFlowCompanionTests/SocialImportTests.swift; sourceTree = "<group>"; };
@@ -1577,6 +1579,7 @@
 				AK00FIX010A /* WorkoutEditorViewModel.swift */,
 				AMA2285VMREF /* SocialImportViewModel.swift */,
 				AMA2305VMXREF /* SocialImportViewModel+StructureClarify.swift */,
+				AMA2308VMXREF /* SocialImportViewModel+Failure.swift */,
 				AK00FIX011A /* AnalyticsView.swift */,
 				AK00FIX012A /* ExportView.swift */,
 				AK00FIX013A /* ImportURLView.swift */,
@@ -2237,6 +2240,7 @@
 				AMA2305CMPBLD /* StructureClarifyComponents.swift in Sources */,
 				AMA2305APIBLD /* APIService+Structure.swift in Sources */,
 				AMA2305VMXBLD /* SocialImportViewModel+StructureClarify.swift in Sources */,
+				AMA2308VMXBLD /* SocialImportViewModel+Failure.swift in Sources */,
 				AMA2305VWBLD /* StructureClarifyView.swift in Sources */,
 				AMA2289FIXCMPBLD /* FixtureAPIService+Completions.swift in Sources */,
 				AMA2289DIARYBLD /* TodayDiary.swift in Sources */,
