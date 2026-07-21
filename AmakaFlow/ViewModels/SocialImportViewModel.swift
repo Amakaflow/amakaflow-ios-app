@@ -178,48 +178,6 @@ final class SocialImportViewModel: ObservableObject {
         phase = .clarify
     }
 
-    func confirmClarifyGroup(_ id: UUID) {
-        guard var session = clarifySession else { return }
-        session.confirm(groupID: id)
-        clarifySession = session
-    }
-
-    func confirmAllClarifyGroups() {
-        guard var session = clarifySession else { return }
-        session.confirmAll()
-        clarifySession = session
-    }
-
-    func undoClarifyGroup(_ id: UUID) {
-        guard var session = clarifySession else { return }
-        session.undo(groupID: id)
-        clarifySession = session
-    }
-
-    func bumpClarifyRounds(_ id: UUID, delta: Int) {
-        guard var session = clarifySession else { return }
-        session.bumpRounds(groupID: id, delta: delta)
-        clarifySession = session
-    }
-
-    func toggleClarifyRow(_ id: UUID) {
-        guard var session = clarifySession else { return }
-        session.toggleRowSelection(id)
-        clarifySession = session
-    }
-
-    func clearClarifySelection() {
-        guard var session = clarifySession else { return }
-        session.clearSelection()
-        clarifySession = session
-    }
-
-    func groupClarifySelection(as type: StructureBlockType) {
-        guard var session = clarifySession else { return }
-        session.groupSelected(as: type)
-        clarifySession = session
-    }
-
     /// Describe sheet → live structure/apply (replaces units; never stacks).
     func applyDescribeNote() async {
         guard ensureAuthenticated() else { return }
@@ -344,6 +302,21 @@ final class SocialImportViewModel: ObservableObject {
                 intendedURL: "\(AppEnvironment.current.mobileBFFURL)/v1/workouts/save"
             )
         }
+    }
+
+    func loadDraft(_ draft: SocialImportDraft) {
+        self.draft = draft
+        canEdit = true
+        phase = .preview
+    }
+
+    func reset() {
+        phase = .idle
+        draft = nil
+        canEdit = true
+        clarifySession = nil
+        isReadingNote = false
+        describeNote = ""
     }
 
     // MARK: - Auth
