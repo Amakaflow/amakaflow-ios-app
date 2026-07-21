@@ -1,0 +1,19 @@
+appId: com.amakaflow.companion
+---
+# AMA-2305 — Check the structure clarify states (fixture / accessibility ids)
+- assertVisible:
+    id: "structure_clarify_screen"
+- assertVisible: "Check the structure"
+- assertVisible:
+    id: "structure_clarify_describe_door"
+- assertVisible:
+    id: "structure_clarify_leave_flat"
+- assertVisible:
+    id: "structure_clarify_save"
+- tapOn:
+    id: "structure_clarify_describe_door"
+- assertVisible:
+    id: "structure_describe_sheet"
+- assertVisible: "Describe the structure"
+- assertVisible:
+    id: "structure_describe_apply"

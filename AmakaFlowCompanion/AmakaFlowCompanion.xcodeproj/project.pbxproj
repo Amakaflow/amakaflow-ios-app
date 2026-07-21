@@ -102,6 +102,18 @@
 		AMA2297PSTEBLD /* LibraryPasteRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2297PSTEREF /* LibraryPasteRouter.swift */; };
 		AMA2285SOCBLD /* APIService+SocialImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285SOCREF /* APIService+SocialImport.swift */; };
 		AMA2285FIXBLD /* FixtureAPIService+SocialImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285FIXREF /* FixtureAPIService+SocialImport.swift */; };
+		AMA2305MDLBLD /* StructureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305MDLREF /* StructureModels.swift */; };
+		AMA2305SESBLD /* StructureClarifySession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305SESREF /* StructureClarifySession.swift */; };
+		AMA2305FIXBLD /* StructureClarifyFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305FIXREF /* StructureClarifyFixtures.swift */; };
+		AMA2305CMPBLD /* StructureClarifyComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305CMPREF /* StructureClarifyComponents.swift */; };
+		AMA2305FACBLD /* StructureClarifySession+Factory.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305FACREF /* StructureClarifySession+Factory.swift */; };
+		AMA2305MAPBLD /* APIService+SocialImportMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305MAPREF /* APIService+SocialImportMapper.swift */; };
+		AMA2305INGBLD /* SocialImportDraft+Ingest.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305INGREF /* SocialImportDraft+Ingest.swift */; };
+		AMA2305PERBLD /* SocialImportDraft+Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305PERREF /* SocialImportDraft+Persistence.swift */; };
+		AMA2305APIBLD /* APIService+Structure.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305APIREF /* APIService+Structure.swift */; };
+		AMA2305VMXBLD /* SocialImportViewModel+StructureClarify.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305VMXREF /* SocialImportViewModel+StructureClarify.swift */; };
+		AMA2305VWBLD /* StructureClarifyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305VWREF /* StructureClarifyView.swift */; };
+		AMA2305TSTBLD /* StructureClarifyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305TSTREF /* StructureClarifyTests.swift */; };
 		AMA2285TSTBLD /* SocialImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285TSTREF /* SocialImportTests.swift */; };
 		AMA2291STARTSELBLD /* WorkoutStartSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2291STARTSELREF /* WorkoutStartSelection.swift */; };
 		AMA2291LIBDESTBLD /* LibraryDestination.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2291LIBDESTREF /* LibraryDestination.swift */; };
@@ -623,6 +635,18 @@
 		AMA2297PSTEREF /* LibraryPasteRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryPasteRouter.swift; path = ../AmakaFlow/Services/LibraryPasteRouter.swift; sourceTree = SOURCE_ROOT; };
 		AMA2285SOCREF /* APIService+SocialImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+SocialImport.swift"; path = "../AmakaFlow/Services/APIService+SocialImport.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2285FIXREF /* FixtureAPIService+SocialImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "FixtureAPIService+SocialImport.swift"; path = "../AmakaFlow/DependencyInjection/FixtureAPIService+SocialImport.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2305MDLREF /* StructureModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StructureModels.swift; path = ../AmakaFlow/Models/StructureModels.swift; sourceTree = SOURCE_ROOT; };
+		AMA2305SESREF /* StructureClarifySession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StructureClarifySession.swift; path = ../AmakaFlow/Models/StructureClarifySession.swift; sourceTree = SOURCE_ROOT; };
+		AMA2305FIXREF /* StructureClarifyFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StructureClarifyFixtures.swift; path = ../AmakaFlow/Models/StructureClarifyFixtures.swift; sourceTree = SOURCE_ROOT; };
+		AMA2305CMPREF /* StructureClarifyComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StructureClarifyComponents.swift; path = ../AmakaFlow/Views/SocialImport/StructureClarifyComponents.swift; sourceTree = SOURCE_ROOT; };
+		AMA2305FACREF /* StructureClarifySession+Factory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "StructureClarifySession+Factory.swift"; path = "../AmakaFlow/Models/StructureClarifySession+Factory.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2305MAPREF /* APIService+SocialImportMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+SocialImportMapper.swift"; path = "../AmakaFlow/Services/APIService+SocialImportMapper.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2305INGREF /* SocialImportDraft+Ingest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "SocialImportDraft+Ingest.swift"; path = "../AmakaFlow/Models/SocialImportDraft+Ingest.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2305PERREF /* SocialImportDraft+Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "SocialImportDraft+Persistence.swift"; path = "../AmakaFlow/Models/SocialImportDraft+Persistence.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2305APIREF /* APIService+Structure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+Structure.swift"; path = "../AmakaFlow/Services/APIService+Structure.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2305VMXREF /* SocialImportViewModel+StructureClarify.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "SocialImportViewModel+StructureClarify.swift"; path = "../AmakaFlow/ViewModels/SocialImportViewModel+StructureClarify.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2305VWREF /* StructureClarifyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StructureClarifyView.swift; path = ../AmakaFlow/Views/SocialImport/StructureClarifyView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2305TSTREF /* StructureClarifyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StructureClarifyTests.swift; path = AmakaFlowCompanionTests/StructureClarifyTests.swift; sourceTree = "<group>"; };
 		AMA2285TSTREF /* SocialImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialImportTests.swift; path = AmakaFlowCompanionTests/SocialImportTests.swift; sourceTree = "<group>"; };
 		AMA2291STARTSELREF /* WorkoutStartSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutStartSelection.swift; path = ../AmakaFlow/Models/WorkoutStartSelection.swift; sourceTree = SOURCE_ROOT; };
 		AMA2291LIBDESTREF /* LibraryDestination.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryDestination.swift; path = ../AmakaFlow/Models/LibraryDestination.swift; sourceTree = SOURCE_ROOT; };
@@ -1352,6 +1376,8 @@
 				AMA2285PENDREF /* PendingShareImportCoordinator.swift */,
 				AMA2297PSTEREF /* LibraryPasteRouter.swift */,
 				AMA2285SOCREF /* APIService+SocialImport.swift */,
+				AMA2305APIREF /* APIService+Structure.swift */,
+				AMA2305MAPREF /* APIService+SocialImportMapper.swift */,
 				AK00NUT002A /* NutritionViewModel.swift */,
 				AK00AFL005A /* FoodLoggingViewModel.swift */,
 				AK00NUT003A /* NutritionDashboardCard.swift */,
@@ -1527,6 +1553,12 @@
 				AK00FIX002A /* TrainingProgram.swift */,
 				AK00FIX003A /* WorkoutSaveRequest.swift */,
 				AMA2285DRFTREF /* SocialImportDraft.swift */,
+				AMA2305MDLREF /* StructureModels.swift */,
+				AMA2305SESREF /* StructureClarifySession.swift */,
+				AMA2305FIXREF /* StructureClarifyFixtures.swift */,
+				AMA2305FACREF /* StructureClarifySession+Factory.swift */,
+				AMA2305PERREF /* SocialImportDraft+Persistence.swift */,
+				AMA2305INGREF /* SocialImportDraft+Ingest.swift */,
 				AMA2291STARTSELREF /* WorkoutStartSelection.swift */,
 				AMA2291LIBDESTREF /* LibraryDestination.swift */,
 				AMA2289DIARYREF /* TodayDiary.swift */,
@@ -1544,12 +1576,15 @@
 				AK00FIX009A /* StravaViewModel.swift */,
 				AK00FIX010A /* WorkoutEditorViewModel.swift */,
 				AMA2285VMREF /* SocialImportViewModel.swift */,
+				AMA2305VMXREF /* SocialImportViewModel+StructureClarify.swift */,
 				AK00FIX011A /* AnalyticsView.swift */,
 				AK00FIX012A /* ExportView.swift */,
 				AK00FIX013A /* ImportURLView.swift */,
 				AMA2285FLOWREF /* SocialImportFlowView.swift */,
 				AMA2285PREVREF /* SocialImportPreviewView.swift */,
 				AMA2293IMPDETREF /* SocialImportDetailPreviewView.swift */,
+				AMA2305VWREF /* StructureClarifyView.swift */,
+				AMA2305CMPREF /* StructureClarifyComponents.swift */,
 				AK00FIX014A /* ProgramDetailView.swift */,
 				AK00FIX015A /* ProgramsListView.swift */,
 				AK00FIX016A /* CalendarSyncView.swift */,
@@ -1573,6 +1608,7 @@
 				AK00TST008A /* InstagramImportModeTests.swift */,
 				AK00TST009A /* ManualInstagramIngestionTests.swift */,
 				AMA2285TSTREF /* SocialImportTests.swift */,
+				AMA2305TSTREF /* StructureClarifyTests.swift */,
 				AMA2291STARTSTREF /* WorkoutStartSelectionTests.swift */,
 				AMA2286GARTESTREF /* GarminStartHandoffTests.swift */,
 				AMA2287APHTESTREF /* AppleStartHandoffTests.swift */,
@@ -2191,6 +2227,17 @@
 				AMA2297PSTEBLD /* LibraryPasteRouter.swift in Sources */,
 				AMA2285SOCBLD /* APIService+SocialImport.swift in Sources */,
 				AMA2285FIXBLD /* FixtureAPIService+SocialImport.swift in Sources */,
+				AMA2305MDLBLD /* StructureModels.swift in Sources */,
+				AMA2305SESBLD /* StructureClarifySession.swift in Sources */,
+				AMA2305FIXBLD /* StructureClarifyFixtures.swift in Sources */,
+				AMA2305FACBLD /* StructureClarifySession+Factory.swift in Sources */,
+				AMA2305PERBLD /* SocialImportDraft+Persistence.swift in Sources */,
+				AMA2305INGBLD /* SocialImportDraft+Ingest.swift in Sources */,
+				AMA2305MAPBLD /* APIService+SocialImportMapper.swift in Sources */,
+				AMA2305CMPBLD /* StructureClarifyComponents.swift in Sources */,
+				AMA2305APIBLD /* APIService+Structure.swift in Sources */,
+				AMA2305VMXBLD /* SocialImportViewModel+StructureClarify.swift in Sources */,
+				AMA2305VWBLD /* StructureClarifyView.swift in Sources */,
 				AMA2289FIXCMPBLD /* FixtureAPIService+Completions.swift in Sources */,
 				AMA2289DIARYBLD /* TodayDiary.swift in Sources */,
 				AMA2290BFILLBLD /* StrengthBackfill.swift in Sources */,
@@ -2335,6 +2382,7 @@
 				AK00TST008B /* InstagramImportModeTests.swift in Sources */,
 				AK00TST009B /* ManualInstagramIngestionTests.swift in Sources */,
 				AMA2285TSTBLD /* SocialImportTests.swift in Sources */,
+				AMA2305TSTBLD /* StructureClarifyTests.swift in Sources */,
 				AMA2291STARTSTBLD /* WorkoutStartSelectionTests.swift in Sources */,
 				AMA2286GARTESTBLD /* GarminStartHandoffTests.swift in Sources */,
 				AMA2287APHTESTBLD /* AppleStartHandoffTests.swift in Sources */,

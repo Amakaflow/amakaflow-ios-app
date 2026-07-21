@@ -41,6 +41,16 @@ final class SocialImportTests: XCTestCase {
 
     func testImportURLThenSaveToLibraryHappyPath() async throws {
         mockAPI.ingestSocialURLResult = .success(sampleIngestJSON())
+        mockAPI.suggestStructureResult = .success(
+            StructureSuggestResult(
+                exercises: [
+                    StructureExerciseModel(name: "Bench", sets: 3, reps: 8),
+                    StructureExerciseModel(name: "Row", sets: 3, reps: 8)
+                ],
+                suggestions: [],
+                blocks: []
+            )
+        )
         mockAPI.saveWorkoutResult = .success(
             Workout(
                 id: "saved-1",
@@ -55,15 +65,15 @@ final class SocialImportTests: XCTestCase {
 
         await sut.importURL("https://instagram.com/reel/abc", platformHint: .instagram)
 
-        guard case .preview = sut.phase else {
-            return XCTFail("Expected preview, got \(sut.phase)")
+        guard case .clarify = sut.phase else {
+            return XCTFail("Expected clarify, got \(sut.phase)")
         }
         XCTAssertEqual(sut.draft?.title, "IG Push Day")
         XCTAssertEqual(sut.draft?.platform, .instagram)
         XCTAssertTrue(sut.canEdit)
         XCTAssertTrue(mockAPI.ingestSocialURLCalled)
 
-        await sut.saveToLibrary()
+        await sut.saveFromClarify(leaveFlat: true)
 
         guard case .saved(let id) = sut.phase else {
             return XCTFail("Expected saved, got \(sut.phase)")
@@ -209,6 +219,7 @@ final class SocialImportTests: XCTestCase {
 
     func testImportURLStripsIgshBeforeIngest() async {
         mockAPI.ingestSocialURLResult = .success(sampleIngestJSON())
+        mockAPI.suggestStructureResult = .success(StructureSuggestResult(exercises: [], suggestions: [], blocks: []))
 
         await sut.importURL(
             "https://www.instagram.com/reel/DRaP9QwCbGk/?igsh=MTMzeGNyZW5uZjBzNA==",
@@ -219,8 +230,8 @@ final class SocialImportTests: XCTestCase {
             mockAPI.lastIngestSocialURL,
             "https://www.instagram.com/reel/DRaP9QwCbGk/"
         )
-        guard case .preview = sut.phase else {
-            return XCTFail("Expected preview, got \(sut.phase)")
+        guard case .clarify = sut.phase else {
+            return XCTFail("Expected clarify, got \(sut.phase)")
         }
     }
 
@@ -338,12 +349,13 @@ final class SocialImportTests: XCTestCase {
 
     func testImportURLNormalizesReelsBeforeIngest() async {
         mockAPI.ingestSocialURLResult = .success(sampleIngestJSON())
+        mockAPI.suggestStructureResult = .success(StructureSuggestResult(exercises: [], suggestions: [], blocks: []))
 
         await sut.importURL("https://www.instagram.com/reels/DMqEsenN6Dl/", platformHint: .instagram)
 
         XCTAssertEqual(mockAPI.lastIngestSocialURL, "https://www.instagram.com/reel/DMqEsenN6Dl/")
-        guard case .preview = sut.phase else {
-            return XCTFail("Expected preview, got \(sut.phase)")
+        guard case .clarify = sut.phase else {
+            return XCTFail("Expected clarify, got \(sut.phase)")
         }
     }
 

@@ -48,6 +48,8 @@ struct SocialImportFlowView: View {
             switch contentPhase {
             case .importing:
                 importingSheet
+            case .clarify:
+                clarifySheet
             case .preview:
                 previewSheet
             case .input:
@@ -64,6 +66,7 @@ struct SocialImportFlowView: View {
     private enum ContentPhase {
         case input
         case importing
+        case clarify
         case preview
     }
 
@@ -71,9 +74,17 @@ struct SocialImportFlowView: View {
         switch viewModel.phase {
         case .importing:
             return .importing
-        case .preview, .saving, .saved:
+        case .clarify, .saving:
+            return viewModel.draft == nil ? .input : .clarify
+        case .saved:
+            // Stay on clarify until dismiss — avoid flashing detail preview.
+            return viewModel.clarifySession != nil ? .clarify : .preview
+        case .preview:
             return viewModel.draft == nil ? .input : .preview
         case .failed:
+            if viewModel.clarifySession != nil {
+                return .clarify
+            }
             return viewModel.draft == nil ? .input : .preview
         default:
             return .input
@@ -84,6 +95,8 @@ struct SocialImportFlowView: View {
         switch contentPhase {
         case .importing:
             return "Importing…"
+        case .clarify:
+            return "Check the structure"
         case .preview:
             return "Review & save"
         case .input:
@@ -167,6 +180,21 @@ struct SocialImportFlowView: View {
                 steps: importSteps
             )
         }
+    }
+
+    @ViewBuilder
+    private var clarifySheet: some View {
+        StructureClarifyView(
+            viewModel: viewModel,
+            onBack: {
+                viewModel.reset()
+            },
+            onSaved: {
+                onSaved?()
+                dismiss()
+            }
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     @ViewBuilder
@@ -291,7 +319,16 @@ struct ImageImportView: View {
                         steps: importSteps
                     )
                 }
-            case .preview, .saving, .saved:
+            case .clarify, .saving:
+                StructureClarifyView(
+                    viewModel: viewModel,
+                    onBack: { viewModel.reset() },
+                    onSaved: {
+                        onSaved?()
+                        dismiss()
+                    }
+                )
+            case .preview, .saved:
                 if let draft = viewModel.draft {
                     SocialImportDetailPreviewView(
                         viewModel: viewModel,
@@ -306,7 +343,16 @@ struct ImageImportView: View {
                     pickerSheet
                 }
             case .failed:
-                if let draft = viewModel.draft {
+                if viewModel.clarifySession != nil {
+                    StructureClarifyView(
+                        viewModel: viewModel,
+                        onBack: { viewModel.reset() },
+                        onSaved: {
+                            onSaved?()
+                            dismiss()
+                        }
+                    )
+                } else if let draft = viewModel.draft {
                     SocialImportDetailPreviewView(
                         viewModel: viewModel,
                         draft: draft,
