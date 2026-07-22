@@ -22,5 +22,12 @@ if git rev-parse "$TAG" >/dev/null 2>&1; then
 fi
 
 git tag "$TAG" "$GITHUB_SHA"
+
+# Checkout uses persist-credentials: false (secrets hygiene). Re-auth with
+# the job's GITHUB_TOKEN so tag push works under contents: write.
+if [ -n "${GITHUB_TOKEN:-}" ] && [ -n "${GITHUB_REPOSITORY:-}" ]; then
+  git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+fi
+
 git push origin "refs/tags/${TAG}"
 echo "✅ Pushed tag $TAG → $GITHUB_SHA"
