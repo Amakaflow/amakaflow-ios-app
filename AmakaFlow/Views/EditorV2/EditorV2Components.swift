@@ -16,6 +16,8 @@ struct EditorV2Stepper: View {
     var min: Int = 0
     var max: Int = 999
     var step: Int = 1
+    /// Optional display override (e.g. tenths → `"12.5 kg"`).
+    var valueText: ((Int) -> String)?
     var onChange: (Int) -> Void
 
     var body: some View {
@@ -34,7 +36,7 @@ struct EditorV2Stepper: View {
                 }
                 .buttonStyle(.plain)
 
-                Text("\(value)\(unit)")
+                Text(valueText?(value) ?? "\(value)\(unit)")
                     .ddDisplayText(17, weight: .heavy)
                     .foregroundColor(DailyDriver.foreground)
                     .monospacedDigit()

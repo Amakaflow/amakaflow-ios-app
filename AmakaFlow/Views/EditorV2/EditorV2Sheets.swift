@@ -89,14 +89,18 @@ struct EditorV2EditSheet: View {
                     ) { draft.distanceMeters = $0 }
                 }
                 if draft.weightKg != nil {
+                    // Tenths of a kg so values like 12.5 survive edit (no Int truncation).
                     EditorV2Stepper(
                         label: "Weight",
-                        value: Int(draft.weightKg ?? 0),
-                        unit: " kg",
+                        value: Int(((draft.weightKg ?? 0) * 10).rounded()),
                         min: 0,
-                        max: 300,
-                        step: 2
-                    ) { draft.weightKg = Double($0) }
+                        max: 3_000,
+                        step: 5,
+                        valueText: { tenths in
+                            "\(EditorV2Exercise.formatWeight(Double(tenths) / 10)) kg"
+                        },
+                        onChange: { draft.weightKg = Double($0) / 10 }
+                    )
                 }
                 if draft.calories != nil {
                     EditorV2Stepper(

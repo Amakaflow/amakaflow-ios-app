@@ -137,6 +137,7 @@ extension EditorV2Session {
                     name: exercise.name,
                     seconds: calories,
                     restSeconds: exercise.restSeconds,
+                    load: load,
                     target: "\(calories) cal"
                 )
             }

@@ -226,7 +226,7 @@ final class EditorV2Tests: XCTestCase {
         var session = EditorV2Session(title: "Mixed")
         session.exercises = [
             EditorV2Exercise(name: "Plank", durationSeconds: 45, restSeconds: 15),
-            EditorV2Exercise(name: "SkiErg", restSeconds: 30, calories: 20),
+            EditorV2Exercise(name: "SkiErg", weightKg: 12.5, restSeconds: 30, calories: 20),
             EditorV2Exercise(name: "Run", distanceMeters: 400, restSeconds: 60)
         ]
         let intervals = session.toSaveIntervals()
@@ -237,8 +237,15 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertEqual(intervals[1].seconds, 20)
         XCTAssertEqual(intervals[1].target, "20 cal")
         XCTAssertEqual(intervals[1].restSeconds, 30)
+        XCTAssertEqual(intervals[1].load, "12.5 kg")
         XCTAssertEqual(intervals[2].type, "distance")
         XCTAssertEqual(intervals[2].meters, 400)
         XCTAssertEqual(intervals[2].restSeconds, 60)
+    }
+
+    func testFormatWeightPreservesTenths() {
+        XCTAssertEqual(EditorV2Exercise.formatWeight(12.5), "12.5")
+        XCTAssertEqual(EditorV2Exercise.formatWeightLoad(12.5), "12.5 kg")
+        XCTAssertEqual(EditorV2Exercise.formatWeight(60), "60")
     }
 }
