@@ -42,12 +42,17 @@ extension APIService {
         if !metadata.isEmpty {
             workoutData["metadata"] = metadata
         }
-        return [
+        var body: [String: Any] = [
             "workout_data": workoutData,
             "sources": [source],
             "device": "ios",
             "title": request.name
         ]
+        if let workoutId = request.workoutId?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !workoutId.isEmpty {
+            body["workout_id"] = workoutId
+        }
+        return body
     }
 
     /// ADR-017 fields on each block for mapper persistence.
