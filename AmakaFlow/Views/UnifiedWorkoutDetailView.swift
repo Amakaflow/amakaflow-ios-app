@@ -9,6 +9,7 @@
 
 import SwiftUI
 
+// swiftlint:disable file_length type_body_length
 struct UnifiedWorkoutDetailView: View {
     @State private var displayedWorkout: Workout
     @AppStorage(DefaultsKey.userDisplayName.rawValue) private var userDisplayName = ""
@@ -814,3 +815,4 @@ extension UnifiedWorkoutDetailView {
         )
     }
 }
+// swiftlint:enable file_length type_body_length
