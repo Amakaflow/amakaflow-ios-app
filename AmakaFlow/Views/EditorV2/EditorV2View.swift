@@ -166,6 +166,17 @@ struct EditorV2View: View {
         return "TAP AN EXERCISE TO EDIT IT · ⋯ FOR EVERYTHING ELSE"
     }
 
+    private func saveTapped() {
+        saveModel.name = session.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        saveModel.intervals = session.toSaveIntervals()
+        saveModel.saveBlocks = session.toSocialImportBlocks()
+        Task { await saveModel.save() }
+    }
+}
+
+// MARK: - Sheets, toast, bindings (split for type_body_length)
+
+extension EditorV2View {
     private var formatLabel: String? {
         guard let key = session.formatGroupKey else { return nil }
         return session.groups[key]?.type.label
@@ -176,19 +187,12 @@ struct EditorV2View: View {
         return session.groups[key]?.type == .superset
     }
 
-    private func saveTapped() {
-        saveModel.name = session.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        saveModel.intervals = session.toSaveIntervals()
-        saveModel.saveBlocks = session.toSocialImportBlocks()
-        Task { await saveModel.save() }
-    }
-
-    private func showToast(_ message: String) {
+    fileprivate func showToast(_ message: String) {
         withAnimation { toastMessage = message }
     }
 
     @ViewBuilder
-    private var toastOverlay: some View {
+    fileprivate var toastOverlay: some View {
         if let toastMessage {
             Text(toastMessage)
                 .font(.system(size: 12, weight: .semibold))
@@ -207,7 +211,7 @@ struct EditorV2View: View {
         }
     }
 
-    private func menuSheet(_ exercise: EditorV2Exercise) -> some View {
+    fileprivate func menuSheet(_ exercise: EditorV2Exercise) -> some View {
         EditorV2MenuSheet(
             exercise: exercise,
             isInSuperset: isInSuperset(exercise),
@@ -244,7 +248,7 @@ struct EditorV2View: View {
         .presentationDetents([.medium])
     }
 
-    private func editSheet(_ exercise: EditorV2Exercise) -> some View {
+    fileprivate func editSheet(_ exercise: EditorV2Exercise) -> some View {
         EditorV2EditSheet(exercise: exercise) { updated in
             if let index = session.exercises.firstIndex(where: { $0.id == updated.id }) {
                 session.exercises[index] = updated
@@ -254,7 +258,7 @@ struct EditorV2View: View {
         .presentationDetents([.medium, .large])
     }
 
-    private func configSheet(_ item: ConfigGroupItem) -> some View {
+    fileprivate func configSheet(_ item: ConfigGroupItem) -> some View {
         EditorV2GroupConfigSheet(
             groupKey: item.id,
             group: item.group,
@@ -269,7 +273,7 @@ struct EditorV2View: View {
         .presentationDetents([.medium, .large])
     }
 
-    private func pairSheet(_ source: EditorV2Exercise) -> some View {
+    fileprivate func pairSheet(_ source: EditorV2Exercise) -> some View {
         EditorV2PairSheet(
             source: source,
             candidates: session.exercises.filter { $0.id != source.id },
@@ -282,7 +286,7 @@ struct EditorV2View: View {
         .presentationDetents([.medium, .large])
     }
 
-    private var addSheet: some View {
+    fileprivate var addSheet: some View {
         EditorV2AddExerciseSheet(
             formatLabel: formatLabel,
             replaceMode: replaceExerciseID != nil,
@@ -309,28 +313,28 @@ struct EditorV2View: View {
         .presentationDetents([.large])
     }
 
-    private var menuExerciseBinding: Binding<EditorV2Exercise?> {
+    fileprivate var menuExerciseBinding: Binding<EditorV2Exercise?> {
         Binding(
             get: { menuExerciseID.flatMap { id in session.exercises.first { $0.id == id } } },
             set: { menuExerciseID = $0?.id }
         )
     }
 
-    private var editExerciseBinding: Binding<EditorV2Exercise?> {
+    fileprivate var editExerciseBinding: Binding<EditorV2Exercise?> {
         Binding(
             get: { editExerciseID.flatMap { id in session.exercises.first { $0.id == id } } },
             set: { editExerciseID = $0?.id }
         )
     }
 
-    private var pairSourceBinding: Binding<EditorV2Exercise?> {
+    fileprivate var pairSourceBinding: Binding<EditorV2Exercise?> {
         Binding(
             get: { pairSourceID.flatMap { id in session.exercises.first { $0.id == id } } },
             set: { pairSourceID = $0?.id }
         )
     }
 
-    private var configGroupBinding: Binding<ConfigGroupItem?> {
+    fileprivate var configGroupBinding: Binding<ConfigGroupItem?> {
         Binding(
             get: {
                 guard let key = configGroupKey, let group = session.groups[key] else { return nil }
@@ -341,7 +345,7 @@ struct EditorV2View: View {
     }
 }
 
-private struct ConfigGroupItem: Identifiable {
+struct ConfigGroupItem: Identifiable {
     let id: String
     let group: EditorV2Group
 }
