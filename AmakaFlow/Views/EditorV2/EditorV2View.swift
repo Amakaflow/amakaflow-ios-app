@@ -46,10 +46,26 @@ struct EditorV2View: View {
             VStack(spacing: 0) {
                 header
                 ScrollView {
-                    content
-                        .padding(.horizontal, 18)
-                        .padding(.top, 12)
-                        .padding(.bottom, 120)
+                    EditorV2Content.main(
+                        session: session,
+                        isReorderMode: isReorderMode,
+                        onConfigGroup: { configGroupKey = $0 },
+                        onOpen: { editExerciseID = $0 },
+                        onMenu: { menuExerciseID = $0 },
+                        onReorder: { session.reorder(fromOffsets: $0, toOffset: $1) },
+                        onExitReorder: { isReorderMode = false },
+                        onAdd: {
+                            replaceExerciseID = nil
+                            addSheetOpen = true
+                        },
+                        onStartFormat: { type in
+                            _ = session.startFormat(type)
+                            showToast("\(type.label) — add the moves, timing is set")
+                        }
+                    )
+                    .padding(.horizontal, 18)
+                    .padding(.top, 12)
+                    .padding(.bottom, 120)
                 }
                 .scrollContentBackground(.hidden)
             }
@@ -74,107 +90,12 @@ struct EditorV2View: View {
         .onChange(of: saveModel.didSave) { _, saved in
             if saved { dismiss() }
         }
-        .sheet(item: menuExerciseBinding) { exercise in
-            EditorV2MenuSheet(
-                exercise: exercise,
-                isInSuperset: isInSuperset(exercise),
-                onReorder: {
-                    menuExerciseID = nil
-                    isReorderMode = true
-                },
-                onReplace: {
-                    replaceExerciseID = exercise.id
-                    menuExerciseID = nil
-                    addSheetOpen = true
-                },
-                onSupersetToggle: {
-                    if isInSuperset(exercise) {
-                        session.removeFromSuperset(exercise.id)
-                        showToast("Removed from superset")
-                        menuExerciseID = nil
-                    } else {
-                        pairSourceID = exercise.id
-                        menuExerciseID = nil
-                    }
-                },
-                onAddSet: {
-                    session.addSet(to: exercise.id)
-                    showToast("Set added ✓")
-                    menuExerciseID = nil
-                },
-                onRemove: {
-                    session.removeExercise(exercise.id)
-                    showToast("Removed")
-                    menuExerciseID = nil
-                }
-            )
-            .presentationDetents([.medium])
-        }
-        .sheet(item: editExerciseBinding) { exercise in
-            EditorV2EditSheet(exercise: exercise) { updated in
-                if let index = session.exercises.firstIndex(where: { $0.id == updated.id }) {
-                    session.exercises[index] = updated
-                }
-                editExerciseID = nil
-            }
-            .presentationDetents([.medium, .large])
-        }
-        .sheet(item: configGroupBinding) { item in
-            EditorV2GroupConfigSheet(
-                groupKey: item.id,
-                group: item.group,
-                onChange: { session.groups[item.id] = $0 },
-                onDone: { configGroupKey = nil },
-                onUngroup: {
-                    session.ungroup(item.id)
-                    configGroupKey = nil
-                    showToast("Ungrouped — now straight sets")
-                }
-            )
-            .presentationDetents([.medium, .large])
-        }
-        .sheet(item: pairSourceBinding) { source in
-            EditorV2PairSheet(
-                source: source,
-                candidates: session.exercises.filter { $0.id != source.id },
-                groups: session.groups,
-                onPick: { targetID in
-                    session.pairSuperset(sourceID: source.id, targetID: targetID)
-                    pairSourceID = nil
-                    showToast("Superset paired ✓")
-                }
-            )
-            .presentationDetents([.medium, .large])
-        }
-        .sheet(isPresented: $addSheetOpen) {
-            EditorV2AddExerciseSheet(
-                formatLabel: formatLabel,
-                replaceMode: replaceExerciseID != nil,
-                onAdd: { name in
-                    if let replaceID = replaceExerciseID {
-                        session.replaceExercise(replaceID, with: name)
-                        replaceExerciseID = nil
-                        addSheetOpen = false
-                        showToast("Replaced ✓")
-                    } else {
-                        _ = session.addExercise(named: name)
-                        let fmt = formatLabel
-                        showToast(
-                            fmt.map { "\(name) added to the \($0)" }
-                                ?? "\(name) added · 3×10 · 60s — tap to tweak"
-                        )
-                    }
-                },
-                onDone: {
-                    addSheetOpen = false
-                    replaceExerciseID = nil
-                }
-            )
-            .presentationDetents([.large])
-        }
+        .sheet(item: menuExerciseBinding, content: menuSheet)
+        .sheet(item: editExerciseBinding, content: editSheet)
+        .sheet(item: configGroupBinding, content: configSheet)
+        .sheet(item: pairSourceBinding, content: pairSheet)
+        .sheet(isPresented: $addSheetOpen) { addSheet }
     }
-
-    // MARK: - Header
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -198,7 +119,9 @@ struct EditorV2View: View {
                     } label: {
                         Text(isReorderMode ? "✓ Done" : "⇅ Reorder")
                             .ddDisplayText(12.5, weight: .bold)
-                            .foregroundColor(isReorderMode ? DailyDriver.lime : DailyDriver.foregroundMuted)
+                            .foregroundColor(
+                                isReorderMode ? DailyDriver.lime : DailyDriver.foregroundMuted
+                            )
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("editor_v2_reorder_toggle")
@@ -232,181 +155,6 @@ struct EditorV2View: View {
         }
         return "TAP AN EXERCISE TO EDIT IT · ⋯ FOR EVERYTHING ELSE"
     }
-
-    // MARK: - Content
-
-    @ViewBuilder
-    private var content: some View {
-        if isReorderMode {
-            reorderList
-        } else if session.exercises.isEmpty, session.formatGroupKey == nil {
-            emptyState
-            addExerciseButton(emphasized: true)
-        } else if session.exercises.isEmpty, let fmtKey = session.formatGroupKey,
-                  let group = session.groups[fmtKey] {
-            formatPinnedPlaceholder(group: group, key: fmtKey)
-            addExerciseButton(emphasized: false)
-        } else {
-            ForEach(session.runs) { run in
-                if let key = run.groupKey, let group = session.groups[key] {
-                    EditorV2GroupedRun(
-                        group: group,
-                        exercises: run.exercises,
-                        onPill: { configGroupKey = key },
-                        onOpen: { editExerciseID = $0.id },
-                        onMenu: { menuExerciseID = $0.id }
-                    )
-                } else {
-                    ForEach(run.exercises) { exercise in
-                        EditorV2ExerciseCard(
-                            exercise: exercise,
-                            onOpen: { editExerciseID = exercise.id },
-                            onMenu: { menuExerciseID = exercise.id }
-                        )
-                    }
-                }
-            }
-            addExerciseButton(emphasized: false)
-        }
-    }
-
-    private var emptyState: some View {
-        VStack(spacing: 0) {
-            Text("Start with any exercise")
-                .ddDisplayText(15, weight: .bold)
-                .foregroundColor(DailyDriver.foreground)
-            Text(
-                "Every exercise lands as 3 × 10 · 60s rest — tap it to tweak. Pair any two into a superset with ⋯ whenever you're ready."
-            )
-            .font(.system(size: 11.5))
-            .foregroundColor(DailyDriver.foregroundMuted)
-            .multilineTextAlignment(.center)
-            .padding(.top, 6)
-            .lineSpacing(3)
-
-            Text("KNOW THE FORMAT ALREADY?")
-                .font(.system(size: 9, weight: .medium, design: .monospaced))
-                .foregroundColor(DailyDriver.foregroundDim)
-                .padding(.top, 18)
-                .padding(.bottom, 8)
-
-            FlexibleFormatChips {
-                ForEach(EditorV2GroupType.formatChips, id: \.self) { type in
-                    Button {
-                        _ = session.startFormat(type)
-                        showToast("\(type.label) — add the moves, timing is set")
-                    } label: {
-                        Text(type.label)
-                            .ddDisplayText(12, weight: .bold)
-                            .foregroundColor(DailyDriver.foreground)
-                            .padding(.horizontal, 13)
-                            .padding(.vertical, 8)
-                            .background(DailyDriver.card2)
-                            .clipShape(Capsule())
-                            .overlay(
-                                Capsule().stroke(type.accentColor.opacity(0.45), lineWidth: 1)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("editor_v2_format_chip_\(type.rawValue)")
-                }
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 22)
-        .padding(.horizontal, 10)
-    }
-
-    private func formatPinnedPlaceholder(group: EditorV2Group, key: String) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            EditorV2GroupPill(group: group) { configGroupKey = key }
-            VStack(spacing: 5) {
-                Text("Timing's set — add the moves")
-                    .ddDisplayText(13.5, weight: .bold)
-                    .foregroundColor(DailyDriver.foreground)
-                Text(
-                    "Everything you add runs inside this \(group.type.label). Tap the pill to change the numbers — or the format."
-                )
-                .font(.system(size: 11))
-                .foregroundColor(DailyDriver.foregroundMuted)
-                .multilineTextAlignment(.center)
-                .lineSpacing(2)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(22)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6]))
-                    .foregroundColor(DailyDriver.borderStrong)
-            )
-        }
-        .padding(.bottom, 10)
-    }
-
-    private var reorderList: some View {
-        VStack(spacing: 6) {
-            List {
-                ForEach(session.exercises) { exercise in
-                    EditorV2ReorderRow(
-                        exercise: exercise,
-                        group: exercise.groupKey.flatMap { session.groups[$0] }
-                    )
-                    .listRowInsets(EdgeInsets(top: 3, leading: 0, bottom: 3, trailing: 0))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                }
-                .onMove { indices, offset in
-                    session.reorder(fromOffsets: indices, toOffset: offset)
-                }
-            }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .frame(minHeight: CGFloat(session.exercises.count) * 56)
-            .environment(\.editMode, .constant(.active))
-
-            Button {
-                isReorderMode = false
-            } label: {
-                Text("Done")
-                    .ddDisplayText(14, weight: .bold)
-                    .foregroundColor(DailyDriver.ink)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 13)
-                    .background(DailyDriver.lime)
-                    .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-            .ddLimeGlow()
-            .padding(.top, 10)
-            .accessibilityIdentifier("editor_v2_reorder_done")
-        }
-    }
-
-    private func addExerciseButton(emphasized: Bool) -> some View {
-        Button {
-            replaceExerciseID = nil
-            addSheetOpen = true
-        } label: {
-            Text("＋ Add exercise")
-                .ddDisplayText(13.5, weight: .bold)
-                .foregroundColor(emphasized ? DailyDriver.ink : DailyDriver.foregroundMuted)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(emphasized ? DailyDriver.lime : Color.clear)
-                .overlay {
-                    if !emphasized {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6]))
-                            .foregroundColor(DailyDriver.borderStrong)
-                    }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("editor_v2_add_exercise")
-    }
-
-    // MARK: - Helpers
 
     private var formatLabel: String? {
         guard let key = session.formatGroupKey else { return nil }
@@ -449,6 +197,109 @@ struct EditorV2View: View {
         }
     }
 
+    private func menuSheet(_ exercise: EditorV2Exercise) -> some View {
+        EditorV2MenuSheet(
+            exercise: exercise,
+            isInSuperset: isInSuperset(exercise),
+            onReorder: {
+                menuExerciseID = nil
+                isReorderMode = true
+            },
+            onReplace: {
+                replaceExerciseID = exercise.id
+                menuExerciseID = nil
+                addSheetOpen = true
+            },
+            onSupersetToggle: {
+                if isInSuperset(exercise) {
+                    session.removeFromSuperset(exercise.id)
+                    showToast("Removed from superset")
+                    menuExerciseID = nil
+                } else {
+                    pairSourceID = exercise.id
+                    menuExerciseID = nil
+                }
+            },
+            onAddSet: {
+                session.addSet(to: exercise.id)
+                showToast("Set added ✓")
+                menuExerciseID = nil
+            },
+            onRemove: {
+                session.removeExercise(exercise.id)
+                showToast("Removed")
+                menuExerciseID = nil
+            }
+        )
+        .presentationDetents([.medium])
+    }
+
+    private func editSheet(_ exercise: EditorV2Exercise) -> some View {
+        EditorV2EditSheet(exercise: exercise) { updated in
+            if let index = session.exercises.firstIndex(where: { $0.id == updated.id }) {
+                session.exercises[index] = updated
+            }
+            editExerciseID = nil
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func configSheet(_ item: ConfigGroupItem) -> some View {
+        EditorV2GroupConfigSheet(
+            groupKey: item.id,
+            group: item.group,
+            onChange: { session.groups[item.id] = $0 },
+            onDone: { configGroupKey = nil },
+            onUngroup: {
+                session.ungroup(item.id)
+                configGroupKey = nil
+                showToast("Ungrouped — now straight sets")
+            }
+        )
+        .presentationDetents([.medium, .large])
+    }
+
+    private func pairSheet(_ source: EditorV2Exercise) -> some View {
+        EditorV2PairSheet(
+            source: source,
+            candidates: session.exercises.filter { $0.id != source.id },
+            groups: session.groups,
+            onPick: { targetID in
+                session.pairSuperset(sourceID: source.id, targetID: targetID)
+                pairSourceID = nil
+                showToast("Superset paired ✓")
+            }
+        )
+        .presentationDetents([.medium, .large])
+    }
+
+    private var addSheet: some View {
+        EditorV2AddExerciseSheet(
+            formatLabel: formatLabel,
+            replaceMode: replaceExerciseID != nil,
+            onAdd: { name in
+                if let replaceID = replaceExerciseID {
+                    session.replaceExercise(replaceID, with: name)
+                    replaceExerciseID = nil
+                    addSheetOpen = false
+                    showToast("Replaced ✓")
+                } else {
+                    _ = session.addExercise(named: name)
+                    let fmt = formatLabel
+                    showToast(
+                        fmt.map { "\(name) added to the \($0)" }
+                            ?? "\(name) added · 3×10 · 60s — tap to tweak"
+                    )
+                }
+            },
+            onDone: {
+                addSheetOpen = false
+                replaceExerciseID = nil
+            }
+        )
+        .presentationDetents([.large])
+    }
+
     private var menuExerciseBinding: Binding<EditorV2Exercise?> {
         Binding(
             get: { menuExerciseID.flatMap { id in session.exercises.first { $0.id == id } } },
@@ -484,47 +335,6 @@ struct EditorV2View: View {
 private struct ConfigGroupItem: Identifiable {
     let id: String
     let group: EditorV2Group
-}
-
-private struct FlexibleFormatChips: Layout {
-    var spacing: CGFloat = 6
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let maxWidth = proposal.width ?? 320
-        var x: CGFloat = 0
-        var y: CGFloat = 0
-        var rowHeight: CGFloat = 0
-        var maxX: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x + size.width > maxWidth, x > 0 {
-                x = 0
-                y += rowHeight + spacing
-                rowHeight = 0
-            }
-            rowHeight = max(rowHeight, size.height)
-            x += size.width + spacing
-            maxX = max(maxX, x)
-        }
-        return CGSize(width: maxWidth, height: y + rowHeight)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var x = bounds.minX
-        var y = bounds.minY
-        var rowHeight: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x + size.width > bounds.maxX, x > bounds.minX {
-                x = bounds.minX
-                y += rowHeight + spacing
-                rowHeight = 0
-            }
-            subview.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
-            x += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
-    }
 }
 
 #if DEBUG
