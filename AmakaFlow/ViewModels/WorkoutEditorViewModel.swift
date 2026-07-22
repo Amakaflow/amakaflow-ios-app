@@ -16,6 +16,8 @@ class WorkoutEditorViewModel: ObservableObject {
     @Published var name: String = ""
     @Published var sport: WorkoutSport = .strength
     @Published var intervals: [WorkoutSaveInterval] = []
+    /// ADR-017 blocks (+ structure_source) when saving from Editor v2 / clarify.
+    @Published var saveBlocks: [SocialImportBlock]?
     @Published var isSaving: Bool = false
     @Published var errorMessage: String?
     @Published var didSave: Bool = false
@@ -115,7 +117,8 @@ class WorkoutEditorViewModel: ObservableObject {
                     return !(interval.name ?? "").trimmingCharacters(in: .whitespaces).isEmpty
                 }
                 return true
-            }
+            },
+            blocks: saveBlocks
         )
 
         do {

@@ -2,8 +2,9 @@
 //  DDEditorView.swift
 //  AmakaFlow
 //
-//  Daily Driver workout editor — edit / new / import / backfill (dd-editor-*.png).
-//  Ground truth: design-handoff/reference/screens-daily-driver.jsx DDEditorScreen ~L703.
+//  Daily Driver workout editor shell.
+//  AMA-2307: .edit / .importReview / .new → Editor v2 (screens-editor2.jsx).
+//  .backfill keeps the legacy accordion (dd-editor-backfill-dark.png).
 //
 
 import SwiftUI
@@ -397,6 +398,15 @@ struct DDEditorView: View {
     }
 
     var body: some View {
+        // AMA-2307: calm Editor v2 for edit / import / new; legacy accordion only for backfill.
+        if mode == .backfill {
+            legacyEditorBody
+        } else {
+            EditorV2View(mode: mode, workout: workout)
+        }
+    }
+
+    private var legacyEditorBody: some View {
         ZStack(alignment: .bottom) {
             DailyDriver.screenBackground.ignoresSafeArea()
 
@@ -985,7 +995,5 @@ private struct DDEditorFlowLayout: Layout {
 }
 
 #if DEBUG
-#Preview("DD Editor · edit") {
-    DDEditorView(mode: .edit)
-}
+#Preview { DDEditorView(mode: .backfill) }
 #endif
