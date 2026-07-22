@@ -134,13 +134,19 @@ enum SocialImportPlatform: String, Codable, CaseIterable, Equatable {
     }
 }
 
-/// Trust/debug metadata pulled from the original social post (AMA-2297).
+/// Trust/debug metadata pulled from the original social post (AMA-2297 / AMA-2302).
 struct SocialImportPostProvenance: Equatable {
     var creator: String?
     var captionSnippet: String?
     var transcriptSnippet: String?
     var mode: String?
     var shortcode: String?
+    /// Backend ladder: how the workout was extracted (`_provenance.extraction_method`).
+    var extractionMethod: String?
+    /// Whether the ≥2-exercise gate passed (`_provenance.exercise_gate_passed`).
+    var exerciseGatePassed: Bool?
+    /// Which ladder tier ran (`_provenance.tier_attempted`).
+    var tierAttempted: String?
 
     var creatorDisplay: String {
         guard let creator = creator?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -160,8 +166,30 @@ struct SocialImportPostProvenance: Equatable {
         return nil
     }
 
+    /// Short badge label for trust strip (e.g. `apify_caption` → `Caption`).
+    var extractionMethodDisplay: String? {
+        guard let raw = extractionMethod?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.isEmpty else { return nil }
+        switch raw.lowercased() {
+        case "apify_caption": return "Caption"
+        case "apify_transcript": return "Transcript"
+        case "whisper_audio": return "Audio"
+        case "vision_frames", "sidecar_vision": return "Vision"
+        case "hybrid_asr_vision": return "Audio + vision"
+        case "hybrid_transcript_vision": return "Transcript + vision"
+        default:
+            return raw
+                .replacingOccurrences(of: "_", with: " ")
+                .capitalized
+        }
+    }
+
     var hasDisplayableInfo: Bool {
-        creator != nil || contentSnippet != nil || shortcode != nil || mode != nil
+        creator != nil
+            || contentSnippet != nil
+            || shortcode != nil
+            || mode != nil
+            || extractionMethod != nil
     }
 }
 

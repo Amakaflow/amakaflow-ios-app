@@ -176,6 +176,9 @@ struct StructureClarifyView: View {
 
     private var provenanceMono: String {
         let creator = draft?.postProvenance?.creatorDisplay.uppercased() ?? "CREATOR"
+        if let method = draft?.postProvenance?.extractionMethodDisplay?.uppercased() {
+            return "\(creator) · VIA \(method)"
+        }
         let mode = (draft?.postProvenance?.mode ?? "reel caption").uppercased()
         return "\(creator) · \(mode) PARSED"
     }
