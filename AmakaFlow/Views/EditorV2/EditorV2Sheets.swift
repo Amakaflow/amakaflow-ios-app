@@ -65,6 +65,16 @@ struct EditorV2EditSheet: View {
                 if draft.reps != nil {
                     EditorV2Stepper(label: "Reps", value: draft.reps ?? 0, min: 1, max: 50) { draft.reps = $0 }
                 }
+                if draft.durationSeconds != nil {
+                    EditorV2Stepper(
+                        label: "Time",
+                        value: draft.durationSeconds ?? 0,
+                        unit: "s",
+                        min: 5,
+                        max: 3600,
+                        step: 5
+                    ) { draft.durationSeconds = $0 }
+                }
                 if draft.distanceMeters != nil {
                     EditorV2Stepper(
                         label: "Distance",
@@ -84,6 +94,16 @@ struct EditorV2EditSheet: View {
                         max: 300,
                         step: 2
                     ) { draft.weightKg = Double($0) }
+                }
+                if draft.calories != nil {
+                    EditorV2Stepper(
+                        label: "Calories",
+                        value: draft.calories ?? 0,
+                        unit: " cal",
+                        min: 1,
+                        max: 200,
+                        step: 1
+                    ) { draft.calories = $0 }
                 }
                 if draft.restSeconds != nil {
                     EditorV2Stepper(
@@ -226,7 +246,7 @@ private struct FlowRunsAsChips: View {
     var onSelect: (EditorV2GroupType) -> Void
 
     var body: some View {
-        EditorV2ChipWrap {
+        EditorV2FlowWrap {
             ForEach(EditorV2GroupType.runsAsOptions, id: \.self) { type in
                 Button {
                     onSelect(type)
@@ -439,45 +459,5 @@ private func menuRow(
     .buttonStyle(.plain)
     .overlay(alignment: .bottom) {
         Rectangle().fill(DailyDriver.border).frame(height: 1)
-    }
-}
-
-/// Wrap layout for Runs-as chips (distinct from clarify FlexibleChipWrap View).
-private struct EditorV2ChipWrap: Layout {
-    var spacing: CGFloat = 6
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let maxWidth = proposal.width ?? .infinity
-        var originX: CGFloat = 0
-        var originY: CGFloat = 0
-        var rowHeight: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if originX + size.width > maxWidth, originX > 0 {
-                originX = 0
-                originY += rowHeight + spacing
-                rowHeight = 0
-            }
-            rowHeight = max(rowHeight, size.height)
-            originX += size.width + spacing
-        }
-        return CGSize(width: maxWidth, height: originY + rowHeight)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var originX = bounds.minX
-        var originY = bounds.minY
-        var rowHeight: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if originX + size.width > bounds.maxX, originX > bounds.minX {
-                originX = bounds.minX
-                originY += rowHeight + spacing
-                rowHeight = 0
-            }
-            subview.place(at: CGPoint(x: originX, y: originY), proposal: ProposedViewSize(size))
-            originX += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
     }
 }

@@ -34,6 +34,10 @@ final class EditorV2Tests: XCTestCase {
             "4 ROUNDS · 3 MIN REST"
         )
         XCTAssertEqual(
+            EditorV2Group(type: .superset, config: .init(rounds: 3, restSeconds: 90)).metaLine,
+            "3 ROUNDS · 90S REST"
+        )
+        XCTAssertEqual(
             EditorV2Group(
                 type: .tabata,
                 config: .init(rounds: 8, restSeconds: 10, workSeconds: 20)
@@ -140,6 +144,21 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertEqual(session.exercises.map(\.name), ["C", "A", "B"])
     }
 
+    func testReorderClearsSplitGroupKeys() {
+        var session = EditorV2Session(exercises: [
+            EditorV2Exercise(id: "a", name: "A", sets: 3, reps: 10, groupKey: "ss1"),
+            EditorV2Exercise(id: "b", name: "B", sets: 3, reps: 10, groupKey: "ss1"),
+            EditorV2Exercise(id: "c", name: "C", sets: 3, reps: 10)
+        ])
+        session.groups["ss1"] = EditorV2Group(id: "ss1", type: .superset)
+
+        // Move C between A and B → splits the superset.
+        session.reorder(fromOffsets: IndexSet(integer: 2), toOffset: 1)
+        XCTAssertEqual(session.exercises.map(\.name), ["A", "C", "B"])
+        XCTAssertTrue(session.exercises.allSatisfy { $0.groupKey == nil })
+        XCTAssertNil(session.groups["ss1"])
+    }
+
     // MARK: - Persistence round-trip
 
     func testExportBlocksPreserveStructureSource() {
@@ -200,5 +219,22 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertTrue(session.exercises.isEmpty)
         XCTAssertTrue(session.groups.isEmpty)
         XCTAssertEqual(session.title, "")
+    }
+
+    func testSaveIntervalsPreserveTimeAndCalories() {
+        var session = EditorV2Session(title: "Mixed")
+        session.exercises = [
+            EditorV2Exercise(name: "Plank", durationSeconds: 45, restSeconds: 15),
+            EditorV2Exercise(name: "SkiErg", restSeconds: 30, calories: 20),
+            EditorV2Exercise(name: "Run", distanceMeters: 400, restSeconds: 60)
+        ]
+        let intervals = session.toSaveIntervals()
+        XCTAssertEqual(intervals[0].type, "time")
+        XCTAssertEqual(intervals[0].seconds, 45)
+        XCTAssertEqual(intervals[1].type, "time")
+        XCTAssertEqual(intervals[1].seconds, 20)
+        XCTAssertEqual(intervals[1].target, "20 cal")
+        XCTAssertEqual(intervals[2].type, "distance")
+        XCTAssertEqual(intervals[2].meters, 400)
     }
 }

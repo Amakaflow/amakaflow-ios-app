@@ -111,10 +111,16 @@ extension EditorV2Session {
 
     func toSaveIntervals() -> [WorkoutSaveInterval] {
         exercises.map { exercise in
-            let load = exercise.weightKg.map { weight in
-                weight.truncatingRemainder(dividingBy: 1) == 0
-                    ? "\(Int(weight)) kg"
-                    : String(format: "%.1f kg", weight)
+            let load = exercise.weightKg.map(EditorV2Exercise.formatWeightLoad)
+            if let seconds = exercise.durationSeconds, seconds > 0,
+               exercise.reps == nil, exercise.sets == nil, exercise.distanceMeters == nil {
+                return WorkoutSaveInterval(
+                    type: "time",
+                    name: exercise.name,
+                    seconds: seconds,
+                    restSeconds: exercise.restSeconds,
+                    load: load
+                )
             }
             if let meters = exercise.distanceMeters, meters > 0 {
                 return WorkoutSaveInterval(
@@ -123,6 +129,15 @@ extension EditorV2Session {
                     meters: meters,
                     restSeconds: exercise.restSeconds,
                     load: load
+                )
+            }
+            if let calories = exercise.calories, calories > 0 {
+                return WorkoutSaveInterval(
+                    type: "time",
+                    name: exercise.name,
+                    seconds: calories,
+                    restSeconds: exercise.restSeconds,
+                    target: "\(calories) cal"
                 )
             }
             return WorkoutSaveInterval(
@@ -144,9 +159,11 @@ private extension DDEditorExerciseDraft {
             name: name,
             sets: sets,
             reps: reps,
+            durationSeconds: durationSeconds,
             distanceMeters: distanceMeters,
             weightKg: weightKg,
             restSeconds: restSeconds,
+            calories: calories,
             groupKey: groupKey,
             swapMessage: swapMessage,
             swapReplacementName: swapReplacementName
@@ -160,12 +177,10 @@ private extension EditorV2Exercise {
             name: name,
             sets: sets,
             reps: reps,
+            seconds: durationSeconds,
             distanceMeters: distanceMeters,
-            load: weightKg.map { weight in
-                weight.truncatingRemainder(dividingBy: 1) == 0
-                    ? "\(Int(weight)) kg"
-                    : String(format: "%.1f kg", weight)
-            }
+            load: weightKg.map(EditorV2Exercise.formatWeightLoad),
+            notes: calories.map { "\($0) cal" }
         )
     }
 }

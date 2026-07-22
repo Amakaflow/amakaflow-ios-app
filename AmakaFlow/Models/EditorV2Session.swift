@@ -183,6 +183,7 @@ struct EditorV2Session: Equatable, Sendable {
             moved.groupKey = key
             exercises.append(moved)
         }
+        pruneEmptyGroups()
     }
 
     mutating func moveExercise(from fromID: String, to toID: String) {
@@ -192,6 +193,7 @@ struct EditorV2Session: Equatable, Sendable {
         let item = exercises.remove(at: fromIndex)
         let adjusted = toIndex > fromIndex ? toIndex - 1 : toIndex
         exercises.insert(item, at: adjusted)
+        repairBrokenGroups()
     }
 
     mutating func reorder(fromOffsets: IndexSet, toOffset: Int) {
@@ -207,6 +209,22 @@ struct EditorV2Session: Equatable, Sendable {
         insertAt = max(0, min(insertAt, items.count))
         items.insert(contentsOf: moving, at: insertAt)
         exercises = items
+        repairBrokenGroups()
+    }
+
+    /// If a reorder splits a group, clear those groupKeys so runs stay contiguous.
+    private mutating func repairBrokenGroups() {
+        let keys = Set(exercises.compactMap(\.groupKey))
+        for key in keys {
+            let indices = exercises.indices.filter { exercises[$0].groupKey == key }
+            guard let first = indices.first, let last = indices.last else { continue }
+            let contiguous = last - first + 1 == indices.count
+            guard !contiguous else { continue }
+            for index in indices {
+                exercises[index].groupKey = nil
+            }
+        }
+        pruneEmptyGroups()
     }
 
     private mutating func pruneEmptyGroups() {

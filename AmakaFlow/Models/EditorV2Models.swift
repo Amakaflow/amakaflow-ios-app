@@ -151,9 +151,16 @@ struct EditorV2Group: Equatable, Identifiable, Sendable {
         case .superset:
             let rounds = config.rounds ?? 3
             let rest = config.restSeconds ?? 60
-            let restText = rest >= 60 ? "\(rest / 60) MIN" : "\(rest)S"
-            return "\(rounds) ROUNDS · \(restText) REST"
+            return "\(rounds) ROUNDS · \(Self.restMetaText(rest)) REST"
         }
+    }
+
+    /// Rest labels: keep exact seconds when not a whole minute (90s ≠ “1 MIN”).
+    static func restMetaText(_ rest: Int) -> String {
+        if rest >= 60, rest % 60 == 0 {
+            return "\(rest / 60) MIN"
+        }
+        return "\(rest)S"
     }
 
     /// Steppers for the group config sheet — only fields this type needs.
@@ -200,9 +207,11 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
     var name: String
     var sets: Int?
     var reps: Int?
+    var durationSeconds: Int?
     var distanceMeters: Int?
     var weightKg: Double?
     var restSeconds: Int?
+    var calories: Int?
     var groupKey: String?
     var swapMessage: String?
     var swapReplacementName: String?
@@ -212,9 +221,11 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
         name: String,
         sets: Int? = nil,
         reps: Int? = nil,
+        durationSeconds: Int? = nil,
         distanceMeters: Int? = nil,
         weightKg: Double? = nil,
         restSeconds: Int? = nil,
+        calories: Int? = nil,
         groupKey: String? = nil,
         swapMessage: String? = nil,
         swapReplacementName: String? = nil
@@ -223,9 +234,11 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
         self.name = name
         self.sets = sets
         self.reps = reps
+        self.durationSeconds = durationSeconds
         self.distanceMeters = distanceMeters
         self.weightKg = weightKg
         self.restSeconds = restSeconds
+        self.calories = calories
         self.groupKey = groupKey
         self.swapMessage = swapMessage
         self.swapReplacementName = swapReplacementName
@@ -239,15 +252,26 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
         } else if let reps {
             parts.append("\(reps) REPS")
         }
+        if let durationSeconds {
+            parts.append(EditorV2Group.restMetaText(durationSeconds))
+        }
         if let distanceMeters { parts.append("\(distanceMeters) M") }
         if let weightKg {
-            let text = weightKg.truncatingRemainder(dividingBy: 1) == 0
-                ? String(Int(weightKg))
-                : String(format: "%.1f", weightKg)
-            parts.append("\(text) KG")
+            parts.append("\(Self.formatWeight(weightKg)) KG")
         }
+        if let calories { parts.append("\(calories) CAL") }
         if let restSeconds { parts.append("\(restSeconds)S REST") }
         return parts.joined(separator: " · ")
+    }
+
+    static func formatWeight(_ weightKg: Double) -> String {
+        weightKg.truncatingRemainder(dividingBy: 1) == 0
+            ? String(Int(weightKg))
+            : String(format: "%.1f", weightKg)
+    }
+
+    static func formatWeightLoad(_ weightKg: Double) -> String {
+        "\(formatWeight(weightKg)) kg"
     }
 
     /// Visible tap targets on a calm card: body + ⋯ only.

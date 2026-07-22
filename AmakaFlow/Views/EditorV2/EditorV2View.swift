@@ -81,13 +81,7 @@ struct EditorV2View: View {
             }
         }
         .preferredColorScheme(.dark)
-        .overlay(alignment: .top) {
-            Text(" ")
-                .font(.system(size: 1))
-                .opacity(0.01)
-                .accessibilityIdentifier("workout_editor_screen")
-                .accessibilityIdentifier("editor_v2_screen")
-        }
+        .overlay(alignment: .top) { accessibilityMarkers }
         .overlay(alignment: .bottom) { toastOverlay }
         .onChange(of: saveModel.didSave) { _, saved in
             if saved { dismiss() }
@@ -97,6 +91,15 @@ struct EditorV2View: View {
         .sheet(item: configGroupBinding, content: configSheet)
         .sheet(item: pairSourceBinding, content: pairSheet)
         .sheet(isPresented: $addSheetOpen) { addSheet }
+    }
+
+    private var accessibilityMarkers: some View {
+        ZStack {
+            Text(" ").font(.system(size: 1)).opacity(0.01)
+                .accessibilityIdentifier("workout_editor_screen")
+            Text(" ").font(.system(size: 1)).opacity(0.01)
+                .accessibilityIdentifier("editor_v2_screen")
+        }
     }
 
     private var header: some View {

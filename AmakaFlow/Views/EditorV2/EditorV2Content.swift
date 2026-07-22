@@ -79,7 +79,7 @@ enum EditorV2Content {
                 .padding(.top, 18)
                 .padding(.bottom, 8)
 
-            EditorV2FormatChipWrap {
+            EditorV2FlowWrap {
                 ForEach(EditorV2GroupType.formatChips, id: \.self) { type in
                     Button {
                         onStartFormat(type)
@@ -151,7 +151,9 @@ enum EditorV2Content {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                 }
-                .onMove(actions.onReorder)
+                .onMove { indices, offset in
+                    actions.onReorder(indices, offset)
+                }
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
@@ -193,44 +195,5 @@ enum EditorV2Content {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("editor_v2_add_exercise")
-    }
-}
-
-struct EditorV2FormatChipWrap: Layout {
-    var spacing: CGFloat = 6
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let maxWidth = proposal.width ?? 320
-        var originX: CGFloat = 0
-        var originY: CGFloat = 0
-        var rowHeight: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if originX + size.width > maxWidth, originX > 0 {
-                originX = 0
-                originY += rowHeight + spacing
-                rowHeight = 0
-            }
-            rowHeight = max(rowHeight, size.height)
-            originX += size.width + spacing
-        }
-        return CGSize(width: maxWidth, height: originY + rowHeight)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var originX = bounds.minX
-        var originY = bounds.minY
-        var rowHeight: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if originX + size.width > bounds.maxX, originX > bounds.minX {
-                originX = bounds.minX
-                originY += rowHeight + spacing
-                rowHeight = 0
-            }
-            subview.place(at: CGPoint(x: originX, y: originY), proposal: ProposedViewSize(size))
-            originX += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
     }
 }
