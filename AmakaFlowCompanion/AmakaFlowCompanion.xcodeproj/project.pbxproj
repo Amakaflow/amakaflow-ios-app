@@ -115,6 +115,16 @@
 		AMA2308VMXBLD /* SocialImportViewModel+Failure.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2308VMXREF /* SocialImportViewModel+Failure.swift */; };
 		AMA2305VWBLD /* StructureClarifyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305VWREF /* StructureClarifyView.swift */; };
 		AMA2305TSTBLD /* StructureClarifyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305TSTREF /* StructureClarifyTests.swift */; };
+		AMA2307MDLBLD /* EditorV2Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307MDLREF /* EditorV2Models.swift */; };
+		AMA2307SESBLD /* EditorV2Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307SESREF /* EditorV2Session.swift */; };
+		AMA2307PERBLD /* EditorV2Session+Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307PERREF /* EditorV2Session+Persistence.swift */; };
+		AMA2307CMPBLD /* EditorV2Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307CMPREF /* EditorV2Components.swift */; };
+		AMA2307SHTBLD /* EditorV2Sheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307SHTREF /* EditorV2Sheets.swift */; };
+		AMA2307VWBLD /* EditorV2View.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307VWREF /* EditorV2View.swift */; };
+		AMA2307CNTBLD /* EditorV2Content.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307CNTREF /* EditorV2Content.swift */; };
+		AMA2307CRDBLD /* DDEditorLegacyCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307CRDREF /* DDEditorLegacyCards.swift */; };
+		AMA2307LEGBLD /* DDEditorLegacyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307LEGREF /* DDEditorLegacyView.swift */; };
+		AMA2307MDL2BLD /* DDEditorModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307MDL2REF /* DDEditorModels.swift */; };
 		AMA2285TSTBLD /* SocialImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285TSTREF /* SocialImportTests.swift */; };
 		AMA2291STARTSELBLD /* WorkoutStartSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2291STARTSELREF /* WorkoutStartSelection.swift */; };
 		AMA2291LIBDESTBLD /* LibraryDestination.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2291LIBDESTREF /* LibraryDestination.swift */; };
@@ -649,6 +659,16 @@
 		AMA2308VMXREF /* SocialImportViewModel+Failure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "SocialImportViewModel+Failure.swift"; path = "../AmakaFlow/ViewModels/SocialImportViewModel+Failure.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2305VWREF /* StructureClarifyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StructureClarifyView.swift; path = ../AmakaFlow/Views/SocialImport/StructureClarifyView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2305TSTREF /* StructureClarifyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StructureClarifyTests.swift; path = AmakaFlowCompanionTests/StructureClarifyTests.swift; sourceTree = "<group>"; };
+		AMA2307MDLREF /* EditorV2Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2Models.swift; path = ../AmakaFlow/Models/EditorV2Models.swift; sourceTree = SOURCE_ROOT; };
+		AMA2307SESREF /* EditorV2Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2Session.swift; path = ../AmakaFlow/Models/EditorV2Session.swift; sourceTree = SOURCE_ROOT; };
+		AMA2307PERREF /* EditorV2Session+Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "EditorV2Session+Persistence.swift"; path = "../AmakaFlow/Models/EditorV2Session+Persistence.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2307CMPREF /* EditorV2Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2Components.swift; path = ../AmakaFlow/Views/EditorV2/EditorV2Components.swift; sourceTree = SOURCE_ROOT; };
+		AMA2307SHTREF /* EditorV2Sheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2Sheets.swift; path = ../AmakaFlow/Views/EditorV2/EditorV2Sheets.swift; sourceTree = SOURCE_ROOT; };
+		AMA2307VWREF /* EditorV2View.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2View.swift; path = ../AmakaFlow/Views/EditorV2/EditorV2View.swift; sourceTree = SOURCE_ROOT; };
+		AMA2307CNTREF /* EditorV2Content.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2Content.swift; path = ../AmakaFlow/Views/EditorV2/EditorV2Content.swift; sourceTree = SOURCE_ROOT; };
+		AMA2307CRDREF /* DDEditorLegacyCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDEditorLegacyCards.swift; path = ../AmakaFlow/Views/DDEditorLegacyCards.swift; sourceTree = SOURCE_ROOT; };
+		AMA2307LEGREF /* DDEditorLegacyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDEditorLegacyView.swift; path = ../AmakaFlow/Views/DDEditorLegacyView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2307MDL2REF /* DDEditorModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDEditorModels.swift; path = ../AmakaFlow/Views/DDEditorModels.swift; sourceTree = SOURCE_ROOT; };
 		AMA2285TSTREF /* SocialImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialImportTests.swift; path = AmakaFlowCompanionTests/SocialImportTests.swift; sourceTree = "<group>"; };
 		AMA2291STARTSELREF /* WorkoutStartSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutStartSelection.swift; path = ../AmakaFlow/Models/WorkoutStartSelection.swift; sourceTree = SOURCE_ROOT; };
 		AMA2291LIBDESTREF /* LibraryDestination.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryDestination.swift; path = ../AmakaFlow/Models/LibraryDestination.swift; sourceTree = SOURCE_ROOT; };
@@ -1257,6 +1277,10 @@
 				AMA2293DDACT00000A /* DDActivityDetailView.swift */,
 				AMA2293DDPLAY00000A /* DDActivePlayerView.swift */,
 				AMA2293DDEDIT00000A /* DDEditorView.swift */,
+				AMA2307CNTREF /* EditorV2Content.swift */,
+				AMA2307CRDREF /* DDEditorLegacyCards.swift */,
+				AMA2307LEGREF /* DDEditorLegacyView.swift */,
+				AMA2307MDL2REF /* DDEditorModels.swift */,
 				AMA2297DDEXEDIT00A /* DDExerciseEditSheet.swift */,
 				AMA2293DDDEV000000A /* DDDeviceDetailView.swift */,
 				AMA2297DDDEVFIX00A /* DDDeviceFixture.swift */,
@@ -1561,6 +1585,9 @@
 				AMA2305FACREF /* StructureClarifySession+Factory.swift */,
 				AMA2305PERREF /* SocialImportDraft+Persistence.swift */,
 				AMA2305INGREF /* SocialImportDraft+Ingest.swift */,
+				AMA2307MDLREF /* EditorV2Models.swift */,
+				AMA2307SESREF /* EditorV2Session.swift */,
+				AMA2307PERREF /* EditorV2Session+Persistence.swift */,
 				AMA2291STARTSELREF /* WorkoutStartSelection.swift */,
 				AMA2291LIBDESTREF /* LibraryDestination.swift */,
 				AMA2289DIARYREF /* TodayDiary.swift */,
@@ -1588,6 +1615,9 @@
 				AMA2293IMPDETREF /* SocialImportDetailPreviewView.swift */,
 				AMA2305VWREF /* StructureClarifyView.swift */,
 				AMA2305CMPREF /* StructureClarifyComponents.swift */,
+				AMA2307CMPREF /* EditorV2Components.swift */,
+				AMA2307SHTREF /* EditorV2Sheets.swift */,
+				AMA2307VWREF /* EditorV2View.swift */,
 				AK00FIX014A /* ProgramDetailView.swift */,
 				AK00FIX015A /* ProgramsListView.swift */,
 				AK00FIX016A /* CalendarSyncView.swift */,
@@ -2242,6 +2272,16 @@
 				AMA2305VMXBLD /* SocialImportViewModel+StructureClarify.swift in Sources */,
 				AMA2308VMXBLD /* SocialImportViewModel+Failure.swift in Sources */,
 				AMA2305VWBLD /* StructureClarifyView.swift in Sources */,
+				AMA2307MDLBLD /* EditorV2Models.swift in Sources */,
+				AMA2307SESBLD /* EditorV2Session.swift in Sources */,
+				AMA2307PERBLD /* EditorV2Session+Persistence.swift in Sources */,
+				AMA2307CMPBLD /* EditorV2Components.swift in Sources */,
+				AMA2307SHTBLD /* EditorV2Sheets.swift in Sources */,
+				AMA2307VWBLD /* EditorV2View.swift in Sources */,
+				AMA2307CNTBLD /* EditorV2Content.swift in Sources */,
+				AMA2307CRDBLD /* DDEditorLegacyCards.swift in Sources */,
+				AMA2307LEGBLD /* DDEditorLegacyView.swift in Sources */,
+				AMA2307MDL2BLD /* DDEditorModels.swift in Sources */,
 				AMA2289FIXCMPBLD /* FixtureAPIService+Completions.swift in Sources */,
 				AMA2289DIARYBLD /* TodayDiary.swift in Sources */,
 				AMA2290BFILLBLD /* StrengthBackfill.swift in Sources */,

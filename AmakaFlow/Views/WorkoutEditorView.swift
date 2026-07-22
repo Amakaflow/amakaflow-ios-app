@@ -11,13 +11,13 @@ struct WorkoutEditorView: View {
     private let mode: DDEditorMode
     private let workout: Workout?
 
-    /// Create mode — opens block picker first (dd-editor-new-dark.png).
+    /// Create mode — Editor v2 empty + optional format chips (AMA-2307 / ADR-017).
     init() {
         mode = .new
         workout = nil
     }
 
-    /// Edit mode — populate from existing workout (dd-editor-dark.png).
+    /// Edit mode — Editor v2 calm list (AMA-2307 / ADR-017).
     init(workout: Workout) {
         mode = .edit
         self.workout = workout

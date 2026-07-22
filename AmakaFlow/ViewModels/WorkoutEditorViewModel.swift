@@ -5,8 +5,8 @@
 //  ViewModel for creating and editing workouts (AMA-1232)
 //
 
-import Foundation
 import Combine
+import Foundation
 import SwiftUI
 
 @MainActor
@@ -16,6 +16,8 @@ class WorkoutEditorViewModel: ObservableObject {
     @Published var name: String = ""
     @Published var sport: WorkoutSport = .strength
     @Published var intervals: [WorkoutSaveInterval] = []
+    /// ADR-017 blocks (+ structure_source) when saving from Editor v2 / clarify.
+    @Published var saveBlocks: [SocialImportBlock]?
     @Published var isSaving: Bool = false
     @Published var errorMessage: String?
     @Published var didSave: Bool = false
@@ -33,7 +35,7 @@ class WorkoutEditorViewModel: ObservableObject {
         (.cardio, "HIIT / Cardio"),
         (.mobility, "Yoga / Mobility"),
         (.swimming, "Swimming"),
-        (.other, "Other"),
+        (.other, "Other")
     ]
 
     // MARK: - Init
@@ -64,7 +66,7 @@ class WorkoutEditorViewModel: ObservableObject {
                 return WorkoutSaveInterval(type: "distance", meters: meters, target: target)
             case .rest(let seconds):
                 return WorkoutSaveInterval(type: "rest", seconds: seconds)
-            case .repeat(_, _):
+            case .repeat:
                 return WorkoutSaveInterval(type: "rest")
             }
         }
@@ -115,11 +117,12 @@ class WorkoutEditorViewModel: ObservableObject {
                     return !(interval.name ?? "").trimmingCharacters(in: .whitespaces).isEmpty
                 }
                 return true
-            }
+            },
+            blocks: saveBlocks
         )
 
         do {
-            let _ = try await dependencies.apiService.saveWorkout(request)
+            _ = try await dependencies.apiService.saveWorkout(request)
             print("[WorkoutEditorVM] Workout saved successfully: \(request.name)")
             didSave = true
         } catch {
