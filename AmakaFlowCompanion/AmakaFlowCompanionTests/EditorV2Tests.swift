@@ -183,6 +183,7 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertEqual(blocks[0].restSec, 180)
         XCTAssertEqual(blocks[0].exercises.count, 2)
         XCTAssertEqual(blocks[1].type, "sets")
+        XCTAssertEqual(blocks[1].structureSource, "user_confirmed")
         XCTAssertEqual(blocks[1].exercises.first?.name, "Curls")
     }
 
@@ -231,10 +232,13 @@ final class EditorV2Tests: XCTestCase {
         let intervals = session.toSaveIntervals()
         XCTAssertEqual(intervals[0].type, "time")
         XCTAssertEqual(intervals[0].seconds, 45)
+        XCTAssertEqual(intervals[0].restSeconds, 15)
         XCTAssertEqual(intervals[1].type, "time")
         XCTAssertEqual(intervals[1].seconds, 20)
         XCTAssertEqual(intervals[1].target, "20 cal")
+        XCTAssertEqual(intervals[1].restSeconds, 30)
         XCTAssertEqual(intervals[2].type, "distance")
         XCTAssertEqual(intervals[2].meters, 400)
+        XCTAssertEqual(intervals[2].restSeconds, 60)
     }
 }

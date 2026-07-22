@@ -160,7 +160,7 @@ struct EditorV2Session: Equatable, Sendable {
         if let existing = key, groups[existing]?.type == .superset {
             // join existing
         } else {
-            let createdKey = "ss\(Int(Date().timeIntervalSince1970 * 1000) % 100_000)"
+            let createdKey = "ss\(UUID().uuidString)"
             groups[createdKey] = EditorV2Group(
                 id: createdKey,
                 type: .superset,

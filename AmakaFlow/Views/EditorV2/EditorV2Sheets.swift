@@ -58,7 +58,10 @@ struct EditorV2EditSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             sheetTitle(draft.name)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 8)], spacing: 8) {
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2),
+                spacing: 8
+            ) {
                 if draft.sets != nil {
                     EditorV2Stepper(label: "Sets", value: draft.sets ?? 0, min: 1, max: 12) { draft.sets = $0 }
                 }
@@ -180,7 +183,10 @@ struct EditorV2GroupConfigSheet: View {
                     onChange(next)
                 }
             }
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 8)], spacing: 8) {
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2),
+                spacing: 8
+            ) {
                 ForEach(group.stepperRows, id: \.key) { row in
                     EditorV2Stepper(
                         label: row.label,

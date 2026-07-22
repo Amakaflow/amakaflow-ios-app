@@ -64,7 +64,7 @@ extension EditorV2Session {
                     exercises: flatBuffer,
                     type: StructureBlockType.sets.rawValue,
                     restSec: nil,
-                    structureSource: StructureSource.unknown.rawValue
+                    structureSource: StructureSource.userConfirmed.rawValue
                 )
             )
             flatBuffer = []
