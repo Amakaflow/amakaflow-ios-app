@@ -177,20 +177,92 @@ final class SocialImportTests: XCTestCase {
         XCTAssertTrue(draft.equipmentEmpty)
     }
 
-    func testDraftDecodeThinPayloadStillEditable() throws {
+    /// AMA-2302: title-only 200 JSON must not invent "Add exercises" — throw parse.
+    func testDraftDecodeThinPayloadThrowsParseFailure() {
         let json = """
         {"title":"Thin Import","source":"https://youtube.com/watch?v=1"}
         """.data(using: .utf8)!
-        let draft = try SocialImportDraft.fromIngestJSON(
-            json,
-            platform: .youtube,
-            sourceURL: nil,
-            equipmentEmpty: false,
-            equipmentNote: nil
+        XCTAssertThrowsError(
+            try SocialImportDraft.fromIngestJSON(
+                json,
+                platform: .youtube,
+                sourceURL: nil,
+                equipmentEmpty: false,
+                equipmentNote: nil
+            )
+        ) { error in
+            guard let failure = error as? SocialImportFailure,
+                  case .parse(let message) = failure else {
+                return XCTFail("Expected SocialImportFailure.parse, got \(error)")
+            }
+            XCTAssertFalse(message.lowercased().contains("add exercises"))
+            XCTAssertTrue(
+                message.lowercased().contains("exercise")
+                    || message.lowercased().contains("couldn't find")
+                    || message.lowercased().contains("extract"),
+                "Expected honest thin-fail copy, got: \(message)"
+            )
+        }
+    }
+
+    /// AMA-2302: HTTP 400 thin_payload → recoverable parse (not network / not empty editor).
+    func testThinPayload400MapsToHonestParseFailure() {
+        let body = "{\"detail\":\"thin_payload: ladder finished with fewer than 2 exercises\"}"
+        let mapped = SocialImportFailure.map(APIError.serverErrorWithBody(400, body))
+        guard let failure = mapped, case .parse(let message) = failure else {
+            return XCTFail("Expected parse for thin_payload 400, got \(String(describing: mapped))")
+        }
+        XCTAssertTrue(failure.isRetryable)
+        XCTAssertFalse(message.lowercased().contains("internet"))
+        XCTAssertFalse(message.lowercased().contains("−1009") || message.lowercased().contains("-1009"))
+        XCTAssertTrue(
+            message.lowercased().contains("exercise")
+                || message.lowercased().contains("couldn't find")
+                || message.lowercased().contains("reel"),
+            "Expected thin-content copy, got: \(message)"
         )
-        XCTAssertEqual(draft.title, "Thin Import")
-        XCTAssertFalse(draft.exercises.isEmpty)
-        XCTAssertEqual(draft.toWorkoutSaveRequest().source, "youtube")
+    }
+
+    /// AMA-2302: HTTP 502 parse_failed → retryable parse, distinct from thin / offline.
+    func testParseFailed502MapsToRetryableParseNotNetwork() {
+        let body = "{\"detail\":\"parse_failed: LLM unavailable\"}"
+        let mapped = SocialImportFailure.map(APIError.serverErrorWithBody(502, body))
+        guard let failure = mapped, case .parse(let message) = failure else {
+            return XCTFail("Expected parse for parse_failed 502, got \(String(describing: mapped))")
+        }
+        XCTAssertTrue(failure.isRetryable)
+        XCTAssertFalse(message.lowercased().contains("internet"))
+        XCTAssertFalse(message.lowercased().contains("no exercises"))
+        XCTAssertTrue(
+            message.lowercased().contains("parse")
+                || message.lowercased().contains("try again")
+                || message.lowercased().contains("server"),
+            "Expected parse-outage copy, got: \(message)"
+        )
+    }
+
+    /// AMA-2302: title-only 200 via ViewModel → .failed(.parse), no draft with placeholders.
+    func testImportURLThinSuccessJSONFailsWithoutPlaceholderExercises() async {
+        mockAPI.ingestSocialURLResult = .success(
+            #"{"title":"Nippard Thin","sport":"strength"}"#.data(using: .utf8)!
+        )
+
+        await sut.importURL("https://www.instagram.com/reel/ThinCode/", platformHint: .instagram)
+
+        guard case .failed(let failure) = sut.phase else {
+            return XCTFail("Expected failed, got \(sut.phase)")
+        }
+        guard case .parse(let message) = failure else {
+            return XCTFail("Expected parse failure, got \(failure)")
+        }
+        XCTAssertNil(sut.draft)
+        XCTAssertTrue(
+            message.lowercased().contains("exercise")
+                || message.lowercased().contains("couldn't find")
+                || message.lowercased().contains("extract"),
+            "Expected thin-fail copy, got: \(message)"
+        )
+        XCTAssertFalse(message.lowercased().contains("add exercises"))
     }
 
     func testNormalizeReelsURLToReel() {
@@ -301,7 +373,10 @@ final class SocialImportTests: XCTestCase {
             "shortcode": "DMqEsenN6Dl",
             "caption_snippet": "HYROX upper body session — push + pull",
             "transcript_snippet": "first up push-ups then bench",
-            "source_url": "https://www.instagram.com/reel/DMqEsenN6Dl/"
+            "source_url": "https://www.instagram.com/reel/DMqEsenN6Dl/",
+            "extraction_method": "apify_caption",
+            "exercise_gate_passed": true,
+            "tier_attempted": "caption"
           }
         }
         """.data(using: .utf8)!
@@ -315,6 +390,10 @@ final class SocialImportTests: XCTestCase {
         XCTAssertEqual(draft.postProvenance?.creatorDisplay, "@trainwithsmee")
         XCTAssertEqual(draft.postProvenance?.shortcode, "DMqEsenN6Dl")
         XCTAssertTrue(draft.postProvenance?.contentSnippet?.contains("HYROX") == true)
+        XCTAssertEqual(draft.postProvenance?.extractionMethod, "apify_caption")
+        XCTAssertEqual(draft.postProvenance?.exerciseGatePassed, true)
+        XCTAssertEqual(draft.postProvenance?.tierAttempted, "caption")
+        XCTAssertEqual(draft.postProvenance?.extractionMethodDisplay, "Caption")
         XCTAssertEqual(draft.exercises.count, 3)
         XCTAssertEqual(draft.exercises[0].name, "Push-Ups")
     }

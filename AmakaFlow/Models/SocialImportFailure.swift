@@ -121,12 +121,49 @@ enum SocialImportFailure: Error, Equatable {
         if status == 400 || status == 422 {
             let detail = body.flatMap { formatValidationDetail(from: $0) }
                 ?? "That content couldn't be turned into a workout."
+            if looksLikeThinPayload(detail) {
+                return .parse(message: thinContentUserMessage())
+            }
             return .parse(message: detail)
+        }
+        // AMA-2302: parse_failed is an ingest/LLM outage — retryable parse, not "no internet".
+        if let detail = body.flatMap({ formatValidationDetail(from: $0) }),
+           looksLikeParseFailed(detail) {
+            return .parse(message: parseFailedUserMessage())
         }
         if status >= 500 {
             return .network(message: "Server error (\(status)). Try again in a moment.")
         }
         return .parse(message: body.map { String($0.prefix(160)) } ?? "Import failed (HTTP \(status)).")
+    }
+
+    /// Shared copy for thin ladder / title-only payloads (HTTP or JSON).
+    static func thinContentUserMessage(
+        provenance: SocialImportPostProvenance? = nil
+    ) -> String {
+        var message =
+            "Couldn't find enough exercises in this import. Try another link, a screenshot, or create manually."
+        if let creator = provenance?.creatorDisplay, creator != "creator unknown" {
+            message += " (\(creator))"
+        } else if let shortcode = provenance?.shortcode?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+            !shortcode.isEmpty {
+            message += " (\(shortcode))"
+        }
+        return message
+    }
+
+    private static func parseFailedUserMessage() -> String {
+        "Server couldn't parse this workout — try again in a moment."
+    }
+
+    private static func looksLikeThinPayload(_ detail: String) -> Bool {
+        detail.lowercased().contains("thin_payload")
+    }
+
+    private static func looksLikeParseFailed(_ detail: String) -> Bool {
+        detail.lowercased().hasPrefix("parse_failed")
+            || detail.lowercased().contains("parse_failed:")
     }
 
     private static func looksLikeTierGate(_ detail: String) -> Bool {

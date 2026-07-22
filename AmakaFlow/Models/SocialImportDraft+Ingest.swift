@@ -59,9 +59,12 @@ extension SocialImportDraft {
             }
         }
 
-        // Thin success payload (title only) — still editable; AI never gatekeeps Edit.
+        // AMA-2302: never invent placeholder exercises for thin ingest — recoverable parse.
         if exercises.isEmpty {
-            exercises = [SocialImportExercise(name: "Add exercises", sets: 3, reps: 10)]
+            let thinProvenance = Self.postProvenance(from: object)
+            throw SocialImportFailure.parse(
+                message: SocialImportFailure.thinContentUserMessage(provenance: thinProvenance)
+            )
         }
 
         if parsedBlocks.isEmpty && !exercises.isEmpty {
@@ -198,7 +201,10 @@ extension SocialImportDraft {
             captionSnippet: captionSnippet,
             transcriptSnippet: transcriptSnippet,
             mode: mode,
-            shortcode: shortcode
+            shortcode: shortcode,
+            extractionMethod: provenance?["extraction_method"] as? String,
+            exerciseGatePassed: provenance?["exercise_gate_passed"] as? Bool,
+            tierAttempted: provenance?["tier_attempted"] as? String
         )
         return result.hasDisplayableInfo ? result : nil
     }

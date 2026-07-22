@@ -189,6 +189,13 @@ struct SocialImportPreviewView: View {
                     .accessibilityIdentifier("social_import_from_post_snippet")
             }
 
+            if let method = draft.postProvenance?.extractionMethodDisplay {
+                Text("Extracted via \(method)")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textSecondary)
+                    .accessibilityIdentifier("social_import_extraction_method")
+            }
+
             if let sourceURL = draft.sourceURL,
                let url = URL(string: sourceURL) {
                 Link(destination: url) {
