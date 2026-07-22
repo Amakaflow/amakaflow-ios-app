@@ -410,5 +410,4 @@ extension APIService {
             throw AnnotatedAPIError(apiError, requestId: requestID)
         }
     }
-
 }
