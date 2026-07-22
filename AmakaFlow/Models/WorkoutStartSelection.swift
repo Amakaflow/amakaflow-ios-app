@@ -81,11 +81,22 @@ enum WorkoutStartGym: String, CaseIterable, Identifiable, Equatable {
     }
 }
 
+/// AMA-2310: Garmin Start-sheet row mode — push when paired, recovery CTA when not.
+enum WorkoutStartGarminRowMode: Equatable {
+    case push
+    case needsPairing
+}
+
 /// Pure Start-sheet defaults — unit-tested without UI.
 enum WorkoutStartDefaults {
     /// Garmin is primary when paired; otherwise Phone. Apple is secondary ("try"), never the silent default.
     static func preferredDevice(garminPaired: Bool) -> WorkoutStartDevice {
         garminPaired ? .garmin : .phone
+    }
+
+    /// Unpaired Garmin must stay tappable (recovery), never a dead disabled row.
+    static func garminRowMode(garminPaired: Bool) -> WorkoutStartGarminRowMode {
+        garminPaired ? .push : .needsPairing
     }
 
     /// Apple Stay available as try even when Watch is unreachable; callers may disable the row.

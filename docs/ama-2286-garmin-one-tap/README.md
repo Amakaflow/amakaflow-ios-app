@@ -9,6 +9,15 @@
 
 **Out of scope:** Amazfit, Apple try (AMA-2287), phone player (AMA-2290), garth Connect scrape.
 
+## AMA-2310 recovery (unpaired)
+
+If Garmin is **not** paired (`GarminConnectManager` has no connection / saved device):
+
+- Start sheet Garmin row stays **tappable** (not a dead grey `.disabled` row)
+- Subtitle: “Tap to pair CIQ / open Devices” + **PAIR** tag
+- Tap → dismiss Start sheet → open **Devices** (pair / CIQ code entry)
+- Status under detail uses the same not_paired what+why copy as push failures
+
 ## Dogfood samples
 
 | Sample | Fixture / Library | What must survive |
@@ -18,6 +27,7 @@
 
 ## Hardware checklist (Forerunner / Fenix)
 
+- [ ] Unpaired Start: Garmin row tappable → Devices / CIQ pair (AMA-2310)
 - [ ] CIQ widget paired (Profile → Devices + code on watch)
 - [ ] Strength push: status shows Sent/Queued (not “stub”); names visible on watch after CIQ download
 - [ ] Interval push: lap structure usable in native player
@@ -26,8 +36,14 @@
 
 ## BLOCKED (device verify)
 
-If hardware unavailable in-session: ship sim/API proof (unit tests + mapper/BFF 422/202). Device verify owned by David on FR965 / Fenix 8 — note evidence screenshots on Linear when done.
+If hardware unavailable in-session: ship sim/API proof (unit tests + Maestro unpaired/paired). Device verify owned by David on FR965 / Fenix 8 — note evidence screenshots on Linear when done.
 
 ## AMA-1387 status
 
-Document Done or blocked next action on both AMA-2286 and AMA-1387 after this PR.
+CIQ leftover that blocks watch land after iOS push works:
+
+- **Prod `serverUrl`**: widget default must be mapper production (`https://mapper-api.amakaflow.com`), not a dead ngrok tunnel — see `amakaflow-garmin-ciq` / AMA-1387
+- Widget install on FR965/Fenix + pair code entry via Devices
+- ExerciseTitleMessage if native player shows “Go” instead of exercise names
+
+Document Done or blocked next action on both AMA-2310 and AMA-1387 after dogfood land.

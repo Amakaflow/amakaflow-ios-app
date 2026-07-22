@@ -32,6 +32,17 @@ enum GarminStartHandoffFailureCode: String, Equatable {
 
 /// Pure mapping for unit tests — keep recoverable copy ≤ a few seconds to read.
 enum GarminStartHandoffCopy {
+    /// AMA-2310: Start sheet subtitle when Garmin is not paired (tappable recovery).
+    static let unpairedRecoverySubtitle = "Tap to pair CIQ / open Devices"
+
+    /// AMA-2310: Start sheet tag when Garmin needs pairing.
+    static let unpairedRecoveryTag = "PAIR"
+
+    /// Status under detail after unpaired Garmin tap (matches not_paired what+why).
+    static var unpairedRecoveryStatusMessage: String {
+        failureMessage(code: .notPaired)
+    }
+
     static func failureMessage(code: GarminStartHandoffFailureCode, detail: String? = nil) -> String {
         switch code {
         case .notPaired:

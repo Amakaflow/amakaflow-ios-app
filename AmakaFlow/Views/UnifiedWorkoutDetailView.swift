@@ -20,6 +20,7 @@ struct UnifiedWorkoutDetailView: View {
     @State private var showingStartSheet = false
     @State private var showingEditor = false
     @State private var showingWorkoutPlayer = false
+    @State private var showingGarminPairing = false
     @State private var handoffStatus: String?
     @State private var isSavingImport = false
     @State private var showingDeleteConfirm = false
@@ -96,10 +97,22 @@ struct UnifiedWorkoutDetailView: View {
                     showingStartSheet = false
                     handleStartConfirm(gym: gym, device: device)
                 },
+                onPairGarmin: {
+                    showingStartSheet = false
+                    handoffStatus = GarminStartHandoffCopy.unpairedRecoveryStatusMessage
+                    showingGarminPairing = true
+                },
                 onClose: { showingStartSheet = false }
             )
             .presentationDetents([.large, .medium])
             .presentationDragIndicator(.hidden)
+            .presentationBackground(DailyDriver.screenBackground)
+        }
+        .sheet(isPresented: $showingGarminPairing) {
+            NavigationStack {
+                DevicesView()
+            }
+            .presentationDetents([.large])
             .presentationBackground(DailyDriver.screenBackground)
         }
         .sheet(

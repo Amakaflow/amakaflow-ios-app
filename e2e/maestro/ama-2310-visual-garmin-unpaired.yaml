@@ -1,0 +1,27 @@
+# AMA-2310: Unpaired Start → Garmin is tappable recovery (not dead grey row).
+# Opens Devices pairing surface; status copy mentions not paired / Devices / CIQ.
+appId: com.amakaflow.companion
+---
+- launchApp:
+    clearState: true
+    arguments:
+      UITEST_MODE: "1"
+      UITEST_USE_FIXTURES: "1"
+      UITEST_FIXTURES: "strength_block_w1"
+      UITEST_SKIP_ONBOARDING: "true"
+      # Explicitly unpaired — no UITEST_GARMIN_PAIRED
+- tapOn:
+    id: "library_tab"
+- tapOn:
+    id: "af_library_workout_row"
+- tapOn:
+    id: "af_workout_detail_start"
+- assertVisible:
+    id: "af_start_sheet"
+- assertVisible: "Tap to pair CIQ"
+- assertVisible: "PAIR"
+- tapOn:
+    id: "af_start_device_garmin"
+- assertVisible:
+    id: "devices_screen"
+- takeScreenshot: ama-2310-garmin-unpaired-recovery
