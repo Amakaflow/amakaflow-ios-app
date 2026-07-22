@@ -156,7 +156,7 @@ struct DDEditorLegacyView: View {
                     .padding(.vertical, 40)
             }
 
-            ForEach(Array(blocks.enumerated()), id: \.element.id) { index, block in
+            ForEach(Array(blocks.enumerated()), id: \.element.id) { index, _ in
                 DDEditorBlockCard(
                     block: binding(for: index),
                     onMoveUp: { moveBlock(from: index, direction: -1) },
@@ -281,10 +281,9 @@ struct DDEditorLegacyView: View {
         }
 
         saveModel.name = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        saveModel.intervals = blocks.flatMap(Self.intervals(from:))
+        saveModel.intervals = blocks.flatMap { Self.intervals(from: $0) }
         Task { await saveModel.save() }
     }
-
 }
 
 extension DDEditorLegacyView {
@@ -338,4 +337,3 @@ extension DDEditorLegacyView {
         )
     }
 }
-

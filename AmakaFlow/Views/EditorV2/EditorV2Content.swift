@@ -7,50 +7,54 @@
 
 import SwiftUI
 
+struct EditorV2ContentActions {
+    var onConfigGroup: (String) -> Void
+    var onOpen: (String) -> Void
+    var onMenu: (String) -> Void
+    var onReorder: (IndexSet, Int) -> Void
+    var onExitReorder: () -> Void
+    var onAdd: () -> Void
+    var onStartFormat: (EditorV2GroupType) -> Void
+}
+
 enum EditorV2Content {
     @ViewBuilder
     static func main(
         session: EditorV2Session,
         isReorderMode: Bool,
-        onConfigGroup: @escaping (String) -> Void,
-        onOpen: @escaping (String) -> Void,
-        onMenu: @escaping (String) -> Void,
-        onReorder: @escaping (IndexSet, Int) -> Void,
-        onExitReorder: @escaping () -> Void,
-        onAdd: @escaping () -> Void,
-        onStartFormat: @escaping (EditorV2GroupType) -> Void
+        actions: EditorV2ContentActions
     ) -> some View {
         if isReorderMode {
-            reorderList(session: session, onReorder: onReorder, onExitReorder: onExitReorder)
+            reorderList(session: session, actions: actions)
         } else if session.exercises.isEmpty, session.formatGroupKey == nil {
-            emptyState(onStartFormat: onStartFormat)
-            addExerciseButton(emphasized: true, onAdd: onAdd)
+            emptyState(onStartFormat: actions.onStartFormat)
+            addExerciseButton(emphasized: true, onAdd: actions.onAdd)
         } else if session.exercises.isEmpty,
                   let fmtKey = session.formatGroupKey,
                   let group = session.groups[fmtKey] {
-            formatPinnedPlaceholder(group: group, key: fmtKey, onConfig: onConfigGroup)
-            addExerciseButton(emphasized: false, onAdd: onAdd)
+            formatPinnedPlaceholder(group: group, key: fmtKey, onConfig: actions.onConfigGroup)
+            addExerciseButton(emphasized: false, onAdd: actions.onAdd)
         } else {
             ForEach(session.runs) { run in
                 if let key = run.groupKey, let group = session.groups[key] {
                     EditorV2GroupedRun(
                         group: group,
                         exercises: run.exercises,
-                        onPill: { onConfigGroup(key) },
-                        onOpen: { onOpen($0.id) },
-                        onMenu: { onMenu($0.id) }
+                        onPill: { actions.onConfigGroup(key) },
+                        onOpen: { actions.onOpen($0.id) },
+                        onMenu: { actions.onMenu($0.id) }
                     )
                 } else {
                     ForEach(run.exercises) { exercise in
                         EditorV2ExerciseCard(
                             exercise: exercise,
-                            onOpen: { onOpen(exercise.id) },
-                            onMenu: { onMenu(exercise.id) }
+                            onOpen: { actions.onOpen(exercise.id) },
+                            onMenu: { actions.onMenu(exercise.id) }
                         )
                     }
                 }
             }
-            addExerciseButton(emphasized: false, onAdd: onAdd)
+            addExerciseButton(emphasized: false, onAdd: actions.onAdd)
         }
     }
 
@@ -134,8 +138,7 @@ enum EditorV2Content {
 
     static func reorderList(
         session: EditorV2Session,
-        onReorder: @escaping (IndexSet, Int) -> Void,
-        onExitReorder: @escaping () -> Void
+        actions: EditorV2ContentActions
     ) -> some View {
         VStack(spacing: 6) {
             List {
@@ -148,14 +151,14 @@ enum EditorV2Content {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                 }
-                .onMove(perform: onReorder)
+                .onMove(actions.onReorder)
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .frame(minHeight: CGFloat(session.exercises.count) * 56)
             .environment(\.editMode, .constant(.active))
 
-            Button(action: onExitReorder) {
+            Button(action: actions.onExitReorder) {
                 Text("Done")
                     .ddDisplayText(14, weight: .bold)
                     .foregroundColor(DailyDriver.ink)

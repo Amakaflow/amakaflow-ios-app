@@ -160,15 +160,16 @@ struct EditorV2Session: Equatable, Sendable {
         if let existing = key, groups[existing]?.type == .superset {
             // join existing
         } else {
-            key = "ss\(Int(Date().timeIntervalSince1970 * 1000) % 100_000)"
-            groups[key!] = EditorV2Group(
-                id: key!,
+            let createdKey = "ss\(Int(Date().timeIntervalSince1970 * 1000) % 100_000)"
+            groups[createdKey] = EditorV2Group(
+                id: createdKey,
                 type: .superset,
                 name: "Superset",
                 config: EditorV2GroupType.superset.defaultConfig,
                 structureSource: .userConfirmed
             )
-            updateExercise(targetID) { $0.groupKey = key }
+            key = createdKey
+            updateExercise(targetID) { $0.groupKey = createdKey }
         }
 
         guard let key else { return }

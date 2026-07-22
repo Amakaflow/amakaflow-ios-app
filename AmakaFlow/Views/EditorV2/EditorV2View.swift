@@ -49,19 +49,21 @@ struct EditorV2View: View {
                     EditorV2Content.main(
                         session: session,
                         isReorderMode: isReorderMode,
-                        onConfigGroup: { configGroupKey = $0 },
-                        onOpen: { editExerciseID = $0 },
-                        onMenu: { menuExerciseID = $0 },
-                        onReorder: { session.reorder(fromOffsets: $0, toOffset: $1) },
-                        onExitReorder: { isReorderMode = false },
-                        onAdd: {
-                            replaceExerciseID = nil
-                            addSheetOpen = true
-                        },
-                        onStartFormat: { type in
-                            _ = session.startFormat(type)
-                            showToast("\(type.label) — add the moves, timing is set")
-                        }
+                        actions: EditorV2ContentActions(
+                            onConfigGroup: { configGroupKey = $0 },
+                            onOpen: { editExerciseID = $0 },
+                            onMenu: { menuExerciseID = $0 },
+                            onReorder: { session.reorder(fromOffsets: $0, toOffset: $1) },
+                            onExitReorder: { isReorderMode = false },
+                            onAdd: {
+                                replaceExerciseID = nil
+                                addSheetOpen = true
+                            },
+                            onStartFormat: { type in
+                                _ = session.startFormat(type)
+                                showToast("\(type.label) — add the moves, timing is set")
+                            }
+                        )
                     )
                     .padding(.horizontal, 18)
                     .padding(.top, 12)
@@ -263,13 +265,12 @@ struct EditorV2View: View {
         EditorV2PairSheet(
             source: source,
             candidates: session.exercises.filter { $0.id != source.id },
-            groups: session.groups,
-            onPick: { targetID in
-                session.pairSuperset(sourceID: source.id, targetID: targetID)
-                pairSourceID = nil
-                showToast("Superset paired ✓")
-            }
-        )
+            groups: session.groups
+        ) { targetID in
+            session.pairSuperset(sourceID: source.id, targetID: targetID)
+            pairSourceID = nil
+            showToast("Superset paired ✓")
+        }
         .presentationDetents([.medium, .large])
     }
 

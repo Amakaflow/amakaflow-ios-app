@@ -351,4 +351,3 @@ enum DDEditorSeed {
         return Double(trimmed[match])
     }
 }
-

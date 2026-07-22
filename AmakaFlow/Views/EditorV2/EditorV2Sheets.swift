@@ -313,9 +313,9 @@ struct EditorV2AddExerciseSheet: View {
     var onDone: () -> Void
 
     private var filtered: [EditorV2LibraryItem] {
-        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !q.isEmpty else { return EditorV2LibraryItem.demo }
-        return EditorV2LibraryItem.demo.filter { $0.name.lowercased().contains(q) }
+        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !needle.isEmpty else { return EditorV2LibraryItem.demo }
+        return EditorV2LibraryItem.demo.filter { $0.name.lowercased().contains(needle) }
     }
 
     var body: some View {

@@ -5,8 +5,8 @@
 //  ViewModel for creating and editing workouts (AMA-1232)
 //
 
-import Foundation
 import Combine
+import Foundation
 import SwiftUI
 
 @MainActor
@@ -35,7 +35,7 @@ class WorkoutEditorViewModel: ObservableObject {
         (.cardio, "HIIT / Cardio"),
         (.mobility, "Yoga / Mobility"),
         (.swimming, "Swimming"),
-        (.other, "Other"),
+        (.other, "Other")
     ]
 
     // MARK: - Init
@@ -66,7 +66,7 @@ class WorkoutEditorViewModel: ObservableObject {
                 return WorkoutSaveInterval(type: "distance", meters: meters, target: target)
             case .rest(let seconds):
                 return WorkoutSaveInterval(type: "rest", seconds: seconds)
-            case .repeat(_, _):
+            case .repeat:
                 return WorkoutSaveInterval(type: "rest")
             }
         }
@@ -122,7 +122,7 @@ class WorkoutEditorViewModel: ObservableObject {
         )
 
         do {
-            let _ = try await dependencies.apiService.saveWorkout(request)
+            _ = try await dependencies.apiService.saveWorkout(request)
             print("[WorkoutEditorVM] Workout saved successfully: \(request.name)")
             didSave = true
         } catch {
