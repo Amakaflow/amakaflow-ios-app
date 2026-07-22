@@ -142,7 +142,7 @@ enum SocialImportFailure: Error, Equatable {
         provenance: SocialImportPostProvenance? = nil
     ) -> String {
         var message =
-            "Couldn't find enough exercises in this reel. Try another link, a screenshot, or create manually."
+            "Couldn't find enough exercises in this import. Try another link, a screenshot, or create manually."
         if let creator = provenance?.creatorDisplay, creator != "creator unknown" {
             message += " (\(creator))"
         } else if let shortcode = provenance?.shortcode?
