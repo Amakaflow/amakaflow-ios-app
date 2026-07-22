@@ -582,9 +582,9 @@ extension APIService {
     /// Save a new or edited workout via mapper `workout_data` + `device` body.
     /// Always uses the provenance-compatible path (AMA-2285 / editor persist fix).
     func saveWorkout(_ request: WorkoutSaveRequest) async throws -> Workout {
-        let source = request.source?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let resolvedSource = (source?.isEmpty == false) ? source! : WorkoutSource.manual.rawValue
+        let trimmedSource = request.source?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedSource = trimmedSource.flatMap { $0.isEmpty ? nil : $0 }
+            ?? WorkoutSource.manual.rawValue
         return try await saveWorkoutWithProvenance(request, source: resolvedSource)
     }
 

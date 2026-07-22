@@ -44,8 +44,10 @@ final class WorkoutEditorSaveTests: XCTestCase {
                 .reps(sets: 3, reps: 10, name: "Bench", load: nil, restSec: 60, followAlongUrl: nil),
                 .reps(sets: 3, reps: 10, name: "Row", load: nil, restSec: 60, followAlongUrl: nil)
             ],
+            description: "Push day from reel",
             source: .instagram,
-            sourceUrl: "https://www.instagram.com/reel/ABC/"
+            sourceUrl: "https://www.instagram.com/reel/ABC/",
+            creatorName: "coach_dave"
         )
         mockAPI.saveWorkoutResult = .success(workout)
 
@@ -61,7 +63,8 @@ final class WorkoutEditorSaveTests: XCTestCase {
                 exercises: [
                     SocialImportExercise(name: "Row", sets: 3, reps: 10),
                     SocialImportExercise(name: "Bench", sets: 3, reps: 10)
-                ]
+                ],
+                structureSource: "explicit"
             )
         ]
 
@@ -70,10 +73,15 @@ final class WorkoutEditorSaveTests: XCTestCase {
         XCTAssertTrue(sut.didSave)
         XCTAssertNil(sut.errorMessage)
         XCTAssertTrue(mockAPI.saveWorkoutCalled)
-        XCTAssertEqual(mockAPI.lastSaveWorkoutRequest?.workoutId, "wk-edit-1")
-        XCTAssertEqual(mockAPI.lastSaveWorkoutRequest?.source, WorkoutSource.instagram.rawValue)
-        XCTAssertEqual(mockAPI.lastSaveWorkoutRequest?.name, "Upper")
-        XCTAssertEqual(mockAPI.lastSaveWorkoutRequest?.blocks?.first?.exercises.first?.name, "Row")
+        let saved = mockAPI.lastSaveWorkoutRequest
+        XCTAssertEqual(saved?.workoutId, "wk-edit-1")
+        XCTAssertEqual(saved?.source, WorkoutSource.instagram.rawValue)
+        XCTAssertEqual(saved?.sourceUrl, "https://www.instagram.com/reel/ABC/")
+        XCTAssertEqual(saved?.description, "Push day from reel")
+        XCTAssertEqual(saved?.creatorName, "coach_dave")
+        XCTAssertEqual(saved?.name, "Upper")
+        XCTAssertEqual(saved?.blocks?.first?.exercises.first?.name, "Row")
+        XCTAssertEqual(saved?.blocks?.first?.structureSource, "explicit")
     }
 
     func testNewSaveDefaultsToManualSourceWithoutWorkoutId() async {
@@ -100,18 +108,42 @@ final class WorkoutEditorSaveTests: XCTestCase {
         XCTAssertEqual(mockAPI.lastSaveWorkoutRequest?.source, WorkoutSource.manual.rawValue)
     }
 
-    func testMapperSaveBodyIncludesWorkoutIdForUpdates() throws {
+    func testMapperSaveBodyIncludesWorkoutIdAndProvenance() throws {
         let request = WorkoutSaveRequest(
             name: "Upper",
             sport: "strength",
-            intervals: [WorkoutSaveInterval(type: "reps", name: "Bench", sets: 3, reps: 8)],
+            intervals: [],
             source: WorkoutSource.instagram.rawValue,
+            sourceUrl: "https://www.instagram.com/reel/ABC/",
+            description: "Push day from reel",
+            creatorName: "coach_dave",
+            blocks: [
+                SocialImportBlock(
+                    label: "Superset A",
+                    rounds: 3,
+                    exercises: [
+                        SocialImportExercise(name: "Bench", sets: 3, reps: 8)
+                    ],
+                    type: "superset",
+                    structureSource: "explicit"
+                )
+            ],
             workoutId: "wk-edit-1"
         )
         let body = try APIService.mapperSaveBody(from: request, source: WorkoutSource.instagram.rawValue)
         XCTAssertEqual(body["workout_id"] as? String, "wk-edit-1")
         XCTAssertEqual(body["device"] as? String, "ios")
-        XCTAssertNotNil(body["workout_data"])
+
+        let workoutData = try XCTUnwrap(body["workout_data"] as? [String: Any])
+        XCTAssertEqual(workoutData["description"] as? String, "Push day from reel")
+        let metadata = try XCTUnwrap(workoutData["metadata"] as? [String: Any])
+        XCTAssertEqual(metadata["source_url"] as? String, "https://www.instagram.com/reel/ABC/")
+        XCTAssertEqual(metadata["creator"] as? String, "coach_dave")
+
+        let blocks = try XCTUnwrap(workoutData["blocks"] as? [[String: Any]])
+        XCTAssertEqual(blocks.first?["structure_source"] as? String, "explicit")
+        XCTAssertEqual(blocks.first?["type"] as? String, "superset")
+        XCTAssertEqual(blocks.first?["rounds"] as? Int, 3)
     }
 
     func testMapperSaveBodyDefaultsWithoutWorkoutIdForCreates() throws {
