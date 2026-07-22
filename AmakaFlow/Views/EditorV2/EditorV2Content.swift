@@ -198,35 +198,35 @@ struct EditorV2FormatChipWrap: Layout {
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let maxWidth = proposal.width ?? 320
-        var x: CGFloat = 0
-        var y: CGFloat = 0
+        var originX: CGFloat = 0
+        var originY: CGFloat = 0
         var rowHeight: CGFloat = 0
         for subview in subviews {
             let size = subview.sizeThatFits(.unspecified)
-            if x + size.width > maxWidth, x > 0 {
-                x = 0
-                y += rowHeight + spacing
+            if originX + size.width > maxWidth, originX > 0 {
+                originX = 0
+                originY += rowHeight + spacing
                 rowHeight = 0
             }
             rowHeight = max(rowHeight, size.height)
-            x += size.width + spacing
+            originX += size.width + spacing
         }
-        return CGSize(width: maxWidth, height: y + rowHeight)
+        return CGSize(width: maxWidth, height: originY + rowHeight)
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var x = bounds.minX
-        var y = bounds.minY
+        var originX = bounds.minX
+        var originY = bounds.minY
         var rowHeight: CGFloat = 0
         for subview in subviews {
             let size = subview.sizeThatFits(.unspecified)
-            if x + size.width > bounds.maxX, x > bounds.minX {
-                x = bounds.minX
-                y += rowHeight + spacing
+            if originX + size.width > bounds.maxX, originX > bounds.minX {
+                originX = bounds.minX
+                originY += rowHeight + spacing
                 rowHeight = 0
             }
-            subview.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
-            x += size.width + spacing
+            subview.place(at: CGPoint(x: originX, y: originY), proposal: ProposedViewSize(size))
+            originX += size.width + spacing
             rowHeight = max(rowHeight, size.height)
         }
     }
