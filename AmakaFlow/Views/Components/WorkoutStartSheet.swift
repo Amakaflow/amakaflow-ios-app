@@ -12,6 +12,8 @@ struct WorkoutStartSheet: View {
     let garminPaired: Bool
     let appleWatchReachable: Bool
     let onConfirm: (WorkoutStartGym, WorkoutStartDevice) -> Void
+    /// AMA-2310: unpaired Garmin → one-tap recovery (Devices / CIQ pair), not a dead grey row.
+    let onPairGarmin: () -> Void
     let onClose: () -> Void
 
     @State private var selectedGym: WorkoutStartGym = .home
@@ -22,14 +24,20 @@ struct WorkoutStartSheet: View {
         appleWatchReachable: Bool,
         initialGym: WorkoutStartGym = .home,
         onConfirm: @escaping (WorkoutStartGym, WorkoutStartDevice) -> Void,
+        onPairGarmin: @escaping () -> Void,
         onClose: @escaping () -> Void
     ) {
         self.workout = workout
         self.garminPaired = garminPaired
         self.appleWatchReachable = appleWatchReachable
         self.onConfirm = onConfirm
+        self.onPairGarmin = onPairGarmin
         self.onClose = onClose
         _selectedGym = State(initialValue: initialGym == .unset ? .home : initialGym)
+    }
+
+    private var garminRowMode: WorkoutStartGarminRowMode {
+        WorkoutStartDefaults.garminRowMode(garminPaired: garminPaired)
     }
 
     private var defaultDevice: WorkoutStartDevice {
@@ -179,8 +187,12 @@ struct WorkoutStartSheet: View {
                 iconBackground: DailyDriver.blue,
                 iconForeground: .white,
                 title: "Garmin",
-                subtitle: garminPaired ? "Push via FIT" : "Pair in Settings to push",
-                tag: defaultDevice == .garmin ? "DEFAULT · \(sportTag)" : nil
+                subtitle: garminRowMode == .push
+                    ? "Push via FIT"
+                    : GarminStartHandoffCopy.unpairedRecoverySubtitle,
+                tag: garminRowMode == .needsPairing
+                    ? GarminStartHandoffCopy.unpairedRecoveryTag
+                    : (defaultDevice == .garmin ? "DEFAULT · \(sportTag)" : nil)
             )
         }
     }
@@ -208,9 +220,10 @@ struct WorkoutStartSheet: View {
         subtitle: String,
         tag: String?
     ) -> some View {
-        let isGarminUnavailable = device == .garmin && !garminPaired
+        let needsGarminPairing = device == .garmin && garminRowMode == .needsPairing
         return Button {
-            if isGarminUnavailable {
+            if needsGarminPairing {
+                onPairGarmin()
                 return
             }
             onConfirm(selectedGym, device)
@@ -231,7 +244,9 @@ struct WorkoutStartSheet: View {
                         .foregroundColor(DailyDriver.foreground)
                     Text(subtitle)
                         .font(.system(size: 10.5))
-                        .foregroundColor(DailyDriver.foregroundMuted)
+                        .foregroundColor(
+                            needsGarminPairing ? DailyDriver.amber : DailyDriver.foregroundMuted
+                        )
                 }
 
                 Spacer(minLength: 0)
@@ -247,14 +262,20 @@ struct WorkoutStartSheet: View {
             .background(DailyDriver.card)
             .overlay(
                 Capsule(style: .continuous)
-                    .stroke(DailyDriver.border, lineWidth: 1)
+                    .stroke(
+                        needsGarminPairing ? DailyDriver.amber.opacity(0.55) : DailyDriver.border,
+                        lineWidth: 1
+                    )
             )
             .clipShape(Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
-        .disabled(isGarminUnavailable)
-        .opacity(isGarminUnavailable ? 0.45 : 1)
         .accessibilityIdentifier(device.accessibilityIdentifier)
+        .accessibilityHint(
+            needsGarminPairing
+                ? "Opens Devices to pair Garmin Connect IQ"
+                : ""
+        )
     }
 }
 
@@ -272,6 +293,7 @@ struct WorkoutStartSheet: View {
         garminPaired: true,
         appleWatchReachable: false,
         onConfirm: { _, _ in },
+        onPairGarmin: {},
         onClose: {}
     )
     .presentationDetents([.large])

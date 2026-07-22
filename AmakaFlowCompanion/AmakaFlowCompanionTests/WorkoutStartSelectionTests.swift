@@ -25,6 +25,17 @@ final class WorkoutStartSelectionTests: XCTestCase {
         )
     }
 
+    func testGarminRowNeedsPairingWhenUnpaired() {
+        XCTAssertEqual(
+            WorkoutStartDefaults.garminRowMode(garminPaired: false),
+            .needsPairing
+        )
+        XCTAssertEqual(
+            WorkoutStartDefaults.garminRowMode(garminPaired: true),
+            .push
+        )
+    }
+
     func testAppleIsNeverSilentDefault() {
         // Even when Watch is reachable, unpaired Garmin still defaults to Phone.
         // Apple remains a labeled "try" path on the sheet.

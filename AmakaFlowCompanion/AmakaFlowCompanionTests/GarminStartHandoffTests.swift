@@ -18,6 +18,28 @@ final class GarminStartHandoffCopyTests: XCTestCase {
         XCTAssertFalse(message.localizedCaseInsensitiveContains("stub"))
     }
 
+    func testUnpairedRecoveryCopyIsActionable() {
+        XCTAssertTrue(
+            GarminStartHandoffCopy.unpairedRecoverySubtitle
+                .localizedCaseInsensitiveContains("pair")
+        )
+        XCTAssertTrue(
+            GarminStartHandoffCopy.unpairedRecoverySubtitle
+                .localizedCaseInsensitiveContains("devices")
+                || GarminStartHandoffCopy.unpairedRecoverySubtitle
+                    .localizedCaseInsensitiveContains("ciq")
+        )
+        XCTAssertEqual(GarminStartHandoffCopy.unpairedRecoveryTag, "PAIR")
+        XCTAssertEqual(
+            GarminStartHandoffCopy.unpairedRecoveryStatusMessage,
+            GarminStartHandoffCopy.failureMessage(code: .notPaired)
+        )
+        XCTAssertFalse(
+            GarminStartHandoffCopy.unpairedRecoverySubtitle
+                .localizedCaseInsensitiveContains("settings to push")
+        )
+    }
+
     func testFailureCodeMapsEmptyConverterAndAuth() {
         XCTAssertEqual(
             GarminStartHandoffCopy.failureCode(fromHTTPStatus: 422, detail: "empty_converter"),

@@ -1,5 +1,5 @@
-# AMA-2286: Start → Garmin shows real push status (not AMA-2291 stub).
-# Success: FixtureAPIService push → "Sent to Garmin…".
+# AMA-2286 / AMA-2310: Start → Garmin shows real push status (not stub).
+# Device row confirms immediately (no separate confirm control).
 # Forced fail: relaunch with UITEST_GARMIN_PUSH_FAIL=not_paired.
 appId: com.amakaflow.companion
 ---
@@ -9,17 +9,16 @@ appId: com.amakaflow.companion
       UITEST_MODE: "1"
       UITEST_USE_FIXTURES: "1"
       UITEST_FIXTURES: "strength_block_w1"
+      UITEST_SKIP_ONBOARDING: "true"
       UITEST_GARMIN_PAIRED: "1"
 - tapOn:
-    id: "af_tab_library"
+    id: "library_tab"
 - tapOn:
     id: "af_library_workout_row"
 - tapOn:
     id: "af_workout_detail_start"
 - tapOn:
     id: "af_start_device_garmin"
-- tapOn:
-    id: "af_start_confirm"
 - assertVisible:
     id: "af_workout_detail_handoff_status"
 - assertVisible: "Sent to Garmin"
@@ -33,18 +32,17 @@ appId: com.amakaflow.companion
       UITEST_MODE: "1"
       UITEST_USE_FIXTURES: "1"
       UITEST_FIXTURES: "strength_block_w1"
+      UITEST_SKIP_ONBOARDING: "true"
       UITEST_GARMIN_PAIRED: "1"
       UITEST_GARMIN_PUSH_FAIL: "not_paired"
 - tapOn:
-    id: "af_tab_library"
+    id: "library_tab"
 - tapOn:
     id: "af_library_workout_row"
 - tapOn:
     id: "af_workout_detail_start"
 - tapOn:
     id: "af_start_device_garmin"
-- tapOn:
-    id: "af_start_confirm"
 - assertVisible: "not paired"
 - assertNotVisible: "AMA-2286 push stub"
 - takeScreenshot: ama-2286-garmin-handoff-not-paired
