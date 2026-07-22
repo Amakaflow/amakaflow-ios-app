@@ -22,5 +22,12 @@ if git rev-parse "$TAG" >/dev/null 2>&1; then
 fi
 
 git tag "$TAG" "$GITHUB_SHA"
-git push origin "refs/tags/${TAG}"
+
+# Checkout uses persist-credentials: false (secrets hygiene). Push with a
+# one-shot authenticated URL so the token is never written to .git/config.
+if [ -n "${GITHUB_TOKEN:-}" ] && [ -n "${GITHUB_REPOSITORY:-}" ]; then
+  git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "refs/tags/${TAG}"
+else
+  git push origin "refs/tags/${TAG}"
+fi
 echo "✅ Pushed tag $TAG → $GITHUB_SHA"

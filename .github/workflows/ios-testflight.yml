@@ -516,11 +516,13 @@ jobs:
           .github/scripts/ci/set-testflight-notes.sh
 
       # AMA-2281 — tag this commit as testflight/buildNNN for next-release diffing.
+      # GITHUB_TOKEN required: archive checkout sets persist-credentials: false.
       - name: Push testflight/build tag (AMA-2281)
         id: tag
         continue-on-error: true
         env:
           BUILD_NUMBER: ${{ steps.build-number.outputs.build_number }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: .github/scripts/ci/push-testflight-build-tag.sh "${BUILD_NUMBER}"
 
       - name: Upload summary

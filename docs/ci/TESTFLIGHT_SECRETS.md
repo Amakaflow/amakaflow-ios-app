@@ -180,8 +180,8 @@ Usually precedes the certificate-limit error. Fixing certificates/profiles in th
 - [x] ASC API key secrets wired
 - [x] Clerk staging + dev secrets wired
 - [x] Build number auto-bump in workflow
-- [ ] Persisted signing `.p12` secrets wired (AMA-2267)
-- [ ] Green archive + altool upload on 2 consecutive runs with **zero** new portal certs
+- [x] Persisted signing `.p12` secrets wired (AMA-2267)
+- [x] Green archive + altool upload on 2 consecutive runs with **zero** new portal certs (verified 2026-07-22 — builds 311 + 312; AMA-2296)
 - [ ] Sentry dSYM upload confirmed on a promoted build (check Sentry release for matching build number)
 
 ## Related
