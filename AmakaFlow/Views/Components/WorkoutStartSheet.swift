@@ -24,7 +24,7 @@ struct WorkoutStartSheet: View {
         appleWatchReachable: Bool,
         initialGym: WorkoutStartGym = .home,
         onConfirm: @escaping (WorkoutStartGym, WorkoutStartDevice) -> Void,
-        onPairGarmin: @escaping () -> Void = {},
+        onPairGarmin: @escaping () -> Void,
         onClose: @escaping () -> Void
     ) {
         self.workout = workout
