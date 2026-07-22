@@ -86,6 +86,11 @@ struct EditorV2View: View {
         .onChange(of: saveModel.didSave) { _, saved in
             if saved { dismiss() }
         }
+        .onChange(of: saveModel.errorMessage) { _, message in
+            if let message, !message.isEmpty {
+                showToast(message)
+            }
+        }
         .sheet(item: menuExerciseBinding, content: menuSheet)
         .sheet(item: editExerciseBinding, content: editSheet)
         .sheet(item: configGroupBinding, content: configSheet)

@@ -35,6 +35,8 @@ struct WorkoutSaveRequest: Codable {
     var creatorName: String?
     /// Block structure from social ingest (preserves section labels).
     var blocks: [SocialImportBlock]?
+    /// When set, mapper updates this workout instead of creating a duplicate.
+    var workoutId: String?
 
     /// Convert from existing Workout model for edit mode
     static func from(workout: Workout) -> WorkoutSaveRequest {
@@ -64,7 +66,8 @@ struct WorkoutSaveRequest: Codable {
             sourceUrl: workout.sourceUrl,
             description: workout.description,
             creatorName: workout.creatorName,
-            blocks: blocksFromWorkout(workout)
+            blocks: blocksFromWorkout(workout),
+            workoutId: workout.id
         )
     }
 

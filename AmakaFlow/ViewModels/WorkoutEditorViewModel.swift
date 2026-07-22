@@ -26,6 +26,10 @@ class WorkoutEditorViewModel: ObservableObject {
 
     private let dependencies: AppDependencies
     private let existingWorkoutId: String?
+    private let preservedSource: String?
+    private let preservedSourceUrl: String?
+    private let preservedDescription: String?
+    private let preservedCreatorName: String?
 
     /// All sport types available in the picker
     static let sportOptions: [(WorkoutSport, String)] = [
@@ -44,12 +48,20 @@ class WorkoutEditorViewModel: ObservableObject {
     init(dependencies: AppDependencies = .current) {
         self.dependencies = dependencies
         self.existingWorkoutId = nil
+        self.preservedSource = nil
+        self.preservedSourceUrl = nil
+        self.preservedDescription = nil
+        self.preservedCreatorName = nil
     }
 
     /// Edit mode — populate from existing workout
     init(workout: Workout, dependencies: AppDependencies = .current) {
         self.dependencies = dependencies
         self.existingWorkoutId = workout.id
+        self.preservedSource = workout.source.rawValue
+        self.preservedSourceUrl = workout.sourceUrl
+        self.preservedDescription = workout.description
+        self.preservedCreatorName = workout.creatorName
         self.name = workout.name
         self.sport = workout.sport
         self.intervals = workout.intervals.map { interval in
@@ -98,7 +110,7 @@ class WorkoutEditorViewModel: ObservableObject {
 
     // MARK: - Save
 
-    /// Save workout to backend via POST /workouts/save
+    /// Save workout to backend via POST /workouts/save (mapper body + workout_id on edit).
     func save() async {
         guard !name.trimmingCharacters(in: .whitespaces).isEmpty else {
             errorMessage = "Workout name is required"
@@ -107,6 +119,10 @@ class WorkoutEditorViewModel: ObservableObject {
 
         isSaving = true
         errorMessage = nil
+
+        let source = (preservedSource?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap {
+            $0.isEmpty ? nil : $0
+        } ?? WorkoutSource.manual.rawValue
 
         let request = WorkoutSaveRequest(
             name: name.trimmingCharacters(in: .whitespaces),
@@ -118,12 +134,17 @@ class WorkoutEditorViewModel: ObservableObject {
                 }
                 return true
             },
-            blocks: saveBlocks
+            source: source,
+            sourceUrl: preservedSourceUrl,
+            description: preservedDescription,
+            creatorName: preservedCreatorName,
+            blocks: saveBlocks,
+            workoutId: existingWorkoutId
         )
 
         do {
             _ = try await dependencies.apiService.saveWorkout(request)
-            print("[WorkoutEditorVM] Workout saved successfully: \(request.name)")
+            print("[WorkoutEditorVM] Workout saved successfully: \(request.name) id=\(existingWorkoutId ?? "new")")
             didSave = true
         } catch {
             print("[WorkoutEditorVM] Save failed: \(error.localizedDescription)")

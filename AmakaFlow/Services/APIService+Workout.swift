@@ -579,29 +579,13 @@ extension APIService {
 
     // MARK: - Workout Editor (AMA-1231)
 
-    /// Save a new or edited workout
+    /// Save a new or edited workout via mapper `workout_data` + `device` body.
+    /// Always uses the provenance-compatible path (AMA-2285 / editor persist fix).
     func saveWorkout(_ request: WorkoutSaveRequest) async throws -> Workout {
-        // AMA-2285: provenance-aware path lives in APIService+SocialImport.
-        if let source = request.source, !source.isEmpty {
-            return try await saveWorkoutWithProvenance(request, source: source)
-        }
-
-        guard let url = URL(string: "\(baseURL)/workouts/save") else { throw APIError.invalidURL }
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.timeoutInterval = 15
-        req.allHTTPHeaderFields = try await makeAuthHeaders()
-
-        let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
-        req.httpBody = try encoder.encode(request)
-        let (data, response) = try await session.data(for: req)
-        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-        guard httpResponse.statusCode == 200 || httpResponse.statusCode == 201 else {
-            if httpResponse.statusCode == 401 { throw APIError.unauthorized }
-            throw APIError.serverError(httpResponse.statusCode)
-        }
-        return try APIService.makeDecoder().decode(Workout.self, from: data)
+        let source = request.source?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedSource = (source?.isEmpty == false) ? source! : WorkoutSource.manual.rawValue
+        return try await saveWorkoutWithProvenance(request, source: resolvedSource)
     }
 
     // MARK: - Workout Export (AMA-1231)
