@@ -426,4 +426,23 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertEqual(exported?.repsRange, "8-10")
         XCTAssertNil(exported?.reps)
     }
+
+    func testRepRangeExportsThroughSaveIntervals() {
+        let session = EditorV2Session(
+            title: "Range day",
+            exercises: [
+                EditorV2Exercise(
+                    name: "Squat",
+                    sets: 3,
+                    repsRange: RepsRange(low: 8, high: 10),
+                    restSeconds: 60
+                )
+            ]
+        )
+
+        let interval = session.toSaveIntervals().first
+        XCTAssertEqual(interval?.type, "reps")
+        XCTAssertEqual(interval?.target, "8-10")
+        XCTAssertEqual(interval?.reps, 9)
+    }
 }

@@ -203,6 +203,8 @@ struct SocialImportExercise: Identifiable, Equatable, Codable {
     var repsRange: String?
     var seconds: Int?
     var distanceMeters: Int?
+    /// Per-exercise rest from ingest (`rest_sec`); client defaults when omitted on straight sets.
+    var restSeconds: Int?
     /// Load / tempo / instruction line (e.g. "70 kg", "build to heavy").
     var load: String?
     /// Target muscles from post (e.g. "Quads · Glutes").
@@ -264,25 +266,7 @@ struct SocialImportDraft: Equatable {
     var provenanceLabel: String { platform.displayName }
 
     func toWorkoutSaveIntervals() -> [WorkoutSaveInterval] {
-        exercises.map { exercise in
-            let instruction = exercise.detailInstruction
-            if let seconds = exercise.seconds, seconds > 0, exercise.reps == nil {
-                return WorkoutSaveInterval(
-                    type: "time",
-                    name: exercise.name,
-                    seconds: seconds,
-                    target: instruction
-                )
-            }
-            return WorkoutSaveInterval(
-                type: "reps",
-                name: exercise.name,
-                sets: exercise.sets ?? 3,
-                reps: exercise.reps ?? 10,
-                restSeconds: 60,
-                load: instruction
-            )
-        }
+        exercises.map { PrescriptionFormatter.saveInterval(from: $0) }
     }
 
     func toWorkoutSaveRequest() -> WorkoutSaveRequest {
@@ -351,7 +335,7 @@ extension SocialImportExercise {
             reps: repsRange ?? reps.map(String.init),
             durationSeconds: seconds,
             load: resolved.load,
-            restSeconds: 60,
+            restSeconds: restSeconds,
             distance: distanceMeters.map(Double.init),
             notes: resolved.instruction,
             focus: focus,

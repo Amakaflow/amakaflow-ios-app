@@ -27,9 +27,11 @@
 		3X3RC1S35W1FT000004 /* Exercise.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3X3RC1S35W1FT000001 /* Exercise.swift */; };
 		AMA2311PRESBLD002 /* Prescription.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311PRESREF001 /* Prescription.swift */; };
 		AMA2311PRESBLD004 /* Prescription.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311PRESREF001 /* Prescription.swift */; };
+		AMA2311PDEFBLD002 /* PrescriptionDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311PDEFREF001 /* PrescriptionDefaults.swift */; };
 		AMA2311PRESTSTBLD /* PrescriptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311PRESTSTREF /* PrescriptionTests.swift */; };
 		AMA2311EDTSTBLD /* EditorV2Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311EDTSTREF /* EditorV2Tests.swift */; };
 		AMA2311PEDTSTBLD /* PrescriptionEditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311PEDTSTREF /* PrescriptionEditorTests.swift */; };
+		AMA2311PDEFTSTBLD /* PrescriptionDefaultsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311PDEFTSTREF /* PrescriptionDefaultsTests.swift */; };
 		AMA2311PDSTSTBLD /* PrescriptionDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311PDSTSTREF /* PrescriptionDisplayTests.swift */; };
 		40E350E9B26F4574902587EF /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29B50DC380A44F2D96E6E414 /* PairingView.swift */; };
 		43F9F2E9369F4546B3AF005A /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D9B67C13E34BAE804A9359 /* HistoryView.swift */; };
@@ -592,9 +594,11 @@
 		3EB7457100F5C1B6E4488558 /* AgentInboxView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AgentInboxView.swift; path = ../AmakaFlow/Views/AgentInboxView.swift; sourceTree = SOURCE_ROOT; };
 		3X3RC1S35W1FT000001 /* Exercise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Exercise.swift; path = ../AmakaFlow/Models/Exercise.swift; sourceTree = SOURCE_ROOT; };
 		AMA2311PRESREF001 /* Prescription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Prescription.swift; path = ../AmakaFlow/Models/Prescription.swift; sourceTree = SOURCE_ROOT; };
+		AMA2311PDEFREF001 /* PrescriptionDefaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PrescriptionDefaults.swift; path = ../AmakaFlow/Models/PrescriptionDefaults.swift; sourceTree = SOURCE_ROOT; };
 		AMA2311PRESTSTREF /* PrescriptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PrescriptionTests.swift; path = AmakaFlowCompanionTests/PrescriptionTests.swift; sourceTree = "<group>"; };
 		AMA2311EDTSTREF /* EditorV2Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2Tests.swift; path = AmakaFlowCompanionTests/EditorV2Tests.swift; sourceTree = "<group>"; };
 		AMA2311PEDTSTREF /* PrescriptionEditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PrescriptionEditorTests.swift; path = AmakaFlowCompanionTests/PrescriptionEditorTests.swift; sourceTree = "<group>"; };
+		AMA2311PDEFTSTREF /* PrescriptionDefaultsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PrescriptionDefaultsTests.swift; path = AmakaFlowCompanionTests/PrescriptionDefaultsTests.swift; sourceTree = "<group>"; };
 		AMA2311PDSTSTREF /* PrescriptionDisplayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PrescriptionDisplayTests.swift; path = AmakaFlowCompanionTests/PrescriptionDisplayTests.swift; sourceTree = "<group>"; };
 		4CC7221F93FB2C2C9982C2ED /* NotificationPreferencesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationPreferencesView.swift; path = ../AmakaFlow/Views/Settings/NotificationPreferencesView.swift; sourceTree = "<group>"; };
 		4F945C56EB30A4BA6E5CAC50 /* ActivityFeedView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ActivityFeedView.swift; path = ../AmakaFlow/Views/ActivityFeedView.swift; sourceTree = "<group>"; };
@@ -1347,6 +1351,7 @@
 				BL0CK5W1FT00000001 /* Block.swift */,
 				3X3RC1S35W1FT000001 /* Exercise.swift */,
 				AMA2311PRESREF001 /* Prescription.swift */,
+				AMA2311PDEFREF001 /* PrescriptionDefaults.swift */,
 				BL0CK2INT3RVAL00001 /* BlockToIntervalConverter.swift */,
 				F84E226D2ED0D55600459747 /* AmakaFlowApp.swift */,
 				F84E226E2ED0D55600459747 /* Theme.swift */,
@@ -1674,6 +1679,7 @@
 				AMA2311PRESTSTREF /* PrescriptionTests.swift */,
 				AMA2311EDTSTREF /* EditorV2Tests.swift */,
 				AMA2311PEDTSTREF /* PrescriptionEditorTests.swift */,
+				AMA2311PDEFTSTREF /* PrescriptionDefaultsTests.swift */,
 				AMA2311PDSTSTREF /* PrescriptionDisplayTests.swift */,
 				AMA2305TSTREF /* StructureClarifyTests.swift */,
 				AMA2291STARTSTREF /* WorkoutStartSelectionTests.swift */,
@@ -2125,6 +2131,7 @@
 				BL0CK5W1FT00000002 /* Block.swift in Sources */,
 				3X3RC1S35W1FT000002 /* Exercise.swift in Sources */,
 				AMA2311PRESBLD002 /* Prescription.swift in Sources */,
+				AMA2311PDEFBLD002 /* PrescriptionDefaults.swift in Sources */,
 				BL0CK2INT3RVAL00002 /* BlockToIntervalConverter.swift in Sources */,
 				9D0C3D8A603340BC8364F188 /* PreWorkoutDeviceSheet.swift in Sources */,
 				W41T1NG000000002C0000002 /* WaitingForWatchView.swift in Sources */,
@@ -2470,6 +2477,7 @@
 				AMA2311PRESTSTBLD /* PrescriptionTests.swift in Sources */,
 				AMA2311EDTSTBLD /* EditorV2Tests.swift in Sources */,
 				AMA2311PEDTSTBLD /* PrescriptionEditorTests.swift in Sources */,
+				AMA2311PDEFTSTBLD /* PrescriptionDefaultsTests.swift in Sources */,
 				AMA2311PDSTSTBLD /* PrescriptionDisplayTests.swift in Sources */,
 				AMA2305TSTBLD /* StructureClarifyTests.swift in Sources */,
 				AMA2291STARTSTBLD /* WorkoutStartSelectionTests.swift in Sources */,

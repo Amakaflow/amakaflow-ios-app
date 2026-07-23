@@ -112,34 +112,51 @@ enum BlockToIntervalConverter {
         isWarmup: Bool,
         isCooldown: Bool
     ) -> WorkoutInterval {
-        // Distance-based exercise
-        if let distance = exercise.distance {
-            let meters = Int(distance)
-            return .distance(meters: meters, target: exercise.notes)
-        }
-
-        // Duration-based exercise
-        if let duration = exercise.durationSeconds {
-            if isWarmup {
-                return .warmup(seconds: duration, target: exercise.notes)
-            } else if isCooldown {
-                return .cooldown(seconds: duration, target: exercise.notes)
-            } else {
-                return .time(seconds: duration, target: exercise.notes)
-            }
-        }
-
-        // Rep-based exercise (default path)
-        let repsInt = parseReps(exercise.reps)
+        let prescription = PrescriptionFormatter.effective(from: exercise)
         let loadStr = formatLoad(exercise.load)
-        return .reps(
-            sets: exercise.sets,
-            reps: repsInt,
-            name: exercise.name,
-            load: loadStr,
-            restSec: exercise.restSeconds,
-            followAlongUrl: nil
-        )
+        let target = exercise.notes
+
+        switch prescription.primary {
+        case .distance(let meters, _):
+            return .distance(meters: meters, target: target)
+        case .duration(let seconds, _):
+            if isWarmup {
+                return .warmup(seconds: seconds, target: target)
+            } else if isCooldown {
+                return .cooldown(seconds: seconds, target: target)
+            } else {
+                return .time(seconds: seconds, target: target)
+            }
+        case .calories(let calories, _):
+            return .time(seconds: calories, target: "\(calories) cal")
+        case .reps(let reps, let sets):
+            return .reps(
+                sets: sets,
+                reps: reps,
+                name: exercise.name,
+                load: loadStr,
+                restSec: exercise.restSeconds,
+                followAlongUrl: nil
+            )
+        case .repsRange(let range, let sets):
+            return .reps(
+                sets: sets,
+                reps: range.high,
+                name: exercise.name,
+                load: loadStr,
+                restSec: exercise.restSeconds,
+                followAlongUrl: nil
+            )
+        case .none(let sets):
+            return .reps(
+                sets: sets,
+                reps: parseReps(exercise.reps),
+                name: exercise.name,
+                load: loadStr,
+                restSec: exercise.restSeconds,
+                followAlongUrl: nil
+            )
+        }
     }
 
     // MARK: - Parsing utilities
