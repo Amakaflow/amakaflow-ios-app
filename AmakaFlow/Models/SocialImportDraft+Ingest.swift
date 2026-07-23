@@ -103,7 +103,8 @@ extension SocialImportDraft {
         let repsRaw = item["reps"]
         let repsString = repsRaw as? String
         let reps = repsRaw as? Int ?? repsString.flatMap(Int.init)
-        let repsRange = (item["reps_range"] as? String)
+        let structuredRange = RepsRange.ingestDisplay(from: item["reps_range"])
+        let repsRange = structuredRange
             ?? repsString.flatMap { Int($0) == nil ? $0 : nil }
         let seconds = item["duration_sec"] as? Int ?? item["duration_seconds"] as? Int ?? item["seconds"] as? Int
         let distanceMeters = item["distance_m"] as? Int ?? item["distanceMeters"] as? Int
@@ -113,7 +114,6 @@ extension SocialImportDraft {
         let instruction = (item["instruction"] as? String)
             ?? (item["detail"] as? String)
             ?? (item["tempo"] as? String)
-            ?? (item["reps_range"] as? String)
         let notes = item["notes"] as? String
 
         return SocialImportExercise(

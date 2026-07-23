@@ -27,6 +27,9 @@
 		3X3RC1S35W1FT000004 /* Exercise.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3X3RC1S35W1FT000001 /* Exercise.swift */; };
 		AMA2311PRESBLD002 /* Prescription.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311PRESREF001 /* Prescription.swift */; };
 		AMA2311PRESBLD004 /* Prescription.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311PRESREF001 /* Prescription.swift */; };
+		AMA2311PRESTSTBLD /* PrescriptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311PRESTSTREF /* PrescriptionTests.swift */; };
+		AMA2311EDTSTBLD /* EditorV2Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311EDTSTREF /* EditorV2Tests.swift */; };
+		AMA2311PEDTSTBLD /* PrescriptionEditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311PEDTSTREF /* PrescriptionEditorTests.swift */; };
 		40E350E9B26F4574902587EF /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29B50DC380A44F2D96E6E414 /* PairingView.swift */; };
 		43F9F2E9369F4546B3AF005A /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D9B67C13E34BAE804A9359 /* HistoryView.swift */; };
 		44201694D9E295D587684DBB /* ShareImportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44D7C6673CB9BE868FC1006 /* ShareImportViewModel.swift */; };
@@ -588,6 +591,9 @@
 		3EB7457100F5C1B6E4488558 /* AgentInboxView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AgentInboxView.swift; path = ../AmakaFlow/Views/AgentInboxView.swift; sourceTree = SOURCE_ROOT; };
 		3X3RC1S35W1FT000001 /* Exercise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Exercise.swift; path = ../AmakaFlow/Models/Exercise.swift; sourceTree = SOURCE_ROOT; };
 		AMA2311PRESREF001 /* Prescription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Prescription.swift; path = ../AmakaFlow/Models/Prescription.swift; sourceTree = SOURCE_ROOT; };
+		AMA2311PRESTSTREF /* PrescriptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PrescriptionTests.swift; path = AmakaFlowCompanionTests/PrescriptionTests.swift; sourceTree = "<group>"; };
+		AMA2311EDTSTREF /* EditorV2Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2Tests.swift; path = AmakaFlowCompanionTests/EditorV2Tests.swift; sourceTree = "<group>"; };
+		AMA2311PEDTSTREF /* PrescriptionEditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PrescriptionEditorTests.swift; path = AmakaFlowCompanionTests/PrescriptionEditorTests.swift; sourceTree = "<group>"; };
 		4CC7221F93FB2C2C9982C2ED /* NotificationPreferencesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationPreferencesView.swift; path = ../AmakaFlow/Views/Settings/NotificationPreferencesView.swift; sourceTree = "<group>"; };
 		4F945C56EB30A4BA6E5CAC50 /* ActivityFeedView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ActivityFeedView.swift; path = ../AmakaFlow/Views/ActivityFeedView.swift; sourceTree = "<group>"; };
 		5CA747C5C41B432C9BEE9C9F /* KeychainClerkTokenPersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainClerkTokenPersistence.swift; path = ../AmakaFlow/Services/KeychainClerkTokenPersistence.swift; sourceTree = SOURCE_ROOT; };
@@ -1663,6 +1669,9 @@
 				AK00TST008A /* InstagramImportModeTests.swift */,
 				AK00TST009A /* ManualInstagramIngestionTests.swift */,
 				AMA2285TSTREF /* SocialImportTests.swift */,
+				AMA2311PRESTSTREF /* PrescriptionTests.swift */,
+				AMA2311EDTSTREF /* EditorV2Tests.swift */,
+				AMA2311PEDTSTREF /* PrescriptionEditorTests.swift */,
 				AMA2305TSTREF /* StructureClarifyTests.swift */,
 				AMA2291STARTSTREF /* WorkoutStartSelectionTests.swift */,
 				AMA2286GARTESTREF /* GarminStartHandoffTests.swift */,
@@ -2455,6 +2464,9 @@
 				AK00TST008B /* InstagramImportModeTests.swift in Sources */,
 				AK00TST009B /* ManualInstagramIngestionTests.swift in Sources */,
 				AMA2285TSTBLD /* SocialImportTests.swift in Sources */,
+				AMA2311PRESTSTBLD /* PrescriptionTests.swift in Sources */,
+				AMA2311EDTSTBLD /* EditorV2Tests.swift in Sources */,
+				AMA2311PEDTSTBLD /* PrescriptionEditorTests.swift in Sources */,
 				AMA2305TSTBLD /* StructureClarifyTests.swift in Sources */,
 				AMA2291STARTSTBLD /* WorkoutStartSelectionTests.swift in Sources */,
 				AMA2286GARTESTBLD /* GarminStartHandoffTests.swift in Sources */,

@@ -90,6 +90,7 @@ struct DDEditorExerciseDraft: Identifiable, Equatable {
     var name: String
     var sets: Int?
     var reps: Int?
+    var repsRange: RepsRange?
     var durationSeconds: Int?
     var distanceMeters: Int?
     var weightKg: Double?
@@ -104,6 +105,7 @@ struct DDEditorExerciseDraft: Identifiable, Equatable {
         name: String,
         sets: Int? = 3,
         reps: Int? = 10,
+        repsRange: RepsRange? = nil,
         durationSeconds: Int? = nil,
         distanceMeters: Int? = nil,
         weightKg: Double? = nil,
@@ -117,6 +119,7 @@ struct DDEditorExerciseDraft: Identifiable, Equatable {
         self.name = name
         self.sets = sets
         self.reps = reps
+        self.repsRange = repsRange
         self.durationSeconds = durationSeconds
         self.distanceMeters = distanceMeters
         self.weightKg = weightKg
@@ -328,10 +331,12 @@ enum DDEditorSeed {
             rounds: block.rounds,
             restBetweenRoundsSeconds: block.restBetweenSeconds ?? 60,
             exercises: block.exercises.map { exercise in
-                DDEditorExerciseDraft(
+                let parsed = RepsRange.splitPrescription(exercise.reps)
+                return DDEditorExerciseDraft(
                     name: exercise.name,
                     sets: exercise.sets,
-                    reps: Int(exercise.reps ?? ""),
+                    reps: parsed.reps,
+                    repsRange: parsed.range,
                     durationSeconds: exercise.durationSeconds,
                     distanceMeters: exercise.distance.map { Int($0) },
                     weightKg: exercise.load?.value,

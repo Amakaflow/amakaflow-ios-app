@@ -46,6 +46,50 @@ struct RepsRange: Equatable, Codable, Sendable {
 
         return RepsRange(low: low, high: high, qualifier: qualifier)
     }
+
+    /// Split a reps string into plain integer reps or a structured range.
+    static func splitPrescription(_ raw: String?) -> (reps: Int?, range: RepsRange?) {
+        guard let raw else { return (nil, nil) }
+        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return (nil, nil) }
+        if let value = Int(text), value != 0 { return (value, nil) }
+        if let range = parse(text) { return (nil, range) }
+        return (nil, nil)
+    }
+
+    static func isValidRangeText(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let regex = try? NSRegularExpression(pattern: #"^\d+\s*[–-]\s*\d+$"#) else {
+            return false
+        }
+        let range = NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)
+        return regex.firstMatch(in: trimmed, options: [], range: range) != nil
+    }
+
+    static func fromRangeText(_ text: String, preservingQualifier: String? = nil) -> RepsRange? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard isValidRangeText(trimmed), let parsed = parse(trimmed) else { return nil }
+        return RepsRange(low: parsed.low, high: parsed.high, qualifier: preservingQualifier)
+    }
+
+    static func ingestDisplay(from value: Any?) -> String? {
+        if let string = value as? String {
+            let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        }
+        if let dict = value as? [String: Any],
+           let low = dict["low"] as? Int,
+           let high = dict["high"] as? Int {
+            if low == high { return String(low) }
+            var display = "\(low)-\(high)"
+            if let qualifier = dict["qualifier"] as? String,
+               !qualifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                display += " \(qualifier)"
+            }
+            return display
+        }
+        return nil
+    }
 }
 
 enum PrescriptionPrimary: Equatable, Sendable {
@@ -133,7 +177,7 @@ enum PrescriptionFormatter {
         return value
     }
 
-    private static func secondaryParts(
+    static func secondaryParts(
         load: ExerciseLoad?,
         notes: String?,
         restSeconds: Int?,
