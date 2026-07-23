@@ -58,24 +58,8 @@ struct StructureClarifyExercise: Equatable, Identifiable, Sendable {
     }
 
     static func summary(for model: StructureExerciseModel) -> String {
-        var parts: [String] = []
-        if let distance = model.distanceM, distance > 0 {
-            parts.append("\(distance) M")
-        }
-        if let sets = model.sets, let reps = model.reps {
-            parts.append("\(sets) × \(reps)")
-        } else if let reps = model.reps {
-            parts.append("\(reps) REPS")
-        } else if let sets = model.sets {
-            parts.append("\(sets) SETS")
-        }
-        if let rest = model.restSec, rest > 0 {
-            parts.append(restMeta(rest))
-        }
-        if let notes = model.notes?.trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty {
-            parts.append(notes.uppercased())
-        }
-        return parts.isEmpty ? "—" : parts.joined(separator: " · ")
+        let line = PrescriptionFormatter.clarifyLine(for: model)
+        return line.isEmpty ? "—" : line
     }
 
     static func restMeta(_ seconds: Int) -> String {
@@ -84,6 +68,41 @@ struct StructureClarifyExercise: Equatable, Identifiable, Sendable {
             return "\(mins) MIN REST"
         }
         return "\(seconds)S REST"
+    }
+}
+
+extension PrescriptionFormatter {
+    /// AMA-2305 clarify rows — same resolver as detail / editor summary.
+    static func effective(from model: StructureExerciseModel) -> EffectivePrescription {
+        let plainReps = model.reps
+        let repsRange = plainReps == nil ? RepsRange.parse(model.notes) : nil
+        var secondary = secondaryParts(
+            load: nil,
+            notes: plainReps == nil && repsRange == nil ? model.notes : nil,
+            restSeconds: model.restSec,
+            rangeQualifier: repsRange?.qualifier
+        )
+
+        let primary = resolvePrimaryMetric(
+            durationSeconds: nil,
+            distanceMeters: model.distanceM,
+            calories: nil,
+            plainReps: plainReps,
+            repsRange: repsRange,
+            sets: model.sets
+        )
+
+        if case .repsRange(let range, _) = primary, let qualifier = range.qualifier {
+            if !secondary.contains(qualifier) {
+                secondary.append(qualifier)
+            }
+        }
+
+        return EffectivePrescription(primary: primary, secondary: secondary)
+    }
+
+    static func clarifyLine(for model: StructureExerciseModel) -> String {
+        line(effective(from: model)).uppercased()
     }
 }
 

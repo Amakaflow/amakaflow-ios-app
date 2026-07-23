@@ -316,7 +316,8 @@ struct SocialImportDraft: Equatable {
             id: "draft-\(UUID().uuidString)",
             name: title,
             sport: resolvedSport,
-            duration: max(exercises.count * 180, 600),
+            // No exercises×180 heuristic — honest 0 when ingest omits workout duration.
+            duration: 0,
             blocks: resolvedBlocks,
             description: workoutDescription ?? postProvenance?.contentSnippet,
             source: source,
