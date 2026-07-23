@@ -312,7 +312,7 @@ struct DDPlatformBadge: View {
 struct DDWatchReadinessPill: View {
     var isConnected: Bool
     /// Proto shows watch battery % (dd-today-dark.png); use 78 when live data unavailable.
-    var batteryPercent: Int? = nil
+    var batteryPercent: Int?
 
     private var displayBattery: String {
         if let batteryPercent {
