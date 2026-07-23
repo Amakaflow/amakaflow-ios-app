@@ -75,6 +75,11 @@ extension APIService {
 
     /// docs#46 — POST /ingest/instagram_reel/async then poll GET /tasks/{id}/status.
     private func ingestInstagramReelAsync(url: String) async throws -> Data {
+        let taskId = try await startInstagramReelAsyncTask(url: url)
+        return try await pollInstagramReelTask(taskId: taskId)
+    }
+
+    private func startInstagramReelAsyncTask(url: String) async throws -> String {
         let ingestorURL = AppEnvironment.current.ingestorAPIURL
         guard let startURL = URL(string: "\(ingestorURL)/ingest/instagram_reel/async") else {
             throw APIError.invalidURL
@@ -102,66 +107,73 @@ extension APIService {
         else {
             throw APIError.invalidResponse
         }
+        return taskId
+    }
 
+    private func pollInstagramReelTask(taskId: String) async throws -> Data {
+        let ingestorURL = AppEnvironment.current.ingestorAPIURL
         let deadline = Date().addingTimeInterval(Self.socialAsyncPollDeadlineSeconds)
         while Date() < deadline {
             if Task.isCancelled { throw CancellationError() }
-
-            guard let statusURL = URL(string: "\(ingestorURL)/tasks/\(taskId)/status") else {
-                throw APIError.invalidURL
+            if let data = try await fetchInstagramReelTaskStatus(ingestorURL: ingestorURL, taskId: taskId) {
+                return data
             }
-            var statusRequest = URLRequest(url: statusURL)
-            statusRequest.httpMethod = "GET"
-            statusRequest.timeoutInterval = Self.socialAsyncPollTimeoutInterval
-            statusRequest.allHTTPHeaderFields = try await makeAuthHeaders()
-
-            let (statusData, statusResponse) = try await session.data(for: statusRequest)
-            guard let http = statusResponse as? HTTPURLResponse else {
-                throw APIError.invalidResponse
-            }
-            if http.statusCode == 401 { throw APIError.unauthorized }
-            guard (200..<300).contains(http.statusCode) else {
-                throw APIError.serverError(http.statusCode)
-            }
-
-            guard
-                let statusJSON = try JSONSerialization.jsonObject(with: statusData) as? [String: Any],
-                let status = statusJSON["status"] as? String
-            else {
-                throw APIError.invalidResponse
-            }
-
-            switch status {
-            case "completed":
-                if let workout = statusJSON["result"] as? [String: Any],
-                   let nested = workout["workout"] as? [String: Any] {
-                    return try JSONSerialization.data(withJSONObject: nested)
-                }
-                if let result = statusJSON["result"] as? [String: Any] {
-                    // Some paths may return the workout dict directly
-                    if result["blocks"] != nil || result["title"] != nil {
-                        return try JSONSerialization.data(withJSONObject: result)
-                    }
-                    if let nested = result["workout"] as? [String: Any] {
-                        return try JSONSerialization.data(withJSONObject: nested)
-                    }
-                }
-                throw APIError.invalidResponse
-            case "failed":
-                let message = (statusJSON["error"] as? String)
-                    ?? "Instagram reel import failed"
-                throw APIError.serverErrorWithBody(400, message)
-            case "queued", "processing":
-                try await Task.sleep(nanoseconds: Self.socialAsyncPollIntervalNanoseconds)
-            default:
-                try await Task.sleep(nanoseconds: Self.socialAsyncPollIntervalNanoseconds)
-            }
+            try await Task.sleep(nanoseconds: Self.socialAsyncPollIntervalNanoseconds)
         }
-
         throw APIError.serverErrorWithBody(
             504,
             "Import is still running — open the app again in a minute, or retry."
         )
+    }
+
+    /// Returns workout JSON when complete; `nil` when still queued/processing.
+    private func fetchInstagramReelTaskStatus(ingestorURL: String, taskId: String) async throws -> Data? {
+        guard let statusURL = URL(string: "\(ingestorURL)/tasks/\(taskId)/status") else {
+            throw APIError.invalidURL
+        }
+        var statusRequest = URLRequest(url: statusURL)
+        statusRequest.httpMethod = "GET"
+        statusRequest.timeoutInterval = Self.socialAsyncPollTimeoutInterval
+        statusRequest.allHTTPHeaderFields = try await makeAuthHeaders()
+
+        let (statusData, statusResponse) = try await session.data(for: statusRequest)
+        guard let http = statusResponse as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        if http.statusCode == 401 { throw APIError.unauthorized }
+        guard (200..<300).contains(http.statusCode) else {
+            throw APIError.serverError(http.statusCode)
+        }
+
+        guard
+            let statusJSON = try JSONSerialization.jsonObject(with: statusData) as? [String: Any],
+            let status = statusJSON["status"] as? String
+        else {
+            throw APIError.invalidResponse
+        }
+
+        switch status {
+        case "completed":
+            return try Self.workoutDataFromAsyncTaskResult(statusJSON["result"])
+        case "failed":
+            let message = (statusJSON["error"] as? String) ?? "Instagram reel import failed"
+            throw APIError.serverErrorWithBody(400, message)
+        default:
+            return nil
+        }
+    }
+
+    private static func workoutDataFromAsyncTaskResult(_ result: Any?) throws -> Data {
+        guard let result else { throw APIError.invalidResponse }
+        if let envelope = result as? [String: Any] {
+            if let nested = envelope["workout"] as? [String: Any] {
+                return try JSONSerialization.data(withJSONObject: nested)
+            }
+            if envelope["blocks"] != nil || envelope["title"] != nil {
+                return try JSONSerialization.data(withJSONObject: envelope)
+            }
+        }
+        throw APIError.invalidResponse
     }
 
     /// POST /ingest/text for pasted captions / notes. Returns raw JSON.
