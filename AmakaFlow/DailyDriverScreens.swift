@@ -5,6 +5,7 @@
 //  Shared Daily Driver screen chrome — Library rows, Today timeline, filters
 //  (Daily Driver Proto standalone.html — DDBuildScreen, DDTodayScreen).
 //
+// swiftlint:disable file_length
 
 import SwiftUI
 
