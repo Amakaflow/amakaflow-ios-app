@@ -149,7 +149,7 @@ extension FixtureAPIService {
     // MARK: - Training Crews (AMA-1277)
 
     func fetchMyCrews() async throws -> CrewListResponse {
-        return CrewListResponse(crews: [], count: 0)
+        CrewListResponse(crews: [], count: 0)
     }
 
     func fetchCrewDetail(id: String) async throws -> CrewDetail {
@@ -157,7 +157,7 @@ extension FixtureAPIService {
     }
 
     func fetchCrewFeed(crewId: String) async throws -> CrewFeedResponse {
-        return CrewFeedResponse(posts: [], nextCursor: nil)
+        CrewFeedResponse(posts: [], nextCursor: nil)
     }
 
     func createCrew(_ request: CreateCrewRequest) async throws {}
@@ -362,6 +362,5 @@ extension FixtureAPIService {
     func deleteAccount() async throws {
         print("[FixtureAPIService] Stub: deleteAccount -> success")
     }
-
 }
 #endif

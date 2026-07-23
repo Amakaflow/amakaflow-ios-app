@@ -322,6 +322,5 @@ class FixtureAPIService: APIServiceProviding {
         }
         fixtureWorkoutsCache = cache
     }
-
 }
 #endif

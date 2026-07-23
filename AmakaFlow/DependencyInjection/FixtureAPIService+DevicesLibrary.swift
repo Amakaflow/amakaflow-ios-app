@@ -69,13 +69,24 @@ extension FixtureAPIService {
         if let exact = fixtureWatchDeliveryStatuses[workoutId] {
             return exact
         }
-        if workoutId.contains("failed") {
-            return fixtureWatchDeliveryStatuses["fixture-watch-failed"]!
+        if workoutId.contains("failed"),
+           let failed = fixtureWatchDeliveryStatuses["fixture-watch-failed"] {
+            return failed
         }
-        if workoutId.contains("confirmed") {
-            return fixtureWatchDeliveryStatuses["fixture-watch-confirmed_on_device"]!
+        if workoutId.contains("confirmed"),
+           let confirmed = fixtureWatchDeliveryStatuses["fixture-watch-confirmed_on_device"] {
+            return confirmed
         }
-        return fixtureWatchDeliveryStatuses["fixture-watch-pushed"]!
+        if let pushed = fixtureWatchDeliveryStatuses["fixture-watch-pushed"] {
+            return pushed
+        }
+        return Components.Schemas.WatchDeliveryStatus(
+            canResend: true,
+            occurredAt: "2026-05-29T13:00:00Z",
+            state: .generated,
+            subtitle: "Queued for Garmin delivery.",
+            title: "Pushed"
+        )
     }
 
     func resendWatchDelivery(workoutId: String) async throws -> Components.Schemas.WatchResendResult {
