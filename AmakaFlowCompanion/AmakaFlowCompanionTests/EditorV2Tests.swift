@@ -321,6 +321,8 @@ final class EditorV2Tests: XCTestCase {
             }
         )
         XCTAssertEqual(roundTrip.exercises.map(\.name), ["C", "A", "B"])
+        XCTAssertEqual(roundTrip.exercises.first?.reps, 12)
+        XCTAssertEqual(roundTrip.exercises.first(where: { $0.name == "A" })?.sets, 4)
     }
 
     func testAddSetAndRepEditExportToSaveIntervals() {
