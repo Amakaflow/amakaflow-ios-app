@@ -106,6 +106,15 @@ struct EffectivePrescription: Equatable, Sendable {
     var secondary: [String]
 }
 
+struct PrescriptionMetricInputs: Equatable, Sendable {
+    var durationSeconds: Int?
+    var distanceMeters: Int?
+    var calories: Int?
+    var plainReps: Int?
+    var repsRange: RepsRange?
+    var sets: Int?
+}
+
 enum PrescriptionFormatter {
     static func effective(from exercise: Exercise) -> EffectivePrescription {
         let plainReps = parsePlainReps(from: exercise.reps)
@@ -118,12 +127,14 @@ enum PrescriptionFormatter {
         )
 
         let primary = resolvePrimaryMetric(
-            durationSeconds: exercise.durationSeconds,
-            distanceMeters: exercise.distance.map { Int($0.rounded()) },
-            calories: nil,
-            plainReps: plainReps,
-            repsRange: repsRange,
-            sets: exercise.sets
+            PrescriptionMetricInputs(
+                durationSeconds: exercise.durationSeconds,
+                distanceMeters: exercise.distance.map { Int($0.rounded()) },
+                calories: nil,
+                plainReps: plainReps,
+                repsRange: repsRange,
+                sets: exercise.sets
+            )
         )
 
         if case .repsRange(let range, _) = primary, let qualifier = range.qualifier {
@@ -135,30 +146,23 @@ enum PrescriptionFormatter {
         return EffectivePrescription(primary: primary, secondary: secondary)
     }
 
-    static func resolvePrimaryMetric(
-        durationSeconds: Int?,
-        distanceMeters: Int?,
-        calories: Int?,
-        plainReps: Int?,
-        repsRange: RepsRange?,
-        sets: Int?
-    ) -> PrescriptionPrimary {
-        if let durationSeconds {
-            return .duration(seconds: durationSeconds, sets: sets)
+    static func resolvePrimaryMetric(_ inputs: PrescriptionMetricInputs) -> PrescriptionPrimary {
+        if let durationSeconds = inputs.durationSeconds {
+            return .duration(seconds: durationSeconds, sets: inputs.sets)
         }
-        if let distanceMeters {
-            return .distance(meters: distanceMeters, sets: sets)
+        if let distanceMeters = inputs.distanceMeters {
+            return .distance(meters: distanceMeters, sets: inputs.sets)
         }
-        if let calories {
-            return .calories(calories, sets: sets)
+        if let calories = inputs.calories {
+            return .calories(calories, sets: inputs.sets)
         }
-        if let plainReps {
-            return .reps(plainReps, sets: sets)
+        if let plainReps = inputs.plainReps {
+            return .reps(plainReps, sets: inputs.sets)
         }
-        if let repsRange {
-            return .repsRange(repsRange, sets: sets)
+        if let repsRange = inputs.repsRange {
+            return .repsRange(repsRange, sets: inputs.sets)
         }
-        return .none(sets: sets)
+        return .none(sets: inputs.sets)
     }
 
     static func line(_ prescription: EffectivePrescription) -> String {

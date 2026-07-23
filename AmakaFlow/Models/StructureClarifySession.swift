@@ -84,12 +84,14 @@ extension PrescriptionFormatter {
         )
 
         let primary = resolvePrimaryMetric(
-            durationSeconds: nil,
-            distanceMeters: model.distanceM,
-            calories: nil,
-            plainReps: plainReps,
-            repsRange: repsRange,
-            sets: model.sets
+            PrescriptionMetricInputs(
+                durationSeconds: nil,
+                distanceMeters: model.distanceM,
+                calories: nil,
+                plainReps: plainReps,
+                repsRange: repsRange,
+                sets: model.sets
+            )
         )
 
         if case .repsRange(let range, _) = primary, let qualifier = range.qualifier {

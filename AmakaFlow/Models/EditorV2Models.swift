@@ -277,12 +277,14 @@ extension PrescriptionFormatter {
         )
 
         let primary = resolvePrimaryMetric(
-            durationSeconds: exercise.durationSeconds,
-            distanceMeters: exercise.distanceMeters,
-            calories: exercise.calories,
-            plainReps: exercise.reps,
-            repsRange: exercise.repsRange,
-            sets: exercise.sets
+            PrescriptionMetricInputs(
+                durationSeconds: exercise.durationSeconds,
+                distanceMeters: exercise.distanceMeters,
+                calories: exercise.calories,
+                plainReps: exercise.reps,
+                repsRange: exercise.repsRange,
+                sets: exercise.sets
+            )
         )
 
         if case .repsRange(let range, _) = primary, let qualifier = range.qualifier {
