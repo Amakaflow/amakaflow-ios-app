@@ -31,14 +31,24 @@ protocol SocialImportAPIProviding {
 extension APIService {
     /// Apify + LLM reel ingest often exceeds 15s; align with ingestor smoke (90s) plus headroom.
     private static let socialURLIngestTimeoutInterval: TimeInterval = 120
+    /// Short per-request timeouts for async start + poll (docs#46) — survives app backgrounding.
+    private static let socialAsyncStartTimeoutInterval: TimeInterval = 30
+    private static let socialAsyncPollTimeoutInterval: TimeInterval = 15
+    private static let socialAsyncPollIntervalNanoseconds: UInt64 = 1_500_000_000
+    private static let socialAsyncPollDeadlineSeconds: TimeInterval = 180
     private static let socialSaveTimeoutInterval: TimeInterval = 30
 
     // MARK: - Social Import (AMA-2285)
 
     /// POST /ingest/{platform.ingestPath} with a URL. Returns raw JSON for draft parsing.
+    /// Instagram uses async start + poll (docs#46) so leaving the app does not drop a 120s POST.
     func ingestSocialURL(url: String, platform: SocialImportPlatform) async throws -> Data {
         guard PairingService.shared.isPaired else {
             throw APIError.unauthorized
+        }
+
+        if platform == .instagram {
+            return try await ingestInstagramReelAsync(url: url)
         }
 
         let ingestorURL = AppEnvironment.current.ingestorAPIURL
@@ -61,6 +71,109 @@ extension APIService {
             response: response,
             endpoint: "/ingest/\(path)"
         )
+    }
+
+    /// docs#46 — POST /ingest/instagram_reel/async then poll GET /tasks/{id}/status.
+    private func ingestInstagramReelAsync(url: String) async throws -> Data {
+        let taskId = try await startInstagramReelAsyncTask(url: url)
+        return try await pollInstagramReelTask(taskId: taskId)
+    }
+
+    private func startInstagramReelAsyncTask(url: String) async throws -> String {
+        let ingestorURL = AppEnvironment.current.ingestorAPIURL
+        guard let startURL = URL(string: "\(ingestorURL)/ingest/instagram_reel/async") else {
+            throw APIError.invalidURL
+        }
+
+        var startRequest = URLRequest(url: startURL)
+        startRequest.httpMethod = "POST"
+        startRequest.timeoutInterval = Self.socialAsyncStartTimeoutInterval
+        startRequest.allHTTPHeaderFields = try await makeAuthHeaders()
+        startRequest.httpBody = try JSONSerialization.data(withJSONObject: ["url": url])
+
+        print("[APIService] ingestInstagramReelAsync - \(startURL.absoluteString)")
+
+        let (startData, startResponse) = try await session.data(for: startRequest)
+        _ = try await Self.validateSocialIngestResponse(
+            data: startData,
+            response: startResponse,
+            endpoint: "/ingest/instagram_reel/async"
+        )
+
+        guard
+            let startJSON = try JSONSerialization.jsonObject(with: startData) as? [String: Any],
+            let taskId = startJSON["task_id"] as? String,
+            !taskId.isEmpty
+        else {
+            throw APIError.invalidResponse
+        }
+        return taskId
+    }
+
+    private func pollInstagramReelTask(taskId: String) async throws -> Data {
+        let ingestorURL = AppEnvironment.current.ingestorAPIURL
+        let deadline = Date().addingTimeInterval(Self.socialAsyncPollDeadlineSeconds)
+        while Date() < deadline {
+            if Task.isCancelled { throw CancellationError() }
+            if let data = try await fetchInstagramReelTaskStatus(ingestorURL: ingestorURL, taskId: taskId) {
+                return data
+            }
+            try await Task.sleep(nanoseconds: Self.socialAsyncPollIntervalNanoseconds)
+        }
+        throw APIError.serverErrorWithBody(
+            504,
+            "Import is still running — open the app again in a minute, or retry."
+        )
+    }
+
+    /// Returns workout JSON when complete; `nil` when still queued/processing.
+    private func fetchInstagramReelTaskStatus(ingestorURL: String, taskId: String) async throws -> Data? {
+        guard let statusURL = URL(string: "\(ingestorURL)/tasks/\(taskId)/status") else {
+            throw APIError.invalidURL
+        }
+        var statusRequest = URLRequest(url: statusURL)
+        statusRequest.httpMethod = "GET"
+        statusRequest.timeoutInterval = Self.socialAsyncPollTimeoutInterval
+        statusRequest.allHTTPHeaderFields = try await makeAuthHeaders()
+
+        let (statusData, statusResponse) = try await session.data(for: statusRequest)
+        guard let http = statusResponse as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        if http.statusCode == 401 { throw APIError.unauthorized }
+        guard (200..<300).contains(http.statusCode) else {
+            throw APIError.serverError(http.statusCode)
+        }
+
+        guard
+            let statusJSON = try JSONSerialization.jsonObject(with: statusData) as? [String: Any],
+            let status = statusJSON["status"] as? String
+        else {
+            throw APIError.invalidResponse
+        }
+
+        switch status {
+        case "completed":
+            return try Self.workoutDataFromAsyncTaskResult(statusJSON["result"])
+        case "failed":
+            let message = (statusJSON["error"] as? String) ?? "Instagram reel import failed"
+            throw APIError.serverErrorWithBody(400, message)
+        default:
+            return nil
+        }
+    }
+
+    private static func workoutDataFromAsyncTaskResult(_ result: Any?) throws -> Data {
+        guard let result else { throw APIError.invalidResponse }
+        if let envelope = result as? [String: Any] {
+            if let nested = envelope["workout"] as? [String: Any] {
+                return try JSONSerialization.data(withJSONObject: nested)
+            }
+            if envelope["blocks"] != nil || envelope["title"] != nil {
+                return try JSONSerialization.data(withJSONObject: envelope)
+            }
+        }
+        throw APIError.invalidResponse
     }
 
     /// POST /ingest/text for pasted captions / notes. Returns raw JSON.
