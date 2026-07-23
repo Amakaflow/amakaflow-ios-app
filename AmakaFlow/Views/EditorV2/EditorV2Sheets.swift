@@ -48,10 +48,12 @@ struct EditorV2MenuSheet: View {
 
 struct EditorV2EditSheet: View {
     @State private var draft: EditorV2Exercise
+    @State private var rangeText: String
     var onDone: (EditorV2Exercise) -> Void
 
     init(exercise: EditorV2Exercise, onDone: @escaping (EditorV2Exercise) -> Void) {
         _draft = State(initialValue: exercise)
+        _rangeText = State(initialValue: exercise.repsRange?.display ?? "")
         self.onDone = onDone
     }
 
@@ -65,7 +67,23 @@ struct EditorV2EditSheet: View {
                 if draft.sets != nil {
                     EditorV2Stepper(label: "Sets", value: draft.sets ?? 0, min: 1, max: 12) { draft.sets = $0 }
                 }
-                if draft.reps != nil {
+                if draft.repsRange != nil {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Rep range")
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                            .foregroundColor(DailyDriver.foregroundMuted)
+                        TextField("8-10", text: $rangeText)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .keyboardType(.numbersAndPunctuation)
+                            .padding(12)
+                            .background(DailyDriver.inputBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .foregroundColor(DailyDriver.foreground)
+                            .accessibilityIdentifier("editor_v2_edit_rep_range")
+                    }
+                    .gridCellColumns(2)
+                } else if draft.reps != nil {
                     EditorV2Stepper(label: "Reps", value: draft.reps ?? 0, min: 1, max: 50) { draft.reps = $0 }
                 }
                 if draft.durationSeconds != nil {
@@ -124,7 +142,7 @@ struct EditorV2EditSheet: View {
                 }
             }
             Button {
-                onDone(draft)
+                onDone(committedDraft())
             } label: {
                 Text("Done")
                     .ddDisplayText(14, weight: .bold)
@@ -142,6 +160,14 @@ struct EditorV2EditSheet: View {
         .padding(.bottom, 24)
         .background(DailyDriver.backgroundElevated)
         .preferredColorScheme(.dark)
+    }
+
+    private func committedDraft() -> EditorV2Exercise {
+        guard draft.repsRange != nil else { return draft }
+        if let updated = RepsRange.fromRangeText(rangeText, preservingQualifier: draft.repsRange?.qualifier) {
+            draft.repsRange = updated
+        }
+        return draft
     }
 }
 

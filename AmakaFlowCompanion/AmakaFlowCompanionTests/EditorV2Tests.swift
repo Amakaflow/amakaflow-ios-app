@@ -20,7 +20,7 @@ final class EditorV2Tests: XCTestCase {
             weightKg: 60,
             restSeconds: 60
         )
-        XCTAssertEqual(exercise.summaryLine, "4 × 8 · 60 KG · 60S REST")
+        XCTAssertEqual(exercise.summaryLine, "4 × 8 · 60 kg · 60S REST")
         XCTAssertEqual(EditorV2Exercise.maxVisibleControlsPerRow, 2)
     }
 
@@ -354,5 +354,95 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertEqual(blocks.first?.type, "sets")
         XCTAssertEqual(blocks.first?.exercises.map(\.name), ["Deadlift", "Pull Up"])
         XCTAssertEqual(session.toSaveIntervals().count, 2)
+    }
+
+    // MARK: - Rep range seed + summary (AMA-2311 Task 6)
+
+    func testSeedFromWorkoutRepRangePreservesRangeNotPlainReps() throws {
+        let workout = Workout(
+            id: "wk-range-1",
+            name: "Upper",
+            sport: .strength,
+            duration: 1800,
+            blocks: [
+                Block(
+                    label: "Main",
+                    structure: .straight,
+                    rounds: 1,
+                    exercises: [
+                        Exercise(
+                            name: "Squat",
+                            canonicalName: nil,
+                            sets: 3,
+                            reps: "8-10",
+                            durationSeconds: nil,
+                            load: nil,
+                            restSeconds: 60,
+                            distance: nil,
+                            notes: nil,
+                            supersetGroup: nil
+                        )
+                    ]
+                )
+            ],
+            source: .instagram
+        )
+
+        let session = EditorV2Session.from(mode: .edit, workout: workout)
+        let row = try XCTUnwrap(session.exercises.first)
+
+        XCTAssertNil(row.reps)
+        XCTAssertEqual(row.repsRange, RepsRange(low: 8, high: 10))
+        XCTAssertEqual(row.sets, 3)
+        XCTAssertEqual(row.restSeconds, 60)
+    }
+
+    func testRepRangeSummaryIsNotRestOnly() {
+        let exercise = EditorV2Exercise(
+            name: "Squat",
+            sets: 3,
+            repsRange: RepsRange(low: 8, high: 10),
+            restSeconds: 60
+        )
+
+        XCTAssertEqual(exercise.summaryLine, "3 × 8-10 · 60S REST")
+        XCTAssertNotEqual(exercise.summaryLine, "60S REST")
+    }
+
+    func testRepRangeExportsThroughSocialImportBlocks() {
+        var session = EditorV2Session(
+            title: "Range day",
+            exercises: [
+                EditorV2Exercise(
+                    name: "Squat",
+                    sets: 3,
+                    repsRange: RepsRange(low: 8, high: 10),
+                    restSeconds: 60
+                )
+            ]
+        )
+
+        let exported = session.toSocialImportBlocks().flatMap(\.exercises).first
+        XCTAssertEqual(exported?.repsRange, "8-10")
+        XCTAssertNil(exported?.reps)
+    }
+
+    func testRepRangeExportsThroughSaveIntervals() {
+        let session = EditorV2Session(
+            title: "Range day",
+            exercises: [
+                EditorV2Exercise(
+                    name: "Squat",
+                    sets: 3,
+                    repsRange: RepsRange(low: 8, high: 10),
+                    restSeconds: 60
+                )
+            ]
+        )
+
+        let interval = session.toSaveIntervals().first
+        XCTAssertEqual(interval?.type, "reps")
+        XCTAssertEqual(interval?.target, "8-10")
+        XCTAssertEqual(interval?.reps, 9)
     }
 }

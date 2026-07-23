@@ -40,11 +40,14 @@ extension SocialImportDraft {
                 let blockExercises = (block["exercises"] as? [[String: Any]]) ?? []
                 let mapped = blockExercises.compactMap { Self.parseExerciseItem($0) }
                 guard !mapped.isEmpty else { continue }
+                let blockType = (block["structure"] as? String) ?? (block["type"] as? String)
                 parsedBlocks.append(
                     SocialImportBlock(
                         label: block["label"] as? String,
                         rounds: block["rounds"] as? Int ?? 1,
-                        exercises: mapped
+                        exercises: mapped,
+                        type: blockType,
+                        restSec: block["rest_between_rounds_sec"] as? Int ?? block["rest_sec"] as? Int
                     )
                 )
                 exercises.append(contentsOf: mapped)
@@ -81,7 +84,7 @@ extension SocialImportDraft {
             ?? (object["summary"] as? String)
             ?? postProvenance?.contentSnippet
 
-        return SocialImportDraft(
+        var draft = SocialImportDraft(
             title: title,
             sport: sport.lowercased(),
             platform: platform,
@@ -93,27 +96,30 @@ extension SocialImportDraft {
             postProvenance: postProvenance,
             workoutDescription: description
         )
+        PrescriptionDefaults.applyToDraft(&draft)
+        return draft
     }
 
     private static func parseExerciseItem(_ item: [String: Any]) -> SocialImportExercise? {
         let name = (item["name"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let name, !name.isEmpty else { return nil }
 
-        let sets = item["sets"] as? Int ?? defaultSets(from: item)
+        let sets = item["sets"] as? Int
         let repsRaw = item["reps"]
         let repsString = repsRaw as? String
         let reps = repsRaw as? Int ?? repsString.flatMap(Int.init)
-        let repsRange = (item["reps_range"] as? String)
+        let structuredRange = RepsRange.ingestDisplay(from: item["reps_range"])
+        let repsRange = structuredRange
             ?? repsString.flatMap { Int($0) == nil ? $0 : nil }
         let seconds = item["duration_sec"] as? Int ?? item["duration_seconds"] as? Int ?? item["seconds"] as? Int
         let distanceMeters = item["distance_m"] as? Int ?? item["distanceMeters"] as? Int
+        let restSeconds = item["rest_sec"] as? Int ?? item["restSeconds"] as? Int
 
         let focus = parseFocus(from: item)
         let load = parseLoad(from: item)
         let instruction = (item["instruction"] as? String)
             ?? (item["detail"] as? String)
             ?? (item["tempo"] as? String)
-            ?? (item["reps_range"] as? String)
         let notes = item["notes"] as? String
 
         return SocialImportExercise(
@@ -123,15 +129,11 @@ extension SocialImportDraft {
             repsRange: repsRange,
             seconds: seconds,
             distanceMeters: distanceMeters,
+            restSeconds: restSeconds,
             load: load ?? instruction,
             focus: focus,
             notes: notes
         )
-    }
-
-    private static func defaultSets(from item: [String: Any]) -> Int? {
-        if item["reps"] != nil || item["duration_sec"] != nil { return 3 }
-        return nil
     }
 
     private static func parseFocus(from item: [String: Any]) -> String? {

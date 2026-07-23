@@ -207,6 +207,7 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
     var name: String
     var sets: Int?
     var reps: Int?
+    var repsRange: RepsRange?
     var durationSeconds: Int?
     var distanceMeters: Int?
     var weightKg: Double?
@@ -221,6 +222,7 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
         name: String,
         sets: Int? = nil,
         reps: Int? = nil,
+        repsRange: RepsRange? = nil,
         durationSeconds: Int? = nil,
         distanceMeters: Int? = nil,
         weightKg: Double? = nil,
@@ -234,6 +236,7 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
         self.name = name
         self.sets = sets
         self.reps = reps
+        self.repsRange = repsRange
         self.durationSeconds = durationSeconds
         self.distanceMeters = distanceMeters
         self.weightKg = weightKg
@@ -246,22 +249,7 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
 
     /// Mono summary under the name (screens-editor2.jsx `e2Sum`).
     var summaryLine: String {
-        var parts: [String] = []
-        if let sets, let reps {
-            parts.append("\(sets) × \(reps)")
-        } else if let reps {
-            parts.append("\(reps) REPS")
-        }
-        if let durationSeconds {
-            parts.append(EditorV2Group.restMetaText(durationSeconds))
-        }
-        if let distanceMeters { parts.append("\(distanceMeters) M") }
-        if let weightKg {
-            parts.append("\(Self.formatWeight(weightKg)) KG")
-        }
-        if let calories { parts.append("\(calories) CAL") }
-        if let restSeconds { parts.append("\(restSeconds)S REST") }
-        return parts.joined(separator: " · ")
+        PrescriptionFormatter.line(PrescriptionFormatter.effective(from: self))
     }
 
     static func formatWeight(_ weightKg: Double) -> String {
@@ -276,6 +264,37 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
 
     /// Visible tap targets on a calm card: body + ⋯ only.
     static let maxVisibleControlsPerRow = 2
+}
+
+extension PrescriptionFormatter {
+    static func effective(from exercise: EditorV2Exercise) -> EffectivePrescription {
+        let load = exercise.weightKg.map { ExerciseLoad(value: $0, unit: "kg") }
+        var secondary = secondaryParts(
+            load: load,
+            notes: nil,
+            restSeconds: exercise.restSeconds,
+            rangeQualifier: exercise.repsRange?.qualifier
+        )
+
+        let primary = resolvePrimaryMetric(
+            PrescriptionMetricInputs(
+                durationSeconds: exercise.durationSeconds,
+                distanceMeters: exercise.distanceMeters,
+                calories: exercise.calories,
+                plainReps: exercise.reps,
+                repsRange: exercise.repsRange,
+                sets: exercise.sets
+            )
+        )
+
+        if case .repsRange(let range, _) = primary, let qualifier = range.qualifier {
+            if !secondary.contains(qualifier) {
+                secondary.append(qualifier)
+            }
+        }
+
+        return EffectivePrescription(primary: primary, secondary: secondary)
+    }
 }
 
 /// Consecutive same-group exercises share one rail (screens-editor2.jsx `runs`).

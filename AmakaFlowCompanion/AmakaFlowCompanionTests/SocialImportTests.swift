@@ -629,17 +629,30 @@ final class APIServiceSocialImportContractTests: XCTestCase {
 
     func testIngestSocialURLUsesExtendedTimeoutForReelFetch() async throws {
         MockURLProtocol.requestHandler = { request in
-            XCTAssertEqual(request.timeoutInterval, 120, accuracy: 0.001)
+            let path = request.url?.path ?? ""
             let response = HTTPURLResponse(
                 url: request.url!,
                 statusCode: 200,
                 httpVersion: "HTTP/1.1",
                 headerFields: ["Content-Type": "application/json"]
             )!
-            let data = """
-            {"title":"Hyrox","sport":"strength","blocks":[{"exercises":[{"name":"Sled Push","sets":4,"reps":1}]}]}
-            """.data(using: .utf8)!
-            return (response, data)
+
+            if path.contains("/ingest/instagram_reel/async") {
+                XCTAssertEqual(request.timeoutInterval, 30, accuracy: 0.001)
+                let data = #"{"task_id":"task-ig-1","status":"queued"}"#.data(using: .utf8)!
+                return (response, data)
+            }
+
+            if path.contains("/tasks/") {
+                XCTAssertEqual(request.timeoutInterval, 15, accuracy: 0.001)
+                let data = """
+                {"status":"completed","result":{"title":"Hyrox","sport":"strength","blocks":[{"exercises":[{"name":"Sled Push","sets":4,"reps":1}]}]}}
+                """.data(using: .utf8)!
+                return (response, data)
+            }
+
+            XCTFail("Unexpected request path: \(path)")
+            return (response, Data())
         }
 
         _ = try await api.ingestSocialURL(
@@ -647,9 +660,12 @@ final class APIServiceSocialImportContractTests: XCTestCase {
             platform: .instagram
         )
 
-        XCTAssertEqual(MockURLProtocol.interceptedRequests.count, 1)
+        XCTAssertEqual(MockURLProtocol.interceptedRequests.count, 2)
         XCTAssertTrue(
-            MockURLProtocol.interceptedRequests[0].url?.path.contains("instagram_reel") == true
+            MockURLProtocol.interceptedRequests[0].url?.path.contains("instagram_reel/async") == true
+        )
+        XCTAssertTrue(
+            MockURLProtocol.interceptedRequests[1].url?.path.contains("/tasks/") == true
         )
     }
 

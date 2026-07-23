@@ -61,7 +61,7 @@ enum WorkoutLibraryDetailStore {
             id: saved.id,
             name: request.name.isEmpty ? saved.name : request.name,
             sport: WorkoutSport(rawValue: request.sport) ?? saved.sport,
-            duration: max(blocks.flatMap(\.exercises).count * 180, 600),
+            duration: saved.duration > 0 ? saved.duration : 0,
             blocks: blocks,
             description: request.description ?? saved.description,
             source: WorkoutSource(rawValue: request.source ?? "") ?? saved.source,

@@ -5,6 +5,7 @@
 //  Shared Daily Driver screen chrome — Library rows, Today timeline, filters
 //  (Daily Driver Proto standalone.html — DDBuildScreen, DDTodayScreen).
 //
+// swiftlint:disable file_length
 
 import SwiftUI
 
@@ -682,21 +683,94 @@ struct DDWorkoutDisplaySection: Identifiable {
 
 enum DDWorkoutDisplayGrouping {
     /// One handoff section per block (`DDDetailScreen` — jsx L1697).
+    /// Applies read-time collapse for legacy singleton blocks — does not mutate `workout`.
     static func sections(for workout: Workout) -> [DDWorkoutDisplaySection] {
-        let blocks = workout.blocks.filter { !$0.exercises.isEmpty }
-        guard !blocks.isEmpty else { return [] }
+        let sourceBlocks = workout.blocks.filter { !$0.exercises.isEmpty }
+        guard !sourceBlocks.isEmpty else { return [] }
 
-        let totalExercises = max(1, blocks.reduce(0) { $0 + $1.exercises.count })
+        let displayBlocks = collapseStraightSetSingletons(sourceBlocks)
+        let totalExercises = max(1, displayBlocks.reduce(0) { $0 + $1.exercises.count })
 
-        return blocks.enumerated().map { index, block in
-            let seconds = durationShare(for: block, totalExercises: totalExercises, workoutDuration: workout.duration)
+        return displayBlocks.enumerated().map { index, block in
+            let suppressTitle = shouldSuppressTitle(for: block, allBlocks: displayBlocks)
+            let title = suppressTitle
+                ? ""
+                : sectionTitle(for: block, index: index)
+            let seconds = durationShare(
+                for: block,
+                totalExercises: totalExercises,
+                workoutDuration: workout.duration
+            )
             return DDWorkoutDisplaySection(
                 id: block.id,
-                title: sectionTitle(for: block, index: index),
+                title: title,
                 note: sectionNote(for: block, durationSeconds: seconds),
                 exercises: block.exercises
             )
         }
+    }
+
+    /// Display-only: merge consecutive unlabeled straight-set singletons into one virtual Main.
+    static func collapseStraightSetSingletons(_ blocks: [Block]) -> [Block] {
+        var result: [Block] = []
+        var pendingExercises: [Exercise] = []
+
+        func flushPending() {
+            guard !pendingExercises.isEmpty else { return }
+            result.append(
+                Block(
+                    label: "Main",
+                    structure: .straight,
+                    rounds: 1,
+                    exercises: pendingExercises
+                )
+            )
+            pendingExercises = []
+        }
+
+        for block in blocks {
+            if isCollapsibleSingleton(block) {
+                pendingExercises.append(contentsOf: block.exercises)
+            } else {
+                flushPending()
+                result.append(block)
+            }
+        }
+        flushPending()
+        return result
+    }
+
+    static func isCollapsibleSingleton(_ block: Block) -> Bool {
+        block.structure == .straight
+            && block.exercises.count == 1
+            && isUnlabeledStraightSetContainer(block)
+    }
+
+    static func isUnlabeledStraightSetContainer(_ block: Block) -> Bool {
+        guard let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines), !label.isEmpty else {
+            return true
+        }
+        if label.caseInsensitiveCompare("Main") == .orderedSame { return true }
+        return isGenericBlockLabel(label)
+    }
+
+    static func isStraightSetContainer(_ block: Block) -> Bool {
+        block.structure == .straight
+    }
+
+    static func shouldSuppressTitle(for block: Block, allBlocks: [Block]) -> Bool {
+        guard isStraightSetContainer(block), isUnlabeledStraightSetContainer(block) else { return false }
+        let unlabeledContainers = allBlocks.filter {
+            isStraightSetContainer($0) && isUnlabeledStraightSetContainer($0)
+        }
+        return unlabeledContainers.count == 1 && unlabeledContainers[0].id == block.id
+    }
+
+    static func isGenericBlockLabel(_ label: String) -> Bool {
+        label.range(
+            of: #"^(Main block|Block \d+|AMRAP)$"#,
+            options: [.regularExpression, .caseInsensitive]
+        ) != nil
     }
 
     static func isWarmupOrCooldown(_ block: Block) -> Bool {
@@ -735,18 +809,24 @@ enum DDWorkoutDisplayGrouping {
     }
 
     private static func isGenericLabel(_ label: String) -> Bool {
-        label.range(
-            of: #"^(Main block|Block \d+|AMRAP)$"#,
-            options: [.regularExpression, .caseInsensitive]
-        ) != nil
+        isGenericBlockLabel(label)
     }
 
     private static func durationShare(for block: Block, totalExercises: Int, workoutDuration: Int) -> Int {
+        guard workoutDuration > 0 else { return 0 }
+        if isStraightSetContainer(block), isUnlabeledStraightSetContainer(block) { return 0 }
         let ratio = Double(block.exercises.count) / Double(totalExercises)
         return max(60, Int(Double(workoutDuration) * ratio))
     }
 
     private static func sectionNote(for block: Block, durationSeconds: Int) -> String {
+        if isStraightSetContainer(block), isUnlabeledStraightSetContainer(block) {
+            if block.rounds > 1 {
+                return "\(block.rounds) rounds"
+            }
+            return ""
+        }
+
         let minutes = max(1, durationSeconds / 60)
         let rounds = max(1, block.rounds)
         let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
@@ -770,14 +850,20 @@ struct DDWorkoutBlockSectionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(section.title)
-                    .ddDisplayText(14.5, weight: .bold)
-                    .foregroundColor(DailyDriver.foreground)
-                Spacer(minLength: 0)
-                Text(section.note.uppercased())
-                    .font(.system(size: 9.5, weight: .medium, design: .monospaced))
-                    .foregroundColor(DailyDriver.foregroundMuted)
+            if !section.title.isEmpty || !section.note.isEmpty {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    if !section.title.isEmpty {
+                        Text(section.title)
+                            .ddDisplayText(14.5, weight: .bold)
+                            .foregroundColor(DailyDriver.foreground)
+                    }
+                    Spacer(minLength: 0)
+                    if !section.note.isEmpty {
+                        Text(section.note.uppercased())
+                            .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+                            .foregroundColor(DailyDriver.foregroundMuted)
+                    }
+                }
             }
 
             VStack(spacing: 0) {
@@ -822,46 +908,7 @@ struct DDWorkoutBlockSectionView: View {
 
 extension Exercise {
     var ddDetailLine: String {
-        var parts: [String] = []
-        if let sets, sets > 0, let distance {
-            let distText = distance >= 1000
-                ? String(format: "%.1f km", distance / 1000)
-                : "\(Int(distance)) m"
-            parts.append("\(sets) × \(distText)")
-        } else if let sets, let reps {
-            parts.append("\(sets) × \(reps)")
-        } else if let reps {
-            parts.append("\(reps) reps")
-        } else if let durationSeconds {
-            parts.append(durationSeconds >= 60 ? "\(durationSeconds / 60) min" : "\(durationSeconds) sec")
-        } else if let distance {
-            parts.append(distance >= 1000 ? String(format: "%.1f km", distance / 1000) : "\(Int(distance)) m")
-        }
-
-        if let load {
-            if load.value > 0 {
-                if load.unit == "bodyweight" {
-                    parts.append("bodyweight")
-                } else {
-                    let valueText = load.value.truncatingRemainder(dividingBy: 1) == 0
-                        ? String(Int(load.value))
-                        : String(load.value)
-                    let unit = load.unit.trimmingCharacters(in: .whitespacesAndNewlines)
-                    parts.append(unit.isEmpty ? valueText : "\(valueText) \(unit)")
-                }
-            } else if !load.unit.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                parts.append(load.unit)
-            }
-        }
-
-        if let notes {
-            let trimmed = notes.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmed.isEmpty, !Exercise.looksLikeMuscleFocus(trimmed), parts.isEmpty || !parts.contains(where: { $0.localizedCaseInsensitiveContains(trimmed) }) {
-                parts.append(trimmed)
-            }
-        }
-
-        return parts.joined(separator: " · ").uppercased()
+        PrescriptionFormatter.line(PrescriptionFormatter.effective(from: self)).uppercased()
     }
 
     var ddMuscleHint: String? {
