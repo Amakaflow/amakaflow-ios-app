@@ -56,11 +56,12 @@ enum WorkoutLibraryDetailStore {
             )
         }
 
+        // Duration follows the current edit — do not max against a stale larger save response.
         return Workout(
             id: saved.id,
             name: request.name.isEmpty ? saved.name : request.name,
             sport: WorkoutSport(rawValue: request.sport) ?? saved.sport,
-            duration: max(saved.duration, max(blocks.flatMap(\.exercises).count * 180, 600)),
+            duration: max(blocks.flatMap(\.exercises).count * 180, 600),
             blocks: blocks,
             description: request.description ?? saved.description,
             source: WorkoutSource(rawValue: request.source ?? "") ?? saved.source,
@@ -111,12 +112,12 @@ enum WorkoutLibraryDetailStore {
             return workout
         }
         // Cache is the block-rich source of truth for interval-only library payloads.
-        // Name/duration still follow the fetched workout when present (post-edit).
+        // Duration stays with the cached blocks so shrinking an edit can take effect.
         return Workout(
             id: workout.id,
             name: workout.name.isEmpty ? cached.name : workout.name,
             sport: workout.sport == .other ? cached.sport : workout.sport,
-            duration: max(workout.duration, cached.duration),
+            duration: cached.duration,
             blocks: cached.blocks,
             description: cached.description ?? workout.description,
             source: resolvedSource(fetched: workout, cached: cached),
@@ -126,10 +127,13 @@ enum WorkoutLibraryDetailStore {
         )
     }
 
-    private static func blockStructure(from type: String?) -> BlockStructure {
+    /// Map ADR-017 / SocialImport block type strings onto Library `BlockStructure`.
+    /// `for-time` has no dedicated `BlockStructure` case yet — closest is circuit (multi-round).
+    static func blockStructure(from type: String?) -> BlockStructure {
         switch type?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
         case "superset": return .superset
         case "circuit", "rounds", "warmup": return .circuit
+        case "for-time", "fortime": return .circuit
         case "amrap": return .amrap
         case "emom": return .emom
         case "tabata": return .tabata
@@ -137,7 +141,8 @@ enum WorkoutLibraryDetailStore {
         }
     }
 
-    private static func interval(from save: WorkoutSaveInterval) -> WorkoutInterval? {
+    /// Shared `WorkoutSaveInterval` → playback interval mapping (editor + fixtures).
+    static func interval(from save: WorkoutSaveInterval) -> WorkoutInterval? {
         switch save.type {
         case "time":
             return .time(seconds: save.seconds ?? 60, target: save.target ?? save.name)

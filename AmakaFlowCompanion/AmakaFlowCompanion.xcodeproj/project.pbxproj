@@ -143,6 +143,10 @@
 		AMA2290WCVCOMPBLD /* WorkoutCompletionView+Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2290WCVCOMPREF /* WorkoutCompletionView+Components.swift */; };
 		AMA2290BFTESTBLD /* StrengthBackfillTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2290BFTESTREF /* StrengthBackfillTests.swift */; };
 		AMA2289FIXCMPBLD /* FixtureAPIService+Completions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2289FIXCMPREF /* FixtureAPIService+Completions.swift */; };
+		F1XWRITE01BLD /* FixtureAPIService+Writes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1XWRITE01REF /* FixtureAPIService+Writes.swift */; };
+		F1XDEVLIB01BLD /* FixtureAPIService+DevicesLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1XDEVLIB01REF /* FixtureAPIService+DevicesLibrary.swift */; };
+		F1XPROD01BLD /* FixtureAPIService+ProductStubs.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1XPROD01REF /* FixtureAPIService+ProductStubs.swift */; };
+		F1XWSAVE01BLD /* FixtureAPIService+WorkoutSave.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1XWSAVE01REF /* FixtureAPIService+WorkoutSave.swift */; };
 		AMA2289DETDTLBLD /* WorkoutCompletionDetail+TodayDiary.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2289DETDTLREF /* WorkoutCompletionDetail+TodayDiary.swift */; };
 		AMA2289ACTSECBLD /* CompletionDiaryActionsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2289ACTSECREF /* CompletionDiaryActionsSection.swift */; };
 		AK00FIX004B /* StravaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX004A /* StravaService.swift */; };
@@ -687,6 +691,10 @@
 		AMA2290WCVCOMPREF /* WorkoutCompletionView+Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutCompletionView+Components.swift"; path = "../AmakaFlow/Views/WorkoutCompletionView+Components.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2290BFTESTREF /* StrengthBackfillTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StrengthBackfillTests.swift; path = AmakaFlowCompanionTests/StrengthBackfillTests.swift; sourceTree = "<group>"; };
 		AMA2289FIXCMPREF /* FixtureAPIService+Completions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "FixtureAPIService+Completions.swift"; path = "../AmakaFlow/DependencyInjection/FixtureAPIService+Completions.swift"; sourceTree = SOURCE_ROOT; };
+		F1XWRITE01REF /* FixtureAPIService+Writes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "FixtureAPIService+Writes.swift"; path = "../AmakaFlow/DependencyInjection/FixtureAPIService+Writes.swift"; sourceTree = SOURCE_ROOT; };
+		F1XDEVLIB01REF /* FixtureAPIService+DevicesLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "FixtureAPIService+DevicesLibrary.swift"; path = "../AmakaFlow/DependencyInjection/FixtureAPIService+DevicesLibrary.swift"; sourceTree = SOURCE_ROOT; };
+		F1XPROD01REF /* FixtureAPIService+ProductStubs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "FixtureAPIService+ProductStubs.swift"; path = "../AmakaFlow/DependencyInjection/FixtureAPIService+ProductStubs.swift"; sourceTree = SOURCE_ROOT; };
+		F1XWSAVE01REF /* FixtureAPIService+WorkoutSave.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "FixtureAPIService+WorkoutSave.swift"; path = "../AmakaFlow/DependencyInjection/FixtureAPIService+WorkoutSave.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2289DETDTLREF /* WorkoutCompletionDetail+TodayDiary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutCompletionDetail+TodayDiary.swift"; path = "../AmakaFlow/Models/WorkoutCompletionDetail+TodayDiary.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2289ACTSECREF /* CompletionDiaryActionsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CompletionDiaryActionsSection.swift; path = ../AmakaFlow/Views/CompletionDetail/CompletionDiaryActionsSection.swift; sourceTree = SOURCE_ROOT; };
 		AMA2286RUNINTREF /* running_intervals_4x800.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = running_intervals_4x800.json; path = ../AmakaFlow/Resources/Fixtures/running_intervals_4x800.json; sourceTree = SOURCE_ROOT; };
@@ -1538,6 +1546,10 @@
 				F1XTUR34P15RV0000001 /* FixtureAPIService.swift */,
 				AMA2285FIXREF /* FixtureAPIService+SocialImport.swift */,
 				AMA2289FIXCMPREF /* FixtureAPIService+Completions.swift */,
+				F1XWRITE01REF /* FixtureAPIService+Writes.swift */,
+				F1XDEVLIB01REF /* FixtureAPIService+DevicesLibrary.swift */,
+				F1XPROD01REF /* FixtureAPIService+ProductStubs.swift */,
+				F1XWSAVE01REF /* FixtureAPIService+WorkoutSave.swift */,
 				F1XTUR3JS0N00000001 /* amrap_10min.json */,
 				F1XTUR3JS0N00000002 /* emom_strength.json */,
 				F1XTUR3JS0N00000003 /* for_time_conditioning.json */,
@@ -2287,6 +2299,10 @@
 				AMA2307LEGBLD /* DDEditorLegacyView.swift in Sources */,
 				AMA2307MDL2BLD /* DDEditorModels.swift in Sources */,
 				AMA2289FIXCMPBLD /* FixtureAPIService+Completions.swift in Sources */,
+				F1XWRITE01BLD /* FixtureAPIService+Writes.swift in Sources */,
+				F1XDEVLIB01BLD /* FixtureAPIService+DevicesLibrary.swift in Sources */,
+				F1XPROD01BLD /* FixtureAPIService+ProductStubs.swift in Sources */,
+				F1XWSAVE01BLD /* FixtureAPIService+WorkoutSave.swift in Sources */,
 				AMA2289DIARYBLD /* TodayDiary.swift in Sources */,
 				AMA2290BFILLBLD /* StrengthBackfill.swift in Sources */,
 				AMA2290BFVIEWBLD /* StrengthBackfillView.swift in Sources */,
