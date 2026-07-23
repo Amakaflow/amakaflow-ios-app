@@ -569,10 +569,12 @@ final class WatchConnectivityTests: XCTestCase {
             ]
             manager.handleHealthMetrics(message)
         }
-        // handleHealthMetrics dispatches to main; drain the queue before asserting
-        let exp = expectation(description: "main queue drained")
-        DispatchQueue.main.async { exp.fulfill() }
-        wait(for: [exp], timeout: 1.0)
+        // handleHealthMetrics dispatches to main; wait until updates land (CI main can be slow).
+        waitForHeartRateSampleCount(
+            manager,
+            atLeast: WatchConnectivityManager.maxHeartRateSamples,
+            timeout: 15.0
+        )
 
         XCTAssertLessThanOrEqual(
             manager.heartRateSamples.count, WatchConnectivityManager.maxHeartRateSamples,
@@ -585,13 +587,28 @@ final class WatchConnectivityTests: XCTestCase {
         for i in 0..<150 {
             manager.handleHealthMetrics(["action": "healthMetrics", "heartRate": Double(i), "activeCalories": 0.0])
         }
-        let exp = expectation(description: "main queue drained")
-        DispatchQueue.main.async { exp.fulfill() }
-        wait(for: [exp], timeout: 1.0)
+        waitForHeartRateSampleCount(
+            manager,
+            atLeast: WatchConnectivityManager.maxHeartRateSamples,
+            timeout: 15.0
+        )
 
         XCTAssertEqual(manager.heartRateSamples.count, WatchConnectivityManager.maxHeartRateSamples)
         // The last retained sample should be the most recently appended value (hr=149)
         XCTAssertEqual(manager.heartRateSamples.last?.value, 149)
+    }
+
+    /// `handleHealthMetrics` hops to main; a single drain expectation races under CI load.
+    private func waitForHeartRateSampleCount(
+        _ manager: WatchConnectivityManager,
+        atLeast expected: Int,
+        timeout: TimeInterval
+    ) {
+        let predicate = NSPredicate { _, _ in
+            manager.heartRateSamples.count >= expected
+        }
+        let exp = expectation(for: predicate, evaluatedWith: nil)
+        wait(for: [exp], timeout: timeout)
     }
 
     // --- DayStateConflictResponse codable round-trip (AMA-301 fix 4) ---

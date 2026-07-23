@@ -76,6 +76,30 @@ enum StructureClarifyFixtures {
         )
     }
 
+    /// Ambiguous “every minute” caption → inferred EMOM suggestion (confirm → user_confirmed).
+    static let emomExercises: [StructureExerciseModel] = [
+        .init(name: "Power Clean", reps: 5),
+        .init(name: "Push Press", reps: 8),
+        .init(name: "Pull Ups", reps: 6)
+    ]
+
+    static var emomSuggestResult: StructureSuggestResult {
+        StructureSuggestResult(
+            exercises: emomExercises,
+            suggestions: [
+                .init(
+                    type: .emom,
+                    label: "EMOM 10",
+                    rounds: 10,
+                    exerciseNames: emomExercises.map(\.name),
+                    exerciseIndices: [0, 1, 2],
+                    structureSource: .inferred
+                )
+            ],
+            blocks: []
+        )
+    }
+
     /// After Describe: "curls go after the incline pair, finisher is a circuit x5"
     static var dmqNoteAppliedBlocks: [StructureBlockModel] {
         [

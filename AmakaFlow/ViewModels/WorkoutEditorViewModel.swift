@@ -143,8 +143,16 @@ class WorkoutEditorViewModel: ObservableObject {
         )
 
         do {
-            _ = try await dependencies.apiService.saveWorkout(request)
-            print("[WorkoutEditorVM] Workout saved successfully: \(request.name) id=\(existingWorkoutId ?? "new")")
+            let saved = try await dependencies.apiService.saveWorkout(request)
+            // Library detail merges a local block cache over interval-only GET payloads.
+            // Without this, reorder/edit saves look like they "didn't stick".
+            switch WorkoutLibraryDetailStore.saveAfterEditor(saved: saved, request: request) {
+            case .success:
+                break
+            case .failure(let error):
+                print("[WorkoutEditorVM] Detail cache update failed: \(error)")
+            }
+            print("[WorkoutEditorVM] Workout saved successfully: \(request.name) id=\(saved.id)")
             didSave = true
         } catch {
             print("[WorkoutEditorVM] Save failed: \(error.localizedDescription)")

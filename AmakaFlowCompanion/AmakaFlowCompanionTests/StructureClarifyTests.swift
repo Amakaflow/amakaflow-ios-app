@@ -216,6 +216,58 @@ final class StructureClarifyTests: XCTestCase {
         XCTAssertTrue(noted.allSatisfy { $0.provenanceTag.contains("FROM YOUR NOTE") })
         XCTAssertTrue(noted.allSatisfy { $0.status == .pending })
     }
+
+    /// Ambiguous import suggests EMOM — confirming must tag user_confirmed (never persist inferred).
+    func testConfirmInferredEMOMBecomesUserConfirmedOnSave() {
+        var session = StructureClarifySession.fromSuggest(StructureClarifyFixtures.emomSuggestResult)
+        XCTAssertEqual(session.groups.count, 1)
+        XCTAssertEqual(session.groups.first?.type.canonical, .emom)
+        XCTAssertEqual(session.groups.first?.structureSource, .inferred)
+        XCTAssertEqual(session.pendingGroupCount, 1)
+
+        // Unconfirmed → flattened sets (never ship inferred EMOM).
+        let unconfirmed = session.blocksForSave(leaveFlat: false)
+        XCTAssertTrue(unconfirmed.allSatisfy { $0.type == .sets })
+        XCTAssertTrue(unconfirmed.allSatisfy { $0.structureSource != .inferred })
+
+        session.confirmAll()
+        let saved = session.blocksForSave(leaveFlat: false)
+        XCTAssertEqual(saved.count, 1)
+        XCTAssertEqual(saved.first?.type.canonical, .emom)
+        XCTAssertEqual(saved.first?.structureSource, .userConfirmed)
+        XCTAssertEqual(saved.first?.rounds, 10)
+        XCTAssertEqual(saved.first?.exercises.map(\.name), [
+            "Power Clean", "Push Press", "Pull Ups"
+        ])
+    }
+
+    /// Flat / ambiguous rows — user chips EMOM themselves.
+    func testUserGroupsFlatRowsAsEMOM() {
+        var session = StructureClarifySession.fromSuggest(
+            StructureSuggestResult(
+                exercises: StructureClarifyFixtures.emomExercises,
+                suggestions: [],
+                blocks: []
+            )
+        )
+        XCTAssertTrue(session.groups.isEmpty)
+        let rowIDs = session.units.compactMap { unit -> UUID? in
+            if case .row(let row) = unit { return row.id }
+            return nil
+        }
+        XCTAssertEqual(rowIDs.count, 3)
+        rowIDs.forEach { session.toggleRowSelection($0) }
+        session.groupSelected(as: .emom)
+
+        XCTAssertEqual(session.groups.count, 1)
+        XCTAssertEqual(session.groups.first?.type.canonical, .emom)
+        XCTAssertEqual(session.groups.first?.status, .confirmed)
+        XCTAssertEqual(session.groups.first?.structureSource, .userConfirmed)
+
+        let saved = session.blocksForSave(leaveFlat: false)
+        XCTAssertEqual(saved.first?.type.canonical, .emom)
+        XCTAssertEqual(saved.first?.structureSource, .userConfirmed)
+    }
 }
 
 @MainActor
@@ -313,6 +365,55 @@ final class StructureClarifyViewModelTests: XCTestCase {
         let blocks = mockAPI.lastSaveWorkoutRequest?.blocks ?? []
         XCTAssertTrue(blocks.allSatisfy { $0.structureSource != StructureSource.inferred.rawValue })
         XCTAssertTrue(blocks.contains { $0.type == "superset" && $0.structureSource == "user_confirmed" })
+    }
+
+    func testImportAmbiguousEMOMConfirmThenSave() async {
+        let payload: [String: Any] = [
+            "title": "Every Minute Strength",
+            "sport": "strength",
+            "creator": "coach",
+            "caption": "EMOM 10 — Power Clean, Push Press, Pull Ups",
+            "blocks": [
+                ["exercises": StructureClarifyFixtures.emomExercises.map {
+                    ["name": $0.name, "reps": $0.reps as Any]
+                }]
+            ]
+        ]
+        // swiftlint:disable:next force_try
+        mockAPI.ingestSocialURLResult = .success(try! JSONSerialization.data(withJSONObject: payload))
+        mockAPI.suggestStructureResult = .success(StructureClarifyFixtures.emomSuggestResult)
+        mockAPI.saveWorkoutResult = .success(
+            Workout(
+                id: "emom-1",
+                name: "Every Minute Strength",
+                sport: .strength,
+                duration: 600,
+                intervals: [],
+                source: .instagram
+            )
+        )
+
+        await sut.importURL("https://instagram.com/reel/EMOMTEST", platformHint: .instagram)
+        guard case .clarify = sut.phase else {
+            return XCTFail("Expected clarify for ambiguous EMOM, got \(sut.phase)")
+        }
+        XCTAssertEqual(sut.clarifySession?.groups.first?.type.canonical, .emom)
+        XCTAssertEqual(sut.clarifySession?.groups.first?.structureSource, .inferred)
+
+        sut.confirmAllClarifyGroups()
+        await sut.saveFromClarify(leaveFlat: false)
+
+        let blocks = mockAPI.lastSaveWorkoutRequest?.blocks ?? []
+        XCTAssertEqual(blocks.count, 1)
+        XCTAssertEqual(blocks.first?.type, "emom")
+        XCTAssertEqual(blocks.first?.structureSource, StructureSource.userConfirmed.rawValue)
+        XCTAssertEqual(blocks.first?.rounds, 10)
+        XCTAssertEqual(blocks.first?.exercises.map(\.name), [
+            "Power Clean", "Push Press", "Pull Ups"
+        ])
+        guard case .saved = sut.phase else {
+            return XCTFail("Expected saved after EMOM confirm, got \(sut.phase)")
+        }
     }
 
     private func sampleIngestJSON() -> Data {
