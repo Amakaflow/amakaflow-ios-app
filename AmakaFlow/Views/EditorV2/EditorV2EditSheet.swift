@@ -220,6 +220,9 @@ struct EditorV2EditSheet: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .foregroundColor(DailyDriver.foreground)
                     .accessibilityIdentifier("editor_v2_edit_rep_range")
+                    .onChange(of: rangeText) { _, _ in
+                        draft.stampUser("reps_range")
+                    }
             }
             .gridCellColumns(2)
         } else if draft.reps != nil {
@@ -233,9 +236,12 @@ struct EditorV2EditSheet: View {
     private func committedDraft() -> EditorV2Exercise {
         guard useRangeMode else { return draft }
         if let updated = RepsRange.fromRangeText(rangeText, preservingQualifier: draft.repsRange?.qualifier) {
+            let changed = draft.repsRange != updated
             draft.repsRange = updated
             draft.reps = nil
-            draft.stampUser("reps_range")
+            if changed {
+                draft.stampUser("reps_range")
+            }
         }
         return draft
     }

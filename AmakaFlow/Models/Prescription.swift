@@ -180,10 +180,19 @@ enum PrescriptionFormatter {
         return joinPrimary(effective.primary, load: exercise.load, restSeconds: nil)
     }
 
-    /// Exercise Info prescription line: primary + load + rest (cues are separate).
+    /// Exercise Info prescription line: primary + load + range qualifier + rest (cues are separate).
     static func lineForInfoPrescription(from exercise: Exercise) -> String {
         let effective = effective(from: exercise)
-        return joinPrimary(effective.primary, load: exercise.load, restSeconds: exercise.restSeconds)
+        var qualifier: String?
+        if case .repsRange(let range, _) = effective.primary {
+            qualifier = range.qualifier
+        }
+        return joinPrimary(
+            effective.primary,
+            load: exercise.load,
+            restSeconds: exercise.restSeconds,
+            rangeQualifier: qualifier
+        )
     }
 
     /// Shared primary resolver output for cross-surface parity tests.
@@ -198,7 +207,8 @@ enum PrescriptionFormatter {
     private static func joinPrimary(
         _ primary: PrescriptionPrimary,
         load: ExerciseLoad?,
-        restSeconds: Int?
+        restSeconds: Int?,
+        rangeQualifier: String? = nil
     ) -> String {
         var parts: [String] = []
         if let primaryText = primaryLine(primary), !primaryText.isEmpty {
@@ -206,6 +216,12 @@ enum PrescriptionFormatter {
         }
         if let loadText = formattedLoad(load) {
             parts.append(loadText)
+        }
+        if let rangeQualifier {
+            let trimmed = rangeQualifier.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                parts.append(trimmed)
+            }
         }
         if let restSeconds {
             parts.append("\(restSeconds)S REST")

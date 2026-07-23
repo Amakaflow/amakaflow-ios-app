@@ -100,6 +100,27 @@ final class PrescriptionDisplayTests: XCTestCase {
         XCTAssertFalse(info.contains("FLOOR"), info)
     }
 
+    func testExerciseInfoKeepsRangeQualifier() {
+        let exercise = Exercise(
+            name: "Lunge",
+            canonicalName: nil,
+            sets: 3,
+            reps: "8-10 each leg",
+            durationSeconds: nil,
+            load: nil,
+            restSeconds: 60,
+            distance: nil,
+            notes: nil,
+            focus: nil,
+            supersetGroup: nil
+        )
+        let info = exercise.ddInfoPrescriptionLine
+        XCTAssertTrue(info.contains("8-10"), info)
+        XCTAssertTrue(info.uppercased().contains("EACH LEG"), info)
+        XCTAssertTrue(info.contains("60S REST") || info.contains("60S"), info)
+        XCTAssertFalse(exercise.ddDetailLine.uppercased().contains("EACH LEG"))
+    }
+
     // MARK: - Preview duration
 
     func testPreviewWorkoutUsesZeroNotExerciseHeuristic() {

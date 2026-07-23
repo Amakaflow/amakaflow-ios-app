@@ -99,4 +99,22 @@ final class PrescriptionEditorTests: XCTestCase {
         let provenance = encoded["field_provenance"] as? [String: String]
         XCTAssertEqual(provenance?["reps"], "user")
     }
+
+    func testCommittedRangeDoesNotStampWhenUnchanged() {
+        let original = RepsRange(low: 8, high: 10, qualifier: nil)
+        var draft = EditorV2Exercise(
+            name: "Squat",
+            sets: 3,
+            repsRange: original,
+            fieldProvenance: ["reps_range": .inferred]
+        )
+        let updated = RepsRange.fromRangeText("8-10", preservingQualifier: nil)
+        XCTAssertEqual(updated, original)
+        let changed = draft.repsRange != updated
+        XCTAssertFalse(changed)
+        if changed {
+            draft.stampUser("reps_range")
+        }
+        XCTAssertEqual(draft.fieldProvenance["reps_range"], .inferred)
+    }
 }
