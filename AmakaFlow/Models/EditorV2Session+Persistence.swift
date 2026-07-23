@@ -136,15 +136,21 @@ private extension DDEditorExerciseDraft {
 
 private extension EditorV2Exercise {
     var asSocialImportExercise: SocialImportExercise {
-        SocialImportExercise(
+        var provenance: [String: String] = [:]
+        for (key, value) in fieldProvenance {
+            provenance[key] = value.rawValue
+        }
+        return SocialImportExercise(
             name: name,
             sets: sets,
             reps: reps,
             repsRange: repsRange?.display,
             seconds: durationSeconds,
             distanceMeters: distanceMeters,
+            restSeconds: restSeconds,
             load: weightKg.map(EditorV2Exercise.formatWeightLoad),
-            notes: calories.map { "\($0) cal" }
+            notes: calories.map { "\($0) cal" },
+            fieldProvenance: provenance.isEmpty ? nil : provenance
         )
     }
 }

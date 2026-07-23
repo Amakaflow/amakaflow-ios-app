@@ -211,6 +211,8 @@ struct SocialImportExercise: Identifiable, Equatable, Codable {
     var focus: String?
     /// Legacy / freeform notes when not mapped to load or focus.
     var notes: String?
+    /// AMA-2312 — `explicit` / `inferred` / `user` per field.
+    var fieldProvenance: [String: String]?
 }
 
 struct SocialImportBlock: Equatable, Codable {

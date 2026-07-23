@@ -10,14 +10,16 @@ import XCTest
 
 final class PrescriptionDisplayTests: XCTestCase {
 
-    // MARK: - Shared formatter parity
+    // MARK: - Shared formatter parity (AMA-2312: shared resolver, per-surface adornment)
 
     private func makeExercise(
         name: String = "Squat",
         sets: Int? = 3,
         reps: String? = "8-10",
         distance: Double? = nil,
-        restSeconds: Int? = 60
+        restSeconds: Int? = 60,
+        load: ExerciseLoad? = nil,
+        notes: String? = nil
     ) -> Exercise {
         Exercise(
             name: name,
@@ -25,22 +27,61 @@ final class PrescriptionDisplayTests: XCTestCase {
             sets: sets,
             reps: reps,
             durationSeconds: nil,
-            load: nil,
+            load: load,
             restSeconds: restSeconds,
             distance: distance,
-            notes: nil,
+            notes: notes,
             supersetGroup: nil
         )
     }
 
-    func testDetailLineMatchesPrescriptionFormatter() {
-        let exercise = makeExercise()
-        let expected = PrescriptionFormatter
-            .line(PrescriptionFormatter.effective(from: exercise))
-            .uppercased()
-        XCTAssertEqual(exercise.ddDetailLine, expected)
-        XCTAssertTrue(exercise.ddDetailLine.contains("8-10"))
-        XCTAssertTrue(exercise.ddDetailLine.contains("3 ×"))
+    func testDetailLineUsesPrimaryPlusLoadNotNotesOrRest() {
+        let exercise = makeExercise(
+            sets: 2,
+            reps: "6",
+            restSeconds: 90,
+            load: ExerciseLoad(value: 0, unit: "bodyweight"),
+            notes: "Use a 30 to 45 degree incline and squeeze your upper pecs hard"
+        )
+        let line = exercise.ddDetailLine
+        XCTAssertTrue(line.contains("2 × 6"), line)
+        XCTAssertTrue(line.contains("BODYWEIGHT"), line)
+        XCTAssertFalse(line.contains("INCLINE"), line)
+        XCTAssertFalse(line.contains("REST"), line)
+        XCTAssertFalse(line.contains("PECS"), line)
+    }
+
+    func testDetailAndEditorSharePrimaryResolverNotFullStringEquality() {
+        let exercise = makeExercise(
+            name: "Pull-Up",
+            sets: 3,
+            reps: "10",
+            restSeconds: 60,
+            load: ExerciseLoad(value: 20, unit: "kg"),
+            notes: "Dead hang briefly between reps"
+        )
+        let editorExercise = EditorV2Exercise(
+            name: "Pull-Up",
+            sets: 3,
+            reps: 10,
+            weightKg: 20,
+            restSeconds: 60
+        )
+        XCTAssertEqual(
+            PrescriptionFormatter.resolvedPrimaryText(from: exercise),
+            PrescriptionFormatter.resolvedPrimaryText(from: editorExercise)
+        )
+        XCTAssertEqual(
+            PrescriptionFormatter.resolvedLoadText(from: exercise)?.uppercased(),
+            PrescriptionFormatter.resolvedLoadText(from: editorExercise)?.uppercased()
+        )
+        // Full assembled strings intentionally diverge (detail omits rest/notes).
+        XCTAssertNotEqual(
+            exercise.ddDetailLine,
+            editorExercise.summaryLine.uppercased()
+        )
+        XCTAssertFalse(exercise.ddDetailLine.contains("REST"))
+        XCTAssertTrue(editorExercise.summaryLine.uppercased().contains("REST"))
     }
 
     func testClarifySummaryMatchesPrescriptionFormatter() {
@@ -50,18 +91,34 @@ final class PrescriptionDisplayTests: XCTestCase {
         XCTAssertEqual(expected, "3 × 500 M")
     }
 
-    func testEditorSummaryMatchesDetailFormatterForEquivalentExercise() {
-        let exercise = makeExercise(name: "Pull-Up", sets: 3, reps: "10", restSeconds: 60)
-        let editorExercise = EditorV2Exercise(
-            name: "Pull-Up",
+    func testExerciseInfoKeepsCuesOutOfPrescriptionLine() {
+        let exercise = makeExercise(
+            notes: "Brace hard and drive through the floor"
+        )
+        let info = exercise.ddInfoPrescriptionLine
+        XCTAssertFalse(info.contains("BRACE"), info)
+        XCTAssertFalse(info.contains("FLOOR"), info)
+    }
+
+    func testExerciseInfoKeepsRangeQualifier() {
+        let exercise = Exercise(
+            name: "Lunge",
+            canonicalName: nil,
             sets: 3,
-            reps: 10,
-            restSeconds: 60
+            reps: "8-10 each leg",
+            durationSeconds: nil,
+            load: nil,
+            restSeconds: 60,
+            distance: nil,
+            notes: nil,
+            focus: nil,
+            supersetGroup: nil
         )
-        XCTAssertEqual(
-            exercise.ddDetailLine,
-            editorExercise.summaryLine.uppercased()
-        )
+        let info = exercise.ddInfoPrescriptionLine
+        XCTAssertTrue(info.contains("8-10"), info)
+        XCTAssertTrue(info.uppercased().contains("EACH LEG"), info)
+        XCTAssertTrue(info.contains("60S REST") || info.contains("60S"), info)
+        XCTAssertFalse(exercise.ddDetailLine.uppercased().contains("EACH LEG"))
     }
 
     // MARK: - Preview duration

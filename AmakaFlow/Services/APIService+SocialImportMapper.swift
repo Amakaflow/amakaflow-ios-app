@@ -108,6 +108,9 @@ extension APIService {
         if let focus = exercise.focus?.trimmingCharacters(in: .whitespacesAndNewlines), !focus.isEmpty {
             object["muscle_group"] = focus
         }
+        if let provenance = exercise.fieldProvenance, !provenance.isEmpty {
+            object["field_provenance"] = provenance
+        }
         return object
     }
 

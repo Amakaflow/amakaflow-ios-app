@@ -312,7 +312,7 @@ struct DDPlatformBadge: View {
 struct DDWatchReadinessPill: View {
     var isConnected: Bool
     /// Proto shows watch battery % (dd-today-dark.png); use 78 when live data unavailable.
-    var batteryPercent: Int? = nil
+    var batteryPercent: Int?
 
     private var displayBattery: String {
         if let batteryPercent {
@@ -847,6 +847,7 @@ enum DDWorkoutDisplayGrouping {
 
 struct DDWorkoutBlockSectionView: View {
     let section: DDWorkoutDisplaySection
+    @State private var infoExercise: Exercise?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -868,25 +869,37 @@ struct DDWorkoutBlockSectionView: View {
 
             VStack(spacing: 0) {
                 ForEach(Array(section.exercises.enumerated()), id: \.element.id) { index, exercise in
-                    HStack(spacing: 11) {
-                        DDIconChip(systemName: "dumbbell.fill", background: DailyDriver.card2, size: 30)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(exercise.name)
-                                .ddDisplayText(13.5, weight: .semibold)
-                                .foregroundColor(DailyDriver.foreground)
-                            Text(exercise.ddDetailLine)
-                                .font(.system(size: 10, weight: .medium, design: .monospaced))
-                                .foregroundColor(DailyDriver.foregroundMuted)
-                        }
-                        Spacer(minLength: 0)
-                        if let hint = exercise.ddMuscleHint {
-                            Text(hint)
-                                .font(.system(size: 9.5))
+                    Button {
+                        infoExercise = exercise
+                    } label: {
+                        HStack(spacing: 11) {
+                            DDIconChip(systemName: "dumbbell.fill", background: DailyDriver.card2, size: 30)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(exercise.name)
+                                    .ddDisplayText(13.5, weight: .semibold)
+                                    .foregroundColor(DailyDriver.foreground)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                Text(exercise.ddDetailLine)
+                                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                    .foregroundColor(DailyDriver.foregroundMuted)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            Spacer(minLength: 0)
+                            if let hint = exercise.ddMuscleHint {
+                                Text(hint)
+                                    .font(.system(size: 9.5))
+                                    .foregroundColor(DailyDriver.foregroundDim)
+                                    .multilineTextAlignment(.trailing)
+                            }
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .semibold))
                                 .foregroundColor(DailyDriver.foregroundDim)
-                                .multilineTextAlignment(.trailing)
                         }
+                        .padding(.vertical, 11)
+                        .contentShape(Rectangle())
                     }
-                    .padding(.vertical, 11)
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("dd_exercise_row_\(index)")
 
                     if index < section.exercises.count - 1 {
                         Divider()
@@ -903,12 +916,22 @@ struct DDWorkoutBlockSectionView: View {
             )
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
+        .fullScreenCover(item: $infoExercise) { exercise in
+            NavigationStack {
+                DDExerciseInfoView(exercise: exercise)
+            }
+            .preferredColorScheme(.dark)
+        }
     }
 }
 
 extension Exercise {
     var ddDetailLine: String {
-        PrescriptionFormatter.line(PrescriptionFormatter.effective(from: self)).uppercased()
+        PrescriptionFormatter.lineForDetailList(from: self).uppercased()
+    }
+
+    var ddInfoPrescriptionLine: String {
+        PrescriptionFormatter.lineForInfoPrescription(from: self).uppercased()
     }
 
     var ddMuscleHint: String? {

@@ -44,133 +44,6 @@ struct EditorV2MenuSheet: View {
     }
 }
 
-// MARK: - Focused edit
-
-struct EditorV2EditSheet: View {
-    @State private var draft: EditorV2Exercise
-    @State private var rangeText: String
-    var onDone: (EditorV2Exercise) -> Void
-
-    init(exercise: EditorV2Exercise, onDone: @escaping (EditorV2Exercise) -> Void) {
-        _draft = State(initialValue: exercise)
-        _rangeText = State(initialValue: exercise.repsRange?.display ?? "")
-        self.onDone = onDone
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            sheetTitle(draft.name)
-            LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2),
-                spacing: 8
-            ) {
-                if draft.sets != nil {
-                    EditorV2Stepper(label: "Sets", value: draft.sets ?? 0, min: 1, max: 12) { draft.sets = $0 }
-                }
-                if draft.repsRange != nil {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Rep range")
-                            .font(.system(size: 10, weight: .medium, design: .monospaced))
-                            .foregroundColor(DailyDriver.foregroundMuted)
-                        TextField("8-10", text: $rangeText)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .keyboardType(.numbersAndPunctuation)
-                            .padding(12)
-                            .background(DailyDriver.inputBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            .foregroundColor(DailyDriver.foreground)
-                            .accessibilityIdentifier("editor_v2_edit_rep_range")
-                    }
-                    .gridCellColumns(2)
-                } else if draft.reps != nil {
-                    EditorV2Stepper(label: "Reps", value: draft.reps ?? 0, min: 1, max: 50) { draft.reps = $0 }
-                }
-                if draft.durationSeconds != nil {
-                    EditorV2Stepper(
-                        label: "Time",
-                        value: draft.durationSeconds ?? 0,
-                        unit: "s",
-                        min: 5,
-                        max: 3600,
-                        step: 5
-                    ) { draft.durationSeconds = $0 }
-                }
-                if draft.distanceMeters != nil {
-                    EditorV2Stepper(
-                        label: "Distance",
-                        value: draft.distanceMeters ?? 0,
-                        unit: " m",
-                        min: 10,
-                        max: 5000,
-                        step: 10
-                    ) { draft.distanceMeters = $0 }
-                }
-                if draft.weightKg != nil {
-                    // Tenths of a kg so values like 12.5 survive edit (no Int truncation).
-                    EditorV2Stepper(
-                        label: "Weight",
-                        value: Int(((draft.weightKg ?? 0) * 10).rounded()),
-                        min: 0,
-                        max: 3_000,
-                        step: 5,
-                        valueText: { tenths in
-                            "\(EditorV2Exercise.formatWeight(Double(tenths) / 10)) kg"
-                        },
-                        onChange: { draft.weightKg = Double($0) / 10 }
-                    )
-                }
-                if draft.calories != nil {
-                    EditorV2Stepper(
-                        label: "Calories",
-                        value: draft.calories ?? 0,
-                        unit: " cal",
-                        min: 1,
-                        max: 200,
-                        step: 1
-                    ) { draft.calories = $0 }
-                }
-                if draft.restSeconds != nil {
-                    EditorV2Stepper(
-                        label: "Rest",
-                        value: draft.restSeconds ?? 0,
-                        unit: "s",
-                        min: 0,
-                        max: 300,
-                        step: 15
-                    ) { draft.restSeconds = $0 }
-                }
-            }
-            Button {
-                onDone(committedDraft())
-            } label: {
-                Text("Done")
-                    .ddDisplayText(14, weight: .bold)
-                    .foregroundColor(DailyDriver.ink)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(DailyDriver.foreground)
-                    .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("editor_v2_edit_done")
-            Spacer(minLength: 8)
-        }
-        .padding(.horizontal, 18)
-        .padding(.bottom, 24)
-        .background(DailyDriver.backgroundElevated)
-        .preferredColorScheme(.dark)
-    }
-
-    private func committedDraft() -> EditorV2Exercise {
-        guard draft.repsRange != nil else { return draft }
-        if let updated = RepsRange.fromRangeText(rangeText, preservingQualifier: draft.repsRange?.qualifier) {
-            draft.repsRange = updated
-        }
-        return draft
-    }
-}
-
 // MARK: - Group config (Runs as)
 
 struct EditorV2GroupConfigSheet: View {
@@ -464,13 +337,18 @@ struct EditorV2AddExerciseSheet: View {
 
 // MARK: - Shared chrome
 
-private func sheetTitle(_ text: String) -> some View {
+func editorV2SheetTitle(_ text: String) -> some View {
     Text(text)
         .ddDisplayText(18, weight: .bold)
         .foregroundColor(DailyDriver.foreground)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 8)
         .padding(.bottom, 14)
+}
+
+/// Backward-compatible alias used inside this file.
+private func sheetTitle(_ text: String) -> some View {
+    editorV2SheetTitle(text)
 }
 
 private func menuRow(

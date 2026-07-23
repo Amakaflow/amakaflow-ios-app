@@ -216,6 +216,8 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
     var groupKey: String?
     var swapMessage: String?
     var swapReplacementName: String?
+    /// AMA-2312 — mirrors backend `field_provenance` (`explicit` / `inferred` / `user`).
+    var fieldProvenance: [String: ProvSource]
 
     init(
         id: String = UUID().uuidString,
@@ -230,7 +232,8 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
         calories: Int? = nil,
         groupKey: String? = nil,
         swapMessage: String? = nil,
-        swapReplacementName: String? = nil
+        swapReplacementName: String? = nil,
+        fieldProvenance: [String: ProvSource] = [:]
     ) {
         self.id = id
         self.name = name
@@ -245,11 +248,42 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
         self.groupKey = groupKey
         self.swapMessage = swapMessage
         self.swapReplacementName = swapReplacementName
+        self.fieldProvenance = fieldProvenance
     }
 
     /// Mono summary under the name (screens-editor2.jsx `e2Sum`).
     var summaryLine: String {
         PrescriptionFormatter.line(PrescriptionFormatter.effective(from: self))
+    }
+
+    /// Strength / straight-set style: show Sets + Reps even when nil (AMA-2312).
+    var showsStrengthPrescriptionEditors: Bool {
+        if durationSeconds != nil || distanceMeters != nil || calories != nil {
+            return false
+        }
+        return true
+    }
+
+    mutating func stampUser(_ field: String) {
+        fieldProvenance[field] = .user
+    }
+
+    /// AMA-2312 — apply range-mode commit only when the parsed range is valid and changed.
+    /// Invalid/empty input leaves the existing prescription and provenance untouched.
+    mutating func commitRepRange(from rangeText: String, useRangeMode: Bool) {
+        guard useRangeMode else { return }
+        guard let updated = RepsRange.fromRangeText(
+            rangeText,
+            preservingQualifier: repsRange?.qualifier
+        ) else {
+            return
+        }
+        let changed = repsRange != updated
+        repsRange = updated
+        reps = nil
+        if changed {
+            stampUser("reps_range")
+        }
     }
 
     static func formatWeight(_ weightKg: Double) -> String {
@@ -267,6 +301,14 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
 }
 
 extension PrescriptionFormatter {
+    static func resolvedPrimaryText(from exercise: EditorV2Exercise) -> String? {
+        primaryLine(effective(from: exercise).primary)
+    }
+
+    static func resolvedLoadText(from exercise: EditorV2Exercise) -> String? {
+        exercise.weightKg.map { ExerciseLoad(value: $0, unit: "kg") }.flatMap(formattedLoad)
+    }
+
     static func effective(from exercise: EditorV2Exercise) -> EffectivePrescription {
         let load = exercise.weightKg.map { ExerciseLoad(value: $0, unit: "kg") }
         var secondary = secondaryParts(

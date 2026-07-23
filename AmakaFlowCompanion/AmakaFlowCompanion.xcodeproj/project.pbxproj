@@ -128,6 +128,7 @@
 		AMA2307PERBLD /* EditorV2Session+Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307PERREF /* EditorV2Session+Persistence.swift */; };
 		AMA2307CMPBLD /* EditorV2Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307CMPREF /* EditorV2Components.swift */; };
 		AMA2307SHTBLD /* EditorV2Sheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307SHTREF /* EditorV2Sheets.swift */; };
+		AMA2312EDITBLD /* EditorV2EditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2312EDITREF /* EditorV2EditSheet.swift */; };
 		AMA2307VWBLD /* EditorV2View.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307VWREF /* EditorV2View.swift */; };
 		AMA2307CNTBLD /* EditorV2Content.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307CNTREF /* EditorV2Content.swift */; };
 		AMA2307CRDBLD /* DDEditorLegacyCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307CRDREF /* DDEditorLegacyCards.swift */; };
@@ -137,6 +138,7 @@
 		AMA2291STARTSELBLD /* WorkoutStartSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2291STARTSELREF /* WorkoutStartSelection.swift */; };
 		AMA2291LIBDESTBLD /* LibraryDestination.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2291LIBDESTREF /* LibraryDestination.swift */; };
 		AMA2291UNIDETBLD /* UnifiedWorkoutDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2291UNIDETREF /* UnifiedWorkoutDetailView.swift */; };
+		AMA2312INFOBLD /* DDExerciseInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2312INFOREF /* DDExerciseInfoView.swift */; };
 		AMA2291STARTSHBLD /* WorkoutStartSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2291STARTSHREF /* WorkoutStartSheet.swift */; };
 		AMA2291STARTSTBLD /* WorkoutStartSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2291STARTSTREF /* WorkoutStartSelectionTests.swift */; };
 		AMA2286GARHANDBLD /* GarminStartHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2286GARHANDREF /* GarminStartHandoff.swift */; };
@@ -685,6 +687,7 @@
 		AMA2307PERREF /* EditorV2Session+Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "EditorV2Session+Persistence.swift"; path = "../AmakaFlow/Models/EditorV2Session+Persistence.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2307CMPREF /* EditorV2Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2Components.swift; path = ../AmakaFlow/Views/EditorV2/EditorV2Components.swift; sourceTree = SOURCE_ROOT; };
 		AMA2307SHTREF /* EditorV2Sheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2Sheets.swift; path = ../AmakaFlow/Views/EditorV2/EditorV2Sheets.swift; sourceTree = SOURCE_ROOT; };
+		AMA2312EDITREF /* EditorV2EditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2EditSheet.swift; path = ../AmakaFlow/Views/EditorV2/EditorV2EditSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2307VWREF /* EditorV2View.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2View.swift; path = ../AmakaFlow/Views/EditorV2/EditorV2View.swift; sourceTree = SOURCE_ROOT; };
 		AMA2307CNTREF /* EditorV2Content.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2Content.swift; path = ../AmakaFlow/Views/EditorV2/EditorV2Content.swift; sourceTree = SOURCE_ROOT; };
 		AMA2307CRDREF /* DDEditorLegacyCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDEditorLegacyCards.swift; path = ../AmakaFlow/Views/DDEditorLegacyCards.swift; sourceTree = SOURCE_ROOT; };
@@ -694,6 +697,7 @@
 		AMA2291STARTSELREF /* WorkoutStartSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutStartSelection.swift; path = ../AmakaFlow/Models/WorkoutStartSelection.swift; sourceTree = SOURCE_ROOT; };
 		AMA2291LIBDESTREF /* LibraryDestination.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryDestination.swift; path = ../AmakaFlow/Models/LibraryDestination.swift; sourceTree = SOURCE_ROOT; };
 		AMA2291UNIDETREF /* UnifiedWorkoutDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UnifiedWorkoutDetailView.swift; path = ../AmakaFlow/Views/UnifiedWorkoutDetailView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2312INFOREF /* DDExerciseInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDExerciseInfoView.swift; path = ../AmakaFlow/Views/DDExerciseInfoView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2291STARTSHREF /* WorkoutStartSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutStartSheet.swift; path = ../AmakaFlow/Views/Components/WorkoutStartSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2291STARTSTREF /* WorkoutStartSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutStartSelectionTests.swift; path = AmakaFlowCompanionTests/WorkoutStartSelectionTests.swift; sourceTree = "<group>"; };
 		AMA2286GARHANDREF /* GarminStartHandoff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminStartHandoff.swift; path = ../AmakaFlow/Services/GarminStartHandoff.swift; sourceTree = SOURCE_ROOT; };
@@ -1302,6 +1306,7 @@
 				AMA2292DDFLOW00000A /* CreateFlowPresentation.swift */,
 				AMA2005LIBDVIEW0000A /* LibraryDetailView.swift */,
 				AMA2291UNIDETREF /* UnifiedWorkoutDetailView.swift */,
+				AMA2312INFOREF /* DDExerciseInfoView.swift */,
 				AMA2293DDACT00000A /* DDActivityDetailView.swift */,
 				AMA2293DDPLAY00000A /* DDActivePlayerView.swift */,
 				AMA2293DDEDIT00000A /* DDEditorView.swift */,
@@ -1652,6 +1657,7 @@
 				AMA2305CMPREF /* StructureClarifyComponents.swift */,
 				AMA2307CMPREF /* EditorV2Components.swift */,
 				AMA2307SHTREF /* EditorV2Sheets.swift */,
+				AMA2312EDITREF /* EditorV2EditSheet.swift */,
 				AMA2307VWREF /* EditorV2View.swift */,
 				AK00FIX014A /* ProgramDetailView.swift */,
 				AK00FIX015A /* ProgramsListView.swift */,
@@ -2320,6 +2326,7 @@
 				AMA2307PERBLD /* EditorV2Session+Persistence.swift in Sources */,
 				AMA2307CMPBLD /* EditorV2Components.swift in Sources */,
 				AMA2307SHTBLD /* EditorV2Sheets.swift in Sources */,
+				AMA2312EDITBLD /* EditorV2EditSheet.swift in Sources */,
 				AMA2307VWBLD /* EditorV2View.swift in Sources */,
 				AMA2307CNTBLD /* EditorV2Content.swift in Sources */,
 				AMA2307CRDBLD /* DDEditorLegacyCards.swift in Sources */,
@@ -2342,6 +2349,7 @@
 				AMA2287APPHANDBLD /* AppleStartHandoff.swift in Sources */,
 				AMA2291LIBDESTBLD /* LibraryDestination.swift in Sources */,
 				AMA2291UNIDETBLD /* UnifiedWorkoutDetailView.swift in Sources */,
+				AMA2312INFOBLD /* DDExerciseInfoView.swift in Sources */,
 				AMA2291STARTSHBLD /* WorkoutStartSheet.swift in Sources */,
 				AK00FIX004B /* StravaService.swift in Sources */,
 				AK00FIX005B /* AnalyticsViewModel.swift in Sources */,
