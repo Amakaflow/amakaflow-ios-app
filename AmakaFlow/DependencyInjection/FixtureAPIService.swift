@@ -924,6 +924,8 @@ class FixtureAPIService: APIServiceProviding {
     func saveWorkout(_ request: WorkoutSaveRequest) async throws -> Workout {
         print("[FixtureAPIService] Stub: saveWorkout -> fixture workout (source=\(request.source ?? "nil"))")
         let source = request.source.flatMap(WorkoutSource.init(rawValue:)) ?? .manual
+        let workoutId = request.workoutId ?? "fixture-saved-\(UUID().uuidString)"
+        let saved: Workout
         if let blocks = request.blocks, !blocks.isEmpty {
             let mappedBlocks = blocks.map { block in
                 Block(
@@ -933,8 +935,8 @@ class FixtureAPIService: APIServiceProviding {
                     exercises: block.exercises.map { $0.toExercise() }
                 )
             }
-            return Workout(
-                id: "fixture-saved-\(UUID().uuidString)",
+            saved = Workout(
+                id: workoutId,
                 name: request.name,
                 sport: WorkoutSport(rawValue: request.sport) ?? .strength,
                 duration: max(mappedBlocks.flatMap(\.exercises).count * 180, 600),
@@ -945,33 +947,45 @@ class FixtureAPIService: APIServiceProviding {
                 creatorName: request.creatorName,
                 createdAt: Date()
             )
-        }
-        let intervals: [WorkoutInterval] = request.intervals.compactMap { interval in
-            switch interval.type {
-            case "reps":
-                return .reps(
-                    sets: interval.sets,
-                    reps: interval.reps ?? 10,
-                    name: interval.name ?? "Exercise",
-                    load: interval.load,
-                    restSec: interval.restSeconds,
-                    followAlongUrl: nil
-                )
-            case "time":
-                return .time(seconds: interval.seconds ?? 60, target: interval.target ?? interval.name)
-            default:
-                return nil
+        } else {
+            let intervals: [WorkoutInterval] = request.intervals.compactMap { interval in
+                switch interval.type {
+                case "reps":
+                    return .reps(
+                        sets: interval.sets,
+                        reps: interval.reps ?? 10,
+                        name: interval.name ?? "Exercise",
+                        load: interval.load,
+                        restSec: interval.restSeconds,
+                        followAlongUrl: nil
+                    )
+                case "time":
+                    return .time(seconds: interval.seconds ?? 60, target: interval.target ?? interval.name)
+                default:
+                    return nil
+                }
             }
+            saved = Workout(
+                id: workoutId,
+                name: request.name,
+                sport: WorkoutSport(rawValue: request.sport) ?? .strength,
+                duration: max(intervals.count * 180, 600),
+                intervals: intervals,
+                source: source,
+                sourceUrl: request.sourceUrl,
+                creatorName: request.creatorName,
+                createdAt: Date()
+            )
         }
-        return Workout(
-            id: "fixture-saved-\(UUID().uuidString)",
-            name: request.name,
-            sport: WorkoutSport(rawValue: request.sport) ?? .strength,
-            duration: max(intervals.count * 180, 600),
-            intervals: intervals,
-            source: source,
-            sourceUrl: request.sourceUrl
-        )
+        // Keep fixture Library reload in sync with edits (reorder / rename).
+        var cache = (try? loadedFixtureWorkouts()) ?? []
+        if let index = cache.firstIndex(where: { $0.id == saved.id }) {
+            cache[index] = saved
+        } else {
+            cache.insert(saved, at: 0)
+        }
+        fixtureWorkoutsCache = cache
+        return saved
     }
 
     // MARK: - Calendar Sync (AMA-1238)

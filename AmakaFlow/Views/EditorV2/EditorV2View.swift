@@ -54,7 +54,10 @@ struct EditorV2View: View {
                             onOpen: { editExerciseID = $0 },
                             onMenu: { menuExerciseID = $0 },
                             onReorder: { session.reorder(fromOffsets: $0, toOffset: $1) },
-                            onExitReorder: { isReorderMode = false },
+                            onExitReorder: {
+                                isReorderMode = false
+                                showToast("Tap Save workout to keep changes")
+                            },
                             onAdd: {
                                 replaceExerciseID = nil
                                 addSheetOpen = true
@@ -125,7 +128,12 @@ struct EditorV2View: View {
 
                 if session.exercises.count > 1 {
                     Button {
-                        isReorderMode.toggle()
+                        if isReorderMode {
+                            isReorderMode = false
+                            showToast("Tap Save workout to keep changes")
+                        } else {
+                            isReorderMode = true
+                        }
                     } label: {
                         Text(isReorderMode ? "✓ Done" : "⇅ Reorder")
                             .ddDisplayText(12.5, weight: .bold)
@@ -155,7 +163,7 @@ struct EditorV2View: View {
 
     private var subtitle: String {
         if isReorderMode {
-            return "DRAG ROWS TO REORDER · TAP DONE WHEN FINISHED"
+            return "DRAG ROWS TO REORDER · DONE THEN SAVE WORKOUT"
         }
         if swapCount > 0 {
             return "⚠ \(swapCount) SWAP SUGGESTIONS"

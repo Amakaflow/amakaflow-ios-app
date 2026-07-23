@@ -248,4 +248,109 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertEqual(EditorV2Exercise.formatWeightLoad(12.5), "12.5 kg")
         XCTAssertEqual(EditorV2Exercise.formatWeight(60), "60")
     }
+
+    // MARK: - Reorder → save payload (dogfood regression)
+
+    func testReorderFourFlatExercisesExportsPushUpFirst() {
+        // Social-import style: four separate sets blocks → flat editor rows.
+        let seed = [
+            DDEditorBlockDraft(
+                structure: .sets,
+                label: "Main",
+                exercises: [DDEditorExerciseDraft(name: "Hammer Curl", sets: 1, reps: 5)]
+            ),
+            DDEditorBlockDraft(
+                structure: .sets,
+                label: "Block 2",
+                exercises: [DDEditorExerciseDraft(name: "Curl to Press", sets: 1, reps: 5)]
+            ),
+            DDEditorBlockDraft(
+                structure: .sets,
+                label: "Block 3",
+                exercises: [DDEditorExerciseDraft(name: "Rows", sets: 1, reps: 5)]
+            ),
+            DDEditorBlockDraft(
+                structure: .sets,
+                label: "Block 4",
+                exercises: [DDEditorExerciseDraft(name: "Push Up", sets: 1, reps: 10)]
+            )
+        ]
+        var session = EditorV2Session.from(title: "Quick Upper Body", blocks: seed)
+        XCTAssertEqual(session.exercises.map(\.name), [
+            "Hammer Curl", "Curl to Press", "Rows", "Push Up"
+        ])
+
+        // Drag Push Up (index 3) to first.
+        session.reorder(fromOffsets: IndexSet(integer: 3), toOffset: 0)
+        XCTAssertEqual(session.exercises.map(\.name), [
+            "Push Up", "Hammer Curl", "Curl to Press", "Rows"
+        ])
+
+        let blocks = session.toSocialImportBlocks()
+        let names = blocks.flatMap(\.exercises).map(\.name)
+        XCTAssertEqual(names, ["Push Up", "Hammer Curl", "Curl to Press", "Rows"])
+
+        let intervals = session.toSaveIntervals()
+        XCTAssertEqual(intervals.map(\.name), ["Push Up", "Hammer Curl", "Curl to Press", "Rows"])
+    }
+
+    func testReorderThenReEditKeepsOrder() {
+        var session = EditorV2Session(exercises: [
+            EditorV2Exercise(id: "1", name: "A", sets: 3, reps: 10),
+            EditorV2Exercise(id: "2", name: "B", sets: 3, reps: 10),
+            EditorV2Exercise(id: "3", name: "C", sets: 3, reps: 10)
+        ])
+        session.reorder(fromOffsets: IndexSet(integer: 2), toOffset: 0)
+        session.updateExercise("3") { $0.reps = 12 }
+        session.addSet(to: "1")
+
+        XCTAssertEqual(session.exercises.map(\.name), ["C", "A", "B"])
+        XCTAssertEqual(session.exercises.first?.reps, 12)
+        XCTAssertEqual(session.exercises.first(where: { $0.id == "1" })?.sets, 4)
+
+        let roundTrip = EditorV2Session.from(
+            title: "RT",
+            blocks: session.toSocialImportBlocks().map { block in
+                DDEditorBlockDraft(
+                    structure: .sets,
+                    label: block.label ?? "Main",
+                    exercises: block.exercises.map {
+                        DDEditorExerciseDraft(name: $0.name, sets: $0.sets, reps: $0.reps)
+                    }
+                )
+            }
+        )
+        XCTAssertEqual(roundTrip.exercises.map(\.name), ["C", "A", "B"])
+    }
+
+    func testAddSetAndRepEditExportToSaveIntervals() {
+        var session = EditorV2Session()
+        let squat = session.addExercise(named: "Squat")
+        _ = session.addExercise(named: "Bench")
+        session.addSet(to: squat.id)
+        session.addSet(to: squat.id)
+        session.updateExercise(squat.id) { $0.reps = 5 }
+
+        let intervals = session.toSaveIntervals()
+        XCTAssertEqual(intervals.first?.name, "Squat")
+        XCTAssertEqual(intervals.first?.sets, 5) // default 3 + 2 adds
+        XCTAssertEqual(intervals.first?.reps, 5)
+
+        let blocks = session.toSocialImportBlocks()
+        XCTAssertEqual(blocks.flatMap(\.exercises).first?.sets, 5)
+        XCTAssertEqual(blocks.flatMap(\.exercises).first?.reps, 5)
+    }
+
+    func testNewWorkoutSessionSaveShapeHasNoStructureRequirement() {
+        var session = EditorV2Session.from(mode: .new, workout: nil)
+        XCTAssertTrue(session.exercises.isEmpty)
+        _ = session.addExercise(named: "Deadlift")
+        _ = session.addExercise(named: "Pull Up")
+
+        let blocks = session.toSocialImportBlocks()
+        XCTAssertEqual(blocks.count, 1)
+        XCTAssertEqual(blocks.first?.type, "sets")
+        XCTAssertEqual(blocks.first?.exercises.map(\.name), ["Deadlift", "Pull Up"])
+        XCTAssertEqual(session.toSaveIntervals().count, 2)
+    }
 }

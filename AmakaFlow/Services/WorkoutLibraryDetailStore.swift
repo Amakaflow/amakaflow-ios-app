@@ -28,6 +28,48 @@ enum WorkoutLibraryDetailStore {
         }
     }
 
+    /// After Editor v2 save: refresh the local detail cache so Library doesn't keep
+    /// stale import blocks (mapper `/workouts/incoming` is often interval-only).
+    @discardableResult
+    static func saveAfterEditor(saved: Workout, request: WorkoutSaveRequest) -> Result<Void, WorkoutLibraryDetailStoreError> {
+        save(detailWorkout(saved: saved, request: request))
+    }
+
+    /// Build the block-rich workout that Library detail should show after an edit.
+    static func detailWorkout(saved: Workout, request: WorkoutSaveRequest) -> Workout {
+        let blocks: [Block]
+        if let requestBlocks = request.blocks, !requestBlocks.isEmpty {
+            blocks = requestBlocks.map { block in
+                Block(
+                    label: block.label,
+                    structure: blockStructure(from: block.type),
+                    rounds: max(1, block.rounds),
+                    exercises: block.exercises.map { $0.toExercise() },
+                    restBetweenSeconds: block.restSec
+                )
+            }
+        } else if !saved.blocks.isEmpty {
+            blocks = saved.blocks
+        } else {
+            blocks = Workout.blocksFromLegacyIntervals(
+                request.intervals.compactMap(Self.interval(from:))
+            )
+        }
+
+        return Workout(
+            id: saved.id,
+            name: request.name.isEmpty ? saved.name : request.name,
+            sport: WorkoutSport(rawValue: request.sport) ?? saved.sport,
+            duration: max(saved.duration, max(blocks.flatMap(\.exercises).count * 180, 600)),
+            blocks: blocks,
+            description: request.description ?? saved.description,
+            source: WorkoutSource(rawValue: request.source ?? "") ?? saved.source,
+            sourceUrl: request.sourceUrl ?? saved.sourceUrl,
+            creatorName: request.creatorName ?? saved.creatorName,
+            createdAt: saved.createdAt
+        )
+    }
+
     /// Prefer cached blocks, description, provenance when the server payload is interval-only.
     static func enrich(_ workout: Workout) -> Workout {
         switch loadAllResult() {
@@ -68,9 +110,11 @@ enum WorkoutLibraryDetailStore {
         guard let cached = cache[workout.id], !cached.blocks.isEmpty else {
             return workout
         }
+        // Cache is the block-rich source of truth for interval-only library payloads.
+        // Name/duration still follow the fetched workout when present (post-edit).
         return Workout(
             id: workout.id,
-            name: cached.name.isEmpty ? workout.name : cached.name,
+            name: workout.name.isEmpty ? cached.name : workout.name,
             sport: workout.sport == .other ? cached.sport : workout.sport,
             duration: max(workout.duration, cached.duration),
             blocks: cached.blocks,
@@ -80,6 +124,43 @@ enum WorkoutLibraryDetailStore {
             creatorName: cached.creatorName ?? workout.creatorName,
             createdAt: cached.createdAt ?? workout.createdAt
         )
+    }
+
+    private static func blockStructure(from type: String?) -> BlockStructure {
+        switch type?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "superset": return .superset
+        case "circuit", "rounds", "warmup": return .circuit
+        case "amrap": return .amrap
+        case "emom": return .emom
+        case "tabata": return .tabata
+        default: return .straight
+        }
+    }
+
+    private static func interval(from save: WorkoutSaveInterval) -> WorkoutInterval? {
+        switch save.type {
+        case "time":
+            return .time(seconds: save.seconds ?? 60, target: save.target ?? save.name)
+        case "reps":
+            return .reps(
+                sets: save.sets,
+                reps: save.reps ?? 10,
+                name: save.name ?? "Exercise",
+                load: save.load,
+                restSec: save.restSeconds,
+                followAlongUrl: nil
+            )
+        case "warmup":
+            return .warmup(seconds: save.seconds ?? 60, target: save.target)
+        case "cooldown":
+            return .cooldown(seconds: save.seconds ?? 60, target: save.target)
+        case "distance":
+            return .distance(meters: save.meters ?? 0, target: save.target)
+        case "rest":
+            return .rest(seconds: save.seconds)
+        default:
+            return nil
+        }
     }
 
     private static func resolvedSource(fetched: Workout, cached: Workout) -> WorkoutSource {
