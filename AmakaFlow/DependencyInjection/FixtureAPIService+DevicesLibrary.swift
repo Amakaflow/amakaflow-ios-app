@@ -262,6 +262,5 @@ extension FixtureAPIService {
         print("[FixtureAPIService] Stub: postReadinessSample(date=\(result.date), source=apple_health) -> success")
         return result
     }
-
 }
 #endif
