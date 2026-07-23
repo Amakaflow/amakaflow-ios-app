@@ -174,6 +174,45 @@ enum PrescriptionFormatter {
         return parts.joined(separator: " · ")
     }
 
+    /// Library detail list: primary + load only (no notes, no rest). AMA-2312.
+    static func lineForDetailList(from exercise: Exercise) -> String {
+        let effective = effective(from: exercise)
+        return joinPrimary(effective.primary, load: exercise.load, restSeconds: nil)
+    }
+
+    /// Exercise Info prescription line: primary + load + rest (cues are separate).
+    static func lineForInfoPrescription(from exercise: Exercise) -> String {
+        let effective = effective(from: exercise)
+        return joinPrimary(effective.primary, load: exercise.load, restSeconds: exercise.restSeconds)
+    }
+
+    /// Shared primary resolver output for cross-surface parity tests.
+    static func resolvedPrimaryText(from exercise: Exercise) -> String? {
+        primaryLine(effective(from: exercise).primary)
+    }
+
+    static func resolvedLoadText(from exercise: Exercise) -> String? {
+        formattedLoad(exercise.load)
+    }
+
+    private static func joinPrimary(
+        _ primary: PrescriptionPrimary,
+        load: ExerciseLoad?,
+        restSeconds: Int?
+    ) -> String {
+        var parts: [String] = []
+        if let primaryText = primaryLine(primary), !primaryText.isEmpty {
+            parts.append(primaryText)
+        }
+        if let loadText = formattedLoad(load) {
+            parts.append(loadText)
+        }
+        if let restSeconds {
+            parts.append("\(restSeconds)S REST")
+        }
+        return parts.joined(separator: " · ")
+    }
+
     private static func parsePlainReps(from reps: String?) -> Int? {
         guard let reps else { return nil }
         let trimmed = reps.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -209,7 +248,7 @@ enum PrescriptionFormatter {
         return parts
     }
 
-    private static func formattedLoad(_ load: ExerciseLoad?) -> String? {
+    static func formattedLoad(_ load: ExerciseLoad?) -> String? {
         guard let load else { return nil }
         if load.unit == "bodyweight" { return "bodyweight" }
         if load.value > 0 {
@@ -223,7 +262,7 @@ enum PrescriptionFormatter {
         return unit.isEmpty ? nil : unit
     }
 
-    private static func primaryLine(_ primary: PrescriptionPrimary) -> String? {
+    static func primaryLine(_ primary: PrescriptionPrimary) -> String? {
         switch primary {
         case .duration(let seconds, let sets):
             let metric = seconds >= 60 ? "\(seconds / 60) min" : "\(seconds) sec"
