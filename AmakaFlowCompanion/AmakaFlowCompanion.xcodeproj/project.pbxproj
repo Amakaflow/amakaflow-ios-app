@@ -25,6 +25,8 @@
 		33B4902461BE49098D5AA4B2 /* RPEFeedbackViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600ABA3EF2B2447396D7B39F /* RPEFeedbackViewModel.swift */; };
 		3X3RC1S35W1FT000002 /* Exercise.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3X3RC1S35W1FT000001 /* Exercise.swift */; };
 		3X3RC1S35W1FT000004 /* Exercise.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3X3RC1S35W1FT000001 /* Exercise.swift */; };
+		AMA2311PRESBLD002 /* Prescription.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311PRESREF001 /* Prescription.swift */; };
+		AMA2311PRESBLD004 /* Prescription.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311PRESREF001 /* Prescription.swift */; };
 		40E350E9B26F4574902587EF /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29B50DC380A44F2D96E6E414 /* PairingView.swift */; };
 		43F9F2E9369F4546B3AF005A /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D9B67C13E34BAE804A9359 /* HistoryView.swift */; };
 		44201694D9E295D587684DBB /* ShareImportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44D7C6673CB9BE868FC1006 /* ShareImportViewModel.swift */; };
@@ -585,6 +587,7 @@
 		3910753486A542ECAA1E5971 /* PreWorkoutDeviceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PreWorkoutDeviceSheet.swift; path = ../AmakaFlow/Views/Components/PreWorkoutDeviceSheet.swift; sourceTree = SOURCE_ROOT; };
 		3EB7457100F5C1B6E4488558 /* AgentInboxView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AgentInboxView.swift; path = ../AmakaFlow/Views/AgentInboxView.swift; sourceTree = SOURCE_ROOT; };
 		3X3RC1S35W1FT000001 /* Exercise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Exercise.swift; path = ../AmakaFlow/Models/Exercise.swift; sourceTree = SOURCE_ROOT; };
+		AMA2311PRESREF001 /* Prescription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Prescription.swift; path = ../AmakaFlow/Models/Prescription.swift; sourceTree = SOURCE_ROOT; };
 		4CC7221F93FB2C2C9982C2ED /* NotificationPreferencesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationPreferencesView.swift; path = ../AmakaFlow/Views/Settings/NotificationPreferencesView.swift; sourceTree = "<group>"; };
 		4F945C56EB30A4BA6E5CAC50 /* ActivityFeedView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ActivityFeedView.swift; path = ../AmakaFlow/Views/ActivityFeedView.swift; sourceTree = "<group>"; };
 		5CA747C5C41B432C9BEE9C9F /* KeychainClerkTokenPersistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KeychainClerkTokenPersistence.swift; path = ../AmakaFlow/Services/KeychainClerkTokenPersistence.swift; sourceTree = SOURCE_ROOT; };
@@ -1335,6 +1338,7 @@
 				89321AF9D21D441198437105 /* DevicePreference.swift */,
 				BL0CK5W1FT00000001 /* Block.swift */,
 				3X3RC1S35W1FT000001 /* Exercise.swift */,
+				AMA2311PRESREF001 /* Prescription.swift */,
 				BL0CK2INT3RVAL00001 /* BlockToIntervalConverter.swift */,
 				F84E226D2ED0D55600459747 /* AmakaFlowApp.swift */,
 				F84E226E2ED0D55600459747 /* Theme.swift */,
@@ -2108,6 +2112,7 @@
 				E33FF845EAAD4110B7D87FB0 /* DevicePreference.swift in Sources */,
 				BL0CK5W1FT00000002 /* Block.swift in Sources */,
 				3X3RC1S35W1FT000002 /* Exercise.swift in Sources */,
+				AMA2311PRESBLD002 /* Prescription.swift in Sources */,
 				BL0CK2INT3RVAL00002 /* BlockToIntervalConverter.swift in Sources */,
 				9D0C3D8A603340BC8364F188 /* PreWorkoutDeviceSheet.swift in Sources */,
 				W41T1NG000000002C0000002 /* WaitingForWatchView.swift in Sources */,
@@ -2519,6 +2524,7 @@
 				F84E22A32ED0E1BB00459747 /* Workout.swift in Sources */,
 				BL0CK5W1FT00000004 /* Block.swift in Sources */,
 				3X3RC1S35W1FT000004 /* Exercise.swift in Sources */,
+				AMA2311PRESBLD004 /* Prescription.swift in Sources */,
 				BL0CK2INT3RVAL00004 /* BlockToIntervalConverter.swift in Sources */,
 				F84E22A42ED0E68300459747 /* WorkoutKitConverter.swift in Sources */,
 			);
