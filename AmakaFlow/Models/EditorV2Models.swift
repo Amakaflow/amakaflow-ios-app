@@ -268,6 +268,24 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
         fieldProvenance[field] = .user
     }
 
+    /// AMA-2312 — apply range-mode commit only when the parsed range is valid and changed.
+    /// Invalid/empty input leaves the existing prescription and provenance untouched.
+    mutating func commitRepRange(from rangeText: String, useRangeMode: Bool) {
+        guard useRangeMode else { return }
+        guard let updated = RepsRange.fromRangeText(
+            rangeText,
+            preservingQualifier: repsRange?.qualifier
+        ) else {
+            return
+        }
+        let changed = repsRange != updated
+        repsRange = updated
+        reps = nil
+        if changed {
+            stampUser("reps_range")
+        }
+    }
+
     static func formatWeight(_ weightKg: Double) -> String {
         weightKg.truncatingRemainder(dividingBy: 1) == 0
             ? String(Int(weightKg))

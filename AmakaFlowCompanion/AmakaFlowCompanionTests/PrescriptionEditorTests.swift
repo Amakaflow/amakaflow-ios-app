@@ -108,13 +108,36 @@ final class PrescriptionEditorTests: XCTestCase {
             repsRange: original,
             fieldProvenance: ["reps_range": .inferred]
         )
-        let updated = RepsRange.fromRangeText("8-10", preservingQualifier: nil)
-        XCTAssertEqual(updated, original)
-        let changed = draft.repsRange != updated
-        XCTAssertFalse(changed)
-        if changed {
-            draft.stampUser("reps_range")
-        }
+        draft.commitRepRange(from: "8-10", useRangeMode: true)
+        XCTAssertEqual(draft.repsRange, original)
+        XCTAssertEqual(draft.fieldProvenance["reps_range"], .inferred)
+    }
+
+    func testCommittedRangeStampsOnlyWhenChanged() {
+        var draft = EditorV2Exercise(
+            name: "Squat",
+            sets: 3,
+            repsRange: RepsRange(low: 8, high: 10),
+            fieldProvenance: ["reps_range": .inferred]
+        )
+        draft.commitRepRange(from: "6-8", useRangeMode: true)
+        XCTAssertEqual(draft.repsRange, RepsRange(low: 6, high: 8))
+        XCTAssertNil(draft.reps)
+        XCTAssertEqual(draft.fieldProvenance["reps_range"], .user)
+    }
+
+    func testCommittedRangeKeepsPrescriptionOnInvalidInput() {
+        let original = RepsRange(low: 8, high: 10)
+        var draft = EditorV2Exercise(
+            name: "Squat",
+            sets: 3,
+            reps: 10,
+            repsRange: original,
+            fieldProvenance: ["reps_range": .inferred]
+        )
+        draft.commitRepRange(from: "", useRangeMode: true)
+        XCTAssertEqual(draft.repsRange, original)
+        XCTAssertEqual(draft.reps, 10)
         XCTAssertEqual(draft.fieldProvenance["reps_range"], .inferred)
     }
 }
