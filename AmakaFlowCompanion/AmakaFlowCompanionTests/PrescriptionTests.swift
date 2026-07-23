@@ -92,12 +92,14 @@ final class PrescriptionTests: XCTestCase {
 
     func testPlainRepsWinsOverStructuredRange() {
         let primary = PrescriptionFormatter.resolvePrimaryMetric(
-            durationSeconds: nil,
-            distanceMeters: nil,
-            calories: nil,
-            plainReps: 10,
-            repsRange: RepsRange(low: 8, high: 10),
-            sets: 3
+            PrescriptionMetricInputs(
+                durationSeconds: nil,
+                distanceMeters: nil,
+                calories: nil,
+                plainReps: 10,
+                repsRange: RepsRange(low: 8, high: 10),
+                sets: 3
+            )
         )
 
         if case .reps(let reps, let sets) = primary {
