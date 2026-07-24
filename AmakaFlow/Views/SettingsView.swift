@@ -111,6 +111,7 @@ struct SettingsView: View {
     @State private var showingGarminDebugAlert = false
     @State private var garminDebugMessage = ""
     @State private var showingManualUUIDSheet = false
+    @State private var showingGarminWatchDisplayPrefs = false
     @State private var manualUUID = ""
     @State private var manualDeviceName = ""
     @State private var showingDebugLog = false
@@ -194,6 +195,9 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showingManualUUIDSheet) {
                 manualUUIDSheet
+            }
+            .sheet(isPresented: $showingGarminWatchDisplayPrefs) {
+                GarminWatchDisplayPrefsSheet(mode: .settings)
             }
             .sheet(isPresented: $showingDebugLog) {
                 debugLogSheet
@@ -1883,6 +1887,28 @@ struct SettingsView: View {
                     )
                     .cornerRadius(Theme.CornerRadius.md)
             }
+
+            // AMA-2316: edit watch display prefs (work/rest end conditions)
+            Button {
+                showingGarminWatchDisplayPrefs = true
+            } label: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Watch workout display")
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    Text(GarminWatchDisplayPrefsStore.current.summaryLine)
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                        .lineLimit(2)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, Theme.Spacing.sm)
+                .padding(.horizontal, Theme.Spacing.md)
+                .background(Theme.Colors.surfaceElevated)
+                .cornerRadius(Theme.CornerRadius.md)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("af_garmin_watch_display_prefs_settings")
 
             // Saved device reconnect (alternative to broken picker)
             if let savedDevice = garminConnectivity.savedDeviceInfo, !garminConnectivity.isConnected {

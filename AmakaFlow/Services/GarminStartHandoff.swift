@@ -168,7 +168,10 @@ final class GarminStartHandoffService {
         }
 
         do {
-            let pushResult = try await apiService.pushWatchDelivery(workoutId: workoutId)
+            let pushResult = try await apiService.pushWatchDelivery(
+                workoutId: workoutId,
+                displayPrefs: GarminWatchDisplayPrefsStore.current
+            )
             guard pushResult.success else {
                 return GarminStartHandoffResult(
                     kind: .failed,

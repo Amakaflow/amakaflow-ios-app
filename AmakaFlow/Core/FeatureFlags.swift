@@ -85,6 +85,10 @@ enum DefaultsKey: String {
     case fatigueShowInCalendar = "fatigue_show_in_calendar"
     case fatigueTrackingEnabled = "fatigue_tracking_enabled"
     case garminSavedDevice = "GarminSavedDevice"
+    /// AMA-2316: Codable GarminWatchDisplayPrefs blob.
+    case garminWatchDisplayPrefs = "garmin_watch_display_prefs_v1"
+    /// AMA-2316: one-time Connect sheet completed.
+    case garminWatchDisplayPrefsConfigured = "garmin_watch_display_prefs_configured_v1"
     case instagramImportMode
     case nutritionSettings = "nutrition_settings"
     case pendingWorkoutCompletionQueue = "WorkoutCompletionPendingQueue"

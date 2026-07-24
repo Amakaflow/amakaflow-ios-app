@@ -143,6 +143,9 @@
 		AMA2291STARTSTBLD /* WorkoutStartSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2291STARTSTREF /* WorkoutStartSelectionTests.swift */; };
 		AMA2286GARHANDBLD /* GarminStartHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2286GARHANDREF /* GarminStartHandoff.swift */; };
 		AMA2286GARTESTBLD /* GarminStartHandoffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2286GARTESTREF /* GarminStartHandoffTests.swift */; };
+		AMA2316PREFBLD001 /* GarminWatchDisplayPrefs.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2316PREFREF001 /* GarminWatchDisplayPrefs.swift */; };
+		AMA2316SHEETBLD01 /* GarminWatchDisplayPrefsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2316SHEETREF01 /* GarminWatchDisplayPrefsSheet.swift */; };
+		AMA2316PREFTESTBLD /* GarminWatchDisplayPrefsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2316PREFTESTREF /* GarminWatchDisplayPrefsTests.swift */; };
 		AMA2287APPHANDBLD /* AppleStartHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2287APPHANDREF /* AppleStartHandoff.swift */; };
 		AMA2287APHTESTBLD /* AppleStartHandoffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2287APHTESTREF /* AppleStartHandoffTests.swift */; };
 		AMA2286RUNINTBLD /* running_intervals_4x800.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA2286RUNINTREF /* running_intervals_4x800.json */; };
@@ -702,6 +705,9 @@
 		AMA2291STARTSTREF /* WorkoutStartSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutStartSelectionTests.swift; path = AmakaFlowCompanionTests/WorkoutStartSelectionTests.swift; sourceTree = "<group>"; };
 		AMA2286GARHANDREF /* GarminStartHandoff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminStartHandoff.swift; path = ../AmakaFlow/Services/GarminStartHandoff.swift; sourceTree = SOURCE_ROOT; };
 		AMA2286GARTESTREF /* GarminStartHandoffTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminStartHandoffTests.swift; path = AmakaFlowCompanionTests/GarminStartHandoffTests.swift; sourceTree = "<group>"; };
+		AMA2316PREFREF001 /* GarminWatchDisplayPrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchDisplayPrefs.swift; path = ../AmakaFlow/Models/GarminWatchDisplayPrefs.swift; sourceTree = SOURCE_ROOT; };
+		AMA2316SHEETREF01 /* GarminWatchDisplayPrefsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchDisplayPrefsSheet.swift; path = ../AmakaFlow/Views/GarminWatchDisplayPrefsSheet.swift; sourceTree = SOURCE_ROOT; };
+		AMA2316PREFTESTREF /* GarminWatchDisplayPrefsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchDisplayPrefsTests.swift; path = AmakaFlowCompanionTests/GarminWatchDisplayPrefsTests.swift; sourceTree = "<group>"; };
 		AMA2287APPHANDREF /* AppleStartHandoff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleStartHandoff.swift; path = ../AmakaFlow/Services/AppleStartHandoff.swift; sourceTree = SOURCE_ROOT; };
 		AMA2287APHTESTREF /* AppleStartHandoffTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleStartHandoffTests.swift; path = AmakaFlowCompanionTests/AppleStartHandoffTests.swift; sourceTree = "<group>"; };
 		AMA2289DIARYREF /* TodayDiary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TodayDiary.swift; path = ../AmakaFlow/Models/TodayDiary.swift; sourceTree = SOURCE_ROOT; };
@@ -1324,6 +1330,7 @@
 				AMA2290BFVIEWREF /* StrengthBackfillView.swift */,
 				AMA2290WCVCOMPREF /* WorkoutCompletionView+Components.swift */,
 				AMA2291STARTSHREF /* WorkoutStartSheet.swift */,
+				AMA2316SHEETREF01 /* GarminWatchDisplayPrefsSheet.swift */,
 				AMA2027MSGVIEW000000A /* MessagingView.swift */,
 				AMA16080001 /* BiometricConsentView.swift */,
 				AMA12650004 /* CoachingProfileOnboardingView.swift */,
@@ -1356,6 +1363,7 @@
 				BL0CK5W1FT00000001 /* Block.swift */,
 				3X3RC1S35W1FT000001 /* Exercise.swift */,
 				AMA2311PRESREF001 /* Prescription.swift */,
+				AMA2316PREFREF001 /* GarminWatchDisplayPrefs.swift */,
 				AMA2311PDEFREF001 /* PrescriptionDefaults.swift */,
 				BL0CK2INT3RVAL00001 /* BlockToIntervalConverter.swift */,
 				F84E226D2ED0D55600459747 /* AmakaFlowApp.swift */,
@@ -1690,6 +1698,7 @@
 				AMA2305TSTREF /* StructureClarifyTests.swift */,
 				AMA2291STARTSTREF /* WorkoutStartSelectionTests.swift */,
 				AMA2286GARTESTREF /* GarminStartHandoffTests.swift */,
+				AMA2316PREFTESTREF /* GarminWatchDisplayPrefsTests.swift */,
 				AMA2287APHTESTREF /* AppleStartHandoffTests.swift */,
 				AMA2289DIARYTSTREF /* TodayDiaryTests.swift */,
 				AMA2290BFTESTREF /* StrengthBackfillTests.swift */,
@@ -2346,6 +2355,8 @@
 				AMA2289ACTSECBLD /* CompletionDiaryActionsSection.swift in Sources */,
 				AMA2291STARTSELBLD /* WorkoutStartSelection.swift in Sources */,
 				AMA2286GARHANDBLD /* GarminStartHandoff.swift in Sources */,
+				AMA2316PREFBLD001 /* GarminWatchDisplayPrefs.swift in Sources */,
+				AMA2316SHEETBLD01 /* GarminWatchDisplayPrefsSheet.swift in Sources */,
 				AMA2287APPHANDBLD /* AppleStartHandoff.swift in Sources */,
 				AMA2291LIBDESTBLD /* LibraryDestination.swift in Sources */,
 				AMA2291UNIDETBLD /* UnifiedWorkoutDetailView.swift in Sources */,
@@ -2490,6 +2501,7 @@
 				AMA2305TSTBLD /* StructureClarifyTests.swift in Sources */,
 				AMA2291STARTSTBLD /* WorkoutStartSelectionTests.swift in Sources */,
 				AMA2286GARTESTBLD /* GarminStartHandoffTests.swift in Sources */,
+				AMA2316PREFTESTBLD /* GarminWatchDisplayPrefsTests.swift in Sources */,
 				AMA2287APHTESTBLD /* AppleStartHandoffTests.swift in Sources */,
 				AMA2289DIARYTSTBLD /* TodayDiaryTests.swift in Sources */,
 				AMA2290BFTESTBLD /* StrengthBackfillTests.swift in Sources */,

@@ -13,6 +13,7 @@ struct DevicesView: View {
     @StateObject private var viewModel: DevicesViewModel
     @State private var didLoad = false
     @State private var showingPairSheet = false
+    @State private var showingWatchDisplayPrefs = false
     @State private var pendingRemoval: DevicesViewModel.PairedDevice?
 
     init(viewModel: DevicesViewModel? = nil) {
@@ -52,7 +53,17 @@ struct DevicesView: View {
             }
         }
         .sheet(isPresented: $showingPairSheet) {
-            PairDeviceSheet(viewModel: viewModel)
+            PairDeviceSheet(viewModel: viewModel) {
+                // AMA-2316: one-time watch display prefs after successful CIQ pair.
+                if GarminWatchDisplayPrefsStore.shouldPresentOnboarding {
+                    showingWatchDisplayPrefs = true
+                }
+            }
+        }
+        .sheet(isPresented: $showingWatchDisplayPrefs) {
+            GarminWatchDisplayPrefsSheet(
+                mode: GarminWatchDisplayPrefsStore.hasConfigured ? .settings : .onboarding
+            )
         }
         .confirmationDialog(
             "Remove this device?",
@@ -93,6 +104,7 @@ struct DevicesView: View {
     private var contentView: some View {
         scrollContainer {
             devicesSection
+            watchDisplayPrefsRow
             infoNote
         }
     }
@@ -228,6 +240,30 @@ struct DevicesView: View {
         }
     }
 
+    /// AMA-2316: Settings → Garmin edit entry (also reachable from Devices).
+    private var watchDisplayPrefsRow: some View {
+        Button {
+            showingWatchDisplayPrefs = true
+        } label: {
+            AFCard {
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Text("Watch workout display")
+                        .afH2()
+                    Text(
+                        GarminWatchDisplayPrefsStore.hasConfigured
+                            ? GarminWatchDisplayPrefsStore.current.summaryLine
+                            : "Choose how work sets and rest show on Garmin."
+                    )
+                    .afMuted()
+                    .multilineTextAlignment(.leading)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("af_garmin_watch_display_prefs_devices")
+    }
+
     private func deviceCard(_ display: DevicesViewModel.DisplayDevice) -> some View {
         AFCard {
             VStack(alignment: .leading, spacing: Theme.Spacing.md) {
@@ -353,6 +389,8 @@ struct DevicesView: View {
 private struct PairDeviceSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: DevicesViewModel
+    /// Called after a successful pair (before this sheet dismisses).
+    var onPaired: (() -> Void)? = nil
     @State private var shortCode = ""
     @State private var isSubmitting = false
 
@@ -449,6 +487,7 @@ private struct PairDeviceSheet: View {
 
         await viewModel.pair(shortCode: normalizedCode)
         if viewModel.lastFailedAction != .pair {
+            onPaired?()
             dismiss()
         }
     }
