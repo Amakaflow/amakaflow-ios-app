@@ -159,13 +159,19 @@ final class SocialImportViewModel: ObservableObject {
                     : text,
                 source: draft.sourceURL ?? draft.platform.rawValue
             )
-            let merged = result.exercises.isEmpty
-                ? StructureSuggestResult(
+            // AMA-2318: never discard non-empty parsed draft exercises for
+            // caption-minted / suggest-returned replacements. Suggest may still
+            // propose grouping via suggestions/blocks over the draft names.
+            let merged: StructureSuggestResult
+            if !fallback.isEmpty {
+                merged = StructureSuggestResult(
                     exercises: fallback,
                     suggestions: result.suggestions,
                     blocks: result.blocks
                 )
-                : result
+            } else {
+                merged = result
+            }
             clarifySession = StructureClarifySession.fromSuggest(merged, fallbackExercises: fallback)
         } catch {
             // Missing BFF → flat rows (MOCK/SKIP), never crash the import path.
@@ -265,10 +271,7 @@ final class SocialImportViewModel: ObservableObject {
             return
         }
 
-        let usableExercises = draft.exercises.filter {
-            let name = $0.name.trimmingCharacters(in: .whitespacesAndNewlines)
-            return !name.isEmpty && name.lowercased() != "add exercises"
-        }
+        let usableExercises = usableParsedExercises(from: draft)
         guard !usableExercises.isEmpty else {
             phase = .failed(.parse(message: "Add at least one exercise before saving — import didn't extract a usable list."))
             return

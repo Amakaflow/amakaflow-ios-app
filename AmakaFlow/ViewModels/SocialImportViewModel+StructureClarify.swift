@@ -50,8 +50,18 @@ extension SocialImportViewModel {
         clarifySession = session
     }
 
-    /// Text fed to structure/suggest — caption preferred, else reconstructed list.
+    /// Text fed to structure/suggest.
+    ///
+    /// AMA-2318: when the draft already has parsed exercises, send those names so
+    /// suggest proposes grouping *over* the draft — never replace exercise names
+    /// with promo caption sentences.
     func structureSuggestText(for draft: SocialImportDraft) -> String {
+        let exerciseList = usableParsedExercises(from: draft)
+            .map(\.name)
+            .joined(separator: "\n")
+        if !exerciseList.isEmpty {
+            return exerciseList
+        }
         if let caption = draft.postProvenance?.captionSnippet?
             .trimmingCharacters(in: .whitespacesAndNewlines),
            !caption.isEmpty {
@@ -62,14 +72,20 @@ extension SocialImportViewModel {
            !description.isEmpty {
             return description
         }
-        return draft.exercises
-            .map(\.name)
-            .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-            .joined(separator: "\n")
+        return ""
+    }
+
+    /// Exercises worth protecting / sending to suggest — blanks and the
+    /// `"Add exercises"` placeholder do not count (same rule as save).
+    func usableParsedExercises(from draft: SocialImportDraft) -> [SocialImportExercise] {
+        draft.exercises.filter { exercise in
+            let name = exercise.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            return !name.isEmpty && name.lowercased() != "add exercises"
+        }
     }
 
     func fallbackStructureExercises(from draft: SocialImportDraft) -> [StructureExerciseModel] {
-        draft.exercises.map { exercise in
+        usableParsedExercises(from: draft).map { exercise in
             StructureExerciseModel(
                 name: exercise.name,
                 sets: exercise.sets,

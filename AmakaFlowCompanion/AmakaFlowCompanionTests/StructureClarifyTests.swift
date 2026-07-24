@@ -416,6 +416,199 @@ final class StructureClarifyViewModelTests: XCTestCase {
         }
     }
 
+    // MARK: - AMA-2318 caption vs parsed exercises
+
+    /// Jeff Nippard Black Friday promo — caption has zero exercises; draft has Whisper-parsed ones.
+    private static let jeffNippardPromoCaption =
+        "Here's the 45-minute high intensity upper body workout for you to try. "
+        + "If you're looking for a new plan to run through the holidays, my Pure "
+        + "Bodybuilding Program is 30% off right now for Black Friday! Link in bio "
+        + "to execute, al"
+
+    private static let jeffParsedExerciseNames = [
+        "Incline Smith Machine Press",
+        "Machine Pec Deck",
+        "Machine Lateral Raises",
+        "Weighted Pull-Ups",
+        "Machine Rows",
+        "Preacher Curls",
+        "Triceps Press Downs"
+    ]
+
+    func testStructureSuggestTextPrefersParsedExercisesOverPromoCaption() {
+        let draft = jeffDraftWithParsedExercisesAndPromoCaption()
+        let text = sut.structureSuggestText(for: draft)
+
+        XCTAssertFalse(text.contains("Black Friday"), "Suggest text must not be the promo caption")
+        XCTAssertFalse(text.contains("Here's the 45-minute"))
+        for name in Self.jeffParsedExerciseNames {
+            XCTAssertTrue(text.contains(name), "Expected parsed exercise \(name) in suggest text")
+        }
+    }
+
+    func testStructureSuggestTextUsesCaptionWhenDraftHasNoExercises() {
+        let draft = SocialImportDraft(
+            title: "Promo only",
+            sport: "strength",
+            platform: .instagram,
+            sourceURL: "https://www.instagram.com/reel/DRKgJ7lDgq4/",
+            exercises: [],
+            blocks: [],
+            equipmentNote: nil,
+            equipmentEmpty: false,
+            postProvenance: SocialImportPostProvenance(
+                creator: "jeffnippard",
+                captionSnippet: Self.jeffNippardPromoCaption,
+                transcriptSnippet: nil,
+                mode: "reel",
+                shortcode: "DRKgJ7lDgq4"
+            )
+        )
+
+        let text = sut.structureSuggestText(for: draft)
+        XCTAssertTrue(text.contains("Black Friday"))
+    }
+
+    func testEnterClarifyKeepsParsedExercisesWhenSuggestReturnsCaptionMintedRows() async {
+        let draft = jeffDraftWithParsedExercisesAndPromoCaption()
+        // Backend minting promo sentences as "exercises" (pre-AMA-2318 backend bug shape).
+        mockAPI.suggestStructureResult = .success(
+            StructureSuggestResult(
+                exercises: [
+                    StructureExerciseModel(
+                        name: "Here's the 45-minute high intensity upper body workout for you to try. "
+                            + "If you're looking for a new plan…"
+                    ),
+                    StructureExerciseModel(
+                        name: "If you're looking for a new plan to run… execute, al"
+                    )
+                ],
+                suggestions: [],
+                blocks: []
+            )
+        )
+
+        await sut.enterClarify(for: draft)
+
+        guard case .clarify = sut.phase else {
+            return XCTFail("Expected clarify, got \(sut.phase)")
+        }
+        let names = sut.clarifySession?.flatExerciseNames ?? []
+        XCTAssertEqual(names, Self.jeffParsedExerciseNames)
+        XCTAssertFalse(names.contains(where: { $0.contains("Black Friday") || $0.contains("Here's") }))
+        XCTAssertTrue(mockAPI.suggestStructureCalled)
+        let sent = mockAPI.lastSuggestStructureText ?? ""
+        XCTAssertFalse(sent.contains("Black Friday"), "Must not send promo caption when draft has exercises")
+        for name in Self.jeffParsedExerciseNames {
+            XCTAssertTrue(sent.contains(name))
+        }
+    }
+
+    func testEnterClarifyUsesSuggestExercisesWhenFallbackEmpty() async {
+        let draft = SocialImportDraft(
+            title: "Caption workout",
+            sport: "strength",
+            platform: .instagram,
+            sourceURL: "https://www.instagram.com/reel/DMqEsenN6Dl/",
+            exercises: [],
+            blocks: [],
+            equipmentNote: nil,
+            equipmentEmpty: false,
+            postProvenance: SocialImportPostProvenance(
+                creator: "trainwithsmee",
+                captionSnippet: StructureClarifyFixtures.dmqCaption,
+                transcriptSnippet: nil,
+                mode: "reel",
+                shortcode: "DMqEsenN6Dl"
+            )
+        )
+        mockAPI.suggestStructureResult = .success(StructureClarifyFixtures.dmqSuggestResult)
+
+        await sut.enterClarify(for: draft)
+
+        let names = sut.clarifySession?.flatExerciseNames ?? []
+        XCTAssertEqual(names.first, "Ski 1000m")
+        XCTAssertTrue(names.contains("Bench Press"))
+    }
+
+    func testPlaceholderOnlyDraftFallsBackToCaptionSuggestText() {
+        let draft = SocialImportDraft(
+            title: "Thin",
+            sport: "strength",
+            platform: .instagram,
+            sourceURL: "https://www.instagram.com/reel/x/",
+            exercises: [
+                SocialImportExercise(name: "Add exercises", sets: 3, reps: 10),
+                SocialImportExercise(name: "   ", sets: nil, reps: nil)
+            ],
+            blocks: [],
+            equipmentNote: nil,
+            equipmentEmpty: false,
+            postProvenance: SocialImportPostProvenance(
+                creator: "jeffnippard",
+                captionSnippet: Self.jeffNippardPromoCaption,
+                transcriptSnippet: nil,
+                mode: "reel",
+                shortcode: "x"
+            )
+        )
+
+        let text = sut.structureSuggestText(for: draft)
+        XCTAssertTrue(text.contains("Black Friday"), "Placeholder rows must not block caption suggest text")
+        XCTAssertTrue(sut.usableParsedExercises(from: draft).isEmpty)
+    }
+
+    func testEnterClarifyUsesSuggestWhenFallbackIsPlaceholderOnly() async {
+        let draft = SocialImportDraft(
+            title: "Thin",
+            sport: "strength",
+            platform: .instagram,
+            sourceURL: "https://www.instagram.com/reel/DMqEsenN6Dl/",
+            exercises: [SocialImportExercise(name: "Add exercises", sets: 3, reps: 10)],
+            blocks: [],
+            equipmentNote: nil,
+            equipmentEmpty: false,
+            postProvenance: SocialImportPostProvenance(
+                creator: "trainwithsmee",
+                captionSnippet: StructureClarifyFixtures.dmqCaption,
+                transcriptSnippet: nil,
+                mode: "reel",
+                shortcode: "DMqEsenN6Dl"
+            )
+        )
+        mockAPI.suggestStructureResult = .success(StructureClarifyFixtures.dmqSuggestResult)
+
+        await sut.enterClarify(for: draft)
+
+        let names = sut.clarifySession?.flatExerciseNames ?? []
+        XCTAssertEqual(names.first, "Ski 1000m")
+        XCTAssertFalse(names.contains("Add exercises"))
+        XCTAssertTrue(mockAPI.lastSuggestStructureText?.contains("Warm up") == true)
+    }
+
+    private func jeffDraftWithParsedExercisesAndPromoCaption() -> SocialImportDraft {
+        SocialImportDraft(
+            title: "45-Minute Upper Body",
+            sport: "strength",
+            platform: .instagram,
+            sourceURL: "https://www.instagram.com/reel/DRKgJ7lDgq4/",
+            exercises: Self.jeffParsedExerciseNames.map { SocialImportExercise(name: $0, sets: 2, reps: 10) },
+            blocks: [],
+            equipmentNote: nil,
+            equipmentEmpty: false,
+            postProvenance: SocialImportPostProvenance(
+                creator: "jeffnippard",
+                captionSnippet: Self.jeffNippardPromoCaption,
+                transcriptSnippet: nil,
+                mode: "reel",
+                shortcode: "DRKgJ7lDgq4",
+                extractionMethod: "whisper_audio",
+                exerciseGatePassed: true,
+                tierAttempted: "whisper"
+            )
+        )
+    }
+
     private func sampleIngestJSON() -> Data {
         let payload: [String: Any] = [
             "title": "Hyrox Upper Body",
@@ -428,5 +621,18 @@ final class StructureClarifyViewModelTests: XCTestCase {
         ]
         // swiftlint:disable:next force_try
         return try! JSONSerialization.data(withJSONObject: payload)
+    }
+}
+
+private extension StructureClarifySession {
+    var flatExerciseNames: [String] {
+        units.flatMap { unit -> [String] in
+            switch unit {
+            case .group(let group):
+                return group.exercises.map(\.name)
+            case .row(let row):
+                return [row.exercise.name]
+            }
+        }
     }
 }
