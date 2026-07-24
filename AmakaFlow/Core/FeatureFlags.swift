@@ -84,6 +84,8 @@ enum DefaultsKey: String {
     case fatigueRecoveryReminder = "fatigue_recovery_reminder"
     case fatigueShowInCalendar = "fatigue_show_in_calendar"
     case fatigueTrackingEnabled = "fatigue_tracking_enabled"
+    /// AMA-2317: last Start → Garmin handoff, for resume + interrupted detection.
+    case garminHandoffState = "garmin_handoff_state_v1"
     case garminSavedDevice = "GarminSavedDevice"
     /// AMA-2316: Codable GarminWatchDisplayPrefs blob.
     case garminWatchDisplayPrefs = "garmin_watch_display_prefs_v1"

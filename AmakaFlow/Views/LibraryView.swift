@@ -96,7 +96,7 @@ struct LibraryView: View {
             }
         }
         .alert(
-            "Delete from Library?",
+            GarminLifecycleCopy.deleteWorkoutTitle,
             isPresented: Binding(
                 get: { pendingDelete != nil },
                 set: { if !$0 { pendingDelete = nil } }
@@ -114,7 +114,12 @@ struct LibraryView: View {
             .accessibilityIdentifier("af_library_delete_cancel")
         } message: {
             if let pendingDelete {
-                Text("“\(pendingDelete.title)” will be removed. You can import it again later.")
+                Text(
+                    GarminLifecycleCopy.deleteWorkoutMessage(
+                        name: pendingDelete.title,
+                        isWorkout: pendingDelete.isWorkout
+                    )
+                )
             }
         }
         .task {

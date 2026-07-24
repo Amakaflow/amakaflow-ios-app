@@ -22,10 +22,21 @@ struct UnifiedWorkoutDetailView: View {
     @State private var showingEditor = false
     @State private var showingWorkoutPlayer = false
     @State private var showingGarminPairing = false
+    @State private var showingGarminDisplayPrefs = false
     @State private var handoffStatus: String?
+    /// AMA-2317: true while the CIQ open request is handing off to Garmin Connect.
+    @State private var isOpeningGarmin = false
+    @State private var showsHandoffNextSteps = false
     @State private var isSavingImport = false
     @State private var showingDeleteConfirm = false
     @State private var isDeleting = false
+
+    @Environment(\.scenePhase) private var scenePhase
+    private let handoffStore = GarminHandoffStateStore()
+
+    /// How long the "opening Garmin Connect…" beat stays up when iOS does not
+    /// actually foreground GCM (CIQ open requests often keep us in front).
+    fileprivate static let garminOpenIndicatorNanoseconds: UInt64 = 2_500_000_000
 
     var garminPairedOverride: Bool?
     var appleWatchReachableOverride: Bool?
@@ -101,7 +112,12 @@ struct UnifiedWorkoutDetailView: View {
                 onPairGarmin: {
                     showingStartSheet = false
                     handoffStatus = GarminStartHandoffCopy.unpairedRecoveryStatusMessage
+                    showsHandoffNextSteps = false
                     showingGarminPairing = true
+                },
+                onEditGarminPrefs: {
+                    showingStartSheet = false
+                    showingGarminDisplayPrefs = true
                 },
                 onClose: { showingStartSheet = false }
             )
@@ -115,6 +131,9 @@ struct UnifiedWorkoutDetailView: View {
             }
             .presentationDetents([.large])
             .presentationBackground(DailyDriver.screenBackground)
+        }
+        .sheet(isPresented: $showingGarminDisplayPrefs) {
+            GarminWatchDisplayPrefsSheet(mode: .settings)
         }
         .sheet(
             isPresented: $showingEditor,
@@ -132,7 +151,7 @@ struct UnifiedWorkoutDetailView: View {
         .fullScreenCover(isPresented: $showingWorkoutPlayer) {
             WorkoutPlayerView()
         }
-        .alert("Delete from Library?", isPresented: $showingDeleteConfirm) {
+        .alert(GarminLifecycleCopy.deleteWorkoutTitle, isPresented: $showingDeleteConfirm) {
             Button("Delete", role: .destructive) {
                 Task {
                     guard let onDelete else { return }
@@ -148,7 +167,11 @@ struct UnifiedWorkoutDetailView: View {
             Button("Cancel", role: .cancel) {}
                 .accessibilityIdentifier("af_library_delete_cancel")
         } message: {
-            Text("“\(workout.name)” will be removed. You can import it again later.")
+            Text(GarminLifecycleCopy.deleteWorkoutMessage(name: workout.name, isWorkout: true))
+        }
+        .onAppear(perform: restoreHandoffStatus)
+        .onChange(of: scenePhase) { phase in
+            handleScenePhaseChange(phase)
         }
         .accessibilityIdentifier("af_workout_detail_screen")
     }
@@ -273,15 +296,45 @@ struct UnifiedWorkoutDetailView: View {
                 .padding(.top, 4)
 
             if let handoffStatus {
-                Text(handoffStatus)
-                    .font(Theme.Typography.caption)
-                    .foregroundColor(Theme.Colors.textSecondary)
+                garminHandoffPanel(status: handoffStatus)
                     .padding(.top, Theme.Spacing.md)
-                    .accessibilityIdentifier("af_workout_detail_handoff_status")
             }
         }
         .padding(.horizontal, 18)
         .padding(.top, 16)
+    }
+
+    /// AMA-2317: the app-switch to Garmin Connect used to read as a crash —
+    /// name the handoff, keep the status parked, and say it survives leaving.
+    @ViewBuilder
+    private func garminHandoffPanel(status: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if isOpeningGarmin {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(DailyDriver.lime)
+                    Text(GarminLifecycleCopy.handoffOpeningGarmin)
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(DailyDriver.foreground)
+                }
+                .accessibilityIdentifier("af_workout_detail_handoff_opening")
+            }
+
+            Text(status)
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("af_workout_detail_handoff_status")
+
+            if showsHandoffNextSteps {
+                Text(GarminLifecycleCopy.handoffNextSteps)
+                    .font(.system(size: 10.5))
+                    .foregroundColor(DailyDriver.foregroundDim)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("af_workout_detail_handoff_next_steps")
+            }
+        }
     }
 
     private var creditRow: some View {
@@ -758,16 +811,17 @@ extension UnifiedWorkoutDetailView {
         let handoff = WorkoutStartHandoffResolver.handoff(for: device)
         switch handoff {
         case .garmin:
-            handoffStatus = "Queueing for Garmin…"
+            handoffStatus = GarminLifecycleCopy.handoffQueueing
+            showsHandoffNextSteps = false
             Task {
                 let result = await GarminStartHandoffService().push(
                     workoutId: workout.id,
                     gymTitle: gym.title
                 )
                 handoffStatus = result.message
-                if result.kind != .failed {
-                    GarminConnectManager.shared.sendOpenAppRequest()
-                }
+                guard result.kind != .failed else { return }
+                showsHandoffNextSteps = true
+                await requestGarminOpen()
             }
         case .apple:
             beginAppleTryHandoff()
@@ -775,6 +829,48 @@ extension UnifiedWorkoutDetailView {
             WorkoutEngine.shared.start(workout: workout)
             showingWorkoutPlayer = true
             handoffStatus = "Recording on Phone — stop anytime, then log sets"
+        }
+    }
+
+    /// Hands off to the CIQ widget with a visible "opening Garmin Connect" beat
+    /// so a foreground switch or watch wake never reads as the app dying.
+    fileprivate func requestGarminOpen() async {
+        isOpeningGarmin = true
+        GarminHandoffTelemetry.openAppRequested(workoutId: workout.id)
+        GarminConnectManager.shared.sendOpenAppRequest()
+        try? await Task.sleep(nanoseconds: Self.garminOpenIndicatorNanoseconds)
+        isOpeningGarmin = false
+    }
+
+    /// Re-show the last handoff result — the status must still be there whether
+    /// iOS suspended us or killed us while Garmin Connect was in front.
+    fileprivate func restoreHandoffStatus() {
+        guard handoffStatus == nil,
+              let restored = handoffStore.restorableMessage(workoutId: workout.id) else { return }
+        handoffStatus = GarminLifecycleCopy.handoffRestored(message: restored)
+        showsHandoffNextSteps = true
+    }
+
+    fileprivate func handleScenePhaseChange(_ phase: ScenePhase) {
+        // Only breadcrumb when a push is actually in play — otherwise every
+        // detail screen would flood the trail with lifecycle noise.
+        let record = handoffStore.record
+        let duringHandoff = record?.isInFlight == true || isOpeningGarmin
+        switch phase {
+        case .active:
+            if record != nil {
+                GarminHandoffTelemetry.scenePhaseChanged("active", duringHandoff: duringHandoff)
+            }
+            isOpeningGarmin = false
+            restoreHandoffStatus()
+        case .background:
+            if record != nil {
+                GarminHandoffTelemetry.scenePhaseChanged("background", duringHandoff: duringHandoff)
+            }
+        case .inactive:
+            break
+        @unknown default:
+            break
         }
     }
 

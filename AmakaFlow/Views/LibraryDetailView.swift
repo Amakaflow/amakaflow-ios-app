@@ -64,7 +64,7 @@ struct LibraryDetailView: View {
                 .padding(.top, Theme.Spacing.md)
             }
         }
-        .alert("Delete from Library?", isPresented: $showingDeleteConfirm) {
+        .alert(GarminLifecycleCopy.deleteWorkoutTitle, isPresented: $showingDeleteConfirm) {
             Button("Delete", role: .destructive) {
                 Task {
                     guard let onDelete else { return }
@@ -80,7 +80,12 @@ struct LibraryDetailView: View {
             Button("Cancel", role: .cancel) {}
                 .accessibilityIdentifier("af_library_delete_cancel")
         } message: {
-            Text("“\(viewModel.item?.title ?? "This item")” will be removed. You can import it again later.")
+            Text(
+                GarminLifecycleCopy.deleteWorkoutMessage(
+                    name: viewModel.item?.title ?? "This item",
+                    isWorkout: false
+                )
+            )
         }
         .task(id: itemID) {
             guard loadedItemID != itemID else { return }
