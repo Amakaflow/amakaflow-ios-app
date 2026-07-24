@@ -42,14 +42,17 @@ extension APIService {
         }
     }
 
-    // MARK: - Watch Delivery Push (AMA-2286)
-    func pushWatchDelivery(workoutId: String) async throws -> Components.Schemas.WatchResendResult {
+    // MARK: - Watch Delivery Push (AMA-2286 / AMA-2316)
+    func pushWatchDelivery(
+        workoutId: String,
+        displayPrefs: GarminWatchDisplayPrefs
+    ) async throws -> Components.Schemas.WatchResendResult {
         let encodedWorkoutID = try Self.pathSegment(workoutId)
         let request = try await makeAPIRequest(
             baseURL: bffURL,
             path: "/devices/watch-delivery/\(encodedWorkoutID)/push",
             method: "POST",
-            body: try encodeJSONBody([:] as [String: String])
+            body: try encodeJSONBody(displayPrefs.pushBody)
         )
         return try await self.request(
             request,

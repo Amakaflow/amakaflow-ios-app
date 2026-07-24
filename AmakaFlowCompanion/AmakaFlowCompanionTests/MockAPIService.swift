@@ -807,6 +807,7 @@ class MockAPIService: APIServiceProviding {
     var pushWatchDeliveryCalled = false
     var pushWatchDeliveryCallCount = 0
     var lastPushWatchDeliveryWorkoutId: String?
+    var lastPushWatchDeliveryPrefs: GarminWatchDisplayPrefs?
     var listMessagingChannelsCalled = false
     var setChannelPrefsCalled = false
     var setChannelPrefsCallCount = 0
@@ -875,10 +876,14 @@ class MockAPIService: APIServiceProviding {
         return try resendWatchDeliveryResult.get()
     }
 
-    func pushWatchDelivery(workoutId: String) async throws -> Components.Schemas.WatchResendResult {
+    func pushWatchDelivery(
+        workoutId: String,
+        displayPrefs: GarminWatchDisplayPrefs
+    ) async throws -> Components.Schemas.WatchResendResult {
         pushWatchDeliveryCalled = true
         pushWatchDeliveryCallCount += 1
         lastPushWatchDeliveryWorkoutId = workoutId
+        lastPushWatchDeliveryPrefs = displayPrefs
         if pushWatchDeliveryDelayNanoseconds > 0 {
             try await Task.sleep(nanoseconds: pushWatchDeliveryDelayNanoseconds)
         }

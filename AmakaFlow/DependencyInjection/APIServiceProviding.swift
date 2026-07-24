@@ -4,6 +4,7 @@
 //
 //  Protocol abstraction for APIService to enable dependency injection and testing.
 //
+// swiftlint:disable file_length
 
 import Foundation
 
@@ -310,7 +311,10 @@ protocol APIServiceProviding: TelegramLinkAPIProviding, SocialImportAPIProviding
     func resendWatchDelivery(workoutId: String) async throws -> Components.Schemas.WatchResendResult
 
     /// First-push a Library workout to Garmin CIQ queue (AMA-2286 Start → Garmin).
-    func pushWatchDelivery(workoutId: String) async throws -> Components.Schemas.WatchResendResult
+    func pushWatchDelivery(
+        workoutId: String,
+        displayPrefs: GarminWatchDisplayPrefs
+    ) async throws -> Components.Schemas.WatchResendResult
 
     // MARK: - Library (AMA-2004)
 

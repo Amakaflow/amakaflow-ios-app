@@ -94,6 +94,7 @@ struct ConnectedAppsResolver {
     }
 }
 
+// swiftlint:disable file_length type_body_length
 struct SettingsView: View {
     @Binding var navigateToSyncDashboard: Bool
     @AppStorage(DefaultsKey.devicePreference.rawValue) private var deviceMode: DevicePreference = .appleWatchPhone
@@ -111,6 +112,7 @@ struct SettingsView: View {
     @State private var showingGarminDebugAlert = false
     @State private var garminDebugMessage = ""
     @State private var showingManualUUIDSheet = false
+    @State private var showingGarminWatchDisplayPrefs = false
     @State private var manualUUID = ""
     @State private var manualDeviceName = ""
     @State private var showingDebugLog = false
@@ -194,6 +196,17 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showingManualUUIDSheet) {
                 manualUUIDSheet
+            }
+            .sheet(isPresented: $showingGarminWatchDisplayPrefs) {
+                GarminWatchDisplayPrefsSheet(
+                    mode: GarminWatchDisplayPrefsStore.hasConfigured ? .settings : .onboarding
+                )
+            }
+            .onChange(of: garminConnectivity.isConnected) { isConnected in
+                // AMA-2316: one-time prefs after GCM Connect succeeds.
+                if isConnected, GarminWatchDisplayPrefsStore.shouldPresentOnboarding {
+                    showingGarminWatchDisplayPrefs = true
+                }
             }
             .sheet(isPresented: $showingDebugLog) {
                 debugLogSheet
@@ -1883,6 +1896,29 @@ struct SettingsView: View {
                     )
                     .cornerRadius(Theme.CornerRadius.md)
             }
+
+            // AMA-2316: edit watch display prefs (work/rest end conditions)
+            Button {
+                showingGarminWatchDisplayPrefs = true
+            } label: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Watch workout display")
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    Text(GarminWatchDisplayPrefsStore.current.summaryLine)
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                        .lineLimit(2)
+                        .monospacedDigit()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, Theme.Spacing.sm)
+                .padding(.horizontal, Theme.Spacing.md)
+                .background(Theme.Colors.surfaceElevated)
+                .cornerRadius(Theme.CornerRadius.md)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("af_garmin_watch_display_prefs_settings")
 
             // Saved device reconnect (alternative to broken picker)
             if let savedDevice = garminConnectivity.savedDeviceInfo, !garminConnectivity.isConnected {
@@ -3760,3 +3796,5 @@ private struct CoachKnowledgeResolveView: View {
 // AMA-1639: EditProfileView and DistanceUnit live in their own file
 // (`AmakaFlow/Views/EditProfileView.swift`) — extracted to keep this
 // file under SwiftLint's file_length cap.
+
+// swiftlint:enable file_length type_body_length
