@@ -271,10 +271,7 @@ final class SocialImportViewModel: ObservableObject {
             return
         }
 
-        let usableExercises = draft.exercises.filter {
-            let name = $0.name.trimmingCharacters(in: .whitespacesAndNewlines)
-            return !name.isEmpty && name.lowercased() != "add exercises"
-        }
+        let usableExercises = usableParsedExercises(from: draft)
         guard !usableExercises.isEmpty else {
             phase = .failed(.parse(message: "Add at least one exercise before saving — import didn't extract a usable list."))
             return

@@ -531,6 +531,61 @@ final class StructureClarifyViewModelTests: XCTestCase {
         XCTAssertTrue(names.contains("Bench Press"))
     }
 
+    func testPlaceholderOnlyDraftFallsBackToCaptionSuggestText() {
+        let draft = SocialImportDraft(
+            title: "Thin",
+            sport: "strength",
+            platform: .instagram,
+            sourceURL: "https://www.instagram.com/reel/x/",
+            exercises: [
+                SocialImportExercise(name: "Add exercises", sets: 3, reps: 10),
+                SocialImportExercise(name: "   ", sets: nil, reps: nil)
+            ],
+            blocks: [],
+            equipmentNote: nil,
+            equipmentEmpty: false,
+            postProvenance: SocialImportPostProvenance(
+                creator: "jeffnippard",
+                captionSnippet: Self.jeffNippardPromoCaption,
+                transcriptSnippet: nil,
+                mode: "reel",
+                shortcode: "x"
+            )
+        )
+
+        let text = sut.structureSuggestText(for: draft)
+        XCTAssertTrue(text.contains("Black Friday"), "Placeholder rows must not block caption suggest text")
+        XCTAssertTrue(sut.usableParsedExercises(from: draft).isEmpty)
+    }
+
+    func testEnterClarifyUsesSuggestWhenFallbackIsPlaceholderOnly() async {
+        let draft = SocialImportDraft(
+            title: "Thin",
+            sport: "strength",
+            platform: .instagram,
+            sourceURL: "https://www.instagram.com/reel/DMqEsenN6Dl/",
+            exercises: [SocialImportExercise(name: "Add exercises", sets: 3, reps: 10)],
+            blocks: [],
+            equipmentNote: nil,
+            equipmentEmpty: false,
+            postProvenance: SocialImportPostProvenance(
+                creator: "trainwithsmee",
+                captionSnippet: StructureClarifyFixtures.dmqCaption,
+                transcriptSnippet: nil,
+                mode: "reel",
+                shortcode: "DMqEsenN6Dl"
+            )
+        )
+        mockAPI.suggestStructureResult = .success(StructureClarifyFixtures.dmqSuggestResult)
+
+        await sut.enterClarify(for: draft)
+
+        let names = sut.clarifySession?.flatExerciseNames ?? []
+        XCTAssertEqual(names.first, "Ski 1000m")
+        XCTAssertFalse(names.contains("Add exercises"))
+        XCTAssertTrue(mockAPI.lastSuggestStructureText?.contains("Warm up") == true)
+    }
+
     private func jeffDraftWithParsedExercisesAndPromoCaption() -> SocialImportDraft {
         SocialImportDraft(
             title: "45-Minute Upper Body",
