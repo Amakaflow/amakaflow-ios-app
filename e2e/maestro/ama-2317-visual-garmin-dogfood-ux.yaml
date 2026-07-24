@@ -70,8 +70,9 @@ appId: com.amakaflow.companion
 - assertVisible: "not a crash"
 - takeScreenshot: ama-2317-handoff-not-a-crash
 ---
-# 3) Pairing lifecycle + remove semantics on Devices (no paired device needed —
-#    the empty state carries the same "where does a code come from" copy).
+# 3) Pairing lifecycle + remove semantics on Devices. The fixture service pairs
+#    a Forerunner 955, so this covers the paired row caption and the Remove
+#    confirmation as well as the pair sheet's one-time-code copy.
 - launchApp:
     clearState: true
     arguments:
@@ -94,7 +95,23 @@ appId: com.amakaflow.companion
 - assertVisible: "one-time"
 - assertVisible: "until you remove"
 - assertVisible: "on the watch itself"
+# The paired row itself says the pairing survives — not just the footer note.
+- assertVisible:
+    id: "af_device_pairing_status_fixture-garmin-955"
+- assertVisible: "stays paired until you remove it"
 - takeScreenshot: ama-2317-devices-pairing-lifecycle
+# Remove on a paired device = unpair only; the watch keeps its downloads.
+- tapOn:
+    id: "af_device_remove_fixture-garmin-955"
+- assertVisible: "Remove this device?"
+- assertVisible: "unpairs the watch from AmakaFlow only"
+- assertVisible: "Strength Workouts"
+- assertVisible: "new 6-digit code"
+- takeScreenshot: ama-2317-remove-device-unpair-only
+- tapOn: "Cancel"
+# The device must still be there — Cancel cannot unpair.
+- assertVisible:
+    id: "device_card_fixture-garmin-955"
 - tapOn:
     id: "af_devices_add"
 - assertVisible:

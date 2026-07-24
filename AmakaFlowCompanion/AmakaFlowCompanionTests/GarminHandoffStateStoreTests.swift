@@ -31,7 +31,7 @@ final class GarminHandoffStateStoreTests: XCTestCase {
     func testNoRecordBeforeAnyPush() {
         XCTAssertNil(store.record)
         XCTAssertNil(store.takeInterrupted())
-        XCTAssertNil(store.restorableMessage(workoutId: "wk-1"))
+        XCTAssertNil(store.restorable(workoutId: "wk-1"))
     }
 
     func testBeginMarksHandoffInFlight() {
@@ -40,16 +40,16 @@ final class GarminHandoffStateStoreTests: XCTestCase {
         XCTAssertEqual(record?.workoutId, "wk-1")
         XCTAssertEqual(record?.gymTitle, "Home")
         XCTAssertEqual(record?.isInFlight, true)
-        XCTAssertNil(store.restorableMessage(workoutId: "wk-1"), "In-flight pushes have nothing to restore yet")
+        XCTAssertNil(store.restorable(workoutId: "wk-1"), "In-flight pushes have nothing to restore yet")
     }
 
-    func testFinishStoresRestorableMessage() {
+    func testFinishStoresARestorableRecord() {
         store.begin(workoutId: "wk-1", gymTitle: "Home")
         store.finish(workoutId: "wk-1", outcome: .sent, message: "Sent to Garmin — open CIQ widget.")
 
         XCTAssertEqual(store.record?.isInFlight, false)
         XCTAssertEqual(store.record?.outcome, .sent)
-        XCTAssertEqual(store.restorableMessage(workoutId: "wk-1"), "Sent to Garmin — open CIQ widget.")
+        XCTAssertEqual(store.restorable(workoutId: "wk-1")?.message, "Sent to Garmin — open CIQ widget.")
     }
 
     func testFinishIgnoresADifferentWorkout() {
@@ -57,26 +57,26 @@ final class GarminHandoffStateStoreTests: XCTestCase {
         store.finish(workoutId: "wk-2", outcome: .sent, message: "Wrong workout")
 
         XCTAssertEqual(store.record?.isInFlight, true)
-        XCTAssertNil(store.restorableMessage(workoutId: "wk-2"))
+        XCTAssertNil(store.restorable(workoutId: "wk-2"))
     }
 
-    func testRestorableMessageIsScopedToTheWorkout() {
+    func testRestorableRecordIsScopedToTheWorkout() {
         store.begin(workoutId: "wk-1", gymTitle: "Home")
         store.finish(workoutId: "wk-1", outcome: .queued, message: "Queued for Garmin.")
 
-        XCTAssertNil(store.restorableMessage(workoutId: "wk-other"))
+        XCTAssertNil(store.restorable(workoutId: "wk-other"))
     }
 
-    func testRestorableMessageExpires() {
+    func testRestorableRecordExpires() {
         let started = Date(timeIntervalSince1970: 1_000_000)
         store.begin(workoutId: "wk-1", gymTitle: "Home", now: started)
         store.finish(workoutId: "wk-1", outcome: .sent, message: "Sent to Garmin.", now: started)
 
         let withinWindow = started.addingTimeInterval(1800)
-        XCTAssertNotNil(store.restorableMessage(workoutId: "wk-1", now: withinWindow, maxAge: 3600))
+        XCTAssertNotNil(store.restorable(workoutId: "wk-1", now: withinWindow, maxAge: 3600))
 
         let stale = started.addingTimeInterval(7200)
-        XCTAssertNil(store.restorableMessage(workoutId: "wk-1", now: stale, maxAge: 3600))
+        XCTAssertNil(store.restorable(workoutId: "wk-1", now: stale, maxAge: 3600))
     }
 
     func testInterruptedHandoffIsReportedOnceThenCleared() {
@@ -102,6 +102,25 @@ final class GarminHandoffStateStoreTests: XCTestCase {
 
         XCTAssertEqual(store.record?.outcome, .failed)
         XCTAssertNil(store.takeInterrupted())
+    }
+
+    /// A restored failure must still read as a failure — the detail screen gates
+    /// the "go find it in Garmin Connect" card on this outcome, and nothing was
+    /// sent to go and find.
+    func testRestoredFailureKeepsItsOutcome() {
+        store.begin(workoutId: "wk-1", gymTitle: "Home")
+        store.finish(workoutId: "wk-1", outcome: .failed, message: "Garmin push failed.")
+
+        let restored = store.restorable(workoutId: "wk-1")
+        XCTAssertEqual(restored?.message, "Garmin push failed.")
+        XCTAssertEqual(restored?.outcome, .failed)
+    }
+
+    func testRestoredSuccessKeepsItsOutcome() {
+        store.begin(workoutId: "wk-1", gymTitle: "Home")
+        store.finish(workoutId: "wk-1", outcome: .readyOnWatch, message: "Ready on watch.")
+
+        XCTAssertEqual(store.restorable(workoutId: "wk-1")?.outcome, .readyOnWatch)
     }
 }
 
@@ -139,7 +158,7 @@ final class GarminStartHandoffRecordingTests: XCTestCase {
 
         XCTAssertNotEqual(result.kind, .failed)
         XCTAssertEqual(store.record?.isInFlight, false)
-        XCTAssertEqual(store.restorableMessage(workoutId: "wk-1"), result.message)
+        XCTAssertEqual(store.restorable(workoutId: "wk-1")?.message, result.message)
         XCTAssertNil(store.takeInterrupted(), "A completed push must never look like a crash")
     }
 

@@ -843,12 +843,14 @@ extension UnifiedWorkoutDetailView {
     }
 
     /// Re-show the last handoff result — the status must still be there whether
-    /// iOS suspended us or killed us while Garmin Connect was in front.
+    /// iOS suspended us or killed us while Garmin Connect was in front. A failed
+    /// push gets no next-steps card: nothing reached the watch to go and find.
     fileprivate func restoreHandoffStatus() {
         guard handoffStatus == nil,
-              let restored = handoffStore.restorableMessage(workoutId: workout.id) else { return }
-        handoffStatus = GarminLifecycleCopy.handoffRestored(message: restored)
-        showsHandoffNextSteps = true
+              let restored = handoffStore.restorable(workoutId: workout.id),
+              let message = restored.message else { return }
+        handoffStatus = GarminLifecycleCopy.handoffRestored(message: message)
+        showsHandoffNextSteps = restored.outcome != .failed
     }
 
     fileprivate func handleScenePhaseChange(_ phase: ScenePhase) {

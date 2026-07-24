@@ -89,19 +89,20 @@ struct GarminHandoffStateStore {
         write(current)
     }
 
-    /// Status to re-show when the detail screen reappears (after a suspend,
-    /// an app switch to Garmin Connect, or a cold relaunch).
-    func restorableMessage(workoutId: String, now: Date = Date(), maxAge: TimeInterval = 3600) -> String? {
+    /// The finished handoff to re-show when the detail screen reappears (after a
+    /// suspend, an app switch to Garmin Connect, or a cold relaunch). Returns the
+    /// whole record so callers can tell a success apart from a failure.
+    func restorable(workoutId: String, now: Date = Date(), maxAge: TimeInterval = 3600) -> GarminHandoffRecord? {
         guard
             let record,
             record.workoutId == workoutId,
-            let message = record.message,
+            record.message != nil,
             let finishedAt = record.finishedAt,
             now.timeIntervalSince(finishedAt) <= maxAge
         else {
             return nil
         }
-        return message
+        return record
     }
 
     /// A record still open at launch means the process died mid-handoff — the
