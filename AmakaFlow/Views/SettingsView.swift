@@ -3796,3 +3796,5 @@ private struct CoachKnowledgeResolveView: View {
 // AMA-1639: EditProfileView and DistanceUnit live in their own file
 // (`AmakaFlow/Views/EditProfileView.swift`) — extracted to keep this
 // file under SwiftLint's file_length cap.
+
+// swiftlint:enable file_length type_body_length

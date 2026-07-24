@@ -512,3 +512,5 @@ private struct PairDeviceSheet: View {
     }
 }
 #endif
+
+// swiftlint:enable file_length type_body_length
