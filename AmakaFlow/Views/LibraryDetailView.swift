@@ -80,12 +80,7 @@ struct LibraryDetailView: View {
             Button("Cancel", role: .cancel) {}
                 .accessibilityIdentifier("af_library_delete_cancel")
         } message: {
-            Text(
-                GarminLifecycleCopy.deleteWorkoutMessage(
-                    name: viewModel.item?.title ?? "This item",
-                    isWorkout: false
-                )
-            )
+            Text(GarminLifecycleCopy.deleteWorkoutMessage(name: viewModel.item?.title ?? "This item", isWorkout: false))
         }
         .task(id: itemID) {
             guard loadedItemID != itemID else { return }
