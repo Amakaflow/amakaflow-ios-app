@@ -1897,6 +1897,15 @@ struct SettingsView: View {
                     .cornerRadius(Theme.CornerRadius.md)
             }
 
+            // AMA-2317: GCM device link and CIQ pairing are different things —
+            // dogfood users kept re-entering a code they never needed.
+            Text(GarminLifecycleCopy.settingsPairingDistinction)
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("af_garmin_pairing_distinction")
+
             // AMA-2316: edit watch display prefs (work/rest end conditions)
             Button {
                 showingGarminWatchDisplayPrefs = true
@@ -1905,11 +1914,16 @@ struct SettingsView: View {
                     Text("Watch workout display")
                         .font(Theme.Typography.body)
                         .foregroundColor(Theme.Colors.textPrimary)
-                    Text(GarminWatchDisplayPrefsStore.current.summaryLine)
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                        .lineLimit(2)
-                        .monospacedDigit()
+                    Text(
+                        GarminLifecycleCopy.startSheetPrefsNote(
+                            prefs: GarminWatchDisplayPrefsStore.current,
+                            hasConfigured: GarminWatchDisplayPrefsStore.hasConfigured
+                        )
+                    )
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textSecondary)
+                    .lineLimit(3)
+                    .monospacedDigit()
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, Theme.Spacing.sm)

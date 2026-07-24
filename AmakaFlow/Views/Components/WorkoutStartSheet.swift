@@ -14,17 +14,25 @@ struct WorkoutStartSheet: View {
     let onConfirm: (WorkoutStartGym, WorkoutStartDevice) -> Void
     /// AMA-2310: unpaired Garmin → one-tap recovery (Devices / CIQ pair), not a dead grey row.
     let onPairGarmin: () -> Void
+    /// AMA-2317: change the work/rest display prefs this push will send.
+    let onEditGarminPrefs: () -> Void
     let onClose: () -> Void
 
     @State private var selectedGym: WorkoutStartGym = .home
+
+    private let displayPrefs: GarminWatchDisplayPrefs
+    private let hasConfiguredDisplayPrefs: Bool
 
     init(
         workout: Workout,
         garminPaired: Bool,
         appleWatchReachable: Bool,
         initialGym: WorkoutStartGym = .home,
+        displayPrefs: GarminWatchDisplayPrefs? = nil,
+        hasConfiguredDisplayPrefs: Bool? = nil,
         onConfirm: @escaping (WorkoutStartGym, WorkoutStartDevice) -> Void,
         onPairGarmin: @escaping () -> Void,
+        onEditGarminPrefs: @escaping () -> Void = {},
         onClose: @escaping () -> Void
     ) {
         self.workout = workout
@@ -32,7 +40,10 @@ struct WorkoutStartSheet: View {
         self.appleWatchReachable = appleWatchReachable
         self.onConfirm = onConfirm
         self.onPairGarmin = onPairGarmin
+        self.onEditGarminPrefs = onEditGarminPrefs
         self.onClose = onClose
+        self.displayPrefs = displayPrefs ?? GarminWatchDisplayPrefsStore.current
+        self.hasConfiguredDisplayPrefs = hasConfiguredDisplayPrefs ?? GarminWatchDisplayPrefsStore.hasConfigured
         _selectedGym = State(initialValue: initialGym == .unset ? .home : initialGym)
     }
 
@@ -194,7 +205,55 @@ struct WorkoutStartSheet: View {
                     ? GarminStartHandoffCopy.unpairedRecoveryTag
                     : (defaultDevice == .garmin ? "DEFAULT · \(sportTag)" : nil)
             )
+
+            if garminRowMode == .push {
+                garminPrefsNote
+            }
         }
+    }
+
+    /// AMA-2317: the watch prefs this push will apply, before the user taps —
+    /// a surprise 60s rest countdown should be visible here first.
+    private var garminPrefsNote: some View {
+        Button(action: onEditGarminPrefs) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(
+                        GarminLifecycleCopy.startSheetPrefsNote(
+                            prefs: displayPrefs,
+                            hasConfigured: hasConfiguredDisplayPrefs
+                        )
+                    )
+                    .font(.system(size: 10.5))
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                    .multilineTextAlignment(.leading)
+                    .monospacedDigit()
+
+                    Spacer(minLength: 0)
+
+                    Text(GarminLifecycleCopy.startSheetPrefsAction)
+                        .font(.system(size: 10.5, weight: .semibold))
+                        .foregroundColor(DailyDriver.lime)
+                }
+
+                if let hint = GarminLifecycleCopy.startSheetPrefsHint(
+                    prefs: displayPrefs,
+                    hasConfigured: hasConfiguredDisplayPrefs
+                ) {
+                    Text(hint)
+                        .font(.system(size: 10))
+                        .foregroundColor(DailyDriver.amber)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.horizontal, 15)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Opens Garmin watch display settings")
+        .accessibilityIdentifier("af_start_garmin_prefs_note")
     }
 
     private var unsetGymLink: some View {
@@ -294,6 +353,7 @@ struct WorkoutStartSheet: View {
         appleWatchReachable: false,
         onConfirm: { _, _ in },
         onPairGarmin: {},
+        onEditGarminPrefs: {},
         onClose: {}
     )
     .presentationDetents([.large])

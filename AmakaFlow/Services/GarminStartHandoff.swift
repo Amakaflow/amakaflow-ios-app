@@ -140,12 +140,15 @@ enum GarminStartHandoffCopy {
 final class GarminStartHandoffService {
     private let apiService: APIServiceProviding
     private let forceFailureCode: (() -> GarminStartHandoffFailureCode?)?
+    private let handoffStore: GarminHandoffStateStore
 
     init(
         apiService: APIServiceProviding? = nil,
-        forceFailureCode: (() -> GarminStartHandoffFailureCode?)? = nil
+        forceFailureCode: (() -> GarminStartHandoffFailureCode?)? = nil,
+        handoffStore: GarminHandoffStateStore = GarminHandoffStateStore()
     ) {
         self.apiService = apiService ?? AppDependencies.current.apiService
+        self.handoffStore = handoffStore
         self.forceFailureCode = forceFailureCode ?? {
             #if DEBUG
             if let raw = ProcessInfo.processInfo.environment["UITEST_GARMIN_PUSH_FAIL"]?
@@ -161,29 +164,49 @@ final class GarminStartHandoffService {
 
     func push(workoutId: String, gymTitle: String) async -> GarminStartHandoffResult {
         if let forced = forceFailureCode?() {
-            return GarminStartHandoffResult(
-                kind: .failed,
-                message: GarminStartHandoffCopy.failureMessage(code: forced)
+            return finish(
+                workoutId: workoutId,
+                result: GarminStartHandoffResult(
+                    kind: .failed,
+                    message: GarminStartHandoffCopy.failureMessage(code: forced)
+                )
             )
         }
+
+        let prefs = GarminWatchDisplayPrefsStore.current
+        handoffStore.begin(workoutId: workoutId, gymTitle: gymTitle)
+        GarminHandoffTelemetry.pushStarted(
+            workoutId: workoutId,
+            prefs: prefs,
+            hasConfiguredPrefs: GarminWatchDisplayPrefsStore.hasConfigured
+        )
 
         do {
             let pushResult = try await apiService.pushWatchDelivery(
                 workoutId: workoutId,
-                displayPrefs: GarminWatchDisplayPrefsStore.current
+                displayPrefs: prefs
             )
             guard pushResult.success else {
-                return GarminStartHandoffResult(
-                    kind: .failed,
-                    message: GarminStartHandoffCopy.failureMessage(code: .unknown, detail: "server rejected push")
+                return finish(
+                    workoutId: workoutId,
+                    result: GarminStartHandoffResult(
+                        kind: .failed,
+                        message: GarminStartHandoffCopy.failureMessage(code: .unknown, detail: "server rejected push")
+                    )
                 )
             }
 
             // Best-effort status enrich; push success alone is enough for queued/sent UX.
             if let status = try? await apiService.watchDeliveryStatus(workoutId: workoutId) {
-                return GarminStartHandoffCopy.successMessage(state: status.state, gymTitle: gymTitle)
+                return finish(
+                    workoutId: workoutId,
+                    result: GarminStartHandoffCopy.successMessage(state: status.state, gymTitle: gymTitle)
+                )
             }
-            return GarminStartHandoffCopy.successMessage(state: .pushed, gymTitle: gymTitle)
+            return finish(
+                workoutId: workoutId,
+                result: GarminStartHandoffCopy.successMessage(state: .pushed, gymTitle: gymTitle)
+            )
         } catch {
             let code = GarminStartHandoffCopy.failureCode(fromAPIError: error)
             let detail: String?
@@ -192,10 +215,21 @@ final class GarminStartHandoffService {
             } else {
                 detail = error.localizedDescription
             }
-            return GarminStartHandoffResult(
-                kind: .failed,
-                message: GarminStartHandoffCopy.failureMessage(code: code, detail: detail)
+            return finish(
+                workoutId: workoutId,
+                result: GarminStartHandoffResult(
+                    kind: .failed,
+                    message: GarminStartHandoffCopy.failureMessage(code: code, detail: detail)
+                )
             )
         }
+    }
+
+    @discardableResult
+    private func finish(workoutId: String, result: GarminStartHandoffResult) -> GarminStartHandoffResult {
+        let outcome = result.kind.telemetryOutcome
+        handoffStore.finish(workoutId: workoutId, outcome: outcome, message: result.message)
+        GarminHandoffTelemetry.pushFinished(workoutId: workoutId, outcome: outcome)
+        return result
     }
 }

@@ -82,6 +82,13 @@ enum LibraryListEntry: Identifiable, Hashable {
         }
     }
 
+    /// AMA-2317: only workouts can already be sitting on a Garmin watch, so
+    /// only they need the "delete on the watch too" caveat.
+    var isWorkout: Bool {
+        if case .workout = self { return true }
+        return false
+    }
+
     var destination: LibraryDestination {
         switch self {
         case .workout(let workout):

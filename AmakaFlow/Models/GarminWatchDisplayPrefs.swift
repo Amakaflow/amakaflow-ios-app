@@ -145,3 +145,12 @@ enum GarminWatchDisplayPrefsStore {
         defaults.removeObject(forKey: DefaultsKey.garminWatchDisplayPrefsConfigured.rawValue)
     }
 }
+
+/// AMA-2317: the onboarding sheet must be queued for *after* the pair sheet
+/// dismisses — SwiftUI drops a second sheet raised from the same anchor while
+/// the first is still on screen, which is how dogfood users never saw it.
+enum GarminPairFollowUp {
+    static func shouldPresentDisplayPrefs(pairSucceeded: Bool, hasConfiguredPrefs: Bool) -> Bool {
+        pairSucceeded && !hasConfiguredPrefs
+    }
+}

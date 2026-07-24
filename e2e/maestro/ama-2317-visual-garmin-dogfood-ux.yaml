@@ -1,0 +1,138 @@
+# AMA-2317 — Garmin post-push dogfood UX.
+#
+# What we're testing: before a Start → Garmin push the sheet states the exact
+# work/rest prefs that will be sent (and warns when rest is still a countdown);
+# after the push the handoff is named "opening Garmin Connect" instead of
+# looking like a crash; Devices says the pairing lasts until you remove it; and
+# Delete/Remove copy says watch copies are not touched.
+#
+# Externals: no mapper/BFF needed — UITEST fixtures back the push, and
+# UITEST_GARMIN_PUSH_FAIL covers the failure branch. Nothing here 500s when
+# Garmin Connect Mobile or the CIQ widget are absent.
+appId: com.amakaflow.companion
+---
+# 1) Prefs the push will send are visible on the Start sheet, with the
+#    timed-rest warning that explains the surprise 60s countdown.
+- launchApp:
+    clearState: true
+    arguments:
+      UITEST_MODE: "1"
+      UITEST_USE_FIXTURES: "1"
+      UITEST_FIXTURES: "strength_block_w1"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_GARMIN_PAIRED: "1"
+- tapOn:
+    id: "library_tab"
+- tapOn:
+    id: "af_library_workout_row"
+- tapOn:
+    id: "af_workout_detail_start"
+- assertVisible:
+    id: "af_start_sheet"
+- assertVisible:
+    id: "af_start_garmin_prefs_note"
+- assertVisible: "Watch display"
+- assertVisible: "60"
+- takeScreenshot: ama-2317-start-sheet-prefs-visible
+# Tapping the note opens the prefs editor so Lap can be chosen before pushing.
+- tapOn:
+    id: "af_start_garmin_prefs_note"
+- assertVisible:
+    id: "af_garmin_display_prefs_sheet"
+- assertVisible: "Press Lap when you’re ready"
+- tapOn: "Press Lap when you’re ready"
+- tapOn:
+    id: "af_garmin_display_prefs_save"
+- takeScreenshot: ama-2317-prefs-lap-selected
+---
+# 2) Push succeeds → handoff is named, and the "not a crash" note is shown.
+- launchApp:
+    clearState: true
+    arguments:
+      UITEST_MODE: "1"
+      UITEST_USE_FIXTURES: "1"
+      UITEST_FIXTURES: "strength_block_w1"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_GARMIN_PAIRED: "1"
+- tapOn:
+    id: "library_tab"
+- tapOn:
+    id: "af_library_workout_row"
+- tapOn:
+    id: "af_workout_detail_start"
+- tapOn:
+    id: "af_start_device_garmin"
+- assertVisible:
+    id: "af_workout_detail_handoff_status"
+- assertVisible: "Sent to Garmin"
+- assertVisible:
+    id: "af_workout_detail_handoff_next_steps"
+- assertVisible: "not a crash"
+- takeScreenshot: ama-2317-handoff-not-a-crash
+---
+# 3) Pairing lifecycle + remove semantics on Devices. The fixture service pairs
+#    a Forerunner 955, so this covers the paired row caption and the Remove
+#    confirmation as well as the pair sheet's one-time-code copy.
+- launchApp:
+    clearState: true
+    arguments:
+      UITEST_MODE: "1"
+      UITEST_USE_FIXTURES: "1"
+      UITEST_FIXTURES: "strength_block_w1"
+      UITEST_SKIP_ONBOARDING: "true"
+- tapOn:
+    id: "library_tab"
+- tapOn:
+    id: "af_library_workout_row"
+- tapOn:
+    id: "af_workout_detail_start"
+- tapOn:
+    id: "af_start_device_garmin"
+- assertVisible:
+    id: "devices_screen"
+- assertVisible:
+    id: "af_devices_pairing_lifecycle_note"
+- assertVisible: "one-time"
+- assertVisible: "until you remove"
+- assertVisible: "on the watch itself"
+# The paired row itself says the pairing survives — not just the footer note.
+- assertVisible:
+    id: "af_device_pairing_status_fixture-garmin-955"
+- assertVisible: "stays paired until you remove it"
+- takeScreenshot: ama-2317-devices-pairing-lifecycle
+# Remove on a paired device = unpair only; the watch keeps its downloads.
+- tapOn:
+    id: "af_device_remove_fixture-garmin-955"
+- assertVisible: "Remove this device?"
+- assertVisible: "unpairs the watch from AmakaFlow only"
+- assertVisible: "Strength Workouts"
+- assertVisible: "new 6-digit code"
+- takeScreenshot: ama-2317-remove-device-unpair-only
+- tapOn: "Cancel"
+# The device must still be there — Cancel cannot unpair.
+- assertVisible:
+    id: "device_card_fixture-garmin-955"
+- tapOn:
+    id: "af_devices_add"
+- assertVisible:
+    id: "af_device_pair_lifecycle_note"
+- takeScreenshot: ama-2317-pair-sheet-one-time-code
+---
+# 4) Library delete says the watch copy survives.
+- launchApp:
+    clearState: true
+    arguments:
+      UITEST_MODE: "1"
+      UITEST_USE_FIXTURES: "1"
+      UITEST_FIXTURES: "strength_block_w1"
+      UITEST_SKIP_ONBOARDING: "true"
+- tapOn:
+    id: "library_tab"
+- tapOn:
+    id: "af_library_workout_row"
+- tapOn:
+    id: "af_workout_detail_delete"
+- assertVisible: "Delete from Library?"
+- assertVisible: "Strength Workouts"
+- takeScreenshot: ama-2317-delete-scope-copy
+- tapOn: "Cancel"

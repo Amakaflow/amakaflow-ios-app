@@ -104,6 +104,13 @@ struct AmakaFlowCompanionApp: App {
             options.appHangTimeoutInterval = 2.0
             #endif
         }
+
+        // AMA-2317: a Garmin handoff still open from the previous run means the
+        // process died mid-push — the only evidence separating a real crash
+        // from iOS suspending us behind Garmin Connect.
+        if let interrupted = GarminHandoffStateStore().takeInterrupted() {
+            GarminHandoffTelemetry.reportInterrupted(interrupted)
+        }
     }
 
     /// In-app routes the deep-link router will surface. Other paths under

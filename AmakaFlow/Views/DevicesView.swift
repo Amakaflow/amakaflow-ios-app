@@ -15,6 +15,8 @@ struct DevicesView: View {
     @State private var didLoad = false
     @State private var showingPairSheet = false
     @State private var showingWatchDisplayPrefs = false
+    /// AMA-2317: raise the prefs sheet only once the pair sheet has dismissed.
+    @State private var prefsQueuedAfterPair = false
     @State private var pendingRemoval: DevicesViewModel.PairedDevice?
 
     init(viewModel: DevicesViewModel? = nil) {
@@ -53,12 +55,13 @@ struct DevicesView: View {
                 .padding(.top, Theme.Spacing.md)
             }
         }
-        .sheet(isPresented: $showingPairSheet) {
+        .sheet(isPresented: $showingPairSheet, onDismiss: presentQueuedDisplayPrefs) {
             PairDeviceSheet(viewModel: viewModel) {
-                // AMA-2316: one-time watch display prefs after successful CIQ pair.
-                if GarminWatchDisplayPrefsStore.shouldPresentOnboarding {
-                    showingWatchDisplayPrefs = true
-                }
+                // AMA-2316/AMA-2317: one-time watch display prefs, raised after dismiss.
+                prefsQueuedAfterPair = GarminPairFollowUp.shouldPresentDisplayPrefs(
+                    pairSucceeded: true,
+                    hasConfiguredPrefs: GarminWatchDisplayPrefsStore.hasConfigured
+                )
             }
         }
         .sheet(isPresented: $showingWatchDisplayPrefs) {
@@ -67,7 +70,7 @@ struct DevicesView: View {
             )
         }
         .confirmationDialog(
-            "Remove this device?",
+            GarminLifecycleCopy.removeDeviceTitle,
             isPresented: Binding(
                 get: { pendingRemoval != nil },
                 set: { if !$0 { pendingRemoval = nil } }
@@ -81,7 +84,7 @@ struct DevicesView: View {
             }
             Button("Cancel", role: .cancel) { pendingRemoval = nil }
         } message: {
-            Text("You'll need to re-pair it.")
+            Text(GarminLifecycleCopy.removeDeviceMessage)
         }
         .task {
             guard !didLoad else { return }
@@ -95,6 +98,14 @@ struct DevicesView: View {
             }
         }
         .accessibilityIdentifier("devices_screen")
+    }
+
+    /// SwiftUI drops a sheet raised while another is still dismissing, so the
+    /// AMA-2316 prefs onboarding has to wait for the pair sheet to go away.
+    private func presentQueuedDisplayPrefs() {
+        guard prefsQueuedAfterPair else { return }
+        prefsQueuedAfterPair = false
+        showingWatchDisplayPrefs = true
     }
 
     private var loadingView: some View {
@@ -112,6 +123,7 @@ struct DevicesView: View {
         scrollContainer {
             devicesSection
             watchDisplayPrefsRow
+            pairingLifecycleNote
             infoNote
         }
     }
@@ -128,15 +140,17 @@ struct DevicesView: View {
                         .foregroundColor(DailyDriver.lime)
                     Text("No devices paired.")
                         .afH2()
-                    Text("Add one to sync workouts.")
+                    Text(GarminLifecycleCopy.notPairedLifecycleCaption)
                         .afMuted()
                         .multilineTextAlignment(.center)
+                        .accessibilityIdentifier("af_devices_pairing_status")
                     addDeviceButton
                 }
                 .frame(maxWidth: .infinity)
             }
             .accessibilityIdentifier("devices_empty_state")
 
+            pairingLifecycleNote
             infoNote
         }
     }
@@ -294,6 +308,12 @@ struct DevicesView: View {
                             .font(Theme.Typography.mono)
                             .foregroundColor(DailyDriver.foregroundMuted)
                             .lineLimit(2)
+
+                        // AMA-2317: pairing is one-shot; say so on the row itself.
+                        Text(GarminLifecycleCopy.pairedLifecycleCaption)
+                            .font(Theme.Typography.footnote)
+                            .foregroundColor(DailyDriver.lime)
+                            .accessibilityIdentifier("af_device_pairing_status_\(display.id)")
                     }
                 }
 
@@ -380,6 +400,23 @@ struct DevicesView: View {
         .accessibilityIdentifier("af_device_remove_\(device.id)")
     }
 
+    /// AMA-2317: answers the two dogfood questions in one place — does the code
+    /// expire, and does Remove delete workouts off the watch.
+    private var pairingLifecycleNote: some View {
+        AFCard {
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                Text(GarminLifecycleCopy.pairCodeLifecycle)
+                    .afMuted()
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(GarminLifecycleCopy.deviceScopeNote)
+                    .afMuted()
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .accessibilityIdentifier("af_devices_pairing_lifecycle_note")
+    }
+
     private var infoNote: some View {
         AFCard {
             HStack(alignment: .top, spacing: Theme.Spacing.md) {
@@ -416,10 +453,14 @@ private struct PairDeviceSheet: View {
 
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                 VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                    Text("Add Garmin")
+                    Text(GarminLifecycleCopy.pairSheetTitle)
                         .afH2()
-                    Text("Enter the code shown on your Garmin watch")
+                    Text(GarminLifecycleCopy.pairSheetSubtitle)
                         .afMuted()
+                    Text(GarminLifecycleCopy.pairCodeLifecycle)
+                        .afMuted()
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("af_device_pair_lifecycle_note")
                 }
 
                 VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
@@ -448,6 +489,11 @@ private struct PairDeviceSheet: View {
                             }
                         }
                         .accessibilityIdentifier("af_device_pair_field")
+
+                    Text(GarminLifecycleCopy.pairCodeExpired)
+                        .font(Theme.Typography.footnote)
+                        .foregroundColor(DailyDriver.foregroundMuted)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Button {
