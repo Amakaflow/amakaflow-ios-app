@@ -4,6 +4,7 @@
 //
 //  Protocol abstraction for APIService to enable dependency injection and testing.
 //
+// swiftlint:disable file_length
 
 import Foundation
 

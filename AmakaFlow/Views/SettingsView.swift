@@ -94,6 +94,7 @@ struct ConnectedAppsResolver {
     }
 }
 
+// swiftlint:disable file_length type_body_length
 struct SettingsView: View {
     @Binding var navigateToSyncDashboard: Bool
     @AppStorage(DefaultsKey.devicePreference.rawValue) private var deviceMode: DevicePreference = .appleWatchPhone

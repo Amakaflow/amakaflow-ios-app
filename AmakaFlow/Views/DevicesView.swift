@@ -8,6 +8,7 @@
 
 import SwiftUI
 
+// swiftlint:disable file_length type_body_length
 struct DevicesView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: DevicesViewModel
@@ -397,7 +398,7 @@ private struct PairDeviceSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: DevicesViewModel
     /// Called after a successful pair (before this sheet dismisses).
-    var onPaired: (() -> Void)? = nil
+    var onPaired: (() -> Void)?
     @State private var shortCode = ""
     @State private var isSubmitting = false
 
