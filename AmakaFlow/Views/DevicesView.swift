@@ -86,6 +86,12 @@ struct DevicesView: View {
             guard !didLoad else { return }
             didLoad = true
             await viewModel.load()
+            // AMA-2316: if Garmin is already paired and prefs never set, ask once.
+            if GarminWatchDisplayPrefsStore.shouldPresentOnboarding,
+               case .content = viewModel.state,
+               !viewModel.displayDevices.isEmpty {
+                showingWatchDisplayPrefs = true
+            }
         }
         .accessibilityIdentifier("devices_screen")
     }
@@ -256,6 +262,7 @@ struct DevicesView: View {
                     )
                     .afMuted()
                     .multilineTextAlignment(.leading)
+                    .monospacedDigit()
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }

@@ -197,7 +197,15 @@ struct SettingsView: View {
                 manualUUIDSheet
             }
             .sheet(isPresented: $showingGarminWatchDisplayPrefs) {
-                GarminWatchDisplayPrefsSheet(mode: .settings)
+                GarminWatchDisplayPrefsSheet(
+                    mode: GarminWatchDisplayPrefsStore.hasConfigured ? .settings : .onboarding
+                )
+            }
+            .onChange(of: garminConnectivity.isConnected) { isConnected in
+                // AMA-2316: one-time prefs after GCM Connect succeeds.
+                if isConnected, GarminWatchDisplayPrefsStore.shouldPresentOnboarding {
+                    showingGarminWatchDisplayPrefs = true
+                }
             }
             .sheet(isPresented: $showingDebugLog) {
                 debugLogSheet
@@ -1900,6 +1908,7 @@ struct SettingsView: View {
                         .font(Theme.Typography.caption)
                         .foregroundColor(Theme.Colors.textSecondary)
                         .lineLimit(2)
+                        .monospacedDigit()
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, Theme.Spacing.sm)
