@@ -115,7 +115,10 @@ final class DevicesViewModel: ObservableObject {
     }
 
     func remove(_ device: PairedDevice) async {
-        await revokeDevice(id: device.id)
+        await revokeDevice(
+            id: device.id,
+            clearsGarminPrefsOnSuccess: Self.isGarmin(device)
+        )
     }
 
     func retryLastAction() async {
@@ -126,7 +129,8 @@ final class DevicesViewModel: ObservableObject {
             guard let lastPairShortCode else { return }
             await pair(shortCode: lastPairShortCode)
         case .remove(let id):
-            await revokeDevice(id: id)
+            guard let device = devices.first(where: { $0.id == id }) else { return }
+            await remove(device)
         case .setRoles(let id):
             guard let request = lastSetRolesRequest, request.id == id else { return }
             await setRoles(id: id, roles: request.roles)
@@ -177,7 +181,7 @@ final class DevicesViewModel: ObservableObject {
         }
     }
 
-    private func revokeDevice(id: String) async {
+    private func revokeDevice(id: String, clearsGarminPrefsOnSuccess: Bool) async {
         ctaError = nil
 
         do {
@@ -186,6 +190,9 @@ final class DevicesViewModel: ObservableObject {
                 ctaError = failure
                 lastFailedAction = .remove(id: id)
                 return
+            }
+            if clearsGarminPrefsOnSuccess {
+                GarminWatchDisplayPrefsStore.markUnconfiguredAfterRemoval()
             }
             await load()
         } catch {
@@ -329,13 +336,21 @@ final class DevicesViewModel: ObservableObject {
         if haystack.contains("whoop") || haystack.contains("heart") || haystack.contains("hrv") {
             return "heart.fill"
         }
-        if haystack.contains("garmin") || haystack.contains("forerunner") || haystack.contains("fenix") || haystack.contains("epix") {
+        if isGarmin(device) {
             return "watchface.applewatch.case"
         }
         if haystack.contains("apple") || haystack.contains("watch") {
             return "applewatch"
         }
         return "watch"
+    }
+
+    private static func isGarmin(_ device: PairedDevice) -> Bool {
+        let haystack = "\(device.name) \(device.model ?? "")".lowercased()
+        return haystack.contains("garmin")
+            || haystack.contains("forerunner")
+            || haystack.contains("fenix")
+            || haystack.contains("epix")
     }
 
     private static func parseISO8601(_ value: String) -> Date? {

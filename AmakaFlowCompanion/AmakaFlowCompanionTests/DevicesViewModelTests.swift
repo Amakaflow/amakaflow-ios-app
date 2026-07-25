@@ -17,6 +17,7 @@ final class DevicesViewModelTests: XCTestCase {
 
     override func setUp() async throws {
         try await super.setUp()
+        GarminWatchDisplayPrefsStore.resetForTests()
         api = MockAPIService()
         viewModel = DevicesViewModel(apiService: api, now: { self.fixedNow })
     }
@@ -24,6 +25,7 @@ final class DevicesViewModelTests: XCTestCase {
     override func tearDown() async throws {
         viewModel = nil
         api = nil
+        GarminWatchDisplayPrefsStore.resetForTests()
         try await super.tearDown()
     }
 
@@ -207,6 +209,59 @@ final class DevicesViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.devices.isEmpty)
         XCTAssertNil(viewModel.ctaError)
         XCTAssertNil(viewModel.lastFailedAction)
+    }
+
+    func testRemoveGarminSuccessClearsConfiguredGateAndPreservesPrefsForRePair() async {
+        let removed = device(id: "garmin-remove", name: "Garmin Forerunner", roles: [.workouts])
+        let configuredPrefs = GarminWatchDisplayPrefs(
+            exerciseEnd: .showRepsLap,
+            restMode: .lap,
+            defaultRestSec: 90
+        )
+        GarminWatchDisplayPrefsStore.current = configuredPrefs
+        api.listDevicesResult = .success([removed])
+        await viewModel.load()
+
+        api.listDevicesResult = .success([])
+        await viewModel.remove(removed)
+
+        XCTAssertFalse(GarminWatchDisplayPrefsStore.hasConfigured)
+        XCTAssertTrue(GarminWatchDisplayPrefsStore.shouldPresentOnboarding)
+        XCTAssertEqual(GarminWatchDisplayPrefsStore.current, configuredPrefs)
+        XCTAssertTrue(
+            GarminPairFollowUp.shouldPresentDisplayPrefs(
+                pairSucceeded: true,
+                hasConfiguredPrefs: GarminWatchDisplayPrefsStore.hasConfigured
+            )
+        )
+    }
+
+    func testRemoveGarminFailureKeepsConfiguredGate() async {
+        let existing = device(id: "garmin-existing", name: "Garmin Forerunner", roles: [.workouts])
+        GarminWatchDisplayPrefsStore.current = .dogfood
+        api.listDevicesResult = .success([existing])
+        await viewModel.load()
+        api.revokeDeviceResult = .failure(
+            APIError.serverErrorWithBody(500, "{\"detail\":\"Remove failed\"}")
+        )
+
+        await viewModel.remove(existing)
+
+        XCTAssertTrue(GarminWatchDisplayPrefsStore.hasConfigured)
+        XCTAssertFalse(GarminWatchDisplayPrefsStore.shouldPresentOnboarding)
+    }
+
+    func testRemoveNonGarminSuccessKeepsConfiguredGate() async {
+        let appleWatch = device(id: "apple-watch", name: "Apple Watch", roles: [.recovery])
+        GarminWatchDisplayPrefsStore.current = .dogfood
+        api.listDevicesResult = .success([appleWatch])
+        await viewModel.load()
+
+        api.listDevicesResult = .success([])
+        await viewModel.remove(appleWatch)
+
+        XCTAssertTrue(GarminWatchDisplayPrefsStore.hasConfigured)
+        XCTAssertFalse(GarminWatchDisplayPrefsStore.shouldPresentOnboarding)
     }
 
     func testRemoveFailureMapsErrorAndPreservesList() async {

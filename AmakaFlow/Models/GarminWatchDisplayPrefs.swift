@@ -140,6 +140,12 @@ enum GarminWatchDisplayPrefsStore {
         !hasConfigured
     }
 
+    /// A new Garmin pairing is a new onboarding lifecycle. Keep the user's
+    /// selected values as defaults, but require confirmation after re-pair.
+    static func markUnconfiguredAfterRemoval() {
+        hasConfigured = false
+    }
+
     static func resetForTests() {
         defaults.removeObject(forKey: DefaultsKey.garminWatchDisplayPrefs.rawValue)
         defaults.removeObject(forKey: DefaultsKey.garminWatchDisplayPrefsConfigured.rawValue)
