@@ -59,25 +59,6 @@ final class DevicesViewModel: ObservableObject {
         self.now = now
     }
 
-    var connectedSubtitle: String {
-        "\(devices.count) connected"
-    }
-
-    var displayDevices: [DisplayDevice] {
-        // Capture one "now" per render pass so every row's "synced X ago"
-        // caption is computed against the same instant (consistent rows).
-        let currentNow = now()
-        return devices.map { device in
-            let relative = Self.relativeSyncText(lastSyncAt: device.lastSyncAt, now: currentNow)
-            return DisplayDevice(
-                device: device,
-                syncCaption: relative,
-                modelSyncCaption: Self.modelSyncCaption(model: device.model, relativeSyncText: relative),
-                symbolName: Self.symbolName(for: device)
-            )
-        }
-    }
-
     func load() async {
         state = .loading
         ctaError = nil
@@ -129,8 +110,9 @@ final class DevicesViewModel: ObservableObject {
             guard let lastPairShortCode else { return }
             await pair(shortCode: lastPairShortCode)
         case .remove(let id):
-            guard let device = devices.first(where: { $0.id == id }) else { return }
-            await remove(device)
+            let matchingDevice = devices.first { $0.id == id }
+            guard let matchingDevice else { return }
+            await remove(matchingDevice)
         case .setRoles(let id):
             guard let request = lastSetRolesRequest, request.id == id else { return }
             await setRoles(id: id, roles: request.roles)
@@ -144,7 +126,8 @@ final class DevicesViewModel: ObservableObject {
     }
 
     func toggleRole(_ role: DeviceRole, for device: PairedDevice) async {
-        let latestDevice = devices.first(where: { $0.id == device.id }) ?? device
+        let matchingDevice = devices.first { $0.id == device.id }
+        let latestDevice = matchingDevice ?? device
         var roles = Set(latestDevice.roles ?? [])
         if roles.contains(role) {
             roles.remove(role)
@@ -363,6 +346,27 @@ final class DevicesViewModel: ObservableObject {
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter
     }()
+}
+
+extension DevicesViewModel {
+    var connectedSubtitle: String {
+        "\(devices.count) connected"
+    }
+
+    var displayDevices: [DisplayDevice] {
+        // Capture one "now" per render pass so every row's "synced X ago"
+        // caption is computed against the same instant (consistent rows).
+        let currentNow = now()
+        return devices.map { device in
+            let relative = Self.relativeSyncText(lastSyncAt: device.lastSyncAt, now: currentNow)
+            return DisplayDevice(
+                device: device,
+                syncCaption: relative,
+                modelSyncCaption: Self.modelSyncCaption(model: device.model, relativeSyncText: relative),
+                symbolName: Self.symbolName(for: device)
+            )
+        }
+    }
 }
 
 private extension Components.Schemas.PairedDevice {
