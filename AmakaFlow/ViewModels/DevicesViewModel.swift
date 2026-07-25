@@ -117,7 +117,7 @@ final class DevicesViewModel: ObservableObject {
     func remove(_ device: PairedDevice) async {
         await revokeDevice(
             id: device.id,
-            clearsGarminPrefsOnSuccess: Self.isGarmin(device)
+            clearsGarminPrefsOnSuccess: device.isGarmin
         )
     }
 
@@ -336,21 +336,13 @@ final class DevicesViewModel: ObservableObject {
         if haystack.contains("whoop") || haystack.contains("heart") || haystack.contains("hrv") {
             return "heart.fill"
         }
-        if isGarmin(device) {
+        if device.isGarmin {
             return "watchface.applewatch.case"
         }
         if haystack.contains("apple") || haystack.contains("watch") {
             return "applewatch"
         }
         return "watch"
-    }
-
-    private static func isGarmin(_ device: PairedDevice) -> Bool {
-        let haystack = "\(device.name) \(device.model ?? "")".lowercased()
-        return haystack.contains("garmin")
-            || haystack.contains("forerunner")
-            || haystack.contains("fenix")
-            || haystack.contains("epix")
     }
 
     private static func parseISO8601(_ value: String) -> Date? {
@@ -371,4 +363,14 @@ final class DevicesViewModel: ObservableObject {
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter
     }()
+}
+
+private extension Components.Schemas.PairedDevice {
+    var isGarmin: Bool {
+        let haystack = "\(name) \(model ?? "")".lowercased()
+        return haystack.contains("garmin")
+            || haystack.contains("forerunner")
+            || haystack.contains("fenix")
+            || haystack.contains("epix")
+    }
 }
