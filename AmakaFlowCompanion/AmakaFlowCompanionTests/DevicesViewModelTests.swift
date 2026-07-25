@@ -264,6 +264,42 @@ final class DevicesViewModelTests: XCTestCase {
         XCTAssertFalse(GarminWatchDisplayPrefsStore.shouldPresentOnboarding)
     }
 
+    func testRemoveOneGarminWhileAnotherRemainsKeepsConfiguredGate() async {
+        let removed = device(id: "garmin-a", name: "Garmin Forerunner", roles: [.workouts])
+        let remaining = device(id: "garmin-b", name: "Garmin Fenix", roles: [.workouts])
+        GarminWatchDisplayPrefsStore.current = .dogfood
+        api.listDevicesResult = .success([removed, remaining])
+        await viewModel.load()
+
+        api.listDevicesResult = .success([remaining])
+        await viewModel.remove(removed)
+
+        XCTAssertTrue(GarminWatchDisplayPrefsStore.hasConfigured)
+        XCTAssertFalse(GarminWatchDisplayPrefsStore.shouldPresentOnboarding)
+        XCTAssertTrue(viewModel.hasPairedGarmin)
+    }
+
+    func testRemoveSoleGarminLeavingAppleWatchClearsConfiguredGate() async {
+        let garmin = device(id: "garmin-only", name: "Garmin Forerunner", roles: [.workouts])
+        let appleWatch = device(id: "apple-watch", name: "Apple Watch", roles: [.recovery])
+        let configuredPrefs = GarminWatchDisplayPrefs(
+            exerciseEnd: .showRepsLap,
+            restMode: .lap,
+            defaultRestSec: 90
+        )
+        GarminWatchDisplayPrefsStore.current = configuredPrefs
+        api.listDevicesResult = .success([garmin, appleWatch])
+        await viewModel.load()
+
+        api.listDevicesResult = .success([appleWatch])
+        await viewModel.remove(garmin)
+
+        XCTAssertFalse(GarminWatchDisplayPrefsStore.hasConfigured)
+        XCTAssertTrue(GarminWatchDisplayPrefsStore.shouldPresentOnboarding)
+        XCTAssertEqual(GarminWatchDisplayPrefsStore.current, configuredPrefs)
+        XCTAssertFalse(viewModel.hasPairedGarmin)
+    }
+
     func testRemoveFailureMapsErrorAndPreservesList() async {
         let existing = device(id: "garmin-existing", name: "Garmin Forerunner", roles: [.workouts])
         api.listDevicesResult = .success([existing])

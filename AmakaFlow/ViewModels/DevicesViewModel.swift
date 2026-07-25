@@ -174,10 +174,11 @@ final class DevicesViewModel: ObservableObject {
                 lastFailedAction = .remove(id: id)
                 return
             }
-            if clearsGarminPrefsOnSuccess {
+            await load()
+            // Global prefs gate: only reset when no Garmin remains (multi-device safe).
+            if clearsGarminPrefsOnSuccess, !hasPairedGarmin {
                 GarminWatchDisplayPrefsStore.markUnconfiguredAfterRemoval()
             }
-            await load()
         } catch {
             ctaError = CTAError.map(error)
             lastFailedAction = .remove(id: id)
@@ -351,6 +352,11 @@ final class DevicesViewModel: ObservableObject {
 extension DevicesViewModel {
     var connectedSubtitle: String {
         "\(devices.count) connected"
+    }
+
+    /// True when at least one connected device classifies as Garmin.
+    var hasPairedGarmin: Bool {
+        devices.contains { $0.isGarmin }
     }
 
     var displayDevices: [DisplayDevice] {

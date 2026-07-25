@@ -90,10 +90,11 @@ struct DevicesView: View {
             guard !didLoad else { return }
             didLoad = true
             await viewModel.load()
-            // AMA-2316: if Garmin is already paired and prefs never set, ask once.
+            // AMA-2316/AMA-2317: if Garmin is already paired and prefs never set, ask once.
+            // Require a Garmin (not just any wearable) so Apple Watch–only lists never spam this sheet.
             if GarminWatchDisplayPrefsStore.shouldPresentOnboarding,
                case .content = viewModel.state,
-               !viewModel.displayDevices.isEmpty {
+               viewModel.hasPairedGarmin {
                 showingWatchDisplayPrefs = true
             }
         }
