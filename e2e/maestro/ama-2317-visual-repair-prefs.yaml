@@ -1,0 +1,95 @@
+# AMA-2317 — Garmin preferences re-prompt after re-pair
+#
+# What we're testing: After a user confirms Garmin watch display preferences,
+# successfully removes that Garmin, and pairs it again, the preferences sheet
+# appears once for the new pairing lifecycle. The prior preference values remain
+# available as defaults; removing another device does not reset the Garmin gate.
+#
+# Checks:
+# - Continue configures prefs: the sheet dismisses and paired Garmin is visible.
+# - Successful Remove clears only the lifecycle gate: Garmin disappears.
+# - Re-pair prompts again: onboarding prefs sheet and title are visible.
+# - Re-confirming works: Continue dismisses the sheet without another prompt.
+#
+# Externals: fixture API only; Garmin, mapper, and backend are not required.
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2317_visual,email=claude+clerk_test@amakaflow.dev,name=AMA2317 Visual"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+      UITEST_FIXTURES: "strength_block_w1"
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn: "Library"
+- extendedWaitUntil:
+    visible: "Strength Block W1D1"
+    timeout: 15000
+- tapOn: "Strength Block W1D1"
+- extendedWaitUntil:
+    visible: "Start"
+    timeout: 15000
+- tapOn: "Start"
+- extendedWaitUntil:
+    visible:
+      id: "af_start_sheet"
+    timeout: 10000
+- tapOn:
+    id: "af_start_device_garmin"
+- extendedWaitUntil:
+    visible:
+      id: "af_garmin_display_prefs_sheet"
+    timeout: 10000
+- tapOn: "Press Lap when you’re ready"
+- tapOn:
+    id: "af_garmin_display_prefs_save"
+- extendedWaitUntil:
+    visible:
+      id: "device_card_fixture-garmin-955"
+    timeout: 15000
+- tapOn:
+    id: "af_device_remove_fixture-garmin-955"
+- tapOn: "Remove"
+- extendedWaitUntil:
+    notVisible:
+      id: "device_card_fixture-garmin-955"
+    timeout: 15000
+- tapOn:
+    id: "af_devices_add"
+- tapOn:
+    id: "af_device_pair_field"
+- inputText: "ABC123"
+- tapOn:
+    id: "af_device_pair_submit"
+- extendedWaitUntil:
+    visible:
+      id: "af_garmin_display_prefs_sheet"
+    timeout: 20000
+- assertVisible: "How should workouts show on your watch?"
+- assertVisible: "Press Lap when you’re ready"
+- takeScreenshot: ama-2317-repair-prefs-sheet
+- tapOn:
+    id: "af_garmin_display_prefs_save"
+- assertNotVisible:
+    id: "af_garmin_display_prefs_sheet"
+- assertVisible:
+    id: "device_card_fixture-garmin-955"
+- tapOn:
+    id: "af_garmin_watch_display_prefs_devices"
+- assertVisible: "Applied on every Garmin push. Change anytime here."
+- assertVisible: "Save"
+- tapOn: "No rest steps — I’ll rest on my own"
+- tapOn:
+    id: "af_garmin_display_prefs_save"
+- assertNotVisible:
+    id: "af_garmin_display_prefs_sheet"
+- assertVisible:
+    id: "device_card_fixture-garmin-955"

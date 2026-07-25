@@ -59,25 +59,6 @@ final class DevicesViewModel: ObservableObject {
         self.now = now
     }
 
-    var connectedSubtitle: String {
-        "\(devices.count) connected"
-    }
-
-    var displayDevices: [DisplayDevice] {
-        // Capture one "now" per render pass so every row's "synced X ago"
-        // caption is computed against the same instant (consistent rows).
-        let currentNow = now()
-        return devices.map { device in
-            let relative = Self.relativeSyncText(lastSyncAt: device.lastSyncAt, now: currentNow)
-            return DisplayDevice(
-                device: device,
-                syncCaption: relative,
-                modelSyncCaption: Self.modelSyncCaption(model: device.model, relativeSyncText: relative),
-                symbolName: Self.symbolName(for: device)
-            )
-        }
-    }
-
     func load() async {
         state = .loading
         ctaError = nil
@@ -115,7 +96,10 @@ final class DevicesViewModel: ObservableObject {
     }
 
     func remove(_ device: PairedDevice) async {
-        await revokeDevice(id: device.id)
+        await revokeDevice(
+            id: device.id,
+            clearsGarminPrefsOnSuccess: device.isGarmin
+        )
     }
 
     func retryLastAction() async {
@@ -126,7 +110,9 @@ final class DevicesViewModel: ObservableObject {
             guard let lastPairShortCode else { return }
             await pair(shortCode: lastPairShortCode)
         case .remove(let id):
-            await revokeDevice(id: id)
+            let matchingDevice = devices.first { $0.id == id }
+            guard let matchingDevice else { return }
+            await remove(matchingDevice)
         case .setRoles(let id):
             guard let request = lastSetRolesRequest, request.id == id else { return }
             await setRoles(id: id, roles: request.roles)
@@ -140,7 +126,8 @@ final class DevicesViewModel: ObservableObject {
     }
 
     func toggleRole(_ role: DeviceRole, for device: PairedDevice) async {
-        let latestDevice = devices.first(where: { $0.id == device.id }) ?? device
+        let matchingDevice = devices.first { $0.id == device.id }
+        let latestDevice = matchingDevice ?? device
         var roles = Set(latestDevice.roles ?? [])
         if roles.contains(role) {
             roles.remove(role)
@@ -177,7 +164,7 @@ final class DevicesViewModel: ObservableObject {
         }
     }
 
-    private func revokeDevice(id: String) async {
+    private func revokeDevice(id: String, clearsGarminPrefsOnSuccess: Bool) async {
         ctaError = nil
 
         do {
@@ -188,6 +175,10 @@ final class DevicesViewModel: ObservableObject {
                 return
             }
             await load()
+            // Global prefs gate: only reset when no Garmin remains (multi-device safe).
+            if clearsGarminPrefsOnSuccess, !hasPairedGarmin {
+                GarminWatchDisplayPrefsStore.markUnconfiguredAfterRemoval()
+            }
         } catch {
             ctaError = CTAError.map(error)
             lastFailedAction = .remove(id: id)
@@ -329,7 +320,7 @@ final class DevicesViewModel: ObservableObject {
         if haystack.contains("whoop") || haystack.contains("heart") || haystack.contains("hrv") {
             return "heart.fill"
         }
-        if haystack.contains("garmin") || haystack.contains("forerunner") || haystack.contains("fenix") || haystack.contains("epix") {
+        if device.isGarmin {
             return "watchface.applewatch.case"
         }
         if haystack.contains("apple") || haystack.contains("watch") {
@@ -356,4 +347,40 @@ final class DevicesViewModel: ObservableObject {
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter
     }()
+}
+
+extension DevicesViewModel {
+    var connectedSubtitle: String {
+        "\(devices.count) connected"
+    }
+
+    /// True when at least one connected device classifies as Garmin.
+    var hasPairedGarmin: Bool {
+        devices.contains { $0.isGarmin }
+    }
+
+    var displayDevices: [DisplayDevice] {
+        // Capture one "now" per render pass so every row's "synced X ago"
+        // caption is computed against the same instant (consistent rows).
+        let currentNow = now()
+        return devices.map { device in
+            let relative = Self.relativeSyncText(lastSyncAt: device.lastSyncAt, now: currentNow)
+            return DisplayDevice(
+                device: device,
+                syncCaption: relative,
+                modelSyncCaption: Self.modelSyncCaption(model: device.model, relativeSyncText: relative),
+                symbolName: Self.symbolName(for: device)
+            )
+        }
+    }
+}
+
+private extension Components.Schemas.PairedDevice {
+    var isGarmin: Bool {
+        let haystack = "\(name) \(model ?? "")".lowercased()
+        return haystack.contains("garmin")
+            || haystack.contains("forerunner")
+            || haystack.contains("fenix")
+            || haystack.contains("epix")
+    }
 }
