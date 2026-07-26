@@ -125,7 +125,7 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         let pairing = MockPairingReader(read: .unknown)
         let service = AppleStartHandoffService(
             pairingReader: pairing,
-            workoutKitSaver: saver
+            workoutKitSaver: .injected(saver)
         )
         let result = await service.handoff(workout: sampleWorkout())
         XCTAssertEqual(result.kind, .savedToFitness)
@@ -139,7 +139,7 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         let saver = MockWorkoutKitSaver()
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .confirmedUnpaired),
-            workoutKitSaver: saver
+            workoutKitSaver: .injected(saver)
         )
         let result = await service.handoff(workout: sampleWorkout())
         XCTAssertEqual(result.kind, .savedToFitness)
@@ -153,7 +153,7 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         let saver = MockWorkoutKitSaver()
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
-            workoutKitSaver: saver
+            workoutKitSaver: .injected(saver)
         )
         let result = await service.handoff(workout: empty)
         XCTAssertEqual(result.kind, .failed)
@@ -166,7 +166,7 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         saver.errorToThrow = WorkoutPlanError.authorizationDenied
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .confirmedPaired),
-            workoutKitSaver: saver
+            workoutKitSaver: .injected(saver)
         )
         let result = await service.handoff(workout: sampleWorkout())
         XCTAssertEqual(result.kind, .failed)
@@ -177,7 +177,7 @@ final class AppleStartHandoffServiceTests: XCTestCase {
     func testNilWorkoutKitSaverIsBlockedIosUnsupported() async {
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
-            workoutKitSaver: nil
+            workoutKitSaver: .disabled
         )
         let result = await service.handoff(workout: sampleWorkout())
         XCTAssertEqual(result.kind, .blocked)
@@ -189,7 +189,7 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         defer { unsetenv("UITEST_APPLE_TRY_FAIL") }
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
-            workoutKitSaver: MockWorkoutKitSaver()
+            workoutKitSaver: .injected(MockWorkoutKitSaver())
         )
         let result = await service.handoff(workout: sampleWorkout())
         XCTAssertEqual(result.kind, .failed)

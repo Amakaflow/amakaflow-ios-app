@@ -192,6 +192,16 @@ struct LiveAppleWatchPairingReader: AppleWatchPairingReading {
     }
 }
 
+/// How `AppleStartHandoffService` obtains a WorkoutKit saver — avoids nested-optional ambiguity.
+enum WorkoutKitSaverOverride {
+    /// Use `LiveWorkoutKitSaver` on iOS 18+; otherwise no saver (blocked).
+    case automatic
+    /// Inject a test/production double.
+    case injected(any WorkoutKitSaving)
+    /// Force no saver (blocked / iOS-unsupported path in tests).
+    case disabled
+}
+
 /// Coordinates WorkoutKit save for Start → Apple try.
 @MainActor
 final class AppleStartHandoffService {
@@ -201,20 +211,20 @@ final class AppleStartHandoffService {
 
     init(
         pairingReader: any AppleWatchPairingReading = LiveAppleWatchPairingReader(),
-        workoutKitSaver: (any WorkoutKitSaving)?? = .some(nil),
+        workoutKitSaver: WorkoutKitSaverOverride = .automatic,
         forceFailureCode: (() -> AppleStartHandoffFailureCode?)? = nil
     ) {
         self.pairingReader = pairingReader
         switch workoutKitSaver {
-        case .some(let saver?):
+        case .injected(let saver):
             self.workoutKitSaver = saver
-        case .some(nil):
+        case .automatic:
             if #available(iOS 18.0, *) {
                 self.workoutKitSaver = LiveWorkoutKitSaver()
             } else {
                 self.workoutKitSaver = nil
             }
-        case .none:
+        case .disabled:
             self.workoutKitSaver = nil
         }
         self.forceFailureCode = forceFailureCode ?? {
