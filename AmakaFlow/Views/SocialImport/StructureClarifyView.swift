@@ -79,9 +79,23 @@ struct StructureClarifyView: View {
             // AMA-2326 I1 — sticky above footer (not inside ScrollView).
             VStack(spacing: 8) {
                 if selectionActive {
-                    selectionChipBar
-                        .padding(.horizontal, 12)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    StructureClarifySelectionChipBar(
+                        selectedCount: session.selectedRowIDs.count,
+                        onGroup: { type, label, allowSingle in
+                            viewModel.groupClarifySelection(
+                                as: type,
+                                label: label,
+                                allowSingle: allowSingle
+                            )
+                        },
+                        onOpenSectionLabel: {
+                            sectionLabelDraft = ""
+                            sectionLabelOpen = true
+                        },
+                        onCancel: { viewModel.clearClarifySelection() }
+                    )
+                    .padding(.horizontal, 12)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 footerCTAs
                     .padding(.horizontal, 12)
@@ -96,7 +110,15 @@ struct StructureClarifyView: View {
             }
         }
         .sheet(isPresented: $sectionLabelOpen) {
-            sectionLabelSheet
+            StructureClarifySectionLabelSheet(
+                labelDraft: $sectionLabelDraft,
+                isFocused: $sectionLabelFocused,
+                onCancel: { sectionLabelOpen = false },
+                onApply: { label in
+                    viewModel.groupClarifySelection(as: .sets, label: label, allowSingle: true)
+                    sectionLabelOpen = false
+                }
+            )
         }
         .onChange(of: viewModel.phase) { _, phase in
             if case .saved = phase {
@@ -201,145 +223,7 @@ struct StructureClarifyView: View {
         return "\(creator) · \(mode) PARSED"
     }
 
-    // MARK: - Chips / Describe
-
-    private var selectionChipBar: some View {
-        let count = session.selectedRowIDs.count
-        let formatReady = count >= 2
-        let softReady = count >= 1
-        return VStack(alignment: .leading, spacing: 8) {
-            Text(formatReady
-                 ? "\(count) SELECTED — GROUP AS:"
-                 : "\(count) SELECTED — SECTION CHIPS OK · FORMATS NEED 2+")
-                .font(.system(size: 9, weight: .medium, design: .monospaced))
-                .foregroundColor(DailyDriver.foregroundMuted)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 7) {
-                    chipButton("Superset", enabled: formatReady) {
-                        viewModel.groupClarifySelection(as: .superset)
-                    }
-                    chipButton("Circuit", enabled: formatReady) {
-                        viewModel.groupClarifySelection(as: .circuit)
-                    }
-                    chipButton("EMOM", enabled: formatReady) {
-                        viewModel.groupClarifySelection(as: .emom)
-                    }
-                    chipButton("AMRAP", enabled: formatReady) {
-                        viewModel.groupClarifySelection(as: .amrap)
-                    }
-                    chipButton("Tabata", enabled: formatReady) {
-                        viewModel.groupClarifySelection(as: .tabata)
-                    }
-                    chipButton("For Time", enabled: formatReady) {
-                        viewModel.groupClarifySelection(as: .forTime)
-                    }
-                    chipButton("Warm-up", enabled: softReady, soft: true) {
-                        viewModel.groupClarifySelection(as: .warmup, label: "Warm-up", allowSingle: true)
-                    }
-                    chipButton("Cool-down", enabled: softReady, soft: true) {
-                        viewModel.groupClarifySelection(as: .sets, label: "Cool Down", allowSingle: true)
-                    }
-                    chipButton("Section…", enabled: softReady, soft: true) {
-                        sectionLabelDraft = ""
-                        sectionLabelOpen = true
-                    }
-                    Button("Cancel") {
-                        viewModel.clearClarifySelection()
-                    }
-                    .ddDisplayText(12, weight: .bold)
-                    .foregroundColor(DailyDriver.foregroundMuted)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(Capsule().fill(DailyDriver.card2))
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("structure_clarify_chip_cancel")
-                }
-            }
-            .accessibilityIdentifier("structure_clarify_chip_bar")
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DailyDriver.card.opacity(0.98))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(DailyDriver.lime.opacity(0.4), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private func chipButton(
-        _ title: String,
-        enabled: Bool,
-        soft: Bool = false,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Text(title)
-                .ddDisplayText(12, weight: .bold)
-                .foregroundColor(DailyDriver.foreground)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(Capsule().fill(DailyDriver.card2))
-                .overlay(
-                    Capsule().stroke(
-                        (soft ? DailyDriver.blue : DailyDriver.amber).opacity(0.45),
-                        lineWidth: 1
-                    )
-                )
-        }
-        .buttonStyle(.plain)
-        .opacity(enabled ? 1 : 0.4)
-        .disabled(!enabled)
-        .accessibilityIdentifier("structure_clarify_chip_\(title.lowercased().replacingOccurrences(of: "…", with: "section").replacingOccurrences(of: " ", with: "_"))")
-    }
-
-    /// AMA-2326 I3 — free-text section label (trim, 40-char cap, last-write-wins).
-    private var sectionLabelSheet: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Name this section")
-                    .ddDisplayText(20, weight: .bold)
-                    .foregroundColor(DailyDriver.foreground)
-                Text("e.g. Accessory, Finisher, Mobility — max 40 characters.")
-                    .font(.system(size: 12))
-                    .foregroundColor(DailyDriver.foregroundMuted)
-                TextField("Section name", text: $sectionLabelDraft)
-                    .textInputAutocapitalization(.words)
-                    .focused($sectionLabelFocused)
-                    .padding(12)
-                    .background(DailyDriver.card2)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .accessibilityIdentifier("structure_clarify_section_label_field")
-                Spacer()
-            }
-            .padding(20)
-            .background(DailyDriver.screenBackground.ignoresSafeArea())
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { sectionLabelOpen = false }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Apply") {
-                        let trimmed = sectionLabelDraft
-                            .trimmingCharacters(in: .whitespacesAndNewlines)
-                        guard !trimmed.isEmpty else { return }
-                        viewModel.groupClarifySelection(
-                            as: .sets,
-                            label: String(trimmed.prefix(40)),
-                            allowSingle: true
-                        )
-                        sectionLabelOpen = false
-                    }
-                    .disabled(sectionLabelDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .accessibilityIdentifier("structure_clarify_section_label_apply")
-                }
-            }
-            .onAppear { sectionLabelFocused = true }
-        }
-        .presentationDetents([.medium])
-        .presentationDragIndicator(.visible)
-    }
+    // MARK: - Describe
 
     private var describeDoor: some View {
         Button {
