@@ -99,7 +99,7 @@ struct StructureClarifySelectionChipBar: View {
         .opacity(enabled ? 1 : 0.4)
         .disabled(!enabled)
         .accessibilityIdentifier(
-            "structure_clarify_chip_\(title.lowercased().replacingOccurrences(of: "…", with: "section").replacingOccurrences(of: " ", with: "_"))"
+            "structure_clarify_chip_\(title.lowercased().replacingOccurrences(of: "…", with: "").replacingOccurrences(of: " ", with: "_"))"
         )
     }
 }
@@ -117,7 +117,9 @@ struct StructureClarifySectionLabelSheet: View {
                 Text("Name this section")
                     .ddDisplayText(20, weight: .bold)
                     .foregroundColor(DailyDriver.foreground)
-                Text("e.g. Accessory, Finisher, Mobility — max 40 characters.")
+                (Text("e.g. Accessory, Finisher, Mobility — max ")
+                    + Text("40").font(.system(size: 12, design: .monospaced)).fontWeight(.medium)
+                    + Text(" characters."))
                     .font(.system(size: 12))
                     .foregroundColor(DailyDriver.foregroundMuted)
                 TextField("Section name", text: $labelDraft)
