@@ -115,6 +115,7 @@
 		AMA2305SESBLD /* StructureClarifySession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305SESREF /* StructureClarifySession.swift */; };
 		AMA2305FIXBLD /* StructureClarifyFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305FIXREF /* StructureClarifyFixtures.swift */; };
 		AMA2305CMPBLD /* StructureClarifyComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305CMPREF /* StructureClarifyComponents.swift */; };
+		AMA2326CHIPBLD /* StructureClarifyChipBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2326CHIPREF /* StructureClarifyChipBar.swift */; };
 		AMA2305FACBLD /* StructureClarifySession+Factory.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305FACREF /* StructureClarifySession+Factory.swift */; };
 		AMA2305MAPBLD /* APIService+SocialImportMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305MAPREF /* APIService+SocialImportMapper.swift */; };
 		AMA2305INGBLD /* SocialImportDraft+Ingest.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305INGREF /* SocialImportDraft+Ingest.swift */; };
@@ -682,6 +683,7 @@
 		AMA2305SESREF /* StructureClarifySession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StructureClarifySession.swift; path = ../AmakaFlow/Models/StructureClarifySession.swift; sourceTree = SOURCE_ROOT; };
 		AMA2305FIXREF /* StructureClarifyFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StructureClarifyFixtures.swift; path = ../AmakaFlow/Models/StructureClarifyFixtures.swift; sourceTree = SOURCE_ROOT; };
 		AMA2305CMPREF /* StructureClarifyComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StructureClarifyComponents.swift; path = ../AmakaFlow/Views/SocialImport/StructureClarifyComponents.swift; sourceTree = SOURCE_ROOT; };
+		AMA2326CHIPREF /* StructureClarifyChipBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StructureClarifyChipBar.swift; path = ../AmakaFlow/Views/SocialImport/StructureClarifyChipBar.swift; sourceTree = SOURCE_ROOT; };
 		AMA2305FACREF /* StructureClarifySession+Factory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "StructureClarifySession+Factory.swift"; path = "../AmakaFlow/Models/StructureClarifySession+Factory.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2305MAPREF /* APIService+SocialImportMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+SocialImportMapper.swift"; path = "../AmakaFlow/Services/APIService+SocialImportMapper.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2305INGREF /* SocialImportDraft+Ingest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "SocialImportDraft+Ingest.swift"; path = "../AmakaFlow/Models/SocialImportDraft+Ingest.swift"; sourceTree = SOURCE_ROOT; };
@@ -1676,6 +1678,7 @@
 				AMA2293IMPDETREF /* SocialImportDetailPreviewView.swift */,
 				AMA2305VWREF /* StructureClarifyView.swift */,
 				AMA2305CMPREF /* StructureClarifyComponents.swift */,
+				AMA2326CHIPREF /* StructureClarifyChipBar.swift */,
 				AMA2307CMPREF /* EditorV2Components.swift */,
 				AMA2307SHTREF /* EditorV2Sheets.swift */,
 				AMA2312EDITREF /* EditorV2EditSheet.swift */,
@@ -2342,6 +2345,7 @@
 				AMA2305INGBLD /* SocialImportDraft+Ingest.swift in Sources */,
 				AMA2305MAPBLD /* APIService+SocialImportMapper.swift in Sources */,
 				AMA2305CMPBLD /* StructureClarifyComponents.swift in Sources */,
+				AMA2326CHIPBLD /* StructureClarifyChipBar.swift in Sources */,
 				AMA2305APIBLD /* APIService+Structure.swift in Sources */,
 				AMA2305VMXBLD /* SocialImportViewModel+StructureClarify.swift in Sources */,
 				AMA2308VMXBLD /* SocialImportViewModel+Failure.swift in Sources */,

@@ -41,13 +41,18 @@ extension SocialImportDraft {
                 let mapped = blockExercises.compactMap { Self.parseExerciseItem($0) }
                 guard !mapped.isEmpty else { continue }
                 let blockType = (block["structure"] as? String) ?? (block["type"] as? String)
+                let structureSource = (block["structure_source"] as? String)
+                    ?? (block["structureSource"] as? String)
                 parsedBlocks.append(
                     SocialImportBlock(
                         label: block["label"] as? String,
                         rounds: block["rounds"] as? Int ?? 1,
                         exercises: mapped,
                         type: blockType,
-                        restSec: block["rest_between_rounds_sec"] as? Int ?? block["rest_sec"] as? Int
+                        restSec: block["rest_between_rounds_sec"] as? Int
+                            ?? block["rest_sec"] as? Int
+                            ?? block["restSec"] as? Int,
+                        structureSource: structureSource
                     )
                 )
                 exercises.append(contentsOf: mapped)

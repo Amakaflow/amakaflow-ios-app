@@ -88,7 +88,9 @@ final class StructureClarifyTests: XCTestCase {
                 XCTAssertEqual(tag, "SUPERSET ✓")
             case .userNote:
                 XCTAssertTrue(tag.contains("FROM YOUR NOTE"))
-            case .explicit, .inferred, .unknown:
+            case .explicit:
+                XCTAssertEqual(tag, "EXPLICIT · SUPERSET")
+            case .inferred, .unknown:
                 XCTAssertTrue(tag.hasPrefix("SUGGESTED"))
             }
         }
@@ -267,6 +269,136 @@ final class StructureClarifyTests: XCTestCase {
         let saved = session.blocksForSave(leaveFlat: false)
         XCTAssertEqual(saved.first?.type.canonical, .emom)
         XCTAssertEqual(saved.first?.structureSource, .userConfirmed)
+    }
+
+    // MARK: - AMA-2326 sticky chips / ingest land / Undo EXPLICIT
+
+    func testDNLIngestLandsExplicitAndSuggestedGroups() throws {
+        let session = try XCTUnwrap(StructureClarifySession.fromIngestDraft(StructureClarifyFixtures.dnlIngestDraft))
+        XCTAssertEqual(session.groups.count, 5)
+        XCTAssertEqual(session.pendingGroupCount, 2, "Warm-up + Cool Down inferred stay pending")
+        XCTAssertEqual(session.confirmedGroupCount, 3, "EXPLICIT groups land confirmed")
+
+        let strength = try XCTUnwrap(session.groups.first { $0.label == "Strength" })
+        XCTAssertEqual(strength.structureSource, .explicit)
+        XCTAssertEqual(strength.status, .confirmed)
+        XCTAssertEqual(strength.type.canonical, .superset)
+        XCTAssertTrue(strength.provenanceTag.hasPrefix("EXPLICIT"))
+
+        let warmup = try XCTUnwrap(session.groups.first { $0.type.canonical == .warmup })
+        XCTAssertEqual(warmup.structureSource, .inferred)
+        XCTAssertEqual(warmup.status, .pending)
+        XCTAssertTrue(warmup.provenanceTag.hasPrefix("SUGGESTED"))
+
+        let emom = try XCTUnwrap(session.groups.first { $0.type.canonical == .emom })
+        XCTAssertEqual(emom.label, "HYROX Finisher")
+        XCTAssertEqual(emom.structureSource, .explicit)
+    }
+
+    func testUndoExplicitSavesAsUserConfirmedFlat() throws {
+        var session = try XCTUnwrap(StructureClarifySession.fromIngestDraft(StructureClarifyFixtures.dnlIngestDraft))
+        let strength = try XCTUnwrap(session.groups.first { $0.label == "Strength" })
+        session.undo(groupID: strength.id)
+
+        XCTAssertFalse(session.groups.contains { $0.label == "Strength" })
+        let saved = session.blocksForSave(leaveFlat: false)
+        let flatNames = ["Back Squat", "Romanian Deadlift"]
+        let flatBlocks = saved.filter { flatNames.contains($0.exercises.first?.name ?? "") }
+        XCTAssertEqual(flatBlocks.count, 2)
+        XCTAssertTrue(flatBlocks.allSatisfy { $0.type.canonical == .sets })
+        XCTAssertTrue(flatBlocks.allSatisfy { $0.structureSource == .userConfirmed })
+    }
+
+    func testSoftSectionChipAllowsSingleExercise() throws {
+        var session = StructureClarifySession.fromSuggest(
+            StructureSuggestResult(
+                exercises: [StructureExerciseModel(name: "Couch Stretch", notes: "60s")],
+                suggestions: [],
+                blocks: []
+            )
+        )
+        let rowID = try XCTUnwrap(session.units.compactMap { unit -> UUID? in
+            if case .row(let row) = unit { return row.id }
+            return nil
+        }.first)
+        session.toggleRowSelection(rowID)
+        session.groupSelected(as: .sets, label: "Cool Down", allowSingle: true)
+        XCTAssertEqual(session.groups.count, 1)
+        XCTAssertEqual(session.groups.first?.label, "Cool Down")
+        XCTAssertEqual(session.groups.first?.status, .confirmed)
+        XCTAssertEqual(session.groups.first?.structureSource, .userConfirmed)
+    }
+
+    func testFormatChipRequiresTwoExercises() throws {
+        var session = StructureClarifySession.fromSuggest(
+            StructureSuggestResult(
+                exercises: [StructureExerciseModel(name: "SkiErg", distanceM: 150)],
+                suggestions: [],
+                blocks: []
+            )
+        )
+        let rowID = try XCTUnwrap(session.units.compactMap { unit -> UUID? in
+            if case .row(let row) = unit { return row.id }
+            return nil
+        }.first)
+        session.toggleRowSelection(rowID)
+        session.groupSelected(as: .emom)
+        XCTAssertTrue(session.groups.isEmpty, "EMOM chip must not fire with a single selection")
+    }
+
+    func testSectionLabelTrimAndCap() {
+        var session = StructureClarifySession.fromSuggest(
+            StructureSuggestResult(
+                exercises: [
+                    StructureExerciseModel(name: "A"),
+                    StructureExerciseModel(name: "B")
+                ],
+                suggestions: [],
+                blocks: []
+            )
+        )
+        let ids = session.units.compactMap { unit -> UUID? in
+            if case .row(let row) = unit { return row.id }
+            return nil
+        }
+        session.toggleRowSelection(ids[0])
+        session.toggleRowSelection(ids[1])
+        let long = "  " + String(repeating: "X", count: 50) + "  "
+        session.groupSelected(as: .sets, label: long, allowSingle: true)
+        XCTAssertEqual(session.groups.first?.label.count, 40)
+        XCTAssertFalse(session.groups.first?.label.hasPrefix(" ") == true)
+    }
+
+    func testIngestJSONParsesStructureSource() throws {
+        let payload: [String: Any] = [
+            "title": "Structured",
+            "sport": "strength",
+            "blocks": [
+                [
+                    "label": "Strength",
+                    "type": "superset",
+                    "rounds": 4,
+                    "structure_source": "explicit",
+                    "exercises": [
+                        ["name": "Back Squat", "reps": 6],
+                        ["name": "RDL", "reps": 8]
+                    ]
+                ]
+            ]
+        ]
+        let data = try JSONSerialization.data(withJSONObject: payload)
+        let draft = try SocialImportDraft.fromIngestJSON(
+            data,
+            platform: .instagram,
+            sourceURL: "https://instagram.com/reel/x",
+            equipmentEmpty: true,
+            equipmentNote: nil
+        )
+        XCTAssertEqual(draft.blocks.first?.structureSource, "explicit")
+        XCTAssertEqual(draft.blocks.first?.type, "superset")
+        let session = try XCTUnwrap(StructureClarifySession.fromIngestDraft(draft))
+        XCTAssertEqual(session.groups.first?.structureSource, .explicit)
+        XCTAssertEqual(session.groups.first?.status, .confirmed)
     }
 }
 
@@ -621,6 +753,17 @@ final class StructureClarifyViewModelTests: XCTestCase {
         ]
         // swiftlint:disable:next force_try
         return try! JSONSerialization.data(withJSONObject: payload)
+    }
+
+    // MARK: - AMA-2326 I4 enterClarify prefers ingest
+
+    func testEnterClarifyPrefersIngestBlocksOverSuggest() async {
+        mockAPI.suggestStructureResult = .success(StructureClarifyFixtures.dmqSuggestResult)
+        await sut.enterClarify(for: StructureClarifyFixtures.dnlIngestDraft)
+
+        XCTAssertFalse(mockAPI.suggestStructureCalled, "Must not call suggest when ingest already structured")
+        XCTAssertEqual(sut.clarifySession?.groups.count, 5)
+        XCTAssertTrue(sut.clarifySession?.groups.contains { $0.structureSource == .explicit } == true)
     }
 }
 

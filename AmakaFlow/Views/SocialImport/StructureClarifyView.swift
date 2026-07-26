@@ -15,12 +15,22 @@ struct StructureClarifyView: View {
     var onSaved: (() -> Void)?
 
     @State private var describeOpen = false
+    @State private var sectionLabelOpen = false
+    @State private var sectionLabelDraft = ""
+    @FocusState private var sectionLabelFocused: Bool
 
     private var session: StructureClarifySession {
         viewModel.clarifySession ?? StructureClarifySession()
     }
 
     private var draft: SocialImportDraft? { viewModel.draft }
+
+    private var selectionActive: Bool { !session.selectedRowIDs.isEmpty }
+
+    /// Extra scroll padding so the last rows clear the sticky chip bar + footer.
+    private var scrollBottomPadding: CGFloat {
+        selectionActive ? 220 : 140
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -49,10 +59,6 @@ struct StructureClarifyView: View {
                             }
                         }
 
-                        if !session.selectedRowIDs.isEmpty {
-                            selectionChipBar
-                        }
-
                         describeDoor
                             .padding(.top, 4)
 
@@ -63,22 +69,56 @@ struct StructureClarifyView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.horizontal, 10)
                             .padding(.top, 8)
-                            .padding(.bottom, 140)
+                            .padding(.bottom, scrollBottomPadding)
                     }
                     .padding(.horizontal, 18)
                     .padding(.top, 12)
                 }
             }
 
-            footerCTAs
-                .padding(.horizontal, 12)
-                .padding(.bottom, 12)
+            // AMA-2326 I1 — sticky above footer (not inside ScrollView).
+            VStack(spacing: 8) {
+                if selectionActive {
+                    StructureClarifySelectionChipBar(
+                        selectedCount: session.selectedRowIDs.count,
+                        onGroup: { type, label, allowSingle in
+                            viewModel.groupClarifySelection(
+                                as: type,
+                                label: label,
+                                allowSingle: allowSingle
+                            )
+                        },
+                        onOpenSectionLabel: {
+                            sectionLabelDraft = ""
+                            sectionLabelOpen = true
+                        },
+                        onCancel: { viewModel.clearClarifySelection() }
+                    )
+                    .padding(.horizontal, 12)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+                footerCTAs
+                    .padding(.horizontal, 12)
+            }
+            .padding(.bottom, 12)
+            .animation(.easeInOut(duration: 0.18), value: selectionActive)
         }
         .ddSuppressFloatingChrome()
         .sheet(isPresented: $describeOpen) {
             StructureDescribeSheet(viewModel: viewModel) {
                 describeOpen = false
             }
+        }
+        .sheet(isPresented: $sectionLabelOpen) {
+            StructureClarifySectionLabelSheet(
+                labelDraft: $sectionLabelDraft,
+                isFocused: $sectionLabelFocused,
+                onCancel: { sectionLabelOpen = false },
+                onApply: { label in
+                    viewModel.groupClarifySelection(as: .sets, label: label, allowSingle: true)
+                    sectionLabelOpen = false
+                }
+            )
         }
         .onChange(of: viewModel.phase) { _, phase in
             if case .saved = phase {
@@ -183,62 +223,7 @@ struct StructureClarifyView: View {
         return "\(creator) · \(mode) PARSED"
     }
 
-    // MARK: - Chips / Describe
-
-    private var selectionChipBar: some View {
-        let count = session.selectedRowIDs.count
-        return VStack(alignment: .leading, spacing: 8) {
-            Text(count < 2
-                 ? "\(count) SELECTED — PICK ANOTHER TO GROUP THEM"
-                 : "\(count) SELECTED — GROUP AS:")
-                .font(.system(size: 9, weight: .medium, design: .monospaced))
-                .foregroundColor(DailyDriver.foregroundMuted)
-
-            HStack(spacing: 7) {
-                chipButton("Superset", enabled: count >= 2) {
-                    viewModel.groupClarifySelection(as: .superset)
-                }
-                chipButton("Circuit ×4", enabled: count >= 2) {
-                    viewModel.groupClarifySelection(as: .circuit)
-                }
-                Button("Cancel") {
-                    viewModel.clearClarifySelection()
-                }
-                .ddDisplayText(12, weight: .bold)
-                .foregroundColor(DailyDriver.foregroundMuted)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(Capsule().fill(DailyDriver.card2))
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DailyDriver.card)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(DailyDriver.lime.opacity(0.4), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .padding(.bottom, 10)
-    }
-
-    private func chipButton(_ title: String, enabled: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .ddDisplayText(12, weight: .bold)
-                .foregroundColor(DailyDriver.foreground)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(Capsule().fill(DailyDriver.card2))
-                .overlay(
-                    Capsule().stroke(DailyDriver.amber.opacity(0.45), lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
-        .opacity(enabled ? 1 : 0.4)
-        .disabled(!enabled)
-    }
+    // MARK: - Describe
 
     private var describeDoor: some View {
         Button {

@@ -258,14 +258,16 @@ enum StructureJSON {
 }
 
 extension StructureSource {
-    /// UI provenance tag copy (screens-clarify.jsx).
+    /// UI provenance tag copy (ADR-017 / AMA-2326 — EXPLICIT is distinct from SUGGESTED).
     func clarifyTag(typeLabel: String) -> String {
         switch self {
         case .userConfirmed:
             return "\(typeLabel.uppercased()) ✓"
         case .userNote:
             return "FROM YOUR NOTE · \(typeLabel.uppercased())"
-        case .explicit, .inferred, .unknown:
+        case .explicit:
+            return "EXPLICIT · \(typeLabel.uppercased())"
+        case .inferred, .unknown:
             return "SUGGESTED · \(typeLabel.uppercased())"
         }
     }
