@@ -36,6 +36,16 @@ enum AppleStartHandoffFailureCode: String, Equatable {
     case unknown = "unknown"
 }
 
+enum AppleWatchPairingRead: Equatable {
+    case confirmedPaired
+    case confirmedUnpaired
+    case unknown
+}
+
+protocol AppleWatchPairingReading: Sendable {
+    func pairingReadForCopy() -> AppleWatchPairingRead
+}
+
 /// Pure mapping for unit tests — keep recoverable copy ≤ a few seconds to read.
 enum AppleStartHandoffCopy {
     private static let failureMessages: [AppleStartHandoffFailureCode: String] = [
@@ -44,8 +54,8 @@ enum AppleStartHandoffCopy {
         .sessionNotAvailable: "Watch connectivity unavailable — restart both apps and try again.",
         .encodingFailed: "Could not encode workout for Watch — edit structure and retry.",
         .watchDecodeFailed: "Watch could not read workout — simplify intervals and retry.",
-        .authorizationDenied: "Apple Fitness permission denied — Settings → Health → Data Access → AmakaFlow, allow Workouts.",
-        .iosVersionUnsupported: "Requires iOS 18 for Apple Fitness save — update iPhone or send while Watch is reachable.",
+        .authorizationDenied: "Workout permission denied — Settings → Health → Data Access → AmakaFlow, allow Workouts.",
+        .iosVersionUnsupported: "Requires iOS 18 to schedule in the Workout app — update iPhone and retry.",
         .emptyWorkout: "Workout has no steps — add exercises or intervals in Edit, then retry."
     ]
 
@@ -94,10 +104,25 @@ enum AppleStartHandoffCopy {
     }
 
     static func savedToFitnessMessage(workoutName: String) -> AppleStartHandoffResult {
-        AppleStartHandoffResult(
-            kind: .savedToFitness,
-            message: "Saved to Apple Fitness — open Workout app on iPhone or Watch for \"\(workoutName)\"."
-        )
+        scheduledInWorkoutMessage(workoutName: workoutName, pairing: .unknown)
+    }
+
+    static func scheduledInWorkoutMessage(
+        workoutName: String,
+        pairing: AppleWatchPairingRead
+    ) -> AppleStartHandoffResult {
+        switch pairing {
+        case .confirmedUnpaired:
+            return AppleStartHandoffResult(
+                kind: .savedToFitness,
+                message: "Scheduled in Workout — pair an Apple Watch to run \"\(workoutName)\"."
+            )
+        case .confirmedPaired, .unknown:
+            return AppleStartHandoffResult(
+                kind: .savedToFitness,
+                message: "Scheduled in Workout — open the Workout app on your Apple Watch for \"\(workoutName)\"."
+            )
+        }
     }
 
     static func failureCode(from watchError: WatchConnectivityError) -> AppleStartHandoffFailureCode {

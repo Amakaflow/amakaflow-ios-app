@@ -6,6 +6,7 @@
 //
 
 import XCTest
+import WatchConnectivity
 import WorkoutKitSync
 @testable import AmakaFlowCompanion
 
@@ -28,12 +29,45 @@ final class AppleStartHandoffCopyTests: XCTestCase {
         XCTAssertFalse(result.message.localizedCaseInsensitiveContains("stub"))
     }
 
-    func testSavedToFitnessMessageIsNotStub() {
-        let result = AppleStartHandoffCopy.savedToFitnessMessage(workoutName: "Easy Run")
+    func testScheduledMessagePairedOrUnknownIsWatchLeading() {
+        for pairing: AppleWatchPairingRead in [.confirmedPaired, .unknown] {
+            let result = AppleStartHandoffCopy.scheduledInWorkoutMessage(
+                workoutName: "Easy Run",
+                pairing: pairing
+            )
+            XCTAssertEqual(result.kind, .savedToFitness)
+            XCTAssertTrue(result.message.localizedCaseInsensitiveContains("Workout"))
+            XCTAssertTrue(result.message.localizedCaseInsensitiveContains("Apple Watch"))
+            XCTAssertTrue(result.message.contains("Easy Run"))
+            XCTAssertFalse(result.message.localizedCaseInsensitiveContains("Apple Fitness"))
+            XCTAssertFalse(result.message.localizedCaseInsensitiveContains("iPhone"))
+            XCTAssertFalse(result.message.localizedCaseInsensitiveContains("AmakaFlowWatch"))
+        }
+    }
+
+    func testScheduledMessageConfirmedUnpairedAsksToPair() {
+        let result = AppleStartHandoffCopy.scheduledInWorkoutMessage(
+            workoutName: "Push Day",
+            pairing: .confirmedUnpaired
+        )
         XCTAssertEqual(result.kind, .savedToFitness)
-        XCTAssertTrue(result.message.localizedCaseInsensitiveContains("Apple Fitness"))
-        XCTAssertTrue(result.message.contains("Easy Run"))
-        XCTAssertFalse(result.message.localizedCaseInsensitiveContains("stub"))
+        XCTAssertTrue(result.message.localizedCaseInsensitiveContains("pair"))
+        XCTAssertTrue(result.message.contains("Push Day"))
+        XCTAssertFalse(result.message.localizedCaseInsensitiveContains("open the Workout app on your Apple Watch"))
+    }
+
+    func testAuthorizationDeniedCopyMentionsSettingsHealth() {
+        let message = AppleStartHandoffCopy.failureMessage(code: .authorizationDenied)
+        XCTAssertTrue(message.localizedCaseInsensitiveContains("permission denied"))
+        XCTAssertTrue(message.localizedCaseInsensitiveContains("Settings"))
+        XCTAssertTrue(message.localizedCaseInsensitiveContains("Health"))
+        XCTAssertFalse(message.localizedCaseInsensitiveContains("Apple Fitness"))
+    }
+
+    func testIosUnsupportedCopyMentionsWorkoutApp() {
+        let message = AppleStartHandoffCopy.failureMessage(code: .iosVersionUnsupported)
+        XCTAssertTrue(message.localizedCaseInsensitiveContains("iOS 18"))
+        XCTAssertTrue(message.localizedCaseInsensitiveContains("Workout"))
     }
 
     func testFailureCodeMapsAuthorizationDenied() {
@@ -41,6 +75,33 @@ final class AppleStartHandoffCopyTests: XCTestCase {
             AppleStartHandoffCopy.failureCode(from: WorkoutPlanError.authorizationDenied),
             .authorizationDenied
         )
+    }
+}
+
+@MainActor
+final class AppleWatchPairingReadTests: XCTestCase {
+    func testNotActivatedIsUnknownEvenIfIsPairedFalse() {
+        let mock = MockWatchSession()
+        mock.activationState = .notActivated
+        mock.isPaired = false
+        let manager = WatchConnectivityManager(session: mock)
+        XCTAssertEqual(manager.pairingReadForCopy(), .unknown)
+    }
+
+    func testActivatedAndNotPairedIsConfirmedUnpaired() {
+        let mock = MockWatchSession()
+        mock.activationState = .activated
+        mock.isPaired = false
+        let manager = WatchConnectivityManager(session: mock)
+        XCTAssertEqual(manager.pairingReadForCopy(), .confirmedUnpaired)
+    }
+
+    func testActivatedAndPairedIsConfirmedPaired() {
+        let mock = MockWatchSession()
+        mock.activationState = .activated
+        mock.isPaired = true
+        let manager = WatchConnectivityManager(session: mock)
+        XCTAssertEqual(manager.pairingReadForCopy(), .confirmedPaired)
     }
 }
 
