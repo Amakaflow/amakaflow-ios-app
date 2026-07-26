@@ -36,7 +36,34 @@ extension APIService {
     private static let socialAsyncPollTimeoutInterval: TimeInterval = 15
     private static let socialAsyncPollIntervalNanoseconds: UInt64 = 1_500_000_000
     private static let socialAsyncPollDeadlineSeconds: TimeInterval = 180
+    /// Short backoff after a transient poll transport blip (AMA-2323).
+    private static let socialAsyncPollBackoffNs: UInt64 = 500_000_000
     private static let socialSaveTimeoutInterval: TimeInterval = 30
+
+    // MARK: - Test hooks (AMA-2323)
+
+    /// Overrides for unit tests — keep production defaults when nil.
+    static var socialAsyncPollDeadlineSecondsForTests: TimeInterval?
+    static var socialAsyncPollIntervalNsForTests: UInt64?
+    static var socialAsyncPollBackoffNsForTests: UInt64?
+
+    static func resetSocialAsyncPollTimingOverridesForTests() {
+        socialAsyncPollDeadlineSecondsForTests = nil
+        socialAsyncPollIntervalNsForTests = nil
+        socialAsyncPollBackoffNsForTests = nil
+    }
+
+    private static var resolvedPollDeadlineSeconds: TimeInterval {
+        socialAsyncPollDeadlineSecondsForTests ?? socialAsyncPollDeadlineSeconds
+    }
+
+    private static var resolvedPollIntervalNanoseconds: UInt64 {
+        socialAsyncPollIntervalNsForTests ?? socialAsyncPollIntervalNanoseconds
+    }
+
+    private static var resolvedTransientBackoffNanoseconds: UInt64 {
+        socialAsyncPollBackoffNsForTests ?? socialAsyncPollBackoffNs
+    }
 
     // MARK: - Social Import (AMA-2285)
 
@@ -112,18 +139,51 @@ extension APIService {
 
     private func pollInstagramReelTask(taskId: String) async throws -> Data {
         let ingestorURL = AppEnvironment.current.ingestorAPIURL
-        let deadline = Date().addingTimeInterval(Self.socialAsyncPollDeadlineSeconds)
+        let deadline = Date().addingTimeInterval(Self.resolvedPollDeadlineSeconds)
+        var lastTransientError: Error?
+
         while Date() < deadline {
             if Task.isCancelled { throw CancellationError() }
-            if let data = try await fetchInstagramReelTaskStatus(ingestorURL: ingestorURL, taskId: taskId) {
-                return data
+            do {
+                if let data = try await fetchInstagramReelTaskStatus(ingestorURL: ingestorURL, taskId: taskId) {
+                    return data
+                }
+                lastTransientError = nil
+                try await Task.sleep(nanoseconds: Self.resolvedPollIntervalNanoseconds)
+            } catch {
+                if CTAError.isCancellation(error) {
+                    throw error
+                }
+                guard Self.isTransientPollTransportError(error) else {
+                    throw error
+                }
+                // Idempotent status GETs: one keep-alive drop (−1005) must not abort
+                // a long MEDIA-route import still running on the server (AMA-2323).
+                lastTransientError = error
+                print("[APIService] pollInstagramReelTask transient poll error — retrying: \(error)")
+                try await Task.sleep(nanoseconds: Self.resolvedTransientBackoffNanoseconds)
             }
-            try await Task.sleep(nanoseconds: Self.socialAsyncPollIntervalNanoseconds)
+        }
+
+        if let lastTransientError {
+            throw lastTransientError
         }
         throw APIError.serverErrorWithBody(
             504,
             "Import is still running — open the app again in a minute, or retry."
         )
+    }
+
+    /// Transport blips on poll GETs — reuse CTAError's connectivity-only list.
+    private static func isTransientPollTransportError(_ error: Error) -> Bool {
+        if let urlError = error as? URLError {
+            return CTAError.isTransientURLError(urlError.code)
+        }
+        if case APIError.networkError(let underlying) = error,
+           let urlError = underlying as? URLError {
+            return CTAError.isTransientURLError(urlError.code)
+        }
+        return false
     }
 
     /// Returns workout JSON when complete; `nil` when still queued/processing.

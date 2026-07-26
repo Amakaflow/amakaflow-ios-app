@@ -621,6 +621,7 @@ final class APIServiceSocialImportContractTests: XCTestCase {
     }
 
     override func tearDown() {
+        APIService.resetSocialAsyncPollTimingOverridesForTests()
         PairingService.shared.isPaired = savedIsPaired
         api = nil
         MockURLProtocol.reset()
@@ -667,6 +668,290 @@ final class APIServiceSocialImportContractTests: XCTestCase {
         XCTAssertTrue(
             MockURLProtocol.interceptedRequests[1].url?.path.contains("/tasks/") == true
         )
+    }
+
+    // MARK: - AMA-2323 Instagram async poll transient retry
+
+    /// What we're testing: one mid-poll NSURLErrorNetworkConnectionLost (−1005) must not abort import.
+    func testInstagramPollRetriesTransientNetworkConnectionLostAndCompletes() async throws {
+        APIService.resetSocialAsyncPollTimingOverridesForTests()
+        APIService.socialAsyncPollIntervalNsForTests = 10_000_000 // 10ms
+        APIService.socialAsyncPollBackoffNsForTests = 5_000_000 // 5ms
+        defer { APIService.resetSocialAsyncPollTimingOverridesForTests() }
+
+        let pollLock = NSLock()
+        var statusPollCount = 0
+
+        MockURLProtocol.requestHandler = { request in
+            let path = request.url?.path ?? ""
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": "application/json"]
+            )!
+
+            if path.contains("/ingest/instagram_reel/async") {
+                return (response, #"{"task_id":"task-retry-1","status":"queued"}"#.data(using: .utf8)!)
+            }
+
+            if path.contains("/tasks/") {
+                pollLock.lock()
+                statusPollCount += 1
+                let count = statusPollCount
+                pollLock.unlock()
+
+                // First poll: classic keep-alive drop (−1005). Must be retried, not surfaced.
+                if count == 1 {
+                    throw URLError(.networkConnectionLost)
+                }
+                // Second poll: still running.
+                if count == 2 {
+                    return (response, #"{"status":"processing"}"#.data(using: .utf8)!)
+                }
+                // Third poll: complete.
+                let data = """
+                {"status":"completed","result":{"title":"Retry Survived","sport":"strength","blocks":[{"exercises":[{"name":"Sled Push","sets":4,"reps":1}]}]}}
+                """.data(using: .utf8)!
+                return (response, data)
+            }
+
+            XCTFail("Unexpected request path: \(path)")
+            return (response, Data())
+        }
+
+        let data = try await api.ingestSocialURL(
+            url: "https://www.instagram.com/reel/DNlYeUGMmCi/",
+            platform: .instagram
+        )
+
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(json["title"] as? String, "Retry Survived")
+        pollLock.lock()
+        let polls = statusPollCount
+        pollLock.unlock()
+        XCTAssertGreaterThanOrEqual(polls, 3, "Expected start + processing + completed after −1005 retry")
+        let statusPaths = MockURLProtocol.interceptedRequests.compactMap { $0.url?.path }.filter { $0.contains("/tasks/") }
+        XCTAssertGreaterThanOrEqual(statusPaths.count, 3)
+    }
+
+    func testInstagramPollAbortsOnNonTransientURLError() async {
+        APIService.resetSocialAsyncPollTimingOverridesForTests()
+        APIService.socialAsyncPollIntervalNsForTests = 10_000_000
+        APIService.socialAsyncPollBackoffNsForTests = 5_000_000
+        defer { APIService.resetSocialAsyncPollTimingOverridesForTests() }
+
+        let pollLock = NSLock()
+        var statusPollCount = 0
+
+        MockURLProtocol.requestHandler = { request in
+            let path = request.url?.path ?? ""
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": "application/json"]
+            )!
+
+            if path.contains("/ingest/instagram_reel/async") {
+                return (response, #"{"task_id":"task-badurl","status":"queued"}"#.data(using: .utf8)!)
+            }
+
+            if path.contains("/tasks/") {
+                pollLock.lock()
+                statusPollCount += 1
+                pollLock.unlock()
+                throw URLError(.badURL)
+            }
+
+            XCTFail("Unexpected request path: \(path)")
+            return (response, Data())
+        }
+
+        do {
+            _ = try await api.ingestSocialURL(
+                url: "https://www.instagram.com/reel/bad/",
+                platform: .instagram
+            )
+            XCTFail("Expected non-transient URLError to abort import")
+        } catch let urlError as URLError {
+            XCTAssertEqual(urlError.code, .badURL)
+        } catch {
+            XCTFail("Expected URLError.badURL, got \(error)")
+        }
+
+        pollLock.lock()
+        let polls = statusPollCount
+        pollLock.unlock()
+        XCTAssertEqual(polls, 1, "Non-transient errors must not be retried")
+    }
+
+    func testInstagramPollAbortsOnFailedTaskStatus() async {
+        APIService.resetSocialAsyncPollTimingOverridesForTests()
+        defer { APIService.resetSocialAsyncPollTimingOverridesForTests() }
+
+        MockURLProtocol.requestHandler = { request in
+            let path = request.url?.path ?? ""
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": "application/json"]
+            )!
+
+            if path.contains("/ingest/instagram_reel/async") {
+                return (response, #"{"task_id":"task-failed","status":"queued"}"#.data(using: .utf8)!)
+            }
+
+            if path.contains("/tasks/") {
+                let data = #"{"status":"failed","error":"Apify scrape failed"}"#.data(using: .utf8)!
+                return (response, data)
+            }
+
+            XCTFail("Unexpected request path: \(path)")
+            return (response, Data())
+        }
+
+        do {
+            _ = try await api.ingestSocialURL(
+                url: "https://www.instagram.com/reel/fail/",
+                platform: .instagram
+            )
+            XCTFail("Expected failed task status to abort")
+        } catch let apiError as APIError {
+            guard case .serverErrorWithBody(let code, let body) = apiError else {
+                return XCTFail("Expected serverErrorWithBody, got \(apiError)")
+            }
+            XCTAssertEqual(code, 400)
+            XCTAssertTrue(body.contains("Apify scrape failed"), body)
+        } catch {
+            XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    func testInstagramPollAbortsOnHTTP5xxWithoutRetryingForever() async {
+        APIService.resetSocialAsyncPollTimingOverridesForTests()
+        APIService.socialAsyncPollIntervalNsForTests = 10_000_000
+        defer { APIService.resetSocialAsyncPollTimingOverridesForTests() }
+
+        let pollLock = NSLock()
+        var statusPollCount = 0
+
+        MockURLProtocol.requestHandler = { request in
+            let path = request.url?.path ?? ""
+
+            if path.contains("/ingest/instagram_reel/async") {
+                let response = HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 200,
+                    httpVersion: "HTTP/1.1",
+                    headerFields: ["Content-Type": "application/json"]
+                )!
+                return (response, #"{"task_id":"task-5xx","status":"queued"}"#.data(using: .utf8)!)
+            }
+
+            if path.contains("/tasks/") {
+                pollLock.lock()
+                statusPollCount += 1
+                pollLock.unlock()
+                let response = HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 503,
+                    httpVersion: "HTTP/1.1",
+                    headerFields: ["Content-Type": "application/json"]
+                )!
+                return (response, Data(#"{"detail":"upstream down"}"#.utf8))
+            }
+
+            XCTFail("Unexpected request path: \(path)")
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 500,
+                httpVersion: "HTTP/1.1",
+                headerFields: nil
+            )!
+            return (response, Data())
+        }
+
+        do {
+            _ = try await api.ingestSocialURL(
+                url: "https://www.instagram.com/reel/5xx/",
+                platform: .instagram
+            )
+            XCTFail("Expected HTTP 503 to abort")
+        } catch let apiError as APIError {
+            guard case .serverError(let code) = apiError else {
+                return XCTFail("Expected serverError, got \(apiError)")
+            }
+            XCTAssertEqual(code, 503)
+        } catch {
+            XCTFail("Expected APIError.serverError, got \(error)")
+        }
+
+        pollLock.lock()
+        let polls = statusPollCount
+        pollLock.unlock()
+        XCTAssertEqual(polls, 1, "Definitive HTTP errors must not be swallowed by poll retry")
+    }
+
+    func testInstagramPollRespectsDeadlineWhenTransientErrorsPersist() async {
+        APIService.resetSocialAsyncPollTimingOverridesForTests()
+        APIService.socialAsyncPollDeadlineSecondsForTests = 0.25
+        APIService.socialAsyncPollIntervalNsForTests = 20_000_000
+        APIService.socialAsyncPollBackoffNsForTests = 20_000_000
+        defer { APIService.resetSocialAsyncPollTimingOverridesForTests() }
+
+        let pollLock = NSLock()
+        var statusPollCount = 0
+
+        MockURLProtocol.requestHandler = { request in
+            let path = request.url?.path ?? ""
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": "application/json"]
+            )!
+
+            if path.contains("/ingest/instagram_reel/async") {
+                return (response, #"{"task_id":"task-deadline","status":"queued"}"#.data(using: .utf8)!)
+            }
+
+            if path.contains("/tasks/") {
+                pollLock.lock()
+                statusPollCount += 1
+                pollLock.unlock()
+                throw URLError(.networkConnectionLost)
+            }
+
+            XCTFail("Unexpected request path: \(path)")
+            return (response, Data())
+        }
+
+        do {
+            _ = try await api.ingestSocialURL(
+                url: "https://www.instagram.com/reel/deadline/",
+                platform: .instagram
+            )
+            XCTFail("Expected deadline to stop infinite retry")
+        } catch let urlError as URLError {
+            XCTAssertEqual(urlError.code, .networkConnectionLost)
+        } catch let apiError as APIError {
+            // Honest timeout copy when no last transient is retained is also acceptable.
+            guard case .serverErrorWithBody(let code, let body) = apiError else {
+                return XCTFail("Unexpected APIError \(apiError)")
+            }
+            XCTAssertEqual(code, 504)
+            XCTAssertTrue(body.lowercased().contains("still running") || body.lowercased().contains("retry"), body)
+        } catch {
+            XCTFail("Unexpected error \(error)")
+        }
+
+        pollLock.lock()
+        let polls = statusPollCount
+        pollLock.unlock()
+        XCTAssertGreaterThanOrEqual(polls, 2, "Should have retried at least once before deadline")
+        XCTAssertLessThan(polls, 40, "Must not infinite-loop past the deadline")
     }
 
     func testSaveWorkoutWithProvenancePushesToIOSCompanionForLibrary() async throws {
