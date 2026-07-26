@@ -41,7 +41,7 @@ extension APIService {
     private static let socialAsyncPollBackoffNs: UInt64 = socialAsyncPollIntervalNanoseconds
     /// Give up after this many consecutive transport blips (ticket: surface network
     /// when consecutive polls keep failing). A single −1005 still survives.
-    private static let socialAsyncPollMaxConsecutiveTransientFailures = 8
+    private static let socialAsyncPollMaxTransient = 8
     private static let socialSaveTimeoutInterval: TimeInterval = 30
 
     // MARK: - Test hooks (AMA-2323)
@@ -51,13 +51,13 @@ extension APIService {
     static var socialAsyncPollDeadlineSecondsForTests: TimeInterval?
     static var socialAsyncPollIntervalNsForTests: UInt64?
     static var socialAsyncPollBackoffNsForTests: UInt64?
-    static var socialAsyncPollMaxConsecutiveTransientForTests: Int?
+    static var socialAsyncPollMaxTransientForTests: Int?
 
     static func resetSocialAsyncPollTimingOverridesForTests() {
         socialAsyncPollDeadlineSecondsForTests = nil
         socialAsyncPollIntervalNsForTests = nil
         socialAsyncPollBackoffNsForTests = nil
-        socialAsyncPollMaxConsecutiveTransientForTests = nil
+        socialAsyncPollMaxTransientForTests = nil
     }
     #endif
 
@@ -87,10 +87,9 @@ extension APIService {
 
     private static var resolvedMaxConsecutiveTransientFailures: Int {
         #if DEBUG
-        return socialAsyncPollMaxConsecutiveTransientForTests
-            ?? socialAsyncPollMaxConsecutiveTransientFailures
+        return socialAsyncPollMaxTransientForTests ?? socialAsyncPollMaxTransient
         #else
-        return socialAsyncPollMaxConsecutiveTransientFailures
+        return socialAsyncPollMaxTransient
         #endif
     }
 

@@ -913,7 +913,7 @@ final class APIServiceSocialImportContractTests: XCTestCase {
         APIService.socialAsyncPollIntervalNsForTests = 20_000_000
         APIService.socialAsyncPollBackoffNsForTests = 20_000_000
         // High enough that the shortened deadline fires first.
-        APIService.socialAsyncPollMaxConsecutiveTransientForTests = 100
+        APIService.socialAsyncPollMaxTransientForTests = 100
         defer { APIService.resetSocialAsyncPollTimingOverridesForTests() }
 
         let pollLock = NSLock()
@@ -972,7 +972,7 @@ final class APIServiceSocialImportContractTests: XCTestCase {
         APIService.socialAsyncPollDeadlineSecondsForTests = 30
         APIService.socialAsyncPollIntervalNsForTests = 5_000_000
         APIService.socialAsyncPollBackoffNsForTests = 5_000_000
-        APIService.socialAsyncPollMaxConsecutiveTransientForTests = 3
+        APIService.socialAsyncPollMaxTransientForTests = 3
         defer { APIService.resetSocialAsyncPollTimingOverridesForTests() }
 
         let pollLock = NSLock()
