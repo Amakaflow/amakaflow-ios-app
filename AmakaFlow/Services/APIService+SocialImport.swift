@@ -36,33 +36,62 @@ extension APIService {
     private static let socialAsyncPollTimeoutInterval: TimeInterval = 15
     private static let socialAsyncPollIntervalNanoseconds: UInt64 = 1_500_000_000
     private static let socialAsyncPollDeadlineSeconds: TimeInterval = 180
-    /// Short backoff after a transient poll transport blip (AMA-2323).
-    private static let socialAsyncPollBackoffNs: UInt64 = 500_000_000
+    /// Initial backoff after a transient poll transport blip (AMA-2323).
+    /// Never shorter than the healthy poll interval — failure must not accelerate.
+    private static let socialAsyncPollBackoffNs: UInt64 = socialAsyncPollIntervalNanoseconds
+    /// Give up after this many consecutive transport blips (ticket: surface network
+    /// when consecutive polls keep failing). A single −1005 still survives.
+    private static let socialAsyncPollMaxConsecutiveTransientFailures = 8
     private static let socialSaveTimeoutInterval: TimeInterval = 30
 
     // MARK: - Test hooks (AMA-2323)
 
+    #if DEBUG
     /// Overrides for unit tests — keep production defaults when nil.
     static var socialAsyncPollDeadlineSecondsForTests: TimeInterval?
     static var socialAsyncPollIntervalNsForTests: UInt64?
     static var socialAsyncPollBackoffNsForTests: UInt64?
+    static var socialAsyncPollMaxConsecutiveTransientForTests: Int?
 
     static func resetSocialAsyncPollTimingOverridesForTests() {
         socialAsyncPollDeadlineSecondsForTests = nil
         socialAsyncPollIntervalNsForTests = nil
         socialAsyncPollBackoffNsForTests = nil
+        socialAsyncPollMaxConsecutiveTransientForTests = nil
     }
+    #endif
 
     private static var resolvedPollDeadlineSeconds: TimeInterval {
-        socialAsyncPollDeadlineSecondsForTests ?? socialAsyncPollDeadlineSeconds
+        #if DEBUG
+        return socialAsyncPollDeadlineSecondsForTests ?? socialAsyncPollDeadlineSeconds
+        #else
+        return socialAsyncPollDeadlineSeconds
+        #endif
     }
 
     private static var resolvedPollIntervalNanoseconds: UInt64 {
-        socialAsyncPollIntervalNsForTests ?? socialAsyncPollIntervalNanoseconds
+        #if DEBUG
+        return socialAsyncPollIntervalNsForTests ?? socialAsyncPollIntervalNanoseconds
+        #else
+        return socialAsyncPollIntervalNanoseconds
+        #endif
     }
 
     private static var resolvedTransientBackoffNanoseconds: UInt64 {
-        socialAsyncPollBackoffNsForTests ?? socialAsyncPollBackoffNs
+        #if DEBUG
+        return socialAsyncPollBackoffNsForTests ?? socialAsyncPollBackoffNs
+        #else
+        return socialAsyncPollBackoffNs
+        #endif
+    }
+
+    private static var resolvedMaxConsecutiveTransientFailures: Int {
+        #if DEBUG
+        return socialAsyncPollMaxConsecutiveTransientForTests
+            ?? socialAsyncPollMaxConsecutiveTransientFailures
+        #else
+        return socialAsyncPollMaxConsecutiveTransientFailures
+        #endif
     }
 
     // MARK: - Social Import (AMA-2285)
@@ -140,7 +169,7 @@ extension APIService {
     private func pollInstagramReelTask(taskId: String) async throws -> Data {
         let ingestorURL = AppEnvironment.current.ingestorAPIURL
         let deadline = Date().addingTimeInterval(Self.resolvedPollDeadlineSeconds)
-        var lastTransientError: Error?
+        var consecutiveTransientFailures = 0
 
         while Date() < deadline {
             if Task.isCancelled { throw CancellationError() }
@@ -148,7 +177,7 @@ extension APIService {
                 if let data = try await fetchInstagramReelTaskStatus(ingestorURL: ingestorURL, taskId: taskId) {
                     return data
                 }
-                lastTransientError = nil
+                consecutiveTransientFailures = 0
                 try await Task.sleep(nanoseconds: Self.resolvedPollIntervalNanoseconds)
             } catch {
                 if CTAError.isCancellation(error) {
@@ -159,15 +188,22 @@ extension APIService {
                 }
                 // Idempotent status GETs: one keep-alive drop (−1005) must not abort
                 // a long MEDIA-route import still running on the server (AMA-2323).
-                lastTransientError = error
-                print("[APIService] pollInstagramReelTask transient poll error — retrying: \(error)")
-                try await Task.sleep(nanoseconds: Self.resolvedTransientBackoffNanoseconds)
+                consecutiveTransientFailures += 1
+                print(
+                    "[APIService] pollInstagramReelTask transient poll error "
+                        + "(\(consecutiveTransientFailures)/\(Self.resolvedMaxConsecutiveTransientFailures)) — retrying: \(error)"
+                )
+                if consecutiveTransientFailures >= Self.resolvedMaxConsecutiveTransientFailures {
+                    throw error
+                }
+                let shift = min(consecutiveTransientFailures - 1, 3)
+                let exponential = Self.resolvedTransientBackoffNanoseconds << shift
+                let sleepNs = max(Self.resolvedPollIntervalNanoseconds, exponential)
+                try await Task.sleep(nanoseconds: sleepNs)
             }
         }
 
-        if let lastTransientError {
-            throw lastTransientError
-        }
+        // Prefer honest "still running" copy — the server task may still complete.
         throw APIError.serverErrorWithBody(
             504,
             "Import is still running — open the app again in a minute, or retry."
@@ -180,6 +216,10 @@ extension APIService {
             return CTAError.isTransientURLError(urlError.code)
         }
         if case APIError.networkError(let underlying) = error,
+           let urlError = underlying as? URLError {
+            return CTAError.isTransientURLError(urlError.code)
+        }
+        if case APIError.network(let underlying) = error,
            let urlError = underlying as? URLError {
             return CTAError.isTransientURLError(urlError.code)
         }

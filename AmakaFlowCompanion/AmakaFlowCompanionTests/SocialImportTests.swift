@@ -618,6 +618,7 @@ final class APIServiceSocialImportContractTests: XCTestCase {
         api = APIService(session: MockURLProtocol.mockSession())
         savedIsPaired = PairingService.shared.isPaired
         PairingService.shared.isPaired = true
+        APIService.resetSocialAsyncPollTimingOverridesForTests()
     }
 
     override func tearDown() {
@@ -626,6 +627,13 @@ final class APIServiceSocialImportContractTests: XCTestCase {
         api = nil
         MockURLProtocol.reset()
         super.tearDown()
+    }
+
+    /// PairingService.isPaired is Combine-bound to AuthViewModel; re-assert before each
+    /// network call so a late auth emission cannot flip the gate mid-test.
+    private func assertPairedForIngest() {
+        PairingService.shared.isPaired = true
+        XCTAssertTrue(PairingService.shared.isPaired, "Social ingest requires paired auth gate")
     }
 
     func testIngestSocialURLUsesExtendedTimeoutForReelFetch() async throws {
@@ -656,6 +664,7 @@ final class APIServiceSocialImportContractTests: XCTestCase {
             return (response, Data())
         }
 
+        assertPairedForIngest()
         _ = try await api.ingestSocialURL(
             url: "https://www.instagram.com/reel/DMYIJsTMVMC/",
             platform: .instagram
@@ -720,6 +729,7 @@ final class APIServiceSocialImportContractTests: XCTestCase {
             return (response, Data())
         }
 
+        assertPairedForIngest()
         let data = try await api.ingestSocialURL(
             url: "https://www.instagram.com/reel/DNlYeUGMmCi/",
             platform: .instagram
@@ -769,6 +779,7 @@ final class APIServiceSocialImportContractTests: XCTestCase {
         }
 
         do {
+            assertPairedForIngest()
             _ = try await api.ingestSocialURL(
                 url: "https://www.instagram.com/reel/bad/",
                 platform: .instagram
@@ -813,6 +824,7 @@ final class APIServiceSocialImportContractTests: XCTestCase {
         }
 
         do {
+            assertPairedForIngest()
             _ = try await api.ingestSocialURL(
                 url: "https://www.instagram.com/reel/fail/",
                 platform: .instagram
@@ -874,6 +886,7 @@ final class APIServiceSocialImportContractTests: XCTestCase {
         }
 
         do {
+            assertPairedForIngest()
             _ = try await api.ingestSocialURL(
                 url: "https://www.instagram.com/reel/5xx/",
                 platform: .instagram
@@ -899,6 +912,8 @@ final class APIServiceSocialImportContractTests: XCTestCase {
         APIService.socialAsyncPollDeadlineSecondsForTests = 0.25
         APIService.socialAsyncPollIntervalNsForTests = 20_000_000
         APIService.socialAsyncPollBackoffNsForTests = 20_000_000
+        // High enough that the shortened deadline fires first.
+        APIService.socialAsyncPollMaxConsecutiveTransientForTests = 100
         defer { APIService.resetSocialAsyncPollTimingOverridesForTests() }
 
         let pollLock = NSLock()
@@ -929,15 +944,13 @@ final class APIServiceSocialImportContractTests: XCTestCase {
         }
 
         do {
+            assertPairedForIngest()
             _ = try await api.ingestSocialURL(
                 url: "https://www.instagram.com/reel/deadline/",
                 platform: .instagram
             )
             XCTFail("Expected deadline to stop infinite retry")
-        } catch let urlError as URLError {
-            XCTAssertEqual(urlError.code, .networkConnectionLost)
         } catch let apiError as APIError {
-            // Honest timeout copy when no last transient is retained is also acceptable.
             guard case .serverErrorWithBody(let code, let body) = apiError else {
                 return XCTFail("Unexpected APIError \(apiError)")
             }
@@ -952,6 +965,60 @@ final class APIServiceSocialImportContractTests: XCTestCase {
         pollLock.unlock()
         XCTAssertGreaterThanOrEqual(polls, 2, "Should have retried at least once before deadline")
         XCTAssertLessThan(polls, 40, "Must not infinite-loop past the deadline")
+    }
+
+    func testInstagramPollAbortsAfterMaxConsecutiveTransientFailures() async {
+        APIService.resetSocialAsyncPollTimingOverridesForTests()
+        APIService.socialAsyncPollDeadlineSecondsForTests = 30
+        APIService.socialAsyncPollIntervalNsForTests = 5_000_000
+        APIService.socialAsyncPollBackoffNsForTests = 5_000_000
+        APIService.socialAsyncPollMaxConsecutiveTransientForTests = 3
+        defer { APIService.resetSocialAsyncPollTimingOverridesForTests() }
+
+        let pollLock = NSLock()
+        var statusPollCount = 0
+
+        MockURLProtocol.requestHandler = { request in
+            let path = request.url?.path ?? ""
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": "application/json"]
+            )!
+
+            if path.contains("/ingest/instagram_reel/async") {
+                return (response, #"{"task_id":"task-cap","status":"queued"}"#.data(using: .utf8)!)
+            }
+
+            if path.contains("/tasks/") {
+                pollLock.lock()
+                statusPollCount += 1
+                pollLock.unlock()
+                throw URLError(.timedOut)
+            }
+
+            XCTFail("Unexpected request path: \(path)")
+            return (response, Data())
+        }
+
+        do {
+            assertPairedForIngest()
+            _ = try await api.ingestSocialURL(
+                url: "https://www.instagram.com/reel/cap/",
+                platform: .instagram
+            )
+            XCTFail("Expected consecutive-failure cap to abort")
+        } catch let urlError as URLError {
+            XCTAssertEqual(urlError.code, .timedOut)
+        } catch {
+            XCTFail("Expected URLError.timedOut, got \(error)")
+        }
+
+        pollLock.lock()
+        let polls = statusPollCount
+        pollLock.unlock()
+        XCTAssertEqual(polls, 3, "Must stop at max consecutive transient failures")
     }
 
     func testSaveWorkoutWithProvenancePushesToIOSCompanionForLibrary() async throws {
@@ -991,6 +1058,7 @@ final class APIServiceSocialImportContractTests: XCTestCase {
             sourceUrl: "https://www.instagram.com/reel/DMYIJsTMVMC/"
         )
 
+        assertPairedForIngest()
         let workout = try await api.saveWorkout(request)
 
         XCTAssertEqual(workout.id, "wk-social-1")
