@@ -109,6 +109,7 @@
 		AMA2285PENDBLD /* PendingShareImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285PENDREF /* PendingShareImportCoordinator.swift */; };
 		AMA2297PSTEBLD /* LibraryPasteRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2297PSTEREF /* LibraryPasteRouter.swift */; };
 		AMA2285SOCBLD /* APIService+SocialImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285SOCREF /* APIService+SocialImport.swift */; };
+		AMA2323ASYBLD /* APIService+InstagramReelAsync.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2323ASYREF /* APIService+InstagramReelAsync.swift */; };
 		AMA2285FIXBLD /* FixtureAPIService+SocialImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285FIXREF /* FixtureAPIService+SocialImport.swift */; };
 		AMA2305MDLBLD /* StructureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305MDLREF /* StructureModels.swift */; };
 		AMA2305SESBLD /* StructureClarifySession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305SESREF /* StructureClarifySession.swift */; };
@@ -675,6 +676,7 @@
 		AMA2285PENDREF /* PendingShareImportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PendingShareImportCoordinator.swift; path = ../AmakaFlow/Services/PendingShareImportCoordinator.swift; sourceTree = SOURCE_ROOT; };
 		AMA2297PSTEREF /* LibraryPasteRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryPasteRouter.swift; path = ../AmakaFlow/Services/LibraryPasteRouter.swift; sourceTree = SOURCE_ROOT; };
 		AMA2285SOCREF /* APIService+SocialImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+SocialImport.swift"; path = "../AmakaFlow/Services/APIService+SocialImport.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2323ASYREF /* APIService+InstagramReelAsync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+InstagramReelAsync.swift"; path = "../AmakaFlow/Services/APIService+InstagramReelAsync.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2285FIXREF /* FixtureAPIService+SocialImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "FixtureAPIService+SocialImport.swift"; path = "../AmakaFlow/DependencyInjection/FixtureAPIService+SocialImport.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2305MDLREF /* StructureModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StructureModels.swift; path = ../AmakaFlow/Models/StructureModels.swift; sourceTree = SOURCE_ROOT; };
 		AMA2305SESREF /* StructureClarifySession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StructureClarifySession.swift; path = ../AmakaFlow/Models/StructureClarifySession.swift; sourceTree = SOURCE_ROOT; };
@@ -1455,6 +1457,7 @@
 				AMA2285PENDREF /* PendingShareImportCoordinator.swift */,
 				AMA2297PSTEREF /* LibraryPasteRouter.swift */,
 				AMA2285SOCREF /* APIService+SocialImport.swift */,
+				AMA2323ASYREF /* APIService+InstagramReelAsync.swift */,
 				AMA2305APIREF /* APIService+Structure.swift */,
 				AMA2305MAPREF /* APIService+SocialImportMapper.swift */,
 				AK00NUT002A /* NutritionViewModel.swift */,
@@ -2329,6 +2332,7 @@
 				AMA2285PENDBLD /* PendingShareImportCoordinator.swift in Sources */,
 				AMA2297PSTEBLD /* LibraryPasteRouter.swift in Sources */,
 				AMA2285SOCBLD /* APIService+SocialImport.swift in Sources */,
+				AMA2323ASYBLD /* APIService+InstagramReelAsync.swift in Sources */,
 				AMA2285FIXBLD /* FixtureAPIService+SocialImport.swift in Sources */,
 				AMA2305MDLBLD /* StructureModels.swift in Sources */,
 				AMA2305SESBLD /* StructureClarifySession.swift in Sources */,
