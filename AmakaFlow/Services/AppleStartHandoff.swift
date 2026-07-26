@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import WatchConnectivity
 import WorkoutKitSync
 
 /// Outcome of Start → Apple for in-app status copy (seconds, not minutes).
@@ -40,6 +41,13 @@ enum AppleWatchPairingRead: Equatable {
     case confirmedPaired
     case confirmedUnpaired
     case unknown
+
+    /// Optimistic: unknown / not activated → paired-style copy. Unpaired only when activated and not paired.
+    static func resolve(from session: (any WatchSessionProviding)?) -> AppleWatchPairingRead {
+        guard let session else { return .unknown }
+        guard session.activationState == .activated else { return .unknown }
+        return session.isPaired ? .confirmedPaired : .confirmedUnpaired
+    }
 }
 
 protocol AppleWatchPairingReading: Sendable {
@@ -179,7 +187,8 @@ struct LiveWorkoutKitSaver: WorkoutKitSaving {
 
 struct LiveAppleWatchPairingReader: AppleWatchPairingReading {
     func pairingReadForCopy() -> AppleWatchPairingRead {
-        WatchConnectivityManager.shared.pairingReadForCopy()
+        guard WCSession.isSupported() else { return .unknown }
+        return AppleWatchPairingRead.resolve(from: LiveWatchSession.shared)
     }
 }
 

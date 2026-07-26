@@ -84,24 +84,25 @@ final class AppleWatchPairingReadTests: XCTestCase {
         let mock = MockWatchSession()
         mock.activationState = .notActivated
         mock.isPaired = false
-        let manager = WatchConnectivityManager(session: mock)
-        XCTAssertEqual(manager.pairingReadForCopy(), .unknown)
+        XCTAssertEqual(AppleWatchPairingRead.resolve(from: mock), .unknown)
     }
 
     func testActivatedAndNotPairedIsConfirmedUnpaired() {
         let mock = MockWatchSession()
         mock.activationState = .activated
         mock.isPaired = false
-        let manager = WatchConnectivityManager(session: mock)
-        XCTAssertEqual(manager.pairingReadForCopy(), .confirmedUnpaired)
+        XCTAssertEqual(AppleWatchPairingRead.resolve(from: mock), .confirmedUnpaired)
     }
 
     func testActivatedAndPairedIsConfirmedPaired() {
         let mock = MockWatchSession()
         mock.activationState = .activated
         mock.isPaired = true
-        let manager = WatchConnectivityManager(session: mock)
-        XCTAssertEqual(manager.pairingReadForCopy(), .confirmedPaired)
+        XCTAssertEqual(AppleWatchPairingRead.resolve(from: mock), .confirmedPaired)
+    }
+
+    func testNilSessionIsUnknown() {
+        XCTAssertEqual(AppleWatchPairingRead.resolve(from: nil), .unknown)
     }
 }
 

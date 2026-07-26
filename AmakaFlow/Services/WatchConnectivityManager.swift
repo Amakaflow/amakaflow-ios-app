@@ -9,7 +9,7 @@ import Foundation
 import WatchConnectivity
 import Combine
 
-class WatchConnectivityManager: NSObject, ObservableObject, AppleWatchPairingReading {
+class WatchConnectivityManager: NSObject, ObservableObject {
     static let shared = WatchConnectivityManager()
 
     // MARK: - Thread Safety (AMA-1075)
@@ -66,12 +66,6 @@ class WatchConnectivityManager: NSObject, ObservableObject, AppleWatchPairingRea
 
     func activate() {
         session?.activate()
-    }
-
-    func pairingReadForCopy() -> AppleWatchPairingRead {
-        guard let session else { return .unknown }
-        guard session.activationState == .activated else { return .unknown }
-        return session.isPaired ? .confirmedPaired : .confirmedUnpaired
     }
 
     // MARK: - Debug Logging
