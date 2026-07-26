@@ -877,14 +877,9 @@ extension UnifiedWorkoutDetailView {
     }
 
     fileprivate func beginAppleTryHandoff() {
-        handoffStatus = appleWatchReachable
-            ? "Sending to Apple Watch…"
-            : "Saving to Apple Fitness…"
+        handoffStatus = "Scheduling in Workout…"
         Task {
-            let result = await AppleStartHandoffService().handoff(
-                workout: workout,
-                watchReachable: appleWatchReachable
-            )
+            let result = await AppleStartHandoffService().handoff(workout: workout)
             handoffStatus = result.message
         }
     }

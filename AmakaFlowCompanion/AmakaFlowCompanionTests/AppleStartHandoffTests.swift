@@ -119,87 +119,86 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         )
     }
 
-    func testHandoffWatchReachableSendSuccess() async {
-        let mock = MockWatchSession()
-        mock.isReachable = true
-        mock.isWatchAppInstalled = true
-        mock.sendMessageReply = ["status": "received"]
-        let manager = WatchConnectivityManager(session: mock)
-
-        let service = AppleStartHandoffService(
-            watchManager: manager,
-            workoutKitSaver: MockWorkoutKitSaver()
-        )
-        let result = await service.handoff(workout: sampleWorkout(), watchReachable: true)
-
-        XCTAssertEqual(result.kind, .sentToWatch)
-        XCTAssertTrue(result.message.localizedCaseInsensitiveContains("Sent to Apple Watch"))
-    }
-
-    func testHandoffWatchUnreachableFallsBackToFitnessSave() async {
-        let mock = MockWatchSession()
-        mock.isReachable = false
-        let manager = WatchConnectivityManager(session: mock)
+    func testHandoffAlwaysSavesViaWorkoutKit() async {
         let saver = MockWorkoutKitSaver()
-
+        let pairing = MockPairingReader(read: .unknown)
         let service = AppleStartHandoffService(
-            watchManager: manager,
+            pairingReader: pairing,
             workoutKitSaver: saver
         )
-        let result = await service.handoff(workout: sampleWorkout(), watchReachable: false)
-
+        let result = await service.handoff(workout: sampleWorkout())
         XCTAssertEqual(result.kind, .savedToFitness)
         XCTAssertEqual(saver.savedWorkoutNames, ["Test Strength"])
+        XCTAssertEqual(saver.saveCallCount, 1)
+        XCTAssertTrue(result.message.localizedCaseInsensitiveContains("Apple Watch"))
+        XCTAssertFalse(result.message.localizedCaseInsensitiveContains("Sent to Apple Watch"))
     }
 
-    func testHandoffWatchSendRejectedFallsBackToFitnessSave() async {
-        let mock = MockWatchSession()
-        mock.isReachable = true
-        mock.sendMessageReply = ["status": "error", "message": "decode_failed"]
-        let manager = WatchConnectivityManager(session: mock)
+    func testHandoffConfirmedUnpairedUsesPairCopy() async {
         let saver = MockWorkoutKitSaver()
-
         let service = AppleStartHandoffService(
-            watchManager: manager,
+            pairingReader: MockPairingReader(read: .confirmedUnpaired),
             workoutKitSaver: saver
         )
-        let result = await service.handoff(workout: sampleWorkout(), watchReachable: true)
-
+        let result = await service.handoff(workout: sampleWorkout())
         XCTAssertEqual(result.kind, .savedToFitness)
-        XCTAssertEqual(saver.savedWorkoutNames, ["Test Strength"])
+        XCTAssertTrue(result.message.localizedCaseInsensitiveContains("pair"))
     }
 
-    func testHandoffEmptyWorkoutFailsFast() async {
+    func testHandoffEmptyWorkoutFailsFastWithoutSave() async {
         let empty = Workout(
-            name: "Empty",
-            sport: .strength,
-            duration: 0,
-            intervals: [],
-            source: .manual
+            name: "Empty", sport: .strength, duration: 0, intervals: [], source: .manual
         )
+        let saver = MockWorkoutKitSaver()
         let service = AppleStartHandoffService(
-            watchManager: WatchConnectivityManager(session: MockWatchSession()),
-            workoutKitSaver: MockWorkoutKitSaver()
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: saver
         )
-        let result = await service.handoff(workout: empty, watchReachable: false)
-
+        let result = await service.handoff(workout: empty)
         XCTAssertEqual(result.kind, .failed)
         XCTAssertTrue(result.message.localizedCaseInsensitiveContains("no steps"))
+        XCTAssertEqual(saver.saveCallCount, 0)
+    }
+
+    func testAuthorizationDeniedMapsToSettingsCopy() async {
+        let saver = MockWorkoutKitSaver()
+        saver.errorToThrow = WorkoutPlanError.authorizationDenied
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .confirmedPaired),
+            workoutKitSaver: saver
+        )
+        let result = await service.handoff(workout: sampleWorkout())
+        XCTAssertEqual(result.kind, .failed)
+        XCTAssertTrue(result.message.localizedCaseInsensitiveContains("permission denied"))
+        XCTAssertTrue(result.message.localizedCaseInsensitiveContains("Settings"))
+    }
+
+    func testNilWorkoutKitSaverIsBlockedIosUnsupported() async {
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: nil
+        )
+        let result = await service.handoff(workout: sampleWorkout())
+        XCTAssertEqual(result.kind, .blocked)
+        XCTAssertTrue(result.message.localizedCaseInsensitiveContains("iOS 18"))
     }
 
     func testForcedFailureEnvironment() async {
         setenv("UITEST_APPLE_TRY_FAIL", "authorization_denied", 1)
         defer { unsetenv("UITEST_APPLE_TRY_FAIL") }
-
         let service = AppleStartHandoffService(
-            watchManager: WatchConnectivityManager(session: MockWatchSession()),
+            pairingReader: MockPairingReader(read: .unknown),
             workoutKitSaver: MockWorkoutKitSaver()
         )
-        let result = await service.handoff(workout: sampleWorkout(), watchReachable: true)
-
+        let result = await service.handoff(workout: sampleWorkout())
         XCTAssertEqual(result.kind, .failed)
         XCTAssertTrue(result.message.localizedCaseInsensitiveContains("permission denied"))
     }
+}
+
+private struct MockPairingReader: AppleWatchPairingReading {
+    let read: AppleWatchPairingRead
+    func pairingReadForCopy() -> AppleWatchPairingRead { read }
 }
 
 @MainActor
@@ -245,9 +244,11 @@ final class WatchWorkoutSendOutcomeTests: XCTestCase {
 
 private final class MockWorkoutKitSaver: WorkoutKitSaving, @unchecked Sendable {
     private(set) var savedWorkoutNames: [String] = []
+    private(set) var saveCallCount = 0
     var errorToThrow: Error?
 
     func saveToWorkoutKit(_ workout: Workout) async throws {
+        saveCallCount += 1
         if let errorToThrow { throw errorToThrow }
         savedWorkoutNames.append(workout.name)
     }
