@@ -1,63 +1,89 @@
-# AMA-2287 — Apple Workout / Watch try (visual evidence + gaps)
+# AMA-2287 — WorkoutKit-primary gaps & device dogfood
 
-Secondary spike for Daily Driver Week 3. Garmin path (AMA-2286) unchanged.
+Secondary spike for Daily Driver Week 3. **Garmin path (AMA-2286) is unchanged.**
 
-## What we tested
+Design spec: [`docs/superpowers/specs/2026-07-26-apple-fitness-workoutkit-primary-design.md`](../superpowers/specs/2026-07-26-apple-fitness-workoutkit-primary-design.md)
 
-| Path | Trigger | Expected surface |
-|------|---------|------------------|
-| Watch reachable | Library → Start → Apple (Watch paired + reachable) | `sendWorkoutWithOutcome` → AmakaFlowWatch receives workout |
-| Watch unreachable | Same, Watch asleep / out of range | `WorkoutKitSync.save` → Apple Fitness / Workout app |
-| Blocked | iOS &lt; 18, Watch unreachable | Honest blocked status (no stub strings) |
+## Where to look
 
-## Code touched (reuse, not rebuild)
+The success surface is Apple’s native **Workout** app on **Apple Watch** (scheduled WorkoutKit plans appear in the upcoming list there).
 
-- `UnifiedWorkoutDetailView.beginAppleTryHandoff` → `AppleStartHandoffService`
-- `WatchConnectivityManager.sendWorkoutWithOutcome` (honest reply handling)
-- `WorkoutKitConverter` + `WorkoutKitSync` (existing package)
+**AmakaFlowWatch is not this path.** Do not use the AmakaFlowWatch workout list to validate AMA-2287. WatchConnectivity send to the companion app is out of scope for Start → Workout on Apple Watch.
 
-## Gaps note (acceptance: documented block)
+## Primary path
 
-### What works (unit + architecture)
+```
+Library → Start → Workout on Apple Watch
+        → AppleStartHandoffService.handoff(workout:)
+        → WorkoutKitConverter → WKPlanDTO
+        → WorkoutKitSync.save(dto, scheduleAt: nil → "now")
+        → native Workout app on Apple Watch
+```
 
-- Library → Start sheet → Apple device routes to `AppleStartHandoffService`.
-- Watch reachable: WCSession `receiveWorkout` with reply `status=received` → user sees **Sent to Apple Watch**.
-- Watch unreachable / send failure: automatic **WorkoutKit fallback** on iOS 18+ → **Saved to Apple Fitness**.
-- Status strings are actionable (pairing, permissions, empty workout) — no "stub" or issue-id suffixes.
-- `WorkoutKitConverter` maps sport types + interval shapes; golden tests already cover conversion smoke.
+- **Always WorkoutKit** — no WCSession-first routing, no `watchReachable` gate.
+- iOS 18+ required; blocked immediately on older iOS.
+- Status stays **pending** (`Scheduling in Workout…`) through conversion, authorization, and save.
+- Success copy is Watch-leading: *Scheduled in Workout — open the Workout app on your Apple Watch for "{name}".*
 
-### What does **not** work yet (dogfood blockers)
+Code touch points: `AppleStartHandoffService`, `WorkoutKitConverter`, `WorkoutKitSync` (existing package). Leave `WatchConnectivityManager` send paths and AmakaFlowWatch unchanged.
 
-1. **No auto-start in native Workout app** — push adds workout to AmakaFlowWatch list (`WatchWorkoutManager.addWorkout`) but does not launch Apple’s Workout/Fitness session. User must open AmakaFlowWatch or Fitness app manually.
-2. **Physical device required** — WorkoutKit + HealthKit authorization do not run in Simulator; dogfood needs paired iPhone (iOS 18+) + Watch (watchOS 11+).
-3. **WorkoutScheduler authorization** — first save triggers system permission; denial surfaces as recoverable copy but blocks save until user grants in Settings → Health.
-4. **Strength fidelity** — `WorkoutKitConverter` drops load/target parsing (TODO in converter); rep-based gym workouts may appear as generic steps in Fitness.
-5. **Unreachable Watch without iOS 18** — blocked with explicit message; no Lumiere/OpenClaw fallback in this spike.
-6. **Sync latency** — WorkoutKit schedule time is “now”; appearance in Watch Workout app depends on Apple sync (not observable from app code).
+## Schedule matrix (dogfood)
 
-### Missing API / capability (vs Garmin W2 bar)
+Default shipping behavior schedules at **now** (`scheduleAt: nil` → package minute-granularity “now”). That is a **hypothesis to validate on device**, not a guarantee the plan surfaces immediately on Watch.
 
-| Capability | Garmin (AMA-2286) | Apple try (AMA-2287) |
-|------------|-------------------|----------------------|
-| One-tap delivery status | CIQ queue + delivery state poll | WCSession reply only; no server-side delivery ledger |
-| Native player start | CIQ widget download → native player | Manual open AmakaFlowWatch or Fitness |
-| Offline queue | Backend `watch_delivery` | `transferUserInfo` exists but not wired for Start handoff |
-| Structured strength on device | FIT export | WorkoutKit custom plan; load/target not mapped |
+| Trial | `scheduleAt` | Purpose |
+| ----- | ------------ | ------- |
+| **A** | now (shipping default) | Does the plan appear in Watch Workout upcoming? How long until visible? |
+| **B** | now + 5–10 minutes | Control: if A no-shows and B works, promote a small future offset to the **shipping** default before Done |
 
-### Recommendation
+**Trial B must not ship enabled.** Use one of:
 
-- **Do not block Garmin W2** on Apple — keep Apple as opt-in “Try” on Start sheet.
-- **Next increment (if pursued):** wire `WatchWorkoutManager.startWorkout` after receive + deep link to Fitness scheduled plan; or supersede AMA-1375 Lumiere only if WorkoutKit path fails dogfood on device.
-- **Supersede AMA-1375?** Not yet — this spike proves plumbing + honest UX; Lumiere remains optional if WorkoutKit dogfood fails on strength workouts.
+1. **Preferred (when wired):** Xcode Debug scheme environment variable `AMA2287_SCHEDULE_OFFSET_MINUTES=10` (positive integer minutes). Release builds ignore this var; clear it before TestFlight or Release archives.
+2. **Local-only fallback:** temporary DEBUG-only change at the `WorkoutKitSync.save` call site in `WorkoutKitConverter.saveToWorkoutKit` — pass explicit future `scheduleAt` date components, revert before merge. Do not commit a permanent default offset.
 
-## Device evidence
+Record for each trial: appeared (Y/N), latency (rough), runnable (Y/N). If A fails and B succeeds, change the production `scheduleAt` default (not DEBUG-only) before calling the slice done.
 
-_Dogfood on physical iPhone + Watch required. Attach screenshots here after manual run:_
+## Duplicate scheduled plans (accepted gap)
 
-1. Start sheet → Apple → status line under detail actions
-2. AmakaFlowWatch workout list OR Fitness app scheduled workout
+Every Start schedules **another** WorkoutKit plan. There is no replace-by-workout-id; WorkoutKit also caps total scheduled plans. Multiple Starts on the same Library workout **accumulate** plans — expected this slice.
 
-Unit evidence: `AppleStartHandoffTests`, `WatchWorkoutSendOutcomeTests` (CI).
+**Follow-up:** track last scheduled plan per Library workout and remove/replace before re-scheduling.
+
+## Pairing copy
+
+Pairing is read-only for success messaging (`AppleWatchPairingRead` via WCSession):
+
+| Session state | Copy |
+| ------------- | ---- |
+| Paired, or pairing **unknown** / session **not activated** | Optimistic paired-style: open Workout on Watch |
+| **Confirmed unpaired** (`activationState == .activated` and `isPaired == false`) | Unpaired: pair a Watch to run "{name}" |
+
+Schedule still succeeds when unpaired; the phone has nowhere to open the plan yet.
+
+## Auth
+
+First save may present the system **WorkoutScheduler** permission sheet (`ensureAuthorization`). UI remains **pending** through the dialog. Denial maps to `WorkoutPlanError.authorizationDenied` → *Settings → Health → Data Access → AmakaFlow, allow Workouts.*
+
+WorkoutKit + HealthKit authorization do not run in Simulator; dogfood requires a physical iPhone (iOS 18+) and paired Watch (watchOS 11+).
+
+## Strength fidelity (known gap)
+
+`WorkoutKitConverter` maps sport types and interval shapes but **load/target parsing is still weak** (TODO in converter). Rep-based gym workouts may appear as generic steps in Apple’s player. Acceptable for this slice if the workout **shows up and is runnable** in native Workout.
+
+## Device evidence checklist
+
+Physical device required. Attach screenshots under this folder after manual runs.
+
+1. iPhone iOS 18+ and paired Watch; grant Workout permission when prompted (status pending through dialog).
+2. Library → workout → Start → **Workout on Apple Watch**.
+3. Status shows Watch-leading scheduled copy (not “Sent to Apple Watch”).
+4. **Schedule matrix:** run trial A (shipping default, now); run trial B with +5–10 min override (**DEBUG only — must not ship enabled**). Record appearance and latency for each.
+5. Open native **Workout** on Watch → plan appears in upcoming → start it.
+6. Optional: confirmed unpaired device → unpaired success copy; schedule still succeeds.
+7. Note duplicate accumulation after multiple Starts (expected).
+8. Save screenshots here: Start sheet status line + Watch Workout upcoming list (or blocker note if plan never appears).
+
+Unit evidence (CI): `AppleStartHandoffTests`, `WorkoutKitConverterTests`, `WatchWorkoutSendOutcomeTests` (unchanged WCSession tests).
 
 ## Garmin unaffected
 
