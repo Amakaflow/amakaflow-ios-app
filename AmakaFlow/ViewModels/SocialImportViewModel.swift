@@ -150,8 +150,17 @@ final class SocialImportViewModel: ObservableObject {
 
     /// After parse — always land on clarify (never silent structural commit).
     func enterClarify(for draft: SocialImportDraft) async {
-        let text = structureSuggestText(for: draft)
         let fallback = fallbackStructureExercises(from: draft)
+
+        // AMA-2326 I4: prefer ingest finalize blocks (EXPLICIT/SUGGESTED) over
+        // name-only structure/suggest, which strips caption headers/EMOM/AMRAP.
+        if let ingestSession = StructureClarifySession.fromIngestDraft(draft) {
+            clarifySession = ingestSession
+            phase = .clarify
+            return
+        }
+
+        let text = structureSuggestText(for: draft)
         do {
             let result = try await dependencies.apiService.suggestStructure(
                 text: text.isEmpty

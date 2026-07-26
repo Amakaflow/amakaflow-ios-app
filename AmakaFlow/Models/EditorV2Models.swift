@@ -89,6 +89,20 @@ enum EditorV2GroupType: String, CaseIterable, Equatable, Sendable {
         case .sets, .cooldown: return nil
         }
     }
+
+    /// Map ADR-017 clarify block types onto Editor v2 defaults (AMA-2326 chips).
+    static func from(structureBlock type: StructureBlockType) -> EditorV2GroupType? {
+        switch type.canonical {
+        case .superset: return .superset
+        case .circuit, .rounds: return .circuit
+        case .emom: return .emom
+        case .amrap: return .amrap
+        case .tabata: return .tabata
+        case .forTime, .fortime: return .fortime
+        case .warmup: return .warmup
+        case .sets, .regular: return nil
+        }
+    }
 }
 
 struct EditorV2GroupConfig: Equatable, Sendable {

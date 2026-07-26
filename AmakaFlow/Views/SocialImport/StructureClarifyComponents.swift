@@ -21,6 +21,10 @@ struct StructureClarifyGroupCard: View {
     }
 
     private var tagColor: Color {
+        // AMA-2326 — EXPLICIT uses a distinct face from SUGGESTED (amber) / confirmed (lime).
+        if group.structureSource == .explicit {
+            return DailyDriver.blue
+        }
         switch group.status {
         case .confirmed: return DailyDriver.lime
         case .pending:

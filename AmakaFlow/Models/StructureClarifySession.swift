@@ -155,12 +155,13 @@ struct StructureClarifyGroup: Equatable, Identifiable, Sendable {
     var provenanceTag: String {
         switch status {
         case .confirmed:
+            // Explicit groups land confirmed — keep EXPLICIT tag until user confirms inferred/note.
+            if structureSource == .explicit {
+                return structureSource.clarifyTag(typeLabel: type.displayLabel)
+            }
             return "\(type.displayLabel.uppercased()) ✓"
         case .pending:
-            if structureSource == .userNote {
-                return "FROM YOUR NOTE · \(type.displayLabel.uppercased())"
-            }
-            return "SUGGESTED · \(type.displayLabel.uppercased())"
+            return structureSource.clarifyTag(typeLabel: type.displayLabel)
         }
     }
 
@@ -177,10 +178,17 @@ struct StructureClarifyGroup: Equatable, Identifiable, Sendable {
 struct StructureClarifyRow: Equatable, Identifiable, Sendable {
     let id: UUID
     var exercise: StructureClarifyExercise
+    /// AMA-2326 — Undo on EXPLICIT dissolves to flat; save as `user_confirmed` (not unknown).
+    var saveAsUserConfirmedFlat: Bool
 
-    init(id: UUID = UUID(), exercise: StructureClarifyExercise) {
+    init(
+        id: UUID = UUID(),
+        exercise: StructureClarifyExercise,
+        saveAsUserConfirmedFlat: Bool = false
+    ) {
         self.id = id
         self.exercise = exercise
+        self.saveAsUserConfirmedFlat = saveAsUserConfirmedFlat
     }
 }
 
@@ -250,10 +258,19 @@ struct StructureClarifySession: Equatable, Sendable {
     }
 
     /// Undo / Ungroup — dissolve to flat rows (replace, never stack leftovers).
+    /// AMA-2326: Undo on EXPLICIT marks flats so save carries `user_confirmed`.
     mutating func undo(groupID: UUID) {
         units = units.flatMap { unit -> [StructureClarifyUnit] in
             guard case .group(let group) = unit, group.id == groupID else { return [unit] }
-            return group.exercises.map { .row(StructureClarifyRow(exercise: $0)) }
+            let markUserConfirmed = group.structureSource == .explicit
+            return group.exercises.map {
+                .row(
+                    StructureClarifyRow(
+                        exercise: $0,
+                        saveAsUserConfirmedFlat: markUserConfirmed
+                    )
+                )
+            }
         }
         selectedRowIDs = []
     }
@@ -283,19 +300,37 @@ struct StructureClarifySession: Equatable, Sendable {
         selectedRowIDs = []
     }
 
-    /// Chip bar — group 2+ selected flat rows as a confirmed structure.
-    mutating func groupSelected(as type: StructureBlockType) {
+    /// Chip bar — group selected flat rows as a confirmed structure.
+    /// Format chips need ≥2; soft sections (warm-up / cool-down / Section…) allow 1+.
+    mutating func groupSelected(
+        as type: StructureBlockType,
+        label: String? = nil,
+        allowSingle: Bool = false
+    ) {
         let selected = units.compactMap { unit -> StructureClarifyRow? in
             guard case .row(let row) = unit, selectedRowIDs.contains(row.id) else { return nil }
             return row
         }
-        guard selected.count >= 2 else { return }
+        let soft = allowSingle || Self.isSoftSection(type)
+        guard selected.count >= (soft ? 1 : 2) else { return }
+
+        let defaults = EditorV2GroupType.from(structureBlock: type)?.defaultConfig
+        let trimmedLabel = label?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedLabel: String = {
+            if let trimmedLabel, !trimmedLabel.isEmpty {
+                return String(trimmedLabel.prefix(40))
+            }
+            if soft {
+                return type.canonical == .warmup ? "Warm-up" : "Section"
+            }
+            return selected.map(\.exercise.name).joined(separator: " + ")
+        }()
 
         let group = StructureClarifyGroup(
-            type: type,
-            label: selected.map(\.exercise.name).joined(separator: " + "),
-            rounds: type.canonical == .superset ? 3 : 4,
-            restSec: type.canonical == .superset ? 60 : nil,
+            type: type.canonical,
+            label: resolvedLabel,
+            rounds: defaults?.rounds ?? (type.canonical == .superset ? 3 : 4),
+            restSec: defaults?.restSeconds ?? (type.canonical == .superset ? 60 : nil),
             exercises: selected.map(\.exercise),
             status: .confirmed,
             structureSource: .userConfirmed
@@ -315,6 +350,16 @@ struct StructureClarifySession: Equatable, Sendable {
         }
         units = out
         selectedRowIDs = []
+    }
+
+    /// Soft section chips (Warm-up / Cool-down / Section…) — single exercise OK.
+    static func isSoftSection(_ type: StructureBlockType) -> Bool {
+        switch type.canonical {
+        case .warmup, .sets, .regular:
+            return true
+        default:
+            return false
+        }
     }
 
     /// Replace session from apply-structure result (idempotent — never stacks).
@@ -369,7 +414,7 @@ struct StructureClarifySession: Equatable, Sendable {
                         rounds: nil,
                         restSec: row.exercise.restSec,
                         exercises: [row.exercise.toModel()],
-                        structureSource: .unknown
+                        structureSource: row.saveAsUserConfirmedFlat ? .userConfirmed : .unknown
                     )
                 )
             }

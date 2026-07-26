@@ -106,6 +106,71 @@ extension StructureClarifySession {
         StructureClarifySession(units: units(fromBlocks: blocks, pendingSourceOverride: nil))
     }
 
+    /// AMA-2326 I4 — land ingest draft blocks when they already carry structure.
+    /// Returns nil when blocks are a single unlabeled flat list (fall back to suggest).
+    static func fromIngestDraft(_ draft: SocialImportDraft) -> StructureClarifySession? {
+        let models = draft.blocks.compactMap(Self.structureBlock(from:))
+        guard !models.isEmpty else { return nil }
+
+        let hasProvenance = models.contains {
+            $0.structureSource == .inferred
+                || $0.structureSource == .explicit
+                || $0.structureSource == .userConfirmed
+                || $0.structureSource == .userNote
+        }
+        let hasTypedStructure = models.contains {
+            $0.type.canonical != .sets && $0.type.canonical != .regular
+        }
+        let hasMultiExerciseGroup = models.contains { $0.exercises.count >= 2 }
+        guard hasProvenance || hasTypedStructure || (hasMultiExerciseGroup && models.count > 1) else {
+            return nil
+        }
+
+        return StructureClarifySession(units: units(fromBlocks: models, pendingSourceOverride: nil))
+    }
+
+    private static func structureBlock(from block: SocialImportBlock) -> StructureBlockModel? {
+        let exercises = block.exercises.map { exercise in
+            StructureExerciseModel(
+                name: exercise.name,
+                sets: exercise.sets,
+                reps: exercise.reps,
+                restSec: exercise.restSeconds,
+                distanceM: exercise.distanceMeters,
+                notes: exercise.detailInstruction ?? exercise.notes
+            )
+        }
+        guard !exercises.isEmpty else { return nil }
+
+        let rawType = (block.type ?? "sets").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let type: StructureBlockType = {
+            switch rawType {
+            case "for_time", "for-time": return .forTime
+            case "cool-down", "cooldown", "cool_down": return .sets
+            default: return StructureBlockType(rawValue: rawType) ?? .sets
+            }
+        }()
+        let sourceRaw = block.structureSource?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        let source = sourceRaw.flatMap(StructureSource.init(rawValue:)) ?? .unknown
+        let label: String? = {
+            if rawType == "cool-down" || rawType == "cooldown" || rawType == "cool_down" {
+                return block.label ?? "Cool Down"
+            }
+            return block.label
+        }()
+
+        return StructureBlockModel(
+            type: type,
+            label: label,
+            rounds: block.rounds,
+            restSec: block.restSec,
+            exercises: exercises,
+            structureSource: source
+        )
+    }
+
     static func units(
         fromBlocks blocks: [StructureBlockModel],
         pendingSourceOverride: StructureSource?
@@ -127,6 +192,7 @@ extension StructureClarifySession {
             let source = pendingSourceOverride ?? block.structureSource
             let isFlatSets = block.type.canonical == .sets && exercises.count == 1
                 && (source == .unknown || source == .userConfirmed)
+                && (block.label == nil || block.label?.isEmpty == true)
 
             if isFlatSets && source != .userNote {
                 return exercises.map { .row(StructureClarifyRow(exercise: $0)) }
@@ -134,9 +200,10 @@ extension StructureClarifySession {
 
             let status: StructureClarifyStatus = {
                 switch source {
-                case .userConfirmed:
+                case .userConfirmed, .explicit:
+                    // AMA-2326 — EXPLICIT ships committed by default (Confirm optional).
                     return .confirmed
-                case .userNote, .inferred, .explicit, .unknown:
+                case .userNote, .inferred, .unknown:
                     return .pending
                 }
             }()

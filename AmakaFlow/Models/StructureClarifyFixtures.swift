@@ -145,4 +145,97 @@ enum StructureClarifyFixtures {
         // swiftlint:disable:next force_try
         try! StructureJSON.encoder.encode(ApplyStructureResult(blocks: dmqNoteAppliedBlocks))
     }
+
+    // MARK: - AMA-2326 / DNL3lR3IyFo (staging finalize shape)
+
+    /// Canned ingest blocks for reel DNL3lR3IyFo — Warm-up (inferred rounds),
+    /// Strength superset (explicit), Accessory AMRAP, HYROX EMOM, Cool Down.
+    static var dnlIngestBlocks: [StructureBlockModel] {
+        [
+            StructureBlockModel(
+                type: .warmup,
+                label: "Warm-Up",
+                rounds: 3,
+                exercises: [
+                    .init(name: "SkiErg", distanceM: 250),
+                    .init(name: "World's Greatest Stretch", reps: 5),
+                    .init(name: "Inchworm to Push-Up", reps: 5)
+                ],
+                structureSource: .inferred
+            ),
+            StructureBlockModel(
+                type: .superset,
+                label: "Strength",
+                rounds: 4,
+                restSec: 90,
+                exercises: [
+                    .init(name: "Back Squat", reps: 6),
+                    .init(name: "Romanian Deadlift", reps: 8)
+                ],
+                structureSource: .explicit
+            ),
+            StructureBlockModel(
+                type: .amrap,
+                label: "Accessory",
+                rounds: 1,
+                exercises: [
+                    .init(name: "Walking Lunge", reps: 10),
+                    .init(name: "Push-Up", reps: 12),
+                    .init(name: "Hollow Hold", notes: "30s")
+                ],
+                structureSource: .explicit
+            ),
+            StructureBlockModel(
+                type: .emom,
+                label: "HYROX Finisher",
+                rounds: 10,
+                exercises: [
+                    .init(name: "SkiErg", distanceM: 150),
+                    .init(name: "Burpee Broad Jump", reps: 5)
+                ],
+                structureSource: .explicit
+            ),
+            StructureBlockModel(
+                type: .sets,
+                label: "Cool Down",
+                rounds: 1,
+                exercises: [
+                    .init(name: "Couch Stretch", notes: "60s/side"),
+                    .init(name: "Child's Pose", notes: "60s")
+                ],
+                structureSource: .inferred
+            )
+        ]
+    }
+
+    static var dnlIngestDraft: SocialImportDraft {
+        let socialBlocks: [SocialImportBlock] = dnlIngestBlocks.map { block in
+            SocialImportBlock(
+                label: block.label,
+                rounds: block.rounds ?? 1,
+                exercises: block.exercises.map {
+                    SocialImportExercise(
+                        name: $0.name,
+                        sets: $0.sets,
+                        reps: $0.reps,
+                        distanceMeters: $0.distanceM,
+                        notes: $0.notes
+                    )
+                },
+                type: block.type.rawValue,
+                restSec: block.restSec,
+                structureSource: block.structureSource.rawValue
+            )
+        }
+        return SocialImportDraft(
+            title: "DNL HYROX Strength",
+            sport: "strength",
+            platform: .instagram,
+            sourceURL: "https://www.instagram.com/reels/DNL3lR3IyFo/",
+            exercises: socialBlocks.flatMap(\.exercises),
+            blocks: socialBlocks,
+            equipmentNote: nil,
+            equipmentEmpty: true
+        )
+    }
 }

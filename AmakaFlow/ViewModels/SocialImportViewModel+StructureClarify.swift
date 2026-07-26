@@ -44,9 +44,13 @@ extension SocialImportViewModel {
         clarifySession = session
     }
 
-    func groupClarifySelection(as type: StructureBlockType) {
+    func groupClarifySelection(
+        as type: StructureBlockType,
+        label: String? = nil,
+        allowSingle: Bool = false
+    ) {
         guard var session = clarifySession else { return }
-        session.groupSelected(as: type)
+        session.groupSelected(as: type, label: label, allowSingle: allowSingle)
         clarifySession = session
     }
 
