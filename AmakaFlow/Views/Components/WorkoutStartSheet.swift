@@ -187,9 +187,11 @@ struct WorkoutStartSheet: View {
                 icon: "applewatch",
                 iconBackground: defaultDevice == .apple ? DailyDriver.lime : DailyDriver.card2,
                 iconForeground: defaultDevice == .apple ? DailyDriver.ink : .white,
-                title: "Apple Watch",
-                subtitle: appleWatchReachable ? "Reachable now" : "Try — Watch optional",
-                tag: defaultDevice == .apple ? "DEFAULT · \(sportTag)" : "TRY"
+                title: WorkoutStartDevice.apple.title,
+                subtitle: WorkoutStartDevice.apple.subtitle,
+                tag: defaultDevice == .apple
+                    ? "DEFAULT · \(sportTag)"
+                    : WorkoutStartDefaults.appleAvailabilityLabel(watchReachable: appleWatchReachable)
             )
 
             deviceRow(

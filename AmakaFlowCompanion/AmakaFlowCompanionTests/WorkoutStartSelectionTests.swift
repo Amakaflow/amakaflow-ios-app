@@ -37,19 +37,30 @@ final class WorkoutStartSelectionTests: XCTestCase {
     }
 
     func testAppleIsNeverSilentDefault() {
-        // Even when Watch is reachable, unpaired Garmin still defaults to Phone.
-        // Apple remains a labeled "try" path on the sheet.
-        XCTAssertEqual(
-            WorkoutStartDefaults.preferredDevice(garminPaired: false),
-            .phone
-        )
+        // Apple remains a secondary path on the sheet, never the silent default,
+        // regardless of Garmin pairing.
+        for garminPaired in [true, false] {
+            XCTAssertNotEqual(
+                WorkoutStartDefaults.preferredDevice(garminPaired: garminPaired),
+                .apple
+            )
+        }
+    }
+
+    func testAppleDeviceLabelIsWorkoutOnAppleWatch() {
+        XCTAssertEqual(WorkoutStartDevice.apple.title, "Workout on Apple Watch")
+        XCTAssertFalse(WorkoutStartDevice.apple.subtitle.localizedCaseInsensitiveContains("AMA-2287"))
+        XCTAssertFalse(WorkoutStartDevice.apple.subtitle.localizedCaseInsensitiveContains("Fitness"))
+    }
+
+    func testAppleAvailabilityLabelDoesNotDependOnReachability() {
         XCTAssertEqual(
             WorkoutStartDefaults.appleAvailabilityLabel(watchReachable: true),
-            "Try"
-        )
-        XCTAssertTrue(
             WorkoutStartDefaults.appleAvailabilityLabel(watchReachable: false)
-                .localizedCaseInsensitiveContains("try")
+        )
+        XCTAssertFalse(
+            WorkoutStartDefaults.appleAvailabilityLabel(watchReachable: false)
+                .localizedCaseInsensitiveContains("not reachable")
         )
     }
 

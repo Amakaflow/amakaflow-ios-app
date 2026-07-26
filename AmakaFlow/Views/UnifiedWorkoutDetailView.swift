@@ -27,6 +27,8 @@ struct UnifiedWorkoutDetailView: View {
     /// AMA-2317: true while the CIQ open request is handing off to Garmin Connect.
     @State private var isOpeningGarmin = false
     @State private var showsHandoffNextSteps = false
+    /// Prevents overlapping Apple WorkoutKit schedules if Start is confirmed again mid-handoff.
+    @State private var isAppleHandoffInFlight = false
     @State private var isSavingImport = false
     @State private var showingDeleteConfirm = false
     @State private var isDeleting = false
@@ -877,14 +879,13 @@ extension UnifiedWorkoutDetailView {
     }
 
     fileprivate func beginAppleTryHandoff() {
-        handoffStatus = appleWatchReachable
-            ? "Sending to Apple Watch…"
-            : "Saving to Apple Fitness…"
+        guard !isAppleHandoffInFlight else { return }
+        isAppleHandoffInFlight = true
+        showsHandoffNextSteps = false
+        handoffStatus = "Scheduling in Workout…"
         Task {
-            let result = await AppleStartHandoffService().handoff(
-                workout: workout,
-                watchReachable: appleWatchReachable
-            )
+            defer { isAppleHandoffInFlight = false }
+            let result = await AppleStartHandoffService().handoff(workout: workout)
             handoffStatus = result.message
         }
     }

@@ -18,7 +18,7 @@ enum WorkoutStartDevice: String, CaseIterable, Identifiable, Equatable {
     var title: String {
         switch self {
         case .garmin: return "Garmin"
-        case .apple: return "Apple"
+        case .apple: return "Workout on Apple Watch"
         case .phone: return "Phone"
         }
     }
@@ -26,7 +26,7 @@ enum WorkoutStartDevice: String, CaseIterable, Identifiable, Equatable {
     var subtitle: String {
         switch self {
         case .garmin: return "Primary — one-tap CIQ push"
-        case .apple: return "Try — Watch / WorkoutKit (AMA-2287)"
+        case .apple: return "Native Workout app via WorkoutKit"
         case .phone: return "Record on phone — Watch optional"
         }
     }
@@ -89,7 +89,7 @@ enum WorkoutStartGarminRowMode: Equatable {
 
 /// Pure Start-sheet defaults — unit-tested without UI.
 enum WorkoutStartDefaults {
-    /// Garmin is primary when paired; otherwise Phone. Apple is secondary ("try"), never the silent default.
+    /// Garmin is primary when paired; otherwise Phone. Apple is secondary, never the silent default.
     static func preferredDevice(garminPaired: Bool) -> WorkoutStartDevice {
         garminPaired ? .garmin : .phone
     }
@@ -99,15 +99,15 @@ enum WorkoutStartDefaults {
         garminPaired ? .push : .needsPairing
     }
 
-    /// Apple Stay available as try even when Watch is unreachable; callers may disable the row.
+    /// Apple Stay available even when Watch is unreachable; label does not gate handoff.
     static func isAppleEnabled(watchReachable: Bool) -> Bool {
-        // Proto: always offer the try path; label/disabled state handled in the sheet.
         _ = watchReachable
         return true
     }
 
     static func appleAvailabilityLabel(watchReachable: Bool) -> String {
-        watchReachable ? "Try" : "Try — Watch not reachable"
+        _ = watchReachable
+        return "Schedule"
     }
 }
 
@@ -115,7 +115,7 @@ enum WorkoutStartDefaults {
 enum WorkoutStartHandoff: Equatable {
     /// AMA-2286: Garmin one-tap push — wire existing push entry when present.
     case garmin
-    /// AMA-2287: Apple Workout / Watch try — sendToWatch / WorkoutKit when present.
+    /// AMA-2287: Apple Workout / Watch — WorkoutKit schedule when present.
     case apple
     /// AMA-2290: strength phone player — use WorkoutEngine + WorkoutPlayerView when present.
     case phone

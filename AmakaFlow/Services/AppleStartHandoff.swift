@@ -2,10 +2,11 @@
 //  AppleStartHandoff.swift
 //  AmakaFlow
 //
-//  AMA-2287: Library → Start → Apple try — WatchConnectivity + WorkoutKit fallback.
+//  AMA-2287: WorkoutKit-primary Start → Workout on Apple Watch.
 //
 
 import Foundation
+import WatchConnectivity
 import WorkoutKitSync
 
 /// Outcome of Start → Apple for in-app status copy (seconds, not minutes).
@@ -36,6 +37,23 @@ enum AppleStartHandoffFailureCode: String, Equatable {
     case unknown = "unknown"
 }
 
+enum AppleWatchPairingRead: Equatable {
+    case confirmedPaired
+    case confirmedUnpaired
+    case unknown
+
+    /// Optimistic: unknown / not activated → paired-style copy. Unpaired only when activated and not paired.
+    static func resolve(from session: (any WatchSessionProviding)?) -> AppleWatchPairingRead {
+        guard let session else { return .unknown }
+        guard session.activationState == .activated else { return .unknown }
+        return session.isPaired ? .confirmedPaired : .confirmedUnpaired
+    }
+}
+
+protocol AppleWatchPairingReading: Sendable {
+    func pairingReadForCopy() -> AppleWatchPairingRead
+}
+
 /// Pure mapping for unit tests — keep recoverable copy ≤ a few seconds to read.
 enum AppleStartHandoffCopy {
     private static let failureMessages: [AppleStartHandoffFailureCode: String] = [
@@ -44,8 +62,8 @@ enum AppleStartHandoffCopy {
         .sessionNotAvailable: "Watch connectivity unavailable — restart both apps and try again.",
         .encodingFailed: "Could not encode workout for Watch — edit structure and retry.",
         .watchDecodeFailed: "Watch could not read workout — simplify intervals and retry.",
-        .authorizationDenied: "Apple Fitness permission denied — Settings → Health → Data Access → AmakaFlow, allow Workouts.",
-        .iosVersionUnsupported: "Requires iOS 18 for Apple Fitness save — update iPhone or send while Watch is reachable.",
+        .authorizationDenied: "Workout permission denied — Settings → Health → Data Access → AmakaFlow, allow Workouts.",
+        .iosVersionUnsupported: "Requires iOS 18 to schedule in the Workout app — update iPhone and retry.",
         .emptyWorkout: "Workout has no steps — add exercises or intervals in Edit, then retry."
     ]
 
@@ -94,10 +112,25 @@ enum AppleStartHandoffCopy {
     }
 
     static func savedToFitnessMessage(workoutName: String) -> AppleStartHandoffResult {
-        AppleStartHandoffResult(
-            kind: .savedToFitness,
-            message: "Saved to Apple Fitness — open Workout app on iPhone or Watch for \"\(workoutName)\"."
-        )
+        scheduledInWorkoutMessage(workoutName: workoutName, pairing: .unknown)
+    }
+
+    static func scheduledInWorkoutMessage(
+        workoutName: String,
+        pairing: AppleWatchPairingRead
+    ) -> AppleStartHandoffResult {
+        switch pairing {
+        case .confirmedUnpaired:
+            return AppleStartHandoffResult(
+                kind: .savedToFitness,
+                message: "Scheduled in Workout — pair an Apple Watch to run \"\(workoutName)\"."
+            )
+        case .confirmedPaired, .unknown:
+            return AppleStartHandoffResult(
+                kind: .savedToFitness,
+                message: "Scheduled in Workout — open the Workout app on your Apple Watch for \"\(workoutName)\"."
+            )
+        }
     }
 
     static func failureCode(from watchError: WatchConnectivityError) -> AppleStartHandoffFailureCode {
@@ -152,22 +185,46 @@ struct LiveWorkoutKitSaver: WorkoutKitSaving {
     }
 }
 
-/// Coordinates Watch send + WorkoutKit fallback for Start → Apple try.
+struct LiveAppleWatchPairingReader: AppleWatchPairingReading {
+    func pairingReadForCopy() -> AppleWatchPairingRead {
+        guard WCSession.isSupported() else { return .unknown }
+        return AppleWatchPairingRead.resolve(from: LiveWatchSession.shared)
+    }
+}
+
+/// How `AppleStartHandoffService` obtains a WorkoutKit saver — avoids nested-optional ambiguity.
+enum WorkoutKitSaverOverride {
+    /// Use `LiveWorkoutKitSaver` on iOS 18+; otherwise no saver (blocked).
+    case automatic
+    /// Inject a test/production double.
+    case injected(any WorkoutKitSaving)
+    /// Force no saver (blocked / iOS-unsupported path in tests).
+    case disabled
+}
+
+/// Coordinates WorkoutKit save for Start → Apple try.
 @MainActor
 final class AppleStartHandoffService {
-    private let watchManager: WatchConnectivityManager
+    private let pairingReader: any AppleWatchPairingReading
     private let workoutKitSaver: (any WorkoutKitSaving)?
     private let forceFailureCode: (() -> AppleStartHandoffFailureCode?)?
 
     init(
-        watchManager: WatchConnectivityManager = .shared,
-        workoutKitSaver: (any WorkoutKitSaving)? = nil,
+        pairingReader: any AppleWatchPairingReading = LiveAppleWatchPairingReader(),
+        workoutKitSaver: WorkoutKitSaverOverride = .automatic,
         forceFailureCode: (() -> AppleStartHandoffFailureCode?)? = nil
     ) {
-        self.watchManager = watchManager
-        if #available(iOS 18.0, *) {
-            self.workoutKitSaver = workoutKitSaver ?? LiveWorkoutKitSaver()
-        } else {
+        self.pairingReader = pairingReader
+        switch workoutKitSaver {
+        case .injected(let saver):
+            self.workoutKitSaver = saver
+        case .automatic:
+            if #available(iOS 18.0, *) {
+                self.workoutKitSaver = LiveWorkoutKitSaver()
+            } else {
+                self.workoutKitSaver = nil
+            }
+        case .disabled:
             self.workoutKitSaver = nil
         }
         self.forceFailureCode = forceFailureCode ?? {
@@ -182,7 +239,7 @@ final class AppleStartHandoffService {
         }
     }
 
-    func handoff(workout: Workout, watchReachable: Bool) async -> AppleStartHandoffResult {
+    func handoff(workout: Workout) async -> AppleStartHandoffResult {
         if let forced = forceFailureCode?() {
             return AppleStartHandoffResult(
                 kind: .failed,
@@ -197,68 +254,26 @@ final class AppleStartHandoffService {
             )
         }
 
-        if watchReachable {
-            let sendOutcome = await watchManager.sendWorkoutWithOutcome(workout)
-            switch sendOutcome {
-            case .sent:
-                return AppleStartHandoffCopy.sentToWatchMessage(workoutName: workout.name)
-            case .watchRejected(let reason):
-                if let fitness = await saveToFitnessFallback(workout: workout, priorFailure: .watchDecodeFailed, detail: reason) {
-                    return fitness
-                }
-                return AppleStartHandoffResult(
-                    kind: .failed,
-                    message: AppleStartHandoffCopy.failureMessage(code: .watchDecodeFailed, detail: reason)
-                )
-            case .failed(let error):
-                if let fitness = await saveToFitnessFallback(workout: workout, priorFailure: AppleStartHandoffCopy.failureCode(from: error), detail: error.localizedDescription) {
-                    return fitness
-                }
-                return AppleStartHandoffResult(
-                    kind: .failed,
-                    message: AppleStartHandoffCopy.failureMessage(
-                        code: AppleStartHandoffCopy.failureCode(from: error),
-                        detail: error.localizedDescription
-                    )
-                )
-            }
-        }
-
-        if let fitness = await saveToFitnessFallback(workout: workout, priorFailure: .watchNotReachable, detail: nil) {
-            return fitness
-        }
-
-        if #available(iOS 18.0, *) {
+        guard let workoutKitSaver else {
             return AppleStartHandoffResult(
-                kind: .failed,
-                message: AppleStartHandoffCopy.failureMessage(code: .watchNotReachable)
+                kind: .blocked,
+                message: AppleStartHandoffCopy.failureMessage(code: .iosVersionUnsupported)
             )
         }
 
-        return AppleStartHandoffResult(
-            kind: .blocked,
-            message: AppleStartHandoffCopy.failureMessage(code: .iosVersionUnsupported)
-        )
-    }
-
-    private func saveToFitnessFallback(
-        workout: Workout,
-        priorFailure: AppleStartHandoffFailureCode,
-        detail: String?
-    ) async -> AppleStartHandoffResult? {
-        guard #available(iOS 18.0, *), let workoutKitSaver else { return nil }
         do {
             try await workoutKitSaver.saveToWorkoutKit(workout)
-            return AppleStartHandoffCopy.savedToFitnessMessage(workoutName: workout.name)
+            return AppleStartHandoffCopy.scheduledInWorkoutMessage(
+                workoutName: workout.name,
+                pairing: pairingReader.pairingReadForCopy()
+            )
         } catch {
             let code = AppleStartHandoffCopy.failureCode(from: error)
-            // Surface the primary blocker when fallback also fails.
-            let primary = priorFailure == .watchNotReachable ? priorFailure : code
             return AppleStartHandoffResult(
                 kind: .failed,
                 message: AppleStartHandoffCopy.failureMessage(
-                    code: primary,
-                    detail: detail ?? error.localizedDescription
+                    code: code,
+                    detail: error.localizedDescription
                 )
             )
         }
