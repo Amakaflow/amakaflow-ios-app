@@ -245,6 +245,7 @@ final class WatchWorkoutSendOutcomeTests: XCTestCase {
 
 private final class MockWorkoutKitSaver: WorkoutKitSaving, @unchecked Sendable {
     private(set) var savedWorkoutNames: [String] = []
+    /// Attempts, incremented before any throw — tests assert 0 to prove fail-fast.
     private(set) var saveCallCount = 0
     var errorToThrow: Error?
 

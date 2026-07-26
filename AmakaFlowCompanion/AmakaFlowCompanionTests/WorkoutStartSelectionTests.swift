@@ -37,12 +37,14 @@ final class WorkoutStartSelectionTests: XCTestCase {
     }
 
     func testAppleIsNeverSilentDefault() {
-        // Even when Watch is reachable, unpaired Garmin still defaults to Phone.
-        // Apple remains a secondary path on the sheet, never the silent default.
-        XCTAssertEqual(
-            WorkoutStartDefaults.preferredDevice(garminPaired: false),
-            .phone
-        )
+        // Apple remains a secondary path on the sheet, never the silent default,
+        // regardless of Garmin pairing.
+        for garminPaired in [true, false] {
+            XCTAssertNotEqual(
+                WorkoutStartDefaults.preferredDevice(garminPaired: garminPaired),
+                .apple
+            )
+        }
     }
 
     func testAppleDeviceLabelIsWorkoutOnAppleWatch() {
