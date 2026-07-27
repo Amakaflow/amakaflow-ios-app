@@ -2,8 +2,9 @@
 
 **Date:** 2026-07-26  
 **Parent:** AMA-2287 (WorkoutKit-primary handoff)  
-**Status:** Approved for planning (revised after WWDC24 / WorkoutKit review)  
-**Repos:** `amakaflow-ios-app`, `workoutkit-sync`
+**Status:** Locked for implementation  
+**Repos:** `amakaflow-ios-app`, `workoutkit-sync`  
+**Related:** [AMA-2329](https://linear.app/amakaflow/issue/AMA-2329) — WorkoutComposition export / AirDrop (non-goal here)
 
 ## Problem
 
@@ -19,127 +20,103 @@ Duplicates / findability are **out of scope** for this slice (next follow-up).
 
 `WorkoutGoal` supports only: `open`, `time`, `distance`, `energy`, and swim variants. There is **no reps goal** and no native “3 × 8” rendering as of watchOS 11 / WWDC24. Strength work steps will still show subtitle **Open**.
 
-WWDC24 (“Build custom swimming workouts with WorkoutKit”) documents `WorkoutStep.displayName` (watchOS 11+) for exactly this use case: exercise types, weights, reps, RPE. Fidelity therefore comes from:
+WWDC24 documents `WorkoutStep.displayName` (watchOS 11+) for exercise types, weights, reps, RPE. Fidelity comes from:
 
 - `IntervalBlock.iterations` = set count  
 - `displayName` carrying compact reps (and load when available)
 
-The Watch **step detail** UI also shows the **upcoming** step’s `displayName` while the current step is active — that preview row truncates earlier than the main card. Design titles for glanceability there.
+The Watch **step detail** UI also shows the **upcoming** step’s `displayName` while the current step is active — that preview row truncates earlier than the main card.
 
 ## Success criteria
 
 | Check | Pass looks like |
 | --- | --- |
 | Sets | A 3-set exercise → one `IntervalBlock` with `iterations == 3` (work + optional recovery **per iteration**) |
-| Reps in title | Preview shows e.g. `Pull-Ups · 8 reps` (not bare name + Open only) |
-| Load | Non-empty load appears in compact form (e.g. `Pull-Ups · 25lb · 8 reps`) |
-| Rest | `restSec` nil or ≤ 0 → **no** recovery `IntervalStep` (no empty/0s recovery card) |
+| Reps in title | Preview shows e.g. `Pull-Ups · 8 reps` |
+| Load | Numeric+unit loads compact (`25 lb` → `25lb`); phrase loads like `body weight` stay unmangled |
+| Rest | `restSec` nil or ≤ 0 → **no** recovery `IntervalStep` |
 | Non-reps | Time / distance / warmup / cooldown / existing `.repeat` unchanged |
 | Goal | Reps steps remain `.open` |
-| Location | Strength `CustomWorkout` keeps **omitted** location (user picks indoor/outdoor at start) — do not force `.indoor` |
-| Validation | Malformed structure (`iterations < 1`, empty block steps) fails **before** `WorkoutScheduler.schedule` with a typed error |
+| Location | Strength `CustomWorkout(activity:)` — do not force indoor/outdoor |
+| Validation | Malformed structure fails **before** `schedule` with `WorkoutPlanConversionError` |
 
 ## Approach (chosen)
 
 **Split conversion:**
 
-1. **`WorkoutKitConverter` (iOS)** — stop discarding `sets` on `.reps`. Emit `.repeatSet(reps: setCount, intervals: [step])` with `setCount = max(sets ?? 1, 1)` (never 0). Step keeps exercise base `name`, `reps`, `restSec`; load folded into `name` in **compact** form (see Load). Do not emit a recovery-bearing DTO when rest is nil/≤0 (leave `restSec` nil).
-2. **`WorkoutPlanConverter` (`workoutkit-sync`)** — build work-step `displayName` when `step.reps` is non-nil:
+1. **`WorkoutKitConverter` (iOS)** — emit `.repeatSet(reps: setCount, intervals: [step])` with `setCount = max(sets ?? 1, 1)`. When `sets == 0` (or `< 1`), log a **warning** then clamp. Compact-fold load into `name` (see Load). Leave `restSec` nil when rest is nil/≤0.
+2. **`WorkoutPlanConverter` (`workoutkit-sync`)** — build `displayName` when `step.reps != nil`: `"{baseName} · {reps} reps"` (fallback base `"Exercise"`). Gate **at the assignment site** inside `makeWorkoutStep` via `#available(iOS 18.0, watchOS 11.0, *)` (already the helper — keep it; do not set `displayName` on any other code path without the same gate). Recovery only if `restSec > 0`.
+3. **Typed validation** — before building / scheduling, throw:
 
-   `"{baseName} · {reps} reps"`  
+```swift
+public enum WorkoutPlanConversionError: Error, LocalizedError, Sendable {
+    case zeroIterations(exerciseName: String?)
+    case emptyBlockSteps(exerciseName: String?)
+}
+```
 
-   If `name` is nil/empty → `"Exercise · {reps} reps"`. Keep existing `#available(iOS 18.0, watchOS 11.0, *)` gate on every `displayName` assignment (property does not exist meaningfully for older OS; package already targets iOS 18 / watchOS 11). Do not change `makeGoal` for reps (still `.open` when no seconds/meters). Recovery only if `restSec > 0` (already the package pattern — treat as a hard requirement; add a regression test).
-3. **Structure validation** — before schedule, reject `repeatSet` with `reps < 1` or empty interval steps. Map to a typed package / conversion error.  
-   **Note:** Current iOS 26 SDK `CustomWorkout` / `WorkoutPlan` inits are **non-throwing** (no `CustomWorkoutComposition` / `WorkoutCompositionError` in the shipped interface). Do **not** invent a throwing composition API; validate in our converters. Revisit if Apple reintroduces composition validators.
-4. **Pin bump** — tag `workoutkit-sync` release (semver tag, e.g. `1.x.y`, not bare SHA), bump SPM pin in `amakaflow-ios-app`, land converter + tests.
+   Do **not** invent removed `CustomWorkoutComposition` / `WorkoutCompositionError` APIs.
+4. **Pin bump** — tag `workoutkit-sync` semver (e.g. `1.4.0`), bump SPM in app to that **tag**.
 
-## Load & title length
+## Load compacting
 
-| Source | Behavior this slice |
+| Input | Output in DTO `name` prefix |
 | --- | --- |
-| `load: String?` | If non-empty, iOS compact-folds into DTO `name`: strip spaces in the load token (`"25 lb"` → `"25lb"`), then `"\(name) · \(compactLoad)"` |
-| `convertLoad` | Unchanged stub (`nil`) — no unit parser |
-| Package | Appends ` · {reps} reps` only; does not re-parse load |
+| Matches `#^\d+\s+[A-Za-z%]+$#` (e.g. `25 lb`, `135 lbs`) | Strip spaces → `25lb`, then `"\(exercise) · \(compact)"` |
+| Already compact (`25lb`) | Unchanged token |
+| Phrase / other (`body weight`, `RPE 7`) | **Do not** strip spaces — `"\(exercise) · \(load)"` as-is |
 
-**Length targets (dogfood):**
+Package then appends ` · {reps} reps` when `step.reps != nil`.
 
-- Prefer **≤ ~30 characters** total `displayName` when practical (upcoming-step preview truncates sooner, ~24 visible).
-- Prefer short exercise names in fixtures used for Watch truncation checks.
-- Never put set count in the title (sets = `iterations` only).
+## Dogfood truncation fixtures
 
-Example: `reps(sets: 3, reps: 8, name: "Pull-Ups", load: "25 lb", restSec: 90)`:
+Commit this table into `docs/ama-2287-visual-evidence/README.md` **before** device verify. Run on **Series 9 45mm** Simulator (truncation floor).
 
-1. iOS name → `"Pull-Ups · 25lb"`  
-2. iOS → `.repeatSet(reps: 3, intervals: [step(reps: 8, restSec: 90)])`  
-3. Package `displayName` → `"Pull-Ups · 25lb · 8 reps"`  
-4. Block `iterations` → `3`; each iteration: work (open) + recovery 90s  
-
-If `restSec` nil: block steps = `[work]` only.
+| Fixture `displayName` | Chars | Expected |
+| --- | ---: | --- |
+| `Pull-Ups · 25lb · 8 reps` | 26 | Fits upcoming preview + main card |
+| `Weighted Pull-Ups · 25lb · 8 reps` | 34 | Main card OK; note if upcoming preview truncates |
+| `Romanian Deadlift · 135lb · 10 reps` | 36 | Document exact truncation on upcoming preview |
 
 ## Data flow
 
 ```
-Workout (.reps sets/reps/name/load/rest)
-    → WorkoutKitConverter → WKPlanDTO (.repeatSet + Step)
-    → WorkoutKitSync.WorkoutPlanConverter → CustomWorkout IntervalBlock
-         (validate iterations ≥ 1; displayName behind watchOS 11 gate)
-    → WorkoutScheduler.schedule (existing AMA-2287 handoff)
+Workout (.reps)
+  → WorkoutKitConverter (clamp sets; compact load; repeatSet)
+  → WKPlanDTO
+  → WorkoutPlanConverter (displayName @ assignment gate; validate; IntervalBlock)
+  → WorkoutScheduler.schedule
 ```
 
 ## Explicit non-goals
 
-- Native “3 sets × 10 reps” Apple UI (API cannot do it as of watchOS 11)
-- Timed stand-in goals for strength reps
-- `removeAllWorkouts` / replace-before-schedule (duplicate cleanup)
-- Findability copy / schedule-time experiments
-- Full load unit parsing into `WKPlanDTO.Interval.Load`
-- **`WorkoutComposition` binary export / AirDrop `.workout` sharing** — useful coach→athlete vector; separate follow-up
-- HR / pace / power alerts on strength or Hyrox hybrid blocks — note for later training paths only
+- Native “3 × 10” Apple UI  
+- Timed stand-in goals for strength reps  
+- Duplicate cleanup / replace-before-schedule  
+- Findability copy / schedule-time experiments  
+- Full `Load` value/unit parser  
+- **Composition binary export / AirDrop** → [AMA-2329](https://linear.app/amakaflow/issue/AMA-2329)  
+- HR/pace/power alerts on strength / Hyrox hybrids  
 
 ## Testing
 
-**`workoutkit-sync`**
+**Package:** reps → displayName; no reps unchanged; rest nil/0 → no recovery; zero iterations / empty steps → `WorkoutPlanConversionError`; strength location not forced indoor.
 
-- Step with `reps` + name → `displayName` contains `· {n} reps`
-- Step without `reps` → existing name-only / time-goal behavior
-- `restSec` nil or 0 → no recovery step in the block
-- `repeatSet(reps: 0, …)` or empty steps → throws before schedule
-- Strength conversion does not set an explicit indoor/outdoor location
+**App:** sets 3 → repeatSet 3; sets nil → 1; sets 0 → 1 (warning logged); load `25 lb` → `25lb` in name; `body weight` unmangled; existing smokes pass.
 
-**`amakaflow-ios-app`**
+**Note:** Asserting `WorkoutStep.displayName` requires a **watchOS 11+ / iOS 18+** sim or device (package platforms already require that). Comment in `WorkoutPlanConverterTests` that displayName assertions need watchOS 11+ runtime.
 
-- `.reps(sets: 3, reps: 8, …)` → DTO `.repeatSet` with `reps == 3`, step `reps == 8`
-- `sets: nil` → iterations `1`
-- Load `"25 lb"` → name contains `25lb`
-- Existing sport-type / smoke tests still pass
+## Rollout
 
-**Device / Simulator dogfood**
+1. `workoutkit-sync` PR → merge → **git tag**  
+2. App PR: pin to tag + converter + gaps README fixtures + tests  
+3. Device/sim dogfood with truncation table  
 
-- Start a known 3×N strength workout → titles include reps; block repeats
-- Truncation check: a **≥35 character** `displayName` in the **upcoming step** preview row (document what truncates; shorten format if unreadable)
+## Implementation checklist
 
-## Rollout order
-
-1. PR + merge `workoutkit-sync` (displayName + rest/validation + tests); **git tag** release  
-2. PR `amakaflow-ios-app`: bump SPM to that **tag**, converter + tests  
-3. Device verify against success criteria  
-
-## Risks
-
-| Risk | Mitigation |
-| --- | --- |
-| Long titles truncate (upcoming preview ~24 chars, main card ~35–40) | Compact load (`25lb`); prefer short names; dogfood a 35+ char title on Watch |
-| `displayName` pre–watchOS 11 | Keep `#available(iOS 18.0, watchOS 11.0, *)` on every assignment (already in package) |
-| Inventing removed Composition APIs | Validate in our code; don’t call non-existent throwing composition types |
-| Package pin lag | Tag first; app PR must include pin bump with converter |
-| 0-iteration / empty blocks | Reject in converter; never call `schedule` with them |
-
-## Implementation checklist (delta)
-
-- [ ] Package: format `displayName` with reps; keep availability guard  
-- [ ] Package: no recovery step when `restSec` nil/≤0 (regression test)  
-- [ ] Package: validate `iterations >= 1` / non-empty steps; typed throw before schedule  
-- [ ] Package: leave strength location unspecified (current `CustomWorkout(activity:)` — confirm no regression)  
-- [ ] iOS: emit `repeatSet` from `.reps` sets; compact-fold load into name  
-- [ ] iOS: bump SPM to **semver tag**  
-- [ ] Tests as above + Watch truncation note in dogfood / gaps README  
+- [ ] Compact load: numeric+unit strip only; leave phrase loads alone  
+- [ ] Warn + clamp when `sets < 1`  
+- [ ] Add `WorkoutPlanConversionError` in package before parallel PRs diverge  
+- [ ] Truncation fixture table in gaps README before device verify  
+- [ ] `#available` only at `makeWorkoutStep` assignment site; test comment for watchOS 11+  
+- [ ] Comment in package near scheduler: `// Follow-up AMA-2329: WorkoutComposition export`  
