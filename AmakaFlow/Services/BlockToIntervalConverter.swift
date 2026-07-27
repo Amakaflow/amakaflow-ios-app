@@ -113,7 +113,7 @@ enum BlockToIntervalConverter {
         isCooldown: Bool
     ) -> WorkoutInterval {
         let prescription = PrescriptionFormatter.effective(from: exercise)
-        let loadStr = formatLoad(exercise.load) ?? exercise.notes
+        let loadStr = formatLoad(exercise.load) ?? phraseLoadFromNotes(exercise.notes)
         let target = exercise.notes
 
         switch prescription.primary {
@@ -178,6 +178,29 @@ enum BlockToIntervalConverter {
         let digits = repsString.prefix(while: { $0.isNumber || $0 == " " })
             .trimmingCharacters(in: .whitespaces)
         return Int(digits) ?? 0
+    }
+
+    /// Notes that look like phrase loads (e.g. "body weight", "25 lb") — not coaching cues.
+    static func phraseLoadFromNotes(_ notes: String?) -> String? {
+        guard let notes = notes else { return nil }
+        let trimmed = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed.count <= 24 else { return nil }
+
+        let lower = trimmed.lowercased()
+        if ["body weight", "bodyweight", "bw"].contains(lower) {
+            return trimmed
+        }
+
+        let patterns = [
+            #"^\d+(\.\d+)?\s*[A-Za-z%]+$"#,
+            #"^\d+(\.\d+)?\s+[A-Za-z%]+$"#
+        ]
+        for pattern in patterns {
+            if trimmed.range(of: pattern, options: .regularExpression) != nil {
+                return trimmed
+            }
+        }
+        return nil
     }
 
     /// Format an ExerciseLoad into a display string for WorkoutInterval.

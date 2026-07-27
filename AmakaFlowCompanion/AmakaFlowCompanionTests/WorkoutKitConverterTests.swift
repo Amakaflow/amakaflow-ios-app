@@ -206,4 +206,21 @@ final class WorkoutKitConverterTests: XCTestCase {
         }
         XCTAssertEqual(steps.first?.name, "Push-Up · body weight")
     }
+    func testDecimalLoadTokenIsCompacted() throws {
+        let workout = Workout(
+            name: "Push",
+            sport: .strength,
+            duration: 600,
+            intervals: [
+                .reps(sets: 1, reps: 8, name: "DB Press", load: "22.5 lb", restSec: nil, followAlongUrl: nil)
+            ],
+            source: .coach
+        )
+        let dto = try converter.convertToWKPlanDTO(workout)
+        guard case .repeatSet(_, let steps) = dto.intervals.first else {
+            return XCTFail("Expected repeatSet")
+        }
+        XCTAssertEqual(steps.first?.name, "DB Press · 22.5lb")
+    }
+
 }

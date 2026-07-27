@@ -20,7 +20,7 @@ private let workoutKitConverterLog = Logger(
 
 private func compactLoadToken(_ load: String) -> String {
     let trimmed = load.trimmingCharacters(in: .whitespacesAndNewlines)
-    let pattern = #"^\d+\s+[A-Za-z%]+$"#
+    let pattern = #"^\d+(\.\d+)?\s+[A-Za-z%]+$"#
     if trimmed.range(of: pattern, options: .regularExpression) != nil {
         return trimmed.replacingOccurrences(of: " ", with: "")
     }
