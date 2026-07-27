@@ -81,6 +81,14 @@ final class MockWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
     var noopRemoveIDs: Set<WorkoutScheduleRowID> = []
     var fetchError: Error?
     var requestAuthorizationCallCount = 0
+    /// AMA-2330 P1 fix test seam: artificial delay inside `remove(row:)` so tests can
+    /// prove a second overlapping call is gated by `WorkoutScheduleViewModel.isMutating`
+    /// rather than racing this mock.
+    var removeDelayNanoseconds: UInt64 = 0
+    /// AMA-2330 P1 fix test seam: when true, `removeAll()` is a no-op (mirrors a
+    /// WorkoutKit-side failure to remove everything) so the view model's post-clear
+    /// "some plans could not be removed" status can be exercised.
+    var removeAllIsNoOp = false
 
     var authorizationState: ScheduleAuthState {
         get async { authState }
@@ -97,6 +105,9 @@ final class MockWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
     }
 
     func remove(row: WorkoutScheduleRow) async {
+        if removeDelayNanoseconds > 0 {
+            try? await Task.sleep(nanoseconds: removeDelayNanoseconds)
+        }
         removeCallRows.append(row)
         guard !noopRemoveIDs.contains(row.id) else { return }
         rows.removeAll { $0.id == row.id }
@@ -104,6 +115,7 @@ final class MockWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
 
     func removeAll() async {
         removeAllCallCount += 1
+        guard !removeAllIsNoOp else { return }
         rows = []
     }
 }
@@ -113,8 +125,13 @@ final class MockWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
 /// last `fetchScheduledRows()` call, since `remove(row:)` needs the original
 /// `WorkoutPlan` value (not just its id) to call `WorkoutScheduler.remove(_:at:)`.
 /// A row with no cache entry (stale row, or `remove` called before any fetch) is a no-op.
+///
+/// AMA-2330 P1 fix: `planCache` is mutated from `fetchScheduledRows()`/`removeAll()`
+/// and read from `remove(row:)`; an overlapping refresh + delete from the view model
+/// could otherwise race it. `actor` gives every access exclusive, serialized isolation
+/// without the view model needing to know this type is anything but "the scheduler".
 @available(iOS 18.0, *)
-final class LiveWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Sendable {
+actor LiveWorkoutKitScheduler: WorkoutKitScheduleManaging {
     private let calendar: Calendar
     private var planCache: [WorkoutScheduleRowID: WorkoutPlan] = [:]
 
@@ -122,7 +139,9 @@ final class LiveWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
         self.calendar = calendar
     }
 
-    var maxAllowedCount: Int {
+    /// `nonisolated` — the protocol requires synchronous access, and this only ever
+    /// reads a static WorkoutKit constant, never actor-isolated state.
+    nonisolated var maxAllowedCount: Int {
         WorkoutScheduler.maxAllowedScheduledWorkoutCount
     }
 

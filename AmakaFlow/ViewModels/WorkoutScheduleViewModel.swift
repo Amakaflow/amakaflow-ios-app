@@ -22,18 +22,32 @@ final class WorkoutScheduleViewModel: ObservableObject {
     @Published var selectedIDs: Set<WorkoutScheduleRowID> = []
     @Published var isEditing = false
     @Published private(set) var isLoading = false
+    /// AMA-2330 P1 fix: gates `refresh`/`deleteSelected`/`clearAll`/`delete` against
+    /// re-entrancy — a second tap (e.g. Delete then Clear all before the first
+    /// finishes) is a no-op instead of racing WorkoutKit calls against each other.
+    @Published private(set) var isMutating = false
     @Published private(set) var statusMessage: String?
     @Published private(set) var authDenied = false
     @Published private(set) var showEmptyState = false
 
     private let scheduler: any WorkoutKitScheduleManaging
     private var rowsByID: [WorkoutScheduleRowID: WorkoutScheduleRow] = [:]
+    /// Set only on the specific "Removed N of M; tap to retry" status — never derived
+    /// from `statusMessage` text, so view copy can change without breaking retry.
+    @Published private(set) var canRetry = false
 
     init(scheduler: any WorkoutKitScheduleManaging) {
         self.scheduler = scheduler
     }
 
     var selectedCount: Int { selectedIDs.count }
+
+    /// AMA-2330 P1 fix: surfaces Apple's schedule cap on the cleanup screen itself
+    /// (not just as a Start-time failure) — never hardcodes 15, always reads the
+    /// scheduler's own `maxAllowedCount`.
+    var isAtScheduleCap: Bool {
+        incompleteRows.count + completedRows.count >= scheduler.maxAllowedCount
+    }
 
     func enterEditing() { isEditing = true }
     func exitEditing() {
@@ -46,7 +60,17 @@ final class WorkoutScheduleViewModel: ObservableObject {
         else { selectedIDs.insert(id) }
     }
 
+    /// Public entry point — gated so an overlapping refresh/delete/clear-all can't
+    /// interleave with this one. See `performRefresh` for the actual body, which
+    /// `deleteSelected`/`clearAll` call directly since they already hold the gate.
     func refresh(mode: WorkoutScheduleRefreshMode = .manual) async {
+        guard !isMutating else { return }
+        isMutating = true
+        defer { isMutating = false }
+        await performRefresh(mode: mode)
+    }
+
+    private func performRefresh(mode: WorkoutScheduleRefreshMode) async {
         isLoading = true
         defer { isLoading = false }
 
@@ -58,9 +82,11 @@ final class WorkoutScheduleViewModel: ObservableObject {
         if authDenied {
             incompleteRows = []
             completedRows = []
+            rowsByID = [:]
             showEmptyState = false
             selectedIDs = []
             isEditing = false
+            canRetry = false
             return
         }
 
@@ -79,6 +105,7 @@ final class WorkoutScheduleViewModel: ObservableObject {
                 selectedIDs = []
                 isEditing = false
                 statusMessage = nil
+                canRetry = false
             case .afterMutation(let attempted):
                 let failed = attempted.intersection(Set(rowsByID.keys))
                 selectedIDs = failed
@@ -86,22 +113,28 @@ final class WorkoutScheduleViewModel: ObservableObject {
                 let removed = attempted.count - failed.count
                 if failed.isEmpty {
                     statusMessage = removed == 1 ? "Removed 1 plan." : "Removed \(removed) plans."
+                    canRetry = false
                 } else {
                     statusMessage = "Removed \(removed) of \(attempted.count); tap to retry"
+                    canRetry = true
                 }
             }
         } catch {
             statusMessage = error.localizedDescription
             showEmptyState = false
+            canRetry = false
         }
     }
 
     /// Single-row delete (e.g. swipe-to-delete), reusing the same still-present
     /// reconciliation as the multi-select path.
     func delete(row: WorkoutScheduleRow) async {
+        guard !isMutating else { return }
+        isMutating = true
+        defer { isMutating = false }
         selectedIDs = [row.id]
         isEditing = true
-        await deleteSelected()
+        await performDeleteSelected()
     }
 
     /// Removes every selected row. `remove(row:)` is non-throwing and may be a
@@ -109,20 +142,34 @@ final class WorkoutScheduleViewModel: ObservableObject {
     /// refresh — not the call site — is the source of truth for what actually
     /// disappeared; still-present ids stay selected for retry.
     func deleteSelected() async {
+        guard !isMutating else { return }
+        isMutating = true
+        defer { isMutating = false }
+        await performDeleteSelected()
+    }
+
+    private func performDeleteSelected() async {
         let targets = selectedIDs.compactMap { rowsByID[$0] }
         guard !targets.isEmpty else { return }
         let attempted = Set(targets.map(\.id))
         for target in targets {
             await scheduler.remove(row: target)
         }
-        await refresh(mode: .afterMutation(attempted: attempted))
+        await performRefresh(mode: .afterMutation(attempted: attempted))
     }
 
     func clearAll() async {
+        guard !isMutating else { return }
+        isMutating = true
+        defer { isMutating = false }
         await scheduler.removeAll()
-        await refresh(mode: .manual)
+        await performRefresh(mode: .manual)
         if showEmptyState {
             statusMessage = "Removed all AmakaFlow plans."
+        } else if !incompleteRows.isEmpty || !completedRows.isEmpty {
+            // AMA-2330 P1 fix: `removeAll()` is non-throwing and may silently no-op
+            // (mirrors `remove(row:)`); surface that instead of claiming success.
+            statusMessage = "Some plans could not be removed — pull to refresh."
         }
     }
 }

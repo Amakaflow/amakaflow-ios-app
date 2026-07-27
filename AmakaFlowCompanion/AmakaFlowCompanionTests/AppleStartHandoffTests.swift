@@ -93,6 +93,23 @@ final class AppleStartHandoffCopyTests: XCTestCase {
             .authorizationDenied
         )
     }
+
+    // MARK: - AMA-2330 P1 fix: `showsManageScheduledPlans` on success
+
+    func testScheduledMessageAlwaysShowsManageScheduledPlans() {
+        for pairing: AppleWatchPairingRead in [.confirmedPaired, .unknown, .confirmedUnpaired] {
+            let result = AppleStartHandoffCopy.scheduledInWorkoutMessage(
+                workoutName: "Easy Run",
+                pairing: pairing
+            )
+            XCTAssertTrue(result.showsManageScheduledPlans)
+        }
+    }
+
+    func testSentToWatchMessageDoesNotShowManageScheduledPlans() {
+        let result = AppleStartHandoffCopy.sentToWatchMessage(workoutName: "Push Day")
+        XCTAssertFalse(result.showsManageScheduledPlans)
+    }
 }
 
 @MainActor
@@ -240,6 +257,9 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         XCTAssertEqual(result.kind, .failed)
         XCTAssertTrue(result.message.localizedCaseInsensitiveContains("Manage scheduled plans"))
         XCTAssertEqual(saver.saveCallCount, 0, "must not save (and must not auto-delete) once at cap")
+        // AMA-2330 P1 fix: at-cap failure must offer the same "Manage scheduled
+        // plans" entry point as a successful schedule.
+        XCTAssertTrue(result.showsManageScheduledPlans)
     }
 
     func testScheduleCapReachedBlocksWhenOverCap() async {
@@ -301,6 +321,64 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         XCTAssertEqual(result.kind, .failed)
         XCTAssertTrue(result.message.localizedCaseInsensitiveContains("not reachable"))
         XCTAssertEqual(reader.statusCallCount, 0)
+    }
+
+    // MARK: - AMA-2330 P1 fix: `showsManageScheduledPlans` scoped to the cap failure only
+
+    func testEmptyWorkoutFailureDoesNotShowManageScheduledPlans() async {
+        let empty = Workout(
+            name: "Empty", sport: .strength, duration: 0, intervals: [], source: .manual
+        )
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(MockWorkoutKitSaver())
+        )
+        let result = await service.handoff(workout: empty)
+        XCTAssertFalse(result.showsManageScheduledPlans)
+    }
+
+    func testBlockedIosUnsupportedDoesNotShowManageScheduledPlans() async {
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .disabled
+        )
+        let result = await service.handoff(workout: sampleWorkout())
+        XCTAssertFalse(result.showsManageScheduledPlans)
+    }
+
+    func testUnderCapSaveShowsManageScheduledPlans() async {
+        let saver = MockWorkoutKitSaver()
+        let reader = MockScheduleCapReader(scheduledCount: 14, maxAllowedCount: 15)
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(saver),
+            scheduleCapReader: .injected(reader)
+        )
+        let result = await service.handoff(workout: sampleWorkout())
+        XCTAssertTrue(result.showsManageScheduledPlans)
+    }
+
+    func testForcedScheduleCapReachedShowsManageScheduledPlans() async {
+        setenv("UITEST_APPLE_TRY_FAIL", "schedule_cap_reached", 1)
+        defer { unsetenv("UITEST_APPLE_TRY_FAIL") }
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(MockWorkoutKitSaver())
+        )
+        let result = await service.handoff(workout: sampleWorkout())
+        XCTAssertEqual(result.kind, .failed)
+        XCTAssertTrue(result.showsManageScheduledPlans)
+    }
+
+    func testForcedOtherFailureDoesNotShowManageScheduledPlans() async {
+        setenv("UITEST_APPLE_TRY_FAIL", "authorization_denied", 1)
+        defer { unsetenv("UITEST_APPLE_TRY_FAIL") }
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(MockWorkoutKitSaver())
+        )
+        let result = await service.handoff(workout: sampleWorkout())
+        XCTAssertFalse(result.showsManageScheduledPlans)
     }
 }
 

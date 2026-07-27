@@ -98,6 +98,7 @@ struct WorkoutScheduleView: View {
             titleVisibility: .visible
         ) {
             Button("Remove", role: .destructive) {
+                guard !viewModel.isMutating else { return }
                 Task { await viewModel.deleteSelected() }
             }
             Button("Cancel", role: .cancel) {}
@@ -108,6 +109,7 @@ struct WorkoutScheduleView: View {
             titleVisibility: .visible
         ) {
             Button("Remove All", role: .destructive) {
+                guard !viewModel.isMutating else { return }
                 Task { await viewModel.clearAll() }
             }
             Button("Cancel", role: .cancel) {}
@@ -123,6 +125,7 @@ struct WorkoutScheduleView: View {
             Button("Remove", role: .destructive) {
                 guard let row = pendingDeleteRow else { return }
                 pendingDeleteRow = nil
+                guard !viewModel.isMutating else { return }
                 Task { await viewModel.delete(row: row) }
             }
             Button("Cancel", role: .cancel) { pendingDeleteRow = nil }
@@ -146,7 +149,9 @@ struct WorkoutScheduleView: View {
         if viewModel.authDenied { return "Workout access needed" }
         if viewModel.isLoading && !hasAnyRows { return "Loading…" }
         if !hasAnyRows { return "No plans scheduled" }
-        return "\(viewModel.incompleteRows.count) scheduled · \(viewModel.completedRows.count) completed"
+        let base = "\(viewModel.incompleteRows.count) scheduled · \(viewModel.completedRows.count) completed"
+        guard viewModel.isAtScheduleCap else { return base }
+        return "\(base) · At Apple's schedule limit"
     }
 
     @ViewBuilder
@@ -170,6 +175,7 @@ struct WorkoutScheduleView: View {
             HStack(spacing: Theme.Spacing.md) {
                 Button("Clear all") { showClearAllConfirm = true }
                     .buttonStyle(AFGhostButtonStyle(size: .sm, isWide: false))
+                    .disabled(viewModel.isMutating)
                     .accessibilityIdentifier("af_workout_schedule_clear_all")
 
                 Spacer(minLength: 0)
@@ -179,6 +185,7 @@ struct WorkoutScheduleView: View {
                         showDeleteSelectedConfirm = true
                     }
                     .buttonStyle(AFPrimaryButtonStyle(size: .sm, isWide: false))
+                    .disabled(viewModel.isMutating)
                     .accessibilityIdentifier("af_workout_schedule_delete_selected")
                 }
             }
@@ -307,7 +314,7 @@ struct WorkoutScheduleView: View {
                 Text(row.title)
                     .afH3()
                     .lineLimit(2)
-                Text(relativeSubtitle(for: row))
+                Text(relativeSubtitle(for: row, isCompleted: isCompleted))
                     .afMuted()
             }
 
@@ -336,6 +343,7 @@ struct WorkoutScheduleView: View {
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
+                .disabled(viewModel.isMutating)
                 .accessibilityIdentifier("af_workout_schedule_swipe_delete")
             }
         }
@@ -354,15 +362,16 @@ struct WorkoutScheduleView: View {
             .listRowSeparator(.hidden)
             .contentShape(Rectangle())
             .onTapGesture {
-                guard message.lowercased().contains("retry") else { return }
+                guard viewModel.canRetry, !viewModel.isMutating else { return }
                 Task { await viewModel.deleteSelected() }
             }
             .accessibilityIdentifier("af_workout_schedule_status")
     }
 
-    private func relativeSubtitle(for row: WorkoutScheduleRow) -> String {
-        guard let date = row.scheduledAt else { return "Scheduled" }
-        return "Scheduled \(Self.relativeFormatter.localizedString(for: date, relativeTo: Date()))"
+    private func relativeSubtitle(for row: WorkoutScheduleRow, isCompleted: Bool) -> String {
+        let prefix = isCompleted ? "Completed" : "Scheduled"
+        guard let date = row.scheduledAt else { return prefix }
+        return "\(prefix) \(Self.relativeFormatter.localizedString(for: date, relativeTo: Date()))"
     }
 
     private func accessibilityLabel(for row: WorkoutScheduleRow) -> String {

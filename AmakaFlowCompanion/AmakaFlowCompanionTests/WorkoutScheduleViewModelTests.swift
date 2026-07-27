@@ -327,4 +327,179 @@ final class WorkoutScheduleViewModelTests: XCTestCase {
         XCTAssertEqual(mock.removeCallRows.map(\.id), [b.id])
         XCTAssertTrue(vm.selectedIDs.isEmpty)
     }
+
+    // MARK: - AMA-2330 P1 fixes: re-entrancy (`isMutating`)
+
+    func testIsMutatingIsFalseBeforeAndAfterDeleteSelected() async {
+        let mock = MockWorkoutKitScheduler()
+        let r = row(id: "1", title: "A", minutesAgo: 1)
+        mock.rows = [r]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        XCTAssertFalse(vm.isMutating)
+        vm.enterEditing()
+        vm.toggleSelect(r.id)
+        await vm.deleteSelected()
+        XCTAssertFalse(vm.isMutating)
+    }
+
+    /// Proves overlapping `deleteSelected()` calls don't double-fire: a slow first
+    /// call holds `isMutating`, so a second call made before it finishes is a no-op
+    /// rather than racing WorkoutKit removal calls against each other.
+    func testOverlappingDeleteSelectedSecondCallIsGatedByIsMutating() async {
+        let mock = MockWorkoutKitScheduler()
+        let a = row(id: "a", title: "A", minutesAgo: 1)
+        let b = row(id: "b", title: "B", minutesAgo: 2)
+        mock.rows = [a, b]
+        mock.removeDelayNanoseconds = 150_000_000
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        vm.enterEditing()
+        vm.toggleSelect(a.id)
+
+        async let firstCall: Void = vm.deleteSelected()
+        try? await Task.sleep(nanoseconds: 30_000_000)
+        XCTAssertTrue(vm.isMutating, "first call should still be in flight")
+
+        // Second call arrives while the first is still removing `a` — must be a no-op.
+        await vm.deleteSelected()
+        await firstCall
+
+        XCTAssertEqual(mock.removeCallRows.map(\.id), [a.id])
+        XCTAssertFalse(vm.isMutating)
+    }
+
+    func testOverlappingRefreshAndClearAllSecondCallIsGatedByIsMutating() async {
+        let mock = MockWorkoutKitScheduler()
+        let a = row(id: "a", title: "A", minutesAgo: 1)
+        mock.rows = [a]
+        mock.removeDelayNanoseconds = 150_000_000
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        vm.enterEditing()
+        vm.toggleSelect(a.id)
+
+        async let firstDelete: Void = vm.deleteSelected()
+        try? await Task.sleep(nanoseconds: 30_000_000)
+
+        // A second, different mutation (clear all) arriving mid-delete must also
+        // be gated — not just a second call to the same method.
+        await vm.clearAll()
+        await firstDelete
+
+        XCTAssertEqual(mock.removeAllCallCount, 0, "clearAll must not run while a delete is in flight")
+    }
+
+    // MARK: - AMA-2330 P1 fixes: schedule-cap warning
+
+    func testIsAtScheduleCapTrueWhenRowCountEqualsMax() async {
+        let mock = MockWorkoutKitScheduler()
+        mock.maxAllowedCount = 2
+        mock.rows = [
+            row(id: "1", title: "A", minutesAgo: 1),
+            row(id: "2", title: "B", minutesAgo: 2, complete: true)
+        ]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        XCTAssertTrue(vm.isAtScheduleCap)
+    }
+
+    func testIsAtScheduleCapFalseWhenBelowMax() async {
+        let mock = MockWorkoutKitScheduler()
+        mock.maxAllowedCount = 15
+        mock.rows = [row(id: "1", title: "A", minutesAgo: 1)]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        XCTAssertFalse(vm.isAtScheduleCap)
+    }
+
+    // MARK: - AMA-2330 P1 fixes: clear-all silent failure
+
+    func testClearAllSurfacesFailureStatusWhenRowsRemain() async {
+        let mock = MockWorkoutKitScheduler()
+        mock.rows = [row(id: "1", title: "A", minutesAgo: 1)]
+        mock.removeAllIsNoOp = true
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        await vm.clearAll()
+        XCTAssertFalse(vm.incompleteRows.isEmpty, "sanity: no-op removeAll left the row behind")
+        XCTAssertEqual(vm.statusMessage, "Some plans could not be removed — pull to refresh.")
+    }
+
+    func testClearAllKeepsSuccessCopyWhenEmptied() async {
+        let mock = MockWorkoutKitScheduler()
+        mock.rows = [row(id: "1", title: "A", minutesAgo: 1)]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        await vm.clearAll()
+        XCTAssertTrue(vm.showEmptyState)
+        XCTAssertEqual(vm.statusMessage, "Removed all AmakaFlow plans.")
+    }
+
+    // MARK: - AMA-2330 P1 fixes: canRetry (not string-sniffed)
+
+    func testCanRetryTrueOnlyWhenSomeRowsStillPresentAfterMutation() async {
+        let mock = MockWorkoutKitScheduler()
+        let a = row(id: "a", title: "A", minutesAgo: 1)
+        let b = row(id: "b", title: "B", minutesAgo: 2)
+        mock.rows = [a, b]
+        mock.noopRemoveIDs = [b.id]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        vm.enterEditing()
+        vm.toggleSelect(a.id)
+        vm.toggleSelect(b.id)
+        await vm.deleteSelected()
+        XCTAssertTrue(vm.canRetry)
+    }
+
+    func testCanRetryFalseAfterFullSuccess() async {
+        let mock = MockWorkoutKitScheduler()
+        let a = row(id: "a", title: "A", minutesAgo: 1)
+        mock.rows = [a]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        vm.enterEditing()
+        vm.toggleSelect(a.id)
+        await vm.deleteSelected()
+        XCTAssertFalse(vm.canRetry)
+    }
+
+    func testCanRetryFalseOnManualRefresh() async {
+        let mock = MockWorkoutKitScheduler()
+        let a = row(id: "a", title: "A", minutesAgo: 1)
+        let b = row(id: "b", title: "B", minutesAgo: 2)
+        mock.rows = [a, b]
+        mock.noopRemoveIDs = [b.id]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        vm.enterEditing()
+        vm.toggleSelect(a.id)
+        vm.toggleSelect(b.id)
+        await vm.deleteSelected()
+        XCTAssertTrue(vm.canRetry)
+        await vm.refresh(mode: .manual)
+        XCTAssertFalse(vm.canRetry)
+    }
+
+    // MARK: - AMA-2330 P1 fixes: stale rowsByID on authDenied
+
+    func testAuthDeniedClearsRowsByIDPreventingGhostDelete() async {
+        let mock = MockWorkoutKitScheduler()
+        let stale = row(id: "stale", title: "Stale", minutesAgo: 1)
+        mock.rows = [stale]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        XCTAssertFalse(vm.incompleteRows.isEmpty)
+
+        mock.authState = .denied
+        await vm.refresh(mode: .manual)
+        XCTAssertTrue(vm.authDenied)
+
+        // Simulate a stale reference to the previously-fetched row surviving in the
+        // UI (e.g. a delayed swipe action) — with `rowsByID` cleared, this must be
+        // a no-op rather than resurrecting a call against a no-longer-authorized session.
+        await vm.delete(row: stale)
+        XCTAssertTrue(mock.removeCallRows.isEmpty)
+    }
 }

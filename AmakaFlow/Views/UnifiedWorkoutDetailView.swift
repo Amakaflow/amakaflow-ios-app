@@ -31,8 +31,9 @@ struct UnifiedWorkoutDetailView: View {
     @State private var isAppleHandoffInFlight = false
     /// AMA-2330: tracks the last Apple handoff outcome specifically (separate from the
     /// shared `handoffStatus`/`showsHandoffNextSteps`, which Garmin also writes to) so
-    /// "Manage scheduled plans" only appears after a successful Apple schedule.
-    @State private var lastAppleHandoffKind: AppleStartHandoffResult.Kind?
+    /// "Manage scheduled plans" appears after a successful Apple schedule *or* an
+    /// at-cap failure — both point at the same cleanup screen as the fix.
+    @State private var lastAppleHandoffShowsManagePlans = false
     @State private var showingWorkoutSchedule = false
     @State private var isSavingImport = false
     @State private var showingDeleteConfirm = false
@@ -120,7 +121,7 @@ struct UnifiedWorkoutDetailView: View {
                     showingStartSheet = false
                     handoffStatus = GarminStartHandoffCopy.unpairedRecoveryStatusMessage
                     showsHandoffNextSteps = false
-                    lastAppleHandoffKind = nil
+                    lastAppleHandoffShowsManagePlans = false
                     showingGarminPairing = true
                 },
                 onEditGarminPrefs: {
@@ -357,7 +358,7 @@ struct UnifiedWorkoutDetailView: View {
     /// Hidden pre-iOS 18 since `WorkoutScheduleView`'s live scheduler requires it.
     @ViewBuilder
     private var manageScheduledPlansControl: some View {
-        if #available(iOS 18.0, *), lastAppleHandoffKind == .savedToFitness {
+        if #available(iOS 18.0, *), lastAppleHandoffShowsManagePlans {
             Button {
                 showingWorkoutSchedule = true
             } label: {
@@ -847,7 +848,7 @@ extension UnifiedWorkoutDetailView {
         case .garmin:
             handoffStatus = GarminLifecycleCopy.handoffQueueing
             showsHandoffNextSteps = false
-            lastAppleHandoffKind = nil
+            lastAppleHandoffShowsManagePlans = false
             Task {
                 let result = await GarminStartHandoffService().push(
                     workoutId: workout.id,
@@ -864,7 +865,7 @@ extension UnifiedWorkoutDetailView {
             WorkoutEngine.shared.start(workout: workout)
             showingWorkoutPlayer = true
             handoffStatus = "Recording on Phone — stop anytime, then log sets"
-            lastAppleHandoffKind = nil
+            lastAppleHandoffShowsManagePlans = false
         }
     }
 
@@ -916,13 +917,13 @@ extension UnifiedWorkoutDetailView {
         guard !isAppleHandoffInFlight else { return }
         isAppleHandoffInFlight = true
         showsHandoffNextSteps = false
-        lastAppleHandoffKind = nil
+        lastAppleHandoffShowsManagePlans = false
         handoffStatus = "Scheduling in Workout…"
         Task {
             defer { isAppleHandoffInFlight = false }
             let result = await AppleStartHandoffService(scheduleCapReader: .automatic).handoff(workout: workout)
             handoffStatus = result.message
-            lastAppleHandoffKind = result.kind
+            lastAppleHandoffShowsManagePlans = result.showsManageScheduledPlans
         }
     }
 

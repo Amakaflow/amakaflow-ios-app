@@ -24,6 +24,16 @@ struct AppleStartHandoffResult: Equatable {
     let kind: Kind
     /// User-facing status line shown under detail actions.
     let message: String
+    /// AMA-2330 P1 fix: true for a successful schedule (`.savedToFitness`) *or* a
+    /// `.scheduleCapReached` failure — both land the user at the same "Manage
+    /// scheduled plans" entry point, since clearing space there is the fix either way.
+    let showsManageScheduledPlans: Bool
+
+    init(kind: Kind, message: String, showsManageScheduledPlans: Bool = false) {
+        self.kind = kind
+        self.message = message
+        self.showsManageScheduledPlans = showsManageScheduledPlans
+    }
 }
 
 enum AppleStartHandoffFailureCode: String, Equatable {
@@ -131,12 +141,14 @@ enum AppleStartHandoffCopy {
         case .confirmedUnpaired:
             return AppleStartHandoffResult(
                 kind: .savedToFitness,
-                message: "Scheduled in Workout — pair an Apple Watch to run \"\(workoutName)\"."
+                message: "Scheduled in Workout — pair an Apple Watch to run \"\(workoutName)\".",
+                showsManageScheduledPlans: true
             )
         case .confirmedPaired, .unknown:
             return AppleStartHandoffResult(
                 kind: .savedToFitness,
-                message: "Scheduled in Workout — open the Workout app on your Apple Watch for \"\(workoutName)\"."
+                message: "Scheduled in Workout — open the Workout app on your Apple Watch for \"\(workoutName)\".",
+                showsManageScheduledPlans: true
             )
         }
     }
@@ -303,7 +315,8 @@ final class AppleStartHandoffService {
         if let forced = forceFailureCode?() {
             return AppleStartHandoffResult(
                 kind: .failed,
-                message: AppleStartHandoffCopy.failureMessage(code: forced)
+                message: AppleStartHandoffCopy.failureMessage(code: forced),
+                showsManageScheduledPlans: forced == .scheduleCapReached
             )
         }
 
@@ -328,7 +341,8 @@ final class AppleStartHandoffService {
             if status.scheduledCount >= status.maxAllowedCount {
                 return AppleStartHandoffResult(
                     kind: .failed,
-                    message: AppleStartHandoffCopy.failureMessage(code: .scheduleCapReached)
+                    message: AppleStartHandoffCopy.failureMessage(code: .scheduleCapReached),
+                    showsManageScheduledPlans: true
                 )
             }
         }
