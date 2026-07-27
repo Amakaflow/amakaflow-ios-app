@@ -247,4 +247,27 @@ final class WorkoutKitConverterTests: XCTestCase {
         XCTAssertEqual(steps[1].reps, 10)
     }
 
+    func testZeroOuterRepeatClampsToOne() throws {
+        // Call convertInterval directly: Workout(intervals:) → blocks → flatten
+        // only emits `.repeat` when rounds > 1, so reps:0 never reaches via Workout.
+        let converted = try converter.convertInterval(
+            .repeat(reps: 0, intervals: [.time(seconds: 40, target: nil)])
+        )
+        guard case .repeatSet(let iterations, let steps) = converted else {
+            return XCTFail("Expected repeatSet, got \(converted)")
+        }
+        XCTAssertEqual(iterations, 1)
+        XCTAssertEqual(steps.count, 1)
+    }
+
+    func testNegativeOuterRepeatClampsToOne() throws {
+        let converted = try converter.convertInterval(
+            .repeat(reps: -2, intervals: [.time(seconds: 30, target: nil)])
+        )
+        guard case .repeatSet(let iterations, _) = converted else {
+            return XCTFail("Expected repeatSet, got \(converted)")
+        }
+        XCTAssertEqual(iterations, 1)
+    }
+
 }

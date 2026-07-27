@@ -135,8 +135,10 @@ class WorkoutKitConverter {
         try intervals.map { try convertInterval($0) }
     }
     
-    /// Convert single WorkoutInterval to WKPlanDTO.Interval
-    private func convertInterval(_ interval: WorkoutInterval) throws -> WKPlanDTO.Interval {
+    /// Convert single WorkoutInterval to WKPlanDTO.Interval.
+    /// Internal for unit tests covering clamp / nest edge cases that do not
+    /// survive `Workout.intervals` (legacy intervals → blocks → flatten).
+    func convertInterval(_ interval: WorkoutInterval) throws -> WKPlanDTO.Interval {
         switch interval {
         case .warmup(let seconds, let target):
             return .warmup(seconds: seconds, target: convertTarget(target))
@@ -172,7 +174,15 @@ class WorkoutKitConverter {
             ))
 
         case .repeat(let reps, let intervals):
-            return .repeatSet(reps: reps, intervals: try expandRepeatBody(intervals))
+            // Match `.reps` sets clamping: bad AI/API data must not emit
+            // `repeatSet(reps: 0)` — workoutkit-sync throws `zeroIterations` and
+            // Apple's IntervalBlock defaults iterations to 1.
+            if reps < 1 {
+                workoutKitConverterLog.warning(
+                    "WorkoutKitConverter: received outer repeat reps=\(reps, privacy: .public); clamping to 1"
+                )
+            }
+            return .repeatSet(reps: max(reps, 1), intervals: try expandRepeatBody(intervals))
 
         case .rest(let seconds):
             return .step(WKPlanDTO.Interval.Step(
