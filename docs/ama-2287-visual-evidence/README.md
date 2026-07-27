@@ -43,11 +43,26 @@ Default shipping behavior schedules at **now** (`scheduleAt: nil` → package mi
 
 Record for each trial: appeared (Y/N), latency (rough), runnable (Y/N). If A fails and B succeeds, change the production `scheduleAt` default (not DEBUG-only) before calling the slice done.
 
-## Duplicate scheduled plans (accepted gap)
+## Duplicate scheduled plans (AMA-2330 cleanup)
 
-Every Start schedules **another** WorkoutKit plan. There is no replace-by-workout-id; WorkoutKit also caps total scheduled plans. Multiple Starts on the same Library workout **accumulate** plans — expected this slice.
+Every Start still **adds** another WorkoutKit plan — no replace-by-workout-id (by design). Multiple Starts on the same Library workout **accumulate** plans until the user cleans up.
 
-**Follow-up:** track last scheduled plan per Library workout and remove/replace before re-scheduling.
+**Cleanup (shipped in AMA-2330):** user-initiated delete only; Start never auto-removes to make room.
+
+| Entry | Path |
+| ----- | ---- |
+| Devices | **Scheduled in Workout** → `WorkoutScheduleView` (iOS 18+ only; hidden on older iOS) |
+| Start success | **Manage scheduled plans** under the scheduled status line (same screen) |
+
+Multi-select, swipe delete, and Clear all. Design spec: [`docs/superpowers/specs/2026-07-27-apple-workoutkit-scheduled-plans-cleanup-design.md`](../superpowers/specs/2026-07-27-apple-workoutkit-scheduled-plans-cleanup-design.md) · Linear: [AMA-2330](https://linear.app/amakaflow/issue/AMA-2330/apple-workout-manage-delete-scheduled-workoutkit-plans).
+
+### Dogfood gaps (AMA-2330 — record on device)
+
+| Gap | What to try | Record |
+| --- | --- | --- |
+| **Watch lag** | Delete one or more plans from the cleanup screen; re-open native Workout on Watch | Latency until Watch list updates. **~30s accepted** — footnote on screen says changes may take a moment. |
+| **At cap** | Schedule until count reaches `WorkoutScheduler.maxAllowedScheduledWorkoutCount`, then Start again | Start fails with cap copy pointing at **Manage scheduled plans** / **Devices → Scheduled in Workout** (no auto-delete). Note actual cap value from SDK. |
+| **Completed counts toward cap?** | Complete a scheduled plan on Watch; check cleanup list **Completed** section; try Start at/near cap | Does a completed plan still occupy a slot toward `maxAllowedScheduledWorkoutCount`, or free one? Y/N + notes. |
 
 ## Pairing copy
 
@@ -96,8 +111,9 @@ Physical device required. Attach screenshots under this folder after manual runs
 4. **Schedule matrix:** run trial A (shipping default, now); run trial B with +5–10 min override (**DEBUG only — must not ship enabled**). Record appearance and latency for each.
 5. Open native **Workout** on Watch → plan appears in upcoming → start it.
 6. Optional: confirmed unpaired device → unpaired success copy; schedule still succeeds.
-7. Note duplicate accumulation after multiple Starts (expected).
-8. Save screenshots here: Start sheet status line + Watch Workout upcoming list (or blocker note if plan never appears).
+7. **AMA-2330 cleanup:** after multiple Starts, open **Manage scheduled plans** (or Devices → **Scheduled in Workout**) → verify list, delete, and Clear all; capture cap failure if schedule is full.
+8. **AMA-2330 dogfood gaps:** record Watch lag (~30s OK), at-cap Start failure (`maxAllowedScheduledWorkoutCount`), and whether completed plans count toward cap.
+9. Save screenshots here: Start sheet status line + cleanup list + Watch Workout upcoming list (or blocker note if plan never appears).
 
 Unit evidence (CI): `AppleStartHandoffTests`, `WorkoutKitConverterTests`, `WatchWorkoutSendOutcomeTests` (unchanged WCSession tests).
 
