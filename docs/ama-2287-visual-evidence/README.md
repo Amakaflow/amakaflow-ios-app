@@ -70,6 +70,22 @@ WorkoutKit + HealthKit authorization do not run in Simulator; dogfood requires a
 
 `WorkoutKitConverter` maps sport types and interval shapes but **load/target parsing is still weak** (TODO in converter). Rep-based gym workouts may appear as generic steps in Apple’s player. Acceptable for this slice if the workout **shows up and is runnable** in native Workout.
 
+## Sets/reps fidelity follow-up (dogfood)
+
+Spec: [`docs/superpowers/specs/2026-07-26-apple-workoutkit-sets-reps-fidelity-design.md`](../superpowers/specs/2026-07-26-apple-workoutkit-sets-reps-fidelity-design.md)
+
+**Simulator floor:** Apple Watch Series 9 (45mm).
+
+| Fixture `displayName` | Chars | Record result |
+| --- | ---: | --- |
+| `Pull-Ups · 25lb · 8 reps` | 26 | Fits preview + main? |
+| `Weighted Pull-Ups · 25lb · 8 reps` | 34 | Preview truncates? Main OK? |
+| `Romanian Deadlift · 135lb · 10 reps` | 36 | Exact truncation point |
+
+Also verify: 3-set exercise → IntervalBlock repeats (not one Open step only).
+
+**Device Trial A/B (founder — still open):** simulator/unit tests do not close AMA-2287 Apple surface. Record on a physical iPhone + paired Watch: appearance, latency, runnability in native Workout for Trial A (schedule now) and Trial B (+5–10 min DEBUG only). Keep Garmin unblocked.
+
 ## Device evidence checklist
 
 Physical device required. Attach screenshots under this folder after manual runs.

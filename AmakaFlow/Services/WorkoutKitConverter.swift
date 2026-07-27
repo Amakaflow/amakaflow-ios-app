@@ -6,10 +6,33 @@
 //
 
 import Foundation
+import OSLog
 import WorkoutKitSync
 #if canImport(Sentry)
 import Sentry
 #endif
+
+private let workoutKitConverterLog = Logger(
+    subsystem: "com.myamaka.AmakaFlowCompanion",
+    category: "WorkoutKitConverter"
+)
+
+private func compactLoadToken(_ load: String) -> String {
+    let trimmed = load.trimmingCharacters(in: .whitespacesAndNewlines)
+    // Allow-list units so coaching cues like "10 sec" / "3 sets" are not compacted as loads.
+    let pattern = #"^\d+(\.\d+)?\s*(lbs?|kgs?|%)$"#
+    if trimmed.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil {
+        return trimmed.replacingOccurrences(of: " ", with: "")
+    }
+    return trimmed
+}
+
+private func displayName(exercise: String, load: String?) -> String {
+    guard let load, !load.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        return exercise
+    }
+    return "\(exercise) · \(compactLoadToken(load))"
+}
 
 /// Service for converting Workout models to WorkoutKit DTO format
 @available(iOS 18.0, watchOS 11.0, *)
@@ -112,20 +135,19 @@ class WorkoutKitConverter {
         try intervals.map { try convertInterval($0) }
     }
     
-    /// Convert single WorkoutInterval to WKPlanDTO.Interval
-    private func convertInterval(_ interval: WorkoutInterval) throws -> WKPlanDTO.Interval {
+    /// Convert single WorkoutInterval to WKPlanDTO.Interval.
+    /// Internal for unit tests covering clamp / nest edge cases that do not
+    /// survive `Workout.intervals` (legacy intervals → blocks → flatten).
+    func convertInterval(_ interval: WorkoutInterval) throws -> WKPlanDTO.Interval {
         switch interval {
         case .warmup(let seconds, let target):
-            let wkTarget = convertTarget(target)
-            return .warmup(seconds: seconds, target: wkTarget)
-            
+            return .warmup(seconds: seconds, target: convertTarget(target))
+
         case .cooldown(let seconds, let target):
-            let wkTarget = convertTarget(target)
-            return .cooldown(seconds: seconds, target: wkTarget)
-            
+            return .cooldown(seconds: seconds, target: convertTarget(target))
+
         case .time(let seconds, let target):
-            let wkTarget = convertTarget(target)
-            let step = WKPlanDTO.Interval.Step(
+            return .step(WKPlanDTO.Interval.Step(
                 kind: "time",
                 seconds: seconds,
                 meters: nil,
@@ -133,27 +155,14 @@ class WorkoutKitConverter {
                 name: nil,
                 load: nil,
                 restSec: nil,
-                target: wkTarget
-            )
-            return .step(step)
-            
-        case .reps(_, let reps, let name, let load, let restSec, _):
-            let wkLoad = convertLoad(load)
-            let step = WKPlanDTO.Interval.Step(
-                kind: "reps",
-                seconds: nil,
-                meters: nil,
-                reps: reps,
-                name: name,
-                load: wkLoad,
-                restSec: restSec,
-                target: nil
-            )
-            return .step(step)
-            
+                target: convertTarget(target)
+            ))
+
+        case .reps(let sets, let reps, let name, let load, let restSec, _):
+            return convertRepsInterval(sets: sets, reps: reps, name: name, load: load, restSec: restSec)
+
         case .distance(let meters, let target):
-            let wkTarget = convertTarget(target)
-            let step = WKPlanDTO.Interval.Step(
+            return .step(WKPlanDTO.Interval.Step(
                 kind: "distance",
                 seconds: nil,
                 meters: Double(meters),
@@ -161,23 +170,22 @@ class WorkoutKitConverter {
                 name: nil,
                 load: nil,
                 restSec: nil,
-                target: wkTarget
-            )
-            return .step(step)
-            
+                target: convertTarget(target)
+            ))
+
         case .repeat(let reps, let intervals):
-            let steps = try intervals.compactMap { interval -> WKPlanDTO.Interval.Step? in
-                guard case .step(let step) = try convertInterval(interval) else {
-                    // Repeat sets can only contain steps, not warmup/cooldown
-                    return nil
-                }
-                return step
+            // Match `.reps` sets clamping: bad AI/API data must not emit
+            // `repeatSet(reps: 0)` — workoutkit-sync throws `zeroIterations` and
+            // Apple's IntervalBlock defaults iterations to 1.
+            if reps < 1 {
+                workoutKitConverterLog.warning(
+                    "WorkoutKitConverter: received outer repeat reps=\(reps, privacy: .public); clamping to 1"
+                )
             }
-            return .repeatSet(reps: reps, intervals: steps)
+            return .repeatSet(reps: max(reps, 1), intervals: try expandRepeatBody(intervals))
 
         case .rest(let seconds):
-            // Convert rest to a time-based step
-            let step = WKPlanDTO.Interval.Step(
+            return .step(WKPlanDTO.Interval.Step(
                 kind: "rest",
                 seconds: seconds,
                 meters: nil,
@@ -186,9 +194,54 @@ class WorkoutKitConverter {
                 load: nil,
                 restSec: nil,
                 target: nil
-            )
-            return .step(step)
+            ))
         }
+    }
+
+    private func convertRepsInterval(
+        sets: Int?,
+        reps: Int,
+        name: String,
+        load: String?,
+        restSec: Int?
+    ) -> WKPlanDTO.Interval {
+        if let sets, sets < 1 {
+            workoutKitConverterLog.warning(
+                "WorkoutKitConverter: received sets=\(sets, privacy: .public) for '\(name, privacy: .public)'; clamping to 1"
+            )
+        }
+        let setCount = max(sets ?? 1, 1)
+        let rest = (restSec ?? 0) > 0 ? restSec : nil
+        let step = WKPlanDTO.Interval.Step(
+            kind: "reps",
+            seconds: nil,
+            meters: nil,
+            reps: reps,
+            name: displayName(exercise: name, load: load),
+            load: nil, // convertLoad remains stub
+            restSec: rest,
+            target: nil
+        )
+        return .repeatSet(reps: setCount, intervals: [step])
+    }
+
+    /// Flatten nested `.reps` → `.repeatSet` into steps for an outer circuit round.
+    private func expandRepeatBody(_ intervals: [WorkoutInterval]) throws -> [WKPlanDTO.Interval.Step] {
+        var steps: [WKPlanDTO.Interval.Step] = []
+        for interval in intervals {
+            switch try convertInterval(interval) {
+            case .step(let step):
+                steps.append(step)
+            case .repeatSet(let nestedReps, let nestedSteps):
+                let count = max(nestedReps, 1)
+                for _ in 0..<count {
+                    steps.append(contentsOf: nestedSteps)
+                }
+            default:
+                continue
+            }
+        }
+        return steps
     }
     
     /// Convert optional target string to WKPlanDTO.Interval.Target

@@ -190,6 +190,59 @@ final class BlockToIntervalConverterTests: XCTestCase {
         }
     }
 
+
+    // MARK: - Notes are not used as load unless phrase-like (AMA-2287 review)
+
+    func testCoachingNotesDoNotBecomeIntervalLoad() {
+        let block = Block(
+            label: "Main",
+            structure: .straight,
+            rounds: 1,
+            exercises: [
+                Exercise(name: "Tricep Extension", canonicalName: nil, sets: 3, reps: "10",
+                         durationSeconds: nil, load: nil, restSeconds: nil,
+                         distance: nil, notes: "keep elbows tucked", supersetGroup: nil)
+            ]
+        )
+
+        let intervals = BlockToIntervalConverter.flatten([block])
+        XCTAssertEqual(intervals.count, 1)
+
+        if case .reps(_, _, let name, let load, _, _) = intervals[0] {
+            XCTAssertEqual(name, "Tricep Extension")
+            XCTAssertNil(load, "Coaching notes must not become WorkoutInterval load")
+        } else {
+            XCTFail("Expected reps interval, got \(intervals[0])")
+        }
+    }
+
+    func testBodyWeightNotesBecomeIntervalLoad() {
+        let block = Block(
+            label: "Main",
+            structure: .straight,
+            rounds: 1,
+            exercises: [
+                Exercise(name: "Push-Up", canonicalName: nil, sets: 3, reps: "12",
+                         durationSeconds: nil, load: nil, restSeconds: nil,
+                         distance: nil, notes: "body weight", supersetGroup: nil)
+            ]
+        )
+
+        let intervals = BlockToIntervalConverter.flatten([block])
+        if case .reps(_, _, _, let load, _, _) = intervals[0] {
+            XCTAssertEqual(load, "body weight")
+        } else {
+            XCTFail("Expected reps interval")
+        }
+    }
+
+    func testNumericCoachingCueNotesDoNotBecomeLoad() {
+        XCTAssertNil(BlockToIntervalConverter.phraseLoadFromNotes("10 sec"))
+        XCTAssertNil(BlockToIntervalConverter.phraseLoadFromNotes("3 sets"))
+        XCTAssertEqual(BlockToIntervalConverter.phraseLoadFromNotes("25 lb"), "25 lb")
+        XCTAssertEqual(BlockToIntervalConverter.phraseLoadFromNotes("22.5kg"), "22.5kg")
+    }
+
     // MARK: - parseReps edge cases
 
     func testParseRepsPlainNumber() {
