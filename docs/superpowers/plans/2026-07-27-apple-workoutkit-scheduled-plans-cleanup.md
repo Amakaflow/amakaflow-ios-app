@@ -4,7 +4,7 @@
 
 **Goal:** Let users list and delete AmakaFlow-scheduled WorkoutKit plans on iPhone (multi-select, swipe, Clear all) without changing Start’s keep-adding behavior.
 
-**Architecture:** `WorkoutKitScheduleManaging` (Live → `WorkoutScheduler`, Mock for tests). ViewModel owns sort/sections, selection rules, and **still-present-after-refetch** failure detection (`remove` / `removeAllWorkouts` are non-throwing on Apple’s API). UI is `WorkoutScheduleView`, entered from Devices and Start success.
+**Architecture:** App-shaped `WorkoutKitScheduleManaging` (Live → `WorkoutScheduler` with plan cache + auth state; Mock for tests). ViewModel reconciles delete outcomes via **still-present after refresh**. UI: `WorkoutScheduleView` from Devices and Start success.
 
 **Tech Stack:** Swift, SwiftUI, WorkoutKit (iOS 18+), XCTest
 
@@ -13,15 +13,14 @@
 
 ## Global Constraints
 
-- Start **keeps adding** — never remove/replace inside handoff except optional **preflight fail** when already at cap.
-- User-facing brand: **AmakaFlow** (never AmakaFlowCompanion). Destination: **Workout** / Apple Watch Workout.
-- Live adapter `@available(iOS 18.0, *)`. Pre-iOS 18: **hide** Devices row and Manage link.
-- Remove uses fetched `scheduled.plan` + `scheduled.date` only.
-- Apple `remove` / `removeAllWorkouts` are async **non-throwing**. Production failure = row still present after re-fetch.
-- Selection rules: (1) manual refresh clears selection + exits edit; (2) post-delete refresh sets `selectedIDs = attempted ∩ stillPresent`.
-- Cap: `WorkoutScheduler.maxAllowedScheduledWorkoutCount` — never hardcode 15 in copy.
-- V1 protocol in app; no `workoutkit-sync` list/remove extraction yet.
-- Do not modify Garmin / AmakaFlowWatch / AMA-2329.
+- Start **keeps adding** — at-cap preflight may fail Start; never auto-delete to make room.
+- Brand: **AmakaFlow**. Destination: **Workout** / Apple Watch Workout.
+- Pre-iOS 18: **hide** Devices row and Manage link. Live `@available(iOS 18.0, *)`.
+- `remove` / `removeAll` on the protocol are **non-throwing**. Failure = still present after refresh.
+- Live caches `WorkoutPlan` by row id from the latest `fetchScheduledRows()`; missing cache → remove no-op.
+- Selection: (1) manual refresh clears; (2) post-delete `selectedIDs = attempted ∩ stillPresent`.
+- Cap: `maxAllowedCount` from Apple — never hardcode 15 in copy.
+- No `workoutkit-sync` extraction in V1. Leave Garmin / AmakaFlowWatch / AMA-2329 alone.
 
 ---
 
@@ -29,44 +28,32 @@
 
 | File | Responsibility |
 | ---- | -------------- |
-| `AmakaFlow/Services/WorkoutKitScheduleManaging.swift` | Row ID helper, row model, protocol, Live, Mock |
-| `AmakaFlow/ViewModels/WorkoutScheduleViewModel.swift` | Load/sort/sections/select/delete/clear/selection rules |
-| `AmakaFlow/Views/WorkoutScheduleView.swift` | List UI, confirms, footnote, auth → Settings |
-| `AmakaFlow/Views/DevicesView.swift` | Scheduled in Workout entry (iOS 18+) |
-| `AmakaFlow/Views/UnifiedWorkoutDetailView.swift` | Manage scheduled plans after Apple Start success |
-| `AmakaFlow/Services/AppleStartHandoff.swift` | At-cap failure code + copy |
+| `AmakaFlow/Services/WorkoutKitScheduleManaging.swift` | Auth enum, row ID, row model, protocol, Live (+ cache), Mock |
+| `AmakaFlow/ViewModels/WorkoutScheduleViewModel.swift` | Auth, load, sections, selection rules, delete/clear |
+| `AmakaFlow/Views/WorkoutScheduleView.swift` | UI |
+| `AmakaFlow/Views/DevicesView.swift` | Entry |
+| `AmakaFlow/Views/UnifiedWorkoutDetailView.swift` | Manage link |
+| `AmakaFlow/Services/AppleStartHandoff.swift` | At-cap copy |
 | `AmakaFlowCompanion/AmakaFlowCompanionTests/WorkoutScheduleViewModelTests.swift` | Unit tests |
 | `AmakaFlowCompanion/AmakaFlowCompanionTests/AppleStartHandoffTests.swift` | Cap copy tests |
-| `docs/ama-2287-visual-evidence/README.md` | Gaps + dogfood (incl. completed-vs-cap) |
+| `docs/ama-2287-visual-evidence/README.md` | Gaps + dogfood |
 
 ---
 
-### Task 1: Protocol, row identity, Mock, Live
+### Task 1: Protocol, identity, Mock, Live (+ plan cache)
 
 **Files:**
 - Create: `AmakaFlow/Services/WorkoutKitScheduleManaging.swift`
 - Test: `AmakaFlowCompanion/AmakaFlowCompanionTests/WorkoutScheduleViewModelTests.swift`
 
 **Interfaces:**
-- Produces: `WorkoutScheduleRowID`, `WorkoutScheduleRow`, `WorkoutKitScheduleManaging`, `MockWorkoutKitScheduler`, `LiveWorkoutKitScheduler`
+- Produces: `ScheduleAuthState`, `WorkoutScheduleRowID`, `WorkoutScheduleRow`, `WorkoutKitScheduleManaging`, `MockWorkoutKitScheduler`, `LiveWorkoutKitScheduler`
 
 - [ ] **Step 1: Confirm SDK signatures**
 
-Jump to Definition / docs for:
+Verify: `scheduledWorkouts`, `remove(_:at:)`, `removeAllWorkouts()`, `maxAllowedScheduledWorkoutCount`, `authorizationState`, `requestAuthorization()`, and the title property for list rows.
 
-- `scheduledWorkouts: [ScheduledWorkoutPlan] { get async }`
-- `remove(_ workout: WorkoutPlan, at: DateComponents) async` (non-throwing)
-- `removeAllWorkouts() async` (non-throwing)
-- `static let maxAllowedScheduledWorkoutCount: Int`
-- Title property on `WorkoutPlan` / associated workout for list display
-
-Expected Live remove:
-
-```swift
-await WorkoutScheduler.shared.remove(scheduled.plan, at: scheduled.date)
-```
-
-- [ ] **Step 2: Write failing identity tests**
+- [ ] **Step 2: Write failing identity + auth-shape tests**
 
 ```swift
 import XCTest
@@ -109,7 +96,7 @@ final class WorkoutScheduleRowIDTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 3: Run — expect compile fail** (`WorkoutScheduleRowID` missing)
+- [ ] **Step 3: Run — expect compile fail**
 
 ```bash
 cd /Users/davidandrews/dev/amakaflow-workspace/amakaflow-ios-app
@@ -117,13 +104,17 @@ xcodebuild test -scheme AmakaFlowCompanion -destination 'platform=iOS Simulator,
   -only-testing:AmakaFlowCompanionTests/WorkoutScheduleRowIDTests 2>&1 | tail -40
 ```
 
-- [ ] **Step 4: Implement types + Mock + Live**
+- [ ] **Step 4: Implement protocol + Mock + Live**
 
 ```swift
 import Foundation
 #if canImport(WorkoutKit)
 import WorkoutKit
 #endif
+
+enum ScheduleAuthState: Equatable, Sendable {
+    case authorized, denied, notDetermined
+}
 
 struct WorkoutScheduleRowID: Hashable, Sendable {
     let planID: String
@@ -160,38 +151,48 @@ struct WorkoutScheduleRow: Identifiable, Equatable, Sendable {
     let dateComponents: DateComponents
     let scheduledAt: Date?
     let isComplete: Bool
-    /// Opaque Live token (plan id string); Mock uses same as planID.
-    let removalToken: String
 }
 
 protocol WorkoutKitScheduleManaging: Sendable {
-    func fetchScheduledRows() async throws -> [WorkoutScheduleRow]
-    func remove(row: WorkoutScheduleRow) async throws
-    func removeAll() async throws
+    var authorizationState: ScheduleAuthState { get async }
     var maxAllowedCount: Int { get }
+    func requestAuthorization() async -> ScheduleAuthState
+    func fetchScheduledRows() async throws -> [WorkoutScheduleRow]
+    func remove(row: WorkoutScheduleRow) async
+    func removeAll() async
 }
 
-/// Test double. `noopRemoveIDs` leave the row present (production-shaped silent no-op).
 final class MockWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Sendable {
+    var authState: ScheduleAuthState = .authorized
     var rows: [WorkoutScheduleRow] = []
     var maxAllowedCount: Int = 15
-    var removeCallIDs: [WorkoutScheduleRowID] = []
+    var removeCallRows: [WorkoutScheduleRow] = []
     var removeAllCallCount = 0
     var noopRemoveIDs: Set<WorkoutScheduleRowID> = []
     var fetchError: Error?
+    var requestAuthorizationCallCount = 0
+
+    var authorizationState: ScheduleAuthState {
+        get async { authState }
+    }
+
+    func requestAuthorization() async -> ScheduleAuthState {
+        requestAuthorizationCallCount += 1
+        return authState
+    }
 
     func fetchScheduledRows() async throws -> [WorkoutScheduleRow] {
         if let fetchError { throw fetchError }
         return rows
     }
 
-    func remove(row: WorkoutScheduleRow) async throws {
-        removeCallIDs.append(row.id)
+    func remove(row: WorkoutScheduleRow) async {
+        removeCallRows.append(row)
         guard !noopRemoveIDs.contains(row.id) else { return }
         rows.removeAll { $0.id == row.id }
     }
 
-    func removeAll() async throws {
+    func removeAll() async {
         removeAllCallCount += 1
         rows = []
     }
@@ -199,8 +200,9 @@ final class MockWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
 
 #if canImport(WorkoutKit)
 @available(iOS 18.0, *)
-struct LiveWorkoutKitScheduler: WorkoutKitScheduleManaging {
+final class LiveWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Sendable {
     private let calendar: Calendar
+    private var planCache: [WorkoutScheduleRowID: WorkoutPlan] = [:]
 
     init(calendar: Calendar = .current) {
         self.calendar = calendar
@@ -210,44 +212,65 @@ struct LiveWorkoutKitScheduler: WorkoutKitScheduleManaging {
         WorkoutScheduler.maxAllowedScheduledWorkoutCount
     }
 
+    var authorizationState: ScheduleAuthState {
+        get async {
+            switch await WorkoutScheduler.shared.authorizationState {
+            case .authorized: return .authorized
+            case .denied: return .denied
+            default: return .notDetermined
+            }
+        }
+    }
+
+    func requestAuthorization() async -> ScheduleAuthState {
+        let result = await WorkoutScheduler.shared.requestAuthorization()
+        switch result {
+        case .authorized: return .authorized
+        case .denied: return .denied
+        default: return .notDetermined
+        }
+    }
+
     func fetchScheduledRows() async throws -> [WorkoutScheduleRow] {
         let scheduled = await WorkoutScheduler.shared.scheduledWorkouts
         if scheduled.count >= maxAllowedCount {
             print("WorkoutKitSchedule: at Apple schedule cap (\(scheduled.count)/\(maxAllowedCount))")
         }
-        return scheduled.map { item in
+        var cache: [WorkoutScheduleRowID: WorkoutPlan] = [:]
+        let rows: [WorkoutScheduleRow] = scheduled.map { item in
             let planID = String(describing: item.plan.id)
-            // Title: adjust to the SDK property confirmed in Step 1.
+            let id = WorkoutScheduleRowID(planID: planID, date: item.date)
+            cache[id] = item.plan
+            // Title: replace with SDK display property confirmed in Step 1.
             let title = String(describing: item.plan)
             return WorkoutScheduleRow(
-                id: WorkoutScheduleRowID(planID: planID, date: item.date),
+                id: id,
                 title: title,
                 dateComponents: item.date,
                 scheduledAt: calendar.date(from: item.date),
-                isComplete: item.complete,
-                removalToken: planID
+                isComplete: item.complete
             )
         }
+        planCache = cache
+        return rows
     }
 
-    func remove(row: WorkoutScheduleRow) async throws {
-        let scheduled = await WorkoutScheduler.shared.scheduledWorkouts
-        guard let match = scheduled.first(where: {
-            WorkoutScheduleRowID(planID: String(describing: $0.plan.id), date: $0.date) == row.id
-        }) else { return }
-        await WorkoutScheduler.shared.remove(match.plan, at: match.date)
+    func remove(row: WorkoutScheduleRow) async {
+        guard let plan = planCache[row.id] else { return }
+        await WorkoutScheduler.shared.remove(plan, at: row.dateComponents)
     }
 
-    func removeAll() async throws {
+    func removeAll() async {
         await WorkoutScheduler.shared.removeAllWorkouts()
+        planCache = [:]
     }
 }
 #endif
 ```
 
-Replace Live `title` with the real display-name property after Step 1. Add the file to the same targets as `AppleStartHandoff.swift`.
+Add file to the same targets as `AppleStartHandoff.swift`.
 
-- [ ] **Step 5: Run identity tests — PASS**
+- [ ] **Step 5: Identity tests PASS**
 
 - [ ] **Step 6: Commit**
 
@@ -255,23 +278,20 @@ Replace Live `title` with the real display-name property after Step 1. Add the f
 git add AmakaFlow/Services/WorkoutKitScheduleManaging.swift \
   AmakaFlowCompanion/AmakaFlowCompanionTests/WorkoutScheduleViewModelTests.swift
 git commit -m "$(cat <<'EOF'
-feat(AMA-2330): add WorkoutKit schedule manage protocol and mock
+feat(AMA-2330): add WorkoutKit schedule manage protocol with auth and cache
 
-Canonical row IDs; Live/Mock seams for scheduled plan cleanup.
+Non-throwing remove; Live caches WorkoutPlan by row id from last fetch.
 EOF
 )"
 ```
 
 ---
 
-### Task 2: ViewModel load, sections, manual-refresh selection rule
+### Task 2: ViewModel — auth, load, sections, manual refresh
 
 **Files:**
 - Create: `AmakaFlow/ViewModels/WorkoutScheduleViewModel.swift`
 - Modify: `AmakaFlowCompanion/AmakaFlowCompanionTests/WorkoutScheduleViewModelTests.swift`
-
-**Interfaces:**
-- Produces: `WorkoutScheduleViewModel` with `incompleteRows`, `completedRows`, `selectedIDs`, `isEditing`, `refresh(mode:)`
 
 - [ ] **Step 1: Write failing tests**
 
@@ -294,9 +314,36 @@ final class WorkoutScheduleViewModelTests: XCTestCase {
             title: title,
             dateComponents: comps,
             scheduledAt: date,
-            isComplete: complete,
-            removalToken: id
+            isComplete: complete
         )
+    }
+
+    func testDeniedAuthShowsBannerNotEmptyState() async {
+        let mock = MockWorkoutKitScheduler()
+        mock.authState = .denied
+        mock.rows = []
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        XCTAssertTrue(vm.authDenied)
+        XCTAssertFalse(vm.showEmptyState)
+    }
+
+    func testAuthorizedEmptyShowsEmptyState() async {
+        let mock = MockWorkoutKitScheduler()
+        mock.authState = .authorized
+        mock.rows = []
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        XCTAssertFalse(vm.authDenied)
+        XCTAssertTrue(vm.showEmptyState)
+    }
+
+    func testNotDeterminedRequestsAuthorization() async {
+        let mock = MockWorkoutKitScheduler()
+        mock.authState = .notDetermined
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        XCTAssertEqual(mock.requestAuthorizationCallCount, 1)
     }
 
     func testRefreshSortsNewestFirstAndSectionsCompleted() async {
@@ -327,9 +374,9 @@ final class WorkoutScheduleViewModelTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run — expect fail** (`WorkoutScheduleViewModel` missing)
+- [ ] **Step 2: Run — expect fail**
 
-- [ ] **Step 3: Implement ViewModel (load/select only)**
+- [ ] **Step 3: Implement ViewModel (auth + load)**
 
 ```swift
 import Foundation
@@ -348,6 +395,7 @@ final class WorkoutScheduleViewModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var statusMessage: String?
     @Published private(set) var authDenied = false
+    @Published private(set) var showEmptyState = false
 
     private let scheduler: any WorkoutKitScheduleManaging
     private var rowsByID: [WorkoutScheduleRowID: WorkoutScheduleRow] = [:]
@@ -359,7 +407,6 @@ final class WorkoutScheduleViewModel: ObservableObject {
     var selectedCount: Int { selectedIDs.count }
 
     func enterEditing() { isEditing = true }
-
     func exitEditing() {
         isEditing = false
         selectedIDs = []
@@ -373,6 +420,21 @@ final class WorkoutScheduleViewModel: ObservableObject {
     func refresh(mode: WorkoutScheduleRefreshMode = .manual) async {
         isLoading = true
         defer { isLoading = false }
+
+        var auth = await scheduler.authorizationState
+        if auth == .notDetermined {
+            auth = await scheduler.requestAuthorization()
+        }
+        authDenied = (auth == .denied)
+        if authDenied {
+            incompleteRows = []
+            completedRows = []
+            showEmptyState = false
+            selectedIDs = []
+            isEditing = false
+            return
+        }
+
         do {
             let rows = try await scheduler.fetchScheduledRows()
             let sorted = rows.sorted {
@@ -381,7 +443,7 @@ final class WorkoutScheduleViewModel: ObservableObject {
             incompleteRows = sorted.filter { !$0.isComplete }
             completedRows = sorted.filter(\.isComplete)
             rowsByID = Dictionary(uniqueKeysWithValues: sorted.map { ($0.id, $0) })
-            authDenied = false
+            showEmptyState = sorted.isEmpty
 
             switch mode {
             case .manual:
@@ -389,8 +451,7 @@ final class WorkoutScheduleViewModel: ObservableObject {
                 isEditing = false
                 statusMessage = nil
             case .afterMutation(let attempted):
-                let present = Set(rowsByID.keys)
-                let failed = attempted.intersection(present)
+                let failed = attempted.intersection(Set(rowsByID.keys))
                 selectedIDs = failed
                 isEditing = !failed.isEmpty
                 let removed = attempted.count - failed.count
@@ -401,9 +462,8 @@ final class WorkoutScheduleViewModel: ObservableObject {
                 }
             }
         } catch {
-            let lower = error.localizedDescription.lowercased()
-            authDenied = lower.contains("authoriz") || lower.contains("denied")
             statusMessage = error.localizedDescription
+            showEmptyState = false
         }
     }
 }
@@ -417,28 +477,26 @@ final class WorkoutScheduleViewModel: ObservableObject {
 git add AmakaFlow/ViewModels/WorkoutScheduleViewModel.swift \
   AmakaFlowCompanion/AmakaFlowCompanionTests/WorkoutScheduleViewModelTests.swift
 git commit -m "$(cat <<'EOF'
-feat(AMA-2330): add WorkoutScheduleViewModel load and selection rules
+feat(AMA-2330): WorkoutScheduleViewModel auth and list sections
 
-Newest-first sections; manual refresh clears selection.
+Denied vs empty distinguished via authorizationState; manual refresh clears selection.
 EOF
 )"
 ```
 
 ---
 
-### Task 3: deleteSelected / clearAll with still-present failure detection
+### Task 3: deleteSelected / clearAll (still-present detection)
 
 **Files:**
 - Modify: `AmakaFlow/ViewModels/WorkoutScheduleViewModel.swift`
 - Modify: `AmakaFlowCompanion/AmakaFlowCompanionTests/WorkoutScheduleViewModelTests.swift`
 
-**Interfaces:**
-- Produces: `deleteSelected()`, `delete(row:)`, `clearAll()`
-
 - [ ] **Step 1: Write failing tests**
 
 ```swift
-func testDeleteSelectedPassesExactDateComponentsAndRemoves() async {
+func testDeleteSelectedPassesExactStoredDateComponents_mockLevel() async {
+    // Mock-level passthrough. Live plan+date → remove(_:at:) is code review + dogfood.
     let mock = MockWorkoutKitScheduler()
     let r = row(id: "1", title: "Hyrox", minutesAgo: 3)
     mock.rows = [r]
@@ -447,9 +505,9 @@ func testDeleteSelectedPassesExactDateComponentsAndRemoves() async {
     vm.enterEditing()
     vm.toggleSelect(r.id)
     await vm.deleteSelected()
-    XCTAssertEqual(mock.removeCallIDs, [r.id])
+    XCTAssertEqual(mock.removeCallRows.map(\.id), [r.id])
+    XCTAssertEqual(mock.removeCallRows.first?.dateComponents, r.dateComponents)
     XCTAssertTrue(vm.incompleteRows.isEmpty)
-    XCTAssertTrue(vm.selectedIDs.isEmpty)
 }
 
 func testEmptySelectionDoesNotCallRemove() async {
@@ -458,7 +516,7 @@ func testEmptySelectionDoesNotCallRemove() async {
     let vm = WorkoutScheduleViewModel(scheduler: mock)
     await vm.refresh(mode: .manual)
     await vm.deleteSelected()
-    XCTAssertTrue(mock.removeCallIDs.isEmpty)
+    XCTAssertTrue(mock.removeCallRows.isEmpty)
 }
 
 func testClearAllCallsRemoveAllOnce() async {
@@ -471,7 +529,6 @@ func testClearAllCallsRemoveAllOnce() async {
     await vm.refresh(mode: .manual)
     await vm.clearAll()
     XCTAssertEqual(mock.removeAllCallCount, 1)
-    XCTAssertTrue(vm.incompleteRows.isEmpty)
 }
 
 func testSilentNoOpRemoveKeepsStillPresentIDsSelected() async {
@@ -480,7 +537,7 @@ func testSilentNoOpRemoveKeepsStillPresentIDsSelected() async {
     let b = row(id: "b", title: "B", minutesAgo: 2)
     let c = row(id: "c", title: "C", minutesAgo: 3)
     mock.rows = [a, b, c]
-    mock.noopRemoveIDs = [b.id] // production-shaped: remove "succeeds" but row stays
+    mock.noopRemoveIDs = [b.id]
     let vm = WorkoutScheduleViewModel(scheduler: mock)
     await vm.refresh(mode: .manual)
     vm.enterEditing()
@@ -488,7 +545,6 @@ func testSilentNoOpRemoveKeepsStillPresentIDsSelected() async {
     await vm.deleteSelected()
     XCTAssertEqual(vm.selectedIDs, [b.id])
     XCTAssertTrue(vm.isEditing)
-    XCTAssertEqual(mock.removeCallIDs, [a.id, b.id, c.id])
     XCTAssertTrue(vm.statusMessage?.contains("Removed 2 of 3") == true)
 }
 
@@ -504,18 +560,17 @@ func testRetryOnlyTargetsIDsStillPresent() async {
     vm.toggleSelect(a.id)
     vm.toggleSelect(b.id)
     await vm.deleteSelected()
-    XCTAssertEqual(vm.selectedIDs, [b.id])
     mock.noopRemoveIDs = []
-    mock.removeCallIDs = []
+    mock.removeCallRows = []
     await vm.deleteSelected()
-    XCTAssertEqual(mock.removeCallIDs, [b.id])
+    XCTAssertEqual(mock.removeCallRows.map(\.id), [b.id])
     XCTAssertTrue(vm.selectedIDs.isEmpty)
 }
 ```
 
-- [ ] **Step 2: Run — expect fail** (methods missing)
+- [ ] **Step 2: Run — expect fail**
 
-- [ ] **Step 3: Implement delete / clear**
+- [ ] **Step 3: Implement**
 
 ```swift
 func delete(row: WorkoutScheduleRow) async {
@@ -529,15 +584,15 @@ func deleteSelected() async {
     guard !targets.isEmpty else { return }
     let attempted = Set(targets.map(\.id))
     for target in targets {
-        try? await scheduler.remove(row: target)
+        await scheduler.remove(row: target)
     }
     await refresh(mode: .afterMutation(attempted: attempted))
 }
 
 func clearAll() async {
-    try? await scheduler.removeAll()
+    await scheduler.removeAll()
     await refresh(mode: .manual)
-    if incompleteRows.isEmpty && completedRows.isEmpty {
+    if showEmptyState {
         statusMessage = "Removed all AmakaFlow plans."
     }
 }
@@ -551,9 +606,9 @@ func clearAll() async {
 git add AmakaFlow/ViewModels/WorkoutScheduleViewModel.swift \
   AmakaFlowCompanion/AmakaFlowCompanionTests/WorkoutScheduleViewModelTests.swift
 git commit -m "$(cat <<'EOF'
-feat(AMA-2330): detect delete failures via still-present re-fetch
+feat(AMA-2330): still-present delete reconciliation in schedule VM
 
-Non-throwing WorkoutKit removes; retry keeps attempted ∩ present.
+Non-throwing removes; retry keeps attempted ∩ present after refresh.
 EOF
 )"
 ```
@@ -565,195 +620,7 @@ EOF
 **Files:**
 - Create: `AmakaFlow/Views/WorkoutScheduleView.swift`
 
-- [ ] **Step 1: Implement UI**
-
-```swift
-import SwiftUI
-
-struct WorkoutScheduleView: View {
-    @StateObject private var viewModel: WorkoutScheduleViewModel
-    @State private var confirmDelete = false
-    @State private var confirmClearAll = false
-
-    init(viewModel: WorkoutScheduleViewModel? = nil) {
-        if let viewModel {
-            _viewModel = StateObject(wrappedValue: viewModel)
-        } else if #available(iOS 18.0, *) {
-            _viewModel = StateObject(
-                wrappedValue: WorkoutScheduleViewModel(scheduler: LiveWorkoutKitScheduler())
-            )
-        } else {
-            _viewModel = StateObject(
-                wrappedValue: WorkoutScheduleViewModel(scheduler: MockWorkoutKitScheduler())
-            )
-        }
-    }
-
-    var body: some View {
-        Group {
-            if viewModel.isLoading && viewModel.incompleteRows.isEmpty && viewModel.completedRows.isEmpty {
-                ProgressView("Loading scheduled plans…")
-            } else {
-                listContent
-            }
-        }
-        .navigationTitle("Schedule")
-        .toolbar { toolbarContent }
-        .refreshable { await viewModel.refresh(mode: .manual) }
-        .task { await viewModel.refresh(mode: .manual) }
-        .confirmationDialog(
-            "Remove \(viewModel.selectedCount) AmakaFlow workout plan(s) from Apple Watch Workout?",
-            isPresented: $confirmDelete,
-            titleVisibility: .visible
-        ) {
-            Button("Remove", role: .destructive) {
-                Task { await viewModel.deleteSelected() }
-            }
-            Button("Cancel", role: .cancel) {}
-        }
-        .confirmationDialog(
-            "Remove all AmakaFlow plans from the Workout app? This can’t be undone — you can re-schedule any workout from its Start button.",
-            isPresented: $confirmClearAll,
-            titleVisibility: .visible
-        ) {
-            Button("Clear all", role: .destructive) {
-                Task { await viewModel.clearAll() }
-            }
-            Button("Cancel", role: .cancel) {}
-        }
-        .accessibilityIdentifier("af_workout_schedule_screen")
-    }
-
-    private var listContent: some View {
-        List {
-            if viewModel.authDenied {
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Workout permission denied — Settings → Health → Data Access → AmakaFlow, allow Workouts.")
-                            .font(.footnote)
-                        Button("Open Settings") {
-                            if let url = URL(string: UIApplication.openSettingsURLString) {
-                                UIApplication.shared.open(url)
-                            }
-                        }
-                    }
-                }
-            }
-
-            if viewModel.incompleteRows.isEmpty && viewModel.completedRows.isEmpty {
-                ContentUnavailableView(
-                    "No AmakaFlow plans in Workout",
-                    systemImage: "figure.run",
-                    description: Text("Start a workout to schedule one, or pull to refresh.")
-                )
-            }
-
-            if !viewModel.incompleteRows.isEmpty {
-                Section("Scheduled") {
-                    ForEach(viewModel.incompleteRows, content: rowView)
-                        .onDelete { offsets in
-                            Task {
-                                for index in offsets {
-                                    await viewModel.delete(row: viewModel.incompleteRows[index])
-                                }
-                            }
-                        }
-                }
-            }
-
-            if !viewModel.completedRows.isEmpty {
-                Section("Completed") {
-                    ForEach(viewModel.completedRows) { row in
-                        rowView(row).opacity(0.55)
-                    }
-                    .onDelete { offsets in
-                        Task {
-                            for index in offsets {
-                                await viewModel.delete(row: viewModel.completedRows[index])
-                            }
-                        }
-                    }
-                }
-            }
-
-            if !viewModel.incompleteRows.isEmpty || !viewModel.completedRows.isEmpty {
-                Section {
-                    Text("Changes may take a moment to appear on Apple Watch.")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .overlay(alignment: .bottom) {
-            if let status = viewModel.statusMessage {
-                Text(status)
-                    .font(.caption)
-                    .padding(8)
-                    .background(.ultraThinMaterial)
-                    .onTapGesture {
-                        if status.contains("retry") {
-                            Task { await viewModel.deleteSelected() }
-                        }
-                    }
-            }
-        }
-    }
-
-    private func rowView(_ row: WorkoutScheduleRow) -> some View {
-        HStack {
-            if viewModel.isEditing {
-                Image(systemName: viewModel.selectedIDs.contains(row.id)
-                      ? "checkmark.circle.fill" : "circle")
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                Text(row.title)
-                Text(relativeLabel(for: row))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-            }
-            Spacer()
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if viewModel.isEditing { viewModel.toggleSelect(row.id) }
-        }
-    }
-
-    private func relativeLabel(for row: WorkoutScheduleRow) -> String {
-        guard let date = row.scheduledAt else { return "Scheduled time unknown" }
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return "Scheduled \(formatter.localizedString(for: date, relativeTo: Date()))"
-    }
-
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            if viewModel.isEditing {
-                Button("Done") { viewModel.exitEditing() }
-            } else {
-                Button("Select") { viewModel.enterEditing() }
-                    .disabled(viewModel.incompleteRows.isEmpty && viewModel.completedRows.isEmpty)
-            }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            HStack {
-                if !viewModel.incompleteRows.isEmpty || !viewModel.completedRows.isEmpty {
-                    Button("Clear all", role: .destructive) { confirmClearAll = true }
-                }
-                if viewModel.isEditing, viewModel.selectedCount >= 1 {
-                    Button("Delete (\(viewModel.selectedCount))", role: .destructive) {
-                        confirmDelete = true
-                    }
-                }
-            }
-        }
-    }
-}
-```
-
-Match Daily Driver typography (`Theme` / `DailyDriver`) where neighboring screens do. Add file to target.
+- [ ] **Step 1: Implement UI** per spec (auth banner → Settings, empty only when `showEmptyState`, Scheduled + Completed sections, footnote, confirms, Delete (N) / Clear all, tap status to retry). Use `LiveWorkoutKitScheduler` on iOS 18+ in the default init.
 
 - [ ] **Step 2: Build SUCCEEDED**
 
@@ -768,14 +635,14 @@ git add AmakaFlow/Views/WorkoutScheduleView.swift
 git commit -m "$(cat <<'EOF'
 feat(AMA-2330): add WorkoutScheduleView for multi-select cleanup
 
-Completed section, relative times, Settings auth banner, Watch footnote.
+Auth banner, Completed section, relative times, Watch sync footnote.
 EOF
 )"
 ```
 
 ---
 
-### Task 5: Entry points + at-cap Start copy
+### Task 5: Navigation + at-cap Start
 
 **Files:**
 - Modify: `AmakaFlow/Views/DevicesView.swift`
@@ -783,62 +650,13 @@ EOF
 - Modify: `AmakaFlow/Services/AppleStartHandoff.swift`
 - Modify: `AmakaFlowCompanion/AmakaFlowCompanionTests/AppleStartHandoffTests.swift`
 
-- [ ] **Step 1: Devices entry (hide pre-iOS 18)**
-
-Add to `contentView` and `emptyView`:
-
-```swift
-@ViewBuilder
-private var scheduledWorkoutPlansRow: some View {
-    if #available(iOS 18.0, *) {
-        NavigationLink {
-            WorkoutScheduleView()
-        } label: {
-            AFCard {
-                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                    Text("Scheduled in Workout").afH2()
-                    Text("Manage AmakaFlow plans on Apple Watch Workout.")
-                        .afMuted()
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("af_devices_scheduled_workout_plans")
-    }
-}
-```
-
-- [ ] **Step 2: Start success Manage link**
-
-Track `@State private var appleHandoffSucceeded = false`. In `beginAppleTryHandoff`, set from `result.kind == .savedToFitness`. Under the status panel when true, present NavigationLink or sheet to `WorkoutScheduleView` labeled **Manage scheduled plans** (`af_workout_detail_manage_scheduled_plans`). Hide when not iOS 18+.
-
-- [ ] **Step 3: At-cap preflight**
-
-Add `AppleStartHandoffFailureCode.scheduleCapReached` with copy:
-
-> Workout schedule is full — open Manage scheduled plans (or Devices → Scheduled in Workout), remove some, then retry.
-
-In `AppleStartHandoffService.handoff`, before save, if iOS 18+ and `scheduledWorkouts.count >= maxAllowedScheduledWorkoutCount`, return `.failed` with that copy. Do not delete to make room.
-
-Add copy unit test. If dogfood later shows completed plans count toward the cap, amend copy to mention clearing Completed — record that in Task 6, not guess here.
-
-- [ ] **Step 4: Run unit tests — PASS**
+- [ ] **Step 1:** Devices row behind `#available(iOS 18.0, *)` only (hide otherwise).
+- [ ] **Step 2:** Start success → **Manage scheduled plans** → same screen.
+- [ ] **Step 3:** `scheduleCapReached` failure code + preflight using `maxAllowedScheduledWorkoutCount` / scheduled count. Unit-test copy.
+- [ ] **Step 4:** Tests PASS.
+- [ ] **Step 5:** Commit.
 
 ```bash
-xcodebuild test -scheme AmakaFlowCompanion -destination 'platform=iOS Simulator,name=iPhone 16' \
-  -only-testing:AmakaFlowCompanionTests/WorkoutScheduleViewModelTests \
-  -only-testing:AmakaFlowCompanionTests/WorkoutScheduleRowIDTests \
-  -only-testing:AmakaFlowCompanionTests/AppleStartHandoffCopyTests 2>&1 | tail -50
-```
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add AmakaFlow/Views/DevicesView.swift \
-  AmakaFlow/Views/UnifiedWorkoutDetailView.swift \
-  AmakaFlow/Services/AppleStartHandoff.swift \
-  AmakaFlowCompanion/AmakaFlowCompanionTests/AppleStartHandoffTests.swift
 git commit -m "$(cat <<'EOF'
 feat(AMA-2330): wire schedule cleanup entry points and at-cap Start
 
@@ -849,36 +667,15 @@ EOF
 
 ---
 
-### Task 6: Gaps README + dogfood checklist
+### Task 6: Gaps README
 
 **Files:**
 - Modify: `docs/ama-2287-visual-evidence/README.md`
 
-- [ ] **Step 1: Replace duplicate-plans gap with cleanup + dogfood**
-
-```markdown
-## Duplicate scheduled plans
-
-Start **keeps adding**. Cleanup is user-initiated (AMA-2330):
-
-- Devices → **Scheduled in Workout**
-- Start success → **Manage scheduled plans**
-
-Spec: `docs/superpowers/specs/2026-07-27-apple-workoutkit-scheduled-plans-cleanup-design.md`
-
-### Dogfood — cleanup
-
-1. Start 2–3 times → list newest-first with relative times; Completed section separate.
-2. Delete one / multi-select / Clear all; confirm Watch list.
-3. **Watch lag:** delete on iPhone → Watch may still show card ~30s (accepted).
-4. **At cap:** fill to `WorkoutScheduler.maxAllowedScheduledWorkoutCount`, Start again — record failure mode.
-5. **Completed vs cap:** with scheduler full of a mix including `complete == true`, note whether completed plans count toward the cap. If yes, update at-cap copy to mention clearing Completed.
-```
-
-- [ ] **Step 2: Commit**
+- [ ] **Step 1:** Point duplicates at AMA-2330 cleanup; add Watch-lag, at-cap, and **completed-counts-toward-cap?** dogfood steps.
+- [ ] **Step 2:** Commit.
 
 ```bash
-git add docs/ama-2287-visual-evidence/README.md
 git commit -m "$(cat <<'EOF'
 docs(AMA-2330): point duplicates gap at schedule cleanup screen
 
@@ -889,30 +686,28 @@ EOF
 
 ---
 
-## Self-review (plan vs spec)
+## Self-review
 
-| Spec requirement | Task |
+| Spec | Task |
 | --- | --- |
-| Keep-adding Start | Global + Task 5 preflight only |
-| Multi / single / Clear all | Tasks 3–4 |
-| Newest-first + Completed section | Tasks 2, 4 |
-| Manual refresh clears selection | Task 2 |
-| Failure = still present after re-fetch | Task 3 |
-| Retry = selected ∩ present | Task 3 |
-| Hide pre-iOS 18 entries | Task 5 |
-| Auth → Settings deep link | Task 4 |
-| Cap API + dogfood completed-vs-cap | Tasks 5–6 |
-| Exact `remove(plan, at:)` | Tasks 1, 3 |
+| Non-throwing remove + still-present | Tasks 1, 3 |
+| Auth state vs empty | Tasks 1–2, 4 |
+| Live plan cache | Task 1 |
+| Mock-level DateComponents assert | Task 3 |
+| Completed section | Tasks 2, 4 |
+| Hide pre-iOS 18 | Task 5 |
+| Manage link + at-cap | Task 5 |
+| Gaps dogfood | Task 6 |
 
 ---
 
 ## Execution handoff
 
-Plan complete and saved to `docs/superpowers/plans/2026-07-27-apple-workoutkit-scheduled-plans-cleanup.md`.
+Plan complete at `docs/superpowers/plans/2026-07-27-apple-workoutkit-scheduled-plans-cleanup.md`.
 
 **Two execution options:**
 
-1. **Subagent-Driven (recommended)** — fresh subagent per task, review between tasks  
-2. **Inline Execution** — run tasks in this session with checkpoints  
+1. **Subagent-Driven (recommended)** — fresh subagent per task  
+2. **Inline Execution** — this session with checkpoints  
 
 Which approach?

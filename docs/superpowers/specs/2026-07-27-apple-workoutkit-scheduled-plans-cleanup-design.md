@@ -3,14 +3,14 @@
 **Date:** 2026-07-27  
 **Parent:** AMA-2287  
 **Linear:** [AMA-2330](https://linear.app/amakaflow/issue/AMA-2330/apple-workout-manage-delete-scheduled-workoutkit-plans)  
-**Status:** Final — ready for implementation  
+**Status:** Final — ready to implement  
 **Repos:** `amakaflow-ios-app` (Live adapter in-app for V1; `workoutkit-sync` list/remove wrappers deferred)
 
 ## Problem
 
 Every Start → Workout on Apple Watch **adds** another AmakaFlow-scheduled plan. The Watch Workout UI does not reliably delete those cards, so duplicates pile up under “Today.”
 
-Users also need more than one planned workout at a time (e.g. morning + evening). Auto-`removeAllWorkouts()` on Start would break that.
+Users also need more than one planned workout at a time. Auto-`removeAllWorkouts()` on Start would break that.
 
 ## Decisions (locked)
 
@@ -18,70 +18,56 @@ Users also need more than one planned workout at a time (e.g. morning + evening)
 | --- | --- |
 | Start behavior | **Keep adding** — no automatic remove/replace |
 | Cleanup | **User-initiated only** |
-| V1 delete modes | Multi-select, swipe/single delete, and Clear all |
+| V1 delete modes | Multi-select, swipe/single delete, Clear all |
 | Surface | iPhone AmakaFlow — not Watch |
-| Entry | Devices → **Scheduled in Workout**, and Start success → **Manage scheduled plans** |
+| Entry | Devices → **Scheduled in Workout**; Start success → **Manage scheduled plans** |
 | Screen / VM | `WorkoutScheduleView` / `WorkoutScheduleViewModel` |
-| Protocol | `WorkoutKitScheduleManaging` (mirrors `WorkoutKitSaving`) |
-| Pre-iOS 18 | **Hide** Devices row and Manage link (Start already communicates the gate) |
-| Completed rows | Separate **Completed** section at the bottom (muted); incomplete above, newest-first in each section |
+| Protocol | `WorkoutKitScheduleManaging` (app-shaped; mirrors `WorkoutKitSaving`) |
+| Pre-iOS 18 | **Hide** Devices row and Manage link |
+| Completed rows | Dedicated **Completed** section (muted), below **Scheduled** |
 
 ## Success criteria
 
 | Check | Pass looks like |
 | --- | --- |
-| List | Newest-first; title + relative time (“Scheduled 2h ago”); incomplete section then Completed |
-| Multi-select | Select N → Delete → confirm → those N gone after re-fetch (or marked failed if still present) |
-| Single | Swipe delete removes one plan |
-| Clear all | Confirm → `removeAllWorkouts()` → list empty after re-fetch |
-| Manual refresh | Pull-to-refresh clears selection and exits edit mode |
-| Post-delete outcome | Re-fetch; still-present attempted IDs = failed; those stay selected in edit mode for retry |
-| Start under cap | Still schedules without deleting others |
-| Start at cap | Friendly failure pointing at this screen — not silent success |
-| Auth | Inline banner with Settings action; no crash |
-| Empty | “No AmakaFlow plans in Workout” |
-| Loading | Progress indicator while first fetch / refresh runs |
-| Error | Inline status message; list retained if previously loaded |
+| List | Newest-first; title + relative time; Scheduled then Completed |
+| Multi-select / swipe / Clear all | Targeted plans gone after re-fetch (or still-present after refresh → retry) |
+| Manual refresh | Clears selection and exits edit mode |
+| Post-delete | `failedIDs = attempted ∩ stillPresent`; those stay selected for retry |
+| Start under cap | Schedules without deleting others |
+| Start at cap | Friendly failure pointing at this screen |
+| Auth denied | Banner (not empty state) |
+| Authorized + empty | “No AmakaFlow plans in Workout” |
+| Loading / error | Progress on first load; inline error keeps prior rows if any |
 
 ## UX
 
-### Entry
+**Entry**
 
-1. **Devices** → **Scheduled in Workout** → `WorkoutScheduleView` (iOS 18+ only; hidden otherwise).
-2. **Start success** (`kind == .savedToFitness`): **Manage scheduled plans** under the status line → same screen (push or sheet).
+1. Devices → **Scheduled in Workout** → `WorkoutScheduleView` (iOS 18+ only; hidden otherwise).
+2. Start success (`kind == .savedToFitness`) → **Manage scheduled plans** under status (push or sheet).
 
-### Screen
+**List** — Duplicate titles with near-identical times are normal. Newest-first within each section; relative subtitle (`RelativeDateTimeFormatter`); absolute time in accessibility. **Scheduled** (incomplete) then **Completed** (muted).
 
-Duplicates with the same title and near-identical times are **normal**. The list makes them legible; multi-select and Clear all do the cleanup.
+**Toolbar** — Select / Done; Clear all when list non-empty; Delete (N) only when N ≥ 1; swipe-to-delete when not editing.
 
-| Element | Behavior |
-| --- | --- |
-| Sort | Newest-first within each section (`Date` from fetched `DateComponents`) |
-| Subtitle | Relative time (`RelativeDateTimeFormatter`); absolute time in accessibility |
-| Sections | **Scheduled** (incomplete), then **Completed** (muted / lower opacity) |
-| Select / Done | Toggles edit mode |
-| Clear all | Shown whenever the list is non-empty |
-| Delete (N) | Shown only when N ≥ 1 |
-| Swipe | Deletes one row when not editing |
-| Footnote | Always when non-empty: “Changes may take a moment to appear on Apple Watch.” |
+**Footnote** (when non-empty): “Changes may take a moment to appear on Apple Watch.”
 
-### Confirm copy
+**Confirms**
 
 - Delete N: “Remove N AmakaFlow workout plan(s) from Apple Watch Workout?”
 - Clear all: “Remove all AmakaFlow plans from the Workout app? This can’t be undone — you can re-schedule any workout from its Start button.”
 
-### Auth banner
+**Auth** — Driven by protocol `authorizationState`, not by empty fetch:
 
-Non-modal banner above the list when authorization is denied / not usable.
+| State | UI |
+| --- | --- |
+| `.denied` | Banner + **Open Settings** (`UIApplication.openSettingsURLString`) |
+| `.notDetermined` | Request authorization on appear (same pattern as Start) |
+| `.authorized` + empty rows | Empty state copy |
+| `.authorized` + rows | List |
 
-- Body: same guidance as Start (*Settings → Health → Data Access → AmakaFlow, allow Workouts*).
-- Primary action: open the app’s Settings page (`UIApplication.openSettingsURLString`). Do not re-run the system authorization sheet from this screen (Start remains the first-grant path).
-
-### Loading / empty / error
-
-- **Loading:** Progress while `isLoading` and no rows yet.
-- **Empty:** “No AmakaFlow plans in Workout” when fetch succeeds with zero rows.
-- **Error:** Keep prior rows if any; show inline `statusMessage`. Auth errors also set the banner.
+**Loading / empty / error** — Progress while loading with no rows; empty copy only when authorized and zero rows; errors show inline `statusMessage` and keep prior rows if any.
 
 ## Architecture
 
@@ -89,10 +75,10 @@ Non-modal banner above the list when authorization is denied / not usable.
 WorkoutScheduleView + WorkoutScheduleViewModel
   → WorkoutKitScheduleManaging
        Live @available(iOS 18.0, *): WorkoutScheduler.shared
-       Mock: in-memory rows for unit tests
+       Mock: in-memory for unit tests
 ```
 
-### Apple APIs (verify against SDK before writing Live)
+### Apple APIs (verify against SDK before Live)
 
 | API | Signature |
 | --- | --- |
@@ -100,72 +86,60 @@ WorkoutScheduleView + WorkoutScheduleViewModel
 | Remove one | `func remove(_ workout: WorkoutPlan, at: DateComponents) async` |
 | Clear | `func removeAllWorkouts() async` |
 | Cap | `static let maxAllowedScheduledWorkoutCount: Int` |
+| Auth | `var authorizationState: AuthorizationState { get async }` (+ `requestAuthorization()`) |
 
-`remove` and `removeAllWorkouts` are **async and non-throwing**. Live remove must not invent throw-on-failure. Call site for one row:
+`remove` / `removeAllWorkouts` / `scheduledWorkouts` are async and **non-throwing**. Do not invent throw-on-remove. Cap copy says “Apple’s schedule limit” — never hardcode `15`.
 
-```swift
-await WorkoutScheduler.shared.remove(scheduled.plan, at: scheduled.date)
-```
-
-Use `maxAllowedScheduledWorkoutCount` in code and “Apple’s schedule limit” in copy — never hardcode `15`.
-
-### Protocol seam
+### Protocol (app-shaped)
 
 ```swift
+enum ScheduleAuthState: Sendable {
+    case authorized, denied, notDetermined
+}
+
 protocol WorkoutKitScheduleManaging: Sendable {
-    func fetchScheduledRows() async throws -> [WorkoutScheduleRow]
-    func remove(row: WorkoutScheduleRow) async throws  // throws reserved for future; Live does not throw on remove
-    func removeAll() async throws                      // same
+    var authorizationState: ScheduleAuthState { get async }
     var maxAllowedCount: Int { get }
+    func requestAuthorization() async -> ScheduleAuthState
+    func fetchScheduledRows() async throws -> [WorkoutScheduleRow]
+    func remove(row: WorkoutScheduleRow) async
+    func removeAll() async
 }
 ```
 
-Row model retains enough to call Apple’s API without reconstruction:
+- `fetchScheduledRows()` may throw for app-level mapping / unexpected failures; Apple’s list itself does not throw.
+- `remove` / `removeAll` are **non-throwing**, matching Apple. Failure is observed only as **still present after refresh**.
 
-- `id: WorkoutScheduleRowID`
-- `title`
-- `dateComponents` (exact fetched value)
-- `scheduledAt: Date?` (resolved for sort/display)
-- `isComplete`
-- Live-only handle sufficient to recover `WorkoutPlan` for `remove` (re-match on id after fetch, or store plan reference behind the Live adapter)
+### Row model + Live cache
+
+`WorkoutScheduleRow`: `id`, `title`, `dateComponents` (exact fetched), `scheduledAt`, `isComplete`.
+
+**Live plan lookup (locked):** On each successful `fetchScheduledRows()`, Live caches `WorkoutPlan` by `WorkoutScheduleRowID`. `remove(row:)` looks up that cache and calls `remove(cachedPlan, at: row.dateComponents)`. Missing cache entry → no-op (composes with still-present detection). Do **not** re-fetch inside every `remove` (avoids N+1).
 
 ### Row identity
 
-One helper used by production and tests:
+One helper for prod and tests: `WorkoutScheduleRowID(planID:date:)`. Canonical serialization in fixed field order; include `calendar` / `timeZone` only when present on the fetched components; omit nils consistently.
 
-`WorkoutScheduleRowID(planID:date:)` → `planID` + canonical serialization of `DateComponents`.
+### Selection vs refresh (normative — single source of truth)
 
-Serialize fields in fixed order (`year`, `month`, `day`, `hour`, `minute`, `second`, `nanosecond`, and `calendar` / `timeZone` **only if present** on the fetched components). Omit nils consistently so two refreshes of the same schedule hash equal.
+1. **Successful manual refresh** (pull-to-refresh / onAppear after auth): `selectedIDs = []`, `isEditing = false`.
+2. **Post-mutation refresh after a delete batch:** `failedIDs = attemptedIDs ∩ idsPresentAfterRefresh`; `selectedIDs = failedIDs`; `isEditing = !failedIDs.isEmpty`. Empty failed → exit edit + success status.
 
-### Selection vs refresh (normative)
-
-1. **Successful manual refresh** (pull-to-refresh / onAppear load): `selectedIDs = []`, `isEditing = false`.
-2. **Post-mutation refresh after a delete batch:** do **not** apply rule 1. Compute  
-   `failedIDs = attemptedIDs ∩ idsPresentAfterRefresh`  
-   then `selectedIDs = failedIDs`, `isEditing = !failedIDs.isEmpty`.  
-   If `failedIDs` is empty, exit edit mode and show success.
-
-Retry is simply `deleteSelected()` again on the surviving selection — never call `remove` for IDs absent from the current list.
+Retry = `deleteSelected()` on the current selection only (IDs absent from the list are never removed).
 
 ## Data flow
 
-1. Load / manual refresh → `fetchScheduledRows()` → sort → section → apply selection rule (1) or (2) above.
-2. Delete selected → for each **currently listed** selected row, `remove(row:)` using stored `plan` + `dateComponents` (never recompute “now”).
-3. Clear all → `removeAll()` → refresh with rule (1).
-4. After delete batch → refresh → apply rule (2); status “Removed K of N; tap to retry” when `failedIDs` non-empty (K = attempted − failed, N = attempted).
-
-Sequential `remove` in the ViewModel is fine under Apple’s cap. Protocol stays per-row so a future batch API is a ViewModel-local swap.
+1. Read `authorizationState` → banner / request / proceed.
+2. `fetchScheduledRows()` → sort → section → apply selection rule (1) or (2).
+3. Delete selected → for each currently listed selected row, `await remove(row:)` using cached plan + stored `dateComponents`.
+4. After batch → refresh with rule (2); status “Removed K of N; tap to retry” when failed non-empty.
+5. Clear all → `await removeAll()` → refresh with rule (1).
 
 ### Start at cap
 
-When `scheduledWorkouts.count >= maxAllowedScheduledWorkoutCount`:
+When count ≥ `maxAllowedCount`: preflight in handoff → failed copy pointing at Manage / Devices. Never auto-delete to make room.
 
-1. **Dogfood:** fill to cap, Start again, record throw vs silent no-op vs false success.
-2. **Product:** preflight in handoff → failed result with Manage / Devices copy. Do **not** auto-delete to make room.
-3. **Dogfood question (record in gaps README):** do `complete == true` plans count toward the cap?  
-   - If **yes**, Completed-section cleanup is the primary unblock and at-cap copy should mention removing completed plans.  
-   - If **no**, no copy change.
-4. List load at cap → log a warning (dogfood signal).
+**Dogfood:** fill to cap; record Start failure mode; record whether `complete == true` plans count toward the cap. If yes, amend at-cap copy to mention clearing Completed.
 
 ## Non-goals
 
@@ -181,47 +155,47 @@ When `scheduledWorkouts.count >= maxAllowedScheduledWorkoutCount`:
 
 ### Unit
 
-- Load: newest-first; Completed section after Scheduled  
-- Delete calls `remove` once per selected id with exact stored `DateComponents`  
+- Newest-first; Completed section after Scheduled  
+- Delete calls `remove` once per selected id with exact stored row / `DateComponents` (**mock-level**; Live `plan + date` → `remove(_:at:)` verified by code review + dogfood — unit tests cannot link WorkoutKit)  
 - Empty selection does not call `remove`  
 - Clear all calls `removeAll` once  
-- Manual refresh clears selection and exits edit mode  
-- **Production-shaped failure:** mock `remove` is a no-op that leaves rows present → after batch + refresh, `selectedIDs == attempted ∩ stillPresent`, edit mode stays on, status invites retry  
-- Retry only targets IDs still in the list  
+- Manual refresh clears selection / exits edit  
+- Silent no-op remove → still-present IDs stay selected; retry only those  
+- Auth: denied → banner path; authorized + empty → empty state (not banner)  
 - Cap warning when count ≥ `maxAllowedCount`  
 
 ### Dogfood
 
-- Start 2–3 times → list shows relative times  
-- Delete one / multi-select / Clear all vs Watch list  
-- Watch lag: delete on iPhone → Watch may still show card ~30s (accepted)  
-- At cap + whether completed counts toward cap (record in `docs/ama-2287-visual-evidence/README.md`)  
+- Start 2–3 → list + relative times  
+- Delete / multi-select / Clear all vs Watch  
+- Watch lag ~30s accepted  
+- At cap + whether completed counts toward cap (record in gaps README)  
 
 ## Risks
 
 | Risk | Mitigation |
 | --- | --- |
-| Watch lag | Persistent footnote; document ~30s lag as accepted |
-| Wrong plan/date on remove | Retain fetched `plan` + `date`; unit-test passthrough |
-| Silent remove no-op | Detect via re-fetch ∩ attempted IDs — not via throws |
-| Auth denied | Inline banner → Settings deep link |
-| Schedule cap | `maxAllowedScheduledWorkoutCount`; preflight + dogfood completed-vs-cap |
+| Watch lag | Persistent footnote; ~30s accepted |
+| Wrong plan/date | Live cache from last fetch + stored `dateComponents` |
+| Silent remove no-op | Still-present after refresh |
+| Empty vs denied | `authorizationState` on protocol |
+| Schedule cap | `maxAllowedCount`; preflight; completed-vs-cap dogfood |
 | Duplicate titles | Newest-first + relative times + Completed section |
 
 ## Implementation checklist
 
-- [ ] Verify `remove(_:at:)` / `removeAllWorkouts()` / `maxAllowedScheduledWorkoutCount` against iOS 18 SDK  
-- [ ] `WorkoutKitScheduleManaging` + Live (iOS 18) + Mock  
-- [ ] Canonical `WorkoutScheduleRowID` helper shared by prod and tests  
-- [ ] ViewModel: load, sections, selection rules (1)/(2), delete, clear, still-present failure detection  
-- [ ] `WorkoutScheduleView`: UI states, confirms, footnote, auth banner → Settings  
-- [ ] Devices entry (hidden pre-iOS 18)  
-- [ ] Start success → Manage scheduled plans  
-- [ ] Start at-cap preflight + copy  
-- [ ] Unit tests for still-present-after-refetch and selection ∩ refresh  
-- [ ] Update gaps README (duplicates → this screen; Watch lag; at-cap; completed-counts-toward-cap?)  
-- [ ] Do **not** auto-remove on Start  
+1. Verify SDK signatures (list / remove / clear / cap / auth)  
+2. Protocol + Live (cache rule) + Mock  
+3. Canonical `WorkoutScheduleRowID`  
+4. ViewModel (auth branch, selection rules, still-present detection)  
+5. `WorkoutScheduleView`  
+6. Devices entry (hidden pre-iOS 18)  
+7. Start success → Manage scheduled plans  
+8. Start at-cap preflight + copy  
+9. Unit tests (incl. auth vs empty, still-present retry)  
+10. Gaps README (duplicates → screen; Watch lag; at-cap; completed-vs-cap?)  
+11. Do **not** auto-remove on Start  
 
 ---
 
-**Revision hygiene:** This document is a single regenerated draft. Before treating any future edit as final, rewrite conflicting sections clean and re-read top-to-bottom once — do not patch over prior wording in place.
+**Revision hygiene:** Before treating any future edit as final, regenerate conflicting sections into a single clean draft and re-read the document top-to-bottom once — do not patch over prior wording in place.
