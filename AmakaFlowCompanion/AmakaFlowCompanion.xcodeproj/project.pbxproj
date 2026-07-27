@@ -157,6 +157,7 @@
 		AMA2330SCHMANBUILD /* WorkoutKitScheduleManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2330SCHMANREF /* WorkoutKitScheduleManaging.swift */; };
 		AMA2330SCHVMBUILD /* WorkoutScheduleViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2330SCHVMREF /* WorkoutScheduleViewModel.swift */; };
 		AMA2330SCHVMTESTBUILD /* WorkoutScheduleViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2330SCHVMTESTREF /* WorkoutScheduleViewModelTests.swift */; };
+		AMA2330SCHVIEWBUILD /* WorkoutScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2330SCHVIEWREF /* WorkoutScheduleView.swift */; };
 		AMA2286RUNINTBLD /* running_intervals_4x800.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA2286RUNINTREF /* running_intervals_4x800.json */; };
 		AMA2289DIARYBLD /* TodayDiary.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2289DIARYREF /* TodayDiary.swift */; };
 		AMA2289DIARYTSTBLD /* TodayDiaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2289DIARYTSTREF /* TodayDiaryTests.swift */; };
@@ -728,6 +729,7 @@
 		AMA2330SCHMANREF /* WorkoutKitScheduleManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutKitScheduleManaging.swift; path = ../AmakaFlow/Services/WorkoutKitScheduleManaging.swift; sourceTree = SOURCE_ROOT; };
 		AMA2330SCHVMREF /* WorkoutScheduleViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutScheduleViewModel.swift; path = ../AmakaFlow/ViewModels/WorkoutScheduleViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA2330SCHVMTESTREF /* WorkoutScheduleViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutScheduleViewModelTests.swift; path = AmakaFlowCompanionTests/WorkoutScheduleViewModelTests.swift; sourceTree = "<group>"; };
+		AMA2330SCHVIEWREF /* WorkoutScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutScheduleView.swift; path = ../AmakaFlow/Views/WorkoutScheduleView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2289DIARYREF /* TodayDiary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TodayDiary.swift; path = ../AmakaFlow/Models/TodayDiary.swift; sourceTree = SOURCE_ROOT; };
 		AMA2289DIARYTSTREF /* TodayDiaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TodayDiaryTests.swift; path = AmakaFlowCompanionTests/TodayDiaryTests.swift; sourceTree = "<group>"; };
 		AMA2290BFILLREF /* StrengthBackfill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StrengthBackfill.swift; path = ../AmakaFlow/Models/StrengthBackfill.swift; sourceTree = SOURCE_ROOT; };
@@ -1324,6 +1326,7 @@
 				AMA12650003 /* SuggestWorkoutView.swift */,
 				AMA1995EQVIEW00000000A /* EquipmentProfileView.swift */,
 				AMA1996DEVVIEW000000A /* DevicesView.swift */,
+				AMA2330SCHVIEWREF /* WorkoutScheduleView.swift */,
 				AMA2054RDVIEW000000A /* ReadinessDetailView.swift */,
 				AMA2004LIBVIEW00000A /* LibraryView.swift */,
 				AMA2292TODAYVIEW0000A /* TodayDiaryView.swift */,
@@ -2259,6 +2262,7 @@
 				AMA12650013 /* SuggestWorkoutView.swift in Sources */,
 				AMA1995EQVIEW00000000B /* EquipmentProfileView.swift in Sources */,
 				AMA1996DEVVIEW000000B /* DevicesView.swift in Sources */,
+				AMA2330SCHVIEWBUILD /* WorkoutScheduleView.swift in Sources */,
 				AMA2054RDVIEW000000B /* ReadinessDetailView.swift in Sources */,
 				AMA2004LIBVIEW00000B /* LibraryView.swift in Sources */,
 				AMA2292TODAYVIEW0000B /* TodayDiaryView.swift in Sources */,
