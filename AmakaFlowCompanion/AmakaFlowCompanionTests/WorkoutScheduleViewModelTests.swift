@@ -179,3 +179,80 @@ final class MockWorkoutKitSchedulerTests: XCTestCase {
         XCTAssertEqual(mock.maxAllowedCount, 15)
     }
 }
+
+@MainActor
+final class WorkoutScheduleViewModelTests: XCTestCase {
+    private func row(
+        id: String,
+        title: String,
+        minutesAgo: Int,
+        complete: Bool = false
+    ) -> WorkoutScheduleRow {
+        let date = Calendar.current.date(byAdding: .minute, value: -minutesAgo, to: Date())!
+        let comps = Calendar.current.dateComponents(
+            [.year, .month, .day, .hour, .minute],
+            from: date
+        )
+        return WorkoutScheduleRow(
+            id: WorkoutScheduleRowID(planID: id, date: comps),
+            title: title,
+            dateComponents: comps,
+            scheduledAt: date,
+            isComplete: complete
+        )
+    }
+
+    func testDeniedAuthShowsBannerNotEmptyState() async {
+        let mock = MockWorkoutKitScheduler()
+        mock.authState = .denied
+        mock.rows = []
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        XCTAssertTrue(vm.authDenied)
+        XCTAssertFalse(vm.showEmptyState)
+    }
+
+    func testAuthorizedEmptyShowsEmptyState() async {
+        let mock = MockWorkoutKitScheduler()
+        mock.authState = .authorized
+        mock.rows = []
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        XCTAssertFalse(vm.authDenied)
+        XCTAssertTrue(vm.showEmptyState)
+    }
+
+    func testNotDeterminedRequestsAuthorization() async {
+        let mock = MockWorkoutKitScheduler()
+        mock.authState = .notDetermined
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        XCTAssertEqual(mock.requestAuthorizationCallCount, 1)
+    }
+
+    func testRefreshSortsNewestFirstAndSectionsCompleted() async {
+        let mock = MockWorkoutKitScheduler()
+        mock.rows = [
+            row(id: "old", title: "A", minutesAgo: 120),
+            row(id: "new", title: "B", minutesAgo: 5),
+            row(id: "done", title: "C", minutesAgo: 1, complete: true)
+        ]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        XCTAssertEqual(vm.incompleteRows.map(\.title), ["B", "A"])
+        XCTAssertEqual(vm.completedRows.map(\.title), ["C"])
+    }
+
+    func testManualRefreshClearsSelectionAndExitsEditing() async {
+        let mock = MockWorkoutKitScheduler()
+        let r = row(id: "1", title: "Hyrox", minutesAgo: 10)
+        mock.rows = [r]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        vm.enterEditing()
+        vm.toggleSelect(r.id)
+        await vm.refresh(mode: .manual)
+        XCTAssertFalse(vm.isEditing)
+        XCTAssertTrue(vm.selectedIDs.isEmpty)
+    }
+}
