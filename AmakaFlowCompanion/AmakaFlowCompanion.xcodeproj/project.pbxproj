@@ -3380,8 +3380,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Amakaflow/workoutkit-sync";
 			requirement = {
-				kind = revision;
-				revision = 6314b211b52ade5d838ecd37fdd9a9c57edf0087;
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.4.0;
 			};
 		};
 		XCT4H34LTH00000003 /* XCRemoteSwiftPackageReference "XCTHealthKit" */ = {

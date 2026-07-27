@@ -9,6 +9,7 @@
 //
 
 import XCTest
+import WorkoutKitSync
 @testable import AmakaFlowCompanion
 
 @available(iOS 18.0, *)
@@ -131,5 +132,78 @@ final class WorkoutKitConverterTests: XCTestCase {
             source: .coach
         )
         XCTAssertNoThrow(try converter.convertToWKPlanDTO(workout))
+    }
+
+    // MARK: - Reps / sets → repeatSet (AMA-2287, Task 4 RED)
+
+    func testRepsWithSetsEmitsRepeatSet() throws {
+        let workout = Workout(
+            name: "Push",
+            sport: .strength,
+            duration: 1800,
+            intervals: [
+                .reps(sets: 3, reps: 8, name: "Pull-Ups", load: "25 lb", restSec: 90, followAlongUrl: nil)
+            ],
+            source: .coach
+        )
+        let dto = try converter.convertToWKPlanDTO(workout)
+        guard case .repeatSet(let iterations, let steps) = dto.intervals.first else {
+            return XCTFail("Expected repeatSet, got \(dto.intervals)")
+        }
+        XCTAssertEqual(iterations, 3)
+        XCTAssertEqual(steps.first?.reps, 8)
+        XCTAssertEqual(steps.first?.name, "Pull-Ups · 25lb")
+        XCTAssertEqual(steps.first?.restSec, 90)
+    }
+
+    func testNilSetsDefaultsToOneIteration() throws {
+        let workout = Workout(
+            name: "Push",
+            sport: .strength,
+            duration: 600,
+            intervals: [
+                .reps(sets: nil, reps: 10, name: "Curl", load: nil, restSec: nil, followAlongUrl: nil)
+            ],
+            source: .coach
+        )
+        let dto = try converter.convertToWKPlanDTO(workout)
+        guard case .repeatSet(let iterations, _) = dto.intervals.first else {
+            return XCTFail("Expected repeatSet")
+        }
+        XCTAssertEqual(iterations, 1)
+    }
+
+    func testZeroSetsClampsToOne() throws {
+        let workout = Workout(
+            name: "Push",
+            sport: .strength,
+            duration: 600,
+            intervals: [
+                .reps(sets: 0, reps: 10, name: "Curl", load: nil, restSec: nil, followAlongUrl: nil)
+            ],
+            source: .coach
+        )
+        let dto = try converter.convertToWKPlanDTO(workout)
+        guard case .repeatSet(let iterations, _) = dto.intervals.first else {
+            return XCTFail("Expected repeatSet")
+        }
+        XCTAssertEqual(iterations, 1)
+    }
+
+    func testBodyWeightLoadIsNotSpaceStripped() throws {
+        let workout = Workout(
+            name: "Push",
+            sport: .strength,
+            duration: 600,
+            intervals: [
+                .reps(sets: 1, reps: 12, name: "Push-Up", load: "body weight", restSec: nil, followAlongUrl: nil)
+            ],
+            source: .coach
+        )
+        let dto = try converter.convertToWKPlanDTO(workout)
+        guard case .repeatSet(_, let steps) = dto.intervals.first else {
+            return XCTFail("Expected repeatSet")
+        }
+        XCTAssertEqual(steps.first?.name, "Push-Up · body weight")
     }
 }
