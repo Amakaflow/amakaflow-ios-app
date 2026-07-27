@@ -70,6 +70,23 @@ final class AppleStartHandoffCopyTests: XCTestCase {
         XCTAssertTrue(message.localizedCaseInsensitiveContains("Workout"))
     }
 
+    // MARK: - AMA-2330: at-cap preflight copy
+
+    func testScheduleCapReachedCopyPointsToManageScheduledPlans() {
+        let message = AppleStartHandoffCopy.failureMessage(code: .scheduleCapReached)
+        XCTAssertTrue(message.localizedCaseInsensitiveContains("Manage scheduled plans"))
+        XCTAssertTrue(message.localizedCaseInsensitiveContains("Devices"))
+        XCTAssertTrue(message.localizedCaseInsensitiveContains("Scheduled in Workout"))
+        XCTAssertTrue(message.localizedCaseInsensitiveContains("full"))
+    }
+
+    func testScheduleCapReachedCopyNeverImpliesAutoDelete() {
+        let message = AppleStartHandoffCopy.failureMessage(code: .scheduleCapReached)
+        XCTAssertFalse(message.localizedCaseInsensitiveContains("automatically"))
+        XCTAssertFalse(message.localizedCaseInsensitiveContains("we removed"))
+        XCTAssertFalse(message.localizedCaseInsensitiveContains("we deleted"))
+    }
+
     func testFailureCodeMapsAuthorizationDenied() {
         XCTAssertEqual(
             AppleStartHandoffCopy.failureCode(from: WorkoutPlanError.authorizationDenied),
@@ -195,11 +212,117 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         XCTAssertEqual(result.kind, .failed)
         XCTAssertTrue(result.message.localizedCaseInsensitiveContains("permission denied"))
     }
+
+    // MARK: - AMA-2330: at-cap preflight
+
+    func testScheduleCapReaderOmittedNeverBlocksSave() async {
+        // Default `scheduleCapReader` is `.disabled` — existing/omitted call sites
+        // must keep saving exactly as before this feature existed.
+        let saver = MockWorkoutKitSaver()
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(saver)
+        )
+        let result = await service.handoff(workout: sampleWorkout())
+        XCTAssertEqual(result.kind, .savedToFitness)
+        XCTAssertEqual(saver.saveCallCount, 1)
+    }
+
+    func testScheduleCapReachedBlocksBeforeSaveWhenAtCap() async {
+        let saver = MockWorkoutKitSaver()
+        let reader = MockScheduleCapReader(scheduledCount: 15, maxAllowedCount: 15)
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(saver),
+            scheduleCapReader: .injected(reader)
+        )
+        let result = await service.handoff(workout: sampleWorkout())
+        XCTAssertEqual(result.kind, .failed)
+        XCTAssertTrue(result.message.localizedCaseInsensitiveContains("Manage scheduled plans"))
+        XCTAssertEqual(saver.saveCallCount, 0, "must not save (and must not auto-delete) once at cap")
+    }
+
+    func testScheduleCapReachedBlocksWhenOverCap() async {
+        let saver = MockWorkoutKitSaver()
+        let reader = MockScheduleCapReader(scheduledCount: 20, maxAllowedCount: 15)
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(saver),
+            scheduleCapReader: .injected(reader)
+        )
+        let result = await service.handoff(workout: sampleWorkout())
+        XCTAssertEqual(result.kind, .failed)
+        XCTAssertEqual(saver.saveCallCount, 0)
+    }
+
+    func testUnderCapStillSavesNormally() async {
+        let saver = MockWorkoutKitSaver()
+        let reader = MockScheduleCapReader(scheduledCount: 14, maxAllowedCount: 15)
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(saver),
+            scheduleCapReader: .injected(reader)
+        )
+        let result = await service.handoff(workout: sampleWorkout())
+        XCTAssertEqual(result.kind, .savedToFitness)
+        XCTAssertEqual(saver.saveCallCount, 1)
+    }
+
+    func testEmptyWorkoutFailsFastBeforeCapPreflight() async {
+        // Cap check should never run (and never matter) when the empty-workout
+        // guard already fails fast — preflight ordering must not regress this.
+        let empty = Workout(
+            name: "Empty", sport: .strength, duration: 0, intervals: [], source: .manual
+        )
+        let saver = MockWorkoutKitSaver()
+        let reader = MockScheduleCapReader(scheduledCount: 15, maxAllowedCount: 15)
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(saver),
+            scheduleCapReader: .injected(reader)
+        )
+        let result = await service.handoff(workout: empty)
+        XCTAssertEqual(result.kind, .failed)
+        XCTAssertTrue(result.message.localizedCaseInsensitiveContains("no steps"))
+        XCTAssertEqual(reader.statusCallCount, 0)
+    }
+
+    func testForcedFailureEnvironmentTakesPriorityOverCapPreflight() async {
+        setenv("UITEST_APPLE_TRY_FAIL", "watch_not_reachable", 1)
+        defer { unsetenv("UITEST_APPLE_TRY_FAIL") }
+        let saver = MockWorkoutKitSaver()
+        let reader = MockScheduleCapReader(scheduledCount: 15, maxAllowedCount: 15)
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(saver),
+            scheduleCapReader: .injected(reader)
+        )
+        let result = await service.handoff(workout: sampleWorkout())
+        XCTAssertEqual(result.kind, .failed)
+        XCTAssertTrue(result.message.localizedCaseInsensitiveContains("not reachable"))
+        XCTAssertEqual(reader.statusCallCount, 0)
+    }
 }
 
 private struct MockPairingReader: AppleWatchPairingReading {
     let read: AppleWatchPairingRead
     func pairingReadForCopy() -> AppleWatchPairingRead { read }
+}
+
+private final class MockScheduleCapReader: ScheduleCapReading, @unchecked Sendable {
+    let scheduledCount: Int
+    let maxAllowedCount: Int
+    private(set) var statusCallCount = 0
+
+    init(scheduledCount: Int, maxAllowedCount: Int) {
+        self.scheduledCount = scheduledCount
+        self.maxAllowedCount = maxAllowedCount
+    }
+
+    func scheduleCapStatus() async -> (scheduledCount: Int, maxAllowedCount: Int) {
+        statusCallCount += 1
+        return (scheduledCount, maxAllowedCount)
+    }
 }
 
 @MainActor

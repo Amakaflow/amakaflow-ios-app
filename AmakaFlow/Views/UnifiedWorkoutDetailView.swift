@@ -29,6 +29,11 @@ struct UnifiedWorkoutDetailView: View {
     @State private var showsHandoffNextSteps = false
     /// Prevents overlapping Apple WorkoutKit schedules if Start is confirmed again mid-handoff.
     @State private var isAppleHandoffInFlight = false
+    /// AMA-2330: tracks the last Apple handoff outcome specifically (separate from the
+    /// shared `handoffStatus`/`showsHandoffNextSteps`, which Garmin also writes to) so
+    /// "Manage scheduled plans" only appears after a successful Apple schedule.
+    @State private var lastAppleHandoffKind: AppleStartHandoffResult.Kind?
+    @State private var showingWorkoutSchedule = false
     @State private var isSavingImport = false
     @State private var showingDeleteConfirm = false
     @State private var isDeleting = false
@@ -115,6 +120,7 @@ struct UnifiedWorkoutDetailView: View {
                     showingStartSheet = false
                     handoffStatus = GarminStartHandoffCopy.unpairedRecoveryStatusMessage
                     showsHandoffNextSteps = false
+                    lastAppleHandoffKind = nil
                     showingGarminPairing = true
                 },
                 onEditGarminPrefs: {
@@ -136,6 +142,11 @@ struct UnifiedWorkoutDetailView: View {
         }
         .sheet(isPresented: $showingGarminDisplayPrefs) {
             GarminWatchDisplayPrefsSheet(mode: .settings)
+        }
+        .sheet(isPresented: $showingWorkoutSchedule) {
+            NavigationStack {
+                WorkoutScheduleView()
+            }
         }
         .sheet(
             isPresented: $showingEditor,
@@ -336,6 +347,27 @@ struct UnifiedWorkoutDetailView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("af_workout_detail_handoff_next_steps")
             }
+
+            manageScheduledPlansControl
+        }
+    }
+
+    /// AMA-2330: after a successful Apple schedule, offer a direct path to the
+    /// cleanup screen — same entry point as Devices → Scheduled in Workout.
+    /// Hidden pre-iOS 18 since `WorkoutScheduleView`'s live scheduler requires it.
+    @ViewBuilder
+    private var manageScheduledPlansControl: some View {
+        if #available(iOS 18.0, *), lastAppleHandoffKind == .savedToFitness {
+            Button {
+                showingWorkoutSchedule = true
+            } label: {
+                Text("Manage scheduled plans")
+                    .font(Theme.Typography.caption.weight(.semibold))
+                    .foregroundColor(DailyDriver.lime)
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 2)
+            .accessibilityIdentifier("af_workout_detail_manage_scheduled_plans")
         }
     }
 
@@ -815,6 +847,7 @@ extension UnifiedWorkoutDetailView {
         case .garmin:
             handoffStatus = GarminLifecycleCopy.handoffQueueing
             showsHandoffNextSteps = false
+            lastAppleHandoffKind = nil
             Task {
                 let result = await GarminStartHandoffService().push(
                     workoutId: workout.id,
@@ -831,6 +864,7 @@ extension UnifiedWorkoutDetailView {
             WorkoutEngine.shared.start(workout: workout)
             showingWorkoutPlayer = true
             handoffStatus = "Recording on Phone — stop anytime, then log sets"
+            lastAppleHandoffKind = nil
         }
     }
 
@@ -882,11 +916,13 @@ extension UnifiedWorkoutDetailView {
         guard !isAppleHandoffInFlight else { return }
         isAppleHandoffInFlight = true
         showsHandoffNextSteps = false
+        lastAppleHandoffKind = nil
         handoffStatus = "Scheduling in Workout…"
         Task {
             defer { isAppleHandoffInFlight = false }
-            let result = await AppleStartHandoffService().handoff(workout: workout)
+            let result = await AppleStartHandoffService(scheduleCapReader: .automatic).handoff(workout: workout)
             handoffStatus = result.message
+            lastAppleHandoffKind = result.kind
         }
     }
 

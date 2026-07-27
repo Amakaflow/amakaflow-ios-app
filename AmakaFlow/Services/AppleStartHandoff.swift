@@ -8,6 +8,9 @@
 import Foundation
 import WatchConnectivity
 import WorkoutKitSync
+#if canImport(WorkoutKit)
+import WorkoutKit
+#endif
 
 /// Outcome of Start → Apple for in-app status copy (seconds, not minutes).
 struct AppleStartHandoffResult: Equatable {
@@ -34,6 +37,8 @@ enum AppleStartHandoffFailureCode: String, Equatable {
     case conversionFailed = "conversion_failed"
     case iosVersionUnsupported = "ios_version_unsupported"
     case emptyWorkout = "empty_workout"
+    /// AMA-2330: preflight hit before saving — the Workout app's own schedule is full.
+    case scheduleCapReached = "schedule_cap_reached"
     case unknown = "unknown"
 }
 
@@ -64,7 +69,10 @@ enum AppleStartHandoffCopy {
         .watchDecodeFailed: "Watch could not read workout — simplify intervals and retry.",
         .authorizationDenied: "Workout permission denied — Settings → Health → Data Access → AmakaFlow, allow Workouts.",
         .iosVersionUnsupported: "Requires iOS 18 to schedule in the Workout app — update iPhone and retry.",
-        .emptyWorkout: "Workout has no steps — add exercises or intervals in Edit, then retry."
+        .emptyWorkout: "Workout has no steps — add exercises or intervals in Edit, then retry.",
+        .scheduleCapReached:
+            "Workout app schedule is full — open Manage scheduled plans (Devices → Scheduled in Workout) "
+                + "to remove old plans, then retry."
     ]
 
     private static func messageWithOptionalDetail(prefix: String, detail: String?, fallback: String) -> String {
@@ -192,6 +200,23 @@ struct LiveAppleWatchPairingReader: AppleWatchPairingReading {
     }
 }
 
+/// AMA-2330: test seam for the at-cap preflight in `handoff(workout:)` — avoids
+/// linking WorkoutKit's `WorkoutScheduler` directly in unit tests. Non-throwing
+/// to mirror `WorkoutScheduler`'s own (non-throwing) `scheduledWorkouts` API.
+protocol ScheduleCapReading: Sendable {
+    func scheduleCapStatus() async -> (scheduledCount: Int, maxAllowedCount: Int)
+}
+
+#if canImport(WorkoutKit)
+@available(iOS 18.0, *)
+struct LiveScheduleCapReader: ScheduleCapReading {
+    func scheduleCapStatus() async -> (scheduledCount: Int, maxAllowedCount: Int) {
+        let count = await WorkoutScheduler.shared.scheduledWorkouts.count
+        return (count, WorkoutScheduler.maxAllowedScheduledWorkoutCount)
+    }
+}
+#endif
+
 /// How `AppleStartHandoffService` obtains a WorkoutKit saver — avoids nested-optional ambiguity.
 enum WorkoutKitSaverOverride {
     /// Use `LiveWorkoutKitSaver` on iOS 18+; otherwise no saver (blocked).
@@ -202,16 +227,35 @@ enum WorkoutKitSaverOverride {
     case disabled
 }
 
+/// How `AppleStartHandoffService` obtains its at-cap preflight reader.
+///
+/// Defaults to `.disabled` — unlike `WorkoutKitSaverOverride`, every existing
+/// call site of this initializer predates this parameter, so an `.automatic`
+/// default here would silently start exercising live WorkoutKit APIs inside
+/// existing unit tests that never asked for it. The one production call site
+/// (`UnifiedWorkoutDetailView.beginAppleTryHandoff`) opts in explicitly with
+/// `.automatic`.
+enum ScheduleCapReaderOverride {
+    /// Use `LiveScheduleCapReader` on iOS 18+; otherwise no reader (no preflight).
+    case automatic
+    /// Inject a test/production double.
+    case injected(any ScheduleCapReading)
+    /// Never preflight (default — safe for tests that don't care about the cap).
+    case disabled
+}
+
 /// Coordinates WorkoutKit save for Start → Apple try.
 @MainActor
 final class AppleStartHandoffService {
     private let pairingReader: any AppleWatchPairingReading
     private let workoutKitSaver: (any WorkoutKitSaving)?
+    private let scheduleCapReader: (any ScheduleCapReading)?
     private let forceFailureCode: (() -> AppleStartHandoffFailureCode?)?
 
     init(
         pairingReader: any AppleWatchPairingReading = LiveAppleWatchPairingReader(),
         workoutKitSaver: WorkoutKitSaverOverride = .automatic,
+        scheduleCapReader: ScheduleCapReaderOverride = .disabled,
         forceFailureCode: (() -> AppleStartHandoffFailureCode?)? = nil
     ) {
         self.pairingReader = pairingReader
@@ -226,6 +270,22 @@ final class AppleStartHandoffService {
             }
         case .disabled:
             self.workoutKitSaver = nil
+        }
+        switch scheduleCapReader {
+        case .injected(let reader):
+            self.scheduleCapReader = reader
+        case .automatic:
+            #if canImport(WorkoutKit)
+            if #available(iOS 18.0, *) {
+                self.scheduleCapReader = LiveScheduleCapReader()
+            } else {
+                self.scheduleCapReader = nil
+            }
+            #else
+            self.scheduleCapReader = nil
+            #endif
+        case .disabled:
+            self.scheduleCapReader = nil
         }
         self.forceFailureCode = forceFailureCode ?? {
             #if DEBUG
@@ -259,6 +319,18 @@ final class AppleStartHandoffService {
                 kind: .blocked,
                 message: AppleStartHandoffCopy.failureMessage(code: .iosVersionUnsupported)
             )
+        }
+
+        // AMA-2330: never auto-delete to make room — surface the cap and point
+        // at Manage scheduled plans / Devices → Scheduled in Workout instead.
+        if let scheduleCapReader {
+            let status = await scheduleCapReader.scheduleCapStatus()
+            if status.scheduledCount >= status.maxAllowedCount {
+                return AppleStartHandoffResult(
+                    kind: .failed,
+                    message: AppleStartHandoffCopy.failureMessage(code: .scheduleCapReached)
+                )
+            }
         }
 
         do {
