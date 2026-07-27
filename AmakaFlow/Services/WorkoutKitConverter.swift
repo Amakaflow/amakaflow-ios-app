@@ -12,7 +12,6 @@ import WorkoutKitSync
 import Sentry
 #endif
 
-
 private let workoutKitConverterLog = Logger(
     subsystem: "com.myamaka.AmakaFlowCompanion",
     category: "WorkoutKitConverter"

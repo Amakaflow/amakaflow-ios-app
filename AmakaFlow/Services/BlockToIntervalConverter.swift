@@ -195,10 +195,8 @@ enum BlockToIntervalConverter {
             #"^\d+(\.\d+)?\s*[A-Za-z%]+$"#,
             #"^\d+(\.\d+)?\s+[A-Za-z%]+$"#
         ]
-        for pattern in patterns {
-            if trimmed.range(of: pattern, options: .regularExpression) != nil {
-                return trimmed
-            }
+        for pattern in patterns where trimmed.range(of: pattern, options: .regularExpression) != nil {
+            return trimmed
         }
         return nil
     }
