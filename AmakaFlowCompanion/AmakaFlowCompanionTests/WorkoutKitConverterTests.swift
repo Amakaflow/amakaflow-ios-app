@@ -223,4 +223,28 @@ final class WorkoutKitConverterTests: XCTestCase {
         XCTAssertEqual(steps.first?.name, "DB Press · 22.5lb")
     }
 
+    func testRepeatWrappingRepsPreservesExpandedSteps() throws {
+        let workout = Workout(
+            name: "Circuit",
+            sport: .strength,
+            duration: 1200,
+            intervals: [
+                .repeat(reps: 3, intervals: [
+                    .reps(sets: 2, reps: 10, name: "Curl", load: nil, restSec: 30, followAlongUrl: nil)
+                ])
+            ],
+            source: .coach
+        )
+        let dto = try converter.convertToWKPlanDTO(workout)
+        guard case .repeatSet(let iterations, let steps) = dto.intervals.first else {
+            return XCTFail("Expected repeatSet, got \(dto.intervals)")
+        }
+        XCTAssertEqual(iterations, 3)
+        // Nested sets:2 expands to two Curl steps per outer round (not dropped).
+        XCTAssertEqual(steps.count, 2)
+        XCTAssertEqual(steps[0].name, "Curl")
+        XCTAssertEqual(steps[0].reps, 10)
+        XCTAssertEqual(steps[1].reps, 10)
+    }
+
 }

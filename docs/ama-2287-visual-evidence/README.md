@@ -84,6 +84,8 @@ Spec: [`docs/superpowers/specs/2026-07-26-apple-workoutkit-sets-reps-fidelity-de
 
 Also verify: 3-set exercise → IntervalBlock repeats (not one Open step only).
 
+**Device Trial A/B (founder — still open):** simulator/unit tests do not close AMA-2287 Apple surface. Record on a physical iPhone + paired Watch: appearance, latency, runnability in native Workout for Trial A (schedule now) and Trial B (+5–10 min DEBUG only). Keep Garmin unblocked.
+
 ## Device evidence checklist
 
 Physical device required. Attach screenshots under this folder after manual runs.

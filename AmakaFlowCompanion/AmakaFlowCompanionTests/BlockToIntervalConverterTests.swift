@@ -236,6 +236,13 @@ final class BlockToIntervalConverterTests: XCTestCase {
         }
     }
 
+    func testNumericCoachingCueNotesDoNotBecomeLoad() {
+        XCTAssertNil(BlockToIntervalConverter.phraseLoadFromNotes("10 sec"))
+        XCTAssertNil(BlockToIntervalConverter.phraseLoadFromNotes("3 sets"))
+        XCTAssertEqual(BlockToIntervalConverter.phraseLoadFromNotes("25 lb"), "25 lb")
+        XCTAssertEqual(BlockToIntervalConverter.phraseLoadFromNotes("22.5kg"), "22.5kg")
+    }
+
     // MARK: - parseReps edge cases
 
     func testParseRepsPlainNumber() {

@@ -19,8 +19,9 @@ private let workoutKitConverterLog = Logger(
 
 private func compactLoadToken(_ load: String) -> String {
     let trimmed = load.trimmingCharacters(in: .whitespacesAndNewlines)
-    let pattern = #"^\d+(\.\d+)?\s+[A-Za-z%]+$"#
-    if trimmed.range(of: pattern, options: .regularExpression) != nil {
+    // Allow-list units so coaching cues like "10 sec" / "3 sets" are not compacted as loads.
+    let pattern = #"^\d+(\.\d+)?\s*(lbs?|kgs?|%)$"#
+    if trimmed.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil {
         return trimmed.replacingOccurrences(of: " ", with: "")
     }
     return trimmed
@@ -194,12 +195,21 @@ class WorkoutKitConverter {
             return .step(step)
             
         case .repeat(let reps, let intervals):
-            let steps = try intervals.compactMap { interval -> WKPlanDTO.Interval.Step? in
-                guard case .step(let step) = try convertInterval(interval) else {
-                    // Repeat sets can only contain steps, not warmup/cooldown
-                    return nil
+            // Nested `.reps` converts to `.repeatSet`; expand those steps into this circuit
+            // (set count × steps per outer round). Skip warmup/cooldown inside a repeat.
+            var steps: [WKPlanDTO.Interval.Step] = []
+            for interval in intervals {
+                switch try convertInterval(interval) {
+                case .step(let step):
+                    steps.append(step)
+                case .repeatSet(let nestedReps, let nestedSteps):
+                    let count = max(nestedReps, 1)
+                    for _ in 0..<count {
+                        steps.append(contentsOf: nestedSteps)
+                    }
+                default:
+                    continue
                 }
-                return step
             }
             return .repeatSet(reps: reps, intervals: steps)
 

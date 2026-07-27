@@ -191,11 +191,9 @@ enum BlockToIntervalConverter {
             return trimmed
         }
 
-        let patterns = [
-            #"^\d+(\.\d+)?\s*[A-Za-z%]+$"#,
-            #"^\d+(\.\d+)?\s+[A-Za-z%]+$"#
-        ]
-        for pattern in patterns where trimmed.range(of: pattern, options: .regularExpression) != nil {
+        // Allow-list units — reject coaching cues like "10 sec" / "3 sets".
+        let pattern = #"^\d+(\.\d+)?\s*(lbs?|kgs?|%)$"#
+        if trimmed.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil {
             return trimmed
         }
         return nil
