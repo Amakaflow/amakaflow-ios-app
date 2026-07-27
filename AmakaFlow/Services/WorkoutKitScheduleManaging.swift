@@ -70,6 +70,7 @@ protocol WorkoutKitScheduleManaging: Sendable {
     func removeAll() async
 }
 
+#if DEBUG
 /// In-memory test double. `maxAllowedCount` defaults to 15 to mirror Apple's real
 /// schedule cap for fixtures, but UI copy must read `maxAllowedCount` — never hardcode 15.
 final class MockWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Sendable {
@@ -81,13 +82,10 @@ final class MockWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
     var noopRemoveIDs: Set<WorkoutScheduleRowID> = []
     var fetchError: Error?
     var requestAuthorizationCallCount = 0
-    /// AMA-2330 P1 fix test seam: artificial delay inside `remove(row:)` so tests can
-    /// prove a second overlapping call is gated by `WorkoutScheduleViewModel.isMutating`
-    /// rather than racing this mock.
-    var removeDelayNanoseconds: UInt64 = 0
-    /// AMA-2330 P1 fix test seam: when true, `removeAll()` is a no-op (mirrors a
-    /// WorkoutKit-side failure to remove everything) so the view model's post-clear
-    /// "some plans could not be removed" status can be exercised.
+    /// When set, `remove(row:)` awaits this before mutating — deterministic
+    /// concurrency-gate tests resume via `releaseRemoveGate()`.
+    var removeGate: (@Sendable () async -> Void)?
+    /// When true, `removeAll()` is a no-op (mirrors a WorkoutKit-side failure).
     var removeAllIsNoOp = false
 
     var authorizationState: ScheduleAuthState {
@@ -105,8 +103,8 @@ final class MockWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
     }
 
     func remove(row: WorkoutScheduleRow) async {
-        if removeDelayNanoseconds > 0 {
-            try? await Task.sleep(nanoseconds: removeDelayNanoseconds)
+        if let removeGate {
+            await removeGate()
         }
         removeCallRows.append(row)
         guard !noopRemoveIDs.contains(row.id) else { return }
@@ -119,6 +117,17 @@ final class MockWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
         rows = []
     }
 }
+#else
+/// Unreachable in shipping builds — schedule UI entry points are iOS 18+ only.
+struct UnavailableWorkoutKitScheduler: WorkoutKitScheduleManaging {
+    var authorizationState: ScheduleAuthState { get async { .denied } }
+    var maxAllowedCount: Int { 0 }
+    func requestAuthorization() async -> ScheduleAuthState { .denied }
+    func fetchScheduledRows() async throws -> [WorkoutScheduleRow] { [] }
+    func remove(row: WorkoutScheduleRow) async {}
+    func removeAll() async {}
+}
+#endif
 
 #if canImport(WorkoutKit)
 /// Live WorkoutKit-backed implementation. Caches `WorkoutPlan` by row id from the
@@ -126,12 +135,11 @@ final class MockWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
 /// `WorkoutPlan` value (not just its id) to call `WorkoutScheduler.remove(_:at:)`.
 /// A row with no cache entry (stale row, or `remove` called before any fetch) is a no-op.
 ///
-/// AMA-2330 P1 fix: `planCache` is mutated from `fetchScheduledRows()`/`removeAll()`
-/// and read from `remove(row:)`; an overlapping refresh + delete from the view model
-/// could otherwise race it. `actor` gives every access exclusive, serialized isolation
-/// without the view model needing to know this type is anything but "the scheduler".
+/// `@MainActor` matches `AppleStartHandoffService` and the ViewModel call sites,
+/// so `planCache` is not accessed across concurrent executors.
 @available(iOS 18.0, *)
-actor LiveWorkoutKitScheduler: WorkoutKitScheduleManaging {
+@MainActor
+final class LiveWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Sendable {
     private let calendar: Calendar
     private var planCache: [WorkoutScheduleRowID: WorkoutPlan] = [:]
 
@@ -139,9 +147,7 @@ actor LiveWorkoutKitScheduler: WorkoutKitScheduleManaging {
         self.calendar = calendar
     }
 
-    /// `nonisolated` — the protocol requires synchronous access, and this only ever
-    /// reads a static WorkoutKit constant, never actor-isolated state.
-    nonisolated var maxAllowedCount: Int {
+    var maxAllowedCount: Int {
         WorkoutScheduler.maxAllowedScheduledWorkoutCount
     }
 
@@ -215,6 +221,8 @@ actor LiveWorkoutKitScheduler: WorkoutKitScheduleManaging {
             displayName = nil
         case .swimBikeRun(let workout):
             displayName = workout.displayName
+        @unknown default:
+            displayName = nil
         }
         if let displayName, !displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return displayName

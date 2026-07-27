@@ -73,6 +73,12 @@ final class WorkoutScheduleRowIDTests: XCTestCase {
             WorkoutScheduleRowID.canonicalDateKey(a),
             WorkoutScheduleRowID.canonicalDateKey(b)
         )
+        var c = b
+        c.nanosecond = 1
+        XCTAssertNotEqual(
+            WorkoutScheduleRowID.canonicalDateKey(b),
+            WorkoutScheduleRowID.canonicalDateKey(c)
+        )
     }
 
     func testRowIDIsHashable() {
@@ -343,26 +349,26 @@ final class WorkoutScheduleViewModelTests: XCTestCase {
         XCTAssertFalse(vm.isMutating)
     }
 
-    /// Proves overlapping `deleteSelected()` calls don't double-fire: a slow first
-    /// call holds `isMutating`, so a second call made before it finishes is a no-op
-    /// rather than racing WorkoutKit removal calls against each other.
+    /// Proves overlapping `deleteSelected()` calls don't double-fire: a gated first
+    /// call holds `isMutating`, so a second call made before it finishes is a no-op.
     func testOverlappingDeleteSelectedSecondCallIsGatedByIsMutating() async {
         let mock = MockWorkoutKitScheduler()
         let a = row(id: "a", title: "A", minutesAgo: 1)
         let b = row(id: "b", title: "B", minutesAgo: 2)
         mock.rows = [a, b]
-        mock.removeDelayNanoseconds = 150_000_000
+        let gate = RemoveGate()
+        mock.removeGate = { await gate.wait() }
         let vm = WorkoutScheduleViewModel(scheduler: mock)
         await vm.refresh(mode: .manual)
         vm.enterEditing()
         vm.toggleSelect(a.id)
 
         async let firstCall: Void = vm.deleteSelected()
-        try? await Task.sleep(nanoseconds: 30_000_000)
+        await gate.waitUntilHeld()
         XCTAssertTrue(vm.isMutating, "first call should still be in flight")
 
-        // Second call arrives while the first is still removing `a` — must be a no-op.
         await vm.deleteSelected()
+        await gate.release()
         await firstCall
 
         XCTAssertEqual(mock.removeCallRows.map(\.id), [a.id])
@@ -373,18 +379,18 @@ final class WorkoutScheduleViewModelTests: XCTestCase {
         let mock = MockWorkoutKitScheduler()
         let a = row(id: "a", title: "A", minutesAgo: 1)
         mock.rows = [a]
-        mock.removeDelayNanoseconds = 150_000_000
+        let gate = RemoveGate()
+        mock.removeGate = { await gate.wait() }
         let vm = WorkoutScheduleViewModel(scheduler: mock)
         await vm.refresh(mode: .manual)
         vm.enterEditing()
         vm.toggleSelect(a.id)
 
         async let firstDelete: Void = vm.deleteSelected()
-        try? await Task.sleep(nanoseconds: 30_000_000)
+        await gate.waitUntilHeld()
 
-        // A second, different mutation (clear all) arriving mid-delete must also
-        // be gated — not just a second call to the same method.
         await vm.clearAll()
+        await gate.release()
         await firstDelete
 
         XCTAssertEqual(mock.removeAllCallCount, 0, "clearAll must not run while a delete is in flight")
@@ -434,6 +440,41 @@ final class WorkoutScheduleViewModelTests: XCTestCase {
         await vm.clearAll()
         XCTAssertTrue(vm.showEmptyState)
         XCTAssertEqual(vm.statusMessage, "Removed all AmakaFlow plans.")
+    }
+
+    func testClearAllPreservesRefreshErrorWhenFetchFailsAfterRemoveAll() async {
+        let mock = MockWorkoutKitScheduler()
+        mock.rows = [row(id: "1", title: "A", minutesAgo: 1)]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        mock.fetchError = DummyFetchError()
+        await vm.clearAll()
+        XCTAssertEqual(vm.statusMessage, DummyFetchError().localizedDescription)
+        XCTAssertNotEqual(vm.statusMessage, "Some plans could not be removed — pull to refresh.")
+    }
+
+    func testRefreshDoesNotTrapOnDuplicateRowIDs() async {
+        let mock = MockWorkoutKitScheduler()
+        let a = row(id: "dup", title: "First", minutesAgo: 1)
+        let b = row(id: "dup", title: "Second", minutesAgo: 1)
+        mock.rows = [a, b]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        XCTAssertEqual(vm.incompleteRows.count, 2)
+        XCTAssertFalse(vm.authDenied)
+    }
+
+    func testSwipeDeleteDoesNotEnterEditingOnSuccess() async {
+        let mock = MockWorkoutKitScheduler()
+        let a = row(id: "a", title: "A", minutesAgo: 1)
+        mock.rows = [a]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        XCTAssertFalse(vm.isEditing)
+        await vm.delete(row: a)
+        XCTAssertFalse(vm.isEditing)
+        XCTAssertTrue(vm.selectedIDs.isEmpty)
+        XCTAssertTrue(vm.incompleteRows.isEmpty)
     }
 
     // MARK: - AMA-2330 P1 fixes: canRetry (not string-sniffed)
@@ -502,4 +543,43 @@ final class WorkoutScheduleViewModelTests: XCTestCase {
         await vm.delete(row: stale)
         XCTAssertTrue(mock.removeCallRows.isEmpty)
     }
+}
+
+/// Deterministic hold/release for concurrency-gate tests (no sleep timing).
+private actor RemoveGate {
+    private var isHeld = false
+    private var holdContinuations: [CheckedContinuation<Void, Never>] = []
+    private var observerContinuations: [CheckedContinuation<Void, Never>] = []
+
+    func wait() async {
+        isHeld = true
+        let observers = observerContinuations
+        observerContinuations = []
+        for continuation in observers {
+            continuation.resume()
+        }
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            holdContinuations.append(continuation)
+        }
+        isHeld = false
+    }
+
+    func waitUntilHeld() async {
+        if isHeld { return }
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            observerContinuations.append(continuation)
+        }
+    }
+
+    func release() {
+        let holds = holdContinuations
+        holdContinuations = []
+        for continuation in holds {
+            continuation.resume()
+        }
+    }
+}
+
+private struct DummyFetchError: Error, LocalizedError {
+    var errorDescription: String? { "fetch blew up" }
 }

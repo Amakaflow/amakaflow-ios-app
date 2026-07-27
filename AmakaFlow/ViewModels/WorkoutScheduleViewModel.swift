@@ -56,8 +56,7 @@ final class WorkoutScheduleViewModel: ObservableObject {
     }
 
     func toggleSelect(_ id: WorkoutScheduleRowID) {
-        if selectedIDs.contains(id) { selectedIDs.remove(id) }
-        else { selectedIDs.insert(id) }
+        if selectedIDs.contains(id) { selectedIDs.remove(id) } else { selectedIDs.insert(id) }
     }
 
     /// Public entry point — gated so an overlapping refresh/delete/clear-all can't
@@ -67,10 +66,11 @@ final class WorkoutScheduleViewModel: ObservableObject {
         guard !isMutating else { return }
         isMutating = true
         defer { isMutating = false }
-        await performRefresh(mode: mode)
+        _ = await performRefresh(mode: mode)
     }
 
-    private func performRefresh(mode: WorkoutScheduleRefreshMode) async {
+    @discardableResult
+    private func performRefresh(mode: WorkoutScheduleRefreshMode) async -> Bool {
         isLoading = true
         defer { isLoading = false }
 
@@ -87,7 +87,7 @@ final class WorkoutScheduleViewModel: ObservableObject {
             selectedIDs = []
             isEditing = false
             canRetry = false
-            return
+            return true
         }
 
         do {
@@ -97,7 +97,8 @@ final class WorkoutScheduleViewModel: ObservableObject {
             }
             incompleteRows = sorted.filter { !$0.isComplete }
             completedRows = sorted.filter(\.isComplete)
-            rowsByID = Dictionary(uniqueKeysWithValues: sorted.map { ($0.id, $0) })
+            // Collision-safe: duplicate WorkoutScheduleRowIDs must not trap.
+            rowsByID = Dictionary(sorted.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
             showEmptyState = sorted.isEmpty
 
             switch mode {
@@ -119,22 +120,24 @@ final class WorkoutScheduleViewModel: ObservableObject {
                     canRetry = true
                 }
             }
+            return true
         } catch {
             statusMessage = error.localizedDescription
             showEmptyState = false
             canRetry = false
+            return false
         }
     }
 
-    /// Single-row delete (e.g. swipe-to-delete), reusing the same still-present
-    /// reconciliation as the multi-select path.
+    /// Single-row delete (e.g. swipe-to-delete). Does not flip the list into
+    /// multi-select edit mode; still-present reconciliation may select the row
+    /// afterward only if removal silently failed.
     func delete(row: WorkoutScheduleRow) async {
         guard !isMutating else { return }
         isMutating = true
         defer { isMutating = false }
-        selectedIDs = [row.id]
-        isEditing = true
-        await performDeleteSelected()
+        guard rowsByID[row.id] != nil else { return }
+        await performDelete(ids: [row.id])
     }
 
     /// Removes every selected row. `remove(row:)` is non-throwing and may be a
@@ -145,17 +148,17 @@ final class WorkoutScheduleViewModel: ObservableObject {
         guard !isMutating else { return }
         isMutating = true
         defer { isMutating = false }
-        await performDeleteSelected()
+        await performDelete(ids: Array(selectedIDs))
     }
 
-    private func performDeleteSelected() async {
-        let targets = selectedIDs.compactMap { rowsByID[$0] }
+    private func performDelete(ids: [WorkoutScheduleRowID]) async {
+        let targets = ids.compactMap { rowsByID[$0] }
         guard !targets.isEmpty else { return }
         let attempted = Set(targets.map(\.id))
         for target in targets {
             await scheduler.remove(row: target)
         }
-        await performRefresh(mode: .afterMutation(attempted: attempted))
+        _ = await performRefresh(mode: .afterMutation(attempted: attempted))
     }
 
     func clearAll() async {
@@ -163,7 +166,7 @@ final class WorkoutScheduleViewModel: ObservableObject {
         isMutating = true
         defer { isMutating = false }
         await scheduler.removeAll()
-        await performRefresh(mode: .manual)
+        guard await performRefresh(mode: .manual) else { return }
         if showEmptyState {
             statusMessage = "Removed all AmakaFlow plans."
         } else if !incompleteRows.isEmpty || !completedRows.isEmpty {

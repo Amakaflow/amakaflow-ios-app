@@ -56,7 +56,11 @@ struct WorkoutScheduleView: View {
         if #available(iOS 18.0, *) {
             return WorkoutScheduleViewModel(scheduler: LiveWorkoutKitScheduler())
         }
+        #if DEBUG
         return WorkoutScheduleViewModel(scheduler: MockWorkoutKitScheduler())
+        #else
+        return WorkoutScheduleViewModel(scheduler: UnavailableWorkoutKitScheduler())
+        #endif
     }
 
     private var hasAnyRows: Bool {
@@ -344,7 +348,7 @@ struct WorkoutScheduleView: View {
                     Label("Delete", systemImage: "trash")
                 }
                 .disabled(viewModel.isMutating)
-                .accessibilityIdentifier("af_workout_schedule_swipe_delete")
+                .accessibilityIdentifier("af_workout_schedule_swipe_delete_\(row.id.planID)_\(row.id.dateKey)")
             }
         }
     }
