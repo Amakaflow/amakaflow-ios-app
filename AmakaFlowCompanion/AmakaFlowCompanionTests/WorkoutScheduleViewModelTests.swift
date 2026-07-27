@@ -255,4 +255,76 @@ final class WorkoutScheduleViewModelTests: XCTestCase {
         XCTAssertFalse(vm.isEditing)
         XCTAssertTrue(vm.selectedIDs.isEmpty)
     }
+
+    func testDeleteSelectedPassesExactStoredDateComponents_mockLevel() async {
+        // Mock-level passthrough. Live plan+date → remove(_:at:) is code review + dogfood.
+        let mock = MockWorkoutKitScheduler()
+        let r = row(id: "1", title: "Hyrox", minutesAgo: 3)
+        mock.rows = [r]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        vm.enterEditing()
+        vm.toggleSelect(r.id)
+        await vm.deleteSelected()
+        XCTAssertEqual(mock.removeCallRows.map(\.id), [r.id])
+        XCTAssertEqual(mock.removeCallRows.first?.dateComponents, r.dateComponents)
+        XCTAssertTrue(vm.incompleteRows.isEmpty)
+    }
+
+    func testEmptySelectionDoesNotCallRemove() async {
+        let mock = MockWorkoutKitScheduler()
+        mock.rows = [row(id: "1", title: "A", minutesAgo: 1)]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        await vm.deleteSelected()
+        XCTAssertTrue(mock.removeCallRows.isEmpty)
+    }
+
+    func testClearAllCallsRemoveAllOnce() async {
+        let mock = MockWorkoutKitScheduler()
+        mock.rows = [
+            row(id: "1", title: "A", minutesAgo: 1),
+            row(id: "2", title: "B", minutesAgo: 2)
+        ]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        await vm.clearAll()
+        XCTAssertEqual(mock.removeAllCallCount, 1)
+    }
+
+    func testSilentNoOpRemoveKeepsStillPresentIDsSelected() async {
+        let mock = MockWorkoutKitScheduler()
+        let a = row(id: "a", title: "A", minutesAgo: 1)
+        let b = row(id: "b", title: "B", minutesAgo: 2)
+        let c = row(id: "c", title: "C", minutesAgo: 3)
+        mock.rows = [a, b, c]
+        mock.noopRemoveIDs = [b.id]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        vm.enterEditing()
+        [a, b, c].forEach { vm.toggleSelect($0.id) }
+        await vm.deleteSelected()
+        XCTAssertEqual(vm.selectedIDs, [b.id])
+        XCTAssertTrue(vm.isEditing)
+        XCTAssertTrue(vm.statusMessage?.contains("Removed 2 of 3") == true)
+    }
+
+    func testRetryOnlyTargetsIDsStillPresent() async {
+        let mock = MockWorkoutKitScheduler()
+        let a = row(id: "a", title: "A", minutesAgo: 1)
+        let b = row(id: "b", title: "B", minutesAgo: 2)
+        mock.rows = [a, b]
+        mock.noopRemoveIDs = [b.id]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        vm.enterEditing()
+        vm.toggleSelect(a.id)
+        vm.toggleSelect(b.id)
+        await vm.deleteSelected()
+        mock.noopRemoveIDs = []
+        mock.removeCallRows = []
+        await vm.deleteSelected()
+        XCTAssertEqual(mock.removeCallRows.map(\.id), [b.id])
+        XCTAssertTrue(vm.selectedIDs.isEmpty)
+    }
 }

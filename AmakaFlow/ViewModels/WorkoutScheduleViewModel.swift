@@ -95,4 +95,34 @@ final class WorkoutScheduleViewModel: ObservableObject {
             showEmptyState = false
         }
     }
+
+    /// Single-row delete (e.g. swipe-to-delete), reusing the same still-present
+    /// reconciliation as the multi-select path.
+    func delete(row: WorkoutScheduleRow) async {
+        selectedIDs = [row.id]
+        isEditing = true
+        await deleteSelected()
+    }
+
+    /// Removes every selected row. `remove(row:)` is non-throwing and may be a
+    /// silent no-op (see `WorkoutKitScheduleManaging`), so the post-mutation
+    /// refresh — not the call site — is the source of truth for what actually
+    /// disappeared; still-present ids stay selected for retry.
+    func deleteSelected() async {
+        let targets = selectedIDs.compactMap { rowsByID[$0] }
+        guard !targets.isEmpty else { return }
+        let attempted = Set(targets.map(\.id))
+        for target in targets {
+            await scheduler.remove(row: target)
+        }
+        await refresh(mode: .afterMutation(attempted: attempted))
+    }
+
+    func clearAll() async {
+        await scheduler.removeAll()
+        await refresh(mode: .manual)
+        if showEmptyState {
+            statusMessage = "Removed all AmakaFlow plans."
+        }
+    }
 }
