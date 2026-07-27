@@ -98,7 +98,7 @@ final class WorkoutScheduleViewModel: ObservableObject {
             incompleteRows = sorted.filter { !$0.isComplete }
             completedRows = sorted.filter(\.isComplete)
             // Collision-safe: duplicate WorkoutScheduleRowIDs must not trap.
-            rowsByID = Dictionary(sorted.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            rowsByID = Dictionary(sorted.map { ($0.id, $0) }) { first, _ in first }
             showEmptyState = sorted.isEmpty
 
             switch mode {
