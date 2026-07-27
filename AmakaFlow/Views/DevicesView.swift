@@ -124,6 +124,9 @@ struct DevicesView: View {
         scrollContainer {
             devicesSection
             watchDisplayPrefsRow
+            if #available(iOS 18.0, *) {
+                scheduledWorkoutPlansRow
+            }
             pairingLifecycleNote
             infoNote
         }
@@ -150,6 +153,10 @@ struct DevicesView: View {
                 .frame(maxWidth: .infinity)
             }
             .accessibilityIdentifier("devices_empty_state")
+
+            if #available(iOS 18.0, *) {
+                scheduledWorkoutPlansRow
+            }
 
             pairingLifecycleNote
             infoNote
@@ -285,6 +292,34 @@ struct DevicesView: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("af_garmin_watch_display_prefs_devices")
+    }
+
+    /// AMA-2330: entry point to the WorkoutKit scheduled-plan cleanup screen.
+    /// iOS 18+ only — no "Requires iOS 18" row on older systems, just hidden.
+    @available(iOS 18.0, *)
+    private var scheduledWorkoutPlansRow: some View {
+        NavigationLink {
+            WorkoutScheduleView()
+        } label: {
+            AFCard {
+                HStack(alignment: .center, spacing: Theme.Spacing.md) {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                        Text("Scheduled in Workout")
+                            .afH2()
+                        Text("Manage AmakaFlow plans scheduled in the Apple Watch Workout app.")
+                            .afMuted()
+                            .multilineTextAlignment(.leading)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(DailyDriver.foregroundDim)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("af_devices_scheduled_workout_plans")
     }
 
     private func deviceCard(_ display: DevicesViewModel.DisplayDevice) -> some View {
