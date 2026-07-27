@@ -113,7 +113,7 @@ enum BlockToIntervalConverter {
         isCooldown: Bool
     ) -> WorkoutInterval {
         let prescription = PrescriptionFormatter.effective(from: exercise)
-        let loadStr = formatLoad(exercise.load)
+        let loadStr = formatLoad(exercise.load) ?? exercise.notes
         let target = exercise.notes
 
         switch prescription.primary {

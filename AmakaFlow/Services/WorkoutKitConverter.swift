@@ -6,10 +6,33 @@
 //
 
 import Foundation
+import OSLog
 import WorkoutKitSync
 #if canImport(Sentry)
 import Sentry
 #endif
+
+
+private let workoutKitConverterLog = Logger(
+    subsystem: "com.myamaka.AmakaFlowCompanion",
+    category: "WorkoutKitConverter"
+)
+
+private func compactLoadToken(_ load: String) -> String {
+    let trimmed = load.trimmingCharacters(in: .whitespacesAndNewlines)
+    let pattern = #"^\d+\s+[A-Za-z%]+$"#
+    if trimmed.range(of: pattern, options: .regularExpression) != nil {
+        return trimmed.replacingOccurrences(of: " ", with: "")
+    }
+    return trimmed
+}
+
+private func displayName(exercise: String, load: String?) -> String {
+    guard let load, !load.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        return exercise
+    }
+    return "\(exercise) · \(compactLoadToken(load))"
+}
 
 /// Service for converting Workout models to WorkoutKit DTO format
 @available(iOS 18.0, watchOS 11.0, *)
@@ -137,19 +160,25 @@ class WorkoutKitConverter {
             )
             return .step(step)
             
-        case .reps(_, let reps, let name, let load, let restSec, _):
-            let wkLoad = convertLoad(load)
+        case .reps(let sets, let reps, let name, let load, let restSec, _):
+            if let sets, sets < 1 {
+                workoutKitConverterLog.warning(
+                    "WorkoutKitConverter: received sets=\(sets, privacy: .public) for '\(name, privacy: .public)'; clamping to 1"
+                )
+            }
+            let setCount = max(sets ?? 1, 1)
+            let rest = (restSec ?? 0) > 0 ? restSec : nil
             let step = WKPlanDTO.Interval.Step(
                 kind: "reps",
                 seconds: nil,
                 meters: nil,
                 reps: reps,
-                name: name,
-                load: wkLoad,
-                restSec: restSec,
+                name: displayName(exercise: name, load: load),
+                load: nil, // convertLoad remains stub
+                restSec: rest,
                 target: nil
             )
-            return .step(step)
+            return .repeatSet(reps: setCount, intervals: [step])
             
         case .distance(let meters, let target):
             let wkTarget = convertTarget(target)
