@@ -16,12 +16,18 @@ enum EditorV2GroupType: String, CaseIterable, Equatable, Sendable {
     case tabata
     case fortime
     case warmup
+    case cooldown
 
     /// Optional create chips — never a gate before the first exercise.
     static let formatChips: [EditorV2GroupType] = [.emom, .amrap, .tabata, .fortime, .circuit]
 
-    /// "Runs as" switcher (warmup excluded — soft section).
+    /// "Runs as" switcher (warmup / cooldown excluded — soft sections).
     static let runsAsOptions: [EditorV2GroupType] = [.superset] + formatChips
+
+    /// Soft sections carry enrichment intent, not a pacing format (AMA-2336).
+    var isSoftSection: Bool {
+        self == .warmup || self == .cooldown
+    }
 
     var label: String {
         switch self {
@@ -32,6 +38,7 @@ enum EditorV2GroupType: String, CaseIterable, Equatable, Sendable {
         case .tabata: return "Tabata"
         case .fortime: return "For time"
         case .warmup: return "Warm-up"
+        case .cooldown: return "Cool-down"
         }
     }
 
@@ -49,6 +56,7 @@ enum EditorV2GroupType: String, CaseIterable, Equatable, Sendable {
         case .tabata: return .tabata
         case .fortime: return .forTime
         case .warmup: return .warmup
+        case .cooldown: return .cooldown
         }
     }
 
@@ -61,6 +69,7 @@ enum EditorV2GroupType: String, CaseIterable, Equatable, Sendable {
         case .tabata: return .tabata
         case .fortime: return .forTime
         case .warmup: return .warmup
+        case .cooldown: return .cooldown
         }
     }
 
@@ -74,6 +83,7 @@ enum EditorV2GroupType: String, CaseIterable, Equatable, Sendable {
         case .tabata: return EditorV2GroupConfig(rounds: 8, restSeconds: 10, workSeconds: 20)
         case .fortime: return EditorV2GroupConfig(capMinutes: 20)
         case .warmup: return EditorV2GroupConfig(rounds: 2)
+        case .cooldown: return EditorV2GroupConfig(rounds: 1)
         }
     }
 
@@ -86,7 +96,8 @@ enum EditorV2GroupType: String, CaseIterable, Equatable, Sendable {
         case .tabata: return .tabata
         case .forTime: return .fortime
         case .warmup: return .warmup
-        case .sets, .cooldown: return nil
+        case .cooldown: return .cooldown
+        case .sets: return nil
         }
     }
 
@@ -100,6 +111,7 @@ enum EditorV2GroupType: String, CaseIterable, Equatable, Sendable {
         case .tabata: return .tabata
         case .forTime, .fortime: return .fortime
         case .warmup: return .warmup
+        case .cooldown: return .cooldown
         case .sets, .regular: return nil
         }
     }
@@ -130,25 +142,32 @@ struct EditorV2Group: Equatable, Identifiable, Sendable {
     var name: String
     var config: EditorV2GroupConfig
     var structureSource: StructureSource
+    /// AMA-2336 — set only on soft sections this app added (`session_warmup` / `cooldown`).
+    /// Never the presence test — that stays block `type`.
+    var enrichmentKind: EnrichmentKind?
 
     init(
         id: String = UUID().uuidString,
         type: EditorV2GroupType,
         name: String? = nil,
         config: EditorV2GroupConfig? = nil,
-        structureSource: StructureSource = .userConfirmed
+        structureSource: StructureSource = .userConfirmed,
+        enrichmentKind: EnrichmentKind? = nil
     ) {
         self.id = id
         self.type = type
         self.name = name ?? type.label
         self.config = config ?? type.defaultConfig
         self.structureSource = structureSource
+        self.enrichmentKind = enrichmentKind
     }
 
     var metaLine: String {
         switch type {
         case .warmup:
             return "\(config.rounds ?? 2) ROUNDS · EASY"
+        case .cooldown:
+            return "\(config.rounds ?? 1) ROUNDS · EASY"
         case .circuit:
             return "\(config.rounds ?? 4) ROUNDS · FOR TIME"
         case .emom:
@@ -190,7 +209,7 @@ struct EditorV2Group: Equatable, Identifiable, Sendable {
                 EditorV2StepperSpec(label: "Rest s", key: .restSeconds, min: 0, max: 120, step: 5),
                 EditorV2StepperSpec(label: "Rounds", key: .rounds, min: 1, max: 20, step: 1)
             ]
-        case .circuit, .warmup:
+        case .circuit, .warmup, .cooldown:
             return [EditorV2StepperSpec(label: "Rounds", key: .rounds, min: 1, max: 20, step: 1)]
         case .superset:
             return [
@@ -230,8 +249,17 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
     var groupKey: String?
     var swapMessage: String?
     var swapReplacementName: String?
-    /// AMA-2312 — mirrors backend `field_provenance` (`explicit` / `inferred` / `user`).
+    /// AMA-2312 — mirrors backend `field_provenance` (`explicit` / `inferred` / `user` /
+    /// `enrichment_default`).
     var fieldProvenance: [String: ProvSource]
+    /// AMA-2336 — stable within-workout identity (`wex_…`), minted at save.
+    var exerciseId: String?
+    /// AMA-2336 — declared sibling rows; `sets: Int` shape is unchanged.
+    var warmupSets: [WarmupSetRow]
+    /// AMA-2336 — open rest intent → lap at delivery (`restSeconds` must be nil).
+    var restOpen: Bool?
+    /// AMA-2336 — row provenance for soft-section activity rows (nil on work rows).
+    var structureSource: StructureSource?
 
     init(
         id: String = UUID().uuidString,
@@ -247,7 +275,11 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
         groupKey: String? = nil,
         swapMessage: String? = nil,
         swapReplacementName: String? = nil,
-        fieldProvenance: [String: ProvSource] = [:]
+        fieldProvenance: [String: ProvSource] = [:],
+        exerciseId: String? = nil,
+        warmupSets: [WarmupSetRow] = [],
+        restOpen: Bool? = nil,
+        structureSource: StructureSource? = nil
     ) {
         self.id = id
         self.name = name
@@ -263,6 +295,10 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
         self.swapMessage = swapMessage
         self.swapReplacementName = swapReplacementName
         self.fieldProvenance = fieldProvenance
+        self.exerciseId = exerciseId
+        self.warmupSets = warmupSets
+        self.restOpen = restOpen
+        self.structureSource = structureSource
     }
 
     /// Mono summary under the name (screens-editor2.jsx `e2Sum`).
@@ -280,6 +316,58 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
 
     mutating func stampUser(_ field: String) {
         fieldProvenance[field] = .user
+    }
+
+    /// AMA-2336 — editing a soft-section activity row makes that row user-owned,
+    /// so untouched siblings still refresh under changed prefs (spec §5 rule a).
+    mutating func renameActivity(to newName: String) {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed != name else { return }
+        name = trimmed
+        structureSource = .userAdded
+    }
+
+    /// Editing one warm-up set row flips **that row** to `user_added`.
+    mutating func updateWarmupSetReps(at index: Int, reps: Int) {
+        guard warmupSets.indices.contains(index), warmupSets[index].reps != reps else { return }
+        warmupSets[index].reps = reps
+        warmupSets[index].structureSource = .userAdded
+    }
+
+    mutating func updateWarmupSetWeight(at index: Int, weight: Double?) {
+        guard warmupSets.indices.contains(index), warmupSets[index].weight != weight else { return }
+        warmupSets[index].weight = weight
+        warmupSets[index].structureSource = .userAdded
+    }
+
+    /// Quick-add rest intent from prefs — refreshable while nothing user-owned.
+    mutating func applyEnrichmentDefaultRest(restSeconds: Int?, restOpen: Bool) throws {
+        let validated = try WorkoutEnrichmentMutations.validatedRest(
+            restSec: restSeconds,
+            restOpen: restOpen
+        )
+        self.restSeconds = validated.restSec
+        self.restOpen = validated.restOpen
+        WorkoutEnrichmentMutations.stampRestEnrichmentDefault(fieldProvenance: &fieldProvenance)
+    }
+
+    /// User-edited rest intent — ownership is monotonic, enrichment never overwrites it.
+    mutating func setRestIntent(restSeconds: Int?, restOpen: Bool) throws {
+        let validated = try WorkoutEnrichmentMutations.validatedRest(
+            restSec: restSeconds,
+            restOpen: restOpen
+        )
+        self.restSeconds = validated.restSec
+        self.restOpen = validated.restOpen
+        WorkoutEnrichmentMutations.stampRestUser(fieldProvenance: &fieldProvenance)
+    }
+
+    /// Absent intent is a decision, not a gap — provenance is cleared with the value.
+    mutating func clearRestIntent() {
+        restSeconds = nil
+        restOpen = nil
+        fieldProvenance.removeValue(forKey: WorkoutEnrichmentMutations.restSecKey)
+        fieldProvenance.removeValue(forKey: WorkoutEnrichmentMutations.restOpenKey)
     }
 
     /// AMA-2312 — apply range-mode commit only when the parsed range is valid and changed.

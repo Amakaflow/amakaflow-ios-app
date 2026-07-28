@@ -164,7 +164,7 @@ struct StructureClarifyGroupCard: View {
         switch type.canonical {
         case .superset: return DailyDriver.amber
         case .circuit, .rounds: return DailyDriver.zoneGreen
-        case .warmup: return Color(hex: "8890A0")
+        case .warmup, .cooldown: return Color(hex: "8890A0")
         case .sets, .regular: return Color.white.opacity(0.35)
         case .emom: return DailyDriver.blue
         case .amrap: return DailyDriver.orange

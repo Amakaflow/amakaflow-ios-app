@@ -29,6 +29,24 @@ class MockAPIService: APIServiceProviding {
     var getTelegramLinkStatusResult: Result<TelegramLinkStatusResponse, Error> = .success(
         TelegramLinkStatusResponse(linked: false, telegramId: nil, telegramIdHash: nil, usedAt: nil)
     )
+    // AMA-2336 — enrichment prefs / enrich / stored blocks_json
+    var fetchWorkoutPreferencesResult: Result<WorkoutPreferences, Error> = .success(.defaults)
+    var fetchWorkoutPreferencesCalled = false
+    var updateWorkoutPreferencesResult: Result<WorkoutPreferences, Error>?
+    var lastUpdatedWorkoutPreferences: WorkoutPreferences?
+    var enrichWorkoutResult: Result<EnrichResponse, Error>?
+    var enrichWorkoutCallCount = 0
+    var lastEnrichRequest: EnrichRequest?
+    var fetchWorkoutBlocksJSONResult: Result<[String: Any], Error> = .success(["blocks": []])
+    var lastFetchWorkoutBlocksJSONWorkoutId: String?
+    var saveWorkoutBlocksJSONResult: Result<Void, Error> = .success(())
+    var savedWorkoutBlocksJSON: [(
+        workoutId: String,
+        title: String,
+        blocksJSON: [String: Any],
+        tombstones: [EnrichmentTombstone]?
+    )] = []
+
     var parseVoiceWorkoutResult: Result<VoiceWorkoutParseResponse, Error>?
     var ingestInstagramReelResult: Result<IngestInstagramReelResponse, Error>?
     var ingestTextResult: Result<IngestTextResponse, Error>?
@@ -888,6 +906,48 @@ class MockAPIService: APIServiceProviding {
             try await Task.sleep(nanoseconds: pushWatchDeliveryDelayNanoseconds)
         }
         return try pushWatchDeliveryResult.get()
+    }
+
+    // MARK: - Workout Enrichment (AMA-2336)
+
+    func fetchWorkoutPreferences() async throws -> WorkoutPreferences {
+        fetchWorkoutPreferencesCalled = true
+        return try fetchWorkoutPreferencesResult.get()
+    }
+
+    @discardableResult
+    func updateWorkoutPreferences(_ prefs: WorkoutPreferences) async throws -> WorkoutPreferences {
+        lastUpdatedWorkoutPreferences = prefs
+        if let updateWorkoutPreferencesResult {
+            return try updateWorkoutPreferencesResult.get()
+        }
+        return prefs
+    }
+
+    func enrichWorkout(_ enrich: EnrichRequest) async throws -> EnrichResponse {
+        lastEnrichRequest = enrich
+        enrichWorkoutCallCount += 1
+        if let enrichWorkoutResult {
+            return try enrichWorkoutResult.get()
+        }
+        return EnrichResponse(blocksJSON: enrich.blocksJSON)
+    }
+
+    func fetchWorkoutBlocksJSON(workoutId: String) async throws -> [String: Any] {
+        lastFetchWorkoutBlocksJSONWorkoutId = workoutId
+        return try fetchWorkoutBlocksJSONResult.get()
+    }
+
+    func saveWorkoutBlocksJSON(
+        workoutId: String,
+        title: String,
+        blocksJSON: [String: Any],
+        tombstones: [EnrichmentTombstone]? = nil
+    ) async throws {
+        savedWorkoutBlocksJSON.append(
+            (workoutId: workoutId, title: title, blocksJSON: blocksJSON, tombstones: tombstones)
+        )
+        try saveWorkoutBlocksJSONResult.get()
     }
 
     func listLibraryItems(

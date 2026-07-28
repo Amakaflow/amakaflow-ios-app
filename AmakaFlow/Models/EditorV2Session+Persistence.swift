@@ -40,7 +40,7 @@ extension EditorV2Session {
                     exercises.append(exercise.asEditorV2(groupKey: key))
                 }
             } else {
-                // Straight sets / cooldown → flat cards (no structure pill).
+                // Straight sets → flat cards (no structure pill).
                 for exercise in block.exercises {
                     exercises.append(exercise.asEditorV2(groupKey: nil))
                 }
@@ -75,7 +75,7 @@ extension EditorV2Session {
                 flushFlat()
                 let restSec: Int? = {
                     switch group.type {
-                    case .superset, .circuit, .warmup:
+                    case .superset, .circuit, .warmup, .cooldown:
                         return group.config.restSeconds
                     case .tabata:
                         return group.config.restSeconds
@@ -98,7 +98,8 @@ extension EditorV2Session {
                         exercises: run.exercises.map(\.asSocialImportExercise),
                         type: group.type.structureBlockType.rawValue,
                         restSec: restSec,
-                        structureSource: group.structureSource.rawValue
+                        structureSource: group.structureSource.rawValue,
+                        enrichmentKind: group.enrichmentKind?.rawValue
                     )
                 )
             } else {
@@ -135,6 +136,9 @@ private extension DDEditorExerciseDraft {
 }
 
 private extension EditorV2Exercise {
+    /// AMA-2336 — mint `exercise_id` on the save payload when the row has none, so
+    /// tombstones written later key off a stable id (`mintMissingExerciseIDs` keeps
+    /// the session in step).
     var asSocialImportExercise: SocialImportExercise {
         var provenance: [String: String] = [:]
         for (key, value) in fieldProvenance {
@@ -150,7 +154,11 @@ private extension EditorV2Exercise {
             restSeconds: restSeconds,
             load: weightKg.map(EditorV2Exercise.formatWeightLoad),
             notes: calories.map { "\($0) cal" },
-            fieldProvenance: provenance.isEmpty ? nil : provenance
+            fieldProvenance: provenance.isEmpty ? nil : provenance,
+            exerciseId: exerciseId ?? WorkoutEnrichmentMutations.mintExerciseId(),
+            warmupSets: warmupSets.isEmpty ? nil : warmupSets,
+            restOpen: restOpen,
+            structureSource: structureSource?.rawValue
         )
     }
 }

@@ -23,6 +23,8 @@ struct EditorV2View: View {
     @State private var pairSourceID: String?
     @State private var addSheetOpen = false
     @State private var replaceExerciseID: String?
+    /// AMA-2336 — `workout_preferences` cache; fetched on the first quick-add.
+    @State private var enrichmentPrefs: WorkoutPreferences?
 
     init(mode: DDEditorMode, workout: Workout? = nil) {
         self.mode = mode
@@ -65,7 +67,9 @@ struct EditorV2View: View {
                             onStartFormat: { type in
                                 _ = session.startFormat(type)
                                 showToast("\(type.label) — add the moves, timing is set")
-                            }
+                            },
+                            onAddWarmup: { quickAddSoftSection(.sessionWarmup) },
+                            onAddCooldown: { quickAddSoftSection(.cooldown) }
                         )
                     )
                     .padding(.horizontal, 18)
@@ -174,10 +178,62 @@ struct EditorV2View: View {
         return "TAP AN EXERCISE TO EDIT IT · ⋯ FOR EVERYTHING ELSE"
     }
 
+    /// Quick-add from prefs. An explicit tap re-opts in, so a previous delete
+    /// (tombstone) is cleared first — presence by type still blocks duplicates.
+    private func quickAddSoftSection(_ kind: EnrichmentKind) {
+        Task {
+            let prefs = await loadEnrichmentPrefs()
+            let added: Bool
+            switch kind {
+            case .cooldown:
+                added = session.quickAddCooldown(from: prefs, clearingTombstone: true)
+            default:
+                added = session.quickAddSessionWarmup(from: prefs, clearingTombstone: true)
+            }
+            guard added else {
+                showToast(
+                    kind == .cooldown
+                        ? "No cool-down defaults yet — set them in Settings › Garmin"
+                        : "No warm-up defaults yet — set them in Settings › Garmin"
+                )
+                return
+            }
+            showToast(kind == .cooldown ? "Cool-down added ✓" : "Warm-up added ✓")
+        }
+    }
+
+    private func addWarmupSets(to exerciseID: String) {
+        Task {
+            let prefs = await loadEnrichmentPrefs()
+            let added = session.addDefaultWarmupSets(
+                to: exerciseID,
+                rows: prefs.defaultWarmupSetRows,
+                clearingTombstone: true
+            )
+            showToast(
+                added
+                    ? "Warm-up sets added ✓"
+                    : "No warm-up set defaults yet — set them in Settings › Garmin"
+            )
+        }
+    }
+
+    /// Prefs are a default source, never a gate: an unavailable mapper falls back
+    /// to the shipped defaults so the quick-add still works offline.
+    private func loadEnrichmentPrefs() async -> WorkoutPreferences {
+        if let enrichmentPrefs { return enrichmentPrefs }
+        let loaded = (try? await AppDependencies.current.apiService.fetchWorkoutPreferences())
+            ?? .defaults
+        enrichmentPrefs = loaded
+        return loaded
+    }
+
     private func saveTapped() {
         saveModel.name = session.title.trimmingCharacters(in: .whitespacesAndNewlines)
         saveModel.intervals = session.toSaveIntervals()
+        session.mintMissingExerciseIDs()
         saveModel.saveBlocks = session.toSocialImportBlocks()
+        saveModel.saveEnrichmentTombstones = session.enrichmentTombstones
         Task { await saveModel.save() }
     }
 }
@@ -247,6 +303,15 @@ extension EditorV2View {
                 showToast("Set added ✓")
                 menuExerciseID = nil
             },
+            onAddWarmupSets: {
+                menuExerciseID = nil
+                addWarmupSets(to: exercise.id)
+            },
+            onRemoveWarmupSets: {
+                _ = session.removeWarmupSets(from: exercise.id)
+                showToast("Warm-up sets removed")
+                menuExerciseID = nil
+            },
             onRemove: {
                 session.removeExercise(exercise.id)
                 showToast("Removed")
@@ -276,6 +341,16 @@ extension EditorV2View {
                 session.ungroup(item.id)
                 configGroupKey = nil
                 showToast("Ungrouped — now straight sets")
+            },
+            onRemoveSoftSection: {
+                if item.group.type == .cooldown {
+                    session.removeCooldown()
+                    showToast("Cool-down removed")
+                } else {
+                    session.removeSessionWarmup()
+                    showToast("Warm-up removed")
+                }
+                configGroupKey = nil
             }
         )
         .presentationDetents([.medium, .large])

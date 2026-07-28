@@ -330,7 +330,7 @@ final class StructureClarifyMatrixTests: XCTestCase {
                 .init(name: "Run", distanceM: 400),
                 .init(name: "Run", distanceM: 400)
             ]
-        case .warmup:
+        case .warmup, .cooldown:
             return [
                 .init(name: "Easy Ski", distanceM: 500),
                 .init(name: "Air Squats", reps: 10)

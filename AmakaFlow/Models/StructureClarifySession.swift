@@ -355,7 +355,7 @@ struct StructureClarifySession: Equatable, Sendable {
     /// Soft section chips (Warm-up / Cool-down / Section…) — single exercise OK.
     static func isSoftSection(_ type: StructureBlockType) -> Bool {
         switch type.canonical {
-        case .warmup, .sets, .regular:
+        case .warmup, .cooldown, .sets, .regular:
             return true
         default:
             return false

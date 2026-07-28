@@ -131,7 +131,7 @@ extension StructureBlockModel {
         switch structureSource {
         case .inferred:
             return false
-        case .explicit, .userConfirmed, .userNote, .unknown:
+        case .explicit, .userConfirmed, .userNote, .userAdded, .enrichmentDefault, .unknown:
             return true
         }
     }

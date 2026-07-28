@@ -14,7 +14,17 @@ enum StructureSource: String, Codable, CaseIterable, Equatable, Sendable {
     case inferred
     case userConfirmed = "user_confirmed"
     case userNote = "user_note"
+    /// AMA-2336 — user inserted via editor / push apply.
+    case userAdded = "user_added"
+    /// AMA-2336 — applied from enrichment prefs at enrich time (standing consent).
+    case enrichmentDefault = "enrichment_default"
     case unknown
+
+    /// Unknown-tolerant decode (AMA-2336 §2): literals this build predates map to `.unknown`.
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = StructureSource(rawValue: raw) ?? .unknown
+    }
 }
 
 /// Canonical block types from ADR-017 / BFF `StructureBlockTypeLiteral`.
@@ -28,6 +38,7 @@ enum StructureBlockType: String, Codable, CaseIterable, Equatable, Sendable {
     case forTime = "for-time"
     case fortime
     case warmup
+    case cooldown
     case rounds
     case regular
 
@@ -42,6 +53,7 @@ enum StructureBlockType: String, Codable, CaseIterable, Equatable, Sendable {
         case .tabata: return "Tabata"
         case .forTime, .fortime: return "For time"
         case .warmup: return "Warm-up"
+        case .cooldown: return "Cool-down"
         }
     }
 
@@ -261,12 +273,14 @@ extension StructureSource {
     /// UI provenance tag copy (ADR-017 / AMA-2326 — EXPLICIT is distinct from SUGGESTED).
     func clarifyTag(typeLabel: String) -> String {
         switch self {
-        case .userConfirmed:
+        case .userConfirmed, .userAdded:
             return "\(typeLabel.uppercased()) ✓"
         case .userNote:
             return "FROM YOUR NOTE · \(typeLabel.uppercased())"
         case .explicit:
             return "EXPLICIT · \(typeLabel.uppercased())"
+        case .enrichmentDefault:
+            return "DEFAULT · \(typeLabel.uppercased())"
         case .inferred, .unknown:
             return "SUGGESTED · \(typeLabel.uppercased())"
         }

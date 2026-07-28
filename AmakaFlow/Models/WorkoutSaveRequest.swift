@@ -37,6 +37,8 @@ struct WorkoutSaveRequest: Codable {
     var blocks: [SocialImportBlock]?
     /// When set, mapper updates this workout instead of creating a duplicate.
     var workoutId: String?
+    /// AMA-2336 — workout-level enrichment deletes, persisted on `workout_data`.
+    var enrichmentTombstones: [EnrichmentTombstone]?
 
     /// Convert from existing Workout model for edit mode
     static func from(workout: Workout) -> WorkoutSaveRequest {

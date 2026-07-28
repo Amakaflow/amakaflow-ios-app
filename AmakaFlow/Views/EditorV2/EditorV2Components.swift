@@ -71,31 +71,41 @@ struct EditorV2ExerciseCard: View {
     var onMenu: () -> Void
 
     var body: some View {
-        HStack(spacing: 11) {
-            Button(action: onOpen) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(exercise.name)
-                        .ddDisplayText(14, weight: .semibold)
-                        .foregroundColor(DailyDriver.foreground)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Text(exercise.summaryLine)
-                        .font(.system(size: 9.5, weight: .medium, design: .monospaced))
-                        .foregroundColor(DailyDriver.foregroundMuted)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 11) {
+                Button(action: onOpen) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(exercise.name)
+                            .ddDisplayText(14, weight: .semibold)
+                            .foregroundColor(DailyDriver.foreground)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Text(exercise.summaryLine)
+                            .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+                            .foregroundColor(DailyDriver.foregroundMuted)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("editor_v2_exercise_body_\(exercise.id)")
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("editor_v2_exercise_body_\(exercise.id)")
 
-            Button(action: onMenu) {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(DailyDriver.foregroundDim)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 4)
+                Button(action: onMenu) {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(DailyDriver.foregroundDim)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 4)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("editor_v2_exercise_menu_\(exercise.id)")
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("editor_v2_exercise_menu_\(exercise.id)")
+
+            // AMA-2336 — warm-up sets are a sibling list; `sets` stays as written.
+            if !exercise.warmupSets.isEmpty {
+                Text("WARM-UP SETS · \(warmupSetsSummary)")
+                    .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                    .foregroundColor(DailyDriver.foregroundDim)
+                    .accessibilityIdentifier("editor_v2_warmup_sets_\(exercise.id)")
+            }
         }
         .padding(.horizontal, 13)
         .padding(.vertical, 12)
@@ -113,6 +123,10 @@ struct EditorV2ExerciseCard: View {
         }
         .clipShape(RoundedRectangle(cornerRadius: inGroup ? 0 : 16, style: .continuous))
         .padding(.bottom, inGroup ? 0 : 8)
+    }
+
+    private var warmupSetsSummary: String {
+        exercise.warmupSets.map { "\($0.reps)" }.joined(separator: " · ") + " REPS"
     }
 }
 

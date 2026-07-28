@@ -200,8 +200,9 @@ extension StructureClarifySession {
 
             let status: StructureClarifyStatus = {
                 switch source {
-                case .userConfirmed, .explicit:
+                case .userConfirmed, .explicit, .userAdded, .enrichmentDefault:
                     // AMA-2326 — EXPLICIT ships committed by default (Confirm optional).
+                    // AMA-2336 — user_added / enrichment_default are committed (standing consent).
                     return .confirmed
                 case .userNote, .inferred, .unknown:
                     return .pending

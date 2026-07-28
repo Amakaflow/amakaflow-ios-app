@@ -15,6 +15,9 @@ struct EditorV2ContentActions {
     var onExitReorder: () -> Void
     var onAdd: () -> Void
     var onStartFormat: (EditorV2GroupType) -> Void
+    /// AMA-2336 — quick-add the session warm-up from `workout_preferences`.
+    var onAddWarmup: () -> Void = {}
+    var onAddCooldown: () -> Void = {}
 }
 
 enum EditorV2Content {
@@ -35,6 +38,7 @@ enum EditorV2Content {
             formatPinnedPlaceholder(group: group, key: fmtKey, onConfig: actions.onConfigGroup)
             addExerciseButton(emphasized: false, onAdd: actions.onAdd)
         } else {
+            enrichmentChips(session: session, actions: actions)
             ForEach(session.runs) { run in
                 if let key = run.groupKey, let group = session.groups[key] {
                     EditorV2GroupedRun(
@@ -56,6 +60,54 @@ enum EditorV2Content {
             }
             addExerciseButton(emphasized: false, onAdd: actions.onAdd)
         }
+    }
+
+    /// AMA-2336 — quiet "add the section you're missing" row. Presence by type:
+    /// an existing warm-up (whatever wrote it) hides the chip.
+    @ViewBuilder
+    static func enrichmentChips(
+        session: EditorV2Session,
+        actions: EditorV2ContentActions
+    ) -> some View {
+        if !session.hasWarmupSection || !session.hasCooldownSection {
+            HStack(spacing: 6) {
+                if !session.hasWarmupSection {
+                    enrichmentChip(
+                        title: "＋ Warm-up",
+                        identifier: "editor_v2_add_warmup",
+                        action: actions.onAddWarmup
+                    )
+                }
+                if !session.hasCooldownSection {
+                    enrichmentChip(
+                        title: "＋ Cool-down",
+                        identifier: "editor_v2_add_cooldown",
+                        action: actions.onAddCooldown
+                    )
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.bottom, 10)
+        }
+    }
+
+    private static func enrichmentChip(
+        title: String,
+        identifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(title)
+                .ddDisplayText(11.5, weight: .bold)
+                .foregroundColor(DailyDriver.foregroundMuted)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(DailyDriver.card2)
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(DailyDriver.border, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(identifier)
     }
 
     static func emptyState(onStartFormat: @escaping (EditorV2GroupType) -> Void) -> some View {

@@ -122,6 +122,54 @@ extension FixtureAPIService {
         return Components.Schemas.WatchResendResult(deliveryIds: ["fixture-push-\(workoutId)"], success: true)
     }
 
+    // MARK: - Workout Enrichment (AMA-2336)
+
+    func fetchWorkoutPreferences() async throws -> WorkoutPreferences {
+        fixtureWorkoutPreferences
+    }
+
+    @discardableResult
+    func updateWorkoutPreferences(_ prefs: WorkoutPreferences) async throws -> WorkoutPreferences {
+        fixtureWorkoutPreferences = prefs
+        print("[FixtureAPIService] Stub: updateWorkoutPreferences -> stored")
+        return prefs
+    }
+
+    /// Echoes `blocks_json` back: the fixture app exercises the surfaces, not
+    /// `enrich_blocks_json` (that is server-owned and unit-tested in mapper-api).
+    func enrichWorkout(_ enrich: EnrichRequest) async throws -> EnrichResponse {
+        print("[FixtureAPIService] Stub: enrichWorkout(mode=\(enrich.mode.rawValue)) -> echo")
+        return EnrichResponse(
+            blocksJSON: enrich.blocksJSON,
+            enrichmentApplied: EnrichmentAppliedSummary(prefsSource: "fixture")
+        )
+    }
+
+    func fetchWorkoutBlocksJSON(workoutId: String) async throws -> [String: Any] {
+        fixtureWorkoutBlocksJSON[workoutId] ?? ["blocks": []]
+    }
+
+    func saveWorkoutBlocksJSON(
+        workoutId: String,
+        title: String,
+        blocksJSON: [String: Any],
+        tombstones: [EnrichmentTombstone]? = nil
+    ) async throws {
+        var stored = blocksJSON
+        if let tombstones {
+            var metadata = (stored["metadata"] as? [String: Any]) ?? [:]
+            if tombstones.isEmpty {
+                metadata.removeValue(forKey: "enrichment_tombstones")
+            } else if let payload = try? EnrichmentTombstone.metadataPayload(tombstones) {
+                metadata["enrichment_tombstones"] = payload
+            }
+            stored["metadata"] = metadata
+            stored.removeValue(forKey: "enrichment_tombstones")
+        }
+        fixtureWorkoutBlocksJSON[workoutId] = stored
+        print("[FixtureAPIService] Stub: saveWorkoutBlocksJSON(\(workoutId), \(title))")
+    }
+
     // MARK: - Library (AMA-2004)
 
     func listLibraryItems(

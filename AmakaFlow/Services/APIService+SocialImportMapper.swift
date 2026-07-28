@@ -39,6 +39,10 @@ extension APIService {
         if let creator = request.creatorName?.trimmingCharacters(in: .whitespacesAndNewlines), !creator.isEmpty {
             metadata["creator"] = creator
         }
+        // Persist under metadata — WorkoutData forbids a top-level key (AMA-2334 gap).
+        if let tombstones = request.enrichmentTombstones, !tombstones.isEmpty {
+            metadata["enrichment_tombstones"] = try EnrichmentTombstone.metadataPayload(tombstones)
+        }
         if !metadata.isEmpty {
             workoutData["metadata"] = metadata
         }
@@ -55,7 +59,7 @@ extension APIService {
         return body
     }
 
-    /// ADR-017 fields on each block for mapper persistence.
+    /// ADR-017 + AMA-2336 declared fields on each block for mapper persistence.
     static func mapperBlockObject(from block: SocialImportBlock) -> [String: Any] {
         var object: [String: Any] = [
             "exercises": block.exercises.map { provenanceExercise(from: $0) }
@@ -75,6 +79,16 @@ extension APIService {
         if let structureSource = block.structureSource?.trimmingCharacters(in: .whitespacesAndNewlines),
            !structureSource.isEmpty {
             object["structure_source"] = structureSource
+        }
+        if let enrichmentKind = block.enrichmentKind?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !enrichmentKind.isEmpty {
+            object["enrichment_kind"] = enrichmentKind
+        }
+        if let restOpen = block.restOpen {
+            object["rest_open"] = restOpen
+        }
+        if let provenance = block.fieldProvenance, !provenance.isEmpty {
+            object["field_provenance"] = provenance
         }
         return object
     }
@@ -110,6 +124,40 @@ extension APIService {
         }
         if let provenance = exercise.fieldProvenance, !provenance.isEmpty {
             object["field_provenance"] = provenance
+        }
+        applyEnrichmentFields(from: exercise, to: &object)
+        return object
+    }
+
+    /// AMA-2336 declared enrichment fields — identity, warm-up sets, rest intent.
+    static func applyEnrichmentFields(from exercise: SocialImportExercise, to object: inout [String: Any]) {
+        if let exerciseId = exercise.exerciseId?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !exerciseId.isEmpty {
+            object["exercise_id"] = exerciseId
+        }
+        if let warmupSets = exercise.warmupSets, !warmupSets.isEmpty {
+            object["warmup_sets"] = warmupSets.map(warmupSetObject(from:))
+        }
+        if let restSeconds = exercise.restSeconds, restSeconds > 0 {
+            object["rest_sec"] = restSeconds
+        }
+        if let restOpen = exercise.restOpen {
+            object["rest_open"] = restOpen
+        }
+        if let structureSource = exercise.structureSource?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !structureSource.isEmpty {
+            object["structure_source"] = structureSource
+        }
+    }
+
+    /// Declared `warmup_sets` row — sibling of `sets`, never an underscore key (AMA-2336).
+    static func warmupSetObject(from row: WarmupSetRow) -> [String: Any] {
+        var object: [String: Any] = [
+            "reps": row.reps,
+            "structure_source": row.structureSource.rawValue
+        ]
+        if let weight = row.weight {
+            object["weight"] = weight
         }
         return object
     }
