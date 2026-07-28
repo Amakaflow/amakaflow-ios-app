@@ -187,8 +187,11 @@ struct EditorV2View: View {
             switch kind {
             case .cooldown:
                 added = session.quickAddCooldown(from: prefs, clearingTombstone: true)
-            default:
+            case .sessionWarmup:
                 added = session.quickAddSessionWarmup(from: prefs, clearingTombstone: true)
+            case .betweenSetRest, .exerciseWarmupSets:
+                assertionFailure("quickAddSoftSection called with unsupported kind \(kind)")
+                return
             }
             guard added else {
                 showToast(
@@ -233,7 +236,10 @@ struct EditorV2View: View {
         saveModel.intervals = session.toSaveIntervals()
         session.mintMissingExerciseIDs()
         saveModel.saveBlocks = session.toSocialImportBlocks()
-        saveModel.saveEnrichmentTombstones = session.enrichmentTombstones
+        // nil = leave server tombstones alone when this session never touched them.
+        saveModel.saveEnrichmentTombstones = session.enrichmentTombstonesDirty
+            ? session.enrichmentTombstones
+            : nil
         Task { await saveModel.save() }
     }
 }

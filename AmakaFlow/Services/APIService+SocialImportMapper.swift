@@ -40,7 +40,8 @@ extension APIService {
             metadata["creator"] = creator
         }
         // Persist under metadata — WorkoutData forbids a top-level key (AMA-2334 gap).
-        if let tombstones = request.enrichmentTombstones, !tombstones.isEmpty {
+        // `nil` = leave server tombstones alone; `[]` = clear them after a re-opt-in.
+        if let tombstones = request.enrichmentTombstones {
             metadata["enrichment_tombstones"] = try EnrichmentTombstone.metadataPayload(tombstones)
         }
         if !metadata.isEmpty {
@@ -73,7 +74,12 @@ extension APIService {
         if let type = block.type?.trimmingCharacters(in: .whitespacesAndNewlines), !type.isEmpty {
             object["type"] = type
         }
-        if let restSec = block.restSec, restSec > 0 {
+        if let restOpen = block.restOpen {
+            object["rest_open"] = restOpen
+            if !restOpen, let restSec = block.restSec, restSec > 0 {
+                object["rest_sec"] = restSec
+            }
+        } else if let restSec = block.restSec, restSec > 0 {
             object["rest_sec"] = restSec
         }
         if let structureSource = block.structureSource?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -83,9 +89,6 @@ extension APIService {
         if let enrichmentKind = block.enrichmentKind?.trimmingCharacters(in: .whitespacesAndNewlines),
            !enrichmentKind.isEmpty {
             object["enrichment_kind"] = enrichmentKind
-        }
-        if let restOpen = block.restOpen {
-            object["rest_open"] = restOpen
         }
         if let provenance = block.fieldProvenance, !provenance.isEmpty {
             object["field_provenance"] = provenance
@@ -138,11 +141,13 @@ extension APIService {
         if let warmupSets = exercise.warmupSets, !warmupSets.isEmpty {
             object["warmup_sets"] = warmupSets.map(warmupSetObject(from:))
         }
-        if let restSeconds = exercise.restSeconds, restSeconds > 0 {
-            object["rest_sec"] = restSeconds
-        }
         if let restOpen = exercise.restOpen {
             object["rest_open"] = restOpen
+            if !restOpen, let restSeconds = exercise.restSeconds, restSeconds > 0 {
+                object["rest_sec"] = restSeconds
+            }
+        } else if let restSeconds = exercise.restSeconds, restSeconds > 0 {
+            object["rest_sec"] = restSeconds
         }
         if let structureSource = exercise.structureSource?.trimmingCharacters(in: .whitespacesAndNewlines),
            !structureSource.isEmpty {

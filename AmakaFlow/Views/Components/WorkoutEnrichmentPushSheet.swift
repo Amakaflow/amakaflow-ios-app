@@ -22,7 +22,6 @@ struct WorkoutEnrichmentPushSheet: View {
     @State private var checkedKinds: Set<EnrichmentKind>
     @State private var restSec: Int
     @State private var restOpen: Bool
-    @State private var restEdited = false
 
     init(
         plan: WorkoutEnrichmentPushPlanner.Plan,
@@ -111,8 +110,8 @@ struct WorkoutEnrichmentPushSheet: View {
     private var decision: WorkoutEnrichmentPushPlanner.Decision {
         WorkoutEnrichmentPushPlanner.Decision(
             checkedKinds: checkedKinds,
-            restSecOverride: restEdited && !restOpen ? restSec : nil,
-            restOpenOverride: restEdited ? restOpen : nil
+            restSecOverride: checkedKinds.contains(.betweenSetRest) && !restOpen ? restSec : nil,
+            restOpenOverride: checkedKinds.contains(.betweenSetRest) ? restOpen : nil
         )
     }
 
@@ -134,8 +133,11 @@ struct WorkoutEnrichmentPushSheet: View {
                         Text(detail(for: offer))
                             .font(.system(size: 10.5))
                             .foregroundColor(DailyDriver.foregroundMuted)
+                            .monospacedDigit()
                             .multilineTextAlignment(.leading)
-                        if offer.wasTombstoned {
+                        // Default-unchecked + tombstoned = true re-opt-in. Partial
+                        // warm-up-sets offers stay checked and must not warn.
+                        if offer.wasTombstoned, !offer.isChecked {
                             Text("You removed this before — tick to add it back.")
                                 .font(.system(size: 10))
                                 .foregroundColor(DailyDriver.amber)
@@ -191,26 +193,22 @@ struct WorkoutEnrichmentPushSheet: View {
     private var restOpenBinding: Binding<Bool> {
         Binding(
             get: { restOpen },
-            set: { newValue in
-                restOpen = newValue
-                restEdited = true
-            }
+            set: { restOpen = $0 }
         )
     }
 
     private var restSecBinding: Binding<Int> {
         Binding(
             get: { restSec },
-            set: { newValue in
-                restSec = newValue
-                restEdited = true
-            }
+            set: { restSec = $0 }
         )
     }
 
     /// The rest row shows the live override so the user sees what will be sent.
     private func detail(for offer: WorkoutEnrichmentPushPlanner.Offer) -> String {
-        guard offer.kind == .betweenSetRest, restEdited else { return offer.detail }
+        guard offer.kind == .betweenSetRest, checkedKinds.contains(.betweenSetRest) else {
+            return offer.detail
+        }
         return restOpen ? "Rest until Lap between sets" : "\(restSec)s between sets"
     }
 

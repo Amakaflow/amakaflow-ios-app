@@ -197,9 +197,9 @@ extension WorkoutEnrichmentPrefsSheet {
                 .accessibilityIdentifier("af_enrichment_prefs_warmup_sets_toggle")
 
             if prefs.exerciseWarmupSets.enabled {
-                ForEach(Array(prefs.exerciseWarmupSets.defaultSets.enumerated()), id: \.offset) { index, row in
+                ForEach(prefs.exerciseWarmupSets.defaultSets) { row in
                     HStack(spacing: Theme.Spacing.md) {
-                        Text("Set \(index + 1)")
+                        Text("Set \(warmupSetNumber(for: row.id))")
                             .font(Theme.Typography.body)
                             .foregroundColor(DailyDriver.foreground)
                         Spacer(minLength: 0)
@@ -207,19 +207,19 @@ extension WorkoutEnrichmentPrefsSheet {
                             .font(Theme.Typography.body)
                             .foregroundColor(DailyDriver.foregroundMuted)
                         Stepper("") {
-                            adjustWarmupSetReps(at: index, by: 1)
+                            adjustWarmupSetReps(id: row.id, by: 1)
                         } onDecrement: {
-                            adjustWarmupSetReps(at: index, by: -1)
+                            adjustWarmupSetReps(id: row.id, by: -1)
                         }
                         .labelsHidden()
                         Button {
-                            prefs.exerciseWarmupSets.defaultSets.remove(at: index)
+                            prefs.exerciseWarmupSets.defaultSets.removeAll { $0.id == row.id }
                         } label: {
                             Image(systemName: "minus.circle")
                                 .foregroundColor(DailyDriver.foregroundMuted)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Remove warm-up set \(index + 1)")
+                        .accessibilityLabel("Remove warm-up set \(warmupSetNumber(for: row.id))")
                     }
                     .padding(Theme.Spacing.md)
                     .background(cardBackground)
@@ -265,35 +265,43 @@ extension WorkoutEnrichmentPrefsSheet {
                     .foregroundColor(DailyDriver.foregroundMuted)
             }
 
-            ForEach(activities.wrappedValue.indices, id: \.self) { index in
+            ForEach(activities.wrappedValue) { activity in
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     HStack(spacing: Theme.Spacing.md) {
-                        TextField("Activity", text: activities[index].name)
+                        TextField(
+                            "Activity",
+                            text: activityNameBinding(activities: activities, id: activity.id)
+                        )
                             .font(Theme.Typography.body)
                             .foregroundColor(DailyDriver.foreground)
-                            .accessibilityIdentifier("af_enrichment_prefs_\(identifierPrefix)_name_\(index)")
+                            .accessibilityIdentifier(
+                                "af_enrichment_prefs_\(identifierPrefix)_name_\(activity.id.uuidString)"
+                            )
                         Button {
-                            activities.wrappedValue.remove(at: index)
+                            activities.wrappedValue.removeAll { $0.id == activity.id }
                         } label: {
                             Image(systemName: "minus.circle")
                                 .foregroundColor(DailyDriver.foregroundMuted)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Remove activity \(index + 1)")
+                        .accessibilityLabel("Remove activity \(activity.name)")
                     }
 
                     Toggle(
                         "Until I press Lap",
-                        isOn: openDurationBinding(activities: activities, index: index)
+                        isOn: openDurationBinding(activities: activities, id: activity.id)
                     )
                     .tint(DailyDriver.lime)
                     .font(Theme.Typography.caption)
-                    .accessibilityIdentifier("af_enrichment_prefs_\(identifierPrefix)_open_\(index)")
+                    .accessibilityIdentifier(
+                        "af_enrichment_prefs_\(identifierPrefix)_open_\(activity.id.uuidString)"
+                    )
 
-                    if let durationSec = activities.wrappedValue[index].durationSec {
+                    if let matched = activities.wrappedValue.first { $0.id == activity.id },
+                       let seconds = matched.durationSec {
                         Stepper(
-                            "\(durationSec)s",
-                            value: durationBinding(activities: activities, index: index),
+                            "\(seconds)s",
+                            value: durationBinding(activities: activities, id: activity.id),
                             in: 15...1800,
                             step: 15
                         )
@@ -334,13 +342,29 @@ extension WorkoutEnrichmentPrefsSheet {
         )
     }
 
+    private func activityNameBinding(
+        activities: Binding<[EnrichmentActivityPref]>,
+        id: UUID
+    ) -> Binding<String> {
+        Binding(
+            get: { activities.wrappedValue.first { $0.id == id }?.name ?? "" },
+            set: { name in
+                let index = activities.wrappedValue.firstIndex { $0.id == id }
+                guard let index else { return }
+                activities.wrappedValue[index].name = name
+            }
+        )
+    }
+
     private func openDurationBinding(
         activities: Binding<[EnrichmentActivityPref]>,
-        index: Int
+        id: UUID
     ) -> Binding<Bool> {
         Binding(
-            get: { activities.wrappedValue[index].durationSec == nil },
+            get: { activities.wrappedValue.first { $0.id == id }?.durationSec == nil },
             set: { isOpen in
+                let index = activities.wrappedValue.firstIndex { $0.id == id }
+                guard let index else { return }
                 activities.wrappedValue[index].durationSec = isOpen ? nil : 300
             }
         )
@@ -348,16 +372,25 @@ extension WorkoutEnrichmentPrefsSheet {
 
     private func durationBinding(
         activities: Binding<[EnrichmentActivityPref]>,
-        index: Int
+        id: UUID
     ) -> Binding<Int> {
         Binding(
-            get: { activities.wrappedValue[index].durationSec ?? 300 },
-            set: { activities.wrappedValue[index].durationSec = $0 }
+            get: { activities.wrappedValue.first { $0.id == id }?.durationSec ?? 300 },
+            set: { seconds in
+                let index = activities.wrappedValue.firstIndex { $0.id == id }
+                guard let index else { return }
+                activities.wrappedValue[index].durationSec = seconds
+            }
         )
     }
 
-    private func adjustWarmupSetReps(at index: Int, by delta: Int) {
-        guard prefs.exerciseWarmupSets.defaultSets.indices.contains(index) else { return }
+    private func warmupSetNumber(for id: UUID) -> Int {
+        (prefs.exerciseWarmupSets.defaultSets.firstIndex { $0.id == id } ?? 0) + 1
+    }
+
+    private func adjustWarmupSetReps(id: UUID, by delta: Int) {
+        let index = prefs.exerciseWarmupSets.defaultSets.firstIndex { $0.id == id }
+        guard let index else { return }
         let reps = prefs.exerciseWarmupSets.defaultSets[index].reps + delta
         prefs.exerciseWarmupSets.defaultSets[index].reps = min(30, max(1, reps))
     }
@@ -403,6 +436,8 @@ extension WorkoutEnrichmentPrefsSheet {
 
         do {
             let saved = try await apiService.updateWorkoutPreferences(payload)
+            prefs = saved
+            excludeKeysText = saved.exerciseWarmupSets.excludeExerciseKeys.joined(separator: "\n")
             onSaved?(saved)
             isSaving = false
             dismiss()

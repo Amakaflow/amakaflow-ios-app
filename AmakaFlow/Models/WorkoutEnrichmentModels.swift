@@ -46,7 +46,11 @@ struct EnrichmentTombstone: Equatable, Codable, Sendable {
         return items.compactMap { item in
             guard let rawKind = item["kind"] as? String,
                   let kind = EnrichmentKind(rawValue: rawKind) else { return nil }
-            let exerciseId = item["exercise_id"] as? String
+            // Only per-exercise tombstones carry `exercise_id`; stray IDs on other
+            // kinds never match `isTombstoned` and would silently drop the delete.
+            let exerciseId = kind == .exerciseWarmupSets
+                ? item["exercise_id"] as? String
+                : nil
             guard kind != .exerciseWarmupSets || exerciseId != nil else { return nil }
             return EnrichmentTombstone(kind: kind, exerciseId: exerciseId)
         }
@@ -156,7 +160,9 @@ struct WarmupSetRow: Equatable, Codable, Sendable {
 
 /// Prefs-side activity row. Backend `SessionActivity` forbids extra keys, so prefs
 /// carry no `structure_source` (that is stamped when enrichment writes the block).
-struct EnrichmentActivityPref: Equatable, Codable, Sendable {
+/// `id` is UI-only (stable ForEach identity) and never encoded.
+struct EnrichmentActivityPref: Identifiable, Equatable, Codable, Sendable {
+    var id: UUID
     var name: String
     var durationSec: Int?
 
@@ -165,20 +171,50 @@ struct EnrichmentActivityPref: Equatable, Codable, Sendable {
         case durationSec = "duration_sec"
     }
 
-    init(name: String, durationSec: Int? = nil) {
+    init(name: String, durationSec: Int? = nil, id: UUID = UUID()) {
+        self.id = id
         self.name = name
         self.durationSec = durationSec
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = UUID()
+        name = try container.decode(String.self, forKey: .name)
+        durationSec = try container.decodeIfPresent(Int.self, forKey: .durationSec)
+    }
+
+    static func == (lhs: EnrichmentActivityPref, rhs: EnrichmentActivityPref) -> Bool {
+        lhs.name == rhs.name && lhs.durationSec == rhs.durationSec
     }
 }
 
 /// Prefs-side warm-up set row (backend `WarmupSetDefault` — no `structure_source`).
-struct WarmupSetDefault: Equatable, Codable, Sendable {
+/// `id` is UI-only (stable ForEach identity) and never encoded.
+struct WarmupSetDefault: Identifiable, Equatable, Codable, Sendable {
+    var id: UUID
     var reps: Int
     var weight: Double?
 
-    init(reps: Int, weight: Double? = nil) {
+    enum CodingKeys: String, CodingKey {
+        case reps, weight
+    }
+
+    init(reps: Int, weight: Double? = nil, id: UUID = UUID()) {
+        self.id = id
         self.reps = reps
         self.weight = weight
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = UUID()
+        reps = try container.decode(Int.self, forKey: .reps)
+        weight = try container.decodeIfPresent(Double.self, forKey: .weight)
+    }
+
+    static func == (lhs: WarmupSetDefault, rhs: WarmupSetDefault) -> Bool {
+        lhs.reps == rhs.reps && lhs.weight == rhs.weight
     }
 }
 
@@ -453,16 +489,5 @@ enum WorkoutEnrichmentMutations {
             throw WorkoutPreferencesValidationError.restOpenWithRestSec
         }
         return (restSec, restOpen)
-    }
-}
-
-/// `normalize_exercise_key` parity for UX preview only — exclusion matching runs
-/// server-side at enrich time so client and server cannot diverge (spec §2).
-enum ExerciseKeyNormalizer {
-    static func normalize(_ name: String) -> String {
-        let nfkc = name.precomposedStringWithCompatibilityMapping
-        let trimmed = nfkc.trimmingCharacters(in: .whitespacesAndNewlines)
-        let collapsed = trimmed.split(whereSeparator: \.isWhitespace).joined(separator: " ")
-        return collapsed.lowercased()
     }
 }

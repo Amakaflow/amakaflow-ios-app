@@ -205,7 +205,10 @@ enum WorkoutEnrichmentPushPlanner {
         var remaining = tombstones
         var cleared: [EnrichmentTombstone] = []
         for kind in checked {
-            guard let offer = plan.offer(kind), offer.wasTombstoned else { continue }
+            // Only a true re-opt-in (offer started unchecked) clears tombstones.
+            // A partial warm-up-sets offer stays default-checked and must not
+            // resurrect exercises the user explicitly deleted.
+            guard let offer = plan.offer(kind), !offer.isChecked else { continue }
             if kind == .exerciseWarmupSets {
                 for exerciseId in offer.tombstonedExerciseIds {
                     cleared.append(EnrichmentTombstone(kind: kind, exerciseId: exerciseId))

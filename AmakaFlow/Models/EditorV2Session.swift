@@ -15,19 +15,25 @@ struct EditorV2Session: Equatable, Sendable {
     var formatGroupKey: String?
     /// AMA-2336 — workout-level enrichment deletes. Written here, read by enrich.
     var enrichmentTombstones: [EnrichmentTombstone]
+    /// True once this session appends/clears tombstones — save then rewrites metadata.
+    /// Untouched sessions omit the key so a library reload without seeded tombstones
+    /// cannot wipe server markers (nil = leave alone, [] = clear after re-opt-in).
+    var enrichmentTombstonesDirty: Bool
 
     init(
         title: String = "",
         groups: [String: EditorV2Group] = [:],
         exercises: [EditorV2Exercise] = [],
         formatGroupKey: String? = nil,
-        enrichmentTombstones: [EnrichmentTombstone] = []
+        enrichmentTombstones: [EnrichmentTombstone] = [],
+        enrichmentTombstonesDirty: Bool = false
     ) {
         self.title = title
         self.groups = groups
         self.exercises = exercises
         self.formatGroupKey = formatGroupKey
         self.enrichmentTombstones = enrichmentTombstones
+        self.enrichmentTombstonesDirty = enrichmentTombstonesDirty
     }
 
     var runs: [EditorV2Run] {
@@ -325,6 +331,10 @@ extension EditorV2Session {
             tombstones: enrichmentTombstones
         ) else { return false }
         guard let index = exercises.firstIndex(where: { $0.id == id }) else { return false }
+        // Ownership is monotonic — never refresh rest the user owns (spec §5 rule a).
+        let provenance = exercises[index].fieldProvenance
+        guard provenance[WorkoutEnrichmentMutations.restSecKey] != .user,
+              provenance[WorkoutEnrichmentMutations.restOpenKey] != .user else { return false }
         try exercises[index].applyEnrichmentDefaultRest(
             restSeconds: validated.restSec,
             restOpen: validated.restOpen
@@ -370,6 +380,7 @@ extension EditorV2Session {
             exercises[index].clearRestIntent()
         }
         WorkoutEnrichmentMutations.appendTombstone(&enrichmentTombstones, kind: .betweenSetRest)
+        enrichmentTombstonesDirty = true
     }
 
     /// Per-exercise tombstone keys off `exercise_id` (rename-safe), so mint when missing.
@@ -384,6 +395,7 @@ extension EditorV2Session {
             kind: .exerciseWarmupSets,
             exerciseId: exerciseId
         )
+        enrichmentTombstonesDirty = true
         return exerciseId
     }
 
@@ -394,6 +406,7 @@ extension EditorV2Session {
             kind: kind,
             exerciseId: exerciseId
         )
+        enrichmentTombstonesDirty = true
     }
 
     /// Save path — stable ids for tombstones written after this save.
@@ -459,5 +472,6 @@ extension EditorV2Session {
             }
         }
         WorkoutEnrichmentMutations.appendTombstone(&enrichmentTombstones, kind: kind)
+        enrichmentTombstonesDirty = true
     }
 }

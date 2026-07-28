@@ -319,6 +319,36 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
         }
     }
 
+    func testQuickAddRestDoesNotOverwriteUserOwnedRest() throws {
+        var session = EditorV2Session(title: "Push")
+        let exercise = session.addExercise(named: "Bench Press")
+        try session.exercises[0].setRestIntent(restSeconds: 45, restOpen: false)
+
+        XCTAssertFalse(try session.quickAddBetweenSetRest(to: exercise.id, restSec: 90, restOpen: false))
+        XCTAssertEqual(session.exercises[0].restSeconds, 45)
+        XCTAssertEqual(
+            session.exercises[0].fieldProvenance[WorkoutEnrichmentMutations.restSecKey],
+            .user
+        )
+    }
+
+    func testParseListStripsExerciseIdOnKindScopedTombstones() {
+        let parsed = EnrichmentTombstone.parseList([
+            ["kind": "cooldown", "exercise_id": "wex_stray"],
+            ["kind": "exercise_warmup_sets", "exercise_id": "wex_ok"],
+            ["kind": "session_warmup"]
+        ])
+        XCTAssertEqual(
+            parsed,
+            [
+                EnrichmentTombstone(kind: .cooldown),
+                EnrichmentTombstone(kind: .exerciseWarmupSets, exerciseId: "wex_ok"),
+                EnrichmentTombstone(kind: .sessionWarmup)
+            ]
+        )
+        XCTAssertTrue(WorkoutEnrichmentPresence.isTombstoned(.cooldown, tombstones: parsed))
+    }
+
     func testRemoveSessionWarmupWritesKindTombstoneAndDropsWarmupType() {
         var session = EditorV2Session(title: "Push")
         session.addExercise(named: "Bench Press")
@@ -510,6 +540,30 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
         let metadata = try XCTUnwrap(workoutData["metadata"] as? [String: Any])
         let tombstones = try XCTUnwrap(metadata["enrichment_tombstones"] as? [[String: Any]])
         XCTAssertEqual(tombstones.first?["kind"] as? String, "cooldown")
+
+        let clearRequest = WorkoutSaveRequest(
+            name: "Push",
+            sport: "strength",
+            intervals: session.toSaveIntervals(),
+            blocks: blocks,
+            enrichmentTombstones: []
+        )
+        let clearBody = try APIService.mapperSaveBody(from: clearRequest, source: "manual")
+        let clearData = try XCTUnwrap(clearBody["workout_data"] as? [String: Any])
+        let clearMeta = try XCTUnwrap(clearData["metadata"] as? [String: Any])
+        let cleared = try XCTUnwrap(clearMeta["enrichment_tombstones"] as? [[String: Any]])
+        XCTAssertTrue(cleared.isEmpty)
+
+        let openRestExercise = SocialImportExercise(
+            name: "Bench Press",
+            sets: 4,
+            reps: 8,
+            restSeconds: 60,
+            restOpen: true
+        )
+        let openRestPayload = APIService.provenanceExercise(from: openRestExercise)
+        XCTAssertEqual(openRestPayload["rest_open"] as? Bool, true)
+        XCTAssertNil(openRestPayload["rest_sec"])
 
         let encodedBlocks = try XCTUnwrap(workoutData["blocks"] as? [[String: Any]])
         let encodedWarmup = try XCTUnwrap(

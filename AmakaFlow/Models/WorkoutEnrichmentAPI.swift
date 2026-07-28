@@ -108,7 +108,17 @@ struct EnrichRequest: Equatable {
     }
 
     func jsonData() throws -> Data {
-        try JSONSerialization.data(withJSONObject: jsonObject())
+        let object = try jsonObject()
+        guard JSONSerialization.isValidJSONObject(object) else {
+            throw EncodingError.invalidValue(
+                object,
+                EncodingError.Context(
+                    codingPath: [],
+                    debugDescription: "blocks_json contains values that are not JSON-serializable"
+                )
+            )
+        }
+        return try JSONSerialization.data(withJSONObject: object)
     }
 }
 
@@ -166,5 +176,16 @@ enum WorkoutEnrichmentJSON {
             )
         }
         return object
+    }
+}
+
+/// `normalize_exercise_key` parity for UX preview only — exclusion matching runs
+/// server-side at enrich time so client and server cannot diverge (spec §2).
+enum ExerciseKeyNormalizer {
+    static func normalize(_ name: String) -> String {
+        let nfkc = name.precomposedStringWithCompatibilityMapping
+        let trimmed = nfkc.trimmingCharacters(in: .whitespacesAndNewlines)
+        let collapsed = trimmed.split { $0.isWhitespace }.joined(separator: " ")
+        return collapsed.lowercased()
     }
 }

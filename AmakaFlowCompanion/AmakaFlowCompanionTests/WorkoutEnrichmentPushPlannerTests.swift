@@ -266,6 +266,8 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
             tombstones: tombstones,
             prefs: .defaults
         )
+        // Fully tombstoned → offer starts unchecked; checking is an explicit re-opt-in.
+        XCTAssertFalse(try XCTUnwrap(plan.offer(.exerciseWarmupSets)).isChecked)
 
         let application = try WorkoutEnrichmentPushPlanner.application(
             plan: plan,
@@ -276,6 +278,39 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
 
         XCTAssertTrue(application.tombstones.isEmpty)
         XCTAssertEqual(application.clearedTombstones, tombstones)
+    }
+
+    func testApplyKeepsPartialWarmupSetTombstonesWhenLeftChecked() throws {
+        let blocks = [
+            SocialImportBlock(
+                label: "Main",
+                rounds: 1,
+                exercises: [
+                    SocialImportExercise(name: "Bench Press", sets: 4, reps: 8, exerciseId: "wex_bench"),
+                    SocialImportExercise(name: "Barbell Row", sets: 4, reps: 8, exerciseId: "wex_row")
+                ],
+                type: "sets"
+            )
+        ]
+        let tombstones = [EnrichmentTombstone(kind: .exerciseWarmupSets, exerciseId: "wex_bench")]
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: blocks,
+            tombstones: tombstones,
+            prefs: .defaults
+        )
+        let offer = try XCTUnwrap(plan.offer(.exerciseWarmupSets))
+        XCTAssertTrue(offer.isChecked)
+        XCTAssertTrue(offer.wasTombstoned)
+
+        let application = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(checkedKinds: [.exerciseWarmupSets]),
+            prefs: .defaults,
+            tombstones: tombstones
+        )
+
+        XCTAssertEqual(application.tombstones, tombstones)
+        XCTAssertTrue(application.clearedTombstones.isEmpty)
     }
 
     func testApplyHonoursRestOverrides() throws {

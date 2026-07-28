@@ -57,8 +57,10 @@ final class WorkoutEnrichmentPushCoordinator {
         let prefs: WorkoutPreferences
         let blocksJSON: [String: Any]
         do {
-            prefs = try await apiService.fetchWorkoutPreferences()
-            blocksJSON = try await apiService.fetchWorkoutBlocksJSON(workoutId: workoutId)
+            async let prefsTask = apiService.fetchWorkoutPreferences()
+            async let blocksTask = apiService.fetchWorkoutBlocksJSON(workoutId: workoutId)
+            prefs = try await prefsTask
+            blocksJSON = try await blocksTask
         } catch {
             // Honest skip: no offers rather than a blocked push.
             logger.info(
