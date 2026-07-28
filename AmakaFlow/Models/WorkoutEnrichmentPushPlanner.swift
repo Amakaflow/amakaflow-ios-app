@@ -13,7 +13,6 @@
 import Foundation
 
 enum WorkoutEnrichmentPushPlanner {
-
     // MARK: - Offer
 
     /// One checkbox row. `wasTombstoned` drives the "you deleted this before" copy

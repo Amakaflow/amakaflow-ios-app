@@ -81,7 +81,9 @@ struct WorkoutEnrichmentPrefsSheet: View {
         .accessibilityIdentifier("af_enrichment_prefs_sheet")
         .task { await load() }
     }
+}
 
+extension WorkoutEnrichmentPrefsSheet {
     // MARK: - Header
 
     private var header: some View {
@@ -413,7 +415,7 @@ struct WorkoutEnrichmentPrefsSheet: View {
     /// Normalized for display parity only — exclusion matching is server-side.
     static func parseExcludeKeys(_ text: String) -> [String] {
         text
-            .split(whereSeparator: { $0 == "\n" || $0 == "," })
+            .split { $0 == "\n" || $0 == "," }
             .map { ExerciseKeyNormalizer.normalize(String($0)) }
             .filter { !$0.isEmpty }
     }
