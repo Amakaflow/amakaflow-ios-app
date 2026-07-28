@@ -84,12 +84,14 @@ final class StructureClarifyTests: XCTestCase {
         for source in StructureSource.allCases {
             let tag = source.clarifyTag(typeLabel: "Superset")
             switch source {
-            case .userConfirmed:
+            case .userConfirmed, .userAdded:
                 XCTAssertEqual(tag, "SUPERSET ✓")
             case .userNote:
                 XCTAssertTrue(tag.contains("FROM YOUR NOTE"))
             case .explicit:
                 XCTAssertEqual(tag, "EXPLICIT · SUPERSET")
+            case .enrichmentDefault:
+                XCTAssertEqual(tag, "DEFAULT · SUPERSET")
             case .inferred, .unknown:
                 XCTAssertTrue(tag.hasPrefix("SUGGESTED"))
             }

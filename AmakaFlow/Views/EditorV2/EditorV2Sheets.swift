@@ -16,7 +16,15 @@ struct EditorV2MenuSheet: View {
     var onReplace: () -> Void
     var onSupersetToggle: () -> Void
     var onAddSet: () -> Void
+    /// AMA-2336 — warm-up sets are a sibling list, not a change to `sets`.
+    var onAddWarmupSets: () -> Void = {}
+    var onRemoveWarmupSets: () -> Void = {}
     var onRemove: () -> Void
+
+    /// Only strength shapes take warm-up sets (spec §2).
+    private var canAddWarmupSets: Bool {
+        exercise.sets != nil && exercise.warmupSets.isEmpty
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -29,6 +37,20 @@ struct EditorV2MenuSheet: View {
                 action: onSupersetToggle
             )
             menuRow(systemImage: "plus", title: "Add a set", action: onAddSet)
+            if canAddWarmupSets {
+                menuRow(
+                    systemImage: "flame",
+                    title: "Add warm-up sets",
+                    action: onAddWarmupSets
+                )
+            }
+            if !exercise.warmupSets.isEmpty {
+                menuRow(
+                    systemImage: "flame.fill",
+                    title: "Remove warm-up sets",
+                    action: onRemoveWarmupSets
+                )
+            }
             menuRow(
                 systemImage: "xmark",
                 title: "Remove exercise",
@@ -52,25 +74,29 @@ struct EditorV2GroupConfigSheet: View {
     var onChange: (EditorV2Group) -> Void
     var onDone: () -> Void
     var onUngroup: () -> Void
+    /// AMA-2336 — soft sections are deleted (tombstoned), never "ungrouped".
+    var onRemoveSoftSection: () -> Void
 
     init(
         groupKey: String,
         group: EditorV2Group,
         onChange: @escaping (EditorV2Group) -> Void,
         onDone: @escaping () -> Void,
-        onUngroup: @escaping () -> Void
+        onUngroup: @escaping () -> Void,
+        onRemoveSoftSection: @escaping () -> Void = {}
     ) {
         self.groupKey = groupKey
         _group = State(initialValue: group)
         self.onChange = onChange
         self.onDone = onDone
         self.onUngroup = onUngroup
+        self.onRemoveSoftSection = onRemoveSoftSection
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             sheetTitle(group.name)
-            if group.type != .warmup {
+            if !group.type.isSoftSection {
                 Text("RUNS AS")
                     .font(.system(size: 9, weight: .medium, design: .monospaced))
                     .foregroundColor(DailyDriver.foregroundMuted)
@@ -114,14 +140,26 @@ struct EditorV2GroupConfigSheet: View {
             .buttonStyle(.plain)
             .ddLimeGlow()
 
-            Button(action: onUngroup) {
-                Text("Ungroup — back to straight sets")
-                    .ddDisplayText(12.5, weight: .bold)
-                    .foregroundColor(DailyDriver.foregroundMuted)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 13)
+            if group.type.isSoftSection {
+                Button(action: onRemoveSoftSection) {
+                    Text("Remove \(group.type.label.lowercased())")
+                        .ddDisplayText(12.5, weight: .bold)
+                        .foregroundColor(DailyDriver.destructive)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 13)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("editor_v2_remove_soft_section")
+            } else {
+                Button(action: onUngroup) {
+                    Text("Ungroup — back to straight sets")
+                        .ddDisplayText(12.5, weight: .bold)
+                        .foregroundColor(DailyDriver.foregroundMuted)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 13)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
             Spacer(minLength: 8)
         }
         .padding(.horizontal, 18)

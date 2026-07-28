@@ -1,9 +1,18 @@
 import Foundation
 
-enum ProvSource: String, Codable, Sendable {
+enum ProvSource: String, Codable, CaseIterable, Sendable {
     case explicit
     case inferred
     case user
+    /// AMA-2336 — field value applied from enrichment prefs (refreshable under rule (a)).
+    case enrichmentDefault = "enrichment_default"
+    case unknown
+
+    /// Unknown-tolerant decode (AMA-2336 §2): literals this build predates map to `.unknown`.
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = ProvSource(rawValue: raw) ?? .unknown
+    }
 }
 
 struct RepsRange: Equatable, Codable, Sendable {

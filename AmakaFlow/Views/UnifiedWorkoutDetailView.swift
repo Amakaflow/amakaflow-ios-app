@@ -23,6 +23,9 @@ struct UnifiedWorkoutDetailView: View {
     @State private var showingWorkoutPlayer = false
     @State private var showingGarminPairing = false
     @State private var showingGarminDisplayPrefs = false
+    /// AMA-2336: enrichment offers gathered before a Garmin push (nil = nothing to ask).
+    @State private var enrichmentOffers: WorkoutEnrichmentPushCoordinator.Prepared?
+    @State private var pendingGarminGymTitle: String?
     @State private var handoffStatus: String?
     /// AMA-2317: true while the CIQ open request is handing off to Garmin Connect.
     @State private var isOpeningGarmin = false
@@ -143,6 +146,27 @@ struct UnifiedWorkoutDetailView: View {
         }
         .sheet(isPresented: $showingGarminDisplayPrefs) {
             GarminWatchDisplayPrefsSheet(mode: .settings)
+        }
+        .sheet(item: $enrichmentOffers) { prepared in
+            WorkoutEnrichmentPushSheet(
+                plan: prepared.plan,
+                prefs: prepared.prefs,
+                onConfirm: { decision in
+                    enrichmentOffers = nil
+                    applyEnrichmentThenPush(prepared: prepared, decision: decision)
+                },
+                onSkip: {
+                    enrichmentOffers = nil
+                    pushToGarmin(gymTitle: pendingGarminGymTitle ?? "", statusNote: nil)
+                },
+                onClose: {
+                    enrichmentOffers = nil
+                    pendingGarminGymTitle = nil
+                }
+            )
+            .presentationDetents([.large, .medium])
+            .presentationDragIndicator(.hidden)
+            .presentationBackground(DailyDriver.screenBackground)
         }
         .sheet(isPresented: $showingWorkoutSchedule) {
             NavigationStack {
@@ -849,15 +873,19 @@ extension UnifiedWorkoutDetailView {
             handoffStatus = GarminLifecycleCopy.handoffQueueing
             showsHandoffNextSteps = false
             lastAppleHandoffShowsManagePlans = false
+            pendingGarminGymTitle = gym.title
             Task {
-                let result = await GarminStartHandoffService().push(
+                // AMA-2336: offer the missing warm-up / rest pieces first. Nothing to
+                // offer (or prefs/blocks unavailable) pushes exactly as before.
+                if let prepared = await WorkoutEnrichmentPushCoordinator().prepare(
                     workoutId: workout.id,
-                    gymTitle: gym.title
-                )
-                handoffStatus = result.message
-                guard result.kind != .failed else { return }
-                showsHandoffNextSteps = true
-                await requestGarminOpen()
+                    title: workout.name
+                ) {
+                    handoffStatus = nil
+                    enrichmentOffers = prepared
+                    return
+                }
+                await performGarminPush(gymTitle: gym.title, statusNote: nil)
             }
         case .apple:
             beginAppleTryHandoff()
@@ -867,6 +895,45 @@ extension UnifiedWorkoutDetailView {
             handoffStatus = "Recording on Phone — stop anytime, then log sets"
             lastAppleHandoffShowsManagePlans = false
         }
+    }
+
+    /// AMA-2336: store the enriched structure, then push. A failed enrich still
+    /// pushes — the note says what was skipped instead of blocking the session.
+    fileprivate func applyEnrichmentThenPush(
+        prepared: WorkoutEnrichmentPushCoordinator.Prepared,
+        decision: WorkoutEnrichmentPushPlanner.Decision
+    ) {
+        let gymTitle = pendingGarminGymTitle ?? ""
+        handoffStatus = GarminLifecycleCopy.handoffQueueing
+        Task {
+            let outcome = await WorkoutEnrichmentPushCoordinator().apply(
+                prepared: prepared,
+                decision: decision
+            )
+            if outcome.applied, let refreshed = await onEditorDismiss?() {
+                displayedWorkout = refreshed
+            }
+            await performGarminPush(gymTitle: gymTitle, statusNote: outcome.note)
+        }
+    }
+
+    fileprivate func pushToGarmin(gymTitle: String, statusNote: String?) {
+        handoffStatus = GarminLifecycleCopy.handoffQueueing
+        Task {
+            await performGarminPush(gymTitle: gymTitle, statusNote: statusNote)
+        }
+    }
+
+    private func performGarminPush(gymTitle: String, statusNote: String?) async {
+        pendingGarminGymTitle = nil
+        let result = await GarminStartHandoffService().push(
+            workoutId: workout.id,
+            gymTitle: gymTitle
+        )
+        handoffStatus = [statusNote, result.message].compactMap { $0 }.joined(separator: " ")
+        guard result.kind != .failed else { return }
+        showsHandoffNextSteps = true
+        await requestGarminOpen()
     }
 
     /// Hands off to the CIQ widget with a visible "opening Garmin Connect" beat

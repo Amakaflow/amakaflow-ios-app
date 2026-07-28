@@ -52,7 +52,11 @@ extension SocialImportDraft {
                         restSec: block["rest_between_rounds_sec"] as? Int
                             ?? block["rest_sec"] as? Int
                             ?? block["restSec"] as? Int,
-                        structureSource: structureSource
+                        structureSource: structureSource,
+                        enrichmentKind: (block["enrichment_kind"] as? String)
+                            ?? (block["enrichmentKind"] as? String),
+                        restOpen: (block["rest_open"] as? Bool) ?? (block["restOpen"] as? Bool),
+                        fieldProvenance: Self.parseFieldProvenance(from: block)
                     )
                 )
                 exercises.append(contentsOf: mapped)
@@ -99,7 +103,8 @@ extension SocialImportDraft {
             equipmentNote: equipmentNote,
             equipmentEmpty: equipmentEmpty,
             postProvenance: postProvenance,
-            workoutDescription: description
+            workoutDescription: description,
+            enrichmentTombstones: EnrichmentTombstone.parseFromWorkoutData(object)
         )
         PrescriptionDefaults.applyToDraft(&draft)
         return draft
@@ -137,8 +142,23 @@ extension SocialImportDraft {
             restSeconds: restSeconds,
             load: load ?? instruction,
             focus: focus,
-            notes: notes
+            notes: notes,
+            fieldProvenance: parseFieldProvenance(from: item),
+            exerciseId: (item["exercise_id"] as? String) ?? (item["exerciseId"] as? String),
+            warmupSets: WarmupSetRow.parseList(item["warmup_sets"] ?? item["warmupSets"]),
+            restOpen: (item["rest_open"] as? Bool) ?? (item["restOpen"] as? Bool),
+            structureSource: (item["structure_source"] as? String)
+                ?? (item["structureSource"] as? String)
         )
+    }
+
+    /// AMA-2311 / AMA-2336 — per-field provenance map (`rest_sec` / `rest_open` ownership).
+    private static func parseFieldProvenance(from item: [String: Any]) -> [String: String]? {
+        let raw = (item["field_provenance"] as? [String: Any])
+            ?? (item["fieldProvenance"] as? [String: Any])
+        guard let raw else { return nil }
+        let mapped = raw.compactMapValues { $0 as? String }
+        return mapped.isEmpty ? nil : mapped
     }
 
     private static func parseFocus(from item: [String: Any]) -> String? {

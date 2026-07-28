@@ -94,17 +94,22 @@ struct GarminWatchDeliveryPushBody: Encodable, Equatable, Sendable {
     let exerciseEnd: String
     let restMode: String
     let defaultRestSec: Int
+    /// AMA-2336: send the structural flag explicitly so the queued FIT always
+    /// takes the enriched encode path instead of relying on a server default.
+    let enriched: Bool
 
     enum CodingKeys: String, CodingKey {
         case exerciseEnd = "exercise_end"
         case restMode = "rest_mode"
         case defaultRestSec = "default_rest_sec"
+        case enriched
     }
 
-    init(prefs: GarminWatchDisplayPrefs) {
+    init(prefs: GarminWatchDisplayPrefs, enriched: Bool = true) {
         exerciseEnd = prefs.exerciseEnd.rawValue
         restMode = prefs.restMode.rawValue
         defaultRestSec = prefs.defaultRestSec
+        self.enriched = enriched
     }
 }
 

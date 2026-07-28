@@ -211,8 +211,16 @@ struct SocialImportExercise: Identifiable, Equatable, Codable {
     var focus: String?
     /// Legacy / freeform notes when not mapped to load or focus.
     var notes: String?
-    /// AMA-2312 — `explicit` / `inferred` / `user` per field.
+    /// AMA-2312 — `explicit` / `inferred` / `user` / `enrichment_default` per field.
     var fieldProvenance: [String: String]?
+    /// AMA-2336 — stable within-workout identity (`wex_…`) tombstones key off.
+    var exerciseId: String?
+    /// AMA-2336 — declared sibling of `sets` (never redefines it).
+    var warmupSets: [WarmupSetRow]?
+    /// AMA-2336 — open rest intent (`rest_sec` must be nil when true).
+    var restOpen: Bool?
+    /// AMA-2336 — row provenance for soft-section activities.
+    var structureSource: String?
 }
 
 struct SocialImportBlock: Equatable, Codable {
@@ -223,13 +231,23 @@ struct SocialImportBlock: Equatable, Codable {
     var type: String?
     /// Programmed rest intent in seconds (no timed/button toggle).
     var restSec: Int?
-    /// Provenance: explicit | inferred | user_confirmed | user_note | unknown.
+    /// Provenance: explicit | inferred | user_confirmed | user_note | user_added |
+    /// enrichment_default | unknown.
     var structureSource: String?
+    /// AMA-2336 — what enrichment added (`session_warmup` / `cooldown` only).
+    var enrichmentKind: String?
+    /// AMA-2336 — open rest intent → lap at delivery.
+    var restOpen: Bool?
+    /// AMA-2311 / AMA-2336 — rest ownership for the refresh rule.
+    var fieldProvenance: [String: String]?
 
     enum CodingKeys: String, CodingKey {
         case label, rounds, exercises, type
         case restSec
         case structureSource
+        case enrichmentKind
+        case restOpen
+        case fieldProvenance
     }
 
     init(
@@ -238,7 +256,10 @@ struct SocialImportBlock: Equatable, Codable {
         exercises: [SocialImportExercise],
         type: String? = nil,
         restSec: Int? = nil,
-        structureSource: String? = nil
+        structureSource: String? = nil,
+        enrichmentKind: String? = nil,
+        restOpen: Bool? = nil,
+        fieldProvenance: [String: String]? = nil
     ) {
         self.label = label
         self.rounds = rounds
@@ -246,6 +267,9 @@ struct SocialImportBlock: Equatable, Codable {
         self.type = type
         self.restSec = restSec
         self.structureSource = structureSource
+        self.enrichmentKind = enrichmentKind
+        self.restOpen = restOpen
+        self.fieldProvenance = fieldProvenance
     }
 }
 
@@ -264,6 +288,8 @@ struct SocialImportDraft: Equatable {
     /// AMA-2297: what we pulled from the original post (creator / caption / URL).
     var postProvenance: SocialImportPostProvenance?
     var workoutDescription: String?
+    /// AMA-2336 — workout-level enrichment deletes. Written here, read by enrich.
+    var enrichmentTombstones: [EnrichmentTombstone] = []
 
     var provenanceLabel: String { platform.displayName }
 
@@ -280,7 +306,8 @@ struct SocialImportDraft: Equatable {
             sourceUrl: sourceURL,
             description: workoutDescription,
             creatorName: postProvenance?.creator,
-            blocks: blocksForPersistence()
+            blocks: blocksForPersistence(),
+            enrichmentTombstones: enrichmentTombstones.isEmpty ? nil : enrichmentTombstones
         )
     }
 

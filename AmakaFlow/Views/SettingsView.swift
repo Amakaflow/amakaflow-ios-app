@@ -113,6 +113,8 @@ struct SettingsView: View {
     @State private var garminDebugMessage = ""
     @State private var showingManualUUIDSheet = false
     @State private var showingGarminWatchDisplayPrefs = false
+    /// AMA-2336 — `workout_preferences` editor (separate from AMA-2316 display prefs).
+    @State private var showingWorkoutEnrichmentPrefs = false
     @State private var manualUUID = ""
     @State private var manualDeviceName = ""
     @State private var showingDebugLog = false
@@ -201,6 +203,9 @@ struct SettingsView: View {
                 GarminWatchDisplayPrefsSheet(
                     mode: GarminWatchDisplayPrefsStore.hasConfigured ? .settings : .onboarding
                 )
+            }
+            .sheet(isPresented: $showingWorkoutEnrichmentPrefs) {
+                WorkoutEnrichmentPrefsSheet()
             }
             .onChange(of: garminConnectivity.isConnected) { isConnected in
                 // AMA-2316: one-time prefs after GCM Connect succeeds.
@@ -1933,6 +1938,29 @@ struct SettingsView: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("af_garmin_watch_display_prefs_settings")
+
+            // AMA-2336: what we offer to add when a workout is missing it.
+            // Separate from AMA-2316 display prefs — these edit workout content.
+            Button {
+                showingWorkoutEnrichmentPrefs = true
+            } label: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Workout enrichment defaults")
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    Text("Warm-up, cool-down, between-set rest and warm-up sets we offer to add.")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                        .lineLimit(3)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, Theme.Spacing.sm)
+                .padding(.horizontal, Theme.Spacing.md)
+                .background(Theme.Colors.surfaceElevated)
+                .cornerRadius(Theme.CornerRadius.md)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("af_workout_enrichment_prefs_settings")
 
             // Saved device reconnect (alternative to broken picker)
             if let savedDevice = garminConnectivity.savedDeviceInfo, !garminConnectivity.isConnected {

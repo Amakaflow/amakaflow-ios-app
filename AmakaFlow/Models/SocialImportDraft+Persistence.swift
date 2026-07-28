@@ -32,7 +32,10 @@ extension SocialImportDraft {
                     exercises: exercises,
                     type: block.type,
                     restSec: block.restSec,
-                    structureSource: block.structureSource
+                    structureSource: block.structureSource,
+                    enrichmentKind: block.enrichmentKind,
+                    restOpen: block.restOpen,
+                    fieldProvenance: block.fieldProvenance
                 )
             ]
         } else {
@@ -73,7 +76,10 @@ extension SocialImportDraft {
                 exercises: reconciledExercises,
                 type: block.type,
                 restSec: block.restSec,
-                structureSource: block.structureSource
+                structureSource: block.structureSource,
+                enrichmentKind: block.enrichmentKind,
+                restOpen: block.restOpen,
+                fieldProvenance: block.fieldProvenance
             )
         }
         let unassigned = exercises.filter { !assignedIDs.contains($0.id) }
@@ -85,7 +91,10 @@ extension SocialImportDraft {
                 exercises: block.exercises + unassigned,
                 type: block.type,
                 restSec: block.restSec,
-                structureSource: block.structureSource
+                structureSource: block.structureSource,
+                enrichmentKind: block.enrichmentKind,
+                restOpen: block.restOpen,
+                fieldProvenance: block.fieldProvenance
             )
         }
         return reconciled

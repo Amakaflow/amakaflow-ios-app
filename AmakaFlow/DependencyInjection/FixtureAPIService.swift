@@ -36,6 +36,9 @@ class FixtureAPIService: APIServiceProviding {
     var watchDeliveryStatusResult: Result<Components.Schemas.WatchDeliveryStatus, Error>?
     var resendWatchDeliveryResult: Result<Components.Schemas.WatchResendResult, Error>?
     var pushWatchDeliveryResult: Result<Components.Schemas.WatchResendResult, Error>?
+    /// AMA-2336 — enrichment prefs + stored `workout_data` for the push sheet.
+    var fixtureWorkoutPreferences: WorkoutPreferences = .defaults
+    var fixtureWorkoutBlocksJSON: [String: [String: Any]] = [:]
     var listMessagingChannelsResult: Result<Components.Schemas.MessagingChannelList, Error>?
     var setChannelPrefsResult: Result<Components.Schemas.ChannelPrefsResult, Error>?
     var listLibraryItemsResult: Result<Components.Schemas.LibraryItemList, Error>?

@@ -18,6 +18,9 @@ class WorkoutEditorViewModel: ObservableObject {
     @Published var intervals: [WorkoutSaveInterval] = []
     /// ADR-017 blocks (+ structure_source) when saving from Editor v2 / clarify.
     @Published var saveBlocks: [SocialImportBlock]?
+    /// AMA-2336 — enrichment deletes from the editor, persisted with the workout.
+    /// `nil` = omit (don't rewrite server tombstones); `[]` = clear them.
+    @Published var saveEnrichmentTombstones: [EnrichmentTombstone]?
     @Published var isSaving: Bool = false
     @Published var errorMessage: String?
     @Published var didSave: Bool = false
@@ -139,7 +142,8 @@ class WorkoutEditorViewModel: ObservableObject {
             description: preservedDescription,
             creatorName: preservedCreatorName,
             blocks: saveBlocks,
-            workoutId: existingWorkoutId
+            workoutId: existingWorkoutId,
+            enrichmentTombstones: saveEnrichmentTombstones
         )
 
         do {

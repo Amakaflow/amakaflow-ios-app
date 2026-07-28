@@ -316,6 +316,30 @@ protocol APIServiceProviding: TelegramLinkAPIProviding, SocialImportAPIProviding
         displayPrefs: GarminWatchDisplayPrefs
     ) async throws -> Components.Schemas.WatchResendResult
 
+    // MARK: - Workout Enrichment (AMA-2336)
+
+    /// Fetch declared enrichment prefs (`workout_preferences`) from mapper-api.
+    func fetchWorkoutPreferences() async throws -> WorkoutPreferences
+
+    /// Persist declared enrichment prefs. Settings edits prefs only — never enrich.
+    @discardableResult
+    func updateWorkoutPreferences(_ prefs: WorkoutPreferences) async throws -> WorkoutPreferences
+
+    /// Inject warm-up / cooldown / rest intent / warm-up sets into `blocks_json`.
+    func enrichWorkout(_ enrich: EnrichRequest) async throws -> EnrichResponse
+
+    /// Stored `workout_data` for a saved workout — the enrich round-trip input.
+    func fetchWorkoutBlocksJSON(workoutId: String) async throws -> [String: Any]
+
+    /// Persist an enriched `workout_data` in place (push path needs it stored).
+    /// Tombstones are written under `metadata` (WorkoutData forbids a top-level key).
+    func saveWorkoutBlocksJSON(
+        workoutId: String,
+        title: String,
+        blocksJSON: [String: Any],
+        tombstones: [EnrichmentTombstone]?
+    ) async throws
+
     // MARK: - Library (AMA-2004)
 
     /// Fetch saved Library items from the mobile BFF.
@@ -448,6 +472,20 @@ extension APIServiceProviding {
     /// Convenience method with default isRetry
     func fetchWorkouts() async throws -> [Workout] {
         try await fetchWorkouts(isRetry: false)
+    }
+
+    /// Persist enriched blocks without changing stored tombstones.
+    func saveWorkoutBlocksJSON(
+        workoutId: String,
+        title: String,
+        blocksJSON: [String: Any]
+    ) async throws {
+        try await saveWorkoutBlocksJSON(
+            workoutId: workoutId,
+            title: title,
+            blocksJSON: blocksJSON,
+            tombstones: nil
+        )
     }
 
     /// Convenience method with default isRetry
