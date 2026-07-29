@@ -3,6 +3,7 @@
 // Simulates the companion steps: push → status → openApp (correct CIQ UUID).
 // Does not download FIT onto the watch (that is CIQ Layer C).
 
+import Combine
 import Foundation
 import SwiftUI
 
