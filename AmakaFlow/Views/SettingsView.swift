@@ -132,6 +132,7 @@ struct SettingsView: View {
     @State private var showDebugSettings = false
     @State private var debugTapCount = 0
     @State private var debugTapResetTask: DispatchWorkItem?
+    @State private var showingGarminDeliveryLab = false
     @State private var showingTelegramSetup = false
     @State private var showingPaywall = false
     @State private var connectedTelegramId: Int?
@@ -251,6 +252,18 @@ struct SettingsView: View {
                             ToolbarItem(placement: .confirmationAction) {
                                 Button("Done") {
                                     showDebugSettings = false
+                                }
+                            }
+                        }
+                }
+            }
+            .sheet(isPresented: $showingGarminDeliveryLab) {
+                NavigationStack {
+                    GarminDeliveryLabView()
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") {
+                                    showingGarminDeliveryLab = false
                                 }
                             }
                         }
@@ -1531,6 +1544,20 @@ struct SettingsView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Theme.Spacing.sm)
                         .background(Theme.Colors.accentGreen.opacity(0.2))
+                        .cornerRadius(Theme.CornerRadius.sm)
+                    }
+
+                    Button {
+                        showingGarminDeliveryLab = true
+                    } label: {
+                        VStack {
+                            Image(systemName: "checklist")
+                            Text("Lab")
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Spacing.sm)
+                        .background(Color.indigo.opacity(0.2))
                         .cornerRadius(Theme.CornerRadius.sm)
                     }
 
