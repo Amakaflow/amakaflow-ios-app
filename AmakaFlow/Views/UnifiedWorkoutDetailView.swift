@@ -44,6 +44,8 @@ struct UnifiedWorkoutDetailView: View {
 
     @Environment(\.scenePhase) private var scenePhase
     private let handoffStore = GarminHandoffStateStore()
+    /// AMA-2342: CIQ Devices token pairing — not GCM BLE.
+    @ObservedObject private var ciqPairing = GarminCIQPairingStore.shared
 
     /// How long the "opening Garmin Connect…" beat stays up when iOS does not
     /// actually foreground GCM (CIQ open requests often keep us in front).
@@ -85,8 +87,9 @@ struct UnifiedWorkoutDetailView: View {
             return true
         }
         #endif
-        return GarminConnectManager.shared.isConnected
-            || GarminConnectManager.shared.savedDeviceInfo != nil
+        // AMA-2342: Start → Garmin queues via CIQ device token (Devices).
+        // GCM BLE / savedDeviceInfo only wakes openApp — it is not pairing.
+        return ciqPairing.hasPairedGarmin
     }
 
     private var appleWatchReachable: Bool {
@@ -133,6 +136,9 @@ struct UnifiedWorkoutDetailView: View {
                 },
                 onClose: { showingStartSheet = false }
             )
+            .task {
+                await GarminCIQPairingStore.shared.refresh()
+            }
             .presentationDetents([.large, .medium])
             .presentationDragIndicator(.hidden)
             .presentationBackground(DailyDriver.screenBackground)
