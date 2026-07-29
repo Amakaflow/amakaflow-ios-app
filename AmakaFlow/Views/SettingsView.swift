@@ -1547,6 +1547,7 @@ struct SettingsView: View {
                         .cornerRadius(Theme.CornerRadius.sm)
                     }
 
+                    #if DEBUG
                     Button {
                         showingGarminDeliveryLab = true
                     } label: {
@@ -1560,6 +1561,7 @@ struct SettingsView: View {
                         .background(Color.indigo.opacity(0.2))
                         .cornerRadius(Theme.CornerRadius.sm)
                     }
+                    #endif
 
                     Button {
                         garminConnectivity.openWatchApp()

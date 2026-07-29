@@ -27,7 +27,7 @@ final class GarminDeliveryLabViewModel: ObservableObject {
         .init(id: "uuid", title: "CIQ app UUID matches widget", status: .pending, detail: ""),
         .init(id: "push", title: "POST watch-delivery push", status: .pending, detail: ""),
         .init(id: "status", title: "GET watch-delivery status", status: .pending, detail: ""),
-        .init(id: "wake", title: "openAppRequest (wake widget)", status: .pending, detail: ""),
+        .init(id: "wake", title: "openAppRequest (wake widget)", status: .pending, detail: "")
     ]
     @Published var lastMessage: String = "Paste a workout id and Run ladder."
 
@@ -91,8 +91,8 @@ final class GarminDeliveryLabViewModel: ObservableObject {
         // 3) Status enrich
         update(id: "status", status: .running, detail: "Fetching…")
         do {
-            let st = try await api.watchDeliveryStatus(workoutId: wid)
-            update(id: "status", status: .pass, detail: "state=\(String(describing: st.state))")
+            let deliveryStatus = try await api.watchDeliveryStatus(workoutId: wid)
+            update(id: "status", status: .pass, detail: "state=\(String(describing: deliveryStatus.state))")
         } catch {
             update(id: "status", status: .fail, detail: error.localizedDescription)
         }
@@ -117,7 +117,7 @@ final class GarminDeliveryLabViewModel: ObservableObject {
 }
 
 struct GarminDeliveryLabView: View {
-    @StateObject private var vm = GarminDeliveryLabViewModel()
+    @StateObject private var viewModel = GarminDeliveryLabViewModel()
 
     var body: some View {
         Form {
@@ -125,18 +125,18 @@ struct GarminDeliveryLabView: View {
                 Text("What we're testing: Companion push + correct CIQ UUID + optional wake. Not watch FIT download.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                TextField("Workout id (UUID)", text: $vm.workoutId)
+                TextField("Workout id (UUID)", text: $viewModel.workoutId)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
-                TextField("Gym title", text: $vm.gymTitle)
+                TextField("Gym title", text: $viewModel.gymTitle)
                 Button("Run Send-to-Garmin ladder") {
-                    Task { await vm.runLadder() }
+                    Task { await viewModel.runLadder() }
                 }
-                Text(vm.lastMessage)
+                Text(viewModel.lastMessage)
                     .font(.footnote)
             }
             Section("Steps") {
-                ForEach(vm.steps) { step in
+                ForEach(viewModel.steps) { step in
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
                             Text(step.title)
