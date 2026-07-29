@@ -97,10 +97,10 @@ class GarminConnectManager: NSObject, ObservableObject {
 
     /// AmakaFlow Connect IQ App UUID (must match manifest.xml in amakaflow-garmin-ciq)
     /// AMA-2342: was 90ABF0DE-… (stale) — openAppRequest never woke the sideloaded widget.
-    private let appUUID = UUID(uuidString: "d79bef4b-8805-44f2-8cdb-9b784a3be996")!
+    private let appUUID = GarminCIQAppIdentity.appUUID
 
     /// Store UUID for the app in Connect IQ store (same as app UUID until Store publish)
-    private let storeUUID = UUID(uuidString: "d79bef4b-8805-44f2-8cdb-9b784a3be996")!
+    private let storeUUID = GarminCIQAppIdentity.storeUUID
 
     /// URL scheme for handling Garmin Connect IQ callbacks
     static let urlScheme = "amakaflow-ciq"

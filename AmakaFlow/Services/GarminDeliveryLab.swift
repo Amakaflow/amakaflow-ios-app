@@ -31,17 +31,22 @@ final class GarminDeliveryLabViewModel: ObservableObject {
     ]
     @Published var lastMessage: String = "Paste a workout id and Run ladder."
 
-    private let expectedCIQUUID = "d79bef4b-8805-44f2-8cdb-9b784a3be996"
+    private let expectedCIQUUID = GarminCIQAppIdentity.appUUID.uuidString
 
     func runLadder(
         api: APIServiceProviding = AppDependencies.current.apiService,
         garmin: GarminConnectManager = .shared
     ) async {
-        guard !workoutId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        let trimmed = workoutId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
             lastMessage = "Workout id required"
             return
         }
-        let wid = workoutId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard UUID(uuidString: trimmed) != nil else {
+            lastMessage = "Workout id must be a UUID"
+            return
+        }
+        let wid = trimmed
 
         // 1) UUID
         update(id: "uuid", status: .running, detail: "Checking…")
