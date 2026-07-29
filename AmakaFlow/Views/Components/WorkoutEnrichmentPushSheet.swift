@@ -168,7 +168,7 @@ struct WorkoutEnrichmentPushSheet: View {
 
     private var restOverride: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Toggle("Rest until I press Lap", isOn: restOpenBinding)
+            Toggle("Lap button press (no timer)", isOn: restOpenBinding)
                 .tint(DailyDriver.lime)
                 .font(.system(size: 11))
                 .foregroundColor(DailyDriver.foregroundMuted)
@@ -176,7 +176,7 @@ struct WorkoutEnrichmentPushSheet: View {
 
             if !restOpen {
                 Stepper(
-                    "\(restSec)s rest",
+                    "Timed · \(restSec)s",
                     value: restSecBinding,
                     in: 15...600,
                     step: 15
@@ -209,7 +209,9 @@ struct WorkoutEnrichmentPushSheet: View {
         guard offer.kind == .betweenSetRest, checkedKinds.contains(.betweenSetRest) else {
             return offer.detail
         }
-        return restOpen ? "Rest until Lap between sets" : "\(restSec)s between sets"
+        return restOpen
+            ? "Lap button press between sets/rounds"
+            : "Timed \(restSec)s between sets/rounds"
     }
 
     private func toggle(_ kind: EnrichmentKind) {
