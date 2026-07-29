@@ -59,25 +59,30 @@ enum GarminLifecycleCopy {
     static let pairSheetSubtitle = "Enter the code shown on your Garmin watch"
 
     /// The single most-asked dogfood question: is the code one-time?
+    /// Phone-side pairing persists; watch Storage is wiped on CIQ reinstall.
     static let pairCodeLifecycle = """
-    The 6-digit code is one-time. Once it's accepted this iPhone stays paired \
-    until you remove the watch here — you won't be asked for a new code each push.
+    The 6-digit code is one-time per watch install. Once accepted, this iPhone \
+    stays paired in Devices until you remove it — you won't be asked for a new \
+    code each push. Exception: removing/re-adding the CIQ app wipes the watch \
+    token — enter a fresh code via Add device (re-pair) even if Devices still \
+    shows Paired.
     """
 
     /// Caption on a paired device row.
-    static let pairedLifecycleCaption = "Paired · stays paired until you remove it"
+    static let pairedLifecycleCaption = "Phone paired · re-pair after CIQ reinstall"
 
     /// Devices empty state — tells the user where a code comes from.
     static let notPairedLifecycleCaption = "Not paired — open the AmakaFlow widget on your watch to get a 6-digit code."
 
-    /// Codes expire before they're used, pairings don't.
-    static let pairCodeExpired = "Codes expire after a few minutes. If yours is rejected, open the widget again for a fresh one."
+    /// Codes expire before they're used; phone pairing persists until Remove.
+    static let pairCodeExpired = "Codes expire after a few minutes. If the watch asks for a code after a CIQ reinstall, tap Add device and enter the new one — Companion may still say Paired until you re-pair."
 
     /// Settings hosts the Garmin Connect Mobile device link, which is a
     /// different thing from the Connect IQ pairing that Start → Garmin uses.
     static let settingsPairingDistinction = """
     This links Garmin Connect Mobile for activity sync. Start → Garmin uses the \
-    Connect IQ pairing in Profile → Devices, which stays paired until you remove it.
+    Connect IQ pairing in Profile → Devices. Phone pairing persists until Remove; \
+    CIQ reinstall on the watch requires Add device with a fresh code.
     """
 
     // MARK: - Delete / remove semantics (dogfood item 4)
