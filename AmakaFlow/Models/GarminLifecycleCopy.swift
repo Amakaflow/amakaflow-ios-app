@@ -63,9 +63,9 @@ enum GarminLifecycleCopy {
     static let pairCodeLifecycle = """
     The 6-digit code is one-time per watch install. Once accepted, this iPhone \
     stays paired in Devices until you remove it — you won't be asked for a new \
-    code each push. Exception: removing/re-adding the CIQ app wipes the watch \
-    token — enter a fresh code via Add device (re-pair) even if Devices still \
-    shows Paired.
+    code each push. Exception: a CIQ reinstall (remove/re-add the watch app) \
+    wipes the watch token — enter a fresh code via Add device (re-pair) even if \
+    Devices still shows Paired.
     """
 
     /// Caption on a paired device row.

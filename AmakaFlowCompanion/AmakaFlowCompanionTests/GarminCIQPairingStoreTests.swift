@@ -33,7 +33,11 @@ final class GarminCIQPairingStoreTests: XCTestCase {
     }
 
     func testUpdateSetsHasPairedGarmin() {
-        let defaults = UserDefaults(suiteName: "GarminCIQPairingStoreTests.\(UUID().uuidString)")!
+        let suite = "GarminCIQPairingStoreTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suite) else {
+            return XCTFail("UserDefaults suite unavailable")
+        }
+        defaults.removePersistentDomain(forName: suite)
         let store = GarminCIQPairingStore(defaults: defaults)
         XCTAssertFalse(store.hasPairedGarmin)
 
@@ -41,8 +45,8 @@ final class GarminCIQPairingStoreTests: XCTestCase {
             Components.Schemas.PairedDevice(
                 id: "tok",
                 lastSyncAt: nil,
-                model: nil,
-                name: "Garmin",
+                model: "Forerunner 965",
+                name: "Dave watch",
                 roles: nil
             )
         ])

@@ -29,10 +29,6 @@ final class GarminCIQPairingStore: ObservableObject {
     /// Update cache from a Devices list response (wearables only from BFF).
     func update(from devices: [Components.Schemas.PairedDevice]) {
         let paired = devices.contains { Self.isGarminWearable($0) }
-        guard paired != hasPairedGarmin else {
-            defaults.set(paired, forKey: Self.defaultsKey)
-            return
-        }
         hasPairedGarmin = paired
         defaults.set(paired, forKey: Self.defaultsKey)
     }
