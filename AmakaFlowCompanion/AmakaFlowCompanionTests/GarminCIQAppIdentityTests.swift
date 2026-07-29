@@ -4,6 +4,7 @@
 import XCTest
 @testable import AmakaFlowCompanion
 
+@MainActor
 final class GarminCIQAppIdentityTests: XCTestCase {
     func testCIQAppUUIDMatchesSideloadedWidgetManifest() {
         // amakaflow-garmin-ciq/manifest.xml application id=
