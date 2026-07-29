@@ -65,11 +65,14 @@ final class GarminLifecycleCopyTests: XCTestCase {
         let copy = GarminLifecycleCopy.pairCodeLifecycle
         XCTAssertTrue(copy.contains("one-time"))
         XCTAssertTrue(copy.contains("until you remove"))
+        XCTAssertTrue(copy.lowercased().contains("reinstall"), "Must warn CIQ reinstall needs re-pair: \(copy)")
         XCTAssertFalse(copy.contains("each time"), "Must not imply re-entry per push: \(copy)")
     }
 
-    func testPairedCaptionDoesNotImplyReEntry() {
-        XCTAssertTrue(GarminLifecycleCopy.pairedLifecycleCaption.contains("stays paired"))
+    func testPairedCaptionMentionsRePairAfterReinstall() {
+        let caption = GarminLifecycleCopy.pairedLifecycleCaption
+        XCTAssertTrue(caption.lowercased().contains("re-pair") || caption.lowercased().contains("reinstall"),
+                      "Paired row must not pretend watch Storage survived CIQ reinstall: \(caption)")
     }
 
     func testNotPairedCaptionSaysWhereTheCodeComesFrom() {

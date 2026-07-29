@@ -146,6 +146,7 @@
 		AMA2286GARHANDBLD /* GarminStartHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2286GARHANDREF /* GarminStartHandoff.swift */; };
 		AMA2342GARLABBLD /* GarminDeliveryLab.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2342GARLABREF /* GarminDeliveryLab.swift */; };
 		AMA2342CIQUIDBLD /* GarminCIQAppIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2342CIQUIDREF /* GarminCIQAppIdentity.swift */; };
+		AMA2342CIQPAIRBLD /* GarminCIQPairingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2342CIQPAIRREF /* GarminCIQPairingStore.swift */; };
 		AMA2286GARTESTBLD /* GarminStartHandoffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2286GARTESTREF /* GarminStartHandoffTests.swift */; };
 		AMA2316PREFBLD001 /* GarminWatchDisplayPrefs.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2316PREFREF001 /* GarminWatchDisplayPrefs.swift */; };
 		AMA2316SHEETBLD01 /* GarminWatchDisplayPrefsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2316SHEETREF01 /* GarminWatchDisplayPrefsSheet.swift */; };
@@ -729,6 +730,7 @@
 		AMA2286GARHANDREF /* GarminStartHandoff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminStartHandoff.swift; path = ../AmakaFlow/Services/GarminStartHandoff.swift; sourceTree = SOURCE_ROOT; };
 		AMA2342GARLABREF /* GarminDeliveryLab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminDeliveryLab.swift; path = ../AmakaFlow/Services/GarminDeliveryLab.swift; sourceTree = SOURCE_ROOT; };
 		AMA2342CIQUIDREF /* GarminCIQAppIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminCIQAppIdentity.swift; path = ../AmakaFlow/Services/GarminCIQAppIdentity.swift; sourceTree = SOURCE_ROOT; };
+		AMA2342CIQPAIRREF /* GarminCIQPairingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminCIQPairingStore.swift; path = ../AmakaFlow/Services/GarminCIQPairingStore.swift; sourceTree = SOURCE_ROOT; };
 		AMA2286GARTESTREF /* GarminStartHandoffTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminStartHandoffTests.swift; path = AmakaFlowCompanionTests/GarminStartHandoffTests.swift; sourceTree = "<group>"; };
 		AMA2316PREFREF001 /* GarminWatchDisplayPrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchDisplayPrefs.swift; path = ../AmakaFlow/Models/GarminWatchDisplayPrefs.swift; sourceTree = SOURCE_ROOT; };
 		AMA2316SHEETREF01 /* GarminWatchDisplayPrefsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchDisplayPrefsSheet.swift; path = ../AmakaFlow/Views/GarminWatchDisplayPrefsSheet.swift; sourceTree = SOURCE_ROOT; };
@@ -1289,6 +1291,7 @@
 				AMA2286GARHANDREF /* GarminStartHandoff.swift */,
 				AMA2342GARLABREF /* GarminDeliveryLab.swift */,
 				AMA2342CIQUIDREF /* GarminCIQAppIdentity.swift */,
+				AMA2342CIQPAIRREF /* GarminCIQPairingStore.swift */,
 				AMA2317TELEREF001 /* GarminHandoffTelemetry.swift */,
 				AMA2287APPHANDREF /* AppleStartHandoff.swift */,
 				AMA2330SCHMANREF /* WorkoutKitScheduleManaging.swift */,
@@ -2424,6 +2427,7 @@
 				AMA2286GARHANDBLD /* GarminStartHandoff.swift in Sources */,
 				AMA2342GARLABBLD /* GarminDeliveryLab.swift in Sources */,
 				AMA2342CIQUIDBLD /* GarminCIQAppIdentity.swift in Sources */,
+				AMA2342CIQPAIRBLD /* GarminCIQPairingStore.swift in Sources */,
 				AMA2316PREFBLD001 /* GarminWatchDisplayPrefs.swift in Sources */,
 				AMA2336MDLBLD001 /* WorkoutEnrichmentModels.swift in Sources */,
 				AMA2336APIBLD001 /* WorkoutEnrichmentAPI.swift in Sources */,

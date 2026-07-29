@@ -67,6 +67,7 @@ final class DevicesViewModel: ObservableObject {
         do {
             let fetched = try await apiService.listDevices()
             devices = fetched
+            GarminCIQPairingStore.shared.update(from: fetched)
             state = fetched.isEmpty ? .empty : .content
         } catch {
             let mapped = CTAError.map(error)

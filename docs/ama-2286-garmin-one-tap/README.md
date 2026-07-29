@@ -11,12 +11,17 @@
 
 ## AMA-2310 recovery (unpaired)
 
-If Garmin is **not** paired (`GarminConnectManager` has no connection / saved device):
+If Garmin is **not** paired (no CIQ device in Profile → Devices — AMA-2342;
+GCM BLE alone is not enough):
 
 - Start sheet Garmin row stays **tappable** (not a dead grey `.disabled` row)
 - Subtitle: “Tap to pair CIQ / open Devices” + **PAIR** tag
 - Tap → dismiss Start sheet → open **Devices** (pair / CIQ code entry)
 - Status under detail uses the same not_paired what+why copy as push failures
+
+**Do not** treat `GarminConnectManager.isConnected` / `savedDeviceInfo` as paired
+for Start → Garmin. Those only wake `openApp`; queue fan-out needs a mapper
+`device_type=garmin` token from Devices.
 
 ## Dogfood samples
 
