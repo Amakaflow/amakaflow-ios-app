@@ -8,8 +8,33 @@
 import XCTest
 @testable import AmakaFlowCompanion
 
-@MainActor
 final class GarminCIQPairingStoreTests: XCTestCase {
+    private var defaults: UserDefaults!
+    private var suiteName: String!
+    private var store: GarminCIQPairingStore!
+
+    @MainActor
+    override func setUp() {
+        super.setUp()
+        suiteName = "GarminCIQPairingStoreTests-\(UUID().uuidString)"
+        defaults = UserDefaults(suiteName: suiteName)
+        XCTAssertNotNil(defaults, "UserDefaults suite must be available")
+        defaults.removeObject(forKey: "garmin_ciq_devices_paired")
+        store = GarminCIQPairingStore(defaults: defaults)
+    }
+
+    @MainActor
+    override func tearDown() {
+        if let suiteName {
+            defaults?.removePersistentDomain(forName: suiteName)
+        }
+        defaults = nil
+        store = nil
+        suiteName = nil
+        super.tearDown()
+    }
+
+    @MainActor
     func testIsGarminWearableMatchesBFFFallbackName() {
         let device = Components.Schemas.PairedDevice(
             id: "tok-1",
@@ -21,6 +46,7 @@ final class GarminCIQPairingStoreTests: XCTestCase {
         XCTAssertTrue(GarminCIQPairingStore.isGarminWearable(device))
     }
 
+    @MainActor
     func testIsGarminWearableMatchesForerunner() {
         let device = Components.Schemas.PairedDevice(
             id: "tok-2",
@@ -32,36 +58,24 @@ final class GarminCIQPairingStoreTests: XCTestCase {
         XCTAssertTrue(GarminCIQPairingStore.isGarminWearable(device))
     }
 
+    @MainActor
     func testUpdateSetsHasPairedGarmin() {
-        let suite = "ciq.pairing.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suite) ?? .standard
-        // Ensure a clean key even if suite falls back to .standard
-        defaults.removeObject(forKey: "garmin_ciq_devices_paired")
+        XCTAssertFalse(store.hasPairedGarmin)
 
-        let store = GarminCIQPairingStore(defaults: defaults)
-        XCTAssertFalse(store.hasPairedGarmin, "fresh store should start unpaired")
-
-        let garmin = Components.Schemas.PairedDevice(
-            id: "tok",
-            lastSyncAt: nil,
-            model: nil,
-            name: "Garmin",
-            roles: nil
-        )
-        XCTAssertTrue(GarminCIQPairingStore.isGarminWearable(garmin))
-
-        store.update(from: [garmin])
-        XCTAssertTrue(store.hasPairedGarmin, "update with Garmin row should set paired")
+        store.update(from: [
+            Components.Schemas.PairedDevice(
+                id: "tok",
+                lastSyncAt: nil,
+                model: nil,
+                name: "Garmin",
+                roles: nil
+            )
+        ])
+        XCTAssertTrue(store.hasPairedGarmin)
         XCTAssertTrue(defaults.bool(forKey: "garmin_ciq_devices_paired"))
 
         store.update(from: [])
-        XCTAssertFalse(store.hasPairedGarmin, "empty list should clear paired")
+        XCTAssertFalse(store.hasPairedGarmin)
         XCTAssertFalse(defaults.bool(forKey: "garmin_ciq_devices_paired"))
-
-        if defaults !== UserDefaults.standard {
-            defaults.removePersistentDomain(forName: suite)
-        } else {
-            defaults.removeObject(forKey: "garmin_ciq_devices_paired")
-        }
     }
 }
