@@ -33,26 +33,35 @@ final class GarminCIQPairingStoreTests: XCTestCase {
     }
 
     func testUpdateSetsHasPairedGarmin() {
-        let suite = "GarminCIQPairingStoreTests.\(UUID().uuidString)"
-        guard let defaults = UserDefaults(suiteName: suite) else {
-            return XCTFail("UserDefaults suite unavailable")
-        }
-        defaults.removePersistentDomain(forName: suite)
-        let store = GarminCIQPairingStore(defaults: defaults)
-        XCTAssertFalse(store.hasPairedGarmin)
+        let suite = "ciq.pairing.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite) ?? .standard
+        // Ensure a clean key even if suite falls back to .standard
+        defaults.removeObject(forKey: "garmin_ciq_devices_paired")
 
-        store.update(from: [
-            Components.Schemas.PairedDevice(
-                id: "tok",
-                lastSyncAt: nil,
-                model: "Forerunner 965",
-                name: "Dave watch",
-                roles: nil
-            )
-        ])
-        XCTAssertTrue(store.hasPairedGarmin)
+        let store = GarminCIQPairingStore(defaults: defaults)
+        XCTAssertFalse(store.hasPairedGarmin, "fresh store should start unpaired")
+
+        let garmin = Components.Schemas.PairedDevice(
+            id: "tok",
+            lastSyncAt: nil,
+            model: nil,
+            name: "Garmin",
+            roles: nil
+        )
+        XCTAssertTrue(GarminCIQPairingStore.isGarminWearable(garmin))
+
+        store.update(from: [garmin])
+        XCTAssertTrue(store.hasPairedGarmin, "update with Garmin row should set paired")
+        XCTAssertTrue(defaults.bool(forKey: "garmin_ciq_devices_paired"))
 
         store.update(from: [])
-        XCTAssertFalse(store.hasPairedGarmin)
+        XCTAssertFalse(store.hasPairedGarmin, "empty list should clear paired")
+        XCTAssertFalse(defaults.bool(forKey: "garmin_ciq_devices_paired"))
+
+        if defaults !== UserDefaults.standard {
+            defaults.removePersistentDomain(forName: suite)
+        } else {
+            defaults.removeObject(forKey: "garmin_ciq_devices_paired")
+        }
     }
 }
