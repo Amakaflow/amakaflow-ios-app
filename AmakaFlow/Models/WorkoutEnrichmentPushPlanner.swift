@@ -29,7 +29,7 @@ enum WorkoutEnrichmentPushPlanner {
 
         var title: String {
             switch kind {
-            case .sessionWarmup: return "Session warm-up"
+            case .sessionWarmup: return "Add mobility prep"
             case .cooldown: return "Cool-down"
             case .betweenSetRest: return "Between-set rest"
             case .exerciseWarmupSets: return "Exercise warm-up sets"

@@ -92,8 +92,34 @@ struct WorkoutSaveRequest: Codable {
             SocialImportBlock(
                 label: block.label,
                 rounds: max(1, block.rounds),
-                exercises: block.exercises.map { socialImportExercise(from: $0) }
+                exercises: block.exercises.map { socialImportExercise(from: $0) },
+                type: persistType(from: block)
             )
+        }
+    }
+
+    /// AMA-2343 A+D: map Block.structure / rounds display contract → ADR-017 type.
+    private static func persistType(from block: Block) -> String? {
+        switch block.structure {
+        case .circuit:
+            return StructureBlockType.circuit.rawValue
+        case .superset:
+            return StructureBlockType.superset.rawValue
+        case .amrap:
+            return StructureBlockType.amrap.rawValue
+        case .emom:
+            return StructureBlockType.emom.rawValue
+        case .tabata:
+            return StructureBlockType.tabata.rawValue
+        case .straight:
+            // Library decode often loses type → structure defaults to straight.
+            // When Companion shows a circuit (rounds>1, multi-ex), persist circuit.
+            guard block.rounds > 1, block.exercises.count >= 2 else { return nil }
+            let setsValues = block.exercises.map(\.sets)
+            let unsetCount = setsValues.filter { $0 == nil }.count
+            guard unsetCount >= 2 else { return nil }
+            if setsValues.allSatisfy({ ($0 ?? 0) > 1 }) { return nil }
+            return StructureBlockType.circuit.rawValue
         }
     }
 

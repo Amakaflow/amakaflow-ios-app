@@ -61,6 +61,8 @@ extension APIService {
     }
 
     /// ADR-017 + AMA-2336 declared fields on each block for mapper persistence.
+    /// AMA-2343 A+D: when Companion treats a block as a circuit (rounds>1, multi-ex),
+    /// persist `type: "circuit"` so FIT groups. Never stamp `warmup` on those.
     static func mapperBlockObject(from block: SocialImportBlock) -> [String: Any] {
         var object: [String: Any] = [
             "exercises": block.exercises.map { provenanceExercise(from: $0) }
@@ -71,7 +73,7 @@ extension APIService {
         if block.rounds > 1 {
             object["rounds"] = block.rounds
         }
-        if let type = block.type?.trimmingCharacters(in: .whitespacesAndNewlines), !type.isEmpty {
+        if let type = persistedBlockType(for: block) {
             object["type"] = type
         }
         if let restOpen = block.restOpen {
@@ -94,6 +96,24 @@ extension APIService {
             object["field_provenance"] = provenance
         }
         return object
+    }
+
+    /// Resolve ADR-017 `type` for mapper save (AMA-2343 A+D).
+    ///
+    /// Explicit types win (including soft `warmup` / `cooldown`). When type is
+    /// absent and the UI contract is a circuit (rounds>1, 2+ exercises without
+    /// per-exercise sets), persist `circuit` — never `warmup`.
+    static func persistedBlockType(for block: SocialImportBlock) -> String? {
+        let trimmed = block.type?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmed, !trimmed.isEmpty {
+            return trimmed
+        }
+        guard block.rounds > 1, block.exercises.count >= 2 else { return nil }
+        let setsValues = block.exercises.map { $0.sets }
+        let unsetCount = setsValues.filter { $0 == nil }.count
+        guard unsetCount >= 2 else { return nil }
+        if setsValues.allSatisfy({ ($0 ?? 0) > 1 }) { return nil }
+        return StructureBlockType.circuit.rawValue
     }
 
     static func provenanceExercise(from exercise: SocialImportExercise) -> [String: Any] {
