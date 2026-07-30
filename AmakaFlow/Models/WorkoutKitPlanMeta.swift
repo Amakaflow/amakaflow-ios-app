@@ -30,21 +30,32 @@ struct WorkoutKitPlanMeta: Equatable, Sendable {
         struct Payload: Decodable {
             let composition: String?
             let compositionEffective: String?
-            let composition_effective: String?
             let routingReason: String?
-            let routing_reason: String?
+
+            enum CodingKeys: String, CodingKey {
+                case composition
+                case compositionEffective = "composition_effective"
+                case compositionEffectiveCamel = "compositionEffective"
+                case routingReason = "routing_reason"
+                case routingReasonCamel = "routingReason"
+            }
+
+            init(from decoder: Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                composition = try container.decodeIfPresent(String.self, forKey: .composition)
+                compositionEffective = try container.decodeIfPresent(String.self, forKey: .compositionEffective)
+                    ?? container.decodeIfPresent(String.self, forKey: .compositionEffectiveCamel)
+                routingReason = try container.decodeIfPresent(String.self, forKey: .routingReason)
+                    ?? container.decodeIfPresent(String.self, forKey: .routingReasonCamel)
+            }
         }
         guard let payload = try? JSONDecoder().decode(Payload.self, from: data) else {
             self = .fallback
             return
         }
         let composition = payload.composition ?? "custom"
-        let effective = payload.compositionEffective
-            ?? payload.composition_effective
-            ?? composition
-        let reason = payload.routingReason
-            ?? payload.routing_reason
-            ?? "legacy_unspecified"
+        let effective = payload.compositionEffective ?? composition
+        let reason = payload.routingReason ?? "legacy_unspecified"
         self.init(
             composition: composition,
             compositionEffective: effective,
