@@ -33,7 +33,7 @@ enum WorkoutEnrichmentPushPlanner {
             switch kind {
             case .sessionWarmup: return "Add mobility prep"
             case .cooldown: return "Cool-down"
-            case .betweenSetRest: return "Between-set rest"
+            case .betweenSetRest: return "Add rest (Lap or timed)"
             case .exerciseWarmupSets: return "Exercise warm-up sets"
             }
         }
@@ -72,9 +72,10 @@ enum WorkoutEnrichmentPushPlanner {
 
     /// Offer rows for a workout about to be pushed.
     ///
-    /// A kind is offered when it is **missing** (presence by type / by intent) and
-    /// the user has it enabled in prefs — a disabled kind is a declared "no",
-    /// so it never nags. Tombstoned kinds are offered but start unchecked.
+    /// Soft kinds (mobility / cooldown / warm-up sets) are offered when missing
+    /// and enabled in prefs. **Between-set rest** is always offered when missing
+    /// so Garmin Lap/timed Rest can be added on this push even if Settings has
+    /// the standing offer off (starts unchecked). Tombstoned kinds start unchecked.
     static func plan(
         blocks: [SocialImportBlock],
         tombstones: [EnrichmentTombstone],
@@ -115,15 +116,19 @@ enum WorkoutEnrichmentPushPlanner {
             )
         }
 
-        if prefs.betweenSetRest.enabled, !hasRestIntent(in: blocks) {
+        // Always offer Rest when the workout has no rest intent — Garmin FIT
+        // needs `rest_open` / `rest_sec` on blocks. Prefs.enabled only controls
+        // the default check (off → show unchecked so this push can still opt in).
+        if !hasRestIntent(in: blocks) {
             let tombstoned = WorkoutEnrichmentPresence.isTombstoned(
                 .betweenSetRest,
                 tombstones: tombstones
             )
+            let prefsWantRest = prefs.betweenSetRest.enabled
             offers.append(
                 Offer(
                     kind: .betweenSetRest,
-                    isChecked: !tombstoned,
+                    isChecked: prefsWantRest && !tombstoned,
                     wasTombstoned: tombstoned,
                     detail: restDetail(prefs.betweenSetRest),
                     tombstonedExerciseIds: []

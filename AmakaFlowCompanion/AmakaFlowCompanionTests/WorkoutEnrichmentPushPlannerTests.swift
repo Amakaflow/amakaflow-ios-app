@@ -116,6 +116,22 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertNil(open.offer(.betweenSetRest))
     }
 
+    /// AMA-2347 — Rest must stay visible on the Garmin send sheet even when
+    /// Settings has "Offer between-set rest" off, so the user can opt in for
+    /// this push (default unchecked).
+    func testRestOfferedUncheckedWhenPrefsDisabled() {
+        var prefs = WorkoutPreferences.defaults
+        prefs.betweenSetRest.enabled = false
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock()],
+            tombstones: [],
+            prefs: prefs
+        )
+        let offer = plan.offer(.betweenSetRest)
+        XCTAssertNotNil(offer)
+        XCTAssertEqual(offer?.isChecked, false)
+    }
+
     func testExistingWarmupSetsAndExcludedNamesAreNotOffered() {
         let present = WorkoutEnrichmentPushPlanner.plan(
             blocks: [benchBlock(warmupSets: [WarmupSetRow(reps: 8)])],
