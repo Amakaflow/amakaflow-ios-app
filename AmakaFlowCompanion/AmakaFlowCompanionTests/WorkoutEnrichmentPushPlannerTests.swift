@@ -326,6 +326,8 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertTrue(application.tombstones.contains(where: { $0.kind == .sessionWarmup }))
         XCTAssertTrue(application.tombstones.contains(where: { $0.kind == .betweenSetRest }))
     }
+
+    func testApplyHonoursRestOverrides() throws {
         let plan = WorkoutEnrichmentPushPlanner.plan(
             blocks: [benchBlock()],
             tombstones: [],
