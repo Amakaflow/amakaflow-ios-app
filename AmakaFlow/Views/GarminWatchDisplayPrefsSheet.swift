@@ -20,6 +20,10 @@ struct GarminWatchDisplayPrefsSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var prefs: GarminWatchDisplayPrefs
+    /// AMA-2357: snapshot taken at open so an explicit Cancel can revert the
+    /// write-through below — swiping the sheet away (which skips every button
+    /// action, including Cancel) must not revert; it keeps the last tap.
+    private let initialPrefs: GarminWatchDisplayPrefs
 
     init(
         mode: Mode,
@@ -28,7 +32,9 @@ struct GarminWatchDisplayPrefsSheet: View {
     ) {
         self.mode = mode
         self.onSaved = onSaved
-        _prefs = State(initialValue: initial ?? GarminWatchDisplayPrefsStore.current)
+        let startingPrefs = initial ?? GarminWatchDisplayPrefsStore.current
+        initialPrefs = startingPrefs
+        _prefs = State(initialValue: startingPrefs)
     }
 
     var body: some View {
@@ -47,6 +53,7 @@ struct GarminWatchDisplayPrefsSheet: View {
                                 isSelected: prefs.exerciseEnd == option
                             ) {
                                 prefs.exerciseEnd = option
+                                GarminWatchDisplayPrefsStore.applyLiveSelection(exerciseEnd: option)
                             }
                         }
                     }
@@ -61,6 +68,7 @@ struct GarminWatchDisplayPrefsSheet: View {
                                 isSelected: prefs.restMode == option
                             ) {
                                 prefs.restMode = option
+                                GarminWatchDisplayPrefsStore.applyLiveSelection(restMode: option)
                             }
                         }
                     }
@@ -84,7 +92,7 @@ struct GarminWatchDisplayPrefsSheet: View {
             .toolbar {
                 if mode == .settings {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { dismiss() }
+                        Button("Cancel") { cancel() }
                     }
                 }
             }
@@ -160,8 +168,18 @@ struct GarminWatchDisplayPrefsSheet: View {
     }
 
     private func save() {
+        // Selections are already persisted by `applyLiveSelection` (row taps
+        // above); this just confirms the flow (marks onboarding complete,
+        // notifies the caller) and closes.
         GarminWatchDisplayPrefsStore.current = prefs
         onSaved?()
+        dismiss()
+    }
+
+    /// Explicit Cancel (Settings mode only) reverts the write-through above —
+    /// unlike a swipe-to-dismiss, tapping Cancel is an unambiguous "never mind".
+    private func cancel() {
+        GarminWatchDisplayPrefsStore.current = initialPrefs
         dismiss()
     }
 }
