@@ -119,7 +119,7 @@ enum WorkoutEnrichmentPushPlanner {
         // Always offer Rest when the workout has no rest intent — Garmin FIT
         // needs `rest_open` / `rest_sec` on blocks. Prefs.enabled only controls
         // the default check (off → show unchecked so this push can still opt in).
-        if !hasRestIntent(in: blocks) {
+        if !hasBlockRestIntent(in: blocks) {
             let tombstoned = WorkoutEnrichmentPresence.isTombstoned(
                 .betweenSetRest,
                 tombstones: tombstones
@@ -307,17 +307,22 @@ enum WorkoutEnrichmentPushPlanner {
 
     // MARK: - Presence helpers
 
-    /// Rest is "present" when any block or row already declares intent — timed or
-    /// open. Delivery end conditions (AMA-2300/2316) are not consulted here.
-    static func hasRestIntent(in blocks: [SocialImportBlock]) -> Bool {
+    /// Block-level rest intent — mirrors mapper `enrichment._has_rest_intent`.
+    ///
+    /// Between-set rest enrichment writes **block** `rest_open` / `rest_sec` for
+    /// Garmin FIT (AMA-2344). Per-exercise `rest_sec` from ingest or client
+    /// defaults is a separate prescription and must not hide the push-sheet offer.
+    static func hasBlockRestIntent(in blocks: [SocialImportBlock]) -> Bool {
         blocks.contains { block in
-            if let restSec = block.restSec, restSec > 0 { return true }
             if block.restOpen == true { return true }
-            return block.exercises.contains { exercise in
-                if let restSeconds = exercise.restSeconds, restSeconds > 0 { return true }
-                return exercise.restOpen == true
-            }
+            if block.restOpen == false { return true }
+            return block.restSec != nil
         }
+    }
+
+    /// Legacy alias — block-level only (exercise rows ignored).
+    static func hasRestIntent(in blocks: [SocialImportBlock]) -> Bool {
+        hasBlockRestIntent(in: blocks)
     }
 
     /// Rows that could take warm-up sets: a strength `sets` shape, no rows yet,
