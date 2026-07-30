@@ -1126,10 +1126,16 @@ enum WorkoutStartFlowSheet: Identifiable, Equatable {
         switch (lhs, rhs) {
         case (.start, .start):
             return true
-        case let (.enrichment(a), .enrichment(b)):
-            return a == b
-        case let (.applePreview(n1, m1, c1, d1), .applePreview(n2, m2, c2, d2)):
-            return n1 == n2 && m1 == m2 && c1 == c2 && d1 == d2
+        case let (.enrichment(leftPrepared), .enrichment(rightPrepared)):
+            return leftPrepared == rightPrepared
+        case let (
+            .applePreview(leftName, leftMeta, leftCount, leftJSON),
+            .applePreview(rightName, rightMeta, rightCount, rightJSON)
+        ):
+            return leftName == rightName
+                && leftMeta == rightMeta
+                && leftCount == rightCount
+                && leftJSON == rightJSON
         default:
             return false
         }
