@@ -256,7 +256,8 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         )
 
         XCTAssertEqual(application.clearedTombstones, [EnrichmentTombstone(kind: .sessionWarmup)])
-        XCTAssertEqual(application.tombstones, [EnrichmentTombstone(kind: .betweenSetRest)])
+        XCTAssertTrue(application.tombstones.contains(where: { $0.kind == .betweenSetRest }))
+        XCTAssertFalse(application.tombstones.contains(where: { $0.kind == .sessionWarmup }))
     }
 
     func testApplyClearsPerExerciseWarmupSetTombstones() throws {
@@ -276,8 +277,15 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
             tombstones: tombstones
         )
 
-        XCTAssertTrue(application.tombstones.isEmpty)
+        XCTAssertFalse(
+            application.tombstones.contains(
+                where: { $0.kind == .exerciseWarmupSets && $0.exerciseId == "wex_bench" }
+            )
+        )
         XCTAssertEqual(application.clearedTombstones, tombstones)
+        // Unchecked offers (mobility / rest) are rejected → tombstoned.
+        XCTAssertTrue(application.tombstones.contains(where: { $0.kind == .sessionWarmup }))
+        XCTAssertTrue(application.tombstones.contains(where: { $0.kind == .betweenSetRest }))
     }
 
     func testApplyKeepsPartialWarmupSetTombstonesWhenLeftChecked() throws {
@@ -309,8 +317,14 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
             tombstones: tombstones
         )
 
-        XCTAssertEqual(application.tombstones, tombstones)
+        XCTAssertTrue(
+            application.tombstones.contains(
+                where: { $0.kind == .exerciseWarmupSets && $0.exerciseId == "wex_bench" }
+            )
+        )
         XCTAssertTrue(application.clearedTombstones.isEmpty)
+        XCTAssertTrue(application.tombstones.contains(where: { $0.kind == .sessionWarmup }))
+        XCTAssertTrue(application.tombstones.contains(where: { $0.kind == .betweenSetRest }))
     }
 
     func testApplyHonoursRestOverrides() throws {
@@ -361,6 +375,105 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
             tombstones: []
         )
         XCTAssertFalse(application.appliesAnything)
+        // AMA-2346: rejecting every offer still persists tombstones.
+        XCTAssertTrue(application.needsPersist)
+        XCTAssertTrue(application.tombstones.contains(where: { $0.kind == .sessionWarmup }))
+        XCTAssertTrue(application.tombstones.contains(where: { $0.kind == .betweenSetRest }))
+        XCTAssertTrue(application.rejectedTombstones.contains(where: { $0.kind == .sessionWarmup }))
+        XCTAssertTrue(application.rejectedTombstones.contains(where: { $0.kind == .betweenSetRest }))
+    }
+
+    // MARK: - Coordinator apply (AMA-2346)
+
+    @MainActor
+    func testApplyPersistsRejectTombstonesWhenEnrichFails() async {
+        let mock = MockAPIService()
+        mock.enrichWorkoutResult = .failure(
+            NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: "mapper down"])
+        )
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock(exerciseId: "wex_bench")],
+            tombstones: [],
+            prefs: .defaults
+        )
+        let prepared = WorkoutEnrichmentPushCoordinator.Prepared(
+            workoutId: "w1",
+            title: "Push",
+            plan: plan,
+            prefs: .defaults,
+            tombstones: [],
+            blocksJSON: ["blocks": []]
+        )
+        let coordinator = WorkoutEnrichmentPushCoordinator(apiService: mock)
+
+        // Accept rest so enrich is called; reject mobility → tombstone must persist
+        // even when enrich throws.
+        let outcome = await coordinator.apply(
+            prepared: prepared,
+            decision: WorkoutEnrichmentPushPlanner.Decision(checkedKinds: [.betweenSetRest])
+        )
+
+        XCTAssertEqual(mock.enrichWorkoutCallCount, 1)
+        XCTAssertTrue(outcome.applied)
+        XCTAssertNotNil(outcome.note)
+        XCTAssertEqual(mock.savedWorkoutBlocksJSON.count, 1)
+        let savedTombs = mock.savedWorkoutBlocksJSON[0].tombstones ?? []
+        XCTAssertTrue(savedTombs.contains(where: { $0.kind == .sessionWarmup }))
+    }
+
+    @MainActor
+    func testApplySkipsEnrichWhenNothingCheckedButStillPersistsTombstones() async {
+        let mock = MockAPIService()
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock(exerciseId: "wex_bench")],
+            tombstones: [],
+            prefs: .defaults
+        )
+        let prepared = WorkoutEnrichmentPushCoordinator.Prepared(
+            workoutId: "w1",
+            title: "Push",
+            plan: plan,
+            prefs: .defaults,
+            tombstones: [],
+            blocksJSON: ["blocks": []]
+        )
+        let coordinator = WorkoutEnrichmentPushCoordinator(apiService: mock)
+
+        let outcome = await coordinator.apply(
+            prepared: prepared,
+            decision: WorkoutEnrichmentPushPlanner.Decision(checkedKinds: [])
+        )
+
+        XCTAssertEqual(mock.enrichWorkoutCallCount, 0)
+        XCTAssertTrue(outcome.applied)
+        XCTAssertNil(outcome.note)
+        XCTAssertEqual(mock.savedWorkoutBlocksJSON.count, 1)
+        let savedTombs = mock.savedWorkoutBlocksJSON[0].tombstones ?? []
+        XCTAssertTrue(savedTombs.contains(where: { $0.kind == .sessionWarmup }))
+        XCTAssertTrue(savedTombs.contains(where: { $0.kind == .betweenSetRest }))
+    }
+
+    func testRejectSessionWarmupTombsWhileAcceptingRest() throws {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock(exerciseId: "wex_bench")],
+            tombstones: [],
+            prefs: .defaults
+        )
+        let application = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(checkedKinds: [.betweenSetRest]),
+            prefs: .defaults,
+            tombstones: []
+        )
+        XCTAssertFalse(application.prefs.sessionWarmup.enabled)
+        XCTAssertTrue(application.prefs.betweenSetRest.enabled)
+        XCTAssertTrue(application.tombstones.contains(where: { $0.kind == .sessionWarmup }))
+        XCTAssertFalse(application.tombstones.contains(where: { $0.kind == .betweenSetRest }))
+        XCTAssertTrue(
+            application.tombstones.contains(
+                where: { $0.kind == .exerciseWarmupSets && $0.exerciseId == "wex_bench" }
+            )
+        )
     }
 
     // MARK: - blocks_json parse (no invented defaults)

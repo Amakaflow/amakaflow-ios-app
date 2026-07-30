@@ -88,14 +88,12 @@ final class WorkoutEnrichmentPushCoordinator {
     }
 
     /// Enrich, then store the result so the CIQ download builds the enriched FIT.
+    /// AMA-2346: also persists reject tombstones when the user unchecks offers
+    /// (including "Send as it is") so mobility/rest cannot sneak back in.
     func apply(
         prepared: Prepared,
         decision: WorkoutEnrichmentPushPlanner.Decision
     ) async -> ApplyOutcome {
-        guard !decision.checkedKinds.isEmpty else {
-            return ApplyOutcome(applied: false, note: nil)
-        }
-
         do {
             let application = try WorkoutEnrichmentPushPlanner.application(
                 plan: prepared.plan,
@@ -103,22 +101,40 @@ final class WorkoutEnrichmentPushCoordinator {
                 prefs: prepared.prefs,
                 tombstones: prepared.tombstones
             )
-            let response = try await apiService.enrichWorkout(
-                EnrichRequest(
-                    blocksJSON: prepared.blocksJSON,
-                    prefs: application.prefs,
-                    tombstones: application.tombstones,
-                    mode: .push
-                )
-            )
-            // Enrich is read-only on tombstones — persist the cleared set ourselves.
+            guard application.needsPersist else {
+                return ApplyOutcome(applied: false, note: nil)
+            }
+
+            var blocksJSON = prepared.blocksJSON
+            var enrichNote: String?
+            if application.appliesAnything {
+                // Narrow enrich failure: still persist reject tombstones so unchecked
+                // offers cannot reappear on the next push (AMA-2346).
+                do {
+                    let response = try await apiService.enrichWorkout(
+                        EnrichRequest(
+                            blocksJSON: prepared.blocksJSON,
+                            prefs: application.prefs,
+                            tombstones: application.tombstones,
+                            mode: .push
+                        )
+                    )
+                    blocksJSON = response.blocksJSON
+                } catch {
+                    logger.error(
+                        "Enrich failed, persisting tombstones only for \(prepared.workoutId, privacy: .public): \(error.localizedDescription, privacy: .public)"
+                    )
+                    enrichNote = "Couldn’t add the warm-up/rest extras — sending your workout as it is."
+                }
+            }
+            // Enrich is read-only on tombstones — persist the sheet answer ourselves.
             try await apiService.saveWorkoutBlocksJSON(
                 workoutId: prepared.workoutId,
                 title: prepared.title,
-                blocksJSON: response.blocksJSON,
+                blocksJSON: blocksJSON,
                 tombstones: application.tombstones
             )
-            return ApplyOutcome(applied: true, note: nil)
+            return ApplyOutcome(applied: true, note: enrichNote)
         } catch {
             logger.error(
                 "Enrichment apply failed for \(prepared.workoutId, privacy: .public): \(error.localizedDescription, privacy: .public)"

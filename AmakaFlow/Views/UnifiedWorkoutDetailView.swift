@@ -18,13 +18,13 @@ struct UnifiedWorkoutDetailView: View {
     @Environment(\.openURL) private var openURL
     @EnvironmentObject private var workoutsViewModel: WorkoutsViewModel
 
-    @State private var showingStartSheet = false
     @State private var showingEditor = false
     @State private var showingWorkoutPlayer = false
     @State private var showingGarminPairing = false
     @State private var showingGarminDisplayPrefs = false
-    /// AMA-2336: enrichment offers gathered before a Garmin push (nil = nothing to ask).
-    @State private var enrichmentOffers: WorkoutEnrichmentPushCoordinator.Prepared?
+    /// AMA-2346: single sheet so Start → enrichment never races a second `.sheet`
+    /// (dual sheets let push/openApp land before answers).
+    @State private var startFlowSheet: WorkoutStartFlowSheet?
     @State private var pendingGarminGymTitle: String?
     @State private var handoffStatus: String?
     /// AMA-2317: true while the CIQ open request is handing off to Garmin Connect.
@@ -114,34 +114,60 @@ struct UnifiedWorkoutDetailView: View {
         .preferredColorScheme(.dark)
         .ddSuppressFloatingChrome()
         .navigationBarHidden(true)
-        .sheet(isPresented: $showingStartSheet) {
-            WorkoutStartSheet(
-                workout: workout,
-                garminPaired: garminPaired,
-                appleWatchReachable: appleWatchReachable,
-                onConfirm: { gym, device in
-                    showingStartSheet = false
-                    handleStartConfirm(gym: gym, device: device)
-                },
-                onPairGarmin: {
-                    showingStartSheet = false
-                    handoffStatus = GarminStartHandoffCopy.unpairedRecoveryStatusMessage
-                    showsHandoffNextSteps = false
-                    lastAppleHandoffShowsManagePlans = false
-                    showingGarminPairing = true
-                },
-                onEditGarminPrefs: {
-                    showingStartSheet = false
-                    showingGarminDisplayPrefs = true
-                },
-                onClose: { showingStartSheet = false }
-            )
-            .task {
-                await GarminCIQPairingStore.shared.refresh()
+        .sheet(item: $startFlowSheet) { sheet in
+            switch sheet {
+            case .start:
+                WorkoutStartSheet(
+                    workout: workout,
+                    garminPaired: garminPaired,
+                    appleWatchReachable: appleWatchReachable,
+                    onConfirm: { gym, device in
+                        handleStartConfirm(gym: gym, device: device)
+                    },
+                    onPairGarmin: {
+                        startFlowSheet = nil
+                        handoffStatus = GarminStartHandoffCopy.unpairedRecoveryStatusMessage
+                        showsHandoffNextSteps = false
+                        lastAppleHandoffShowsManagePlans = false
+                        showingGarminPairing = true
+                    },
+                    onEditGarminPrefs: {
+                        startFlowSheet = nil
+                        showingGarminDisplayPrefs = true
+                    },
+                    onClose: { startFlowSheet = nil }
+                )
+                .task {
+                    await GarminCIQPairingStore.shared.refresh()
+                }
+                .presentationDetents([.large, .medium])
+                .presentationDragIndicator(.hidden)
+                .presentationBackground(DailyDriver.screenBackground)
+            case .enrichment(let prepared):
+                WorkoutEnrichmentPushSheet(
+                    plan: prepared.plan,
+                    prefs: prepared.prefs,
+                    onConfirm: { decision in
+                        startFlowSheet = nil
+                        applyEnrichmentThenPush(prepared: prepared, decision: decision)
+                    },
+                    onSkip: {
+                        startFlowSheet = nil
+                        // Skip still records rejects so mobility cannot reappear next push.
+                        applyEnrichmentThenPush(
+                            prepared: prepared,
+                            decision: WorkoutEnrichmentPushPlanner.Decision(checkedKinds: [])
+                        )
+                    },
+                    onClose: {
+                        startFlowSheet = nil
+                        pendingGarminGymTitle = nil
+                    }
+                )
+                .presentationDetents([.large, .medium])
+                .presentationDragIndicator(.hidden)
+                .presentationBackground(DailyDriver.screenBackground)
             }
-            .presentationDetents([.large, .medium])
-            .presentationDragIndicator(.hidden)
-            .presentationBackground(DailyDriver.screenBackground)
         }
         .sheet(isPresented: $showingGarminPairing) {
             NavigationStack {
@@ -152,27 +178,6 @@ struct UnifiedWorkoutDetailView: View {
         }
         .sheet(isPresented: $showingGarminDisplayPrefs) {
             GarminWatchDisplayPrefsSheet(mode: .settings)
-        }
-        .sheet(item: $enrichmentOffers) { prepared in
-            WorkoutEnrichmentPushSheet(
-                plan: prepared.plan,
-                prefs: prepared.prefs,
-                onConfirm: { decision in
-                    enrichmentOffers = nil
-                    applyEnrichmentThenPush(prepared: prepared, decision: decision)
-                },
-                onSkip: {
-                    enrichmentOffers = nil
-                    pushToGarmin(gymTitle: pendingGarminGymTitle ?? "", statusNote: nil)
-                },
-                onClose: {
-                    enrichmentOffers = nil
-                    pendingGarminGymTitle = nil
-                }
-            )
-            .presentationDetents([.large, .medium])
-            .presentationDragIndicator(.hidden)
-            .presentationBackground(DailyDriver.screenBackground)
         }
         .sheet(isPresented: $showingWorkoutSchedule) {
             NavigationStack {
@@ -551,7 +556,7 @@ extension UnifiedWorkoutDetailView {
     fileprivate func handleStartTapped() async {
         if let importContext {
             if importContext.isSaved {
-                showingStartSheet = true
+                startFlowSheet = .start
                 return
             }
             isSavingImport = true
@@ -564,7 +569,7 @@ extension UnifiedWorkoutDetailView {
                 return
             }
         }
-        showingStartSheet = true
+        startFlowSheet = .start
     }
 
     /// Resolve provenance from source + URL (imports may arrive as `.amaka` / `.other`).
@@ -876,26 +881,35 @@ extension UnifiedWorkoutDetailView {
         let handoff = WorkoutStartHandoffResolver.handoff(for: device)
         switch handoff {
         case .garmin:
-            handoffStatus = GarminLifecycleCopy.handoffQueueing
+            // AMA-2346: do NOT set Queueing / push / openApp until enrichment
+            // answers are applied (or there is nothing to ask).
             showsHandoffNextSteps = false
             lastAppleHandoffShowsManagePlans = false
             pendingGarminGymTitle = gym.title
             Task {
-                // AMA-2336: offer the missing warm-up / rest pieces first. Nothing to
-                // offer (or prefs/blocks unavailable) pushes exactly as before.
+                // Keep the Start sheet up while preparing so we can swap to the
+                // enrichment sheet in the same `.sheet(item:)` — never dismiss
+                // then present (SwiftUI drops / delays the second sheet).
                 if let prepared = await WorkoutEnrichmentPushCoordinator().prepare(
                     workoutId: workout.id,
                     title: workout.name
                 ) {
-                    handoffStatus = nil
-                    enrichmentOffers = prepared
+                    // User dismissed Start while prepare() was in flight — do not
+                    // re-present enrichment or push after they backed out.
+                    guard startFlowSheet == .start else { return }
+                    startFlowSheet = .enrichment(prepared)
                     return
                 }
+                guard startFlowSheet == .start else { return }
+                startFlowSheet = nil
+                handoffStatus = GarminLifecycleCopy.handoffQueueing
                 await performGarminPush(gymTitle: gym.title, statusNote: nil)
             }
         case .apple:
+            startFlowSheet = nil
             beginAppleTryHandoff()
         case .phone:
+            startFlowSheet = nil
             WorkoutEngine.shared.start(workout: workout)
             showingWorkoutPlayer = true
             handoffStatus = "Recording on Phone — stop anytime, then log sets"
@@ -903,8 +917,8 @@ extension UnifiedWorkoutDetailView {
         }
     }
 
-    /// AMA-2336: store the enriched structure, then push. A failed enrich still
-    /// pushes — the note says what was skipped instead of blocking the session.
+    /// AMA-2336/2346: store the enriched structure (and reject tombstones), then
+    /// push. A failed enrich still pushes — the note says what was skipped.
     fileprivate func applyEnrichmentThenPush(
         prepared: WorkoutEnrichmentPushCoordinator.Prepared,
         decision: WorkoutEnrichmentPushPlanner.Decision
@@ -1024,4 +1038,15 @@ extension UnifiedWorkoutDetailView {
         )
     }
 }
+
+/// AMA-2346: Start + enrichment share one sheet identity so SwiftUI cannot
+/// dismiss Start and present enrichment out of order with push/openApp.
+enum WorkoutStartFlowSheet: Identifiable, Equatable {
+    case start
+    case enrichment(WorkoutEnrichmentPushCoordinator.Prepared)
+
+    /// Stable id — content swaps in place; a changing id would dismiss/re-present.
+    var id: String { "garmin-start-flow" }
+}
+
 // swiftlint:enable file_length type_body_length
