@@ -137,6 +137,24 @@ class MockAPIService: APIServiceProviding {
         return try getAppleExportResult.get()
     }
 
+    var mapToWorkoutKitResult: Result<Data, Error> = .success(Data(
+        #"""
+        {"title":"Fixture","sportType":"strengthTraining","composition":"custom","composition_effective":"custom","routing_reason":"strength_sets","intervals":[{"kind":"reps","reps":8,"name":"Squat"}]}
+        """#.utf8
+    ))
+    private(set) var mapToWorkoutKitCalled = false
+    private(set) var lastMapToWorkoutKitBlocks: [String: Any]?
+
+    func mapToWorkoutKit(
+        blocksJSON: [String: Any],
+        deliveryPrefs: [String: Any]?
+    ) async throws -> Data {
+        mapToWorkoutKitCalled = true
+        lastMapToWorkoutKitBlocks = blocksJSON
+        _ = deliveryPrefs
+        return try mapToWorkoutKitResult.get()
+    }
+
     func mintTelegramLinkToken() async throws -> TelegramLinkTokenResponse {
         mintTelegramLinkTokenCalled = true
         return try mintTelegramLinkTokenResult.get()

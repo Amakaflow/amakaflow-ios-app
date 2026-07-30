@@ -156,6 +156,10 @@
 		AMA2336TESTBLD /* WorkoutEnrichmentModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336TESTREF /* WorkoutEnrichmentModelsTests.swift */; };
 		AMA2336PLANBLD001 /* WorkoutEnrichmentPushPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336PLANREF001 /* WorkoutEnrichmentPushPlanner.swift */; };
 		AMA2336SVCBLD001 /* APIService+WorkoutEnrichment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336SVCREF001 /* APIService+WorkoutEnrichment.swift */; };
+		AMA2351WKAPIBLD /* APIService+WorkoutKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2351WKAPIREF /* APIService+WorkoutKit.swift */; };
+		AMA2351MAPPERBLD /* MapperWorkoutKitPlanProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2351MAPPERREF /* MapperWorkoutKitPlanProvider.swift */; };
+		AMA2351WKMETABLD /* WorkoutKitPlanMeta.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2351WKMETAREF /* WorkoutKitPlanMeta.swift */; };
+		AMA2351WKPREVBLD /* AppleWorkoutKitPreviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2351WKPREVREF /* AppleWorkoutKitPreviewSheet.swift */; };
 		AMA2336COORDBLD001 /* WorkoutEnrichmentPushCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336COORDREF001 /* WorkoutEnrichmentPushCoordinator.swift */; };
 		AMA2336PREFVBLD001 /* WorkoutEnrichmentPrefsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336PREFVREF001 /* WorkoutEnrichmentPrefsSheet.swift */; };
 		AMA2336PUSHVBLD001 /* WorkoutEnrichmentPushSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336PUSHVREF001 /* WorkoutEnrichmentPushSheet.swift */; };
@@ -166,6 +170,7 @@
 		AMA2317STORETESTBLD /* GarminHandoffStateStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2317STORETESTREF /* GarminHandoffStateStoreTests.swift */; };
 		AMA2287APPHANDBLD /* AppleStartHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2287APPHANDREF /* AppleStartHandoff.swift */; };
 		AMA2287APHTESTBLD /* AppleStartHandoffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2287APHTESTREF /* AppleStartHandoffTests.swift */; };
+		AMA2351METATESTBLD /* WorkoutKitPlanMetaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2351METATESTREF /* WorkoutKitPlanMetaTests.swift */; };
 		AMA2330SCHMANBUILD /* WorkoutKitScheduleManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2330SCHMANREF /* WorkoutKitScheduleManaging.swift */; };
 		AMA2330SCHVMBUILD /* WorkoutScheduleViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2330SCHVMREF /* WorkoutScheduleViewModel.swift */; };
 		AMA2330SCHVMTESTBUILD /* WorkoutScheduleViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2330SCHVMTESTREF /* WorkoutScheduleViewModelTests.swift */; };
@@ -739,6 +744,10 @@
 		AMA2336APIREF001 /* WorkoutEnrichmentAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentAPI.swift; path = ../AmakaFlow/Models/WorkoutEnrichmentAPI.swift; sourceTree = SOURCE_ROOT; };
 		AMA2336PLANREF001 /* WorkoutEnrichmentPushPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentPushPlanner.swift; path = ../AmakaFlow/Models/WorkoutEnrichmentPushPlanner.swift; sourceTree = SOURCE_ROOT; };
 		AMA2336SVCREF001 /* APIService+WorkoutEnrichment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+WorkoutEnrichment.swift"; path = "../AmakaFlow/Services/APIService+WorkoutEnrichment.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2351WKAPIREF /* APIService+WorkoutKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+WorkoutKit.swift"; path = "../AmakaFlow/Services/APIService+WorkoutKit.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2351MAPPERREF /* MapperWorkoutKitPlanProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MapperWorkoutKitPlanProvider.swift; path = ../AmakaFlow/Services/MapperWorkoutKitPlanProvider.swift; sourceTree = SOURCE_ROOT; };
+		AMA2351WKMETAREF /* WorkoutKitPlanMeta.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutKitPlanMeta.swift; path = ../AmakaFlow/Models/WorkoutKitPlanMeta.swift; sourceTree = SOURCE_ROOT; };
+		AMA2351WKPREVREF /* AppleWorkoutKitPreviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleWorkoutKitPreviewSheet.swift; path = ../AmakaFlow/Views/AppleWorkoutKitPreviewSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2336COORDREF001 /* WorkoutEnrichmentPushCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentPushCoordinator.swift; path = ../AmakaFlow/Services/WorkoutEnrichmentPushCoordinator.swift; sourceTree = SOURCE_ROOT; };
 		AMA2336PREFVREF001 /* WorkoutEnrichmentPrefsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentPrefsSheet.swift; path = ../AmakaFlow/Views/WorkoutEnrichmentPrefsSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2336PUSHVREF001 /* WorkoutEnrichmentPushSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentPushSheet.swift; path = ../AmakaFlow/Views/Components/WorkoutEnrichmentPushSheet.swift; sourceTree = SOURCE_ROOT; };
@@ -750,6 +759,7 @@
 		AMA2317STORETESTREF /* GarminHandoffStateStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminHandoffStateStoreTests.swift; path = AmakaFlowCompanionTests/GarminHandoffStateStoreTests.swift; sourceTree = "<group>"; };
 		AMA2287APPHANDREF /* AppleStartHandoff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleStartHandoff.swift; path = ../AmakaFlow/Services/AppleStartHandoff.swift; sourceTree = SOURCE_ROOT; };
 		AMA2287APHTESTREF /* AppleStartHandoffTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleStartHandoffTests.swift; path = AmakaFlowCompanionTests/AppleStartHandoffTests.swift; sourceTree = "<group>"; };
+		AMA2351METATESTREF /* WorkoutKitPlanMetaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutKitPlanMetaTests.swift; path = AmakaFlowCompanionTests/WorkoutKitPlanMetaTests.swift; sourceTree = "<group>"; };
 		AMA2330SCHMANREF /* WorkoutKitScheduleManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutKitScheduleManaging.swift; path = ../AmakaFlow/Services/WorkoutKitScheduleManaging.swift; sourceTree = SOURCE_ROOT; };
 		AMA2330SCHVMREF /* WorkoutScheduleViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutScheduleViewModel.swift; path = ../AmakaFlow/ViewModels/WorkoutScheduleViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA2330SCHVMTESTREF /* WorkoutScheduleViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutScheduleViewModelTests.swift; path = AmakaFlowCompanionTests/WorkoutScheduleViewModelTests.swift; sourceTree = "<group>"; };
@@ -1412,12 +1422,15 @@
 				89321AF9D21D441198437105 /* DevicePreference.swift */,
 				BL0CK5W1FT00000001 /* Block.swift */,
 				3X3RC1S35W1FT000001 /* Exercise.swift */,
+				AMA2351WKMETAREF /* WorkoutKitPlanMeta.swift */,
 				AMA2311PRESREF001 /* Prescription.swift */,
 				AMA2316PREFREF001 /* GarminWatchDisplayPrefs.swift */,
 				AMA2336MDLREF001 /* WorkoutEnrichmentModels.swift */,
 				AMA2336APIREF001 /* WorkoutEnrichmentAPI.swift */,
 				AMA2336PLANREF001 /* WorkoutEnrichmentPushPlanner.swift */,
 				AMA2336SVCREF001 /* APIService+WorkoutEnrichment.swift */,
+				AMA2351WKAPIREF /* APIService+WorkoutKit.swift */,
+				AMA2351MAPPERREF /* MapperWorkoutKitPlanProvider.swift */,
 				AMA2336COORDREF001 /* WorkoutEnrichmentPushCoordinator.swift */,
 				AMA2336PREFVREF001 /* WorkoutEnrichmentPrefsSheet.swift */,
 				AMA2336PUSHVREF001 /* WorkoutEnrichmentPushSheet.swift */,
@@ -1622,6 +1635,7 @@
 				D33PL1NK1MP0RTV0001 /* DeepLinkImportView.swift */,
 				2AB8DFBA16CE406C95456EAD /* CalendarView.swift */,
 				08D9B67C13E34BAE804A9359 /* HistoryView.swift */,
+				AMA2351WKPREVREF /* AppleWorkoutKitPreviewSheet.swift */,
 				5F86F482904144B39B954F6A /* Environment.swift */,
 				11B5892FB68A40CB890E3630 /* KeychainHelper.swift */,
 				0EDC25041B83402BB9EDF84D /* Client.swift */,
@@ -1765,6 +1779,7 @@
 				AMA2317COPYTESTREF /* GarminLifecycleCopyTests.swift */,
 				AMA2317STORETESTREF /* GarminHandoffStateStoreTests.swift */,
 				AMA2287APHTESTREF /* AppleStartHandoffTests.swift */,
+				AMA2351METATESTREF /* WorkoutKitPlanMetaTests.swift */,
 				AMA2330SCHVMTESTREF /* WorkoutScheduleViewModelTests.swift */,
 				AMA2289DIARYTSTREF /* TodayDiaryTests.swift */,
 				AMA2290BFTESTREF /* StrengthBackfillTests.swift */,
@@ -2433,6 +2448,10 @@
 				AMA2336APIBLD001 /* WorkoutEnrichmentAPI.swift in Sources */,
 				AMA2336PLANBLD001 /* WorkoutEnrichmentPushPlanner.swift in Sources */,
 				AMA2336SVCBLD001 /* APIService+WorkoutEnrichment.swift in Sources */,
+				AMA2351WKAPIBLD /* APIService+WorkoutKit.swift in Sources */,
+				AMA2351MAPPERBLD /* MapperWorkoutKitPlanProvider.swift in Sources */,
+				AMA2351WKMETABLD /* WorkoutKitPlanMeta.swift in Sources */,
+				AMA2351WKPREVBLD /* AppleWorkoutKitPreviewSheet.swift in Sources */,
 				AMA2336COORDBLD001 /* WorkoutEnrichmentPushCoordinator.swift in Sources */,
 				AMA2336PREFVBLD001 /* WorkoutEnrichmentPrefsSheet.swift in Sources */,
 				AMA2336PUSHVBLD001 /* WorkoutEnrichmentPushSheet.swift in Sources */,
@@ -2590,6 +2609,7 @@
 				AMA2317COPYTESTBLD /* GarminLifecycleCopyTests.swift in Sources */,
 				AMA2317STORETESTBLD /* GarminHandoffStateStoreTests.swift in Sources */,
 				AMA2287APHTESTBLD /* AppleStartHandoffTests.swift in Sources */,
+				AMA2351METATESTBLD /* WorkoutKitPlanMetaTests.swift in Sources */,
 				AMA2330SCHVMTESTBUILD /* WorkoutScheduleViewModelTests.swift in Sources */,
 				AMA2289DIARYTSTBLD /* TodayDiaryTests.swift in Sources */,
 				AMA2290BFTESTBLD /* StrengthBackfillTests.swift in Sources */,
