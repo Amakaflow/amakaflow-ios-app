@@ -235,13 +235,32 @@ enum WorkoutEnrichmentPushPlanner {
         }
 
         var remaining = tombstones
-        var cleared: [EnrichmentTombstone] = []
-        var rejected: [EnrichmentTombstone] = []
+        let rejected = collectRejectedTombstones(
+            plan: plan,
+            checked: checked,
+            into: &remaining
+        )
+        let cleared = clearReoptInTombstones(
+            plan: plan,
+            checked: checked,
+            into: &remaining
+        )
 
-        // AMA-2346: turning off a **default-checked** offer is an explicit reject —
-        // tombstone so a later enrich cannot inject it from stored prefs.
-        // AMA-2347: leaving a default-unchecked row alone (e.g. Rest when Settings
-        // has the standing offer off) is not a rejection — do not tombstone.
+        return Application(
+            prefs: overridden,
+            tombstones: remaining,
+            clearedTombstones: cleared,
+            rejectedTombstones: rejected
+        )
+    }
+
+    /// AMA-2346/2347 — tombstone only when a **default-checked** offer was turned off.
+    private static func collectRejectedTombstones(
+        plan: Plan,
+        checked: Set<EnrichmentKind>,
+        into remaining: inout [EnrichmentTombstone]
+    ) -> [EnrichmentTombstone] {
+        var rejected: [EnrichmentTombstone] = []
         for offer in plan.offers where !checked.contains(offer.kind) {
             guard offer.isChecked else { continue }
             if offer.kind == .exerciseWarmupSets {
@@ -257,11 +276,17 @@ enum WorkoutEnrichmentPushPlanner {
                 rejected.append(tomb)
             }
         }
+        return rejected
+    }
 
+    /// Clear tombstones only for true re-opt-in (offer started unchecked).
+    private static func clearReoptInTombstones(
+        plan: Plan,
+        checked: Set<EnrichmentKind>,
+        into remaining: inout [EnrichmentTombstone]
+    ) -> [EnrichmentTombstone] {
+        var cleared: [EnrichmentTombstone] = []
         for kind in checked {
-            // Only a true re-opt-in (offer started unchecked) clears tombstones.
-            // A partial warm-up-sets offer stays default-checked and must not
-            // resurrect exercises the user explicitly deleted.
             guard let offer = plan.offer(kind), !offer.isChecked else { continue }
             if kind == .exerciseWarmupSets {
                 for exerciseId in offer.tombstonedExerciseIds {
@@ -277,13 +302,7 @@ enum WorkoutEnrichmentPushPlanner {
                 WorkoutEnrichmentMutations.clearTombstone(&remaining, kind: kind)
             }
         }
-
-        return Application(
-            prefs: overridden,
-            tombstones: remaining,
-            clearedTombstones: cleared,
-            rejectedTombstones: rejected
-        )
+        return cleared
     }
 
     // MARK: - Presence helpers
