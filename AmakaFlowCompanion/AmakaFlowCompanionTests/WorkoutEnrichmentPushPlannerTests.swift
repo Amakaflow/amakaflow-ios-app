@@ -15,6 +15,8 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
     private func benchBlock(
         restSec: Int? = nil,
         restOpen: Bool? = nil,
+        blockRestSec: Int? = nil,
+        blockRestOpen: Bool? = nil,
         exerciseId: String? = nil,
         warmupSets: [WarmupSetRow]? = nil
     ) -> SocialImportBlock {
@@ -32,7 +34,9 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
                     restOpen: restOpen
                 )
             ],
-            type: "sets"
+            type: "sets",
+            restSec: blockRestSec,
+            restOpen: blockRestOpen
         )
     }
 
@@ -102,18 +106,47 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
 
     func testExistingRestIntentIsNotOffered() {
         let timed = WorkoutEnrichmentPushPlanner.plan(
-            blocks: [benchBlock(restSec: 90)],
+            blocks: [benchBlock(blockRestSec: 90)],
             tombstones: [],
             prefs: .defaults
         )
         XCTAssertNil(timed.offer(.betweenSetRest))
 
         let open = WorkoutEnrichmentPushPlanner.plan(
-            blocks: [benchBlock(restOpen: true)],
+            blocks: [benchBlock(blockRestOpen: true)],
             tombstones: [],
             prefs: .defaults
         )
         XCTAssertNil(open.offer(.betweenSetRest))
+    }
+
+    /// Exercise-level rest from ingest/defaults must not hide block Lap/timed rest (AMA-2348).
+    func testExerciseRestSecDoesNotSuppressBlockRestOffer() {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock(restSec: 90)],
+            tombstones: [],
+            prefs: .defaults
+        )
+        XCTAssertNotNil(plan.offer(.betweenSetRest))
+    }
+
+    /// Dogfood Test workout: Ski Erg + Push Press with per-exercise rest still needs block rest offer.
+    func testStrengthPairWithExerciseRestStillOffersBlockRest() {
+        let block = SocialImportBlock(
+            label: "Main",
+            rounds: 1,
+            exercises: [
+                SocialImportExercise(name: "Ski Erg", sets: 3, distanceMeters: 500),
+                SocialImportExercise(name: "Push Press", sets: 3, reps: 8, restSeconds: 45)
+            ],
+            type: "sets"
+        )
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [block],
+            tombstones: [],
+            prefs: .defaults
+        )
+        XCTAssertNotNil(plan.offer(.betweenSetRest))
     }
 
     /// AMA-2347 — Rest must stay visible on the Garmin send sheet even when
@@ -243,7 +276,10 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         let plan = WorkoutEnrichmentPushPlanner.plan(
             blocks: [
                 warmupBlock,
-                benchBlock(restSec: 90, warmupSets: [WarmupSetRow(reps: 8)])
+                benchBlock(
+                    blockRestSec: 90,
+                    warmupSets: [WarmupSetRow(reps: 8)]
+                )
             ],
             tombstones: [],
             prefs: .defaults
