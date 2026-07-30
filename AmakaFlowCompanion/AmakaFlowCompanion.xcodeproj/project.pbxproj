@@ -157,6 +157,7 @@
 		AMA2336PLANBLD001 /* WorkoutEnrichmentPushPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336PLANREF001 /* WorkoutEnrichmentPushPlanner.swift */; };
 		AMA2336SVCBLD001 /* APIService+WorkoutEnrichment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336SVCREF001 /* APIService+WorkoutEnrichment.swift */; };
 		AMA2351WKAPIBLD /* APIService+WorkoutKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2351WKAPIREF /* APIService+WorkoutKit.swift */; };
+		AMA2351MAPPERBLD /* MapperWorkoutKitPlanProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2351MAPPERREF /* MapperWorkoutKitPlanProvider.swift */; };
 		AMA2351WKMETABLD /* WorkoutKitPlanMeta.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2351WKMETAREF /* WorkoutKitPlanMeta.swift */; };
 		AMA2351WKPREVBLD /* AppleWorkoutKitPreviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2351WKPREVREF /* AppleWorkoutKitPreviewSheet.swift */; };
 		AMA2336COORDBLD001 /* WorkoutEnrichmentPushCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336COORDREF001 /* WorkoutEnrichmentPushCoordinator.swift */; };
@@ -744,6 +745,7 @@
 		AMA2336PLANREF001 /* WorkoutEnrichmentPushPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentPushPlanner.swift; path = ../AmakaFlow/Models/WorkoutEnrichmentPushPlanner.swift; sourceTree = SOURCE_ROOT; };
 		AMA2336SVCREF001 /* APIService+WorkoutEnrichment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+WorkoutEnrichment.swift"; path = "../AmakaFlow/Services/APIService+WorkoutEnrichment.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2351WKAPIREF /* APIService+WorkoutKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+WorkoutKit.swift"; path = "../AmakaFlow/Services/APIService+WorkoutKit.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2351MAPPERREF /* MapperWorkoutKitPlanProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MapperWorkoutKitPlanProvider.swift; path = ../AmakaFlow/Services/MapperWorkoutKitPlanProvider.swift; sourceTree = SOURCE_ROOT; };
 		AMA2351WKMETAREF /* WorkoutKitPlanMeta.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutKitPlanMeta.swift; path = ../AmakaFlow/Models/WorkoutKitPlanMeta.swift; sourceTree = SOURCE_ROOT; };
 		AMA2351WKPREVREF /* AppleWorkoutKitPreviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleWorkoutKitPreviewSheet.swift; path = ../AmakaFlow/Views/AppleWorkoutKitPreviewSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2336COORDREF001 /* WorkoutEnrichmentPushCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentPushCoordinator.swift; path = ../AmakaFlow/Services/WorkoutEnrichmentPushCoordinator.swift; sourceTree = SOURCE_ROOT; };
@@ -1428,6 +1430,7 @@
 				AMA2336PLANREF001 /* WorkoutEnrichmentPushPlanner.swift */,
 				AMA2336SVCREF001 /* APIService+WorkoutEnrichment.swift */,
 				AMA2351WKAPIREF /* APIService+WorkoutKit.swift */,
+				AMA2351MAPPERREF /* MapperWorkoutKitPlanProvider.swift */,
 				AMA2336COORDREF001 /* WorkoutEnrichmentPushCoordinator.swift */,
 				AMA2336PREFVREF001 /* WorkoutEnrichmentPrefsSheet.swift */,
 				AMA2336PUSHVREF001 /* WorkoutEnrichmentPushSheet.swift */,
@@ -2446,6 +2449,7 @@
 				AMA2336PLANBLD001 /* WorkoutEnrichmentPushPlanner.swift in Sources */,
 				AMA2336SVCBLD001 /* APIService+WorkoutEnrichment.swift in Sources */,
 				AMA2351WKAPIBLD /* APIService+WorkoutKit.swift in Sources */,
+				AMA2351MAPPERBLD /* MapperWorkoutKitPlanProvider.swift in Sources */,
 				AMA2351WKMETABLD /* WorkoutKitPlanMeta.swift in Sources */,
 				AMA2351WKPREVBLD /* AppleWorkoutKitPreviewSheet.swift in Sources */,
 				AMA2336COORDBLD001 /* WorkoutEnrichmentPushCoordinator.swift in Sources */,

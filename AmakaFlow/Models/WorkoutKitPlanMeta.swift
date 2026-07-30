@@ -7,6 +7,30 @@
 
 import Foundation
 
+/// Wire payload for composition fields (file-level to satisfy nesting lint).
+private struct WorkoutKitPlanMetaPayload: Decodable {
+    let composition: String?
+    let compositionEffective: String?
+    let routingReason: String?
+
+    enum CodingKeys: String, CodingKey {
+        case composition
+        case compositionEffective = "composition_effective"
+        case compositionEffectiveCamel = "compositionEffective"
+        case routingReason = "routing_reason"
+        case routingReasonCamel = "routingReason"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        composition = try container.decodeIfPresent(String.self, forKey: .composition)
+        compositionEffective = try container.decodeIfPresent(String.self, forKey: .compositionEffective)
+            ?? container.decodeIfPresent(String.self, forKey: .compositionEffectiveCamel)
+        routingReason = try container.decodeIfPresent(String.self, forKey: .routingReason)
+            ?? container.decodeIfPresent(String.self, forKey: .routingReasonCamel)
+    }
+}
+
 /// Lightweight decode of mapper composition fields without depending on a
 /// workoutkit-sync version that exposes them on `WKPlanDTO`.
 struct WorkoutKitPlanMeta: Equatable, Sendable {
@@ -27,29 +51,7 @@ struct WorkoutKitPlanMeta: Equatable, Sendable {
     }
 
     init(fromMapperJSON data: Data) {
-        struct Payload: Decodable {
-            let composition: String?
-            let compositionEffective: String?
-            let routingReason: String?
-
-            enum CodingKeys: String, CodingKey {
-                case composition
-                case compositionEffective = "composition_effective"
-                case compositionEffectiveCamel = "compositionEffective"
-                case routingReason = "routing_reason"
-                case routingReasonCamel = "routingReason"
-            }
-
-            init(from decoder: Decoder) throws {
-                let container = try decoder.container(keyedBy: CodingKeys.self)
-                composition = try container.decodeIfPresent(String.self, forKey: .composition)
-                compositionEffective = try container.decodeIfPresent(String.self, forKey: .compositionEffective)
-                    ?? container.decodeIfPresent(String.self, forKey: .compositionEffectiveCamel)
-                routingReason = try container.decodeIfPresent(String.self, forKey: .routingReason)
-                    ?? container.decodeIfPresent(String.self, forKey: .routingReasonCamel)
-            }
-        }
-        guard let payload = try? JSONDecoder().decode(Payload.self, from: data) else {
+        guard let payload = try? JSONDecoder().decode(WorkoutKitPlanMetaPayload.self, from: data) else {
             self = .fallback
             return
         }
