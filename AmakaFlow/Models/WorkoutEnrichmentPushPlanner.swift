@@ -238,9 +238,12 @@ enum WorkoutEnrichmentPushPlanner {
         var cleared: [EnrichmentTombstone] = []
         var rejected: [EnrichmentTombstone] = []
 
-        // AMA-2346: unchecking an offered kind is an explicit reject — tombstone
-        // so a later enrich (or re-push) cannot inject it from stored prefs.
+        // AMA-2346: turning off a **default-checked** offer is an explicit reject —
+        // tombstone so a later enrich cannot inject it from stored prefs.
+        // AMA-2347: leaving a default-unchecked row alone (e.g. Rest when Settings
+        // has the standing offer off) is not a rejection — do not tombstone.
         for offer in plan.offers where !checked.contains(offer.kind) {
+            guard offer.isChecked else { continue }
             if offer.kind == .exerciseWarmupSets {
                 for exerciseId in offer.candidateExerciseIds {
                     let tomb = EnrichmentTombstone(kind: offer.kind, exerciseId: exerciseId)

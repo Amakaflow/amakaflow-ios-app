@@ -132,6 +132,30 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertEqual(offer?.isChecked, false)
     }
 
+    /// AMA-2347 — leaving default-unchecked Rest alone must not tombstone Rest,
+    /// or enabling the Settings offer later would stay suppressed.
+    func testLeavingPrefsDisabledRestUncheckedDoesNotTombstone() throws {
+        var prefs = WorkoutPreferences.defaults
+        prefs.betweenSetRest.enabled = false
+        prefs.sessionWarmup.enabled = false
+        prefs.exerciseWarmupSets.enabled = false
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock()],
+            tombstones: [],
+            prefs: prefs
+        )
+        XCTAssertEqual(plan.offer(.betweenSetRest)?.isChecked, false)
+
+        let application = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(checkedKinds: []),
+            prefs: prefs,
+            tombstones: []
+        )
+        XCTAssertFalse(application.tombstones.contains(where: { $0.kind == .betweenSetRest }))
+        XCTAssertFalse(application.rejectedTombstones.contains(where: { $0.kind == .betweenSetRest }))
+    }
+
     func testExistingWarmupSetsAndExcludedNamesAreNotOffered() {
         let present = WorkoutEnrichmentPushPlanner.plan(
             blocks: [benchBlock(warmupSets: [WarmupSetRow(reps: 8)])],
