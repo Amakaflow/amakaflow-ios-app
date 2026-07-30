@@ -54,6 +54,60 @@ final class GarminWatchDisplayPrefsTests: XCTestCase {
         XCTAssertTrue(line.contains("Lap to advance"))
         XCTAssertTrue(line.contains("60"))
     }
+
+    // MARK: - AMA-2357: sheet selections must write through immediately.
+    //
+    // Root cause: `GarminWatchDisplayPrefsSheet` staged the user's tap only in
+    // local `@State` and persisted it exclusively inside `save()`. SwiftUI
+    // sheets are swipe-to-dismiss by default, and that gesture calls no button
+    // action — so tapping "Countdown from the workout rest" and then swiping
+    // the sheet away (instead of tapping Save) silently discarded the choice.
+    // The store kept whatever was persisted before (often `lap`, from an
+    // earlier dogfood pass), and every subsequent Garmin push kept sending it
+    // no matter what Settings appeared to show. Fix: persist on every tap via
+    // `GarminWatchDisplayPrefsStore.applyLiveSelection`, which the sheet's row
+    // actions call directly (verified here without needing a live SwiftUI
+    // view hierarchy, since `@State` mutations aren't observable outside one).
+
+    func testApplyLiveSelectionWritesRestModeThroughImmediately() {
+        GarminWatchDisplayPrefsStore.current = GarminWatchDisplayPrefs(
+            exerciseEnd: .lap,
+            restMode: .lap,
+            defaultRestSec: 60
+        )
+
+        // What the sheet's "Countdown from the workout rest" row now does on tap.
+        GarminWatchDisplayPrefsStore.applyLiveSelection(restMode: .timed)
+
+        // A swipe-to-dismiss would run no further code — this alone must be
+        // enough for the next push to send `rest_mode: timed`.
+        XCTAssertEqual(GarminWatchDisplayPrefsStore.current.restMode, .timed)
+        // Untouched fields survive the partial update.
+        XCTAssertEqual(GarminWatchDisplayPrefsStore.current.exerciseEnd, .lap)
+    }
+
+    func testApplyLiveSelectionWritesExerciseEndThroughImmediately() {
+        GarminWatchDisplayPrefsStore.current = GarminWatchDisplayPrefs(
+            exerciseEnd: .lap,
+            restMode: .timed,
+            defaultRestSec: 60
+        )
+
+        GarminWatchDisplayPrefsStore.applyLiveSelection(exerciseEnd: .showRepsLap)
+
+        XCTAssertEqual(GarminWatchDisplayPrefsStore.current.exerciseEnd, .showRepsLap)
+        XCTAssertEqual(GarminWatchDisplayPrefsStore.current.restMode, .timed)
+    }
+
+    func testApplyLiveSelectionMarksConfigured() {
+        GarminWatchDisplayPrefsStore.resetForTests()
+        XCTAssertTrue(GarminWatchDisplayPrefsStore.shouldPresentOnboarding)
+
+        GarminWatchDisplayPrefsStore.applyLiveSelection(restMode: .timed)
+
+        XCTAssertFalse(GarminWatchDisplayPrefsStore.shouldPresentOnboarding)
+        XCTAssertEqual(GarminWatchDisplayPrefsStore.current.restMode, .timed)
+    }
 }
 
 @MainActor

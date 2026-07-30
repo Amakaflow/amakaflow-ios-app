@@ -155,6 +155,22 @@ enum GarminWatchDisplayPrefsStore {
         defaults.removeObject(forKey: DefaultsKey.garminWatchDisplayPrefs.rawValue)
         defaults.removeObject(forKey: DefaultsKey.garminWatchDisplayPrefsConfigured.rawValue)
     }
+
+    /// AMA-2357: write through on every row tap in `GarminWatchDisplayPrefsSheet`,
+    /// not just on "Save". SwiftUI sheets are swipe-to-dismiss by default — that
+    /// gesture runs no button action at all, so a choice staged only in the
+    /// sheet's local `@State` (the old behavior) was silently discarded, and
+    /// whatever was persisted before (often `lap`, from an earlier dogfood pass)
+    /// kept shipping to every Garmin push after it, no matter what Settings
+    /// appeared to show. Persisting immediately means the last tap always wins,
+    /// swipe or not — this is a plain function (not `@State`) so it is testable
+    /// without a live SwiftUI view hierarchy.
+    static func applyLiveSelection(exerciseEnd: GarminExerciseEnd? = nil, restMode: GarminRestMode? = nil) {
+        var next = current
+        if let exerciseEnd { next.exerciseEnd = exerciseEnd }
+        if let restMode { next.restMode = restMode }
+        current = next
+    }
 }
 
 /// AMA-2317: the onboarding sheet must be queued for *after* the pair sheet
