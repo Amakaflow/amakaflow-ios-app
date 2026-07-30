@@ -909,7 +909,9 @@ final class APIServiceSocialImportContractTests: XCTestCase {
 
     func testInstagramPollRespectsDeadlineWhenTransientErrorsPersist() async {
         APIService.resetSocialAsyncPollTimingOverridesForTests()
-        APIService.socialAsyncPollDeadlineSecondsForTests = 0.25
+        // CI simulators can be slow enough that a sub-second deadline expires after
+        // only one poll; keep this short but above typical poll+sleep overhead.
+        APIService.socialAsyncPollDeadlineSecondsForTests = 1.0
         APIService.socialAsyncPollIntervalNsForTests = 20_000_000
         APIService.socialAsyncPollBackoffNsForTests = 20_000_000
         // High enough that the shortened deadline fires first.
