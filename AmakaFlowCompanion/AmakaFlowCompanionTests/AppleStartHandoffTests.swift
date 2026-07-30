@@ -159,7 +159,8 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         let pairing = MockPairingReader(read: .unknown)
         let service = AppleStartHandoffService(
             pairingReader: pairing,
-            workoutKitSaver: .injected(saver)
+            workoutKitSaver: .injected(saver),
+            planProvider: StubWorkoutKitPlanProvider(json: StubWorkoutKitPlanProvider.strengthFixture(title: "Test Strength")),
         )
         let result = await service.handoff(workout: sampleWorkout())
         XCTAssertEqual(result.kind, .savedToFitness)
@@ -173,7 +174,8 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         let saver = MockWorkoutKitSaver()
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .confirmedUnpaired),
-            workoutKitSaver: .injected(saver)
+            workoutKitSaver: .injected(saver),
+            planProvider: StubWorkoutKitPlanProvider(json: StubWorkoutKitPlanProvider.strengthFixture(title: "Test Strength")),
         )
         let result = await service.handoff(workout: sampleWorkout())
         XCTAssertEqual(result.kind, .savedToFitness)
@@ -187,7 +189,10 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         let saver = MockWorkoutKitSaver()
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
-            workoutKitSaver: .injected(saver)
+            workoutKitSaver: .injected(saver),
+            planProvider: StubWorkoutKitPlanProvider(json: Data(#"""
+            {"title":"Empty","sportType":"strengthTraining","intervals":[]}
+            """#.utf8)),
         )
         let result = await service.handoff(workout: empty)
         XCTAssertEqual(result.kind, .failed)
@@ -200,7 +205,8 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         saver.errorToThrow = WorkoutPlanError.authorizationDenied
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .confirmedPaired),
-            workoutKitSaver: .injected(saver)
+            workoutKitSaver: .injected(saver),
+            planProvider: StubWorkoutKitPlanProvider(json: StubWorkoutKitPlanProvider.strengthFixture(title: "Test Strength")),
         )
         let result = await service.handoff(workout: sampleWorkout())
         XCTAssertEqual(result.kind, .failed)
@@ -211,7 +217,8 @@ final class AppleStartHandoffServiceTests: XCTestCase {
     func testNilWorkoutKitSaverIsBlockedIosUnsupported() async {
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
-            workoutKitSaver: .disabled
+            workoutKitSaver: .disabled,
+            planProvider: StubWorkoutKitPlanProvider(json: StubWorkoutKitPlanProvider.strengthFixture(title: "Test Strength")),
         )
         let result = await service.handoff(workout: sampleWorkout())
         XCTAssertEqual(result.kind, .blocked)
@@ -223,7 +230,8 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         defer { unsetenv("UITEST_APPLE_TRY_FAIL") }
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
-            workoutKitSaver: .injected(MockWorkoutKitSaver())
+            workoutKitSaver: .injected(MockWorkoutKitSaver()),
+            planProvider: StubWorkoutKitPlanProvider(json: StubWorkoutKitPlanProvider.strengthFixture(title: "Test Strength")),
         )
         let result = await service.handoff(workout: sampleWorkout())
         XCTAssertEqual(result.kind, .failed)
@@ -238,7 +246,8 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         let saver = MockWorkoutKitSaver()
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
-            workoutKitSaver: .injected(saver)
+            workoutKitSaver: .injected(saver),
+            planProvider: StubWorkoutKitPlanProvider(json: StubWorkoutKitPlanProvider.strengthFixture(title: "Test Strength")),
         )
         let result = await service.handoff(workout: sampleWorkout())
         XCTAssertEqual(result.kind, .savedToFitness)
@@ -251,6 +260,7 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
             workoutKitSaver: .injected(saver),
+            planProvider: StubWorkoutKitPlanProvider(json: StubWorkoutKitPlanProvider.strengthFixture(title: "Test Strength")),
             scheduleCapReader: .injected(reader)
         )
         let result = await service.handoff(workout: sampleWorkout())
@@ -268,6 +278,7 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
             workoutKitSaver: .injected(saver),
+            planProvider: StubWorkoutKitPlanProvider(json: StubWorkoutKitPlanProvider.strengthFixture(title: "Test Strength")),
             scheduleCapReader: .injected(reader)
         )
         let result = await service.handoff(workout: sampleWorkout())
@@ -281,6 +292,7 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
             workoutKitSaver: .injected(saver),
+            planProvider: StubWorkoutKitPlanProvider(json: StubWorkoutKitPlanProvider.strengthFixture(title: "Test Strength")),
             scheduleCapReader: .injected(reader)
         )
         let result = await service.handoff(workout: sampleWorkout())
@@ -288,9 +300,28 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         XCTAssertEqual(saver.saveCallCount, 1)
     }
 
-    func testEmptyWorkoutFailsFastBeforeCapPreflight() async {
-        // Cap check should never run (and never matter) when the empty-workout
-        // guard already fails fast — preflight ordering must not regress this.
+    func testEmptyMapperPlanFailsWithoutSaveWhenUnderCap() async {
+        let empty = Workout(
+            name: "Empty", sport: .strength, duration: 0, intervals: [], source: .manual
+        )
+        let saver = MockWorkoutKitSaver()
+        let reader = MockScheduleCapReader(scheduledCount: 0, maxAllowedCount: 15)
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(saver),
+            planProvider: StubWorkoutKitPlanProvider(json: Data(#"""
+            {"title":"Empty","sportType":"strengthTraining","intervals":[]}
+            """#.utf8)),
+            scheduleCapReader: .injected(reader)
+        )
+        let result = await service.handoff(workout: empty)
+        XCTAssertEqual(result.kind, .failed)
+        XCTAssertTrue(result.message.localizedCaseInsensitiveContains("no steps"))
+        XCTAssertEqual(saver.saveCallCount, 0)
+        XCTAssertEqual(reader.statusCallCount, 1)
+    }
+
+    func testAtCapBlocksBeforeMapperCompose() async {
         let empty = Workout(
             name: "Empty", sport: .strength, duration: 0, intervals: [], source: .manual
         )
@@ -299,12 +330,16 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
             workoutKitSaver: .injected(saver),
+            planProvider: StubWorkoutKitPlanProvider(json: Data(#"""
+            {"title":"Empty","sportType":"strengthTraining","intervals":[]}
+            """#.utf8)),
             scheduleCapReader: .injected(reader)
         )
         let result = await service.handoff(workout: empty)
         XCTAssertEqual(result.kind, .failed)
-        XCTAssertTrue(result.message.localizedCaseInsensitiveContains("no steps"))
-        XCTAssertEqual(reader.statusCallCount, 0)
+        XCTAssertTrue(result.message.localizedCaseInsensitiveContains("full"))
+        XCTAssertEqual(saver.saveCallCount, 0)
+        XCTAssertEqual(reader.statusCallCount, 1)
     }
 
     func testForcedFailureEnvironmentTakesPriorityOverCapPreflight() async {
@@ -315,6 +350,7 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
             workoutKitSaver: .injected(saver),
+            planProvider: StubWorkoutKitPlanProvider(json: StubWorkoutKitPlanProvider.strengthFixture(title: "Test Strength")),
             scheduleCapReader: .injected(reader)
         )
         let result = await service.handoff(workout: sampleWorkout())
@@ -331,7 +367,10 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         )
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
-            workoutKitSaver: .injected(MockWorkoutKitSaver())
+            workoutKitSaver: .injected(MockWorkoutKitSaver()),
+            planProvider: StubWorkoutKitPlanProvider(json: Data(#"""
+            {"title":"Empty","sportType":"strengthTraining","intervals":[]}
+            """#.utf8)),
         )
         let result = await service.handoff(workout: empty)
         XCTAssertFalse(result.showsManageScheduledPlans)
@@ -340,7 +379,8 @@ final class AppleStartHandoffServiceTests: XCTestCase {
     func testBlockedIosUnsupportedDoesNotShowManageScheduledPlans() async {
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
-            workoutKitSaver: .disabled
+            workoutKitSaver: .disabled,
+            planProvider: StubWorkoutKitPlanProvider(json: StubWorkoutKitPlanProvider.strengthFixture(title: "Test Strength")),
         )
         let result = await service.handoff(workout: sampleWorkout())
         XCTAssertFalse(result.showsManageScheduledPlans)
@@ -352,6 +392,7 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
             workoutKitSaver: .injected(saver),
+            planProvider: StubWorkoutKitPlanProvider(json: StubWorkoutKitPlanProvider.strengthFixture(title: "Test Strength")),
             scheduleCapReader: .injected(reader)
         )
         let result = await service.handoff(workout: sampleWorkout())
@@ -363,7 +404,8 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         defer { unsetenv("UITEST_APPLE_TRY_FAIL") }
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
-            workoutKitSaver: .injected(MockWorkoutKitSaver())
+            workoutKitSaver: .injected(MockWorkoutKitSaver()),
+            planProvider: StubWorkoutKitPlanProvider(json: StubWorkoutKitPlanProvider.strengthFixture(title: "Test Strength")),
         )
         let result = await service.handoff(workout: sampleWorkout())
         XCTAssertEqual(result.kind, .failed)
@@ -375,7 +417,8 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         defer { unsetenv("UITEST_APPLE_TRY_FAIL") }
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
-            workoutKitSaver: .injected(MockWorkoutKitSaver())
+            workoutKitSaver: .injected(MockWorkoutKitSaver()),
+            planProvider: StubWorkoutKitPlanProvider(json: StubWorkoutKitPlanProvider.strengthFixture(title: "Test Strength")),
         )
         let result = await service.handoff(workout: sampleWorkout())
         XCTAssertFalse(result.showsManageScheduledPlans)
@@ -445,14 +488,37 @@ final class WatchWorkoutSendOutcomeTests: XCTestCase {
 }
 
 private final class MockWorkoutKitSaver: WorkoutKitSaving, @unchecked Sendable {
-    private(set) var savedWorkoutNames: [String] = []
+    private(set) var savedPlanTitles: [String] = []
     /// Attempts, incremented before any throw — tests assert 0 to prove fail-fast.
     private(set) var saveCallCount = 0
     var errorToThrow: Error?
 
-    func saveToWorkoutKit(_ workout: Workout) async throws {
+    /// Compatibility for older assertions that used workout.name.
+    var savedWorkoutNames: [String] { savedPlanTitles }
+
+    func saveMapperPlanJSON(_ data: Data) async throws {
         saveCallCount += 1
         if let errorToThrow { throw errorToThrow }
-        savedWorkoutNames.append(workout.name)
+        let title = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["title"] as? String
+        savedPlanTitles.append(title ?? "untitled")
+    }
+}
+
+private struct StubWorkoutKitPlanProvider: WorkoutKitPlanProviding {
+    var json: Data
+    var error: Error?
+
+    func fetchMapperPlanJSON(for workout: Workout) async throws -> Data {
+        _ = workout
+        if let error { throw error }
+        return json
+    }
+
+    static func strengthFixture(title: String = "Test Strength") -> Data {
+        Data(
+            #"""
+            {"title":"\#(title)","sportType":"strengthTraining","composition":"custom","composition_effective":"custom","routing_reason":"strength_sets","intervals":[{"kind":"reps","reps":8,"name":"Squat"}]}
+            """#.utf8
+        )
     }
 }

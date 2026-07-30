@@ -39,6 +39,12 @@ protocol APIServiceProviding: TelegramLinkAPIProviding, SocialImportAPIProviding
     /// Get workout export in Apple WorkoutKit format
     func getAppleExport(workoutId: String) async throws -> String
 
+    /// AMA-2351 — mapper SportRouter compose via BFF `POST /v1/map/to-workoutkit`.
+    func mapToWorkoutKit(
+        blocksJSON: [String: Any],
+        deliveryPrefs: [String: Any]?
+    ) async throws -> Data
+
     // MARK: - Voice Workout Parsing
 
     /// Parse a voice transcription into a structured workout

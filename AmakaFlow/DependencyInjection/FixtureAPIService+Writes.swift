@@ -20,6 +20,20 @@ extension FixtureAPIService {
         return "{}"
     }
 
+    func mapToWorkoutKit(
+        blocksJSON: [String: Any],
+        deliveryPrefs: [String: Any]?
+    ) async throws -> Data {
+        _ = blocksJSON
+        _ = deliveryPrefs
+        print("[FixtureAPIService] Stub: mapToWorkoutKit")
+        return Data(
+            #"""
+            {"title":"Fixture","sportType":"strengthTraining","composition":"custom","composition_effective":"custom","routing_reason":"strength_sets","intervals":[{"kind":"reps","reps":8,"name":"Squat"}]}
+            """#.utf8
+        )
+    }
+
     func mintTelegramLinkToken() async throws -> TelegramLinkTokenResponse {
         TelegramLinkTokenResponse(
             token: "fixture-telegram-token",

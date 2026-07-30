@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import WorkoutKitSync
 
 // swiftlint:disable file_length type_body_length
 struct UnifiedWorkoutDetailView: View {
@@ -143,6 +144,25 @@ struct UnifiedWorkoutDetailView: View {
                 .presentationDetents([.large, .medium])
                 .presentationDragIndicator(.hidden)
                 .presentationBackground(DailyDriver.screenBackground)
+            case .applePreview(let name, let meta, let intervalCount, let planJSON):
+                AppleWorkoutKitPreviewSheet(
+                    workoutName: name,
+                    meta: meta,
+                    intervalCount: intervalCount,
+                    onConfirm: {
+                        startFlowSheet = nil
+                        confirmAppleWorkoutKitSchedule(
+                            workoutName: name,
+                            meta: meta,
+                            planJSON: planJSON
+                        )
+                    },
+                    onCancel: {
+                        startFlowSheet = nil
+                        handoffStatus = "Apple schedule canceled."
+                        lastAppleHandoffShowsManagePlans = false
+                    }
+                )
             case .enrichment(let prepared):
                 WorkoutEnrichmentPushSheet(
                     plan: prepared.plan,
@@ -1005,10 +1025,56 @@ extension UnifiedWorkoutDetailView {
         isAppleHandoffInFlight = true
         showsHandoffNextSteps = false
         lastAppleHandoffShowsManagePlans = false
+        handoffStatus = "Building Apple Workout plan…"
+        Task {
+            defer { isAppleHandoffInFlight = false }
+            let service = AppleStartHandoffService(
+                planProvider: MapperWorkoutKitPlanProvider(),
+                scheduleCapReader: .automatic
+            )
+            let prepared = await service.prepare(workout: workout)
+            switch prepared.kind {
+            case .previewReady:
+                guard let meta = prepared.planMeta, let planJSON = prepared.planJSON else {
+                    handoffStatus = AppleStartHandoffCopy.failureMessage(code: .mapperComposeFailed)
+                    return
+                }
+                let intervalCount: Int = {
+                    (try? WorkoutKitSync.default.parse(from: planJSON).intervals.count) ?? 0
+                }()
+                handoffStatus = prepared.message
+                startFlowSheet = .applePreview(
+                    name: workout.name,
+                    meta: meta,
+                    intervalCount: intervalCount,
+                    planJSON: planJSON
+                )
+            case .failed, .blocked:
+                handoffStatus = prepared.message
+                lastAppleHandoffShowsManagePlans = prepared.showsManageScheduledPlans
+            case .savedToFitness, .sentToWatch:
+                handoffStatus = prepared.message
+                lastAppleHandoffShowsManagePlans = prepared.showsManageScheduledPlans
+            }
+        }
+    }
+
+    fileprivate func confirmAppleWorkoutKitSchedule(
+        workoutName: String,
+        meta: WorkoutKitPlanMeta,
+        planJSON: Data
+    ) {
+        guard !isAppleHandoffInFlight else { return }
+        isAppleHandoffInFlight = true
         handoffStatus = "Scheduling in Workout…"
         Task {
             defer { isAppleHandoffInFlight = false }
-            let result = await AppleStartHandoffService(scheduleCapReader: .automatic).handoff(workout: workout)
+            let service = AppleStartHandoffService(scheduleCapReader: .automatic)
+            let result = await service.confirmSchedule(
+                workoutName: workoutName,
+                planJSON: planJSON,
+                meta: meta
+            )
             handoffStatus = result.message
             lastAppleHandoffShowsManagePlans = result.showsManageScheduledPlans
         }
@@ -1044,9 +1110,30 @@ extension UnifiedWorkoutDetailView {
 enum WorkoutStartFlowSheet: Identifiable, Equatable {
     case start
     case enrichment(WorkoutEnrichmentPushCoordinator.Prepared)
+    case applePreview(name: String, meta: WorkoutKitPlanMeta, intervalCount: Int, planJSON: Data)
 
     /// Stable id — content swaps in place; a changing id would dismiss/re-present.
-    var id: String { "garmin-start-flow" }
+    var id: String {
+        switch self {
+        case .start, .enrichment:
+            return "garmin-start-flow"
+        case .applePreview:
+            return "apple-wk-preview"
+        }
+    }
+
+    static func == (lhs: WorkoutStartFlowSheet, rhs: WorkoutStartFlowSheet) -> Bool {
+        switch (lhs, rhs) {
+        case (.start, .start):
+            return true
+        case let (.enrichment(a), .enrichment(b)):
+            return a == b
+        case let (.applePreview(n1, m1, c1, d1), .applePreview(n2, m2, c2, d2)):
+            return n1 == n2 && m1 == m2 && c1 == c2 && d1 == d2
+        default:
+            return false
+        }
+    }
 }
 
 // swiftlint:enable file_length type_body_length

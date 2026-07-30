@@ -19,6 +19,8 @@ struct AppleStartHandoffResult: Equatable {
         case savedToFitness
         case failed
         case blocked
+        /// Mapper DTO ready — UI shows preview before scheduling (AMA-2351).
+        case previewReady
     }
 
     let kind: Kind
@@ -28,11 +30,25 @@ struct AppleStartHandoffResult: Equatable {
     /// `.scheduleCapReached` failure — both land the user at the same "Manage
     /// scheduled plans" entry point, since clearing space there is the fix either way.
     let showsManageScheduledPlans: Bool
+    /// AMA-2351 — composition line for preview / post-schedule status.
+    let compositionLine: String?
+    let planMeta: WorkoutKitPlanMeta?
+    let planJSON: Data?
 
-    init(kind: Kind, message: String, showsManageScheduledPlans: Bool = false) {
+    init(
+        kind: Kind,
+        message: String,
+        showsManageScheduledPlans: Bool = false,
+        compositionLine: String? = nil,
+        planMeta: WorkoutKitPlanMeta? = nil,
+        planJSON: Data? = nil
+    ) {
         self.kind = kind
         self.message = message
         self.showsManageScheduledPlans = showsManageScheduledPlans
+        self.compositionLine = compositionLine
+        self.planMeta = planMeta
+        self.planJSON = planJSON
     }
 }
 
@@ -49,6 +65,8 @@ enum AppleStartHandoffFailureCode: String, Equatable {
     case emptyWorkout = "empty_workout"
     /// AMA-2330: preflight hit before saving — the Workout app's own schedule is full.
     case scheduleCapReached = "schedule_cap_reached"
+    /// AMA-2351: mapper/BFF compose or re-validation failed — never silent no-schedule.
+    case mapperComposeFailed = "mapper_compose_failed"
     case unknown = "unknown"
 }
 
@@ -82,7 +100,9 @@ enum AppleStartHandoffCopy {
         .emptyWorkout: "Workout has no steps — add exercises or intervals in Edit, then retry.",
         .scheduleCapReached:
             "Workout app schedule is full — open Manage scheduled plans (Devices → Scheduled in Workout) "
-                + "to remove old plans, then retry."
+                + "to remove old plans, then retry.",
+        .mapperComposeFailed:
+            "Could not build Apple Workout plan — check connection and workout structure, then retry."
     ]
 
     private static func messageWithOptionalDetail(prefix: String, detail: String?, fallback: String) -> String {
@@ -105,6 +125,12 @@ enum AppleStartHandoffCopy {
                 prefix: "WorkoutKit conversion failed",
                 detail: detail,
                 fallback: "check intervals use supported step types."
+            )
+        case .mapperComposeFailed:
+            return messageWithOptionalDetail(
+                prefix: "Could not build Apple Workout plan",
+                detail: detail,
+                fallback: "check connection and workout structure, then retry."
             )
         case .unknown:
             return messageWithOptionalDetail(
@@ -135,20 +161,27 @@ enum AppleStartHandoffCopy {
 
     static func scheduledInWorkoutMessage(
         workoutName: String,
-        pairing: AppleWatchPairingRead
+        pairing: AppleWatchPairingRead,
+        compositionLine: String? = nil
     ) -> AppleStartHandoffResult {
+        let compositionSuffix: String = {
+            guard let compositionLine, !compositionLine.isEmpty else { return "" }
+            return " \(compositionLine)."
+        }()
         switch pairing {
         case .confirmedUnpaired:
             return AppleStartHandoffResult(
                 kind: .savedToFitness,
-                message: "Scheduled in Workout — pair an Apple Watch to run \"\(workoutName)\".",
-                showsManageScheduledPlans: true
+                message: "Scheduled in Workout — pair an Apple Watch to run \"\(workoutName)\".\(compositionSuffix)",
+                showsManageScheduledPlans: true,
+                compositionLine: compositionLine
             )
         case .confirmedPaired, .unknown:
             return AppleStartHandoffResult(
                 kind: .savedToFitness,
-                message: "Scheduled in Workout — open the Workout app on your Apple Watch for \"\(workoutName)\".",
-                showsManageScheduledPlans: true
+                message: "Scheduled in Workout — open the Workout app on your Apple Watch for \"\(workoutName)\".\(compositionSuffix)",
+                showsManageScheduledPlans: true,
+                compositionLine: compositionLine
             )
         }
     }
@@ -194,14 +227,63 @@ enum WatchWorkoutSendOutcome: Equatable {
 }
 
 /// Test seam for WorkoutKit saves without linking WorkoutKit in unit tests.
+/// AMA-2351: saves mapper JSON via WorkoutKitSync — no on-device block interpretation.
 protocol WorkoutKitSaving: Sendable {
-    func saveToWorkoutKit(_ workout: Workout) async throws
+    func saveMapperPlanJSON(_ data: Data) async throws
 }
 
 @available(iOS 18.0, *)
 struct LiveWorkoutKitSaver: WorkoutKitSaving {
-    func saveToWorkoutKit(_ workout: Workout) async throws {
-        try await WorkoutKitConverter.shared.saveToWorkoutKit(workout)
+    func saveMapperPlanJSON(_ data: Data) async throws {
+        guard let jsonString = String(data: data, encoding: .utf8) else {
+            throw WorkoutPlanError.invalidJSONString
+        }
+        try await WorkoutKitSync.default.parseAndSave(from: jsonString)
+    }
+}
+
+/// AMA-2351 — fetches mapper WKPlanDTO JSON (via BFF). Production uses stored blocks_json.
+protocol WorkoutKitPlanProviding: Sendable {
+    func fetchMapperPlanJSON(for workout: Workout) async throws -> Data
+}
+
+struct MapperWorkoutKitPlanProvider: WorkoutKitPlanProviding {
+    let api: any APIServiceProviding
+    let deliveryPrefs: [String: Any]?
+
+    init(api: any APIServiceProviding = APIService.shared, deliveryPrefs: [String: Any]? = nil) {
+        self.api = api
+        self.deliveryPrefs = deliveryPrefs
+    }
+
+    func fetchMapperPlanJSON(for workout: Workout) async throws -> Data {
+        var blocksJSON = try await api.fetchWorkoutBlocksJSON(workoutId: workout.id)
+        if blocksJSON["title"] == nil {
+            blocksJSON["title"] = workout.name
+        }
+        if (blocksJSON["blocks"] as? [Any])?.isEmpty != false,
+           (blocksJSON["intervals"] as? [Any])?.isEmpty != false {
+            // Empty stored payload — fail visibly rather than inventing structure.
+            throw AppleStartMapperError.emptyBlocks
+        }
+        return try await api.mapToWorkoutKit(
+            blocksJSON: blocksJSON,
+            deliveryPrefs: deliveryPrefs
+        )
+    }
+}
+
+enum AppleStartMapperError: LocalizedError {
+    case emptyBlocks
+    case invalidResponse
+
+    var errorDescription: String? {
+        switch self {
+        case .emptyBlocks:
+            return "Workout has no stored blocks to compose for Apple Watch."
+        case .invalidResponse:
+            return "Mapper returned an unreadable WorkoutKit plan."
+        }
     }
 }
 
@@ -256,21 +338,24 @@ enum ScheduleCapReaderOverride {
     case disabled
 }
 
-/// Coordinates WorkoutKit save for Start → Apple try.
+/// Coordinates mapper compose → preview → WorkoutKit schedule for Start → Apple.
 @MainActor
 final class AppleStartHandoffService {
     private let pairingReader: any AppleWatchPairingReading
     private let workoutKitSaver: (any WorkoutKitSaving)?
+    private let planProvider: (any WorkoutKitPlanProviding)?
     private let scheduleCapReader: (any ScheduleCapReading)?
     private let forceFailureCode: (() -> AppleStartHandoffFailureCode?)?
 
     init(
         pairingReader: any AppleWatchPairingReading = LiveAppleWatchPairingReader(),
         workoutKitSaver: WorkoutKitSaverOverride = .automatic,
+        planProvider: (any WorkoutKitPlanProviding)? = nil,
         scheduleCapReader: ScheduleCapReaderOverride = .disabled,
         forceFailureCode: (() -> AppleStartHandoffFailureCode?)? = nil
     ) {
         self.pairingReader = pairingReader
+        self.planProvider = planProvider
         switch workoutKitSaver {
         case .injected(let saver):
             self.workoutKitSaver = saver
@@ -311,7 +396,8 @@ final class AppleStartHandoffService {
         }
     }
 
-    func handoff(workout: Workout) async -> AppleStartHandoffResult {
+    /// Fetch mapper DTO for preview. Does not schedule.
+    func prepare(workout: Workout) async -> AppleStartHandoffResult {
         if let forced = forceFailureCode?() {
             return AppleStartHandoffResult(
                 kind: .failed,
@@ -320,22 +406,23 @@ final class AppleStartHandoffService {
             )
         }
 
-        if workout.intervals.isEmpty {
-            return AppleStartHandoffResult(
-                kind: .failed,
-                message: AppleStartHandoffCopy.failureMessage(code: .emptyWorkout)
-            )
-        }
-
-        guard let workoutKitSaver else {
+        guard workoutKitSaver != nil else {
             return AppleStartHandoffResult(
                 kind: .blocked,
                 message: AppleStartHandoffCopy.failureMessage(code: .iosVersionUnsupported)
             )
         }
 
-        // AMA-2330: never auto-delete to make room — surface the cap and point
-        // at Manage scheduled plans / Devices → Scheduled in Workout instead.
+        guard let planProvider else {
+            return AppleStartHandoffResult(
+                kind: .failed,
+                message: AppleStartHandoffCopy.failureMessage(
+                    code: .mapperComposeFailed,
+                    detail: "WorkoutKit plan provider is not configured."
+                )
+            )
+        }
+
         if let scheduleCapReader {
             let status = await scheduleCapReader.scheduleCapStatus()
             if status.scheduledCount >= status.maxAllowedCount {
@@ -348,10 +435,48 @@ final class AppleStartHandoffService {
         }
 
         do {
-            try await workoutKitSaver.saveToWorkoutKit(workout)
+            let data = try await planProvider.fetchMapperPlanJSON(for: workout)
+            let meta = WorkoutKitPlanMeta(fromMapperJSON: data)
+            let dto = try WorkoutKitSync.default.parse(from: data)
+            guard !dto.intervals.isEmpty else {
+                return AppleStartHandoffResult(
+                    kind: .failed,
+                    message: AppleStartHandoffCopy.failureMessage(code: .emptyWorkout)
+                )
+            }
+            let line = WorkoutKitRoutingCopy.compositionLine(meta: meta)
+            return AppleStartHandoffResult(
+                kind: .previewReady,
+                message: line,
+                compositionLine: line,
+                planMeta: meta,
+                planJSON: data
+            )
+        } catch {
+            return AppleStartHandoffResult(
+                kind: .failed,
+                message: AppleStartHandoffCopy.failureMessage(
+                    code: .mapperComposeFailed,
+                    detail: error.localizedDescription
+                )
+            )
+        }
+    }
+
+    /// Schedule a previously prepared mapper plan JSON.
+    func confirmSchedule(workoutName: String, planJSON: Data, meta: WorkoutKitPlanMeta) async -> AppleStartHandoffResult {
+        guard let workoutKitSaver else {
+            return AppleStartHandoffResult(
+                kind: .blocked,
+                message: AppleStartHandoffCopy.failureMessage(code: .iosVersionUnsupported)
+            )
+        }
+        do {
+            try await workoutKitSaver.saveMapperPlanJSON(planJSON)
             return AppleStartHandoffCopy.scheduledInWorkoutMessage(
-                workoutName: workout.name,
-                pairing: pairingReader.pairingReadForCopy()
+                workoutName: workoutName,
+                pairing: pairingReader.pairingReadForCopy(),
+                compositionLine: WorkoutKitRoutingCopy.compositionLine(meta: meta)
             )
         } catch {
             let code = AppleStartHandoffCopy.failureCode(from: error)
@@ -363,5 +488,20 @@ final class AppleStartHandoffService {
                 )
             )
         }
+    }
+
+    /// One-shot compose + schedule (tests / callers that skip the preview sheet).
+    func handoff(workout: Workout) async -> AppleStartHandoffResult {
+        let prepared = await prepare(workout: workout)
+        guard prepared.kind == .previewReady,
+              let planJSON = prepared.planJSON,
+              let meta = prepared.planMeta else {
+            return prepared
+        }
+        return await confirmSchedule(
+            workoutName: workout.name,
+            planJSON: planJSON,
+            meta: meta
+        )
     }
 }

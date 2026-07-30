@@ -2,7 +2,9 @@
 //  WorkoutKitConverter.swift
 //  AmakaFlow
 //
-//  Converts Workout model to WKPlanDTO for WorkoutKitSync
+//  AMA-2287 legacy: on-device Workout → WKPlanDTO interpretation.
+//  AMA-2351 cutover: Start handoff no longer calls this path — mapper is the
+//  sole composer. Kept for unit tests covering clamp / nest edge cases only.
 //
 
 import Foundation
@@ -34,7 +36,7 @@ private func displayName(exercise: String, load: String?) -> String {
     return "\(exercise) · \(compactLoadToken(load))"
 }
 
-/// Service for converting Workout models to WorkoutKit DTO format
+/// Legacy on-device composer — **not** used by Apple Start after AMA-2351.
 @available(iOS 18.0, watchOS 11.0, *)
 class WorkoutKitConverter {
     
@@ -46,6 +48,7 @@ class WorkoutKitConverter {
     /// - Parameter workout: The workout to convert
     /// - Returns: WKPlanDTO ready for WorkoutKit
     /// - Throws: ConversionError if conversion fails
+    @available(*, deprecated, message: "AMA-2351: Start uses mapper WKPlanDTO via BFF; do not call from production handoff.")
     func convertToWKPlanDTO(_ workout: Workout) throws -> WKPlanDTO {
         // Map sport type
         let sportType = mapSportType(workout.sport)
@@ -64,9 +67,8 @@ class WorkoutKitConverter {
         return dto
     }
     
-    /// Save workout to WorkoutKit
-    /// - Parameter workout: The workout to save
-    /// - Throws: ConversionError or WorkoutPlanError
+    /// Save workout to WorkoutKit via on-device conversion (legacy tests only).
+    @available(*, deprecated, message: "AMA-2351: use WorkoutKitSync.parseAndSave with mapper JSON.")
     func saveToWorkoutKit(_ workout: Workout) async throws {
         #if canImport(Sentry)
         // Sentry performance transaction for WorkoutKit / HealthKit write (AMA-1083)
