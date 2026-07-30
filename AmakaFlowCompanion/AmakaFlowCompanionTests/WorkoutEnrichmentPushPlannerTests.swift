@@ -379,6 +379,78 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertTrue(application.needsPersist)
         XCTAssertTrue(application.tombstones.contains(where: { $0.kind == .sessionWarmup }))
         XCTAssertTrue(application.tombstones.contains(where: { $0.kind == .betweenSetRest }))
+        XCTAssertTrue(application.rejectedTombstones.contains(where: { $0.kind == .sessionWarmup }))
+        XCTAssertTrue(application.rejectedTombstones.contains(where: { $0.kind == .betweenSetRest }))
+    }
+
+    // MARK: - Coordinator apply (AMA-2346)
+
+    @MainActor
+    func testApplyPersistsRejectTombstonesWhenEnrichFails() async {
+        let mock = MockAPIService()
+        mock.enrichWorkoutResult = .failure(
+            NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: "mapper down"])
+        )
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock(exerciseId: "wex_bench")],
+            tombstones: [],
+            prefs: .defaults
+        )
+        let prepared = WorkoutEnrichmentPushCoordinator.Prepared(
+            workoutId: "w1",
+            title: "Push",
+            plan: plan,
+            prefs: .defaults,
+            tombstones: [],
+            blocksJSON: ["blocks": []]
+        )
+        let coordinator = WorkoutEnrichmentPushCoordinator(apiService: mock)
+
+        // Accept rest so enrich is called; reject mobility → tombstone must persist
+        // even when enrich throws.
+        let outcome = await coordinator.apply(
+            prepared: prepared,
+            decision: WorkoutEnrichmentPushPlanner.Decision(checkedKinds: [.betweenSetRest])
+        )
+
+        XCTAssertEqual(mock.enrichWorkoutCallCount, 1)
+        XCTAssertTrue(outcome.applied)
+        XCTAssertNotNil(outcome.note)
+        XCTAssertEqual(mock.savedWorkoutBlocksJSON.count, 1)
+        let savedTombs = mock.savedWorkoutBlocksJSON[0].tombstones ?? []
+        XCTAssertTrue(savedTombs.contains(where: { $0.kind == .sessionWarmup }))
+    }
+
+    @MainActor
+    func testApplySkipsEnrichWhenNothingCheckedButStillPersistsTombstones() async {
+        let mock = MockAPIService()
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock(exerciseId: "wex_bench")],
+            tombstones: [],
+            prefs: .defaults
+        )
+        let prepared = WorkoutEnrichmentPushCoordinator.Prepared(
+            workoutId: "w1",
+            title: "Push",
+            plan: plan,
+            prefs: .defaults,
+            tombstones: [],
+            blocksJSON: ["blocks": []]
+        )
+        let coordinator = WorkoutEnrichmentPushCoordinator(apiService: mock)
+
+        let outcome = await coordinator.apply(
+            prepared: prepared,
+            decision: WorkoutEnrichmentPushPlanner.Decision(checkedKinds: [])
+        )
+
+        XCTAssertEqual(mock.enrichWorkoutCallCount, 0)
+        XCTAssertTrue(outcome.applied)
+        XCTAssertNil(outcome.note)
+        XCTAssertEqual(mock.savedWorkoutBlocksJSON.count, 1)
+        let savedTombs = mock.savedWorkoutBlocksJSON[0].tombstones ?? []
+        XCTAssertTrue(savedTombs.contains(where: { $0.kind == .sessionWarmup }))
+        XCTAssertTrue(savedTombs.contains(where: { $0.kind == .betweenSetRest }))
     }
 
     func testRejectSessionWarmupTombsWhileAcceptingRest() throws {

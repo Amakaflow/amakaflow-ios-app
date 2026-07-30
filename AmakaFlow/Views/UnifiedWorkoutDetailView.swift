@@ -894,9 +894,13 @@ extension UnifiedWorkoutDetailView {
                     workoutId: workout.id,
                     title: workout.name
                 ) {
+                    // User dismissed Start while prepare() was in flight — do not
+                    // re-present enrichment or push after they backed out.
+                    guard startFlowSheet == .start else { return }
                     startFlowSheet = .enrichment(prepared)
                     return
                 }
+                guard startFlowSheet == .start else { return }
                 startFlowSheet = nil
                 handoffStatus = GarminLifecycleCopy.handoffQueueing
                 await performGarminPush(gymTitle: gym.title, statusNote: nil)
