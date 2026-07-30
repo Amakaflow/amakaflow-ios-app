@@ -88,14 +88,12 @@ final class WorkoutEnrichmentPushCoordinator {
     }
 
     /// Enrich, then store the result so the CIQ download builds the enriched FIT.
+    /// AMA-2346: also persists reject tombstones when the user unchecks offers
+    /// (including "Send as it is") so mobility/rest cannot sneak back in.
     func apply(
         prepared: Prepared,
         decision: WorkoutEnrichmentPushPlanner.Decision
     ) async -> ApplyOutcome {
-        guard !decision.checkedKinds.isEmpty else {
-            return ApplyOutcome(applied: false, note: nil)
-        }
-
         do {
             let application = try WorkoutEnrichmentPushPlanner.application(
                 plan: prepared.plan,
@@ -103,19 +101,27 @@ final class WorkoutEnrichmentPushCoordinator {
                 prefs: prepared.prefs,
                 tombstones: prepared.tombstones
             )
-            let response = try await apiService.enrichWorkout(
-                EnrichRequest(
-                    blocksJSON: prepared.blocksJSON,
-                    prefs: application.prefs,
-                    tombstones: application.tombstones,
-                    mode: .push
+            guard application.needsPersist else {
+                return ApplyOutcome(applied: false, note: nil)
+            }
+
+            var blocksJSON = prepared.blocksJSON
+            if application.appliesAnything {
+                let response = try await apiService.enrichWorkout(
+                    EnrichRequest(
+                        blocksJSON: prepared.blocksJSON,
+                        prefs: application.prefs,
+                        tombstones: application.tombstones,
+                        mode: .push
+                    )
                 )
-            )
-            // Enrich is read-only on tombstones — persist the cleared set ourselves.
+                blocksJSON = response.blocksJSON
+            }
+            // Enrich is read-only on tombstones — persist the sheet answer ourselves.
             try await apiService.saveWorkoutBlocksJSON(
                 workoutId: prepared.workoutId,
                 title: prepared.title,
-                blocksJSON: response.blocksJSON,
+                blocksJSON: blocksJSON,
                 tombstones: application.tombstones
             )
             return ApplyOutcome(applied: true, note: nil)

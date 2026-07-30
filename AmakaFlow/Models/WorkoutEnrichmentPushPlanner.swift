@@ -24,6 +24,8 @@ enum WorkoutEnrichmentPushPlanner {
         var detail: String
         /// Per-exercise tombstones to clear when `exercise_warmup_sets` is applied.
         var tombstonedExerciseIds: [String]
+        /// Candidate exercise ids covered by a warm-up-sets offer (reject → tombstone).
+        var candidateExerciseIds: [String]
 
         var id: String { kind.rawValue }
 
@@ -34,6 +36,22 @@ enum WorkoutEnrichmentPushPlanner {
             case .betweenSetRest: return "Between-set rest"
             case .exerciseWarmupSets: return "Exercise warm-up sets"
             }
+        }
+
+        init(
+            kind: EnrichmentKind,
+            isChecked: Bool,
+            wasTombstoned: Bool,
+            detail: String,
+            tombstonedExerciseIds: [String] = [],
+            candidateExerciseIds: [String] = []
+        ) {
+            self.kind = kind
+            self.isChecked = isChecked
+            self.wasTombstoned = wasTombstoned
+            self.detail = detail
+            self.tombstonedExerciseIds = tombstonedExerciseIds
+            self.candidateExerciseIds = candidateExerciseIds
         }
     }
 
@@ -128,6 +146,7 @@ enum WorkoutEnrichmentPushPlanner {
                 // All candidates deleted before → start unchecked. A partial delete
                 // still offers (checked) so untouched exercises are not held hostage.
                 let allTombstoned = tombstonedIds.count == candidates.count
+                let candidateIds = candidates.compactMap(\.exerciseId)
                 offers.append(
                     Offer(
                         kind: .exerciseWarmupSets,
@@ -137,7 +156,8 @@ enum WorkoutEnrichmentPushPlanner {
                             prefs.exerciseWarmupSets.defaultSets,
                             exerciseCount: candidates.count
                         ),
-                        tombstonedExerciseIds: tombstonedIds
+                        tombstonedExerciseIds: tombstonedIds,
+                        candidateExerciseIds: candidateIds
                     )
                 )
             }
@@ -167,17 +187,24 @@ enum WorkoutEnrichmentPushPlanner {
     }
 
     /// Enrich inputs for the decision: unchecked kinds are disabled so enrich
-    /// cannot inject them, and tombstones for checked kinds are dropped.
+    /// cannot inject them, rejected offers are tombstoned, and tombstones for
+    /// checked re-opt-in kinds are dropped.
     struct Application: Equatable, Sendable {
         var prefs: WorkoutPreferences
         var tombstones: [EnrichmentTombstone]
         var clearedTombstones: [EnrichmentTombstone]
+        var rejectedTombstones: [EnrichmentTombstone]
 
         var appliesAnything: Bool {
             prefs.sessionWarmup.enabled
                 || prefs.cooldown.enabled
                 || prefs.betweenSetRest.enabled
                 || prefs.exerciseWarmupSets.enabled
+        }
+
+        /// True when the sheet answer must be persisted (enrich and/or tombstones).
+        var needsPersist: Bool {
+            appliesAnything || !rejectedTombstones.isEmpty || !clearedTombstones.isEmpty
         }
     }
 
@@ -204,6 +231,25 @@ enum WorkoutEnrichmentPushPlanner {
 
         var remaining = tombstones
         var cleared: [EnrichmentTombstone] = []
+        var rejected: [EnrichmentTombstone] = []
+
+        // AMA-2346: unchecking an offered kind is an explicit reject — tombstone
+        // so a later enrich (or re-push) cannot inject it from stored prefs.
+        for offer in plan.offers where !checked.contains(offer.kind) {
+            if offer.kind == .exerciseWarmupSets {
+                for exerciseId in offer.candidateExerciseIds {
+                    let tomb = EnrichmentTombstone(kind: offer.kind, exerciseId: exerciseId)
+                    guard !remaining.contains(tomb) else { continue }
+                    remaining.append(tomb)
+                    rejected.append(tomb)
+                }
+            } else if !WorkoutEnrichmentPresence.isTombstoned(offer.kind, tombstones: remaining) {
+                let tomb = EnrichmentTombstone(kind: offer.kind)
+                remaining.append(tomb)
+                rejected.append(tomb)
+            }
+        }
+
         for kind in checked {
             // Only a true re-opt-in (offer started unchecked) clears tombstones.
             // A partial warm-up-sets offer stays default-checked and must not
@@ -224,7 +270,12 @@ enum WorkoutEnrichmentPushPlanner {
             }
         }
 
-        return Application(prefs: overridden, tombstones: remaining, clearedTombstones: cleared)
+        return Application(
+            prefs: overridden,
+            tombstones: remaining,
+            clearedTombstones: cleared,
+            rejectedTombstones: rejected
+        )
     }
 
     // MARK: - Presence helpers
