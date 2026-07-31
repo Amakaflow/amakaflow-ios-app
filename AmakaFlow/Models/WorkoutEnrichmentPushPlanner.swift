@@ -21,6 +21,7 @@ enum WorkoutEnrichmentPushPlanner {
         var kind: EnrichmentKind
         var isChecked: Bool
         var wasTombstoned: Bool
+        var title: String
         var detail: String
         /// Per-exercise tombstones to clear when `exercise_warmup_sets` is applied.
         var tombstonedExerciseIds: [String]
@@ -29,26 +30,20 @@ enum WorkoutEnrichmentPushPlanner {
 
         var id: String { kind.rawValue }
 
-        var title: String {
-            switch kind {
-            case .sessionWarmup: return "Add mobility prep"
-            case .cooldown: return "Cool-down"
-            case .betweenSetRest: return "Add rest (Lap or timed)"
-            case .exerciseWarmupSets: return "Exercise warm-up sets"
-            }
-        }
-
         init(
             kind: EnrichmentKind,
             isChecked: Bool,
             wasTombstoned: Bool,
             detail: String,
+            title: String? = nil,
             tombstonedExerciseIds: [String] = [],
-            candidateExerciseIds: [String] = []
+            candidateExerciseIds: [String] = [],
+            target: EnrichmentPushTarget = .garmin
         ) {
             self.kind = kind
             self.isChecked = isChecked
             self.wasTombstoned = wasTombstoned
+            self.title = title ?? WorkoutEnrichmentPushCopy.offerTitle(for: kind, target: target)
             self.detail = detail
             self.tombstonedExerciseIds = tombstonedExerciseIds
             self.candidateExerciseIds = candidateExerciseIds
@@ -57,6 +52,7 @@ enum WorkoutEnrichmentPushPlanner {
 
     struct Plan: Equatable, Sendable {
         var offers: [Offer]
+        var target: EnrichmentPushTarget
 
         var hasOffers: Bool { !offers.isEmpty }
 
@@ -67,6 +63,11 @@ enum WorkoutEnrichmentPushPlanner {
 
         func offer(_ kind: EnrichmentKind) -> Offer? {
             offers.first { $0.kind == kind }
+        }
+
+        init(offers: [Offer], target: EnrichmentPushTarget = .garmin) {
+            self.offers = offers
+            self.target = target
         }
     }
 
@@ -79,7 +80,8 @@ enum WorkoutEnrichmentPushPlanner {
     static func plan(
         blocks: [SocialImportBlock],
         tombstones: [EnrichmentTombstone],
-        prefs: WorkoutPreferences
+        prefs: WorkoutPreferences,
+        target: EnrichmentPushTarget = .garmin
     ) -> Plan {
         var offers: [Offer] = []
 
@@ -95,8 +97,11 @@ enum WorkoutEnrichmentPushPlanner {
                     kind: .sessionWarmup,
                     isChecked: !tombstoned,
                     wasTombstoned: tombstoned,
-                    detail: activitiesDetail(prefs.sessionWarmup.activities),
-                    tombstonedExerciseIds: []
+                    detail: WorkoutEnrichmentPushCopy.activitiesDetail(
+                        prefs.sessionWarmup.activities,
+                        target: target
+                    ),
+                    target: target
                 )
             )
         }
@@ -110,8 +115,11 @@ enum WorkoutEnrichmentPushPlanner {
                     kind: .cooldown,
                     isChecked: !tombstoned,
                     wasTombstoned: tombstoned,
-                    detail: activitiesDetail(prefs.cooldown.activities),
-                    tombstonedExerciseIds: []
+                    detail: WorkoutEnrichmentPushCopy.activitiesDetail(
+                        prefs.cooldown.activities,
+                        target: target
+                    ),
+                    target: target
                 )
             )
         }
@@ -119,7 +127,9 @@ enum WorkoutEnrichmentPushPlanner {
         // Always offer Rest when the workout has no rest intent — Garmin FIT
         // needs `rest_open` / `rest_sec` on blocks. Prefs.enabled only controls
         // the default check (off → show unchecked so this push can still opt in).
-        if !hasBlockRestIntent(in: blocks) {
+        // Apple delivery `rest_mode=omit` skips the offer (AMA-2362 / CodeRabbit).
+        if !hasBlockRestIntent(in: blocks),
+           !WorkoutEnrichmentPushCopy.shouldSkipRestOffer(target: target) {
             let tombstoned = WorkoutEnrichmentPresence.isTombstoned(
                 .betweenSetRest,
                 tombstones: tombstones
@@ -130,8 +140,11 @@ enum WorkoutEnrichmentPushPlanner {
                     kind: .betweenSetRest,
                     isChecked: prefsWantRest && !tombstoned,
                     wasTombstoned: tombstoned,
-                    detail: restDetail(prefs.betweenSetRest),
-                    tombstonedExerciseIds: []
+                    detail: WorkoutEnrichmentPushCopy.restDetail(
+                        prefs.betweenSetRest,
+                        target: target
+                    ),
+                    target: target
                 )
             )
         }
@@ -157,18 +170,19 @@ enum WorkoutEnrichmentPushPlanner {
                         kind: .exerciseWarmupSets,
                         isChecked: !allTombstoned,
                         wasTombstoned: !tombstonedIds.isEmpty,
-                        detail: warmupSetsDetail(
+                        detail: WorkoutEnrichmentPushCopy.warmupSetsDetail(
                             prefs.exerciseWarmupSets.defaultSets,
                             exerciseCount: candidates.count
                         ),
                         tombstonedExerciseIds: tombstonedIds,
-                        candidateExerciseIds: candidateIds
+                        candidateExerciseIds: candidateIds,
+                        target: target
                     )
                 )
             }
         }
 
-        return Plan(offers: offers)
+        return Plan(offers: offers, target: target)
     }
 
     // MARK: - Apply
@@ -338,33 +352,6 @@ enum WorkoutEnrichmentPushPlanner {
             guard exercise.warmupSets?.isEmpty ?? true else { return false }
             return !excluded.contains(ExerciseKeyNormalizer.normalize(exercise.name))
         }
-    }
-
-    // MARK: - Copy
-
-    static func activitiesDetail(_ activities: [EnrichmentActivityPref]) -> String {
-        guard !activities.isEmpty else { return "No activities set — add them in Settings." }
-        return activities.map { activity in
-            guard let durationSec = activity.durationSec, durationSec > 0 else {
-                return "\(activity.name) · until Lap"
-            }
-            return "\(activity.name) · \(durationSec)s"
-        }
-        .joined(separator: ", ")
-    }
-
-    static func restDetail(_ prefs: BetweenSetRestPrefs) -> String {
-        if prefs.restOpen { return "Rest until Lap between sets" }
-        guard let restSec = prefs.restSec, restSec > 0 else {
-            return "No rest length set — add one in Settings."
-        }
-        return "\(restSec)s between sets"
-    }
-
-    static func warmupSetsDetail(_ defaults: [WarmupSetDefault], exerciseCount: Int) -> String {
-        let reps = defaults.map { "\($0.reps)" }.joined(separator: " · ")
-        let noun = exerciseCount == 1 ? "exercise" : "exercises"
-        return "\(defaults.count) warm-up sets (\(reps) reps) on \(exerciseCount) \(noun)"
     }
 }
 

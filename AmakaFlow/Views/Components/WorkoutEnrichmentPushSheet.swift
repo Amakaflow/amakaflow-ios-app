@@ -4,10 +4,7 @@
 //
 //  AMA-2336 — the offer shown before a Garmin push when a workout is missing
 //  something the user has asked for (spec §5).
-//
-//  Kinds already present by type are never offered. Kinds the user deleted
-//  before are offered **unchecked** — accepting is an explicit re-opt-in that
-//  clears the tombstone.
+//  AMA-2362 — Apple Start uses Open-rest copy + open default (not Garmin Lap).
 //
 
 import SwiftUI
@@ -23,6 +20,8 @@ struct WorkoutEnrichmentPushSheet: View {
     @State private var restSec: Int
     @State private var restOpen: Bool
 
+    private var target: EnrichmentPushTarget { plan.target }
+
     init(
         plan: WorkoutEnrichmentPushPlanner.Plan,
         prefs: WorkoutPreferences,
@@ -37,7 +36,12 @@ struct WorkoutEnrichmentPushSheet: View {
         self.onClose = onClose
         _checkedKinds = State(initialValue: plan.defaultCheckedKinds)
         _restSec = State(initialValue: prefs.betweenSetRest.restSec ?? 60)
-        _restOpen = State(initialValue: prefs.betweenSetRest.restOpen)
+        _restOpen = State(
+            initialValue: WorkoutEnrichmentPushCopy.initialRestOpen(
+                standing: prefs.betweenSetRest,
+                target: plan.target
+            )
+        )
     }
 
     var body: some View {
@@ -168,7 +172,10 @@ struct WorkoutEnrichmentPushSheet: View {
 
     private var restOverride: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Toggle("Lap button press (no timer)", isOn: restOpenBinding)
+            Toggle(
+                WorkoutEnrichmentPushCopy.restOpenToggleTitle(target: target),
+                isOn: restOpenBinding
+            )
                 .tint(DailyDriver.lime)
                 .font(.system(size: 11))
                 .foregroundColor(DailyDriver.foregroundMuted)
@@ -209,9 +216,11 @@ struct WorkoutEnrichmentPushSheet: View {
         guard offer.kind == .betweenSetRest, checkedKinds.contains(.betweenSetRest) else {
             return offer.detail
         }
-        return restOpen
-            ? "Lap button press between sets/rounds"
-            : "Timed \(restSec)s between sets/rounds"
+        return WorkoutEnrichmentPushCopy.liveRestDetail(
+            restOpen: restOpen,
+            restSec: restSec,
+            target: target
+        )
     }
 
     private func toggle(_ kind: EnrichmentKind) {
@@ -224,7 +233,7 @@ struct WorkoutEnrichmentPushSheet: View {
 }
 
 #if DEBUG
-#Preview {
+#Preview("Garmin") {
     WorkoutEnrichmentPushSheet(
         plan: WorkoutEnrichmentPushPlanner.Plan(
             offers: [
@@ -233,23 +242,53 @@ struct WorkoutEnrichmentPushSheet: View {
                     isChecked: true,
                     wasTombstoned: false,
                     detail: "Jump Rope · until Lap",
-                    tombstonedExerciseIds: []
+                    target: .garmin
                 ),
                 WorkoutEnrichmentPushPlanner.Offer(
                     kind: .betweenSetRest,
                     isChecked: true,
                     wasTombstoned: false,
                     detail: "60s between sets",
-                    tombstonedExerciseIds: []
+                    target: .garmin
                 ),
                 WorkoutEnrichmentPushPlanner.Offer(
                     kind: .exerciseWarmupSets,
                     isChecked: false,
                     wasTombstoned: true,
                     detail: "2 warm-up sets (8 · 5 reps) on 3 exercises",
-                    tombstonedExerciseIds: ["wex_1"]
+                    target: .garmin
                 )
-            ]
+            ],
+            target: .garmin
+        ),
+        prefs: .defaults,
+        onConfirm: { _ in },
+        onSkip: {},
+        onClose: {}
+    )
+    .presentationDetents([.large])
+}
+
+#Preview("Apple") {
+    WorkoutEnrichmentPushSheet(
+        plan: WorkoutEnrichmentPushPlanner.Plan(
+            offers: [
+                WorkoutEnrichmentPushPlanner.Offer(
+                    kind: .sessionWarmup,
+                    isChecked: true,
+                    wasTombstoned: false,
+                    detail: "Jump Rope · until tap",
+                    target: .apple
+                ),
+                WorkoutEnrichmentPushPlanner.Offer(
+                    kind: .betweenSetRest,
+                    isChecked: true,
+                    wasTombstoned: false,
+                    detail: "Open rest between sets",
+                    target: .apple
+                )
+            ],
+            target: .apple
         ),
         prefs: .defaults,
         onConfirm: { _ in },
