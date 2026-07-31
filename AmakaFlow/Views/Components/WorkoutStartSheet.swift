@@ -227,70 +227,19 @@ struct WorkoutStartSheet: View {
         }
     }
 
-    /// AMA-2360: delivery prefs this Apple Start will send to mapper.
     private var applePrefsNote: some View {
-        Button(action: onEditApplePrefs) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(appleDeliveryPrefsSummary)
-                    .font(.system(size: 10.5))
-                    .foregroundColor(DailyDriver.foregroundMuted)
-                    .multilineTextAlignment(.leading)
-                Spacer(minLength: 0)
-                Text("Edit")
-                    .font(.system(size: 10.5, weight: .semibold))
-                    .foregroundColor(DailyDriver.lime)
-            }
-            .padding(.horizontal, 15)
-            .padding(.vertical, 8)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .buttonStyle(.plain)
-        .accessibilityHint("Opens Apple Watch delivery settings")
-        .accessibilityIdentifier("af_start_apple_prefs_note")
+        WorkoutStartApplePrefsNote(
+            summary: appleDeliveryPrefsSummary,
+            onEdit: onEditApplePrefs
+        )
     }
 
-    /// AMA-2317: the watch prefs this push will apply, before the user taps —
-    /// a surprise 60s rest countdown should be visible here first.
     private var garminPrefsNote: some View {
-        Button(action: onEditGarminPrefs) {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(
-                        GarminLifecycleCopy.startSheetPrefsNote(
-                            prefs: displayPrefs,
-                            hasConfigured: hasConfiguredDisplayPrefs
-                        )
-                    )
-                    .font(.system(size: 10.5))
-                    .foregroundColor(DailyDriver.foregroundMuted)
-                    .multilineTextAlignment(.leading)
-                    .monospacedDigit()
-
-                    Spacer(minLength: 0)
-
-                    Text(GarminLifecycleCopy.startSheetPrefsAction)
-                        .font(.system(size: 10.5, weight: .semibold))
-                        .foregroundColor(DailyDriver.lime)
-                }
-
-                if let hint = GarminLifecycleCopy.startSheetPrefsHint(
-                    prefs: displayPrefs,
-                    hasConfigured: hasConfiguredDisplayPrefs
-                ) {
-                    Text(hint)
-                        .font(.system(size: 10))
-                        .foregroundColor(DailyDriver.amber)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .padding(.horizontal, 15)
-            .padding(.vertical, 8)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .buttonStyle(.plain)
-        .accessibilityHint("Opens Garmin watch display settings")
-        .accessibilityIdentifier("af_start_garmin_prefs_note")
+        WorkoutStartGarminPrefsNote(
+            displayPrefs: displayPrefs,
+            hasConfiguredDisplayPrefs: hasConfiguredDisplayPrefs,
+            onEdit: onEditGarminPrefs
+        )
     }
 
     private var unsetGymLink: some View {

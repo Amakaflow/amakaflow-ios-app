@@ -9,21 +9,41 @@ import Foundation
 import WorkoutKitSync
 
 enum WorkoutKitPlanStepSummary {
-    /// Short labels for preview (warmup / recovery / named work). Cap length for sheet.
+    /// Short labels for preview (warmup / recovery / named work). `limit` is a hard cap.
     static func lines(from planJSON: Data, limit: Int = 12) -> [String] {
+        guard limit > 0 else { return [] }
         guard let dto = try? WorkoutKitSync.default.parse(from: planJSON) else { return [] }
         var out: [String] = []
-        for interval in dto.intervals {
-            append(interval: interval, into: &out)
-            if out.count >= limit { break }
-        }
-        if dto.intervals.count > limit {
-            out.append("… +\(dto.intervals.count - limit) more")
+        let intervals = dto.intervals
+        for (index, interval) in intervals.enumerated() {
+            let room = limit - out.count
+            guard room > 0 else { break }
+            let remainingIncludingThis = intervals.count - index
+            if room == 1, remainingIncludingThis > 1 {
+                out.append("… +\(remainingIncludingThis) more")
+                break
+            }
+            let before = out.count
+            append(interval: interval, into: &out, budget: room)
+            // Hard cap even if append miscounted.
+            if out.count > limit {
+                out = Array(out.prefix(limit))
+                break
+            }
+            if out.count == before {
+                // Nothing added (budget too small) — stop.
+                break
+            }
         }
         return out
     }
 
-    private static func append(interval: WKPlanDTO.Interval, into out: inout [String]) {
+    private static func append(
+        interval: WKPlanDTO.Interval,
+        into out: inout [String],
+        budget: Int
+    ) {
+        guard budget > 0 else { return }
         switch interval {
         case .warmup(let seconds, _):
             out.append("Warm-up · \(seconds)s")
@@ -31,11 +51,17 @@ enum WorkoutKitPlanStepSummary {
             out.append("Cool-down · \(seconds)s")
         case .repeatSet(let reps, let steps):
             out.append("Repeat ×\(reps)")
-            for step in steps.prefix(6) {
+            var used = 1
+            for (stepIndex, step) in steps.enumerated() {
+                let left = budget - used
+                guard left > 0 else { break }
+                let remainingSteps = steps.count - stepIndex
+                if left == 1, remainingSteps > 1 {
+                    out.append("  · … +\(remainingSteps) steps")
+                    break
+                }
                 out.append("  · \(label(for: step))")
-            }
-            if steps.count > 6 {
-                out.append("  · … +\(steps.count - 6) steps")
+                used += 1
             }
         case .step(let step):
             out.append(label(for: step))

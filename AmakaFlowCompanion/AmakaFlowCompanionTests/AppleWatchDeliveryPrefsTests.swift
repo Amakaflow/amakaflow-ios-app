@@ -90,6 +90,19 @@ final class AppleWatchDeliveryPrefsTests: XCTestCase {
         XCTAssertTrue(lines.contains { $0.localizedCaseInsensitiveContains("rest") })
     }
 
+    func testStepSummaryRespectsHardLimit() throws {
+        let intervals = (0..<20).map { i in
+            "{\"kind\":\"work\",\"name\":\"Move \(i)\",\"reps\":5}"
+        }.joined(separator: ",")
+        let json = """
+        {"title":"Long","sportType":"traditionalStrengthTraining","intervals":[\(intervals)]}
+        """.data(using: .utf8)!
+        let limit = 5
+        let lines = WorkoutKitPlanStepSummary.lines(from: json, limit: limit)
+        XCTAssertEqual(lines.count, limit)
+        XCTAssertTrue(lines.last?.hasPrefix("… +") == true)
+    }
+
     func testMapperProviderForwardsDeliveryPrefs() async throws {
         let api = MockAPIService()
         api.fetchWorkoutBlocksJSONResult = .success([

@@ -17,7 +17,6 @@ struct AppleWatchDeliveryPrefsSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var prefs: AppleWatchDeliveryPrefs
-    private let initialPrefs: AppleWatchDeliveryPrefs
 
     init(
         mode: Mode = .settings,
@@ -26,8 +25,12 @@ struct AppleWatchDeliveryPrefsSheet: View {
     ) {
         self.mode = mode
         self.onSaved = onSaved
-        let starting = initial ?? AppleWatchDeliveryPrefsStore.current
-        initialPrefs = starting
+        // Unconfigured users edit dogfood locally until Save — do not mark configured on open.
+        let starting = initial ?? (
+            AppleWatchDeliveryPrefsStore.hasConfigured
+                ? AppleWatchDeliveryPrefsStore.current
+                : .dogfood
+        )
         _prefs = State(initialValue: starting)
     }
 
@@ -43,7 +46,6 @@ struct AppleWatchDeliveryPrefsSheet: View {
                         ForEach(AppleExerciseEnd.allCases) { option in
                             optionRow(title: option.title, isSelected: prefs.exerciseEnd == option) {
                                 prefs.exerciseEnd = option
-                                AppleWatchDeliveryPrefsStore.applyLiveSelection(exerciseEnd: option)
                             }
                         }
                     }
@@ -52,7 +54,6 @@ struct AppleWatchDeliveryPrefsSheet: View {
                         ForEach(AppleRestMode.allCases) { option in
                             optionRow(title: option.title, isSelected: prefs.restMode == option) {
                                 prefs.restMode = option
-                                AppleWatchDeliveryPrefsStore.applyLiveSelection(restMode: option)
                             }
                         }
                     }
@@ -77,8 +78,6 @@ struct AppleWatchDeliveryPrefsSheet: View {
                     .accessibilityIdentifier("af_apple_delivery_prefs_save")
 
                     Button {
-                        prefs = initialPrefs
-                        AppleWatchDeliveryPrefsStore.current = initialPrefs
                         dismiss()
                     } label: {
                         Text("Cancel")
@@ -95,7 +94,6 @@ struct AppleWatchDeliveryPrefsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .preferredColorScheme(.dark)
-        .interactiveDismissDisabled()
     }
 
     private func section<Content: View>(

@@ -141,6 +141,7 @@
 		AMA2291LIBDESTBLD /* LibraryDestination.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2291LIBDESTREF /* LibraryDestination.swift */; };
 		AMA2291UNIDETBLD /* UnifiedWorkoutDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2291UNIDETREF /* UnifiedWorkoutDetailView.swift */; };
 		AMA2312INFOBLD /* DDExerciseInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2312INFOREF /* DDExerciseInfoView.swift */; };
+		AMA2360PREFNOTEBLD /* WorkoutStartSheetPrefNotes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2360PREFNOTEREF /* WorkoutStartSheetPrefNotes.swift */; };
 		AMA2291STARTSHBLD /* WorkoutStartSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2291STARTSHREF /* WorkoutStartSheet.swift */; };
 		AMA2291STARTSTBLD /* WorkoutStartSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2291STARTSTREF /* WorkoutStartSelectionTests.swift */; };
 		AMA2286GARHANDBLD /* GarminStartHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2286GARHANDREF /* GarminStartHandoff.swift */; };
@@ -734,6 +735,7 @@
 		AMA2291LIBDESTREF /* LibraryDestination.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryDestination.swift; path = ../AmakaFlow/Models/LibraryDestination.swift; sourceTree = SOURCE_ROOT; };
 		AMA2291UNIDETREF /* UnifiedWorkoutDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UnifiedWorkoutDetailView.swift; path = ../AmakaFlow/Views/UnifiedWorkoutDetailView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2312INFOREF /* DDExerciseInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDExerciseInfoView.swift; path = ../AmakaFlow/Views/DDExerciseInfoView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2360PREFNOTEREF /* WorkoutStartSheetPrefNotes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutStartSheetPrefNotes.swift; path = ../AmakaFlow/Views/Components/WorkoutStartSheetPrefNotes.swift; sourceTree = SOURCE_ROOT; };
 		AMA2291STARTSHREF /* WorkoutStartSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutStartSheet.swift; path = ../AmakaFlow/Views/Components/WorkoutStartSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2291STARTSTREF /* WorkoutStartSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutStartSelectionTests.swift; path = AmakaFlowCompanionTests/WorkoutStartSelectionTests.swift; sourceTree = "<group>"; };
 		AMA2286GARHANDREF /* GarminStartHandoff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminStartHandoff.swift; path = ../AmakaFlow/Services/GarminStartHandoff.swift; sourceTree = SOURCE_ROOT; };
@@ -1397,6 +1399,7 @@
 				AMA2297DDGYM00000A /* DDGymDetailView.swift */,
 				AMA2290BFVIEWREF /* StrengthBackfillView.swift */,
 				AMA2290WCVCOMPREF /* WorkoutCompletionView+Components.swift */,
+				AMA2360PREFNOTEREF /* WorkoutStartSheetPrefNotes.swift */,
 				AMA2291STARTSHREF /* WorkoutStartSheet.swift */,
 				AMA2360SHEETREF01 /* AppleWatchDeliveryPrefsSheet.swift */,
 				AMA2316SHEETREF01 /* GarminWatchDisplayPrefsSheet.swift */,
@@ -2478,6 +2481,7 @@
 				AMA2291LIBDESTBLD /* LibraryDestination.swift in Sources */,
 				AMA2291UNIDETBLD /* UnifiedWorkoutDetailView.swift in Sources */,
 				AMA2312INFOBLD /* DDExerciseInfoView.swift in Sources */,
+				AMA2360PREFNOTEBLD /* WorkoutStartSheetPrefNotes.swift in Sources */,
 				AMA2291STARTSHBLD /* WorkoutStartSheet.swift in Sources */,
 				AK00FIX004B /* StravaService.swift in Sources */,
 				AK00FIX005B /* AnalyticsViewModel.swift in Sources */,
