@@ -157,6 +157,10 @@ class WorkoutEditorViewModel: ObservableObject {
                 print("[WorkoutEditorVM] Detail cache update failed: \(error)")
             }
             print("[WorkoutEditorVM] Workout saved successfully: \(request.name) id=\(saved.id)")
+            // AMA-2359 — Library list only refreshes via `.libraryContentDidChange`
+            // (on `.task`/onReceive, not a shared store). Post here so a create/edit
+            // save is visible immediately without tabbing away and back.
+            NotificationCenter.default.post(name: .libraryContentDidChange, object: nil)
             didSave = true
         } catch {
             print("[WorkoutEditorVM] Save failed: \(error.localizedDescription)")
