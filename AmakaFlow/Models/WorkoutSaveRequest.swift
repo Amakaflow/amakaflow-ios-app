@@ -39,6 +39,10 @@ struct WorkoutSaveRequest: Codable {
     var workoutId: String?
     /// AMA-2336 — workout-level enrichment deletes, persisted on `workout_data`.
     var enrichmentTombstones: [EnrichmentTombstone]?
+    /// Stable taxonomy identifier selected or matched for this workout.
+    var canonicalId: String?
+    /// Ownership of the canonical selection (`auto`, `user_pick`, or `preset`).
+    var canonicalSource: CanonicalSource?
 
     /// Convert from existing Workout model for edit mode
     static func from(workout: Workout) -> WorkoutSaveRequest {

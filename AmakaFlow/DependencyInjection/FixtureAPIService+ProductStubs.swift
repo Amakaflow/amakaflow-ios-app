@@ -9,6 +9,34 @@
 import Foundation
 
 extension FixtureAPIService {
+    // MARK: - Canonical Workout Types
+
+    func fetchWorkoutTypes(aiPresetOnly: Bool) async throws -> [WorkoutTypeItem] {
+        let tempoRun = WorkoutTypeItem(
+            id: "tempo_run",
+            category: "cardio",
+            format: "continuous",
+            focus: ["threshold"],
+            displayName: "Tempo Run",
+            aliases: ["threshold tempo"],
+            aiPreset: true,
+            equipment: ["running_shoes"],
+            platformTags: ["apple": "running", "garmin": "run"]
+        )
+        return [tempoRun]
+    }
+
+    func matchWorkoutType(title: String) async throws -> WorkoutTypeMatchResponse {
+        WorkoutTypeMatchResponse(
+            canonicalId: "tempo_run",
+            displayName: "Tempo Run",
+            confidence: 1,
+            method: "fixture",
+            normalizedTitle: title,
+            candidates: []
+        )
+    }
+
     // MARK: - Readiness (AMA-2054)
 
     func readinessToday() async throws -> Components.Schemas.ReadinessToday {

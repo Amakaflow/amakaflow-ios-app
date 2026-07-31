@@ -18,6 +18,8 @@ class MockAPIService: APIServiceProviding {
     var fetchPendingWorkoutsResult: Result<[Workout], Error> = .success([])
     var syncWorkoutResult: Result<Void, Error> = .success(())
     var getAppleExportResult: Result<String, Error> = .success("{}")
+    var fetchWorkoutTypesResult: Result<[WorkoutTypeItem], Error> = .success([])
+    var matchWorkoutTypeResult: Result<WorkoutTypeMatchResponse, Error>?
     var mintTelegramLinkTokenResult: Result<TelegramLinkTokenResponse, Error> = .success(
         TelegramLinkTokenResponse(
             token: "mock-telegram-token",
@@ -72,6 +74,10 @@ class MockAPIService: APIServiceProviding {
     var syncWorkoutCalled = false
     var syncedWorkout: Workout?
     var getAppleExportCalled = false
+    var fetchWorkoutTypesCalled = false
+    var lastFetchWorkoutTypesAIPresetOnly: Bool?
+    var matchWorkoutTypeCalled = false
+    var lastMatchWorkoutTypeTitle: String?
     var mintTelegramLinkTokenCalled = false
     var getTelegramLinkStatusCalled = false
     var telegramLinkStatusToken: String?
@@ -135,6 +141,21 @@ class MockAPIService: APIServiceProviding {
     func getAppleExport(workoutId: String) async throws -> String {
         getAppleExportCalled = true
         return try getAppleExportResult.get()
+    }
+
+    func fetchWorkoutTypes(aiPresetOnly: Bool) async throws -> [WorkoutTypeItem] {
+        fetchWorkoutTypesCalled = true
+        lastFetchWorkoutTypesAIPresetOnly = aiPresetOnly
+        return try fetchWorkoutTypesResult.get()
+    }
+
+    func matchWorkoutType(title: String) async throws -> WorkoutTypeMatchResponse {
+        matchWorkoutTypeCalled = true
+        lastMatchWorkoutTypeTitle = title
+        guard let result = matchWorkoutTypeResult else {
+            throw APIError.notImplemented
+        }
+        return try result.get()
     }
 
     var mapToWorkoutKitResult: Result<Data, Error> = .success(Data(

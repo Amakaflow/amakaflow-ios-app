@@ -45,6 +45,14 @@ protocol APIServiceProviding: TelegramLinkAPIProviding, SocialImportAPIProviding
         deliveryPrefs: [String: Any]?
     ) async throws -> Data
 
+    // MARK: - Canonical Workout Types
+
+    /// Fetch canonical workout types through the mobile BFF.
+    func fetchWorkoutTypes(aiPresetOnly: Bool) async throws -> [WorkoutTypeItem]
+
+    /// Match a freeform title to the canonical taxonomy through the mobile BFF.
+    func matchWorkoutType(title: String) async throws -> WorkoutTypeMatchResponse
+
     // MARK: - Voice Workout Parsing
 
     /// Parse a voice transcription into a structured workout
