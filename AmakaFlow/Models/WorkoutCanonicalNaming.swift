@@ -68,9 +68,13 @@ struct CanonicalMatchState: Equatable, Sendable {
 
     mutating func applyAutoMatchIfEligible(_ response: WorkoutTypeMatchResponse) {
         guard canAttemptAutoMatch,
-              !isClearSuppressed(serverNormalizedTitle: response.normalizedTitle),
+              !isClearSuppressed(serverNormalizedTitle: response.normalizedTitle) else {
+            return
+        }
+        guard response.method != "none",
               let canonicalId = response.canonicalId,
               let displayName = response.displayName else {
+            clearAutoMatch()
             return
         }
         self.canonicalId = canonicalId
@@ -122,6 +126,13 @@ struct CanonicalMatchState: Equatable, Sendable {
         chipDisplayName = displayName
         clearSuppressionNormalizedTitle = nil
     }
+
+    private mutating func clearAutoMatch() {
+        guard source == .auto else { return }
+        canonicalId = nil
+        source = nil
+        chipDisplayName = nil
+    }
 }
 
 @MainActor
@@ -133,6 +144,7 @@ final class WorkoutTypeMatchController: ObservableObject {
     private var titleAwaitingMatch: String?
     private var currentTitleForSaveMatch: String?
     private var latestServerNormalizedTitle: String?
+    private var clearSuppressionPendingTitle: String?
 
     var canonicalId: String? { state.canonicalId }
     var canonicalSource: CanonicalSource? { state.source }
@@ -184,15 +196,20 @@ final class WorkoutTypeMatchController: ObservableObject {
         state.resolveLoadedDisplayName(from: catalog)
     }
 
-    func clear() {
-        state.clear(serverNormalizedTitle: latestServerNormalizedTitle)
+    func clear() async {
+        let title = currentTitleForSaveMatch
+        let normalizedTitle = await normalizedTitleForClear(title: title)
+        state.clear(serverNormalizedTitle: normalizedTitle)
+        clearSuppressionPendingTitle = normalizedTitle == nil ? title : nil
         titleAwaitingMatch = nil
-        lastMatchSoftFailed = false
     }
 
     func clear(serverNormalizedTitle: String) {
         latestServerNormalizedTitle = serverNormalizedTitle
-        clear()
+        state.clear(serverNormalizedTitle: serverNormalizedTitle)
+        clearSuppressionPendingTitle = nil
+        titleAwaitingMatch = nil
+        lastMatchSoftFailed = false
     }
 
     private func attemptPendingAutoMatch() async {
@@ -229,6 +246,12 @@ final class WorkoutTypeMatchController: ObservableObject {
             guard title == currentTitleForSaveMatch else { return }
             latestServerNormalizedTitle = response.normalizedTitle
             lastCandidates = response.candidates
+            if clearSuppressionPendingTitle == title {
+                state.clear(serverNormalizedTitle: response.normalizedTitle)
+                clearSuppressionPendingTitle = nil
+                lastMatchSoftFailed = false
+                return
+            }
             state.applyAutoMatchIfEligible(response)
             lastMatchSoftFailed = false
         } catch {
@@ -242,6 +265,30 @@ final class WorkoutTypeMatchController: ObservableObject {
         titleAwaitingMatch = nil
         currentTitleForSaveMatch = nil
         latestServerNormalizedTitle = nil
+        clearSuppressionPendingTitle = nil
         lastMatchSoftFailed = false
+    }
+
+    private func normalizedTitleForClear(title: String?) async -> String? {
+        if let latestServerNormalizedTitle {
+            return latestServerNormalizedTitle
+        }
+        guard let title,
+              !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+
+        do {
+            let response = try await apiService.matchWorkoutType(title: title)
+            guard title == currentTitleForSaveMatch else { return nil }
+            latestServerNormalizedTitle = response.normalizedTitle
+            lastCandidates = response.candidates
+            lastMatchSoftFailed = false
+            return response.normalizedTitle
+        } catch {
+            guard title == currentTitleForSaveMatch else { return nil }
+            lastMatchSoftFailed = true
+            return nil
+        }
     }
 }

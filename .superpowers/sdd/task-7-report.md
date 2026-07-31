@@ -41,3 +41,32 @@ Simulator UI dogfood was not performed in this task. Verify:
 - Pick a type, rename the title → the picked chip remains.
 - In airplane mode with a prior chip → save keeps the last-known match.
 - Load a workout with an unknown/retired canonical ID → no chip appears.
+
+## Important review fixes
+
+- Clear now obtains the server-normalized title before removing a loaded
+  `user_pick` chip. Online save therefore keeps the cleared canonical fields
+  null instead of reapplying the same match.
+- If the clear-time lookup soft-fails, the next successful match for that same
+  title establishes suppression before it can apply; save remains non-blocking.
+- A successful no-match response now removes a stale `.auto` chip while leaving
+  `user_pick` and `preset` ownership locks unchanged.
+
+## Review-fix verification
+
+TDD red was confirmed for both review regressions: the loaded `user_pick` clear
+test failed by restoring `tempo_run` as `.auto`, and the no-match test failed by
+retaining the prior auto chip.
+
+```text
+xcodebuild test \
+  -project AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj \
+  -scheme AmakaFlowCompanion \
+  -destination 'platform=iOS Simulator,id=CC96CAB1-5E7D-4FE6-8559-23809EBEB86E' \
+  -only-testing:AmakaFlowCompanionTests/WorkoutCanonicalNamingTests \
+  -only-testing:AmakaFlowCompanionTests/WorkoutEditorSaveTests \
+  -skip-testing:AmakaFlowCompanionUITests \
+  -parallel-testing-enabled NO
+
+Executed 30 tests, 0 failures — TEST SUCCEEDED
+```

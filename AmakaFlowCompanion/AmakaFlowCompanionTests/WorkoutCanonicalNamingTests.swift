@@ -252,13 +252,57 @@ final class WorkoutCanonicalNamingTests: XCTestCase {
         XCTAssertEqual(controller.lastCandidates, candidates)
     }
 
+    func testClearLoadedUserPickObtainsSuppressionBeforeOnlineSave() async {
+        let apiService = MockAPIService()
+        apiService.matchWorkoutTypeResult = .success(match(normalizedTitle: "tempo run"))
+        let controller = WorkoutTypeMatchController(
+            apiService: apiService,
+            state: CanonicalMatchState(
+                canonicalId: "tempo_run",
+                source: .userPick,
+                chip: "Tempo Run"
+            )
+        )
+        controller.noteTitleForSave("Tempo Run")
+
+        await controller.clear()
+        let values = await controller.onSave(online: true)
+
+        XCTAssertEqual(apiService.matchWorkoutTypeCallCount, 1)
+        XCTAssertEqual(controller.clearSuppressionNormalizedTitle, "tempo run")
+        XCTAssertNil(controller.chipDisplayName)
+        XCTAssertNil(values.canonicalId)
+        XCTAssertNil(values.source)
+    }
+
+    func testNoMatchResponseClearsPriorAutoChip() async {
+        let apiService = MockAPIService()
+        apiService.matchWorkoutTypeResult = .success(
+            match(canonicalId: nil, displayName: nil, method: "none")
+        )
+        let controller = WorkoutTypeMatchController(
+            apiService: apiService,
+            state: CanonicalMatchState(
+                canonicalId: "tempo_run",
+                source: .auto,
+                chip: "Tempo Run"
+            )
+        )
+
+        await controller.onTitleIdle(title: "Unmatched workout")
+
+        XCTAssertNil(controller.canonicalId)
+        XCTAssertNil(controller.canonicalSource)
+        XCTAssertNil(controller.chipDisplayName)
+    }
+
     func testClearHidesChipAndProducesNullSaveValues() async {
         let apiService = MockAPIService()
         apiService.matchWorkoutTypeResult = .success(match())
         var controller = WorkoutTypeMatchController(apiService: apiService)
         await controller.onTitleIdle(title: "Tempo Run")
 
-        controller.clear()
+        await controller.clear()
         let values = await controller.onSave(online: false)
 
         XCTAssertNil(controller.chipDisplayName)
@@ -325,13 +369,14 @@ final class WorkoutCanonicalNamingTests: XCTestCase {
         canonicalId: String? = "tempo_run",
         displayName: String? = "Tempo Run",
         normalizedTitle: String = "tempo run",
+        method: String = "exact",
         candidates: [WorkoutTypeCandidate] = []
     ) -> WorkoutTypeMatchResponse {
         WorkoutTypeMatchResponse(
             canonicalId: canonicalId,
             displayName: displayName,
             confidence: 1,
-            method: "exact",
+            method: method,
             normalizedTitle: normalizedTitle,
             candidates: candidates
         )

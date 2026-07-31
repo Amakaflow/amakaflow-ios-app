@@ -475,7 +475,7 @@ extension EditorV2View {
                 )
             },
             onClear: {
-                matchController.clear()
+                Task { await matchController.clear() }
             }
         )
         .presentationDetents([.medium, .large])
