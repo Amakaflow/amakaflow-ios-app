@@ -12,7 +12,6 @@ import SwiftUI
 struct WorkoutEnrichmentPushSheet: View {
     let plan: WorkoutEnrichmentPushPlanner.Plan
     let prefs: WorkoutPreferences
-    let target: EnrichmentPushTarget
     let onConfirm: (WorkoutEnrichmentPushPlanner.Decision) -> Void
     let onSkip: () -> Void
     let onClose: () -> Void
@@ -21,17 +20,17 @@ struct WorkoutEnrichmentPushSheet: View {
     @State private var restSec: Int
     @State private var restOpen: Bool
 
+    private var target: EnrichmentPushTarget { plan.target }
+
     init(
         plan: WorkoutEnrichmentPushPlanner.Plan,
         prefs: WorkoutPreferences,
-        target: EnrichmentPushTarget = .garmin,
         onConfirm: @escaping (WorkoutEnrichmentPushPlanner.Decision) -> Void,
         onSkip: @escaping () -> Void,
         onClose: @escaping () -> Void
     ) {
         self.plan = plan
         self.prefs = prefs
-        self.target = target
         self.onConfirm = onConfirm
         self.onSkip = onSkip
         self.onClose = onClose
@@ -40,7 +39,7 @@ struct WorkoutEnrichmentPushSheet: View {
         _restOpen = State(
             initialValue: WorkoutEnrichmentPushCopy.initialRestOpen(
                 standing: prefs.betweenSetRest,
-                target: target
+                target: plan.target
             )
         )
     }
@@ -263,7 +262,6 @@ struct WorkoutEnrichmentPushSheet: View {
             target: .garmin
         ),
         prefs: .defaults,
-        target: .garmin,
         onConfirm: { _ in },
         onSkip: {},
         onClose: {}
@@ -293,7 +291,6 @@ struct WorkoutEnrichmentPushSheet: View {
             target: .apple
         ),
         prefs: .defaults,
-        target: .apple,
         onConfirm: { _ in },
         onSkip: {},
         onClose: {}

@@ -353,7 +353,6 @@ enum WorkoutEnrichmentPushPlanner {
             return !excluded.contains(ExerciseKeyNormalizer.normalize(exercise.name))
         }
     }
-
 }
 
 /// Read-only `blocks_json` parse for presence checks.

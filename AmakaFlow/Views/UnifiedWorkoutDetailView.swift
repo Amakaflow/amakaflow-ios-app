@@ -176,7 +176,6 @@ struct UnifiedWorkoutDetailView: View {
                 WorkoutEnrichmentPushSheet(
                     plan: prepared.plan,
                     prefs: prepared.prefs,
-                    target: prepared.target,
                     onConfirm: { decision in
                         startFlowSheet = nil
                         if enrichmentContinuesToApple {
