@@ -113,6 +113,7 @@ struct SettingsView: View {
     @State private var garminDebugMessage = ""
     @State private var showingManualUUIDSheet = false
     @State private var showingGarminWatchDisplayPrefs = false
+    @State private var showingAppleWatchDeliveryPrefs = false
     /// AMA-2336 — `workout_preferences` editor (separate from AMA-2316 display prefs).
     @State private var showingWorkoutEnrichmentPrefs = false
     @State private var manualUUID = ""
@@ -204,6 +205,9 @@ struct SettingsView: View {
                 GarminWatchDisplayPrefsSheet(
                     mode: GarminWatchDisplayPrefsStore.hasConfigured ? .settings : .onboarding
                 )
+            }
+            .sheet(isPresented: $showingAppleWatchDeliveryPrefs) {
+                AppleWatchDeliveryPrefsSheet(mode: .settings)
             }
             .sheet(isPresented: $showingWorkoutEnrichmentPrefs) {
                 WorkoutEnrichmentPrefsSheet()
@@ -1867,8 +1871,39 @@ struct SettingsView: View {
                 if deviceMode == .garminPhone {
                     garminConnectionCard
                 }
+
+                // AMA-2360: Apple delivery prefs are independent of Garmin device mode.
+                appleWatchDeliveryPrefsButton
             }
         }
+    }
+
+    /// Settings entry for Apple WorkoutKit delivery (visible for any device preference).
+    private var appleWatchDeliveryPrefsButton: some View {
+        Button {
+            showingAppleWatchDeliveryPrefs = true
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Apple Watch delivery")
+                    .font(Theme.Typography.body)
+                    .foregroundColor(Theme.Colors.textPrimary)
+                Text(
+                    AppleWatchDeliveryPrefsStore.hasConfigured
+                        ? AppleWatchDeliveryPrefsStore.current.summaryLine
+                        : "Mapper sport defaults — tap to customize"
+                )
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.textSecondary)
+                .lineLimit(3)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, Theme.Spacing.sm)
+            .padding(.horizontal, Theme.Spacing.md)
+            .background(Theme.Colors.surfaceElevated)
+            .cornerRadius(Theme.CornerRadius.md)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("af_apple_watch_delivery_prefs_settings")
     }
 
     // MARK: - Garmin Connection Card

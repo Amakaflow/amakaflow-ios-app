@@ -91,6 +91,10 @@ enum DefaultsKey: String {
     case garminWatchDisplayPrefs = "garmin_watch_display_prefs_v1"
     /// AMA-2316: one-time Connect sheet completed.
     case garminWatchDisplayPrefsConfigured = "garmin_watch_display_prefs_configured_v1"
+    /// AMA-2360: Codable AppleWatchDeliveryPrefs blob.
+    case appleWatchDeliveryPrefs = "apple_watch_delivery_prefs_v1"
+    /// AMA-2360: user has saved Apple delivery prefs at least once.
+    case appleWatchDeliveryPrefsConfigured = "apple_watch_delivery_prefs_configured_v1"
     case instagramImportMode
     case nutritionSettings = "nutrition_settings"
     case pendingWorkoutCompletionQueue = "WorkoutCompletionPendingQueue"

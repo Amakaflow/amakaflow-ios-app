@@ -23,6 +23,9 @@ struct UnifiedWorkoutDetailView: View {
     @State private var showingWorkoutPlayer = false
     @State private var showingGarminPairing = false
     @State private var showingGarminDisplayPrefs = false
+    @State private var showingAppleDeliveryPrefs = false
+    /// AMA-2360: enrichment sheet may continue to Apple compose instead of Garmin push.
+    @State private var enrichmentContinuesToApple = false
     /// AMA-2346: single sheet so Start → enrichment never races a second `.sheet`
     /// (dual sheets let push/openApp land before answers).
     @State private var startFlowSheet: WorkoutStartFlowSheet?
@@ -136,6 +139,10 @@ struct UnifiedWorkoutDetailView: View {
                         startFlowSheet = nil
                         showingGarminDisplayPrefs = true
                     },
+                    onEditApplePrefs: {
+                        startFlowSheet = nil
+                        showingAppleDeliveryPrefs = true
+                    },
                     onClose: { startFlowSheet = nil }
                 )
                 .task {
@@ -149,6 +156,8 @@ struct UnifiedWorkoutDetailView: View {
                     workoutName: name,
                     meta: meta,
                     intervalCount: intervalCount,
+                    stepLines: WorkoutKitPlanStepSummary.lines(from: planJSON),
+                    prefsSummary: AppleWatchDeliveryPrefsStore.previewSummaryLine,
                     onConfirm: {
                         startFlowSheet = nil
                         confirmAppleWorkoutKitSchedule(
@@ -169,19 +178,26 @@ struct UnifiedWorkoutDetailView: View {
                     prefs: prepared.prefs,
                     onConfirm: { decision in
                         startFlowSheet = nil
-                        applyEnrichmentThenPush(prepared: prepared, decision: decision)
+                        if enrichmentContinuesToApple {
+                            applyEnrichmentThenAppleHandoff(prepared: prepared, decision: decision)
+                        } else {
+                            applyEnrichmentThenPush(prepared: prepared, decision: decision)
+                        }
                     },
                     onSkip: {
                         startFlowSheet = nil
-                        // Skip still records rejects so mobility cannot reappear next push.
-                        applyEnrichmentThenPush(
-                            prepared: prepared,
-                            decision: WorkoutEnrichmentPushPlanner.Decision(checkedKinds: [])
-                        )
+                        let skip = WorkoutEnrichmentPushPlanner.Decision(checkedKinds: [])
+                        if enrichmentContinuesToApple {
+                            applyEnrichmentThenAppleHandoff(prepared: prepared, decision: skip)
+                        } else {
+                            // Skip still records rejects so mobility cannot reappear next push.
+                            applyEnrichmentThenPush(prepared: prepared, decision: skip)
+                        }
                     },
                     onClose: {
                         startFlowSheet = nil
                         pendingGarminGymTitle = nil
+                        enrichmentContinuesToApple = false
                     }
                 )
                 .presentationDetents([.large, .medium])
@@ -198,6 +214,9 @@ struct UnifiedWorkoutDetailView: View {
         }
         .sheet(isPresented: $showingGarminDisplayPrefs) {
             GarminWatchDisplayPrefsSheet(mode: .settings)
+        }
+        .sheet(isPresented: $showingAppleDeliveryPrefs) {
+            AppleWatchDeliveryPrefsSheet(mode: .settings)
         }
         .sheet(isPresented: $showingWorkoutSchedule) {
             NavigationStack {
@@ -905,6 +924,7 @@ extension UnifiedWorkoutDetailView {
             // answers are applied (or there is nothing to ask).
             showsHandoffNextSteps = false
             lastAppleHandoffShowsManagePlans = false
+            enrichmentContinuesToApple = false
             pendingGarminGymTitle = gym.title
             Task {
                 // Keep the Start sheet up while preparing so we can swap to the
@@ -926,8 +946,25 @@ extension UnifiedWorkoutDetailView {
                 await performGarminPush(gymTitle: gym.title, statusNote: nil)
             }
         case .apple:
-            startFlowSheet = nil
-            beginAppleTryHandoff()
+            // AMA-2360: same enrichment offer as Garmin, then mapper compose with
+            // Apple delivery prefs (not deliveryPrefs: nil).
+            showsHandoffNextSteps = false
+            lastAppleHandoffShowsManagePlans = false
+            enrichmentContinuesToApple = true
+            pendingGarminGymTitle = nil
+            Task {
+                if let prepared = await WorkoutEnrichmentPushCoordinator().prepare(
+                    workoutId: workout.id,
+                    title: workout.name
+                ) {
+                    guard startFlowSheet == .start else { return }
+                    startFlowSheet = .enrichment(prepared)
+                    return
+                }
+                guard startFlowSheet == .start else { return }
+                startFlowSheet = nil
+                beginAppleTryHandoff()
+            }
         case .phone:
             startFlowSheet = nil
             WorkoutEngine.shared.start(workout: workout)
@@ -944,6 +981,7 @@ extension UnifiedWorkoutDetailView {
         decision: WorkoutEnrichmentPushPlanner.Decision
     ) {
         let gymTitle = pendingGarminGymTitle ?? ""
+        enrichmentContinuesToApple = false
         handoffStatus = GarminLifecycleCopy.handoffQueueing
         Task {
             let outcome = await WorkoutEnrichmentPushCoordinator().apply(
@@ -954,6 +992,25 @@ extension UnifiedWorkoutDetailView {
                 displayedWorkout = refreshed
             }
             await performGarminPush(gymTitle: gymTitle, statusNote: outcome.note)
+        }
+    }
+
+    /// AMA-2360: apply enrichment answers, then mapper WorkoutKit compose + preview.
+    fileprivate func applyEnrichmentThenAppleHandoff(
+        prepared: WorkoutEnrichmentPushCoordinator.Prepared,
+        decision: WorkoutEnrichmentPushPlanner.Decision
+    ) {
+        enrichmentContinuesToApple = false
+        handoffStatus = "Building Apple Workout plan…"
+        Task {
+            let outcome = await WorkoutEnrichmentPushCoordinator().apply(
+                prepared: prepared,
+                decision: decision
+            )
+            if outcome.applied, let refreshed = await onEditorDismiss?() {
+                displayedWorkout = refreshed
+            }
+            beginAppleTryHandoff(statusNote: outcome.note)
         }
     }
 
@@ -1020,7 +1077,7 @@ extension UnifiedWorkoutDetailView {
         }
     }
 
-    fileprivate func beginAppleTryHandoff() {
+    fileprivate func beginAppleTryHandoff(statusNote: String? = nil) {
         guard !isAppleHandoffInFlight else { return }
         isAppleHandoffInFlight = true
         showsHandoffNextSteps = false
@@ -1029,20 +1086,29 @@ extension UnifiedWorkoutDetailView {
         Task {
             defer { isAppleHandoffInFlight = false }
             let service = AppleStartHandoffService(
-                planProvider: MapperWorkoutKitPlanProvider(),
+                planProvider: MapperWorkoutKitPlanProvider(
+                    deliveryPrefs: AppleWatchDeliveryPrefsStore.deliveryPrefsForMapper
+                ),
                 scheduleCapReader: .automatic
             )
             let prepared = await service.prepare(workout: workout)
+            let composedMessage = [statusNote, prepared.message]
+                .compactMap { $0 }
+                .filter { !$0.isEmpty }
+                .joined(separator: " ")
             switch prepared.kind {
             case .previewReady:
                 guard let meta = prepared.planMeta, let planJSON = prepared.planJSON else {
-                    handoffStatus = AppleStartHandoffCopy.failureMessage(code: .mapperComposeFailed)
+                    handoffStatus = [statusNote, AppleStartHandoffCopy.failureMessage(code: .mapperComposeFailed)]
+                        .compactMap { $0 }
+                        .filter { !$0.isEmpty }
+                        .joined(separator: " ")
                     return
                 }
                 let intervalCount: Int = {
                     (try? WorkoutKitSync.default.parse(from: planJSON).intervals.count) ?? 0
                 }()
-                handoffStatus = prepared.message
+                handoffStatus = composedMessage
                 startFlowSheet = .applePreview(
                     name: workout.name,
                     meta: meta,
@@ -1050,10 +1116,10 @@ extension UnifiedWorkoutDetailView {
                     planJSON: planJSON
                 )
             case .failed, .blocked:
-                handoffStatus = prepared.message
+                handoffStatus = composedMessage
                 lastAppleHandoffShowsManagePlans = prepared.showsManageScheduledPlans
             case .savedToFitness, .sentToWatch:
-                handoffStatus = prepared.message
+                handoffStatus = composedMessage
                 lastAppleHandoffShowsManagePlans = prepared.showsManageScheduledPlans
             }
         }

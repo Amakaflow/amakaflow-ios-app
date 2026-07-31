@@ -144,6 +144,7 @@ class MockAPIService: APIServiceProviding {
     ))
     private(set) var mapToWorkoutKitCalled = false
     private(set) var lastMapToWorkoutKitBlocks: [String: Any]?
+    private(set) var lastMapToWorkoutKitDeliveryPrefs: [String: Any]?
 
     func mapToWorkoutKit(
         blocksJSON: [String: Any],
@@ -151,7 +152,7 @@ class MockAPIService: APIServiceProviding {
     ) async throws -> Data {
         mapToWorkoutKitCalled = true
         lastMapToWorkoutKitBlocks = blocksJSON
-        _ = deliveryPrefs
+        lastMapToWorkoutKitDeliveryPrefs = deliveryPrefs
         return try mapToWorkoutKitResult.get()
     }
 
