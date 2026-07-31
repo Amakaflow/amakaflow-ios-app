@@ -649,13 +649,14 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         )
     }
 
-    func testAppleInitialRestOpenFollowsConfiguredDeliveryPrefs() {
+    func testAppleInitialRestOpenStaysOpenEvenWhenDeliveryPrefsTimed() {
+        // AMA-2363 — timed delivery prefs must not seed Timed 60s on the sheet.
         AppleWatchDeliveryPrefsStore.resetForTests()
         defer { AppleWatchDeliveryPrefsStore.resetForTests() }
 
         AppleWatchDeliveryPrefsStore.current = AppleWatchDeliveryPrefs(
             exerciseEnd: .tap,
-            restMode: .tap,
+            restMode: .timed,
             alertsEnabled: false
         )
         XCTAssertTrue(
@@ -667,7 +668,7 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
 
         AppleWatchDeliveryPrefsStore.current = AppleWatchDeliveryPrefs(
             exerciseEnd: .tap,
-            restMode: .timed,
+            restMode: .omit,
             alertsEnabled: false
         )
         XCTAssertFalse(
@@ -676,6 +677,24 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
                 target: .apple
             )
         )
+    }
+
+    func testMintMissingExerciseIdsForWarmupSets() {
+        let input: [String: Any] = [
+            "blocks": [
+                [
+                    "type": "sets",
+                    "exercises": [
+                        ["name": "Barbell back squat", "sets": 3, "reps": 10] as [String: Any]
+                    ]
+                ] as [String: Any]
+            ]
+        ]
+        let minted = WorkoutEnrichmentMutations.mintMissingExerciseIds(in: input)
+        let exercises = (minted["blocks"] as? [[String: Any]])?.first?["exercises"] as? [[String: Any]]
+        let id = exercises?.first?["exercise_id"] as? String
+        XCTAssertNotNil(id)
+        XCTAssertTrue(id?.hasPrefix("wex_") == true)
     }
 
     func testAppleOmitRestModeSkipsRestOffer() {

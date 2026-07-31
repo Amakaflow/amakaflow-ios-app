@@ -42,6 +42,9 @@ final class WorkoutEnrichmentPushCoordinator {
     struct ApplyOutcome: Equatable {
         var applied: Bool
         var note: String?
+        /// True when checked offers needed enrich and POST `/workout/enrich` failed.
+        /// Apple Start must not silently compose the unenriched workout (AMA-2363).
+        var enrichFailed: Bool = false
     }
 
     private let apiService: APIServiceProviding
@@ -116,13 +119,18 @@ final class WorkoutEnrichmentPushCoordinator {
 
             var blocksJSON = prepared.blocksJSON
             var enrichNote: String?
+            var enrichFailed = false
             if application.appliesAnything {
+                // Warm-up sets need exercise_id — mint before enrich (AMA-2363).
+                if application.prefs.exerciseWarmupSets.enabled {
+                    blocksJSON = WorkoutEnrichmentMutations.mintMissingExerciseIds(in: blocksJSON)
+                }
                 // Narrow enrich failure: still persist reject tombstones so unchecked
                 // offers cannot reappear on the next push (AMA-2346).
                 do {
                     let response = try await apiService.enrichWorkout(
                         EnrichRequest(
-                            blocksJSON: prepared.blocksJSON,
+                            blocksJSON: blocksJSON,
                             prefs: application.prefs,
                             tombstones: application.tombstones,
                             mode: .push
@@ -133,7 +141,8 @@ final class WorkoutEnrichmentPushCoordinator {
                     logger.error(
                         "Enrich failed, persisting tombstones only for \(prepared.workoutId, privacy: .public): \(error.localizedDescription, privacy: .public)"
                     )
-                    enrichNote = "Couldn’t add the warm-up/rest extras — sending your workout as it is."
+                    enrichNote = "Couldn’t add the warm-up/rest extras — fix and try again."
+                    enrichFailed = true
                 }
             }
             // Enrich is read-only on tombstones — persist the sheet answer ourselves.
@@ -143,7 +152,7 @@ final class WorkoutEnrichmentPushCoordinator {
                 blocksJSON: blocksJSON,
                 tombstones: application.tombstones
             )
-            return ApplyOutcome(applied: true, note: enrichNote)
+            return ApplyOutcome(applied: true, note: enrichNote, enrichFailed: enrichFailed)
         } catch {
             logger.error(
                 "Enrichment apply failed for \(prepared.workoutId, privacy: .public): \(error.localizedDescription, privacy: .public)"

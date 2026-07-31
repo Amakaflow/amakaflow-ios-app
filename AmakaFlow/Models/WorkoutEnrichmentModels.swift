@@ -450,6 +450,27 @@ enum WorkoutEnrichmentMutations {
         "wex_" + UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
     }
 
+    /// AMA-2363 — enrich warm-up sets require `exercise_id`; mint before POST /workout/enrich.
+    static func mintMissingExerciseIds(in blocksJSON: [String: Any]) -> [String: Any] {
+        guard var blocks = blocksJSON["blocks"] as? [[String: Any]] else { return blocksJSON }
+        var changed = false
+        for blockIndex in blocks.indices {
+            guard var exercises = blocks[blockIndex]["exercises"] as? [[String: Any]] else { continue }
+            for exerciseIndex in exercises.indices {
+                let existing = exercises[exerciseIndex]["exercise_id"] as? String
+                if existing?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true {
+                    exercises[exerciseIndex]["exercise_id"] = mintExerciseId()
+                    changed = true
+                }
+            }
+            blocks[blockIndex]["exercises"] = exercises
+        }
+        guard changed else { return blocksJSON }
+        var out = blocksJSON
+        out["blocks"] = blocks
+        return out
+    }
+
     static func appendTombstone(
         _ list: inout [EnrichmentTombstone],
         kind: EnrichmentKind,
