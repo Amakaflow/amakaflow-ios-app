@@ -5,13 +5,8 @@
 //  Canonical workout type contracts and client-side ownership state.
 //
 
+import Combine
 import Foundation
-
-enum CanonicalSource: String, Codable, Equatable, Sendable {
-    case auto
-    case userPick = "user_pick"
-    case preset
-}
 
 struct WorkoutTypeItem: Codable, Equatable, Sendable {
     let id: String
@@ -91,6 +86,15 @@ struct CanonicalMatchState: Equatable, Sendable {
         applyOwned(canonicalId: canonicalId, displayName: displayName, source: .preset)
     }
 
+    mutating func resolveLoadedDisplayName(from catalog: [WorkoutTypeItem]) {
+        guard let canonicalId,
+              let item = catalog.first(where: { $0.id == canonicalId }) else {
+            chipDisplayName = nil
+            return
+        }
+        chipDisplayName = item.displayName
+    }
+
     mutating func clear(serverNormalizedTitle: String?) {
         canonicalId = nil
         source = nil
@@ -120,10 +124,12 @@ struct CanonicalMatchState: Equatable, Sendable {
     }
 }
 
-struct WorkoutTypeMatchController {
+@MainActor
+final class WorkoutTypeMatchController: ObservableObject {
     private let apiService: any APIServiceProviding
-    private(set) var state: CanonicalMatchState
-    private(set) var lastMatchSoftFailed = false
+    @Published private(set) var state: CanonicalMatchState
+    @Published private(set) var lastMatchSoftFailed = false
+    @Published private(set) var lastCandidates: [WorkoutTypeCandidate] = []
     private var titleAwaitingMatch: String?
     private var currentTitleForSaveMatch: String?
     private var latestServerNormalizedTitle: String?
@@ -143,13 +149,17 @@ struct WorkoutTypeMatchController {
         self.state = state
     }
 
-    mutating func onTitleIdle(title: String) async {
+    func onTitleIdle(title: String) async {
         currentTitleForSaveMatch = title
         titleAwaitingMatch = title
         await attemptPendingAutoMatch()
     }
 
-    mutating func onSave(online: Bool) async -> CanonicalSaveValues {
+    func noteTitleForSave(_ title: String) {
+        currentTitleForSaveMatch = title
+    }
+
+    func onSave(online: Bool) async -> CanonicalSaveValues {
         if online {
             await attemptSaveAutoMatch()
         }
@@ -160,28 +170,32 @@ struct WorkoutTypeMatchController {
         )
     }
 
-    mutating func applyUserPick(canonicalId: String, displayName: String) {
+    func applyUserPick(canonicalId: String, displayName: String) {
         state.applyUserPick(canonicalId: canonicalId, displayName: displayName)
         clearPendingMatch()
     }
 
-    mutating func applyPreset(canonicalId: String, displayName: String) {
+    func applyPreset(canonicalId: String, displayName: String) {
         state.applyPreset(canonicalId: canonicalId, displayName: displayName)
         clearPendingMatch()
     }
 
-    mutating func clear() {
+    func resolveLoadedDisplayName(from catalog: [WorkoutTypeItem]) {
+        state.resolveLoadedDisplayName(from: catalog)
+    }
+
+    func clear() {
         state.clear(serverNormalizedTitle: latestServerNormalizedTitle)
         titleAwaitingMatch = nil
         lastMatchSoftFailed = false
     }
 
-    mutating func clear(serverNormalizedTitle: String) {
+    func clear(serverNormalizedTitle: String) {
         latestServerNormalizedTitle = serverNormalizedTitle
         clear()
     }
 
-    private mutating func attemptPendingAutoMatch() async {
+    private func attemptPendingAutoMatch() async {
         guard state.canAttemptAutoMatch,
               let title = titleAwaitingMatch,
               !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -194,7 +208,7 @@ struct WorkoutTypeMatchController {
         }
     }
 
-    private mutating func attemptSaveAutoMatch() async {
+    private func attemptSaveAutoMatch() async {
         guard state.canAttemptAutoMatch,
               state.clearSuppressionNormalizedTitle == nil
                 || state.clearSuppressionNormalizedTitle != latestServerNormalizedTitle,
@@ -209,19 +223,22 @@ struct WorkoutTypeMatchController {
         }
     }
 
-    private mutating func attemptAutoMatch(title: String) async {
+    private func attemptAutoMatch(title: String) async {
         do {
             let response = try await apiService.matchWorkoutType(title: title)
+            guard title == currentTitleForSaveMatch else { return }
             latestServerNormalizedTitle = response.normalizedTitle
+            lastCandidates = response.candidates
             state.applyAutoMatchIfEligible(response)
             lastMatchSoftFailed = false
         } catch {
+            guard title == currentTitleForSaveMatch else { return }
             // Taxonomy matching is advisory. Preserve last-known state and allow save.
             lastMatchSoftFailed = true
         }
     }
 
-    private mutating func clearPendingMatch() {
+    private func clearPendingMatch() {
         titleAwaitingMatch = nil
         currentTitleForSaveMatch = nil
         latestServerNormalizedTitle = nil

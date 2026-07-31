@@ -8,6 +8,7 @@
 import XCTest
 @testable import AmakaFlowCompanion
 
+@MainActor
 final class WorkoutCanonicalNamingTests: XCTestCase {
 
     func testAutoMatchNeverReplacesUserPick() {
@@ -226,10 +227,105 @@ final class WorkoutCanonicalNamingTests: XCTestCase {
         XCTAssertEqual(values.source, .auto)
     }
 
+    func testSuccessfulMatchShowsChipAndRetainsTopCandidates() async {
+        let apiService = MockAPIService()
+        let candidates = [
+            WorkoutTypeCandidate(
+                canonicalId: "tempo_run",
+                displayName: "Tempo Run",
+                confidence: 1
+            ),
+            WorkoutTypeCandidate(
+                canonicalId: "interval_run",
+                displayName: "Interval Run",
+                confidence: 0.72
+            )
+        ]
+        apiService.matchWorkoutTypeResult = .success(
+            match(candidates: candidates)
+        )
+        var controller = WorkoutTypeMatchController(apiService: apiService)
+
+        await controller.onTitleIdle(title: "Tempo Run")
+
+        XCTAssertEqual(controller.chipDisplayName, "Tempo Run")
+        XCTAssertEqual(controller.lastCandidates, candidates)
+    }
+
+    func testClearHidesChipAndProducesNullSaveValues() async {
+        let apiService = MockAPIService()
+        apiService.matchWorkoutTypeResult = .success(match())
+        var controller = WorkoutTypeMatchController(apiService: apiService)
+        await controller.onTitleIdle(title: "Tempo Run")
+
+        controller.clear()
+        let values = await controller.onSave(online: false)
+
+        XCTAssertNil(controller.chipDisplayName)
+        XCTAssertNil(values.canonicalId)
+        XCTAssertNil(values.source)
+    }
+
+    func testUserPickSurvivesTitleRename() async {
+        let apiService = MockAPIService()
+        apiService.matchWorkoutTypeResult = .success(
+            match(canonicalId: "leg_day", displayName: "Leg Day")
+        )
+        var controller = WorkoutTypeMatchController(apiService: apiService)
+        controller.applyUserPick(canonicalId: "tempo_run", displayName: "Tempo Run")
+
+        await controller.onTitleIdle(title: "Renamed workout")
+
+        XCTAssertFalse(apiService.matchWorkoutTypeCalled)
+        XCTAssertEqual(controller.canonicalId, "tempo_run")
+        XCTAssertEqual(controller.canonicalSource, .userPick)
+        XCTAssertEqual(controller.chipDisplayName, "Tempo Run")
+    }
+
+    func testLoadedKnownIdResolvesChipButUnknownIdDoesNot() {
+        let catalog = [
+            workoutType(id: "tempo_run", displayName: "Tempo Run")
+        ]
+        var known = CanonicalMatchState(canonicalId: "tempo_run", source: .auto)
+        var unknown = CanonicalMatchState(canonicalId: "retired_type", source: .auto)
+
+        known.resolveLoadedDisplayName(from: catalog)
+        unknown.resolveLoadedDisplayName(from: catalog)
+
+        XCTAssertEqual(known.chipDisplayName, "Tempo Run")
+        XCTAssertNil(unknown.chipDisplayName)
+    }
+
+    @MainActor
+    func testEditorSavePassesCanonicalFields() async {
+        let apiService = MockAPIService()
+        let dependencies = AppDependencies(
+            apiService: apiService,
+            pairingService: MockPairingService(),
+            audioService: MockAudioService(),
+            progressStore: MockProgressStore(),
+            watchSession: MockWatchSession(),
+            chatStreamService: MockChatStreamService()
+        )
+        let viewModel = WorkoutEditorViewModel(dependencies: dependencies)
+        viewModel.name = "Tempo Run"
+        viewModel.intervals = [
+            WorkoutSaveInterval(type: "time", name: "Run", seconds: 1200)
+        ]
+        viewModel.canonicalId = "tempo_run"
+        viewModel.canonicalSource = .userPick
+
+        await viewModel.save()
+
+        XCTAssertEqual(apiService.lastSaveWorkoutRequest?.canonicalId, "tempo_run")
+        XCTAssertEqual(apiService.lastSaveWorkoutRequest?.canonicalSource, CanonicalSource.userPick)
+    }
+
     private func match(
         canonicalId: String? = "tempo_run",
         displayName: String? = "Tempo Run",
-        normalizedTitle: String = "tempo run"
+        normalizedTitle: String = "tempo run",
+        candidates: [WorkoutTypeCandidate] = []
     ) -> WorkoutTypeMatchResponse {
         WorkoutTypeMatchResponse(
             canonicalId: canonicalId,
@@ -237,7 +333,21 @@ final class WorkoutCanonicalNamingTests: XCTestCase {
             confidence: 1,
             method: "exact",
             normalizedTitle: normalizedTitle,
-            candidates: []
+            candidates: candidates
+        )
+    }
+
+    private func workoutType(id: String, displayName: String) -> WorkoutTypeItem {
+        WorkoutTypeItem(
+            id: id,
+            category: "cardio",
+            format: "continuous",
+            focus: [],
+            displayName: displayName,
+            aliases: [],
+            aiPreset: false,
+            equipment: [],
+            platformTags: [:]
         )
     }
 }

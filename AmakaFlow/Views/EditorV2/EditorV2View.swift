@@ -13,6 +13,7 @@ struct EditorV2View: View {
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var saveModel: WorkoutEditorViewModel
+    @StateObject private var matchController: WorkoutTypeMatchController
 
     @State private var session: EditorV2Session
     @State private var isReorderMode = false
@@ -23,6 +24,8 @@ struct EditorV2View: View {
     @State private var pairSourceID: String?
     @State private var addSheetOpen = false
     @State private var replaceExerciseID: String?
+    @State private var isMatchSheetPresented = false
+    @FocusState private var isTitleFocused: Bool
     /// AMA-2336 — `workout_preferences` cache; fetched on the first quick-add.
     @State private var enrichmentPrefs: WorkoutPreferences?
 
@@ -30,6 +33,15 @@ struct EditorV2View: View {
         self.mode = mode
         self.workout = workout
         _session = State(initialValue: EditorV2Session.from(mode: mode, workout: workout))
+        _matchController = StateObject(
+            wrappedValue: WorkoutTypeMatchController(
+                apiService: AppDependencies.current.apiService,
+                state: CanonicalMatchState(
+                    canonicalId: workout?.canonicalId,
+                    source: workout?.canonicalSource
+                )
+            )
+        )
         if let workout {
             _saveModel = StateObject(wrappedValue: WorkoutEditorViewModel(workout: workout))
         } else {
@@ -103,6 +115,22 @@ struct EditorV2View: View {
         .sheet(item: configGroupBinding, content: configSheet)
         .sheet(item: pairSourceBinding, content: pairSheet)
         .sheet(isPresented: $addSheetOpen) { addSheet }
+        .sheet(isPresented: $isMatchSheetPresented) { workoutTypeMatchSheet }
+        .task { await resolveLoadedMatchDisplayName() }
+        .task(id: session.title) {
+            matchController.noteTitleForSave(session.title)
+            do {
+                try await Task.sleep(for: .milliseconds(600))
+                try Task.checkCancellation()
+                await matchTitleIfNeeded()
+            } catch {
+                // A newer title superseded this advisory match.
+            }
+        }
+        .onChange(of: isTitleFocused) { _, focused in
+            guard !focused else { return }
+            Task { await matchTitleIfNeeded() }
+        }
     }
 
     private var accessibilityMarkers: some View {
@@ -154,7 +182,15 @@ struct EditorV2View: View {
                 .ddDisplayText(24, weight: .heavy)
                 .foregroundColor(DailyDriver.foreground)
                 .padding(.top, 10)
+                .focused($isTitleFocused)
                 .accessibilityIdentifier("workout_name_field")
+
+            if let displayName = matchController.chipDisplayName {
+                WorkoutTypeMatchChip(displayName: displayName) {
+                    isMatchSheetPresented = true
+                }
+                .padding(.top, 8)
+            }
 
             Text(subtitle)
                 .font(.system(size: 9, weight: .medium, design: .monospaced))
@@ -232,7 +268,8 @@ struct EditorV2View: View {
     }
 
     private func saveTapped() {
-        saveModel.name = session.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedTitle = session.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        saveModel.name = trimmedTitle
         saveModel.intervals = session.toSaveIntervals()
         session.mintMissingExerciseIDs()
         saveModel.saveBlocks = session.toSocialImportBlocks()
@@ -240,7 +277,32 @@ struct EditorV2View: View {
         saveModel.saveEnrichmentTombstones = session.enrichmentTombstonesDirty
             ? session.enrichmentTombstones
             : nil
-        Task { await saveModel.save() }
+        Task {
+            matchController.noteTitleForSave(trimmedTitle)
+            let canonicalValues = await matchController.onSave(online: true)
+            saveModel.canonicalId = canonicalValues.canonicalId
+            saveModel.canonicalSource = canonicalValues.source
+            await saveModel.save()
+        }
+    }
+
+    private func resolveLoadedMatchDisplayName() async {
+        guard workout?.canonicalId != nil else { return }
+        guard let catalog = try? await AppDependencies.current.apiService.fetchWorkoutTypes(
+            aiPresetOnly: false
+        ) else {
+            return
+        }
+        matchController.resolveLoadedDisplayName(from: catalog)
+    }
+
+    private func matchTitleIfNeeded() async {
+        // Existing IDs are resolved against the catalog on load. A retired/unknown
+        // ID stays hidden until the user actually changes the title.
+        if workout?.canonicalId != nil, session.title == workout?.name {
+            return
+        }
+        await matchController.onTitleIdle(title: session.title)
     }
 }
 
@@ -400,6 +462,23 @@ extension EditorV2View {
             }
         )
         .presentationDetents([.large])
+    }
+
+    fileprivate var workoutTypeMatchSheet: some View {
+        WorkoutTypeMatchSheet(
+            candidates: matchController.lastCandidates,
+            apiService: AppDependencies.current.apiService,
+            onPick: { canonicalId, displayName in
+                matchController.applyUserPick(
+                    canonicalId: canonicalId,
+                    displayName: displayName
+                )
+            },
+            onClear: {
+                matchController.clear()
+            }
+        )
+        .presentationDetents([.medium, .large])
     }
 
     fileprivate var menuExerciseBinding: Binding<EditorV2Exercise?> {

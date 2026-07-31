@@ -7,6 +7,12 @@
 
 import Foundation
 
+enum CanonicalSource: String, Codable, Equatable, Hashable, Sendable {
+    case auto
+    case userPick = "user_pick"
+    case preset
+}
+
 // MARK: - Workout Interval Types
 enum WorkoutInterval: Codable, Hashable {
     case warmup(seconds: Int, target: String?)
@@ -273,6 +279,9 @@ struct Workout: Identifiable, Codable, Hashable {
     /// Creator / coach name from import metadata when available.
     let creatorName: String?
     let createdAt: Date?
+    /// Stable workout taxonomy identity, when the backend supplied one.
+    let canonicalId: String?
+    let canonicalSource: CanonicalSource?
 
     /// Computed flat interval list for playback (backward-compatible).
     var intervals: [WorkoutInterval] {
@@ -299,7 +308,9 @@ struct Workout: Identifiable, Codable, Hashable {
         source: WorkoutSource,
         sourceUrl: String? = nil,
         creatorName: String? = nil,
-        createdAt: Date? = nil
+        createdAt: Date? = nil,
+        canonicalId: String? = nil,
+        canonicalSource: CanonicalSource? = nil
     ) {
         self.id = id
         self.name = name
@@ -311,6 +322,8 @@ struct Workout: Identifiable, Codable, Hashable {
         self.sourceUrl = sourceUrl
         self.creatorName = creatorName
         self.createdAt = createdAt
+        self.canonicalId = canonicalId
+        self.canonicalSource = canonicalSource
     }
 
     /// Legacy convenience init that accepts intervals and wraps them in blocks.
@@ -324,7 +337,9 @@ struct Workout: Identifiable, Codable, Hashable {
         source: WorkoutSource,
         sourceUrl: String? = nil,
         creatorName: String? = nil,
-        createdAt: Date? = nil
+        createdAt: Date? = nil,
+        canonicalId: String? = nil,
+        canonicalSource: CanonicalSource? = nil
     ) {
         self.id = id
         self.name = name
@@ -336,6 +351,8 @@ struct Workout: Identifiable, Codable, Hashable {
         self.sourceUrl = sourceUrl
         self.creatorName = creatorName
         self.createdAt = createdAt
+        self.canonicalId = canonicalId
+        self.canonicalSource = canonicalSource
     }
 
     // Custom decoder to handle missing/null fields gracefully
@@ -352,6 +369,8 @@ struct Workout: Identifiable, Codable, Hashable {
             ?? (try? container.decodeIfPresent(String.self, forKey: .creator))
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
             ?? (try? container.decodeIfPresent(Date.self, forKey: .pushedAt))
+        canonicalId = try container.decodeIfPresent(String.self, forKey: .canonicalId)
+        canonicalSource = try container.decodeIfPresent(CanonicalSource.self, forKey: .canonicalSource)
 
         // Try blocks first (new format), fall back to legacy intervals
         if let decodedBlocks = try container.decodeIfPresent([Block].self, forKey: .blocks), !decodedBlocks.isEmpty {
@@ -375,11 +394,14 @@ struct Workout: Identifiable, Codable, Hashable {
         try container.encodeIfPresent(sourceUrl, forKey: .sourceUrl)
         try container.encodeIfPresent(creatorName, forKey: .creatorName)
         try container.encodeIfPresent(createdAt, forKey: .createdAt)
+        try container.encodeIfPresent(canonicalId, forKey: .canonicalId)
+        try container.encodeIfPresent(canonicalSource, forKey: .canonicalSource)
     }
 
     enum CodingKeys: String, CodingKey {
         case id, name, sport, duration, blocks, intervals, description, source, sourceUrl
         case creatorName, creator, createdAt, pushedAt
+        case canonicalId, canonicalSource
     }
 
     /// Convert legacy flat WorkoutInterval array into Block array.
