@@ -413,4 +413,42 @@ final class WorkoutEditorSaveTests: XCTestCase {
             ["A", "C"]
         )
     }
+
+    /// AMA-2359 — Library list only reloads via `.libraryContentDidChange`
+    /// (no shared store). A successful save must post it so the new/edited
+    /// workout shows up without the user tabbing away and back.
+    func testSuccessfulSavePostsLibraryContentDidChange() async {
+        mockAPI.saveWorkoutResult = .success(
+            Workout(id: "wk-notify-1", name: "Notify Me", sport: .strength, duration: 600, source: .manual)
+        )
+        let sut = WorkoutEditorViewModel(dependencies: deps)
+        sut.name = "Notify Me"
+        sut.intervals = [
+            WorkoutSaveInterval(type: "reps", name: "Squat", sets: 3, reps: 10, restSeconds: 60)
+        ]
+
+        let expectation = expectation(forNotification: .libraryContentDidChange, object: nil)
+
+        await sut.save()
+
+        XCTAssertTrue(sut.didSave)
+        await fulfillment(of: [expectation], timeout: 1)
+    }
+
+    func testFailedSaveDoesNotPostLibraryContentDidChange() async {
+        mockAPI.saveWorkoutResult = .failure(URLError(.notConnectedToInternet))
+        let sut = WorkoutEditorViewModel(dependencies: deps)
+        sut.name = "Will Fail"
+        sut.intervals = [
+            WorkoutSaveInterval(type: "reps", name: "Squat", sets: 3, reps: 10, restSeconds: 60)
+        ]
+
+        let unexpected = expectation(forNotification: .libraryContentDidChange, object: nil)
+        unexpected.isInverted = true
+
+        await sut.save()
+
+        XCTAssertFalse(sut.didSave)
+        await fulfillment(of: [unexpected], timeout: 0.3)
+    }
 }
