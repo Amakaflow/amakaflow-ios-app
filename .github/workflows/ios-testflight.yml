@@ -39,6 +39,16 @@
 # cert slot limit). -allowProvisioningUpdates remains for profile refresh
 # only. Setup: docs/ci/TESTFLIGHT_SECRETS.md
 #
+# Cert-slot guard (AMA-2361, 2026-07-31):
+# AMA-2267 only guaranteed the .p12 secrets decode — not that Apple still
+# honours them. When the persisted Development cert was revoked in the portal
+# on 2026-07-15, -allowProvisioningUpdates quietly minted a replacement on
+# every run (private key lost with the runner) until the account hit its
+# certificate limit two weeks later. secrets-preflight now asks the portal
+# whether the persisted serials are still valid and fails in ~1min if not,
+# and import-signing-identity.sh hard-fails unless both identities install.
+# Portal cleanup is `ios-cert-hygiene.yml`, never the portal UI.
+#
 # v1 posture decision (2026-05-22): CLERK_PUBLISHABLE_KEY_PRODUCTION is
 # the STAGING Clerk key. Per AMA-1796 the iOS Release config defaults to
 # .staging, and per the 2026-05-22 plan "staging IS production for v1."
@@ -112,10 +122,14 @@ jobs:
       && (needs.dispatch-sha-guard.result == 'success' || needs.dispatch-sha-guard.result == 'skipped')
       && (github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip-testflight]'))
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 5
     permissions:
       contents: read
     steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Validate TestFlight secrets
         env:
           ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
@@ -185,6 +199,32 @@ jobs:
             echo "::warning::CLERK_PUBLISHABLE_KEY_DEV not set — using solid-chicken-50 publishable default."
           fi
           echo "✅ Required TestFlight secrets present."
+
+      # AMA-2361 — the .p12 secrets being well-formed says nothing about whether
+      # Apple still honours them. A revoked persisted identity makes
+      # -allowProvisioningUpdates mint a throwaway certificate every run until
+      # the account hits its slot limit (2026-07-15 → build 338). Ask the portal
+      # here, on a 2-minute Ubuntu runner, instead of 10 minutes into a macOS archive.
+      - name: Set up Python for cert verification
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Verify persisted signing certs against Apple portal (AMA-2361)
+        env:
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+          APPLE_DISTRIBUTION_CERTIFICATE_P12: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_P12 }}
+          APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          APPLE_DEVELOPMENT_CERTIFICATE_P12: ${{ secrets.APPLE_DEVELOPMENT_CERTIFICATE_P12 }}
+          APPLE_DEVELOPMENT_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DEVELOPMENT_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          pip install -q -r .github/scripts/ci/requirements-asc-notes.txt
+          EXPECTED_CERT_SERIALS="$(.github/scripts/ci/persisted-cert-serials.sh)"
+          export EXPECTED_CERT_SERIALS
+          python3 .github/scripts/ci/asc-cert-hygiene.py --mode verify
 
   # AMA-1806 — offline completion-contract gate. Validates the canonical
   # iOS WorkoutCompletionRequest fixtures against staging mapper-api's
@@ -365,7 +405,7 @@ jobs:
               else
                 CERT_TYPE="Apple Development or Distribution"
               fi
-              echo "::error::Apple Developer ${CERT_TYPE} certificate limit reached. Revoke unused \"Created via API\" ${CERT_TYPE} certificates at https://developer.apple.com/account/resources/certificates/list then re-run (workflow_dispatch or push to main). Setup: docs/ci/TESTFLIGHT_SECRETS.md"
+              echo "::error::Apple Developer ${CERT_TYPE} certificate limit reached. Free the slots with the hygiene workflow (never hand-pick in the portal UI — that is how the persisted identity got revoked in AMA-2361): gh workflow run ios-cert-hygiene.yml --repo Amakaflow/amakaflow-ios-app -f mode=revoke-dupes -f apply=true. Reaching this point means the AMA-2361 preflight passed, so a persisted identity was valid at job start — capture archive.log on the issue. Setup: docs/ci/TESTFLIGHT_SECRETS.md"
             fi
             exit "$ARCHIVE_EXIT"
           fi

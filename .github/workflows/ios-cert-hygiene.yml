@@ -1,0 +1,114 @@
+# AMA-2361 — Apple Developer certificate hygiene.
+#
+# Replaces hand-picking certificates in the Apple Developer portal UI. The UI
+# shows no indication of which certificate is the one persisted in GitHub
+# secrets, which is how the persisted Apple Development identity got revoked on
+# 2026-07-15 — after which every TestFlight run silently minted a throwaway
+# "Created via API" certificate until the account hit its slot limit.
+#
+# This job derives the keep-list from the .p12 secrets themselves, so the
+# persisted identities cannot be revoked by accident.
+#
+#   mode=list          show every certificate on the account (safe, read-only)
+#   mode=verify        fail if a persisted identity is missing/expired in the portal
+#   mode=revoke-dupes  revoke API-minted certs that are NOT persisted in secrets
+#                      (dry-run unless apply=true)
+#
+# Runbook: docs/ci/TESTFLIGHT_SECRETS.md
+
+name: iOS Cert Hygiene
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: What to do with the account's certificates.
+        required: true
+        default: list
+        type: choice
+        options:
+          - list
+          - verify
+          - revoke-dupes
+      apply:
+        description: >-
+          revoke-dupes only — actually revoke. Leave false for a dry run that
+          just prints what would be revoked.
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-cert-hygiene
+  cancel-in-progress: false
+
+jobs:
+  hygiene:
+    name: Apple certificate hygiene (${{ inputs.mode }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install ASC API deps
+        run: pip install -q -r .github/scripts/ci/requirements-asc-notes.txt
+
+      # Derive the keep-list from the actual .p12 secrets rather than a
+      # hardcoded list, so rotating a certificate cannot desync the two.
+      - name: Resolve persisted certificate serials
+        id: serials
+        env:
+          APPLE_DISTRIBUTION_CERTIFICATE_P12: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_P12 }}
+          APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          APPLE_DEVELOPMENT_CERTIFICATE_P12: ${{ secrets.APPLE_DEVELOPMENT_CERTIFICATE_P12 }}
+          APPLE_DEVELOPMENT_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DEVELOPMENT_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          serials="$(.github/scripts/ci/persisted-cert-serials.sh)"
+          echo "serials=${serials}" >> "$GITHUB_OUTPUT"
+          echo "Keep-list (never revoked): ${serials}"
+
+      - name: Run cert hygiene
+        env:
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+          EXPECTED_CERT_SERIALS: ${{ steps.serials.outputs.serials }}
+          MODE: ${{ inputs.mode }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          set -euo pipefail
+          args=(--mode "$MODE")
+          if [ "$MODE" = "revoke-dupes" ] && [ "$APPLY" = "true" ]; then
+            args+=(--apply)
+          fi
+          python3 .github/scripts/ci/asc-cert-hygiene.py "${args[@]}" | tee hygiene.log
+
+      - name: Job summary
+        if: always()
+        env:
+          MODE: ${{ inputs.mode }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          {
+            echo "## Apple cert hygiene — \`${MODE}\`"
+            echo ""
+            if [ "$MODE" = "revoke-dupes" ] && [ "$APPLY" != "true" ]; then
+              echo "> Dry run. Re-dispatch with **apply = true** to revoke."
+              echo ""
+            fi
+            echo '```'
+            cat hygiene.log 2>/dev/null || echo "(no output — see step logs)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
