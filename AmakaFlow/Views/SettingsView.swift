@@ -113,6 +113,7 @@ struct SettingsView: View {
     @State private var garminDebugMessage = ""
     @State private var showingManualUUIDSheet = false
     @State private var showingGarminWatchDisplayPrefs = false
+    @State private var showingAppleWatchDeliveryPrefs = false
     /// AMA-2336 — `workout_preferences` editor (separate from AMA-2316 display prefs).
     @State private var showingWorkoutEnrichmentPrefs = false
     @State private var manualUUID = ""
@@ -204,6 +205,9 @@ struct SettingsView: View {
                 GarminWatchDisplayPrefsSheet(
                     mode: GarminWatchDisplayPrefsStore.hasConfigured ? .settings : .onboarding
                 )
+            }
+            .sheet(isPresented: $showingAppleWatchDeliveryPrefs) {
+                AppleWatchDeliveryPrefsSheet(mode: .settings)
             }
             .sheet(isPresented: $showingWorkoutEnrichmentPrefs) {
                 WorkoutEnrichmentPrefsSheet()
@@ -1967,6 +1971,28 @@ struct SettingsView: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("af_garmin_watch_display_prefs_settings")
+
+            // AMA-2360: Apple Watch delivery prefs (tap / timed rest).
+            Button {
+                showingAppleWatchDeliveryPrefs = true
+            } label: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Apple Watch delivery")
+                        .font(Theme.Typography.body)
+                        .foregroundColor(Theme.Colors.textPrimary)
+                    Text(AppleWatchDeliveryPrefsStore.current.summaryLine)
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(Theme.Colors.textSecondary)
+                        .lineLimit(3)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, Theme.Spacing.sm)
+                .padding(.horizontal, Theme.Spacing.md)
+                .background(Theme.Colors.surfaceElevated)
+                .cornerRadius(Theme.CornerRadius.md)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("af_apple_watch_delivery_prefs_settings")
 
             // AMA-2336: what we offer to add when a workout is missing it.
             // Separate from AMA-2316 display prefs — these edit workout content.

@@ -16,12 +16,15 @@ struct WorkoutStartSheet: View {
     let onPairGarmin: () -> Void
     /// AMA-2317: change the work/rest display prefs this push will send.
     let onEditGarminPrefs: () -> Void
+    /// AMA-2360: edit Apple delivery prefs (tap/timed rest) before compose.
+    let onEditApplePrefs: () -> Void
     let onClose: () -> Void
 
     @State private var selectedGym: WorkoutStartGym = .home
 
     private let displayPrefs: GarminWatchDisplayPrefs
     private let hasConfiguredDisplayPrefs: Bool
+    private let appleDeliveryPrefs: AppleWatchDeliveryPrefs
 
     init(
         workout: Workout,
@@ -30,9 +33,11 @@ struct WorkoutStartSheet: View {
         initialGym: WorkoutStartGym = .home,
         displayPrefs: GarminWatchDisplayPrefs? = nil,
         hasConfiguredDisplayPrefs: Bool? = nil,
+        appleDeliveryPrefs: AppleWatchDeliveryPrefs? = nil,
         onConfirm: @escaping (WorkoutStartGym, WorkoutStartDevice) -> Void,
         onPairGarmin: @escaping () -> Void,
         onEditGarminPrefs: @escaping () -> Void = {},
+        onEditApplePrefs: @escaping () -> Void = {},
         onClose: @escaping () -> Void
     ) {
         self.workout = workout
@@ -41,9 +46,11 @@ struct WorkoutStartSheet: View {
         self.onConfirm = onConfirm
         self.onPairGarmin = onPairGarmin
         self.onEditGarminPrefs = onEditGarminPrefs
+        self.onEditApplePrefs = onEditApplePrefs
         self.onClose = onClose
         self.displayPrefs = displayPrefs ?? GarminWatchDisplayPrefsStore.current
         self.hasConfiguredDisplayPrefs = hasConfiguredDisplayPrefs ?? GarminWatchDisplayPrefsStore.hasConfigured
+        self.appleDeliveryPrefs = appleDeliveryPrefs ?? AppleWatchDeliveryPrefsStore.current
         _selectedGym = State(initialValue: initialGym == .unset ? .home : initialGym)
     }
 
@@ -194,6 +201,8 @@ struct WorkoutStartSheet: View {
                     : WorkoutStartDefaults.appleAvailabilityLabel(watchReachable: appleWatchReachable)
             )
 
+            applePrefsNote
+
             deviceRow(
                 device: .garmin,
                 icon: "applewatch.side.right",
@@ -212,6 +221,28 @@ struct WorkoutStartSheet: View {
                 garminPrefsNote
             }
         }
+    }
+
+    /// AMA-2360: delivery prefs this Apple Start will send to mapper.
+    private var applePrefsNote: some View {
+        Button(action: onEditApplePrefs) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(appleDeliveryPrefs.summaryLine)
+                    .font(.system(size: 10.5))
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                    .multilineTextAlignment(.leading)
+                Spacer(minLength: 0)
+                Text("Edit")
+                    .font(.system(size: 10.5, weight: .semibold))
+                    .foregroundColor(DailyDriver.lime)
+            }
+            .padding(.horizontal, 15)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Opens Apple Watch delivery settings")
+        .accessibilityIdentifier("af_start_apple_prefs_note")
     }
 
     /// AMA-2317: the watch prefs this push will apply, before the user taps —
@@ -356,6 +387,7 @@ struct WorkoutStartSheet: View {
         onConfirm: { _, _ in },
         onPairGarmin: {},
         onEditGarminPrefs: {},
+        onEditApplePrefs: {},
         onClose: {}
     )
     .presentationDetents([.large])
