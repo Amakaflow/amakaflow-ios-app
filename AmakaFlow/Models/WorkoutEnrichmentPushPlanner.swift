@@ -12,13 +12,6 @@
 
 import Foundation
 
-/// Device that will receive the enriched workout after the pre-send sheet.
-/// AMA-2362 — Apple uses Open-rest copy; Garmin keeps Lap language.
-enum EnrichmentPushTarget: String, Equatable, Sendable {
-    case apple
-    case garmin
-}
-
 enum WorkoutEnrichmentPushPlanner {
     // MARK: - Offer
 
@@ -50,23 +43,10 @@ enum WorkoutEnrichmentPushPlanner {
             self.kind = kind
             self.isChecked = isChecked
             self.wasTombstoned = wasTombstoned
-            self.title = title ?? Self.defaultTitle(for: kind, target: target)
+            self.title = title ?? WorkoutEnrichmentPushCopy.offerTitle(for: kind, target: target)
             self.detail = detail
             self.tombstonedExerciseIds = tombstonedExerciseIds
             self.candidateExerciseIds = candidateExerciseIds
-        }
-
-        static func defaultTitle(for kind: EnrichmentKind, target: EnrichmentPushTarget) -> String {
-            switch kind {
-            case .sessionWarmup: return "Add mobility prep"
-            case .cooldown: return "Cool-down"
-            case .betweenSetRest:
-                switch target {
-                case .apple: return "Add rest (Open or timed)"
-                case .garmin: return "Add rest (Lap or timed)"
-                }
-            case .exerciseWarmupSets: return "Exercise warm-up sets"
-            }
         }
     }
 
@@ -117,7 +97,10 @@ enum WorkoutEnrichmentPushPlanner {
                     kind: .sessionWarmup,
                     isChecked: !tombstoned,
                     wasTombstoned: tombstoned,
-                    detail: activitiesDetail(prefs.sessionWarmup.activities, target: target),
+                    detail: WorkoutEnrichmentPushCopy.activitiesDetail(
+                        prefs.sessionWarmup.activities,
+                        target: target
+                    ),
                     target: target
                 )
             )
@@ -132,7 +115,10 @@ enum WorkoutEnrichmentPushPlanner {
                     kind: .cooldown,
                     isChecked: !tombstoned,
                     wasTombstoned: tombstoned,
-                    detail: activitiesDetail(prefs.cooldown.activities, target: target),
+                    detail: WorkoutEnrichmentPushCopy.activitiesDetail(
+                        prefs.cooldown.activities,
+                        target: target
+                    ),
                     target: target
                 )
             )
@@ -141,7 +127,9 @@ enum WorkoutEnrichmentPushPlanner {
         // Always offer Rest when the workout has no rest intent — Garmin FIT
         // needs `rest_open` / `rest_sec` on blocks. Prefs.enabled only controls
         // the default check (off → show unchecked so this push can still opt in).
-        if !hasBlockRestIntent(in: blocks) {
+        // Apple delivery `rest_mode=omit` skips the offer (AMA-2362 / CodeRabbit).
+        if !hasBlockRestIntent(in: blocks),
+           !WorkoutEnrichmentPushCopy.shouldSkipRestOffer(target: target) {
             let tombstoned = WorkoutEnrichmentPresence.isTombstoned(
                 .betweenSetRest,
                 tombstones: tombstones
@@ -152,7 +140,10 @@ enum WorkoutEnrichmentPushPlanner {
                     kind: .betweenSetRest,
                     isChecked: prefsWantRest && !tombstoned,
                     wasTombstoned: tombstoned,
-                    detail: restDetail(prefs.betweenSetRest, target: target),
+                    detail: WorkoutEnrichmentPushCopy.restDetail(
+                        prefs.betweenSetRest,
+                        target: target
+                    ),
                     target: target
                 )
             )
@@ -179,7 +170,7 @@ enum WorkoutEnrichmentPushPlanner {
                         kind: .exerciseWarmupSets,
                         isChecked: !allTombstoned,
                         wasTombstoned: !tombstonedIds.isEmpty,
-                        detail: warmupSetsDetail(
+                        detail: WorkoutEnrichmentPushCopy.warmupSetsDetail(
                             prefs.exerciseWarmupSets.defaultSets,
                             exerciseCount: candidates.count
                         ),
@@ -192,23 +183,6 @@ enum WorkoutEnrichmentPushPlanner {
         }
 
         return Plan(offers: offers, target: target)
-    }
-
-    /// Seed the sheet's open-rest toggle. Apple: Lap-equivalent is Open rest;
-    /// prefer delivery prefs when configured, else default open (AMA-2362).
-    static func initialRestOpen(
-        standing: BetweenSetRestPrefs,
-        target: EnrichmentPushTarget
-    ) -> Bool {
-        switch target {
-        case .garmin:
-            return standing.restOpen
-        case .apple:
-            if AppleWatchDeliveryPrefsStore.hasConfigured {
-                return AppleWatchDeliveryPrefsStore.current.restMode == .tap
-            }
-            return true
-        }
     }
 
     // MARK: - Apply
@@ -380,65 +354,6 @@ enum WorkoutEnrichmentPushPlanner {
         }
     }
 
-    // MARK: - Copy
-
-    static func activitiesDetail(
-        _ activities: [EnrichmentActivityPref],
-        target: EnrichmentPushTarget = .garmin
-    ) -> String {
-        guard !activities.isEmpty else { return "No activities set — add them in Settings." }
-        let openLabel = target == .apple ? "until tap" : "until Lap"
-        return activities.map { activity in
-            guard let durationSec = activity.durationSec, durationSec > 0 else {
-                return "\(activity.name) · \(openLabel)"
-            }
-            return "\(activity.name) · \(durationSec)s"
-        }
-        .joined(separator: ", ")
-    }
-
-    static func restDetail(
-        _ prefs: BetweenSetRestPrefs,
-        target: EnrichmentPushTarget = .garmin
-    ) -> String {
-        if prefs.restOpen {
-            switch target {
-            case .apple: return "Open rest between sets"
-            case .garmin: return "Rest until Lap between sets"
-            }
-        }
-        guard let restSec = prefs.restSec, restSec > 0 else {
-            return "No rest length set — add one in Settings."
-        }
-        return "\(restSec)s between sets"
-    }
-
-    static func liveRestDetail(
-        restOpen: Bool,
-        restSec: Int,
-        target: EnrichmentPushTarget
-    ) -> String {
-        if restOpen {
-            switch target {
-            case .apple: return "Open rest between sets/rounds"
-            case .garmin: return "Lap button press between sets/rounds"
-            }
-        }
-        return "Timed \(restSec)s between sets/rounds"
-    }
-
-    static func restOpenToggleTitle(target: EnrichmentPushTarget) -> String {
-        switch target {
-        case .apple: return "Open rest (no timer)"
-        case .garmin: return "Lap button press (no timer)"
-        }
-    }
-
-    static func warmupSetsDetail(_ defaults: [WarmupSetDefault], exerciseCount: Int) -> String {
-        let reps = defaults.map { "\($0.reps)" }.joined(separator: " · ")
-        let noun = exerciseCount == 1 ? "exercise" : "exercises"
-        return "\(defaults.count) warm-up sets (\(reps) reps) on \(exerciseCount) \(noun)"
-    }
 }
 
 /// Read-only `blocks_json` parse for presence checks.

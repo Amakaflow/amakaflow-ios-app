@@ -635,13 +635,13 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
     func testAppleInitialRestOpenDefaultsTrueWhenUnconfigured() {
         AppleWatchDeliveryPrefsStore.resetForTests()
         XCTAssertTrue(
-            WorkoutEnrichmentPushPlanner.initialRestOpen(
+            WorkoutEnrichmentPushCopy.initialRestOpen(
                 standing: .defaults,
                 target: .apple
             )
         )
         XCTAssertFalse(
-            WorkoutEnrichmentPushPlanner.initialRestOpen(
+            WorkoutEnrichmentPushCopy.initialRestOpen(
                 standing: .defaults,
                 target: .garmin
             ),
@@ -659,7 +659,7 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
             alertsEnabled: false
         )
         XCTAssertTrue(
-            WorkoutEnrichmentPushPlanner.initialRestOpen(
+            WorkoutEnrichmentPushCopy.initialRestOpen(
                 standing: .defaults,
                 target: .apple
             )
@@ -671,7 +671,31 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
             alertsEnabled: false
         )
         XCTAssertFalse(
-            WorkoutEnrichmentPushPlanner.initialRestOpen(
+            WorkoutEnrichmentPushCopy.initialRestOpen(
+                standing: .defaults,
+                target: .apple
+            )
+        )
+    }
+
+    func testAppleOmitRestModeSkipsRestOffer() {
+        AppleWatchDeliveryPrefsStore.resetForTests()
+        defer { AppleWatchDeliveryPrefsStore.resetForTests() }
+
+        AppleWatchDeliveryPrefsStore.current = AppleWatchDeliveryPrefs(
+            exerciseEnd: .tap,
+            restMode: .omit,
+            alertsEnabled: false
+        )
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock()],
+            tombstones: [],
+            prefs: .defaults,
+            target: .apple
+        )
+        XCTAssertNil(plan.offer(.betweenSetRest))
+        XCTAssertFalse(
+            WorkoutEnrichmentPushCopy.initialRestOpen(
                 standing: .defaults,
                 target: .apple
             )

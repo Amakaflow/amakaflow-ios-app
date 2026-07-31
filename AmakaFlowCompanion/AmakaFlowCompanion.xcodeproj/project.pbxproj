@@ -158,6 +158,7 @@
 		AMA2336MDLBLD001 /* WorkoutEnrichmentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336MDLREF001 /* WorkoutEnrichmentModels.swift */; };
 		AMA2336APIBLD001 /* WorkoutEnrichmentAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336APIREF001 /* WorkoutEnrichmentAPI.swift */; };
 		AMA2336TESTBLD /* WorkoutEnrichmentModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336TESTREF /* WorkoutEnrichmentModelsTests.swift */; };
+		AMA2362COPYBLD001 /* WorkoutEnrichmentPushCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2362COPYREF001 /* WorkoutEnrichmentPushCopy.swift */; };
 		AMA2336PLANBLD001 /* WorkoutEnrichmentPushPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336PLANREF001 /* WorkoutEnrichmentPushPlanner.swift */; };
 		AMA2336SVCBLD001 /* APIService+WorkoutEnrichment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336SVCREF001 /* APIService+WorkoutEnrichment.swift */; };
 		AMA2351WKAPIBLD /* APIService+WorkoutKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2351WKAPIREF /* APIService+WorkoutKit.swift */; };
@@ -752,6 +753,7 @@
 		AMA2316PREFTESTREF /* GarminWatchDisplayPrefsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchDisplayPrefsTests.swift; path = AmakaFlowCompanionTests/GarminWatchDisplayPrefsTests.swift; sourceTree = "<group>"; };
 		AMA2336MDLREF001 /* WorkoutEnrichmentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentModels.swift; path = ../AmakaFlow/Models/WorkoutEnrichmentModels.swift; sourceTree = SOURCE_ROOT; };
 		AMA2336APIREF001 /* WorkoutEnrichmentAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentAPI.swift; path = ../AmakaFlow/Models/WorkoutEnrichmentAPI.swift; sourceTree = SOURCE_ROOT; };
+		AMA2362COPYREF001 /* WorkoutEnrichmentPushCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentPushCopy.swift; path = ../AmakaFlow/Models/WorkoutEnrichmentPushCopy.swift; sourceTree = SOURCE_ROOT; };
 		AMA2336PLANREF001 /* WorkoutEnrichmentPushPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentPushPlanner.swift; path = ../AmakaFlow/Models/WorkoutEnrichmentPushPlanner.swift; sourceTree = SOURCE_ROOT; };
 		AMA2336SVCREF001 /* APIService+WorkoutEnrichment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+WorkoutEnrichment.swift"; path = "../AmakaFlow/Services/APIService+WorkoutEnrichment.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2351WKAPIREF /* APIService+WorkoutKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+WorkoutKit.swift"; path = "../AmakaFlow/Services/APIService+WorkoutKit.swift"; sourceTree = SOURCE_ROOT; };
@@ -1441,6 +1443,7 @@
 				AMA2316PREFREF001 /* GarminWatchDisplayPrefs.swift */,
 				AMA2336MDLREF001 /* WorkoutEnrichmentModels.swift */,
 				AMA2336APIREF001 /* WorkoutEnrichmentAPI.swift */,
+				AMA2362COPYREF001 /* WorkoutEnrichmentPushCopy.swift */,
 				AMA2336PLANREF001 /* WorkoutEnrichmentPushPlanner.swift */,
 				AMA2336SVCREF001 /* APIService+WorkoutEnrichment.swift */,
 				AMA2351WKAPIREF /* APIService+WorkoutKit.swift */,
@@ -2462,6 +2465,7 @@
 				AMA2316PREFBLD001 /* GarminWatchDisplayPrefs.swift in Sources */,
 				AMA2336MDLBLD001 /* WorkoutEnrichmentModels.swift in Sources */,
 				AMA2336APIBLD001 /* WorkoutEnrichmentAPI.swift in Sources */,
+				AMA2362COPYBLD001 /* WorkoutEnrichmentPushCopy.swift in Sources */,
 				AMA2336PLANBLD001 /* WorkoutEnrichmentPushPlanner.swift in Sources */,
 				AMA2336SVCBLD001 /* APIService+WorkoutEnrichment.swift in Sources */,
 				AMA2351WKAPIBLD /* APIService+WorkoutKit.swift in Sources */,

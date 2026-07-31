@@ -38,7 +38,7 @@ struct WorkoutEnrichmentPushSheet: View {
         _checkedKinds = State(initialValue: plan.defaultCheckedKinds)
         _restSec = State(initialValue: prefs.betweenSetRest.restSec ?? 60)
         _restOpen = State(
-            initialValue: WorkoutEnrichmentPushPlanner.initialRestOpen(
+            initialValue: WorkoutEnrichmentPushCopy.initialRestOpen(
                 standing: prefs.betweenSetRest,
                 target: target
             )
@@ -174,7 +174,7 @@ struct WorkoutEnrichmentPushSheet: View {
     private var restOverride: some View {
         VStack(alignment: .leading, spacing: 6) {
             Toggle(
-                WorkoutEnrichmentPushPlanner.restOpenToggleTitle(target: target),
+                WorkoutEnrichmentPushCopy.restOpenToggleTitle(target: target),
                 isOn: restOpenBinding
             )
                 .tint(DailyDriver.lime)
@@ -217,7 +217,7 @@ struct WorkoutEnrichmentPushSheet: View {
         guard offer.kind == .betweenSetRest, checkedKinds.contains(.betweenSetRest) else {
             return offer.detail
         }
-        return WorkoutEnrichmentPushPlanner.liveRestDetail(
+        return WorkoutEnrichmentPushCopy.liveRestDetail(
             restOpen: restOpen,
             restSec: restSec,
             target: target
