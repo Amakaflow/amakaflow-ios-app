@@ -115,3 +115,7 @@ ama1834-step*.png
 ama-*-step*.png
 maestro-evidence*/
 /tmp/ama*-evidence/
+
+# Python bytecode from .github/scripts/ci helpers
+__pycache__/
+*.pyc

@@ -1,4 +1,4 @@
-# TestFlight CI secrets (AMA-1852, AMA-2267)
+# TestFlight CI secrets (AMA-1852, AMA-2267, AMA-2361)
 
 Setup guide for `.github/workflows/ios-testflight.yml` — auto-upload to TestFlight on every `main` push that touches app code.
 
@@ -40,7 +40,13 @@ gh secret set APP_STORE_CONNECT_API_PRIVATE_KEY --repo Amakaflow/amakaflow-ios-a
 
 CI imports **one** Apple Distribution + **one** Apple Development certificate (with private keys) into an ephemeral runner keychain before archive/export. This stops each run from minting new "Created via API" certs and hitting Apple's slot limit.
 
-**Before creating new certs:** check [Certificates](https://developer.apple.com/account/resources/certificates/list). If the account is at the limit, **revoke accumulated "Created via API" Development/Distribution certs first** — do not create new ones until slots are free.
+**Before creating new certs:** run the hygiene workflow (below) — never hand-pick certificates in the portal UI. If the account is at the limit, revoke the accumulated "Created via API" certs first; do not create new ones until slots are free.
+
+> ⚠️ **Never revoke certificates from the Apple portal UI.** The portal gives no
+> indication which certificate is the one persisted in GitHub secrets. Revoking
+> the wrong one puts CI back on the cert-minting treadmill (AMA-2361).
+> Use `ios-cert-hygiene.yml`, which derives its keep-list from the `.p12`
+> secrets themselves and therefore cannot revoke a persisted identity.
 
 #### One-time cert creation (founder, on a Mac with Keychain Access)
 
@@ -66,7 +72,107 @@ gh secret set APPLE_KEYCHAIN_PASSWORD --repo Amakaflow/amakaflow-ios-app --body 
 
 5. After wiring secrets, run **two consecutive** `workflow_dispatch` builds and confirm **zero** new certificates appear in the Apple portal.
 
-Import script: `.github/scripts/ci/import-signing-identity.sh` (runs on macOS archive job only).
+Import script: `.github/scripts/ci/import-signing-identity.sh` (runs on macOS archive job only). It exits non-zero unless **both** identities land in the CI keychain — a partial import must never fall through to `-allowProvisioningUpdates`.
+
+## Certificate hygiene (AMA-2361) — the permanent process
+
+### Why this exists
+
+`xcodebuild archive` signs this project **for development**: every app target is
+`CODE_SIGN_STYLE = Automatic` with no `CODE_SIGN_IDENTITY` override, so the archive
+needs *iOS App Development* profiles and therefore a usable Apple Development
+certificate. Distribution signing only happens later, at `-exportArchive` with
+`method: app-store-connect`.
+
+That makes the persisted **Development** certificate load-bearing. If it stops being
+valid in the portal, `-allowProvisioningUpdates` mints a replacement "Created via API"
+certificate on the ephemeral runner and the private key dies with the job — so the next
+run mints another one. Builds keep passing until the account runs out of certificate
+slots, then every run fails at once. That is exactly what happened between 2026-07-15
+(persisted Development cert revoked) and build 338 on 2026-07-31.
+
+AMA-2267 persisted the identities. AMA-2361 added the part that was missing: **CI now
+asks Apple whether the persisted identities are still valid, and refuses to archive if
+they are not.**
+
+### The three guards
+
+| Guard | Where | Behaviour |
+|---|---|---|
+| Portal verification | `secrets-preflight` job, ~1 min on Ubuntu | Extracts the serials from the `.p12` secrets and matches them against `GET /v1/certificates`. Missing (revoked/deleted) or expired ⇒ hard fail before any macOS minutes are spent. |
+| Import assertion | `import-signing-identity.sh` | Exits non-zero unless both `Apple Distribution:` and `Apple Development:` identities are installed. |
+| Hygiene workflow | `ios-cert-hygiene.yml` (`workflow_dispatch`) | Lists/verifies/revokes. Keep-list is derived from the `.p12` secrets, so persisted identities can never be revoked. |
+
+### Running the hygiene workflow
+
+```bash
+# See everything on the account. KEEP=YES marks the persisted identities.
+gh workflow run ios-cert-hygiene.yml --repo Amakaflow/amakaflow-ios-app -f mode=list
+
+# Dry run — print the API-minted certs that would be revoked.
+gh workflow run ios-cert-hygiene.yml --repo Amakaflow/amakaflow-ios-app -f mode=revoke-dupes
+
+# Actually free the slots.
+gh workflow run ios-cert-hygiene.yml --repo Amakaflow/amakaflow-ios-app -f mode=revoke-dupes -f apply=true
+```
+
+`revoke-dupes` only touches certificates whose display name is **`Created via API`** and
+whose serial is not in the keep-list. Certificates you created by hand in the portal, and
+non-signing certificates (Developer ID, push, Apple Pay), are never touched.
+
+### Re-issuing a persisted signing identity
+
+Do this when the preflight reports `Persisted signing certificate <serial> is NOT in the
+Apple Developer portal`, or ahead of the yearly expiry.
+
+1. Free a slot first if the account is at the limit:
+   `gh workflow run ios-cert-hygiene.yml -f mode=revoke-dupes -f apply=true`
+2. **Keychain Access → Certificate Assistant → Request a Certificate from a Certificate
+   Authority** → save the `.certSigningRequest`.
+3. [developer.apple.com → Certificates](https://developer.apple.com/account/resources/certificates/list)
+   → **+** → *Apple Development* (or *Apple Distribution*) → upload the CSR → download the
+   `.cer` → double-click to install.
+4. In Keychain Access, export the new identity (certificate **and** private key) as `.p12`.
+5. Update the secret and confirm the serial changed:
+
+```bash
+gh secret set APPLE_DEVELOPMENT_CERTIFICATE_PASSWORD --repo Amakaflow/amakaflow-ios-app --body "your-export-password"
+gh secret set APPLE_DEVELOPMENT_CERTIFICATE_P12 --repo Amakaflow/amakaflow-ios-app -b "$(openssl base64 -A -in ~/Downloads/Development.p12)"
+
+gh workflow run ios-cert-hygiene.yml --repo Amakaflow/amakaflow-ios-app -f mode=verify
+```
+
+6. Re-run TestFlight: `gh workflow run ios-testflight.yml --repo Amakaflow/amakaflow-ios-app --ref main`
+
+### Checking an identity locally
+
+```bash
+# Is the identity the keychain holds still honoured by Apple?
+security find-identity -v -p codesigning   # CSSMERR_TP_CERT_REVOKED ⇒ revoked
+
+# Authoritative answer, with the revocation timestamp:
+security find-certificate -c "Apple Development: <name>" -p > /tmp/c.pem
+curl -sO https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
+openssl x509 -inform DER -in AppleWWDRCAG3.cer -out /tmp/wwdr.pem
+openssl ocsp -issuer /tmp/wwdr.pem -cert /tmp/c.pem -url http://ocsp.apple.com/ocsp03-wwdrg301 \
+  -header "Host=ocsp.apple.com" -noverify
+```
+
+### Known non-fix: pinning the archive to Apple Distribution
+
+Passing `CODE_SIGN_IDENTITY="Apple Distribution"` to `xcodebuild archive` would remove the
+Development-certificate dependency entirely, but Xcode rejects it while the targets are on
+automatic signing:
+
+> `AmakaFlowCompanion has conflicting provisioning settings. AmakaFlowCompanion is
+> automatically signed for development, but a conflicting code signing identity Apple
+> Distribution has been manually specified.`
+
+A command-line override also leaks into SPM resource-bundle targets
+(`Signing for "GRDB_GRDB" requires a development team`). Removing the Development
+certificate from the critical path therefore requires switching the app targets to
+**manual signing with App Store provisioning profiles persisted as secrets** — a larger
+change, tracked separately.
 
 ### Clerk publishable keys
 
@@ -153,14 +259,13 @@ The nightly smoke workflow was removed at 0/10 green nights. GHA sims ran Maestr
 
 Apple Developer accounts allow a limited number of **Development** and **Distribution** certificates. Before AMA-2267, CI `-allowProvisioningUpdates` minted a new Development cert on every ephemeral runner because the private key was lost between runs.
 
-**Fix (manual, ~5 min):**
+**Fix:**
 
-1. [developer.apple.com](https://developer.apple.com/account/resources/certificates/list) → **Certificates**.
-2. Revoke **duplicate** "Created via API" **Development** and **Distribution** certificates (keep the two identities exported to GitHub secrets).
-3. Ensure persisted `.p12` secrets are wired (see above) so CI reuses them instead of minting new certs.
-4. Re-run the workflow (`workflow_dispatch` on Actions tab, or push to `main`).
+1. `gh workflow run ios-cert-hygiene.yml --repo Amakaflow/amakaflow-ios-app -f mode=revoke-dupes -f apply=true` — frees the slots without any risk of revoking a persisted identity. **Do not revoke by hand in the portal UI.**
+2. `-f mode=verify` — confirms both persisted identities are still valid in the portal. If one is missing, follow *Re-issuing a persisted signing identity* above; slot cleanup alone will not stop the recurrence.
+3. Re-run the workflow (`workflow_dispatch` on Actions tab, or push to `main`).
 
-The workflow error message now names **Development** vs **Distribution** when the limit trips.
+Since AMA-2361 the archive should never be where you discover this: `secrets-preflight` fails in about a minute when a persisted identity is no longer valid. Hitting the limit *after* a green preflight means something minted a certificate mid-run — attach `archive.log` to the issue.
 
 ### `CLERK_PUBLISHABLE_KEY_* does not match the secret value`
 
@@ -168,7 +273,11 @@ xcodebuild silently dropped a build-setting override. Check the **Archive** step
 
 ### `No profiles for 'com.myamaka…' were found`
 
-Usually precedes the certificate-limit error. Fixing certificates/profiles in the Developer portal resolves both. With persisted certs imported, `-allowProvisioningUpdates` should refresh profiles without creating new identities.
+Reported as *iOS App Development* profiles even on a Release archive — that is expected, see *Why this exists* above. It follows the certificate-limit error rather than causing it: Xcode could not obtain a Development certificate, so it had nothing to build a profile against. Fix the certificate and the profile error goes with it.
+
+### `Signing certificate is invalid … It may have been revoked or expired`
+
+The persisted identity is no longer honoured by Apple. Confirm with the OCSP snippet above, then follow *Re-issuing a persisted signing identity*. Note the CI runner will **not** report this — a fresh keychain has no revocation cache, so `security find-identity -v` happily lists a revoked certificate as valid. That false green is why the portal preflight exists.
 
 ### Post-upload smoke hangs (AMA-2276)
 
@@ -182,6 +291,7 @@ Usually precedes the certificate-limit error. Fixing certificates/profiles in th
 - [x] Build number auto-bump in workflow
 - [x] Persisted signing `.p12` secrets wired (AMA-2267)
 - [x] Green archive + altool upload on 2 consecutive runs with **zero** new portal certs (verified 2026-07-22 — builds 311 + 312; AMA-2296)
+- [x] Portal-verified cert preflight + hygiene workflow (AMA-2361) — the 2026-07-22 check above passed *before* the Development cert was revoked on 2026-07-15+, and nothing re-checked it for two weeks
 - [ ] Sentry dSYM upload confirmed on a promoted build (check Sentry release for matching build number)
 
 ## Related

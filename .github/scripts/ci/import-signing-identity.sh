@@ -103,4 +103,17 @@ existing_keychains="$(security list-keychains -d user | sed 's/^[[:space:]]*"\(.
 security list-keychains -d user -s "$KEYCHAIN_NAME" $existing_keychains
 
 echo "Imported signing identities (public metadata only):"
-security find-identity -v -p codesigning "$KEYCHAIN_NAME"
+identities="$(security find-identity -v -p codesigning "$KEYCHAIN_NAME")"
+printf '%s\n' "$identities"
+
+# AMA-2361 — hard fail rather than letting the archive fall through to
+# -allowProvisioningUpdates, which mints a throwaway "Created via API"
+# certificate and burns an Apple certificate slot on every run.
+missing_identities=()
+printf '%s' "$identities" | grep -q "Apple Distribution:" || missing_identities+=("Apple Distribution")
+printf '%s' "$identities" | grep -q "Apple Development:" || missing_identities+=("Apple Development")
+if [ ${#missing_identities[@]} -gt 0 ]; then
+  echo "::error::Signing identity import incomplete — missing: ${missing_identities[*]}. The .p12 secrets decoded but no usable identity landed in the CI keychain (cert without its private key, or a mismatched export). Re-export both identities per docs/ci/TESTFLIGHT_SECRETS.md."
+  exit 1
+fi
+echo "✅ Both persisted signing identities are installed in ${KEYCHAIN_NAME}."

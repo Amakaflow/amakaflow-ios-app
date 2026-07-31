@@ -123,3 +123,22 @@ jobs:
         run: |
           chmod +x scripts/preflight/check-singleton-escape.sh
           ./scripts/preflight/check-singleton-escape.sh
+
+  # AMA-2361 — asc-cert-hygiene.py can revoke Apple Developer certificates, and
+  # revoking the persisted identity is the exact failure it exists to prevent.
+  # Keep the keep-list guarantees under test on every PR.
+  check-cert-hygiene:
+    name: Cert hygiene keep-list guarantees
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install ASC API deps
+        run: pip install -q -r .github/scripts/ci/requirements-asc-notes.txt
+      - name: Run asc-cert-hygiene tests
+        run: python3 .github/scripts/ci/test_asc_cert_hygiene.py
