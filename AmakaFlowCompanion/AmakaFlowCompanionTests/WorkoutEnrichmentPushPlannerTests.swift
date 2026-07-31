@@ -478,7 +478,8 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
             plan: plan,
             prefs: .defaults,
             tombstones: [],
-            blocksJSON: ["blocks": []]
+            blocksJSON: ["blocks": []],
+            target: .garmin
         )
         let coordinator = WorkoutEnrichmentPushCoordinator(apiService: mock)
 
@@ -511,7 +512,8 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
             plan: plan,
             prefs: .defaults,
             tombstones: [],
-            blocksJSON: ["blocks": []]
+            blocksJSON: ["blocks": []],
+            target: .garmin
         )
         let coordinator = WorkoutEnrichmentPushCoordinator(apiService: mock)
 
@@ -592,6 +594,110 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertNil(bench.restSeconds)
         XCTAssertNil(bench.restOpen)
         XCTAssertFalse(WorkoutEnrichmentPushPlanner.hasRestIntent(in: parsed.blocks))
+    }
+
+    // MARK: - AMA-2362 Apple Open rest
+
+    func testAppleTargetUsesOpenRestCopyNotLap() {
+        var prefs = WorkoutPreferences.defaults
+        prefs.sessionWarmup = SessionWarmupPrefs(
+            enabled: true,
+            activities: [EnrichmentActivityPref(name: "Jump Rope", durationSec: nil)]
+        )
+        let apple = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock()],
+            tombstones: [],
+            prefs: prefs,
+            target: .apple
+        )
+        XCTAssertEqual(apple.target, .apple)
+        XCTAssertEqual(apple.offer(.betweenSetRest)?.title, "Add rest (Open or timed)")
+        XCTAssertFalse(
+            (apple.offer(.betweenSetRest)?.title ?? "").localizedCaseInsensitiveContains("Lap")
+        )
+        XCTAssertTrue(
+            (apple.offer(.sessionWarmup)?.detail ?? "").contains("until tap")
+        )
+        XCTAssertFalse(
+            (apple.offer(.sessionWarmup)?.detail ?? "").localizedCaseInsensitiveContains("Lap")
+        )
+
+        let garmin = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock()],
+            tombstones: [],
+            prefs: prefs,
+            target: .garmin
+        )
+        XCTAssertEqual(garmin.offer(.betweenSetRest)?.title, "Add rest (Lap or timed)")
+        XCTAssertTrue((garmin.offer(.sessionWarmup)?.detail ?? "").contains("until Lap"))
+    }
+
+    func testAppleInitialRestOpenDefaultsTrueWhenUnconfigured() {
+        AppleWatchDeliveryPrefsStore.resetForTests()
+        XCTAssertTrue(
+            WorkoutEnrichmentPushPlanner.initialRestOpen(
+                standing: .defaults,
+                target: .apple
+            )
+        )
+        XCTAssertFalse(
+            WorkoutEnrichmentPushPlanner.initialRestOpen(
+                standing: .defaults,
+                target: .garmin
+            ),
+            "Garmin keeps standing timed default (restOpen false)"
+        )
+    }
+
+    func testAppleInitialRestOpenFollowsConfiguredDeliveryPrefs() {
+        AppleWatchDeliveryPrefsStore.resetForTests()
+        defer { AppleWatchDeliveryPrefsStore.resetForTests() }
+
+        AppleWatchDeliveryPrefsStore.current = AppleWatchDeliveryPrefs(
+            exerciseEnd: .tap,
+            restMode: .tap,
+            alertsEnabled: false
+        )
+        XCTAssertTrue(
+            WorkoutEnrichmentPushPlanner.initialRestOpen(
+                standing: .defaults,
+                target: .apple
+            )
+        )
+
+        AppleWatchDeliveryPrefsStore.current = AppleWatchDeliveryPrefs(
+            exerciseEnd: .tap,
+            restMode: .timed,
+            alertsEnabled: false
+        )
+        XCTAssertFalse(
+            WorkoutEnrichmentPushPlanner.initialRestOpen(
+                standing: .defaults,
+                target: .apple
+            )
+        )
+    }
+
+    func testAppleOpenRestApplicationClearsRestSec() throws {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock()],
+            tombstones: [],
+            prefs: .defaults,
+            target: .apple
+        )
+        let application = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.betweenSetRest],
+                restSecOverride: nil,
+                restOpenOverride: true
+            ),
+            prefs: .defaults,
+            tombstones: []
+        )
+        XCTAssertTrue(application.prefs.betweenSetRest.enabled)
+        XCTAssertTrue(application.prefs.betweenSetRest.restOpen)
+        XCTAssertNil(application.prefs.betweenSetRest.restSec)
     }
 
     // MARK: - Mock double

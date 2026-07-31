@@ -176,6 +176,7 @@ struct UnifiedWorkoutDetailView: View {
                 WorkoutEnrichmentPushSheet(
                     plan: prepared.plan,
                     prefs: prepared.prefs,
+                    target: prepared.target,
                     onConfirm: { decision in
                         startFlowSheet = nil
                         if enrichmentContinuesToApple {
@@ -932,7 +933,8 @@ extension UnifiedWorkoutDetailView {
                 // then present (SwiftUI drops / delays the second sheet).
                 if let prepared = await WorkoutEnrichmentPushCoordinator().prepare(
                     workoutId: workout.id,
-                    title: workout.name
+                    title: workout.name,
+                    target: .garmin
                 ) {
                     // User dismissed Start while prepare() was in flight — do not
                     // re-present enrichment or push after they backed out.
@@ -948,6 +950,7 @@ extension UnifiedWorkoutDetailView {
         case .apple:
             // AMA-2360: same enrichment offer as Garmin, then mapper compose with
             // Apple delivery prefs (not deliveryPrefs: nil).
+            // AMA-2362: Apple Open-rest copy + open default (not Garmin Lap / timed 60).
             showsHandoffNextSteps = false
             lastAppleHandoffShowsManagePlans = false
             enrichmentContinuesToApple = true
@@ -955,7 +958,8 @@ extension UnifiedWorkoutDetailView {
             Task {
                 if let prepared = await WorkoutEnrichmentPushCoordinator().prepare(
                     workoutId: workout.id,
-                    title: workout.name
+                    title: workout.name,
+                    target: .apple
                 ) {
                     guard startFlowSheet == .start else { return }
                     startFlowSheet = .enrichment(prepared)

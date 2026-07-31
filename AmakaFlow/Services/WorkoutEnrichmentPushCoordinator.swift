@@ -21,6 +21,8 @@ final class WorkoutEnrichmentPushCoordinator {
         let prefs: WorkoutPreferences
         let tombstones: [EnrichmentTombstone]
         let blocksJSON: [String: Any]
+        /// AMA-2362 — drives Open vs Lap copy and Apple restOpen seed.
+        let target: EnrichmentPushTarget
 
         var id: String { workoutId }
 
@@ -30,6 +32,7 @@ final class WorkoutEnrichmentPushCoordinator {
                 && lhs.plan == rhs.plan
                 && lhs.prefs == rhs.prefs
                 && lhs.tombstones == rhs.tombstones
+                && lhs.target == rhs.target
                 && NSDictionary(dictionary: lhs.blocksJSON).isEqual(to: rhs.blocksJSON)
         }
     }
@@ -51,7 +54,11 @@ final class WorkoutEnrichmentPushCoordinator {
     /// Gather prefs + stored blocks and decide whether the sheet has anything to
     /// ask. Returns `nil` when there is nothing to offer or an input is
     /// unavailable — the caller then pushes exactly as it does today.
-    func prepare(workoutId: String, title: String) async -> Prepared? {
+    func prepare(
+        workoutId: String,
+        title: String,
+        target: EnrichmentPushTarget = .garmin
+    ) async -> Prepared? {
         guard !workoutId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
 
         let prefs: WorkoutPreferences
@@ -73,7 +80,8 @@ final class WorkoutEnrichmentPushCoordinator {
         let plan = WorkoutEnrichmentPushPlanner.plan(
             blocks: parsed.blocks,
             tombstones: parsed.tombstones,
-            prefs: prefs
+            prefs: prefs,
+            target: target
         )
         guard plan.hasOffers else { return nil }
 
@@ -83,7 +91,8 @@ final class WorkoutEnrichmentPushCoordinator {
             plan: plan,
             prefs: prefs,
             tombstones: parsed.tombstones,
-            blocksJSON: blocksJSON
+            blocksJSON: blocksJSON,
+            target: target
         )
     }
 
