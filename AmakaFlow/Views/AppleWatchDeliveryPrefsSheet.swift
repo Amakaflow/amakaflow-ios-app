@@ -130,5 +130,6 @@ struct AppleWatchDeliveryPrefsSheet: View {
             .cornerRadius(Theme.CornerRadius.md)
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

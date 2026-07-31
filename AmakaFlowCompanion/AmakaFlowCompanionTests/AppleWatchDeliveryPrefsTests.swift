@@ -103,6 +103,30 @@ final class AppleWatchDeliveryPrefsTests: XCTestCase {
         XCTAssertTrue(lines.last?.hasPrefix("… +") == true)
     }
 
+    func testStepSummaryTruncatesAfterRepeatWhenLaterIntervalExists() throws {
+        let json = """
+        {
+          "title": "Test",
+          "sportType": "traditionalStrengthTraining",
+          "intervals": [
+            {
+              "kind": "repeat",
+              "reps": 3,
+              "intervals": [
+                { "kind": "work", "name": "Squat", "reps": 8 },
+                { "kind": "rest", "seconds": 60 }
+              ]
+            },
+            { "kind": "cooldown", "seconds": 120 }
+          ]
+        }
+        """.data(using: .utf8)!
+        let lines = WorkoutKitPlanStepSummary.lines(from: json, limit: 2)
+        XCTAssertEqual(lines.count, 2)
+        XCTAssertTrue(lines[0].contains("Repeat"))
+        XCTAssertTrue(lines[1].hasPrefix("… +"), "omitted nested rest + cooldown need a marker")
+    }
+
     func testMapperProviderForwardsDeliveryPrefs() async throws {
         let api = MockAPIService()
         api.fetchWorkoutBlocksJSONResult = .success([

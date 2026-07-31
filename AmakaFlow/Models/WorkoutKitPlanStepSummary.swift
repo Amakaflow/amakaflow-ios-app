@@ -15,56 +15,82 @@ enum WorkoutKitPlanStepSummary {
         guard let dto = try? WorkoutKitSync.default.parse(from: planJSON) else { return [] }
         var out: [String] = []
         let intervals = dto.intervals
+
         for (index, interval) in intervals.enumerated() {
             let room = limit - out.count
             guard room > 0 else { break }
-            let remainingIncludingThis = intervals.count - index
-            if room == 1, remainingIncludingThis > 1 {
-                out.append("… +\(remainingIncludingThis) more")
+
+            let laterLabelCount = intervals[(index + 1)..<intervals.count]
+                .reduce(0) { $0 + labelCount(for: $1) }
+            let remainingLabels = labelCount(for: interval) + laterLabelCount
+
+            if room == 1, remainingLabels > 1 {
+                out.append("… +\(remainingLabels) more")
                 break
             }
-            let before = out.count
-            append(interval: interval, into: &out, budget: room)
-            // Hard cap even if append miscounted.
+
+            // Reserve one slot for a truncation marker when more labels may remain.
+            let budget = laterLabelCount > 0 ? room - 1 : room
+            if budget <= 0 {
+                out.append("… +\(remainingLabels) more")
+                break
+            }
+
+            let omittedNested = append(interval: interval, into: &out, budget: budget)
             if out.count > limit {
                 out = Array(out.prefix(limit))
-                break
             }
-            if out.count == before {
-                // Nothing added (budget too small) — stop.
+
+            let omitted = omittedNested + laterLabelCount
+            if omitted > 0 {
+                if out.count < limit {
+                    out.append("… +\(omitted) more")
+                }
                 break
             }
         }
         return out
     }
 
+    /// Approximate preview lines an interval would emit (uncapped).
+    private static func labelCount(for interval: WKPlanDTO.Interval) -> Int {
+        switch interval {
+        case .warmup, .cooldown, .step:
+            return 1
+        case .repeatSet(_, let steps):
+            return 1 + steps.count
+        }
+    }
+
+    /// Appends up to `budget` lines. Returns how many nested step labels were omitted.
+    @discardableResult
     private static func append(
         interval: WKPlanDTO.Interval,
         into out: inout [String],
         budget: Int
-    ) {
-        guard budget > 0 else { return }
+    ) -> Int {
+        guard budget > 0 else { return labelCount(for: interval) }
         switch interval {
         case .warmup(let seconds, _):
             out.append("Warm-up · \(seconds)s")
+            return 0
         case .cooldown(let seconds, _):
             out.append("Cool-down · \(seconds)s")
+            return 0
         case .repeatSet(let reps, let steps):
             out.append("Repeat ×\(reps)")
             var used = 1
             for (stepIndex, step) in steps.enumerated() {
-                let left = budget - used
-                guard left > 0 else { break }
-                let remainingSteps = steps.count - stepIndex
-                if left == 1, remainingSteps > 1 {
-                    out.append("  · … +\(remainingSteps) steps")
-                    break
+                guard used < budget else {
+                    return steps.count - stepIndex
                 }
                 out.append("  · \(label(for: step))")
                 used += 1
             }
+            return 0
         case .step(let step):
             out.append(label(for: step))
+            return 0
         }
     }
 
