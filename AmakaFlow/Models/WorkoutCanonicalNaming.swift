@@ -125,6 +125,7 @@ struct WorkoutTypeMatchController {
     private(set) var state: CanonicalMatchState
     private(set) var lastMatchSoftFailed = false
     private var titleAwaitingMatch: String?
+    private var currentTitleForSaveMatch: String?
     private var latestServerNormalizedTitle: String?
 
     var canonicalId: String? { state.canonicalId }
@@ -143,13 +144,14 @@ struct WorkoutTypeMatchController {
     }
 
     mutating func onTitleIdle(title: String) async {
+        currentTitleForSaveMatch = title
         titleAwaitingMatch = title
         await attemptPendingAutoMatch()
     }
 
     mutating func onSave(online: Bool) async -> CanonicalSaveValues {
         if online {
-            await attemptPendingAutoMatch()
+            await attemptSaveAutoMatch()
         }
         // Match errors are consumed as advisory failures, so save always receives
         // the exact last-known chip state instead of being rejected.
@@ -186,11 +188,32 @@ struct WorkoutTypeMatchController {
             return
         }
 
+        await attemptAutoMatch(title: title)
+        if !lastMatchSoftFailed {
+            titleAwaitingMatch = nil
+        }
+    }
+
+    private mutating func attemptSaveAutoMatch() async {
+        guard state.canAttemptAutoMatch,
+              state.clearSuppressionNormalizedTitle == nil
+                || state.clearSuppressionNormalizedTitle != latestServerNormalizedTitle,
+              let title = currentTitleForSaveMatch,
+              !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+
+        await attemptAutoMatch(title: title)
+        if !lastMatchSoftFailed {
+            titleAwaitingMatch = nil
+        }
+    }
+
+    private mutating func attemptAutoMatch(title: String) async {
         do {
             let response = try await apiService.matchWorkoutType(title: title)
             latestServerNormalizedTitle = response.normalizedTitle
             state.applyAutoMatchIfEligible(response)
-            titleAwaitingMatch = nil
             lastMatchSoftFailed = false
         } catch {
             // Taxonomy matching is advisory. Preserve last-known state and allow save.
@@ -200,6 +223,7 @@ struct WorkoutTypeMatchController {
 
     private mutating func clearPendingMatch() {
         titleAwaitingMatch = nil
+        currentTitleForSaveMatch = nil
         latestServerNormalizedTitle = nil
         lastMatchSoftFailed = false
     }

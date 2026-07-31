@@ -123,6 +123,32 @@ final class WorkoutCanonicalNamingTests: XCTestCase {
         XCTAssertNil(body["canonicalSource"])
     }
 
+    func testMapperSaveBodyOmitsMalformedCanonicalPairs() throws {
+        let intervals = [
+            WorkoutSaveInterval(type: "time", name: "Run", seconds: 1200)
+        ]
+        let idOnlyRequest = WorkoutSaveRequest(
+            name: "Tempo Run",
+            sport: "running",
+            intervals: intervals,
+            canonicalId: "tempo_run"
+        )
+        let sourceOnlyRequest = WorkoutSaveRequest(
+            name: "Tempo Run",
+            sport: "running",
+            intervals: intervals,
+            canonicalSource: .auto
+        )
+
+        let idOnlyBody = try APIService.mapperSaveBody(from: idOnlyRequest, source: "manual")
+        let sourceOnlyBody = try APIService.mapperSaveBody(from: sourceOnlyRequest, source: "manual")
+
+        XCTAssertNil(idOnlyBody["canonical_id"])
+        XCTAssertNil(idOnlyBody["canonical_source"])
+        XCTAssertNil(sourceOnlyBody["canonical_id"])
+        XCTAssertNil(sourceOnlyBody["canonical_source"])
+    }
+
     func testMatchResponseDecodesBFFCamelCaseContract() throws {
         let data = Data(
             #"""
@@ -182,6 +208,20 @@ final class WorkoutCanonicalNamingTests: XCTestCase {
         let values = await controller.onSave(online: false)
 
         XCTAssertTrue(apiService.matchWorkoutTypeCalled)
+        XCTAssertEqual(values.canonicalId, "tempo_run")
+        XCTAssertEqual(values.source, .auto)
+    }
+
+    func testControllerRematchesIdleSuccessOnOnlineSave() async {
+        let apiService = MockAPIService()
+        apiService.matchWorkoutTypeResult = .success(match())
+        var controller = WorkoutTypeMatchController(apiService: apiService)
+
+        await controller.onTitleIdle(title: "Tempo Run")
+        let values = await controller.onSave(online: true)
+
+        XCTAssertEqual(apiService.matchWorkoutTypeCallCount, 2)
+        XCTAssertEqual(apiService.lastMatchWorkoutTypeTitle, "Tempo Run")
         XCTAssertEqual(values.canonicalId, "tempo_run")
         XCTAssertEqual(values.source, .auto)
     }

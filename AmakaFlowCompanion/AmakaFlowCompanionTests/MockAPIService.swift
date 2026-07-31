@@ -77,6 +77,7 @@ class MockAPIService: APIServiceProviding {
     var fetchWorkoutTypesCalled = false
     var lastFetchWorkoutTypesAIPresetOnly: Bool?
     var matchWorkoutTypeCalled = false
+    var matchWorkoutTypeCallCount = 0
     var lastMatchWorkoutTypeTitle: String?
     var mintTelegramLinkTokenCalled = false
     var getTelegramLinkStatusCalled = false
@@ -151,6 +152,7 @@ class MockAPIService: APIServiceProviding {
 
     func matchWorkoutType(title: String) async throws -> WorkoutTypeMatchResponse {
         matchWorkoutTypeCalled = true
+        matchWorkoutTypeCallCount += 1
         lastMatchWorkoutTypeTitle = title
         guard let result = matchWorkoutTypeResult else {
             throw APIError.notImplemented

@@ -58,10 +58,9 @@ extension APIService {
             body["workout_id"] = workoutId
         }
         if let canonicalId = request.canonicalId?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !canonicalId.isEmpty {
+           !canonicalId.isEmpty,
+           let canonicalSource = request.canonicalSource {
             body["canonical_id"] = canonicalId
-        }
-        if let canonicalSource = request.canonicalSource {
             body["canonical_source"] = canonicalSource.rawValue
         }
         return body
