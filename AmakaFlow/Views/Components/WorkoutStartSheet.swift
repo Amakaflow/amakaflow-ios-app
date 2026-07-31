@@ -24,7 +24,7 @@ struct WorkoutStartSheet: View {
 
     private let displayPrefs: GarminWatchDisplayPrefs
     private let hasConfiguredDisplayPrefs: Bool
-    private let appleDeliveryPrefs: AppleWatchDeliveryPrefs
+    private let appleDeliveryPrefsSummary: String
 
     init(
         workout: Workout,
@@ -50,7 +50,11 @@ struct WorkoutStartSheet: View {
         self.onClose = onClose
         self.displayPrefs = displayPrefs ?? GarminWatchDisplayPrefsStore.current
         self.hasConfiguredDisplayPrefs = hasConfiguredDisplayPrefs ?? GarminWatchDisplayPrefsStore.hasConfigured
-        self.appleDeliveryPrefs = appleDeliveryPrefs ?? AppleWatchDeliveryPrefsStore.current
+        if let appleDeliveryPrefs {
+            self.appleDeliveryPrefsSummary = appleDeliveryPrefs.summaryLine
+        } else {
+            self.appleDeliveryPrefsSummary = AppleWatchDeliveryPrefsStore.previewSummaryLine
+        }
         _selectedGym = State(initialValue: initialGym == .unset ? .home : initialGym)
     }
 
@@ -227,7 +231,7 @@ struct WorkoutStartSheet: View {
     private var applePrefsNote: some View {
         Button(action: onEditApplePrefs) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(appleDeliveryPrefs.summaryLine)
+                Text(appleDeliveryPrefsSummary)
                     .font(.system(size: 10.5))
                     .foregroundColor(DailyDriver.foregroundMuted)
                     .multilineTextAlignment(.leading)

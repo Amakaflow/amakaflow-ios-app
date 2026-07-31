@@ -95,6 +95,7 @@ struct AppleWatchDeliveryPrefsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .preferredColorScheme(.dark)
+        .interactiveDismissDisabled()
     }
 
     private func section<Content: View>(

@@ -111,6 +111,19 @@ enum AppleWatchDeliveryPrefsStore {
         }
     }
 
+    /// JSON body for mapper `delivery_prefs`, or `nil` so backend sport defaults apply
+    /// until the user has saved prefs at least once (AMA-2360 / CodeRabbit).
+    static var deliveryPrefsForMapper: [String: Any]? {
+        hasConfigured ? current.deliveryPrefsDictionary : nil
+    }
+
+    /// Preview / Start sheet line — distinguishes unset vs customized.
+    static var previewSummaryLine: String {
+        hasConfigured
+            ? current.summaryLine
+            : "Mapper sport defaults (not customized)"
+    }
+
     static func applyLiveSelection(
         exerciseEnd: AppleExerciseEnd? = nil,
         restMode: AppleRestMode? = nil,

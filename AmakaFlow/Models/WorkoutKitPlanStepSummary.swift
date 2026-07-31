@@ -51,7 +51,12 @@ enum WorkoutKitPlanStepSummary {
             return "Rest · tap"
         }
         let name = step.name?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let base = (name?.isEmpty == false) ? name! : kind
+        let base: String
+        if let name, !name.isEmpty {
+            base = name
+        } else {
+            base = kind
+        }
         if let reps = step.reps {
             return "\(base) · \(reps) reps"
         }

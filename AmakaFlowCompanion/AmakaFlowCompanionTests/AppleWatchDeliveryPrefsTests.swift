@@ -26,6 +26,15 @@ final class AppleWatchDeliveryPrefsTests: XCTestCase {
         XCTAssertFalse(prefs.alertsEnabled)
     }
 
+    func testUnconfiguredMapperPrefsAreNil() {
+        XCTAssertFalse(AppleWatchDeliveryPrefsStore.hasConfigured)
+        XCTAssertNil(AppleWatchDeliveryPrefsStore.deliveryPrefsForMapper)
+        XCTAssertTrue(
+            AppleWatchDeliveryPrefsStore.previewSummaryLine
+                .localizedCaseInsensitiveContains("defaults")
+        )
+    }
+
     func testDeliveryPrefsDictionaryUsesSnakeCaseAppleValues() {
         let prefs = AppleWatchDeliveryPrefs(
             exerciseEnd: .timedHoldsOnly,
@@ -41,12 +50,18 @@ final class AppleWatchDeliveryPrefsTests: XCTestCase {
         XCTAssertNotEqual(dict["rest_mode"] as? String, "lap")
     }
 
-    func testPersistAndLiveSelection() {
+    func testPersistAndLiveSelectionSurvivesReload() throws {
         AppleWatchDeliveryPrefsStore.applyLiveSelection(restMode: .tap)
-        XCTAssertEqual(AppleWatchDeliveryPrefsStore.current.restMode, .tap)
         XCTAssertTrue(AppleWatchDeliveryPrefsStore.hasConfigured)
+
+        let data = try XCTUnwrap(
+            UserDefaults.standard.data(forKey: DefaultsKey.appleWatchDeliveryPrefs.rawValue)
+        )
+        let decoded = try JSONDecoder().decode(AppleWatchDeliveryPrefs.self, from: data)
+        XCTAssertEqual(decoded.restMode, .tap)
+        XCTAssertEqual(AppleWatchDeliveryPrefsStore.deliveryPrefsForMapper?["rest_mode"] as? String, "tap")
         XCTAssertTrue(
-            AppleWatchDeliveryPrefsStore.current.summaryLine.localizedCaseInsensitiveContains("tap")
+            AppleWatchDeliveryPrefsStore.previewSummaryLine.localizedCaseInsensitiveContains("tap")
         )
     }
 
@@ -71,7 +86,8 @@ final class AppleWatchDeliveryPrefsTests: XCTestCase {
         let lines = WorkoutKitPlanStepSummary.lines(from: json)
         XCTAssertFalse(lines.isEmpty, "DTO should decode fixture intervals")
         XCTAssertTrue(lines.contains { $0.contains("Warm-up") })
-        XCTAssertTrue(lines.contains { $0.contains("Squat") || $0.contains("Repeat") })
+        XCTAssertTrue(lines.contains { $0.contains("Squat") })
+        XCTAssertTrue(lines.contains { $0.localizedCaseInsensitiveContains("rest") })
     }
 
     func testMapperProviderForwardsDeliveryPrefs() async throws {

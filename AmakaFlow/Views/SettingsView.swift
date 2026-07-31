@@ -1871,8 +1871,39 @@ struct SettingsView: View {
                 if deviceMode == .garminPhone {
                     garminConnectionCard
                 }
+
+                // AMA-2360: Apple delivery prefs are independent of Garmin device mode.
+                appleWatchDeliveryPrefsButton
             }
         }
+    }
+
+    /// Settings entry for Apple WorkoutKit delivery (visible for any device preference).
+    private var appleWatchDeliveryPrefsButton: some View {
+        Button {
+            showingAppleWatchDeliveryPrefs = true
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Apple Watch delivery")
+                    .font(Theme.Typography.body)
+                    .foregroundColor(Theme.Colors.textPrimary)
+                Text(
+                    AppleWatchDeliveryPrefsStore.hasConfigured
+                        ? AppleWatchDeliveryPrefsStore.current.summaryLine
+                        : "Mapper sport defaults — tap to customize"
+                )
+                .font(Theme.Typography.caption)
+                .foregroundColor(Theme.Colors.textSecondary)
+                .lineLimit(3)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, Theme.Spacing.sm)
+            .padding(.horizontal, Theme.Spacing.md)
+            .background(Theme.Colors.surfaceElevated)
+            .cornerRadius(Theme.CornerRadius.md)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("af_apple_watch_delivery_prefs_settings")
     }
 
     // MARK: - Garmin Connection Card
@@ -1971,28 +2002,6 @@ struct SettingsView: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("af_garmin_watch_display_prefs_settings")
-
-            // AMA-2360: Apple Watch delivery prefs (tap / timed rest).
-            Button {
-                showingAppleWatchDeliveryPrefs = true
-            } label: {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Apple Watch delivery")
-                        .font(Theme.Typography.body)
-                        .foregroundColor(Theme.Colors.textPrimary)
-                    Text(AppleWatchDeliveryPrefsStore.current.summaryLine)
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                        .lineLimit(3)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, Theme.Spacing.sm)
-                .padding(.horizontal, Theme.Spacing.md)
-                .background(Theme.Colors.surfaceElevated)
-                .cornerRadius(Theme.CornerRadius.md)
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("af_apple_watch_delivery_prefs_settings")
 
             // AMA-2336: what we offer to add when a workout is missing it.
             // Separate from AMA-2316 display prefs — these edit workout content.

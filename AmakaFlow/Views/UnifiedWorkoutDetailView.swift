@@ -157,7 +157,7 @@ struct UnifiedWorkoutDetailView: View {
                     meta: meta,
                     intervalCount: intervalCount,
                     stepLines: WorkoutKitPlanStepSummary.lines(from: planJSON),
-                    prefsSummary: AppleWatchDeliveryPrefsStore.current.summaryLine,
+                    prefsSummary: AppleWatchDeliveryPrefsStore.previewSummaryLine,
                     onConfirm: {
                         startFlowSheet = nil
                         confirmAppleWorkoutKitSchedule(
@@ -1010,10 +1010,7 @@ extension UnifiedWorkoutDetailView {
             if outcome.applied, let refreshed = await onEditorDismiss?() {
                 displayedWorkout = refreshed
             }
-            if let note = outcome.note, !note.isEmpty {
-                handoffStatus = note
-            }
-            beginAppleTryHandoff()
+            beginAppleTryHandoff(statusNote: outcome.note)
         }
     }
 
@@ -1080,7 +1077,7 @@ extension UnifiedWorkoutDetailView {
         }
     }
 
-    fileprivate func beginAppleTryHandoff() {
+    fileprivate func beginAppleTryHandoff(statusNote: String? = nil) {
         guard !isAppleHandoffInFlight else { return }
         isAppleHandoffInFlight = true
         showsHandoffNextSteps = false
@@ -1090,21 +1087,28 @@ extension UnifiedWorkoutDetailView {
             defer { isAppleHandoffInFlight = false }
             let service = AppleStartHandoffService(
                 planProvider: MapperWorkoutKitPlanProvider(
-                    deliveryPrefs: AppleWatchDeliveryPrefsStore.current.deliveryPrefsDictionary
+                    deliveryPrefs: AppleWatchDeliveryPrefsStore.deliveryPrefsForMapper
                 ),
                 scheduleCapReader: .automatic
             )
             let prepared = await service.prepare(workout: workout)
+            let composedMessage = [statusNote, prepared.message]
+                .compactMap { $0 }
+                .filter { !$0.isEmpty }
+                .joined(separator: " ")
             switch prepared.kind {
             case .previewReady:
                 guard let meta = prepared.planMeta, let planJSON = prepared.planJSON else {
-                    handoffStatus = AppleStartHandoffCopy.failureMessage(code: .mapperComposeFailed)
+                    handoffStatus = [statusNote, AppleStartHandoffCopy.failureMessage(code: .mapperComposeFailed)]
+                        .compactMap { $0 }
+                        .filter { !$0.isEmpty }
+                        .joined(separator: " ")
                     return
                 }
                 let intervalCount: Int = {
                     (try? WorkoutKitSync.default.parse(from: planJSON).intervals.count) ?? 0
                 }()
-                handoffStatus = prepared.message
+                handoffStatus = composedMessage
                 startFlowSheet = .applePreview(
                     name: workout.name,
                     meta: meta,
@@ -1112,10 +1116,10 @@ extension UnifiedWorkoutDetailView {
                     planJSON: planJSON
                 )
             case .failed, .blocked:
-                handoffStatus = prepared.message
+                handoffStatus = composedMessage
                 lastAppleHandoffShowsManagePlans = prepared.showsManageScheduledPlans
             case .savedToFitness, .sentToWatch:
-                handoffStatus = prepared.message
+                handoffStatus = composedMessage
                 lastAppleHandoffShowsManagePlans = prepared.showsManageScheduledPlans
             }
         }
