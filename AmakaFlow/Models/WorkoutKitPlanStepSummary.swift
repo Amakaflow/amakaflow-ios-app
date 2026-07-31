@@ -41,9 +41,10 @@ enum WorkoutKitPlanStepSummary {
                 out = Array(out.prefix(limit))
             }
 
-            let omitted = omittedNested + laterLabelCount
-            if omitted > 0 {
-                if out.count < limit {
+            // Only stop early when this interval overflowed the budget (or we hit the hard cap).
+            if omittedNested > 0 || out.count >= limit {
+                let omitted = omittedNested + laterLabelCount
+                if omitted > 0, out.count < limit {
                     out.append("… +\(omitted) more")
                 }
                 break
