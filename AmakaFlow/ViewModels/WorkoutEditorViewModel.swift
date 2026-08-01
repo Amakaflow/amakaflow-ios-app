@@ -149,7 +149,8 @@ class WorkoutEditorViewModel: ObservableObject {
             workoutId: existingWorkoutId,
             enrichmentTombstones: saveEnrichmentTombstones,
             canonicalId: canonicalId,
-            canonicalSource: canonicalSource
+            canonicalSource: canonicalSource,
+            canonicalFieldsProvided: true
         )
 
         do {

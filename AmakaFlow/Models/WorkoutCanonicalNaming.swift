@@ -156,6 +156,7 @@ final class WorkoutTypeMatchController: ObservableObject {
     private var titleAwaitingMatch: String?
     private var currentTitleForSaveMatch: String?
     private var latestServerNormalizedTitle: String?
+    private var latestServerNormalizedTitleSourceTitle: String?
     private var clearSuppressionPendingTitle: String?
 
     var canonicalId: String? { state.canonicalId }
@@ -218,6 +219,7 @@ final class WorkoutTypeMatchController: ObservableObject {
 
     func clear(serverNormalizedTitle: String) {
         latestServerNormalizedTitle = serverNormalizedTitle
+        latestServerNormalizedTitleSourceTitle = currentTitleForSaveMatch
         state.clear(serverNormalizedTitle: serverNormalizedTitle)
         clearSuppressionPendingTitle = nil
         titleAwaitingMatch = nil
@@ -257,6 +259,7 @@ final class WorkoutTypeMatchController: ObservableObject {
             let response = try await apiService.matchWorkoutType(title: title)
             guard title == currentTitleForSaveMatch else { return }
             latestServerNormalizedTitle = response.normalizedTitle
+            latestServerNormalizedTitleSourceTitle = title
             lastCandidates = response.candidates
             if clearSuppressionPendingTitle == title {
                 state.clear(serverNormalizedTitle: response.normalizedTitle)
@@ -277,12 +280,14 @@ final class WorkoutTypeMatchController: ObservableObject {
         titleAwaitingMatch = nil
         currentTitleForSaveMatch = nil
         latestServerNormalizedTitle = nil
+        latestServerNormalizedTitleSourceTitle = nil
         clearSuppressionPendingTitle = nil
         lastMatchSoftFailed = false
     }
 
     private func normalizedTitleForClear(title: String?) async -> String? {
-        if let latestServerNormalizedTitle {
+        if let latestServerNormalizedTitle,
+           title == latestServerNormalizedTitleSourceTitle {
             return latestServerNormalizedTitle
         }
         guard let title,
@@ -294,6 +299,7 @@ final class WorkoutTypeMatchController: ObservableObject {
             let response = try await apiService.matchWorkoutType(title: title)
             guard title == currentTitleForSaveMatch else { return nil }
             latestServerNormalizedTitle = response.normalizedTitle
+            latestServerNormalizedTitleSourceTitle = title
             lastCandidates = response.candidates
             lastMatchSoftFailed = false
             return response.normalizedTitle

@@ -131,14 +131,20 @@ private struct PresetCategory: Identifiable {
         switch category.lowercased() {
         case "run", "running":
             return "Run"
+        case "ride":
+            return "Ride"
         case "strength":
             return "Strength"
         case "mobility":
             return "Mobility"
-        case "cycle", "cycling":
-            return "Cycling"
-        case "swim", "swimming":
-            return "Swimming"
+        case "conditioning":
+            return "Conditioning"
+        case "recovery":
+            return "Recovery"
+        case "yoga":
+            return "Yoga"
+        case "mixed":
+            return "Mixed"
         default:
             return category.replacingOccurrences(of: "_", with: " ").capitalized
         }

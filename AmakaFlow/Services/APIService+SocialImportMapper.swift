@@ -57,11 +57,16 @@ extension APIService {
            !workoutId.isEmpty {
             body["workout_id"] = workoutId
         }
-        if let canonicalId = request.canonicalId?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !canonicalId.isEmpty,
-           let canonicalSource = request.canonicalSource {
-            body["canonical_id"] = canonicalId
-            body["canonical_source"] = canonicalSource.rawValue
+        if request.canonicalFieldsProvided {
+            if let canonicalId = request.canonicalId?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !canonicalId.isEmpty,
+               let canonicalSource = request.canonicalSource {
+                body["canonical_id"] = canonicalId
+                body["canonical_source"] = canonicalSource.rawValue
+            } else if request.canonicalId == nil, request.canonicalSource == nil {
+                body["canonical_id"] = NSNull()
+                body["canonical_source"] = NSNull()
+            }
         }
         return body
     }

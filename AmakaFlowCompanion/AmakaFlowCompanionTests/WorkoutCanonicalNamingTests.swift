@@ -138,7 +138,8 @@ final class WorkoutCanonicalNamingTests: XCTestCase {
                 WorkoutSaveInterval(type: "time", name: "Run", seconds: 1200)
             ],
             canonicalId: "tempo_run",
-            canonicalSource: .userPick
+            canonicalSource: .userPick,
+            canonicalFieldsProvided: true
         )
 
         let body = try APIService.mapperSaveBody(from: request, source: "manual")
@@ -147,6 +148,22 @@ final class WorkoutCanonicalNamingTests: XCTestCase {
         XCTAssertEqual(body["canonical_source"] as? String, "user_pick")
         XCTAssertNil(body["canonicalId"])
         XCTAssertNil(body["canonicalSource"])
+    }
+
+    func testMapperSaveBodyEmitsExplicitNullsWhenCanonicalMatchIsCleared() throws {
+        let request = WorkoutSaveRequest(
+            name: "Tempo Run",
+            sport: "running",
+            intervals: [
+                WorkoutSaveInterval(type: "time", name: "Run", seconds: 1200)
+            ],
+            canonicalFieldsProvided: true
+        )
+
+        let body = try APIService.mapperSaveBody(from: request, source: "manual")
+
+        XCTAssertTrue(body["canonical_id"] is NSNull)
+        XCTAssertTrue(body["canonical_source"] is NSNull)
     }
 
     func testMapperSaveBodyOmitsMalformedCanonicalPairs() throws {
@@ -298,6 +315,27 @@ final class WorkoutCanonicalNamingTests: XCTestCase {
         XCTAssertNil(controller.chipDisplayName)
         XCTAssertNil(values.canonicalId)
         XCTAssertNil(values.source)
+    }
+
+    func testClearFetchesNormalizationForCurrentTitleInsteadOfUsingStaleMatch() async {
+        let apiService = MockAPIService()
+        apiService.matchWorkoutTypeResult = .success(match(normalizedTitle: "tempo run"))
+        let controller = WorkoutTypeMatchController(apiService: apiService)
+        await controller.onTitleIdle(title: "Tempo Run")
+        apiService.matchWorkoutTypeResult = .success(
+            match(
+                canonicalId: "leg_day",
+                displayName: "Leg Day",
+                normalizedTitle: "leg day"
+            )
+        )
+        controller.noteTitleForSave("Leg Day")
+
+        await controller.clear()
+
+        XCTAssertEqual(apiService.matchWorkoutTypeCallCount, 2)
+        XCTAssertEqual(apiService.lastMatchWorkoutTypeTitle, "Leg Day")
+        XCTAssertEqual(controller.clearSuppressionNormalizedTitle, "leg day")
     }
 
     func testNoMatchResponseClearsPriorAutoChip() async {

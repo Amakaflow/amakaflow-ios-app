@@ -43,6 +43,8 @@ struct WorkoutSaveRequest: Codable {
     var canonicalId: String?
     /// Ownership of the canonical selection (`auto`, `user_pick`, or `preset`).
     var canonicalSource: CanonicalSource?
+    /// Distinguishes legacy omission (preserve server values) from editor-owned nulls (clear).
+    var canonicalFieldsProvided: Bool = false
 
     /// Convert from existing Workout model for edit mode
     static func from(workout: Workout) -> WorkoutSaveRequest {
