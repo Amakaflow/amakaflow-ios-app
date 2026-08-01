@@ -495,11 +495,11 @@ final class EditorV2Tests: XCTestCase {
             sets: 2,
             reps: 12,
             restSeconds: 60,
-            restOpen: true,
             fieldProvenance: [
-                WorkoutEnrichmentMutations.restSecKey: .enrichmentDefault,
-                WorkoutEnrichmentMutations.restOpenKey: .enrichmentDefault,
-            ]
+                WorkoutEnrichmentMutations.restSecKey: ProvSource.enrichmentDefault,
+                WorkoutEnrichmentMutations.restOpenKey: ProvSource.enrichmentDefault,
+            ],
+            restOpen: true
         )
         if exercise.restOpen == true {
             exercise.restSeconds = nil
@@ -508,11 +508,11 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertNil(exercise.restSeconds)
         XCTAssertEqual(
             exercise.fieldProvenance[WorkoutEnrichmentMutations.restOpenKey],
-            .enrichmentDefault
+            ProvSource.enrichmentDefault
         )
         XCTAssertEqual(
             exercise.fieldProvenance[WorkoutEnrichmentMutations.restSecKey],
-            .enrichmentDefault
+            ProvSource.enrichmentDefault
         )
     }
 }
