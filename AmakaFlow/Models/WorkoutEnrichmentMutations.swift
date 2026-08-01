@@ -71,6 +71,116 @@ enum WorkoutEnrichmentMutations {
         return out
     }
 
+    /// AMA-2365 — remove enrichment-owned soft sections / rest / warmup_sets so
+    /// cancel or a second sync starts clean (never stacks Jump Rope).
+    /// Author soft sections without `enrichment_kind` / enrichment provenance stay.
+    /// `softActivityNames` also drops orphan name-only blocks left by the
+    /// AMA-2364 save-strip bug (Jump Rope with no `type=warmup`).
+    static func stripEnrichmentOwned(
+        in blocksJSON: [String: Any],
+        softActivityNames: Set<String> = []
+    ) -> [String: Any] {
+        guard let rawBlocks = blocksJSON["blocks"] as? [[String: Any]] else { return blocksJSON }
+        let normalizedSoft = Set(softActivityNames.map(ExerciseKeyNormalizer.normalize))
+        var blocks: [[String: Any]] = []
+        blocks.reserveCapacity(rawBlocks.count)
+        for var block in rawBlocks {
+            if isEnrichmentSoftSection(block) {
+                continue
+            }
+            if isOrphanSoftActivityBlock(block, softNames: normalizedSoft) {
+                continue
+            }
+            // Strip each rest key only when that key's own provenance is enrichment_default.
+            if var prov = block["field_provenance"] as? [String: Any] {
+                for key in [restSecKey, restOpenKey]
+                where (prov[key] as? String) == ProvSource.enrichmentDefault.rawValue {
+                    block.removeValue(forKey: key)
+                    prov.removeValue(forKey: key)
+                }
+                if prov.isEmpty {
+                    block.removeValue(forKey: "field_provenance")
+                } else {
+                    block["field_provenance"] = prov
+                }
+            }
+            if var exercises = block["exercises"] as? [[String: Any]] {
+                for index in exercises.indices {
+                    exercises[index] = stripEnrichmentWarmupSets(from: exercises[index])
+                }
+                block["exercises"] = exercises
+            }
+            blocks.append(block)
+        }
+        var out = blocksJSON
+        out["blocks"] = blocks
+        return out
+    }
+
+    /// Matches `WorkoutEnrichmentBlocksJSON.parse` (`type` then `structure`).
+    private static func resolvedBlockKind(_ block: [String: Any]) -> String {
+        let type = (block["type"] as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !type.isEmpty { return type.lowercased() }
+        return ((block["structure"] as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? "")
+            .lowercased()
+    }
+
+    /// Name-only soft leftovers (no strength `sets`) that match mobility/cooldown prefs.
+    private static func isOrphanSoftActivityBlock(
+        _ block: [String: Any],
+        softNames: Set<String>
+    ) -> Bool {
+        guard !softNames.isEmpty else { return false }
+        let kind = resolvedBlockKind(block)
+        if !kind.isEmpty,
+           kind != "straight",
+           kind != "sets",
+           kind != StructureBlockType.warmup.rawValue,
+           kind != StructureBlockType.cooldown.rawValue {
+            return false
+        }
+        guard let exercises = block["exercises"] as? [[String: Any]], !exercises.isEmpty else {
+            return false
+        }
+        for exercise in exercises {
+            let name = ExerciseKeyNormalizer.normalize(exercise["name"] as? String ?? "")
+            guard softNames.contains(name) else { return false }
+            if exercise["sets"] != nil { return false }
+            if exercise["warmup_sets"] != nil { return false }
+        }
+        return true
+    }
+
+    private static func isEnrichmentSoftSection(_ block: [String: Any]) -> Bool {
+        let kind = (block["enrichment_kind"] as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased() ?? ""
+        if kind == EnrichmentKind.sessionWarmup.rawValue || kind == EnrichmentKind.cooldown.rawValue {
+            return true
+        }
+        let blockKind = resolvedBlockKind(block)
+        guard blockKind == StructureBlockType.warmup.rawValue
+            || blockKind == StructureBlockType.cooldown.rawValue else {
+            return false
+        }
+        return (block["structure_source"] as? String) == StructureSource.enrichmentDefault.rawValue
+    }
+
+    private static func stripEnrichmentWarmupSets(from exercise: [String: Any]) -> [String: Any] {
+        guard let rows = exercise["warmup_sets"] as? [[String: Any]], !rows.isEmpty else {
+            return exercise
+        }
+        let allOwned = rows.allSatisfy { row in
+            (row["structure_source"] as? String) == StructureSource.enrichmentDefault.rawValue
+        }
+        guard allOwned else { return exercise }
+        var out = exercise
+        out.removeValue(forKey: "warmup_sets")
+        return out
+    }
+
     static func appendTombstone(
         _ list: inout [EnrichmentTombstone],
         kind: EnrichmentKind,

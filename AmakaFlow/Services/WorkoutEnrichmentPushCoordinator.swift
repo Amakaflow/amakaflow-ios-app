@@ -45,6 +45,10 @@ final class WorkoutEnrichmentPushCoordinator {
         /// True when checked offers needed enrich and POST `/workout/enrich` failed
         /// or returned an incomplete summary (AMA-2363).
         var enrichFailed: Bool = false
+        /// AMA-2365 — blocks to restore if Apple preview is canceled (pre-enrich baseline).
+        var resetBlocksJSON: [String: Any]?
+        /// Tombstones that belonged with `resetBlocksJSON` before this apply.
+        var resetTombstones: [EnrichmentTombstone]?
 
         /// Apple Start may compose only when persist/enrich succeeded, or when
         /// the sheet was a clean no-op (`applied == false` with no note).
@@ -52,6 +56,30 @@ final class WorkoutEnrichmentPushCoordinator {
             if enrichFailed { return false }
             if applied { return true }
             return note == nil
+        }
+
+        static func == (lhs: ApplyOutcome, rhs: ApplyOutcome) -> Bool {
+            lhs.applied == rhs.applied
+                && lhs.note == rhs.note
+                && lhs.enrichFailed == rhs.enrichFailed
+                && lhs.resetTombstones == rhs.resetTombstones
+                && NSDictionary(dictionary: lhs.resetBlocksJSON ?? [:])
+                    .isEqual(to: rhs.resetBlocksJSON ?? [:])
+        }
+    }
+
+    /// Snapshot used to undo an Apple Start enrich when the user cancels preview.
+    struct ResetSnapshot: Equatable {
+        let workoutId: String
+        let title: String
+        let blocksJSON: [String: Any]
+        let tombstones: [EnrichmentTombstone]
+
+        static func == (lhs: ResetSnapshot, rhs: ResetSnapshot) -> Bool {
+            lhs.workoutId == rhs.workoutId
+                && lhs.title == rhs.title
+                && lhs.tombstones == rhs.tombstones
+                && NSDictionary(dictionary: lhs.blocksJSON).isEqual(to: rhs.blocksJSON)
         }
     }
 
@@ -87,10 +115,19 @@ final class WorkoutEnrichmentPushCoordinator {
             return nil
         }
 
-        let parsed = WorkoutEnrichmentBlocksJSON.parse(blocksJSON)
+        // AMA-2365 — Apple Start plans against a stripped baseline so a prior
+        // cancel/re-sync never hides offers behind leftover Jump Rope blocks.
+        let softNames = Self.softActivityNames(from: prefs)
+        let planningJSON = target == .apple
+            ? WorkoutEnrichmentMutations.stripEnrichmentOwned(
+                in: blocksJSON,
+                softActivityNames: softNames
+            )
+            : blocksJSON
+        let parsed = WorkoutEnrichmentBlocksJSON.parse(planningJSON)
         let plan = WorkoutEnrichmentPushPlanner.plan(
             blocks: parsed.blocks,
-            tombstones: parsed.tombstones,
+            tombstones: EnrichmentTombstone.parseFromWorkoutData(blocksJSON),
             prefs: prefs,
             target: target
         )
@@ -101,7 +138,7 @@ final class WorkoutEnrichmentPushCoordinator {
             title: title,
             plan: plan,
             prefs: prefs,
-            tombstones: parsed.tombstones,
+            tombstones: EnrichmentTombstone.parseFromWorkoutData(blocksJSON),
             blocksJSON: blocksJSON,
             target: target
         )
@@ -110,6 +147,7 @@ final class WorkoutEnrichmentPushCoordinator {
     /// Enrich, then store the result so the CIQ download builds the enriched FIT.
     /// AMA-2346: also persists reject tombstones when the user unchecks offers
     /// (including "Send as it is") so mobility/rest cannot sneak back in.
+    /// AMA-2365: strip enrichment-owned extras first so sync adds once, never stacks.
     func apply(
         prepared: Prepared,
         decision: WorkoutEnrichmentPushPlanner.Decision
@@ -125,7 +163,16 @@ final class WorkoutEnrichmentPushCoordinator {
                 return ApplyOutcome(applied: false, note: nil)
             }
 
-            var blocksJSON = prepared.blocksJSON
+            // AMA-2365 — Apple Start resets leftover enrichment, then adds once.
+            // Garmin keeps existing enrichment (prepare does not strip for Garmin).
+            let softNames = Self.softActivityNames(from: prepared.prefs)
+            let baseline = prepared.target == .apple
+                ? WorkoutEnrichmentMutations.stripEnrichmentOwned(
+                    in: prepared.blocksJSON,
+                    softActivityNames: softNames
+                )
+                : prepared.blocksJSON
+            var blocksJSON = baseline
             var enrichNote: String?
             var enrichFailed = false
             if application.appliesAnything {
@@ -170,7 +217,13 @@ final class WorkoutEnrichmentPushCoordinator {
                 blocksJSON: blocksJSON,
                 tombstones: application.tombstones
             )
-            return ApplyOutcome(applied: true, note: enrichNote, enrichFailed: enrichFailed)
+            return ApplyOutcome(
+                applied: true,
+                note: enrichNote,
+                enrichFailed: enrichFailed,
+                resetBlocksJSON: baseline,
+                resetTombstones: prepared.tombstones
+            )
         } catch {
             logger.error(
                 "Enrichment apply failed for \(prepared.workoutId, privacy: .public): \(error.localizedDescription, privacy: .public)"
@@ -180,6 +233,30 @@ final class WorkoutEnrichmentPushCoordinator {
                 note: "Couldn’t add the warm-up/rest extras — sending your workout as it is."
             )
         }
+    }
+
+    /// AMA-2365 — restore the pre-enrich baseline after Apple preview Cancel.
+    func restore(_ snapshot: ResetSnapshot) async -> Bool {
+        do {
+            try await apiService.saveWorkoutBlocksJSON(
+                workoutId: snapshot.workoutId,
+                title: snapshot.title,
+                blocksJSON: snapshot.blocksJSON,
+                tombstones: snapshot.tombstones
+            )
+            return true
+        } catch {
+            logger.error(
+                "Enrichment reset failed for \(snapshot.workoutId, privacy: .public): \(error.localizedDescription, privacy: .public)"
+            )
+            return false
+        }
+    }
+
+    static func softActivityNames(from prefs: WorkoutPreferences) -> Set<String> {
+        var names = Set(prefs.sessionWarmup.activities.map(\.name))
+        names.formUnion(prefs.cooldown.activities.map(\.name))
+        return names
     }
 
     /// Checked offer must land in added/refreshed/expected-skip; `skipped_no_identity`
