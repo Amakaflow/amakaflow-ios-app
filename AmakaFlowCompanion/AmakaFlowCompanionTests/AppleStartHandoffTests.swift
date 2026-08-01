@@ -427,7 +427,9 @@ final class AppleStartHandoffServiceTests: XCTestCase {
 
     func testConfirmScheduleReplacesIncompleteSameTitlePlans() async {
         let saver = MockWorkoutKitSaver()
-        let replacer = MockIncompleteScheduleReplacer()
+        let replacer = MockIncompleteScheduleReplacer(
+            matchingRows: [Self.incompleteRow(title: "Testing Apple 2")]
+        )
         let planJSON = StubWorkoutKitPlanProvider.strengthFixture(title: "Testing Apple 2")
         let meta = WorkoutKitPlanMeta(fromMapperJSON: planJSON)
         let service = AppleStartHandoffService(
@@ -441,8 +443,97 @@ final class AppleStartHandoffServiceTests: XCTestCase {
             meta: meta
         )
         XCTAssertEqual(result.kind, .savedToFitness)
+        XCTAssertEqual(replacer.findCallTitles, ["Testing Apple 2"])
         XCTAssertEqual(replacer.removedTitles, ["Testing Apple 2"])
         XCTAssertEqual(saver.saveCallCount, 1)
+    }
+
+    func testConfirmScheduleSurfacesReplacementLookupFailure() async {
+        let saver = MockWorkoutKitSaver()
+        let replacer = MockIncompleteScheduleReplacer(
+            findError: NSError(domain: "test", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "schedule fetch failed"
+            ])
+        )
+        let planJSON = StubWorkoutKitPlanProvider.strengthFixture(title: "Testing Apple 2")
+        let meta = WorkoutKitPlanMeta(fromMapperJSON: planJSON)
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(saver),
+            incompleteScheduleReplacer: .injected(replacer)
+        )
+        let result = await service.confirmSchedule(
+            workoutName: "Testing Apple 2",
+            planJSON: planJSON,
+            meta: meta
+        )
+        XCTAssertEqual(result.kind, .failed)
+        XCTAssertTrue(result.message.localizedCaseInsensitiveContains("schedule fetch failed"))
+        XCTAssertEqual(saver.saveCallCount, 0)
+        XCTAssertTrue(replacer.removedRows.isEmpty)
+    }
+
+    func testConfirmScheduleKeepsExistingOnSaveFailure() async {
+        let saver = MockWorkoutKitSaver()
+        saver.errorToThrow = WorkoutPlanError.saveFailed(
+            NSError(domain: "test", code: 2, userInfo: [
+                NSLocalizedDescriptionKey: "save blew up"
+            ])
+        )
+        let replacer = MockIncompleteScheduleReplacer(
+            matchingRows: [Self.incompleteRow(title: "Testing Apple 2")]
+        )
+        let planJSON = StubWorkoutKitPlanProvider.strengthFixture(title: "Testing Apple 2")
+        let meta = WorkoutKitPlanMeta(fromMapperJSON: planJSON)
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(saver),
+            incompleteScheduleReplacer: .injected(replacer)
+        )
+        let result = await service.confirmSchedule(
+            workoutName: "Testing Apple 2",
+            planJSON: planJSON,
+            meta: meta
+        )
+        XCTAssertEqual(result.kind, .failed)
+        XCTAssertEqual(saver.saveCallCount, 1)
+        XCTAssertEqual(replacer.findCallTitles, ["Testing Apple 2"])
+        XCTAssertTrue(replacer.removedRows.isEmpty, "must not remove existing schedule when save fails")
+    }
+
+    func testAtCapAllowsWhenMatchingIncompleteCanReplace() async {
+        let saver = MockWorkoutKitSaver()
+        let reader = MockScheduleCapReader(scheduledCount: 15, maxAllowedCount: 15)
+        let replacer = MockIncompleteScheduleReplacer(
+            matchingRows: [Self.incompleteRow(title: "Test Strength")]
+        )
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(saver),
+            planProvider: StubWorkoutKitPlanProvider(
+                json: StubWorkoutKitPlanProvider.strengthFixture(title: "Test Strength")
+            ),
+            scheduleCapReader: .injected(reader),
+            incompleteScheduleReplacer: .injected(replacer)
+        )
+        let result = await service.handoff(workout: sampleWorkout())
+        XCTAssertEqual(result.kind, .savedToFitness)
+        XCTAssertEqual(saver.saveCallCount, 1)
+        XCTAssertEqual(replacer.removedTitles, ["Test Strength"])
+        XCTAssertEqual(reader.statusCallCount, 2, "prepare + confirm both evaluate the live cap")
+    }
+
+    private static func incompleteRow(title: String) -> WorkoutScheduleRow {
+        WorkoutScheduleRow(
+            id: WorkoutScheduleRowID(
+                planID: "incomplete-\(title)",
+                date: DateComponents(year: 2026, month: 8, day: 1, hour: 9)
+            ),
+            title: title,
+            dateComponents: DateComponents(year: 2026, month: 8, day: 1, hour: 9),
+            scheduledAt: nil,
+            isComplete: false
+        )
     }
 
     func testEnrichmentFixtureParsesRestAndWarmupSteps() throws {
@@ -582,10 +673,30 @@ private final class MockWorkoutKitSaver: WorkoutKitSaving, @unchecked Sendable {
 }
 
 private final class MockIncompleteScheduleReplacer: IncompleteScheduleReplacing, @unchecked Sendable {
-    private(set) var removedTitles: [String] = []
+    private(set) var findCallTitles: [String] = []
+    private(set) var removedRows: [WorkoutScheduleRow] = []
+    var matchingRows: [WorkoutScheduleRow]
+    var findError: Error?
 
-    func removeIncompletePlans(titled title: String) async {
-        removedTitles.append(title)
+    init(matchingRows: [WorkoutScheduleRow] = [], findError: Error? = nil) {
+        self.matchingRows = matchingRows
+        self.findError = findError
+    }
+
+    var removedTitles: [String] { removedRows.map(\.title) }
+
+    func findIncompletePlans(titled title: String) async throws -> [WorkoutScheduleRow] {
+        findCallTitles.append(title)
+        if let findError { throw findError }
+        let needle = title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return matchingRows.filter {
+            !$0.isComplete
+                && $0.title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == needle
+        }
+    }
+
+    func remove(rows: [WorkoutScheduleRow]) async {
+        removedRows.append(contentsOf: rows)
     }
 }
 

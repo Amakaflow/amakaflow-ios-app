@@ -413,7 +413,26 @@ final class AppleStartHandoffService {
 
         if let scheduleCapReader {
             let status = await scheduleCapReader.scheduleCapStatus()
-            if status.scheduledCount >= status.maxAllowedCount {
+            var effectiveCount = status.scheduledCount
+            // AMA-2367 — a matching incomplete plan frees a slot on confirm; don't
+            // hard-block prepare when replacement would make room.
+            if effectiveCount >= status.maxAllowedCount, let incompleteScheduleReplacer {
+                do {
+                    let replacements = try await incompleteScheduleReplacer.findIncompletePlans(
+                        titled: workout.name
+                    )
+                    effectiveCount -= replacements.count
+                } catch {
+                    return AppleStartHandoffResult(
+                        kind: .failed,
+                        message: AppleStartHandoffCopy.failureMessage(
+                            code: .unknown,
+                            detail: error.localizedDescription
+                        )
+                    )
+                }
+            }
+            if effectiveCount >= status.maxAllowedCount {
                 return AppleStartHandoffResult(
                     kind: .failed,
                     message: AppleStartHandoffCopy.failureMessage(code: .scheduleCapReached),
@@ -460,11 +479,28 @@ final class AppleStartHandoffService {
             )
         }
         do {
-            // AMA-2367 — replace incomplete same-title plans so Start again does not stack.
+            // AMA-2367 — discover replacements first; remove only after a successful save.
+            var replacements: [WorkoutScheduleRow] = []
             if let incompleteScheduleReplacer {
-                await incompleteScheduleReplacer.removeIncompletePlans(titled: workoutName)
+                replacements = try await incompleteScheduleReplacer.findIncompletePlans(
+                    titled: workoutName
+                )
+            }
+            if let scheduleCapReader {
+                let status = await scheduleCapReader.scheduleCapStatus()
+                let effectiveCount = status.scheduledCount - replacements.count
+                if effectiveCount >= status.maxAllowedCount {
+                    return AppleStartHandoffResult(
+                        kind: .failed,
+                        message: AppleStartHandoffCopy.failureMessage(code: .scheduleCapReached),
+                        showsManageScheduledPlans: true
+                    )
+                }
             }
             try await workoutKitSaver.saveMapperPlanJSON(planJSON)
+            if let incompleteScheduleReplacer, !replacements.isEmpty {
+                await incompleteScheduleReplacer.remove(rows: replacements)
+            }
             return AppleStartHandoffCopy.scheduledInWorkoutMessage(
                 workoutName: workoutName,
                 pairing: pairingReader.pairingReadForCopy(),

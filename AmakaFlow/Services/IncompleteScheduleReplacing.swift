@@ -2,26 +2,39 @@
 //  IncompleteScheduleReplacing.swift
 //  AmakaFlow
 //
-//  AMA-2367 — remove incomplete same-title plans before adding a new schedule.
+//  AMA-2367 — discover/remove incomplete same-title plans around a new schedule.
 //
 
 import Foundation
 
-/// AMA-2367 — remove incomplete same-title plans before adding a new schedule.
+/// AMA-2367 — discover/remove incomplete same-title plans around a new schedule.
+///
+/// Lookup is throwing so fetch failures surface to the caller. Removal is
+/// intentionally separate and runs only after a successful save so a failed
+/// schedule leaves existing plans intact.
 protocol IncompleteScheduleReplacing: Sendable {
-    func removeIncompletePlans(titled title: String) async
+    func findIncompletePlans(titled title: String) async throws -> [WorkoutScheduleRow]
+    func remove(rows: [WorkoutScheduleRow]) async
 }
 
 #if canImport(WorkoutKit)
 @available(iOS 18.0, *)
-struct LiveIncompleteScheduleReplacer: IncompleteScheduleReplacing {
-    func removeIncompletePlans(titled title: String) async {
+@MainActor
+final class LiveIncompleteScheduleReplacer: IncompleteScheduleReplacing, @unchecked Sendable {
+    /// Shared across find → remove so `LiveWorkoutKitScheduler`'s plan cache stays warm.
+    private let scheduler = LiveWorkoutKitScheduler()
+
+    func findIncompletePlans(titled title: String) async throws -> [WorkoutScheduleRow] {
         let needle = Self.normalizedTitle(title)
-        guard !needle.isEmpty else { return }
-        let scheduler = LiveWorkoutKitScheduler()
-        guard let rows = try? await scheduler.fetchScheduledRows() else { return }
-        for row in rows where !row.isComplete {
-            guard Self.normalizedTitle(row.title) == needle else { continue }
+        guard !needle.isEmpty else { return [] }
+        let rows = try await scheduler.fetchScheduledRows()
+        return rows.filter { row in
+            !row.isComplete && Self.normalizedTitle(row.title) == needle
+        }
+    }
+
+    func remove(rows: [WorkoutScheduleRow]) async {
+        for row in rows {
             await scheduler.remove(row: row)
         }
     }
