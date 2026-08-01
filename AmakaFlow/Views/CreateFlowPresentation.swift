@@ -8,6 +8,8 @@
 import SwiftUI
 
 enum CreateFlowPresentation: Identifiable, Equatable {
+    case presetPicker
+    case presetEditor(WorkoutTypeItem)
     case socialImport(url: String?, platform: SocialImportPlatform?)
     case screenshot
     case knowledge
@@ -15,6 +17,10 @@ enum CreateFlowPresentation: Identifiable, Equatable {
 
     var id: String {
         switch self {
+        case .presetPicker:
+            return "preset-picker"
+        case .presetEditor(let preset):
+            return "preset-editor-\(preset.id)"
         case .socialImport(let url, let platform):
             return "social-\(platform?.rawValue ?? "any")-\(url ?? "")"
         case .screenshot:
@@ -52,18 +58,7 @@ struct CreateFlowSheetsModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .ddBottomSheet(isPresented: $showCreateSheet, detents: [.medium]) {
-                CreateWorkoutSheet { door in
-                    switch door {
-                    case .importURL:
-                        activeFlow = .socialImport(url: nil, platform: nil)
-                    case .screenshot:
-                        activeFlow = .screenshot
-                    case .manual:
-                        activeFlow = .manualEditor
-                    case .speak:
-                        speakUnavailableAlert = true
-                    }
-                }
+                CreateWorkoutSheet(onSelect: openDoor)
             }
             .alert("Voice import not available yet", isPresented: $speakUnavailableAlert) {
                 Button("OK", role: .cancel) {}
@@ -72,6 +67,14 @@ struct CreateFlowSheetsModifier: ViewModifier {
             }
             .fullScreenCover(item: $activeFlow) { flow in
                 switch flow {
+                case .presetPicker:
+                    WorkoutTypePresetPicker(
+                        apiService: AppDependencies.current.apiService,
+                        onPick: openPresetEditor
+                    )
+                case .presetEditor(let preset):
+                    WorkoutEditorView(preset: preset)
+                        .ddSuppressFloatingChrome()
                 case .socialImport(let url, let platform):
                     SocialImportFlowView(
                         mode: .url(platformHint: platform),
@@ -95,6 +98,28 @@ struct CreateFlowSheetsModifier: ViewModifier {
                         .ddSuppressFloatingChrome()
                 }
             }
+    }
+
+    private func openDoor(_ door: CreateWorkoutDoor) {
+        switch door {
+        case .createWithAI:
+            activeFlow = .presetPicker
+        case .importURL:
+            activeFlow = .socialImport(url: nil, platform: nil)
+        case .screenshot:
+            activeFlow = .screenshot
+        case .manual:
+            activeFlow = .manualEditor
+        case .speak:
+            speakUnavailableAlert = true
+        }
+    }
+
+    private func openPresetEditor(_ preset: WorkoutTypeItem) {
+        activeFlow = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            activeFlow = .presetEditor(preset)
+        }
     }
 }
 

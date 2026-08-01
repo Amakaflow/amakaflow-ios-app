@@ -13,23 +13,43 @@ struct EditorV2View: View {
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var saveModel: WorkoutEditorViewModel
+    @StateObject var matchController: WorkoutTypeMatchController
 
-    @State private var session: EditorV2Session
-    @State private var isReorderMode = false
-    @State private var toastMessage: String?
-    @State private var menuExerciseID: String?
-    @State private var editExerciseID: String?
-    @State private var configGroupKey: String?
-    @State private var pairSourceID: String?
-    @State private var addSheetOpen = false
-    @State private var replaceExerciseID: String?
+    @State var session: EditorV2Session
+    @State var isReorderMode = false
+    @State var toastMessage: String?
+    @State var menuExerciseID: String?
+    @State var editExerciseID: String?
+    @State var configGroupKey: String?
+    @State var pairSourceID: String?
+    @State var addSheetOpen = false
+    @State var replaceExerciseID: String?
+    @State private var isMatchSheetPresented = false
+    @FocusState private var isTitleFocused: Bool
     /// AMA-2336 — `workout_preferences` cache; fetched on the first quick-add.
     @State private var enrichmentPrefs: WorkoutPreferences?
 
-    init(mode: DDEditorMode, workout: Workout? = nil) {
+    init(
+        mode: DDEditorMode,
+        workout: Workout? = nil,
+        preset: WorkoutTypeItem? = nil
+    ) {
         self.mode = mode
         self.workout = workout
-        _session = State(initialValue: EditorV2Session.from(mode: mode, workout: workout))
+        let presetSeed = preset.map(WorkoutTypePresetEditorSeed.init)
+        let initialSession = presetSeed.map { EditorV2Session(title: $0.title) }
+            ?? EditorV2Session.from(mode: mode, workout: workout)
+        _session = State(initialValue: initialSession)
+        _matchController = StateObject(
+            wrappedValue: WorkoutTypeMatchController(
+                apiService: AppDependencies.current.apiService,
+                state: presetSeed?.matchState
+                    ?? CanonicalMatchState(
+                        canonicalId: workout?.canonicalId,
+                        source: workout?.canonicalSource
+                    )
+            )
+        )
         if let workout {
             _saveModel = StateObject(wrappedValue: WorkoutEditorViewModel(workout: workout))
         } else {
@@ -103,6 +123,22 @@ struct EditorV2View: View {
         .sheet(item: configGroupBinding, content: configSheet)
         .sheet(item: pairSourceBinding, content: pairSheet)
         .sheet(isPresented: $addSheetOpen) { addSheet }
+        .sheet(isPresented: $isMatchSheetPresented) { workoutTypeMatchSheet }
+        .task { await resolveLoadedMatchDisplayName() }
+        .task(id: session.title) {
+            matchController.noteTitleForSave(session.title)
+            do {
+                try await Task.sleep(for: .milliseconds(600))
+                try Task.checkCancellation()
+                await matchTitleIfNeeded()
+            } catch {
+                // A newer title superseded this advisory match.
+            }
+        }
+        .onChange(of: isTitleFocused) { _, focused in
+            guard !focused else { return }
+            Task { await matchTitleIfNeeded() }
+        }
     }
 
     private var accessibilityMarkers: some View {
@@ -154,7 +190,15 @@ struct EditorV2View: View {
                 .ddDisplayText(24, weight: .heavy)
                 .foregroundColor(DailyDriver.foreground)
                 .padding(.top, 10)
+                .focused($isTitleFocused)
                 .accessibilityIdentifier("workout_name_field")
+
+            if let displayName = matchController.chipDisplayName {
+                WorkoutTypeMatchChip(displayName: displayName) {
+                    isMatchSheetPresented = true
+                }
+                .padding(.top, 8)
+            }
 
             Text(subtitle)
                 .font(.system(size: 9, weight: .medium, design: .monospaced))
@@ -205,7 +249,7 @@ struct EditorV2View: View {
         }
     }
 
-    private func addWarmupSets(to exerciseID: String) {
+    func addWarmupSets(to exerciseID: String) {
         Task {
             let prefs = await loadEnrichmentPrefs()
             let added = session.addDefaultWarmupSets(
@@ -232,7 +276,8 @@ struct EditorV2View: View {
     }
 
     private func saveTapped() {
-        saveModel.name = session.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedTitle = session.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        saveModel.name = trimmedTitle
         saveModel.intervals = session.toSaveIntervals()
         session.mintMissingExerciseIDs()
         saveModel.saveBlocks = session.toSocialImportBlocks()
@@ -240,210 +285,31 @@ struct EditorV2View: View {
         saveModel.saveEnrichmentTombstones = session.enrichmentTombstonesDirty
             ? session.enrichmentTombstones
             : nil
-        Task { await saveModel.save() }
-    }
-}
-
-// MARK: - Sheets, toast, bindings (split for type_body_length)
-
-extension EditorV2View {
-    private var formatLabel: String? {
-        guard let key = session.formatGroupKey else { return nil }
-        return session.groups[key]?.type.label
-    }
-
-    private func isInSuperset(_ exercise: EditorV2Exercise) -> Bool {
-        guard let key = exercise.groupKey else { return false }
-        return session.groups[key]?.type == .superset
-    }
-
-    fileprivate func showToast(_ message: String) {
-        withAnimation { toastMessage = message }
-    }
-
-    @ViewBuilder
-    fileprivate var toastOverlay: some View {
-        if let toastMessage {
-            Text(toastMessage)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(DailyDriver.foreground)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(DailyDriver.backgroundElevated)
-                .clipShape(Capsule())
-                .padding(.bottom, 88)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .onAppear {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        withAnimation { self.toastMessage = nil }
-                    }
-                }
+        Task {
+            matchController.noteTitleForSave(trimmedTitle)
+            let canonicalValues = await matchController.onSave(online: true)
+            saveModel.canonicalId = canonicalValues.canonicalId
+            saveModel.canonicalSource = canonicalValues.source
+            await saveModel.save()
         }
     }
 
-    fileprivate func menuSheet(_ exercise: EditorV2Exercise) -> some View {
-        EditorV2MenuSheet(
-            exercise: exercise,
-            isInSuperset: isInSuperset(exercise),
-            onReorder: {
-                menuExerciseID = nil
-                isReorderMode = true
-            },
-            onReplace: {
-                replaceExerciseID = exercise.id
-                menuExerciseID = nil
-                addSheetOpen = true
-            },
-            onSupersetToggle: {
-                if isInSuperset(exercise) {
-                    session.removeFromSuperset(exercise.id)
-                    showToast("Removed from superset")
-                    menuExerciseID = nil
-                } else {
-                    pairSourceID = exercise.id
-                    menuExerciseID = nil
-                }
-            },
-            onAddSet: {
-                session.addSet(to: exercise.id)
-                showToast("Set added ✓")
-                menuExerciseID = nil
-            },
-            onAddWarmupSets: {
-                menuExerciseID = nil
-                addWarmupSets(to: exercise.id)
-            },
-            onRemoveWarmupSets: {
-                _ = session.removeWarmupSets(from: exercise.id)
-                showToast("Warm-up sets removed")
-                menuExerciseID = nil
-            },
-            onRemove: {
-                session.removeExercise(exercise.id)
-                showToast("Removed")
-                menuExerciseID = nil
-            }
-        )
-        .presentationDetents([.medium])
-    }
-
-    fileprivate func editSheet(_ exercise: EditorV2Exercise) -> some View {
-        EditorV2EditSheet(exercise: exercise) { updated in
-            if let index = session.exercises.firstIndex(where: { $0.id == updated.id }) {
-                session.exercises[index] = updated
-            }
-            editExerciseID = nil
+    private func resolveLoadedMatchDisplayName() async {
+        guard workout?.canonicalId != nil else { return }
+        guard let catalog = try? await AppDependencies.current.apiService.fetchWorkoutTypes(
+            aiPresetOnly: false
+        ) else {
+            return
         }
-        .presentationDetents([.medium, .large])
+        matchController.resolveLoadedDisplayName(from: catalog)
     }
 
-    fileprivate func configSheet(_ item: ConfigGroupItem) -> some View {
-        EditorV2GroupConfigSheet(
-            groupKey: item.id,
-            group: item.group,
-            onChange: { session.groups[item.id] = $0 },
-            onDone: { configGroupKey = nil },
-            onUngroup: {
-                session.ungroup(item.id)
-                configGroupKey = nil
-                showToast("Ungrouped — now straight sets")
-            },
-            onRemoveSoftSection: {
-                if item.group.type == .cooldown {
-                    session.removeCooldown()
-                    showToast("Cool-down removed")
-                } else {
-                    session.removeSessionWarmup()
-                    showToast("Warm-up removed")
-                }
-                configGroupKey = nil
-            }
-        )
-        .presentationDetents([.medium, .large])
-    }
-
-    fileprivate func pairSheet(_ source: EditorV2Exercise) -> some View {
-        EditorV2PairSheet(
-            source: source,
-            candidates: session.exercises.filter { $0.id != source.id },
-            groups: session.groups
-        ) { targetID in
-            session.pairSuperset(sourceID: source.id, targetID: targetID)
-            pairSourceID = nil
-            showToast("Superset paired ✓")
+    private func matchTitleIfNeeded() async {
+        // Existing IDs are resolved against the catalog on load. A retired/unknown
+        // ID stays hidden until the user actually changes the title.
+        if workout?.canonicalId != nil, session.title == workout?.name {
+            return
         }
-        .presentationDetents([.medium, .large])
-    }
-
-    fileprivate var addSheet: some View {
-        EditorV2AddExerciseSheet(
-            formatLabel: formatLabel,
-            replaceMode: replaceExerciseID != nil,
-            onAdd: { name in
-                if let replaceID = replaceExerciseID {
-                    session.replaceExercise(replaceID, with: name)
-                    replaceExerciseID = nil
-                    addSheetOpen = false
-                    showToast("Replaced ✓")
-                } else {
-                    _ = session.addExercise(named: name)
-                    let fmt = formatLabel
-                    showToast(
-                        fmt.map { "\(name) added to the \($0)" }
-                            ?? "\(name) added · 3×10 · 60s — tap to tweak"
-                    )
-                }
-            },
-            onDone: {
-                addSheetOpen = false
-                replaceExerciseID = nil
-            }
-        )
-        .presentationDetents([.large])
-    }
-
-    fileprivate var menuExerciseBinding: Binding<EditorV2Exercise?> {
-        Binding(
-            get: { menuExerciseID.flatMap { id in session.exercises.first { $0.id == id } } },
-            set: { menuExerciseID = $0?.id }
-        )
-    }
-
-    fileprivate var editExerciseBinding: Binding<EditorV2Exercise?> {
-        Binding(
-            get: { editExerciseID.flatMap { id in session.exercises.first { $0.id == id } } },
-            set: { editExerciseID = $0?.id }
-        )
-    }
-
-    fileprivate var pairSourceBinding: Binding<EditorV2Exercise?> {
-        Binding(
-            get: { pairSourceID.flatMap { id in session.exercises.first { $0.id == id } } },
-            set: { pairSourceID = $0?.id }
-        )
-    }
-
-    fileprivate var configGroupBinding: Binding<ConfigGroupItem?> {
-        Binding(
-            get: {
-                guard let key = configGroupKey, let group = session.groups[key] else { return nil }
-                return ConfigGroupItem(id: key, group: group)
-            },
-            set: { configGroupKey = $0?.id }
-        )
+        await matchController.onTitleIdle(title: session.title)
     }
 }
-
-struct ConfigGroupItem: Identifiable {
-    let id: String
-    let group: EditorV2Group
-}
-
-#if DEBUG
-#Preview("Editor v2 edit") {
-    EditorV2View(mode: .edit)
-}
-#Preview("Editor v2 new") {
-    EditorV2View(mode: .new)
-}
-#endif

@@ -21,6 +21,8 @@ class WorkoutEditorViewModel: ObservableObject {
     /// AMA-2336 — enrichment deletes from the editor, persisted with the workout.
     /// `nil` = omit (don't rewrite server tombstones); `[]` = clear them.
     @Published var saveEnrichmentTombstones: [EnrichmentTombstone]?
+    @Published var canonicalId: String?
+    @Published var canonicalSource: CanonicalSource?
     @Published var isSaving: Bool = false
     @Published var errorMessage: String?
     @Published var didSave: Bool = false
@@ -67,6 +69,8 @@ class WorkoutEditorViewModel: ObservableObject {
         self.preservedCreatorName = workout.creatorName
         self.name = workout.name
         self.sport = workout.sport
+        self.canonicalId = workout.canonicalId
+        self.canonicalSource = workout.canonicalSource
         self.intervals = workout.intervals.map { interval in
             switch interval {
             case .warmup(let seconds, let target):
@@ -143,7 +147,10 @@ class WorkoutEditorViewModel: ObservableObject {
             creatorName: preservedCreatorName,
             blocks: saveBlocks,
             workoutId: existingWorkoutId,
-            enrichmentTombstones: saveEnrichmentTombstones
+            enrichmentTombstones: saveEnrichmentTombstones,
+            canonicalId: canonicalId,
+            canonicalSource: canonicalSource,
+            canonicalFieldsProvided: true
         )
 
         do {

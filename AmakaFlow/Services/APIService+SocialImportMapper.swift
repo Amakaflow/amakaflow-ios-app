@@ -57,7 +57,25 @@ extension APIService {
            !workoutId.isEmpty {
             body["workout_id"] = workoutId
         }
+        applyCanonicalFields(to: &body, from: request)
         return body
+    }
+
+    /// Applies clear/set canonical identity for mapper save bodies.
+    private static func applyCanonicalFields(
+        to body: inout [String: Any],
+        from request: WorkoutSaveRequest
+    ) {
+        guard request.canonicalFieldsProvided else { return }
+        if let canonicalId = request.canonicalId?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !canonicalId.isEmpty,
+           let canonicalSource = request.canonicalSource {
+            body["canonical_id"] = canonicalId
+            body["canonical_source"] = canonicalSource.rawValue
+        } else if request.canonicalId == nil, request.canonicalSource == nil {
+            body["canonical_id"] = NSNull()
+            body["canonical_source"] = NSNull()
+        }
     }
 
     /// ADR-017 + AMA-2336 declared fields on each block for mapper persistence.

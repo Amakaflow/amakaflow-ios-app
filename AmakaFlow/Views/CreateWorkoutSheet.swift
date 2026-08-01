@@ -2,12 +2,13 @@
 //  CreateWorkoutSheet.swift
 //  AmakaFlow
 //
-//  Daily Driver "Add workout" sheet — four doors into import / create flows.
+//  Daily Driver "Add workout" sheet — explicit doors into import / create flows.
 //
 
 import SwiftUI
 
 enum CreateWorkoutDoor: Equatable {
+    case createWithAI
     case importURL
     case screenshot
     case speak
@@ -21,6 +22,16 @@ struct CreateWorkoutSheet: View {
     var body: some View {
         DDBottomSheetChrome(title: "Add workout") {
             VStack(spacing: 10) {
+                DDDoorRow(
+                    icon: "sparkles",
+                    iconBackground: DailyDriver.blue,
+                    title: "Create with AI",
+                    subtitle: "Start from a workout type"
+                ) {
+                    dismissThen { onSelect(.createWithAI) }
+                }
+                .accessibilityIdentifier("create_door_ai_preset")
+
                 DDDoorRow(
                     icon: "link",
                     iconBackground: DailyDriver.lime,
