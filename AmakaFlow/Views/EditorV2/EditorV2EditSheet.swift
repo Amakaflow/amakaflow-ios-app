@@ -75,24 +75,8 @@ struct EditorV2EditSheet: View {
                         step: 1
                     ) { draft.calories = $0 }
                 }
-                if draft.restSeconds != nil || draft.showsStrengthPrescriptionEditors {
-                    EditorV2Stepper(
-                        label: "Rest",
-                        value: draft.restSeconds ?? 0,
-                        unit: "s",
-                        min: 0,
-                        max: 300,
-                        step: 15,
-                        valueText: { draft.restSeconds == nil ? "—" : "\($0)s" },
-                        onChange: { newValue in
-                            if draft.restSeconds == nil {
-                                draft.restSeconds = PrescriptionDefaults.defaultRestSec
-                            } else {
-                                draft.restSeconds = newValue
-                            }
-                            draft.stampUser("rest_sec")
-                        }
-                    )
+                if showsRestEditor {
+                    restEditors
                 }
             }
             Button {
@@ -226,8 +210,81 @@ struct EditorV2EditSheet: View {
         }
     }
 
+    /// AMA-2368 — Open (tap) vs Timed rest; timed stepper only when Timed selected.
+    private var showsRestEditor: Bool {
+        draft.restSeconds != nil
+            || draft.restOpen == true
+            || draft.showsStrengthPrescriptionEditors
+    }
+
+    private var isRestOpen: Bool {
+        draft.restOpen == true
+    }
+
+    private var isTimedRest: Bool {
+        draft.restSeconds != nil && !isRestOpen
+    }
+
+    @ViewBuilder
+    private var restEditors: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("REST")
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .foregroundColor(DailyDriver.foregroundMuted)
+            HStack(spacing: 8) {
+                restModeChip(title: "Open", selected: isRestOpen) {
+                    try? draft.setRestIntent(restSeconds: nil, restOpen: true)
+                }
+                .accessibilityIdentifier("editor_v2_edit_rest_open")
+                restModeChip(title: "Timed", selected: isTimedRest) {
+                    let seconds = draft.restSeconds ?? PrescriptionDefaults.defaultRestSec
+                    try? draft.setRestIntent(restSeconds: seconds, restOpen: false)
+                }
+                .accessibilityIdentifier("editor_v2_edit_rest_timed")
+            }
+            if isTimedRest {
+                EditorV2Stepper(
+                    label: "Duration",
+                    value: draft.restSeconds ?? PrescriptionDefaults.defaultRestSec,
+                    unit: "s",
+                    min: 0,
+                    max: 300,
+                    step: 15,
+                    valueText: { "\($0)s" },
+                    onChange: { newValue in
+                        try? draft.setRestIntent(restSeconds: newValue, restOpen: false)
+                    }
+                )
+                .accessibilityIdentifier("editor_v2_edit_rest_sec")
+            }
+        }
+        .gridCellColumns(2)
+    }
+
+    private func restModeChip(
+        title: String,
+        selected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(selected ? DailyDriver.ink : DailyDriver.foreground)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(selected ? DailyDriver.foreground : DailyDriver.inputBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
     private func committedDraft() -> EditorV2Exercise {
         draft.commitRepRange(from: rangeText, useRangeMode: useRangeMode)
+        // AMA-2368 — open rest must not serialize with timed seconds (preserve provenance).
+        if draft.restOpen == true {
+            draft.restSeconds = nil
+        }
         return draft
     }
 }

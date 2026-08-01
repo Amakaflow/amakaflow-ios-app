@@ -445,4 +445,74 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertEqual(interval?.target, "8-10")
         XCTAssertEqual(interval?.reps, 9)
     }
+
+    // MARK: - AMA-2368 editor rest Open vs Timed
+
+    func testSetRestIntentOpenClearsTimedSeconds() throws {
+        var exercise = EditorV2Exercise(
+            name: "Triceps Press Downs",
+            sets: 2,
+            reps: 12,
+            restSeconds: 60
+        )
+        try exercise.setRestIntent(restSeconds: nil, restOpen: true)
+        XCTAssertEqual(exercise.restOpen, true)
+        XCTAssertNil(exercise.restSeconds)
+        XCTAssertEqual(
+            exercise.fieldProvenance[WorkoutEnrichmentMutations.restOpenKey],
+            .user
+        )
+        XCTAssertEqual(
+            exercise.fieldProvenance[WorkoutEnrichmentMutations.restSecKey],
+            .user
+        )
+    }
+
+    func testSetRestIntentTimedClearsOpenFlag() throws {
+        var exercise = EditorV2Exercise(
+            name: "Triceps Press Downs",
+            sets: 2,
+            reps: 12,
+            restOpen: true
+        )
+        try exercise.setRestIntent(restSeconds: 90, restOpen: false)
+        XCTAssertEqual(exercise.restOpen, false)
+        XCTAssertEqual(exercise.restSeconds, 90)
+        XCTAssertEqual(
+            exercise.fieldProvenance[WorkoutEnrichmentMutations.restOpenKey],
+            .user
+        )
+        XCTAssertEqual(
+            exercise.fieldProvenance[WorkoutEnrichmentMutations.restSecKey],
+            .user
+        )
+    }
+
+    func testOpenRestNormalizesAwayTimedSecondsWithoutStamping() {
+        // Mirrors EditorV2EditSheet.committedDraft — clear seconds, keep provenance.
+        var exercise = EditorV2Exercise(
+            name: "Triceps Press Downs",
+            sets: 2,
+            reps: 12,
+            restSeconds: 60,
+            fieldProvenance: [
+                WorkoutEnrichmentMutations.restSecKey: ProvSource.enrichmentDefault,
+                WorkoutEnrichmentMutations.restOpenKey: ProvSource.enrichmentDefault,
+            ],
+            restOpen: true
+        )
+        if exercise.restOpen == true {
+            exercise.restSeconds = nil
+        }
+        XCTAssertEqual(exercise.restOpen, true)
+        XCTAssertNil(exercise.restSeconds)
+        XCTAssertEqual(
+            exercise.fieldProvenance[WorkoutEnrichmentMutations.restOpenKey],
+            ProvSource.enrichmentDefault
+        )
+        XCTAssertEqual(
+            exercise.fieldProvenance[WorkoutEnrichmentMutations.restSecKey],
+            ProvSource.enrichmentDefault
+        )
+    }
 }
