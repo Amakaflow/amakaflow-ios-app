@@ -232,37 +232,6 @@ protocol WorkoutKitSaving: Sendable {
     func saveMapperPlanJSON(_ data: Data) async throws
 }
 
-/// AMA-2367 — remove incomplete same-title plans before adding a new schedule.
-protocol IncompleteScheduleReplacing: Sendable {
-    func removeIncompletePlans(titled title: String) async
-}
-
-#if canImport(WorkoutKit)
-@available(iOS 18.0, *)
-struct LiveIncompleteScheduleReplacer: IncompleteScheduleReplacing {
-    func removeIncompletePlans(titled title: String) async {
-        let needle = Self.normalizedTitle(title)
-        guard !needle.isEmpty else { return }
-        let scheduler = LiveWorkoutKitScheduler()
-        guard let rows = try? await scheduler.fetchScheduledRows() else { return }
-        for row in rows where !row.isComplete {
-            guard Self.normalizedTitle(row.title) == needle else { continue }
-            await scheduler.remove(row: row)
-        }
-    }
-
-    static func normalizedTitle(_ title: String) -> String {
-        title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    }
-}
-#endif
-
-enum IncompleteScheduleReplacerOverride {
-    case automatic
-    case injected(any IncompleteScheduleReplacing)
-    case disabled
-}
-
 @available(iOS 18.0, *)
 struct LiveWorkoutKitSaver: WorkoutKitSaving {
     func saveMapperPlanJSON(_ data: Data) async throws {
@@ -344,60 +313,75 @@ final class AppleStartHandoffService {
     ) {
         self.pairingReader = pairingReader
         self.planProvider = planProvider
-        switch workoutKitSaver {
+        self.workoutKitSaver = Self.resolveWorkoutKitSaver(workoutKitSaver)
+        self.scheduleCapReader = Self.resolveScheduleCapReader(scheduleCapReader)
+        self.incompleteScheduleReplacer = Self.resolveIncompleteScheduleReplacer(
+            incompleteScheduleReplacer
+        )
+        self.forceFailureCode = forceFailureCode ?? Self.defaultForceFailureCode
+    }
+
+    private static func resolveWorkoutKitSaver(
+        _ override: WorkoutKitSaverOverride
+    ) -> (any WorkoutKitSaving)? {
+        switch override {
         case .injected(let saver):
-            self.workoutKitSaver = saver
+            return saver
         case .automatic:
             if #available(iOS 18.0, *) {
-                self.workoutKitSaver = LiveWorkoutKitSaver()
-            } else {
-                self.workoutKitSaver = nil
+                return LiveWorkoutKitSaver()
             }
+            return nil
         case .disabled:
-            self.workoutKitSaver = nil
+            return nil
         }
-        switch scheduleCapReader {
+    }
+
+    private static func resolveScheduleCapReader(
+        _ override: ScheduleCapReaderOverride
+    ) -> (any ScheduleCapReading)? {
+        switch override {
         case .injected(let reader):
-            self.scheduleCapReader = reader
+            return reader
         case .automatic:
             #if canImport(WorkoutKit)
             if #available(iOS 18.0, *) {
-                self.scheduleCapReader = LiveScheduleCapReader()
-            } else {
-                self.scheduleCapReader = nil
-            }
-            #else
-            self.scheduleCapReader = nil
-            #endif
-        case .disabled:
-            self.scheduleCapReader = nil
-        }
-        switch incompleteScheduleReplacer {
-        case .injected(let replacer):
-            self.incompleteScheduleReplacer = replacer
-        case .automatic:
-            #if canImport(WorkoutKit)
-            if #available(iOS 18.0, *) {
-                self.incompleteScheduleReplacer = LiveIncompleteScheduleReplacer()
-            } else {
-                self.incompleteScheduleReplacer = nil
-            }
-            #else
-            self.incompleteScheduleReplacer = nil
-            #endif
-        case .disabled:
-            self.incompleteScheduleReplacer = nil
-        }
-        self.forceFailureCode = forceFailureCode ?? {
-            #if DEBUG
-            if let raw = ProcessInfo.processInfo.environment["UITEST_APPLE_TRY_FAIL"]?
-                .trimmingCharacters(in: .whitespacesAndNewlines),
-               !raw.isEmpty {
-                return AppleStartHandoffFailureCode(rawValue: raw) ?? .unknown
+                return LiveScheduleCapReader()
             }
             #endif
             return nil
+        case .disabled:
+            return nil
         }
+    }
+
+    private static func resolveIncompleteScheduleReplacer(
+        _ override: IncompleteScheduleReplacerOverride
+    ) -> (any IncompleteScheduleReplacing)? {
+        switch override {
+        case .injected(let replacer):
+            return replacer
+        case .automatic:
+            #if canImport(WorkoutKit)
+            if #available(iOS 18.0, *) {
+                return LiveIncompleteScheduleReplacer()
+            }
+            #endif
+            return nil
+        case .disabled:
+            return nil
+        }
+    }
+
+    private static func defaultForceFailureCode() -> AppleStartHandoffFailureCode? {
+        #if DEBUG
+        if let raw = ProcessInfo.processInfo.environment["UITEST_APPLE_TRY_FAIL"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !raw.isEmpty {
+            return AppleStartHandoffFailureCode(rawValue: raw) ?? .unknown
+        }
+        #endif
+        return nil
     }
 
     /// Fetch mapper DTO for preview. Does not schedule.

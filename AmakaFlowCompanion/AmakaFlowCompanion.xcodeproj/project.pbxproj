@@ -185,6 +185,7 @@
 		AMA2287APHTESTBLD /* AppleStartHandoffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2287APHTESTREF /* AppleStartHandoffTests.swift */; };
 		AMA2351METATESTBLD /* WorkoutKitPlanMetaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2351METATESTREF /* WorkoutKitPlanMetaTests.swift */; };
 		AMA2330SCHMANBUILD /* WorkoutKitScheduleManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2330SCHMANREF /* WorkoutKitScheduleManaging.swift */; };
+		AMA2367REPLBUILD /* IncompleteScheduleReplacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2367REPLREF /* IncompleteScheduleReplacing.swift */; };
 		AMA2330SCHVMBUILD /* WorkoutScheduleViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2330SCHVMREF /* WorkoutScheduleViewModel.swift */; };
 		AMA2330SCHVMTESTBUILD /* WorkoutScheduleViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2330SCHVMTESTREF /* WorkoutScheduleViewModelTests.swift */; };
 		AMA2330SCHVIEWBUILD /* WorkoutScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2330SCHVIEWREF /* WorkoutScheduleView.swift */; };
@@ -787,6 +788,7 @@
 		AMA2287APHTESTREF /* AppleStartHandoffTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleStartHandoffTests.swift; path = AmakaFlowCompanionTests/AppleStartHandoffTests.swift; sourceTree = "<group>"; };
 		AMA2351METATESTREF /* WorkoutKitPlanMetaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutKitPlanMetaTests.swift; path = AmakaFlowCompanionTests/WorkoutKitPlanMetaTests.swift; sourceTree = "<group>"; };
 		AMA2330SCHMANREF /* WorkoutKitScheduleManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutKitScheduleManaging.swift; path = ../AmakaFlow/Services/WorkoutKitScheduleManaging.swift; sourceTree = SOURCE_ROOT; };
+		AMA2367REPLREF /* IncompleteScheduleReplacing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = IncompleteScheduleReplacing.swift; path = ../AmakaFlow/Services/IncompleteScheduleReplacing.swift; sourceTree = SOURCE_ROOT; };
 		AMA2330SCHVMREF /* WorkoutScheduleViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutScheduleViewModel.swift; path = ../AmakaFlow/ViewModels/WorkoutScheduleViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA2330SCHVMTESTREF /* WorkoutScheduleViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutScheduleViewModelTests.swift; path = AmakaFlowCompanionTests/WorkoutScheduleViewModelTests.swift; sourceTree = "<group>"; };
 		AMA2330SCHVIEWREF /* WorkoutScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutScheduleView.swift; path = ../AmakaFlow/Views/WorkoutScheduleView.swift; sourceTree = SOURCE_ROOT; };
@@ -1331,6 +1333,7 @@
 				AMA2317TELEREF001 /* GarminHandoffTelemetry.swift */,
 				AMA2287APPHANDREF /* AppleStartHandoff.swift */,
 				AMA2330SCHMANREF /* WorkoutKitScheduleManaging.swift */,
+				AMA2367REPLREF /* IncompleteScheduleReplacing.swift */,
 				D3BUG10G00000001B0000001 /* DebugLogService.swift */,
 				AMA1791APPDBREF /* AppDatabase.swift */,
 				AMA1791V1REF /* V1_initial_schema.swift */,
@@ -2510,6 +2513,7 @@
 				AMA2316SHEETBLD01 /* GarminWatchDisplayPrefsSheet.swift in Sources */,
 				AMA2287APPHANDBLD /* AppleStartHandoff.swift in Sources */,
 				AMA2330SCHMANBUILD /* WorkoutKitScheduleManaging.swift in Sources */,
+				AMA2367REPLBUILD /* IncompleteScheduleReplacing.swift in Sources */,
 				AMA2291LIBDESTBLD /* LibraryDestination.swift in Sources */,
 				AMA2291UNIDETBLD /* UnifiedWorkoutDetailView.swift in Sources */,
 				AMA2312INFOBLD /* DDExerciseInfoView.swift in Sources */,
