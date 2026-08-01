@@ -42,9 +42,17 @@ final class WorkoutEnrichmentPushCoordinator {
     struct ApplyOutcome: Equatable {
         var applied: Bool
         var note: String?
-        /// True when checked offers needed enrich and POST `/workout/enrich` failed.
-        /// Apple Start must not silently compose the unenriched workout (AMA-2363).
+        /// True when checked offers needed enrich and POST `/workout/enrich` failed
+        /// or returned an incomplete summary (AMA-2363).
         var enrichFailed: Bool = false
+
+        /// Apple Start may compose only when persist/enrich succeeded, or when
+        /// the sheet was a clean no-op (`applied == false` with no note).
+        var allowsAppleHandoff: Bool {
+            if enrichFailed { return false }
+            if applied { return true }
+            return note == nil
+        }
     }
 
     private let apiService: APIServiceProviding
@@ -136,7 +144,17 @@ final class WorkoutEnrichmentPushCoordinator {
                             mode: .push
                         )
                     )
-                    blocksJSON = response.blocksJSON
+                    if let summary = response.enrichmentApplied {
+                        if Self.isIncompleteEnrichment(application: application, summary: summary) {
+                            enrichNote = "Couldn’t add the warm-up/rest extras — fix and try again."
+                            enrichFailed = true
+                        } else {
+                            blocksJSON = response.blocksJSON
+                        }
+                    } else {
+                        enrichNote = "Couldn’t add the warm-up/rest extras — fix and try again."
+                        enrichFailed = true
+                    }
                 } catch {
                     logger.error(
                         "Enrich failed, persisting tombstones only for \(prepared.workoutId, privacy: .public): \(error.localizedDescription, privacy: .public)"
@@ -162,5 +180,35 @@ final class WorkoutEnrichmentPushCoordinator {
                 note: "Couldn’t add the warm-up/rest extras — sending your workout as it is."
             )
         }
+    }
+
+    /// Checked offer must land in added/refreshed/expected-skip; `skipped_no_identity`
+    /// after mint is still a failure for Apple handoff (AMA-2363).
+    static func isIncompleteEnrichment(
+        application: WorkoutEnrichmentPushPlanner.Application,
+        summary: EnrichmentAppliedSummary
+    ) -> Bool {
+        func satisfied(_ kind: String) -> Bool {
+            summary.added.contains(kind)
+                || summary.refreshed.contains(kind)
+                || summary.skippedAlreadyPresent.contains(kind)
+                || summary.skippedTombstoned.contains(kind)
+        }
+
+        if application.prefs.sessionWarmup.enabled, !satisfied("session_warmup") {
+            return true
+        }
+        if application.prefs.cooldown.enabled, !satisfied("cooldown") {
+            return true
+        }
+        if application.prefs.betweenSetRest.enabled, !satisfied("between_set_rest") {
+            return true
+        }
+        if application.prefs.exerciseWarmupSets.enabled, !satisfied("exercise_warmup_sets") {
+            if !summary.skippedNoIdentity.isEmpty { return true }
+            // All candidates tombstoned per-exercise is an expected skip.
+            if summary.skippedTombstonedExercises.isEmpty { return true }
+        }
+        return false
     }
 }

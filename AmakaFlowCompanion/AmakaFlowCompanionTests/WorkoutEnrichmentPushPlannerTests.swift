@@ -492,6 +492,8 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
 
         XCTAssertEqual(mock.enrichWorkoutCallCount, 1)
         XCTAssertTrue(outcome.applied)
+        XCTAssertTrue(outcome.enrichFailed)
+        XCTAssertFalse(outcome.allowsAppleHandoff)
         XCTAssertNotNil(outcome.note)
         XCTAssertEqual(mock.savedWorkoutBlocksJSON.count, 1)
         let savedTombs = mock.savedWorkoutBlocksJSON[0].tombstones ?? []
@@ -685,16 +687,130 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
                 [
                     "type": "sets",
                     "exercises": [
-                        ["name": "Barbell back squat", "sets": 3, "reps": 10] as [String: Any]
+                        ["name": "Barbell back squat", "sets": 3, "reps": 10] as [String: Any],
+                        [
+                            "name": "Bench",
+                            "sets": 3,
+                            "reps": 8,
+                            "exercise_id": "wex_keep"
+                        ] as [String: Any]
                     ]
                 ] as [String: Any]
             ]
         ]
         let minted = WorkoutEnrichmentMutations.mintMissingExerciseIds(in: input)
         let exercises = (minted["blocks"] as? [[String: Any]])?.first?["exercises"] as? [[String: Any]]
+        let squatId = exercises?.first?["exercise_id"] as? String
+        XCTAssertNotNil(squatId)
+        XCTAssertTrue(squatId?.hasPrefix("wex_") == true)
+        XCTAssertEqual(exercises?.last?["exercise_id"] as? String, "wex_keep")
+    }
+
+    @MainActor
+    func testApplyMintsExerciseIdBeforeEnrichRequest() async {
+        let mock = MockAPIService()
+        mock.enrichWorkoutResult = .success(
+            EnrichResponse(
+                blocksJSON: ["blocks": []],
+                enrichmentApplied: EnrichmentAppliedSummary(
+                    prefsSource: "override",
+                    added: ["exercise_warmup_sets"]
+                )
+            )
+        )
+        let blocksJSON: [String: Any] = [
+            "blocks": [
+                [
+                    "type": "sets",
+                    "exercises": [
+                        ["name": "Barbell back squat", "sets": 3, "reps": 10] as [String: Any]
+                    ]
+                ] as [String: Any]
+            ]
+        ]
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock()],
+            tombstones: [],
+            prefs: .defaults,
+            target: .apple
+        )
+        let prepared = WorkoutEnrichmentPushCoordinator.Prepared(
+            workoutId: "w1",
+            title: "Push",
+            plan: plan,
+            prefs: .defaults,
+            tombstones: [],
+            blocksJSON: blocksJSON,
+            target: .apple
+        )
+        let outcome = await WorkoutEnrichmentPushCoordinator(apiService: mock).apply(
+            prepared: prepared,
+            decision: WorkoutEnrichmentPushPlanner.Decision(checkedKinds: [.exerciseWarmupSets])
+        )
+        XCTAssertTrue(outcome.allowsAppleHandoff)
+        let sent = mock.lastEnrichRequest?.blocksJSON
+        let exercises = (sent?["blocks"] as? [[String: Any]])?.first?["exercises"] as? [[String: Any]]
         let id = exercises?.first?["exercise_id"] as? String
         XCTAssertNotNil(id)
         XCTAssertTrue(id?.hasPrefix("wex_") == true)
+    }
+
+    @MainActor
+    func testApplyMarksIncompleteWhenWarmupSetsSkippedNoIdentity() async {
+        let mock = MockAPIService()
+        mock.enrichWorkoutResult = .success(
+            EnrichResponse(
+                blocksJSON: ["blocks": []],
+                enrichmentApplied: EnrichmentAppliedSummary(
+                    prefsSource: "override",
+                    skippedNoIdentity: ["Barbell back squat"]
+                )
+            )
+        )
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock()],
+            tombstones: [],
+            prefs: .defaults,
+            target: .apple
+        )
+        let prepared = WorkoutEnrichmentPushCoordinator.Prepared(
+            workoutId: "w1",
+            title: "Push",
+            plan: plan,
+            prefs: .defaults,
+            tombstones: [],
+            blocksJSON: ["blocks": []],
+            target: .apple
+        )
+        let outcome = await WorkoutEnrichmentPushCoordinator(apiService: mock).apply(
+            prepared: prepared,
+            decision: WorkoutEnrichmentPushPlanner.Decision(checkedKinds: [.exerciseWarmupSets])
+        )
+        XCTAssertTrue(outcome.applied)
+        XCTAssertTrue(outcome.enrichFailed)
+        XCTAssertFalse(outcome.allowsAppleHandoff)
+    }
+
+    func testAppleTimedRestWhenOpenTurnedOff() throws {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock()],
+            tombstones: [],
+            prefs: .defaults,
+            target: .apple
+        )
+        let application = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.betweenSetRest],
+                restSecOverride: 60,
+                restOpenOverride: false
+            ),
+            prefs: .defaults,
+            tombstones: []
+        )
+        XCTAssertTrue(application.prefs.betweenSetRest.enabled)
+        XCTAssertFalse(application.prefs.betweenSetRest.restOpen)
+        XCTAssertEqual(application.prefs.betweenSetRest.restSec, 60)
     }
 
     func testAppleOmitRestModeSkipsRestOffer() {
