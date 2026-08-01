@@ -105,6 +105,31 @@ final class WorkoutCanonicalNamingTests: XCTestCase {
         XCTAssertEqual(state.valuesForSave().source, .preset)
     }
 
+    func testPresetEditorSeedSetsTitleCanonicalIdAndPresetSource() {
+        let preset = workoutType(id: "tempo_run", displayName: "Tempo Run", aiPreset: true)
+
+        let seed = WorkoutTypePresetEditorSeed(preset: preset)
+
+        XCTAssertEqual(seed.title, "Tempo Run")
+        XCTAssertEqual(seed.matchState.canonicalId, "tempo_run")
+        XCTAssertEqual(seed.matchState.source, .preset)
+        XCTAssertEqual(seed.matchState.chipDisplayName, "Tempo Run")
+    }
+
+    func testPresetCanonicalIdSurvivesTitleRename() async {
+        let apiService = MockAPIService()
+        let seed = WorkoutTypePresetEditorSeed(
+            preset: workoutType(id: "tempo_run", displayName: "Tempo Run", aiPreset: true)
+        )
+        let controller = WorkoutTypeMatchController(apiService: apiService, state: seed.matchState)
+
+        await controller.onTitleIdle(title: "Friday Threshold Session")
+
+        XCTAssertFalse(apiService.matchWorkoutTypeCalled)
+        XCTAssertEqual(controller.canonicalId, "tempo_run")
+        XCTAssertEqual(controller.canonicalSource, .preset)
+    }
+
     func testMapperSaveBodyEmitsCanonicalFieldsInSnakeCase() throws {
         let request = WorkoutSaveRequest(
             name: "Tempo Run",
@@ -382,7 +407,11 @@ final class WorkoutCanonicalNamingTests: XCTestCase {
         )
     }
 
-    private func workoutType(id: String, displayName: String) -> WorkoutTypeItem {
+    private func workoutType(
+        id: String,
+        displayName: String,
+        aiPreset: Bool = false
+    ) -> WorkoutTypeItem {
         WorkoutTypeItem(
             id: id,
             category: "cardio",
@@ -390,7 +419,7 @@ final class WorkoutCanonicalNamingTests: XCTestCase {
             focus: [],
             displayName: displayName,
             aliases: [],
-            aiPreset: false,
+            aiPreset: aiPreset,
             equipment: [],
             platformTags: [:]
         )

@@ -40,6 +40,18 @@ struct CanonicalSaveValues: Equatable, Sendable {
     let source: CanonicalSource?
 }
 
+struct WorkoutTypePresetEditorSeed: Equatable, Sendable {
+    let title: String
+    let matchState: CanonicalMatchState
+
+    init(preset: WorkoutTypeItem) {
+        title = preset.displayName
+        var state = CanonicalMatchState()
+        state.applyPreset(canonicalId: preset.id, displayName: preset.displayName)
+        matchState = state
+    }
+}
+
 struct CanonicalMatchState: Equatable, Sendable {
     private(set) var canonicalId: String?
     private(set) var source: CanonicalSource?

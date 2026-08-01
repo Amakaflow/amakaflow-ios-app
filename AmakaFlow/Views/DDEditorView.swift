@@ -10,11 +10,18 @@ import SwiftUI
 struct DDEditorView: View {
     let mode: DDEditorMode
     var workout: Workout?
+    var preset: WorkoutTypeItem?
     var onBackfillSaved: (() -> Void)?
 
-    init(mode: DDEditorMode = .new, workout: Workout? = nil, onBackfillSaved: (() -> Void)? = nil) {
+    init(
+        mode: DDEditorMode = .new,
+        workout: Workout? = nil,
+        preset: WorkoutTypeItem? = nil,
+        onBackfillSaved: (() -> Void)? = nil
+    ) {
         self.mode = mode
         self.workout = workout
+        self.preset = preset
         self.onBackfillSaved = onBackfillSaved
     }
 
@@ -22,7 +29,7 @@ struct DDEditorView: View {
         if mode == .backfill {
             DDEditorLegacyView(mode: mode, workout: workout, onBackfillSaved: onBackfillSaved)
         } else {
-            EditorV2View(mode: mode, workout: workout)
+            EditorV2View(mode: mode, workout: workout, preset: preset)
         }
     }
 }

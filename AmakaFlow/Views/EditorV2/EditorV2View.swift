@@ -29,17 +29,25 @@ struct EditorV2View: View {
     /// AMA-2336 — `workout_preferences` cache; fetched on the first quick-add.
     @State private var enrichmentPrefs: WorkoutPreferences?
 
-    init(mode: DDEditorMode, workout: Workout? = nil) {
+    init(
+        mode: DDEditorMode,
+        workout: Workout? = nil,
+        preset: WorkoutTypeItem? = nil
+    ) {
         self.mode = mode
         self.workout = workout
-        _session = State(initialValue: EditorV2Session.from(mode: mode, workout: workout))
+        let presetSeed = preset.map(WorkoutTypePresetEditorSeed.init)
+        let initialSession = presetSeed.map { EditorV2Session(title: $0.title) }
+            ?? EditorV2Session.from(mode: mode, workout: workout)
+        _session = State(initialValue: initialSession)
         _matchController = StateObject(
             wrappedValue: WorkoutTypeMatchController(
                 apiService: AppDependencies.current.apiService,
-                state: CanonicalMatchState(
-                    canonicalId: workout?.canonicalId,
-                    source: workout?.canonicalSource
-                )
+                state: presetSeed?.matchState
+                    ?? CanonicalMatchState(
+                        canonicalId: workout?.canonicalId,
+                        source: workout?.canonicalSource
+                    )
             )
         )
         if let workout {

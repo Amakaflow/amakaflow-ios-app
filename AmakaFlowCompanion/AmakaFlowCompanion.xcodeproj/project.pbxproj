@@ -125,6 +125,7 @@
 		AMA2304APIBLD /* APIService+WorkoutTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2304APIREF /* APIService+WorkoutTypes.swift */; };
 		AMA2304CHIPBLD /* WorkoutTypeMatchChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2304CHIPREF /* WorkoutTypeMatchChip.swift */; };
 		AMA2304SHEETBLD /* WorkoutTypeMatchSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2304SHEETREF /* WorkoutTypeMatchSheet.swift */; };
+		AMA2304PREBLD /* WorkoutTypePresetPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2304PREREF /* WorkoutTypePresetPicker.swift */; };
 		AMA2305VMXBLD /* SocialImportViewModel+StructureClarify.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305VMXREF /* SocialImportViewModel+StructureClarify.swift */; };
 		AMA2308VMXBLD /* SocialImportViewModel+Failure.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2308VMXREF /* SocialImportViewModel+Failure.swift */; };
 		AMA2305VWBLD /* StructureClarifyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305VWREF /* StructureClarifyView.swift */; };
@@ -724,6 +725,7 @@
 		AMA2304APIREF /* APIService+WorkoutTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+WorkoutTypes.swift"; path = "../AmakaFlow/Services/APIService+WorkoutTypes.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2304CHIPREF /* WorkoutTypeMatchChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutTypeMatchChip.swift; path = ../AmakaFlow/Views/EditorV2/WorkoutTypeMatchChip.swift; sourceTree = SOURCE_ROOT; };
 		AMA2304SHEETREF /* WorkoutTypeMatchSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutTypeMatchSheet.swift; path = ../AmakaFlow/Views/EditorV2/WorkoutTypeMatchSheet.swift; sourceTree = SOURCE_ROOT; };
+		AMA2304PREREF /* WorkoutTypePresetPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutTypePresetPicker.swift; path = ../AmakaFlow/Views/WorkoutTypePresetPicker.swift; sourceTree = SOURCE_ROOT; };
 		AMA2305VMXREF /* SocialImportViewModel+StructureClarify.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "SocialImportViewModel+StructureClarify.swift"; path = "../AmakaFlow/ViewModels/SocialImportViewModel+StructureClarify.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2308VMXREF /* SocialImportViewModel+Failure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "SocialImportViewModel+Failure.swift"; path = "../AmakaFlow/ViewModels/SocialImportViewModel+Failure.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2305VWREF /* StructureClarifyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StructureClarifyView.swift; path = ../AmakaFlow/Views/SocialImport/StructureClarifyView.swift; sourceTree = SOURCE_ROOT; };
@@ -1389,6 +1391,7 @@
 				AMA2292TODAYVIEW0000A /* TodayDiaryView.swift */,
 				AMA2292PROFILEHUB00A /* ProfileHubView.swift */,
 				AMA2292DDCREATE00A /* CreateWorkoutSheet.swift */,
+				AMA2304PREREF /* WorkoutTypePresetPicker.swift */,
 				AMA2292DDFLOW00000A /* CreateFlowPresentation.swift */,
 				AMA2005LIBDVIEW0000A /* LibraryDetailView.swift */,
 				AMA2291UNIDETREF /* UnifiedWorkoutDetailView.swift */,
@@ -2362,6 +2365,7 @@
 				AMA2297DDGYMST00B /* DDActiveGymStore.swift in Sources */,
 				AMA2297DDGYM00000B /* DDGymDetailView.swift in Sources */,
 				AMA2292DDCREATE00B /* CreateWorkoutSheet.swift in Sources */,
+				AMA2304PREBLD /* WorkoutTypePresetPicker.swift in Sources */,
 				AMA2292DDFLOW00000B /* CreateFlowPresentation.swift in Sources */,
 				AMA2005LIBDVIEW0000B /* LibraryDetailView.swift in Sources */,
 				AMA2027MSGVIEW000000B /* MessagingView.swift in Sources */,
