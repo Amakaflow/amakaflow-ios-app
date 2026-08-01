@@ -39,7 +39,7 @@ struct WorkoutTypeMatchChip: View {
 
 #if DEBUG
 #Preview {
-    WorkoutTypeMatchChip(displayName: "Tempo Run", action: {})
+    WorkoutTypeMatchChip(displayName: "Tempo Run") {}
         .padding()
         .background(DailyDriver.screenBackground)
         .preferredColorScheme(.dark)

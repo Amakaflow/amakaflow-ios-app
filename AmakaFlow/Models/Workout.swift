@@ -7,12 +7,6 @@
 
 import Foundation
 
-enum CanonicalSource: String, Codable, Equatable, Hashable, Sendable {
-    case auto
-    case userPick = "user_pick"
-    case preset
-}
-
 // MARK: - Workout Interval Types
 enum WorkoutInterval: Codable, Hashable {
     case warmup(seconds: Int, target: String?)
