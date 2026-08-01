@@ -1985,18 +1985,6 @@
         "title": "KnowledgeCardResponse",
         "type": "object"
       },
-      "KnowledgeDeleteResponse": {
-        "additionalProperties": true,
-        "description": "Documentation schema for DELETE /v1/knowledge/cards/{id}.\n\nchat-api currently returns 204 with an empty body. The BFF still forwards\nthat status/body verbatim; this optional schema gives OpenAPI a named\nsuccess response for client generation without changing runtime behavior.",
-        "properties": {
-          "success": {
-            "title": "Success",
-            "type": "boolean"
-          }
-        },
-        "title": "KnowledgeDeleteResponse",
-        "type": "object"
-      },
       "KnowledgeProcessingStatus": {
         "description": "Knowledge-card processing states mirrored from chat-api.",
         "enum": [
@@ -2272,11 +2260,11 @@
         "type": "object"
       },
       "NoWorkoutFoundError": {
+        "additionalProperties": false,
         "description": "Typed 422 response when workout text contains no parseable workout.",
         "properties": {
           "code": {
             "const": "NO_WORKOUT_FOUND",
-            "default": "NO_WORKOUT_FOUND",
             "title": "Code",
             "type": "string"
           },
@@ -2287,6 +2275,9 @@
             "type": "string"
           }
         },
+        "required": [
+          "code"
+        ],
         "title": "NoWorkoutFoundError",
         "type": "object"
       },
@@ -3985,6 +3976,19 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "WatchDeliveryPushRequest": {
+        "additionalProperties": false,
+        "description": "Optional body for POST /v1/devices/watch-delivery/{workout_id}/push.\n\nOmit or send ``{}`` to fan out to every paired Garmin. Provide\n``device_token`` to target a single CIQ device.",
+        "properties": {
+          "deviceToken": {
+            "default": null,
+            "title": "Devicetoken",
+            "type": "string"
+          }
+        },
+        "title": "WatchDeliveryPushRequest",
+        "type": "object"
+      },
       "WatchDeliveryState": {
         "description": "The 5 PRODUCT-SPEC \u00a74.8 delivery states (mirrors mapper DeliveryState).",
         "enum": [
@@ -4420,7 +4424,12 @@
           "id",
           "category",
           "format",
-          "displayName"
+          "focus",
+          "displayName",
+          "aliases",
+          "aiPreset",
+          "equipment",
+          "platformTags"
         ],
         "title": "WorkoutTypeItem",
         "type": "object"
@@ -4430,6 +4439,8 @@
         "description": "Workout title to normalize against the canonical taxonomy.",
         "properties": {
           "title": {
+            "maxLength": 200,
+            "minLength": 1,
             "title": "Title",
             "type": "string"
           }
@@ -4472,6 +4483,7 @@
           }
         },
         "required": [
+          "candidates",
           "confidence",
           "method",
           "normalizedTitle"
@@ -4922,7 +4934,6 @@
                   }
                 },
                 "schema": {
-                  "contentMediaType": "application/octet-stream",
                   "type": "string"
                 }
               }
@@ -5474,7 +5485,7 @@
     },
     "/v1/devices/watch-delivery/{workout_id}/push": {
       "post": {
-        "description": "iOS Start\u2192Garmin one-tap \u2192 mapper-api POST /api/workout-delivery/{id}/push (AMA-2286).\n\nMapper returns 202 on success; 422 (not paired / empty_converter / fit_too_large)\nand 401/409 flow through for recoverable in-app copy.\n\nOptional JSON body may include ``device_token`` (mapper PushBody). Empty/`{}`\nfans out to every paired Garmin. Start sheet \"device\" is garmin/apple/phone \u2014\nnot a CIQ token; one-tap defaults to fan-out.",
+        "description": "iOS Start\u2192Garmin one-tap \u2192 mapper-api POST /api/workout-delivery/{id}/push (AMA-2286).\n\nMapper returns 202 on success; BFF returns 200 with WatchResendResult after\naccepting the upstream queue. 422 (not paired / empty_converter / fit_too_large)\nand 401/409 flow through for recoverable in-app copy.\n\nOptional JSON body may include ``device_token`` (mapper PushBody). Empty/`{}`\nfans out to every paired Garmin. Start sheet \"device\" is garmin/apple/phone \u2014\nnot a CIQ token; one-tap defaults to fan-out.",
         "operationId": "watchDeliveryPush",
         "parameters": [
           {
@@ -5487,6 +5498,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatchDeliveryPushRequest"
+              }
+            }
+          },
+          "required": false
+        },
         "responses": {
           "200": {
             "content": {
@@ -5759,6 +5780,9 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "discriminator": {
+                    "propertyName": "code"
+                  },
                   "oneOf": [
                     {
                       "$ref": "#/components/schemas/HTTPValidationError"
@@ -6025,15 +6049,8 @@
           }
         ],
         "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/KnowledgeDeleteResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
+          "204": {
+            "description": "Card deleted. Empty body forwarded from chat-api."
           },
           "422": {
             "content": {
@@ -6795,7 +6812,6 @@
                   }
                 },
                 "schema": {
-                  "contentMediaType": "application/octet-stream",
                   "type": "string"
                 }
               }
@@ -6872,7 +6888,6 @@
                   }
                 },
                 "schema": {
-                  "contentMediaType": "application/octet-stream",
                   "type": "string"
                 }
               }
@@ -6949,7 +6964,6 @@
                   }
                 },
                 "schema": {
-                  "contentMediaType": "application/octet-stream",
                   "type": "string"
                 }
               }
@@ -7334,7 +7348,7 @@
     },
     "/v1/workout-types": {
       "get": {
-        "description": "List canonical workout types, optionally limited to AI presets.",
+        "description": "List canonical workout types.\n\nOmit ``ai_preset`` for the full catalog. ``true`` returns AI presets only;\n``false`` returns non-preset entries only.",
         "operationId": "v1_workout_types_v1_workout_types_get",
         "parameters": [
           {
