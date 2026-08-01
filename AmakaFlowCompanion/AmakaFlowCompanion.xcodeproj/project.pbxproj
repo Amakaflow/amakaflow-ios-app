@@ -187,6 +187,7 @@
 		AMA2330SCHMANBUILD /* WorkoutKitScheduleManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2330SCHMANREF /* WorkoutKitScheduleManaging.swift */; };
 		AMA2367REPLBUILD /* IncompleteScheduleReplacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2367REPLREF /* IncompleteScheduleReplacing.swift */; };
 		AMA2287APHCOPYBLD /* AppleStartHandoffCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2287APHCOPYREF /* AppleStartHandoffCopy.swift */; };
+		AMA2366OVRDBUILD /* AppleStartHandoffOverrides.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2366OVRDREF /* AppleStartHandoffOverrides.swift */; };
 		AMA2330SCHVMBUILD /* WorkoutScheduleViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2330SCHVMREF /* WorkoutScheduleViewModel.swift */; };
 		AMA2330SCHVMTESTBUILD /* WorkoutScheduleViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2330SCHVMTESTREF /* WorkoutScheduleViewModelTests.swift */; };
 		AMA2330SCHVIEWBUILD /* WorkoutScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2330SCHVIEWREF /* WorkoutScheduleView.swift */; };
@@ -791,6 +792,7 @@
 		AMA2330SCHMANREF /* WorkoutKitScheduleManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutKitScheduleManaging.swift; path = ../AmakaFlow/Services/WorkoutKitScheduleManaging.swift; sourceTree = SOURCE_ROOT; };
 		AMA2367REPLREF /* IncompleteScheduleReplacing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = IncompleteScheduleReplacing.swift; path = ../AmakaFlow/Services/IncompleteScheduleReplacing.swift; sourceTree = SOURCE_ROOT; };
 		AMA2287APHCOPYREF /* AppleStartHandoffCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleStartHandoffCopy.swift; path = ../AmakaFlow/Services/AppleStartHandoffCopy.swift; sourceTree = SOURCE_ROOT; };
+		AMA2366OVRDREF /* AppleStartHandoffOverrides.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleStartHandoffOverrides.swift; path = ../AmakaFlow/Services/AppleStartHandoffOverrides.swift; sourceTree = SOURCE_ROOT; };
 		AMA2330SCHVMREF /* WorkoutScheduleViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutScheduleViewModel.swift; path = ../AmakaFlow/ViewModels/WorkoutScheduleViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA2330SCHVMTESTREF /* WorkoutScheduleViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutScheduleViewModelTests.swift; path = AmakaFlowCompanionTests/WorkoutScheduleViewModelTests.swift; sourceTree = "<group>"; };
 		AMA2330SCHVIEWREF /* WorkoutScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutScheduleView.swift; path = ../AmakaFlow/Views/WorkoutScheduleView.swift; sourceTree = SOURCE_ROOT; };
@@ -1337,6 +1339,7 @@
 				AMA2287APHCOPYREF /* AppleStartHandoffCopy.swift */,
 				AMA2330SCHMANREF /* WorkoutKitScheduleManaging.swift */,
 				AMA2367REPLREF /* IncompleteScheduleReplacing.swift */,
+				AMA2366OVRDREF /* AppleStartHandoffOverrides.swift */,
 				D3BUG10G00000001B0000001 /* DebugLogService.swift */,
 				AMA1791APPDBREF /* AppDatabase.swift */,
 				AMA1791V1REF /* V1_initial_schema.swift */,
@@ -2518,6 +2521,7 @@
 				AMA2287APHCOPYBLD /* AppleStartHandoffCopy.swift in Sources */,
 				AMA2330SCHMANBUILD /* WorkoutKitScheduleManaging.swift in Sources */,
 				AMA2367REPLBUILD /* IncompleteScheduleReplacing.swift in Sources */,
+				AMA2366OVRDBUILD /* AppleStartHandoffOverrides.swift in Sources */,
 				AMA2291LIBDESTBLD /* LibraryDestination.swift in Sources */,
 				AMA2291UNIDETBLD /* UnifiedWorkoutDetailView.swift in Sources */,
 				AMA2312INFOBLD /* DDExerciseInfoView.swift in Sources */,

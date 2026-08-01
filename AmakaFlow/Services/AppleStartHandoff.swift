@@ -117,50 +117,6 @@ struct LiveAppleWatchPairingReader: AppleWatchPairingReading {
     }
 }
 
-/// AMA-2330: test seam for the at-cap preflight in `handoff(workout:)` — avoids
-/// linking WorkoutKit's `WorkoutScheduler` directly in unit tests. Non-throwing
-/// to mirror `WorkoutScheduler`'s own (non-throwing) `scheduledWorkouts` API.
-protocol ScheduleCapReading: Sendable {
-    func scheduleCapStatus() async -> (scheduledCount: Int, maxAllowedCount: Int)
-}
-
-#if canImport(WorkoutKit)
-@available(iOS 18.0, *)
-struct LiveScheduleCapReader: ScheduleCapReading {
-    func scheduleCapStatus() async -> (scheduledCount: Int, maxAllowedCount: Int) {
-        let count = await WorkoutScheduler.shared.scheduledWorkouts.count
-        return (count, WorkoutScheduler.maxAllowedScheduledWorkoutCount)
-    }
-}
-#endif
-
-/// How `AppleStartHandoffService` obtains a WorkoutKit saver — avoids nested-optional ambiguity.
-enum WorkoutKitSaverOverride {
-    /// Use `LiveWorkoutKitSaver` on iOS 18+; otherwise no saver (blocked).
-    case automatic
-    /// Inject a test/production double.
-    case injected(any WorkoutKitSaving)
-    /// Force no saver (blocked / iOS-unsupported path in tests).
-    case disabled
-}
-
-/// How `AppleStartHandoffService` obtains its at-cap preflight reader.
-///
-/// Defaults to `.disabled` — unlike `WorkoutKitSaverOverride`, every existing
-/// call site of this initializer predates this parameter, so an `.automatic`
-/// default here would silently start exercising live WorkoutKit APIs inside
-/// existing unit tests that never asked for it. The one production call site
-/// (`UnifiedWorkoutDetailView.beginAppleTryHandoff`) opts in explicitly with
-/// `.automatic`.
-enum ScheduleCapReaderOverride {
-    /// Use `LiveScheduleCapReader` on iOS 18+; otherwise no reader (no preflight).
-    case automatic
-    /// Inject a test/production double.
-    case injected(any ScheduleCapReading)
-    /// Never preflight (default — safe for tests that don't care about the cap).
-    case disabled
-}
-
 /// Coordinates mapper compose → preview → WorkoutKit schedule for Start → Apple.
 @MainActor
 final class AppleStartHandoffService {
