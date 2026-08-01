@@ -3517,7 +3517,7 @@
 			repositoryURL = "https://github.com/Amakaflow/workoutkit-sync";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.4.0;
+				minimumVersion = 1.5.0;
 			};
 		};
 		XCT4H34LTH00000003 /* XCRemoteSwiftPackageReference "XCTHealthKit" */ = {

@@ -1138,7 +1138,8 @@ extension UnifiedWorkoutDetailView {
                 planProvider: MapperWorkoutKitPlanProvider(
                     deliveryPrefs: AppleWatchDeliveryPrefsStore.deliveryPrefsForMapper
                 ),
-                scheduleCapReader: .automatic
+                scheduleCapReader: .automatic,
+                incompleteScheduleReplacer: .automatic
             )
             let prepared = await service.prepare(workout: workout)
             let composedMessage = [statusNote, prepared.message]
@@ -1186,7 +1187,10 @@ extension UnifiedWorkoutDetailView {
         handoffStatus = "Scheduling in Workout…"
         Task {
             defer { isAppleHandoffInFlight = false }
-            let service = AppleStartHandoffService(scheduleCapReader: .automatic)
+            let service = AppleStartHandoffService(
+                scheduleCapReader: .automatic,
+                incompleteScheduleReplacer: .automatic
+            )
             let result = await service.confirmSchedule(
                 workoutName: workoutName,
                 planJSON: planJSON,

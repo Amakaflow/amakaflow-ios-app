@@ -232,6 +232,37 @@ protocol WorkoutKitSaving: Sendable {
     func saveMapperPlanJSON(_ data: Data) async throws
 }
 
+/// AMA-2367 — remove incomplete same-title plans before adding a new schedule.
+protocol IncompleteScheduleReplacing: Sendable {
+    func removeIncompletePlans(titled title: String) async
+}
+
+#if canImport(WorkoutKit)
+@available(iOS 18.0, *)
+struct LiveIncompleteScheduleReplacer: IncompleteScheduleReplacing {
+    func removeIncompletePlans(titled title: String) async {
+        let needle = Self.normalizedTitle(title)
+        guard !needle.isEmpty else { return }
+        let scheduler = LiveWorkoutKitScheduler()
+        guard let rows = try? await scheduler.fetchScheduledRows() else { return }
+        for row in rows where !row.isComplete {
+            guard Self.normalizedTitle(row.title) == needle else { continue }
+            await scheduler.remove(row: row)
+        }
+    }
+
+    static func normalizedTitle(_ title: String) -> String {
+        title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+}
+#endif
+
+enum IncompleteScheduleReplacerOverride {
+    case automatic
+    case injected(any IncompleteScheduleReplacing)
+    case disabled
+}
+
 @available(iOS 18.0, *)
 struct LiveWorkoutKitSaver: WorkoutKitSaving {
     func saveMapperPlanJSON(_ data: Data) async throws {
@@ -300,6 +331,7 @@ final class AppleStartHandoffService {
     private let workoutKitSaver: (any WorkoutKitSaving)?
     private let planProvider: (any WorkoutKitPlanProviding)?
     private let scheduleCapReader: (any ScheduleCapReading)?
+    private let incompleteScheduleReplacer: (any IncompleteScheduleReplacing)?
     private let forceFailureCode: (() -> AppleStartHandoffFailureCode?)?
 
     init(
@@ -307,6 +339,7 @@ final class AppleStartHandoffService {
         workoutKitSaver: WorkoutKitSaverOverride = .automatic,
         planProvider: (any WorkoutKitPlanProviding)? = nil,
         scheduleCapReader: ScheduleCapReaderOverride = .disabled,
+        incompleteScheduleReplacer: IncompleteScheduleReplacerOverride = .disabled,
         forceFailureCode: (() -> AppleStartHandoffFailureCode?)? = nil
     ) {
         self.pairingReader = pairingReader
@@ -338,6 +371,22 @@ final class AppleStartHandoffService {
             #endif
         case .disabled:
             self.scheduleCapReader = nil
+        }
+        switch incompleteScheduleReplacer {
+        case .injected(let replacer):
+            self.incompleteScheduleReplacer = replacer
+        case .automatic:
+            #if canImport(WorkoutKit)
+            if #available(iOS 18.0, *) {
+                self.incompleteScheduleReplacer = LiveIncompleteScheduleReplacer()
+            } else {
+                self.incompleteScheduleReplacer = nil
+            }
+            #else
+            self.incompleteScheduleReplacer = nil
+            #endif
+        case .disabled:
+            self.incompleteScheduleReplacer = nil
         }
         self.forceFailureCode = forceFailureCode ?? {
             #if DEBUG
@@ -427,6 +476,10 @@ final class AppleStartHandoffService {
             )
         }
         do {
+            // AMA-2367 — replace incomplete same-title plans so Start again does not stack.
+            if let incompleteScheduleReplacer {
+                await incompleteScheduleReplacer.removeIncompletePlans(titled: workoutName)
+            }
             try await workoutKitSaver.saveMapperPlanJSON(planJSON)
             return AppleStartHandoffCopy.scheduledInWorkoutMessage(
                 workoutName: workoutName,

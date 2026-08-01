@@ -1,5 +1,5 @@
 {
-  "originHash" : "c1ec7346a80db14217a6337c1b66da4bf680d3d244e60bdddbb1e57cc9b4fab5",
+  "originHash" : "b35b776717f6114029b912147d064b4b9fcfa927d8c1d327174324e88f7bb642",
   "pins" : [
     {
       "identity" : "clerk-ios",
@@ -96,8 +96,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Amakaflow/workoutkit-sync",
       "state" : {
-        "revision" : "e37178e207f89bce3e4a61b9bda4b5daef0821c1",
-        "version" : "1.4.0"
+        "revision" : "f106deadb82f9bdc7c9ee0aff8c0397bdd86d46e",
+        "version" : "1.5.0"
       }
     },
     {
