@@ -80,6 +80,50 @@
         "title": "AgentActionStatus",
         "type": "string"
       },
+      "ApplyStructureRequest": {
+        "properties": {
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/StructureBlockModel"
+            },
+            "title": "Blocks",
+            "type": "array"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "ops": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Ops",
+            "type": "array"
+          }
+        },
+        "required": [
+          "blocks"
+        ],
+        "title": "ApplyStructureRequest",
+        "type": "object"
+      },
+      "ApplyStructureResult": {
+        "properties": {
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/StructureBlockModel"
+            },
+            "title": "Blocks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "blocks"
+        ],
+        "title": "ApplyStructureResult",
+        "type": "object"
+      },
       "AutoRegulationAdvice": {
         "description": "Auto-regulation recommendation from chat-api.",
         "properties": {
@@ -103,6 +147,41 @@
           }
         },
         "title": "AutoRegulationAdvice",
+        "type": "object"
+      },
+      "BillingSubscriptionResponse": {
+        "additionalProperties": true,
+        "description": "Response for GET /v1/billing/subscription.\n\nMirrors mapper-api's billing helper payload. `extra=\"allow\"` keeps the BFF\nfrom narrowing future billing-provider metadata while still publishing the\nstable fields the mobile client uses.",
+        "properties": {
+          "cancel_at_period_end": {
+            "title": "Cancel At Period End",
+            "type": "boolean"
+          },
+          "current_period_end": {
+            "title": "Current Period End",
+            "type": "string"
+          },
+          "features": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Features",
+            "type": "array"
+          },
+          "plan": {
+            "title": "Plan",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan",
+          "status"
+        ],
+        "title": "BillingSubscriptionResponse",
         "type": "object"
       },
       "ChannelPrefs": {
@@ -294,6 +373,46 @@
         "title": "ChatHeartbeatEvent",
         "type": "object"
       },
+      "ChatMessage": {
+        "additionalProperties": true,
+        "description": "One persisted chat message returned by GET /v1/chat/sessions/{id}/messages.",
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "tool_calls": {
+            "title": "Tool Calls"
+          },
+          "tool_results": {
+            "title": "Tool Results"
+          },
+          "tool_use_id": {
+            "title": "Tool Use Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "created_at"
+        ],
+        "title": "ChatMessage",
+        "type": "object"
+      },
       "ChatMessageEndEvent": {
         "properties": {
           "latency_ms": {
@@ -333,6 +452,29 @@
           "session_id"
         ],
         "title": "ChatMessageStartEvent",
+        "type": "object"
+      },
+      "ChatMessagesResponse": {
+        "additionalProperties": true,
+        "description": "Response for GET /v1/chat/sessions/{id}/messages.",
+        "properties": {
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/ChatMessage"
+            },
+            "title": "Messages",
+            "type": "array"
+          }
+        },
+        "required": [
+          "messages",
+          "has_more"
+        ],
+        "title": "ChatMessagesResponse",
         "type": "object"
       },
       "ChatStageEvent": {
@@ -1198,6 +1340,82 @@
         "title": "DegradedResponse",
         "type": "object"
       },
+      "DesignProgramRequest": {
+        "description": "Request body for POST /v1/programs/design/stream.\n\nBFF forwards this body to chat-api /api/programs/design/stream. The\ncamelCase aliases keep the generated Swift client consistent with newer\nmobile-facing BFF contracts while populate_by_name allows internal tests\nand legacy callers to use the upstream snake_case names.",
+        "properties": {
+          "avoidExercises": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Avoidexercises",
+            "type": "array"
+          },
+          "durationWeeks": {
+            "maximum": 16.0,
+            "minimum": 2.0,
+            "title": "Durationweeks",
+            "type": "integer"
+          },
+          "equipment": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Equipment",
+            "type": "array"
+          },
+          "experienceLevel": {
+            "pattern": "^(beginner|intermediate|advanced)$",
+            "title": "Experiencelevel",
+            "type": "string"
+          },
+          "focusAreas": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Focusareas",
+            "type": "array"
+          },
+          "goal": {
+            "pattern": "^(strength|hypertrophy|fat_loss|endurance|general_fitness)$",
+            "title": "Goal",
+            "type": "string"
+          },
+          "injuries": {
+            "maxLength": 1000,
+            "title": "Injuries",
+            "type": "string"
+          },
+          "preferredDays": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Preferreddays",
+            "type": "array"
+          },
+          "sessionsPerWeek": {
+            "maximum": 7.0,
+            "minimum": 1.0,
+            "title": "Sessionsperweek",
+            "type": "integer"
+          },
+          "timePerSession": {
+            "maximum": 180.0,
+            "minimum": 10.0,
+            "title": "Timepersession",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "goal",
+          "experienceLevel",
+          "durationWeeks",
+          "sessionsPerWeek",
+          "equipment"
+        ],
+        "title": "DesignProgramRequest",
+        "type": "object"
+      },
       "DeviceRole": {
         "description": "Which metric a device feeds (PairingScreen role chips). Multi-per-device\nAND multi-device-per-role; conflicts resolved by most-recently-synced wins\n(screens-flow.jsx:360). Assigned in Wedge C (AMA-2030).",
         "enum": [
@@ -1519,6 +1737,46 @@
         "title": "FollowAlongResponse",
         "type": "object"
       },
+      "GamificationXPResponse": {
+        "additionalProperties": true,
+        "description": "Current XP and level state from chat-api GET /gamification/xp.",
+        "properties": {
+          "current_level": {
+            "title": "Current Level",
+            "type": "integer"
+          },
+          "daily_cap": {
+            "title": "Daily Cap",
+            "type": "integer"
+          },
+          "level_name": {
+            "title": "Level Name",
+            "type": "string"
+          },
+          "xp_to_next_level": {
+            "title": "Xp To Next Level",
+            "type": "integer"
+          },
+          "xp_today": {
+            "title": "Xp Today",
+            "type": "integer"
+          },
+          "xp_total": {
+            "title": "Xp Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "xp_total",
+          "current_level",
+          "level_name",
+          "xp_to_next_level",
+          "xp_today",
+          "daily_cap"
+        ],
+        "title": "GamificationXPResponse",
+        "type": "object"
+      },
       "GenerateWeekRequest": {
         "description": "BFF-owned request body for weekly plan proposal generation.",
         "properties": {
@@ -1534,6 +1792,22 @@
           }
         },
         "title": "GenerateWeekRequest",
+        "type": "object"
+      },
+      "GenerateWorkoutsRequest": {
+        "description": "Request body for POST /v1/programs/generate/stream.",
+        "properties": {
+          "previewId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Previewid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "previewId"
+        ],
+        "title": "GenerateWorkoutsRequest",
         "type": "object"
       },
       "GoalEntry": {
@@ -1610,6 +1884,178 @@
         },
         "title": "HealthMetrics",
         "type": "object"
+      },
+      "KnowledgeCardListResponse": {
+        "additionalProperties": true,
+        "description": "Response for GET /v1/knowledge/cards.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeCardResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "KnowledgeCardListResponse",
+        "type": "object"
+      },
+      "KnowledgeCardResponse": {
+        "additionalProperties": true,
+        "description": "One knowledge card returned by chat-api knowledge endpoints.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key_takeaways": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Key Takeaways",
+            "type": "array"
+          },
+          "micro_summary": {
+            "maxLength": 100,
+            "title": "Micro Summary",
+            "type": "string"
+          },
+          "processing_status": {
+            "$ref": "#/components/schemas/KnowledgeProcessingStatus"
+          },
+          "source_type": {
+            "$ref": "#/components/schemas/KnowledgeSourceType"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source_type",
+          "processing_status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "KnowledgeCardResponse",
+        "type": "object"
+      },
+      "KnowledgeProcessingStatus": {
+        "description": "Knowledge-card processing states mirrored from chat-api.",
+        "enum": [
+          "pending",
+          "extracting",
+          "summarizing",
+          "tagging",
+          "embedding",
+          "linking",
+          "complete",
+          "failed"
+        ],
+        "title": "KnowledgeProcessingStatus",
+        "type": "string"
+      },
+      "KnowledgeSearchResponse": {
+        "additionalProperties": true,
+        "description": "Response for GET /v1/knowledge/cards/search.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeCardResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset",
+          "query"
+        ],
+        "title": "KnowledgeSearchResponse",
+        "type": "object"
+      },
+      "KnowledgeSourceType": {
+        "description": "Knowledge-card source types mirrored from chat-api.",
+        "enum": [
+          "url",
+          "youtube",
+          "pdf",
+          "manual",
+          "workout_log",
+          "chat_extract",
+          "voice_note",
+          "image",
+          "social_media",
+          "email",
+          "sensor_data",
+          "csv"
+        ],
+        "title": "KnowledgeSourceType",
+        "type": "string"
       },
       "LibraryItem": {
         "description": "One saved-content card for the Library, projected from a knowledge_card.\n\n`thumbnailUrl`/`bookmarked` are not captured yet (no OG-image/bookmark on\nknowledge_cards) \u2014 null/false until that ingest+schema work lands (see the\nLibrary follow-up). No fabricated values.",
@@ -1811,6 +2257,279 @@
           }
         },
         "title": "MessagingChannelList",
+        "type": "object"
+      },
+      "NoWorkoutFoundError": {
+        "additionalProperties": false,
+        "description": "Typed 422 response when workout text contains no parseable workout.",
+        "properties": {
+          "code": {
+            "const": "NO_WORKOUT_FOUND",
+            "title": "Code",
+            "type": "string"
+          },
+          "detail": {
+            "const": "No parseable workout found in the provided text.",
+            "default": "No parseable workout found in the provided text.",
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "NoWorkoutFoundError",
+        "type": "object"
+      },
+      "NutritionAnalyzePhotoResponse": {
+        "additionalProperties": true,
+        "description": "Response for POST /v1/nutrition/analyze-photo.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NutritionFoodItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "notes": {
+            "title": "Notes",
+            "type": "string"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/NutritionMacroTotals"
+          }
+        },
+        "required": [
+          "items",
+          "totals"
+        ],
+        "title": "NutritionAnalyzePhotoResponse",
+        "type": "object"
+      },
+      "NutritionBarcodeResponse": {
+        "additionalProperties": true,
+        "description": "Response for GET /v1/nutrition/barcode/{code}.",
+        "properties": {
+          "barcode": {
+            "title": "Barcode",
+            "type": "string"
+          },
+          "brand": {
+            "title": "Brand",
+            "type": "string"
+          },
+          "calories": {
+            "title": "Calories",
+            "type": "number"
+          },
+          "carbs_g": {
+            "title": "Carbs G",
+            "type": "number"
+          },
+          "fat_g": {
+            "title": "Fat G",
+            "type": "number"
+          },
+          "fiber_g": {
+            "title": "Fiber G",
+            "type": "number"
+          },
+          "image_url": {
+            "title": "Image Url",
+            "type": "string"
+          },
+          "product_name": {
+            "title": "Product Name",
+            "type": "string"
+          },
+          "protein_g": {
+            "title": "Protein G",
+            "type": "number"
+          },
+          "serving_size": {
+            "title": "Serving Size",
+            "type": "string"
+          },
+          "sugar_g": {
+            "title": "Sugar G",
+            "type": "number"
+          }
+        },
+        "required": [
+          "barcode",
+          "product_name",
+          "calories",
+          "protein_g",
+          "carbs_g",
+          "fat_g"
+        ],
+        "title": "NutritionBarcodeResponse",
+        "type": "object"
+      },
+      "NutritionFoodItem": {
+        "additionalProperties": true,
+        "description": "A single food item with estimated macros.",
+        "properties": {
+          "calories": {
+            "title": "Calories",
+            "type": "number"
+          },
+          "carbs_g": {
+            "title": "Carbs G",
+            "type": "number"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "string"
+          },
+          "fat_g": {
+            "title": "Fat G",
+            "type": "number"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "protein_g": {
+            "title": "Protein G",
+            "type": "number"
+          },
+          "serving_size": {
+            "title": "Serving Size",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "calories",
+          "protein_g",
+          "carbs_g",
+          "fat_g"
+        ],
+        "title": "NutritionFoodItem",
+        "type": "object"
+      },
+      "NutritionFuelingStatusResponse": {
+        "additionalProperties": true,
+        "description": "Response for GET /v1/nutrition/fueling-status.",
+        "properties": {
+          "calories_pct": {
+            "title": "Calories Pct",
+            "type": "number"
+          },
+          "hydration_pct": {
+            "title": "Hydration Pct",
+            "type": "number"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "protein_pct": {
+            "title": "Protein Pct",
+            "type": "number"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "protein_pct",
+          "calories_pct",
+          "hydration_pct",
+          "message"
+        ],
+        "title": "NutritionFuelingStatusResponse",
+        "type": "object"
+      },
+      "NutritionMacroTotals": {
+        "additionalProperties": true,
+        "description": "Aggregated macro totals across nutrition items.",
+        "properties": {
+          "calories": {
+            "title": "Calories",
+            "type": "number"
+          },
+          "carbs_g": {
+            "title": "Carbs G",
+            "type": "number"
+          },
+          "fat_g": {
+            "title": "Fat G",
+            "type": "number"
+          },
+          "protein_g": {
+            "title": "Protein G",
+            "type": "number"
+          }
+        },
+        "required": [
+          "calories",
+          "protein_g",
+          "carbs_g",
+          "fat_g"
+        ],
+        "title": "NutritionMacroTotals",
+        "type": "object"
+      },
+      "NutritionParseTextResponse": {
+        "additionalProperties": true,
+        "description": "Response for POST /v1/nutrition/parse-text.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NutritionFoodItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "raw_text": {
+            "title": "Raw Text",
+            "type": "string"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/NutritionMacroTotals"
+          }
+        },
+        "required": [
+          "items",
+          "totals",
+          "raw_text"
+        ],
+        "title": "NutritionParseTextResponse",
+        "type": "object"
+      },
+      "NutritionProteinNudgeResponse": {
+        "additionalProperties": true,
+        "description": "Response for POST /v1/nutrition/protein-nudge/check.",
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "protein_current": {
+            "title": "Protein Current",
+            "type": "integer"
+          },
+          "protein_target": {
+            "title": "Protein Target",
+            "type": "integer"
+          },
+          "should_nudge": {
+            "title": "Should Nudge",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "should_nudge",
+          "protein_current",
+          "protein_target",
+          "message"
+        ],
+        "title": "NutritionProteinNudgeResponse",
         "type": "object"
       },
       "PairDeviceRequest": {
@@ -2216,6 +2935,116 @@
         "title": "PlannedWorkout",
         "type": "object"
       },
+      "ProgramCompleteEvent": {
+        "properties": {
+          "scheduled_count": {
+            "default": 0,
+            "title": "Scheduled Count",
+            "type": "integer"
+          },
+          "workout_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Workout Ids",
+            "type": "array"
+          }
+        },
+        "title": "ProgramCompleteEvent",
+        "type": "object"
+      },
+      "ProgramErrorEvent": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "recoverable": {
+            "default": null,
+            "title": "Recoverable",
+            "type": "boolean"
+          },
+          "stage": {
+            "default": null,
+            "title": "Stage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ProgramErrorEvent",
+        "type": "object"
+      },
+      "ProgramPreviewEvent": {
+        "properties": {
+          "preview_id": {
+            "title": "Preview Id",
+            "type": "string"
+          },
+          "program": {
+            "additionalProperties": true,
+            "default": null,
+            "title": "Program",
+            "type": "object"
+          }
+        },
+        "required": [
+          "preview_id"
+        ],
+        "title": "ProgramPreviewEvent",
+        "type": "object"
+      },
+      "ProgramStageEvent": {
+        "properties": {
+          "message": {
+            "default": null,
+            "title": "Message",
+            "type": "string"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "sub_progress": {
+            "additionalProperties": true,
+            "default": null,
+            "title": "Sub Progress",
+            "type": "object"
+          }
+        },
+        "required": [
+          "stage"
+        ],
+        "title": "ProgramStageEvent",
+        "type": "object"
+      },
+      "ProgramStreamEventEnvelope": {
+        "description": "Documentation model for one program-pipeline Server-Sent Event.\n\nThe wire format is SSE text frames (`event: <type>`, `data: <JSON>`), not a\nJSON array. `data` is one of the per-event payloads documented above.",
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          },
+          "event": {
+            "enum": [
+              "stage",
+              "preview",
+              "complete",
+              "error"
+            ],
+            "title": "Event",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event",
+          "data"
+        ],
+        "title": "ProgramStreamEventEnvelope",
+        "type": "object"
+      },
       "ProposedDay": {
         "description": "One day of a proposed week, including synthesized rest days.",
         "properties": {
@@ -2330,6 +3159,31 @@
           }
         },
         "title": "RPEFeedbackResponse",
+        "type": "object"
+      },
+      "ReadinessSampleResponse": {
+        "additionalProperties": true,
+        "description": "Response for PUT /v1/readiness/sample.",
+        "properties": {
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success",
+          "date",
+          "source"
+        ],
+        "title": "ReadinessSampleResponse",
         "type": "object"
       },
       "ReadinessSourcePref": {
@@ -2574,6 +3428,27 @@
         "title": "RiskLevel",
         "type": "string"
       },
+      "SaveProgramRequest": {
+        "description": "Request body for POST /v1/programs/save/stream.",
+        "properties": {
+          "previewId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Previewid",
+            "type": "string"
+          },
+          "scheduleStartDate": {
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "title": "Schedulestartdate",
+            "type": "string"
+          }
+        },
+        "required": [
+          "previewId"
+        ],
+        "title": "SaveProgramRequest",
+        "type": "object"
+      },
       "SetEntry": {
         "description": "Individual set within an exercise log (AMA-281).",
         "properties": {
@@ -2645,6 +3520,204 @@
           }
         },
         "title": "SimulationConfig",
+        "type": "object"
+      },
+      "StructureBlockModel": {
+        "description": "ADR-017 block shape for suggest/apply (iOS clarify screen).",
+        "properties": {
+          "exercises": {
+            "items": {
+              "$ref": "#/components/schemas/StructureExercise"
+            },
+            "title": "Exercises",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "restSec": {
+            "title": "Restsec",
+            "type": "integer"
+          },
+          "rounds": {
+            "title": "Rounds",
+            "type": "integer"
+          },
+          "structureSource": {
+            "default": "unknown",
+            "enum": [
+              "explicit",
+              "inferred",
+              "user_confirmed",
+              "user_note",
+              "unknown"
+            ],
+            "title": "Structuresource",
+            "type": "string"
+          },
+          "type": {
+            "default": "sets",
+            "enum": [
+              "sets",
+              "superset",
+              "circuit",
+              "emom",
+              "amrap",
+              "tabata",
+              "for-time",
+              "fortime",
+              "warmup",
+              "rounds",
+              "regular"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "title": "StructureBlockModel",
+        "type": "object"
+      },
+      "StructureExercise": {
+        "description": "Exercise row inside an ADR-017 structure block (BFF camelCase).",
+        "properties": {
+          "distanceM": {
+            "title": "Distancem",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
+            "title": "Notes",
+            "type": "string"
+          },
+          "reps": {
+            "title": "Reps",
+            "type": "integer"
+          },
+          "restSec": {
+            "title": "Restsec",
+            "type": "integer"
+          },
+          "sets": {
+            "title": "Sets",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "StructureExercise",
+        "type": "object"
+      },
+      "StructureSuggestRequest": {
+        "properties": {
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "StructureSuggestRequest",
+        "type": "object"
+      },
+      "StructureSuggestResult": {
+        "properties": {
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/StructureBlockModel"
+            },
+            "title": "Blocks",
+            "type": "array"
+          },
+          "exercises": {
+            "items": {
+              "$ref": "#/components/schemas/StructureExercise"
+            },
+            "title": "Exercises",
+            "type": "array"
+          },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/StructureSuggestionModel"
+            },
+            "title": "Suggestions",
+            "type": "array"
+          }
+        },
+        "title": "StructureSuggestResult",
+        "type": "object"
+      },
+      "StructureSuggestionModel": {
+        "properties": {
+          "exerciseIndices": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Exerciseindices",
+            "type": "array"
+          },
+          "exerciseNames": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Exercisenames",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "restSec": {
+            "title": "Restsec",
+            "type": "integer"
+          },
+          "rounds": {
+            "title": "Rounds",
+            "type": "integer"
+          },
+          "structureSource": {
+            "default": "inferred",
+            "enum": [
+              "explicit",
+              "inferred",
+              "user_confirmed",
+              "user_note",
+              "unknown"
+            ],
+            "title": "Structuresource",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "sets",
+              "superset",
+              "circuit",
+              "emom",
+              "amrap",
+              "tabata",
+              "for-time",
+              "fortime",
+              "warmup",
+              "rounds",
+              "regular"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "StructureSuggestionModel",
         "type": "object"
       },
       "SuggestWarmUpCooldown": {
@@ -2901,6 +3974,19 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "WatchDeliveryPushRequest": {
+        "additionalProperties": false,
+        "description": "Optional body for POST /v1/devices/watch-delivery/{workout_id}/push.\n\nOmit or send ``{}`` to fan out to every paired Garmin. Provide\n``device_token`` to target a single CIQ device.",
+        "properties": {
+          "deviceToken": {
+            "default": null,
+            "title": "Devicetoken",
+            "type": "string"
+          }
+        },
+        "title": "WatchDeliveryPushRequest",
         "type": "object"
       },
       "WatchDeliveryState": {
@@ -3229,6 +4315,180 @@
           "duration_formatted"
         ],
         "title": "WorkoutCompletionSummary",
+        "type": "object"
+      },
+      "WorkoutKitExportRequest": {
+        "description": "Opaque passthrough to mapper ``POST /map/to-workoutkit``.",
+        "properties": {
+          "blocks_json": {
+            "additionalProperties": true,
+            "title": "Blocks Json",
+            "type": "object"
+          },
+          "delivery_prefs": {
+            "additionalProperties": true,
+            "title": "Delivery Prefs",
+            "type": "object"
+          },
+          "prefs": {
+            "additionalProperties": true,
+            "description": "Legacy alias for delivery_prefs",
+            "title": "Prefs",
+            "type": "object"
+          }
+        },
+        "required": [
+          "blocks_json"
+        ],
+        "title": "WorkoutKitExportRequest",
+        "type": "object"
+      },
+      "WorkoutTypeCandidate": {
+        "description": "A possible canonical match for an ambiguous workout title.",
+        "properties": {
+          "canonicalId": {
+            "title": "Canonicalid",
+            "type": "string"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "displayName": {
+            "title": "Displayname",
+            "type": "string"
+          }
+        },
+        "required": [
+          "canonicalId",
+          "displayName",
+          "confidence"
+        ],
+        "title": "WorkoutTypeCandidate",
+        "type": "object"
+      },
+      "WorkoutTypeItem": {
+        "description": "One canonical workout type exposed to iOS in camelCase.",
+        "properties": {
+          "aiPreset": {
+            "default": false,
+            "title": "Aipreset",
+            "type": "boolean"
+          },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "displayName": {
+            "title": "Displayname",
+            "type": "string"
+          },
+          "equipment": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Equipment",
+            "type": "array"
+          },
+          "focus": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Focus",
+            "type": "array"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "platformTags": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Platformtags",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "category",
+          "format",
+          "focus",
+          "displayName",
+          "aliases",
+          "aiPreset",
+          "equipment",
+          "platformTags"
+        ],
+        "title": "WorkoutTypeItem",
+        "type": "object"
+      },
+      "WorkoutTypeMatchRequest": {
+        "additionalProperties": false,
+        "description": "Workout title to normalize against the canonical taxonomy.",
+        "properties": {
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "WorkoutTypeMatchRequest",
+        "type": "object"
+      },
+      "WorkoutTypeMatchResponse": {
+        "description": "Canonical workout-type match returned to iOS in camelCase.",
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/WorkoutTypeCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "canonicalId": {
+            "title": "Canonicalid",
+            "type": "string"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "displayName": {
+            "title": "Displayname",
+            "type": "string"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "normalizedTitle": {
+            "title": "Normalizedtitle",
+            "type": "string"
+          }
+        },
+        "required": [
+          "candidates",
+          "confidence",
+          "method",
+          "normalizedTitle"
+        ],
+        "title": "WorkoutTypeMatchResponse",
         "type": "object"
       }
     },
@@ -3566,6 +4826,85 @@
         "summary": "(W3b) Undo an approved agent action"
       }
     },
+    "/v1/billing/subscription": {
+      "get": {
+        "description": "iOS fetchSubscription \u2192 mapper-api GET /billing/subscription.",
+        "operationId": "v1_billing_subscription_v1_billing_subscription_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingSubscriptionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Billing Subscription"
+      }
+    },
+    "/v1/chat/sessions/{session_id}/messages": {
+      "get": {
+        "description": "iOS CoachSessionClient \u2192 chat-api GET /chat/sessions/{id}/messages (AMA-2123).",
+        "operationId": "v1_chat_session_messages_v1_chat_sessions__session_id__messages_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessagesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Chat Session Messages"
+      }
+    },
     "/v1/chat/stream": {
       "post": {
         "description": "iOS ChatStreamService \u2192 chat-api POST /chat/stream (SSE).\n\nUses `_proxy_stream` so chunks reach iOS as the LLM produces them;\nthe standard buffered proxy would defeat SSE.",
@@ -3595,7 +4934,6 @@
                   }
                 },
                 "schema": {
-                  "format": "binary",
                   "type": "string"
                 }
               }
@@ -4145,6 +5483,65 @@
         "summary": "V1 Watch Delivery Status"
       }
     },
+    "/v1/devices/watch-delivery/{workout_id}/push": {
+      "post": {
+        "description": "iOS Start\u2192Garmin one-tap \u2192 mapper-api POST /api/workout-delivery/{id}/push (AMA-2286).\n\nMapper returns 202 on success; BFF returns 200 with WatchResendResult after\naccepting the upstream queue. 422 (not paired / empty_converter / fit_too_large)\nand 401/409 flow through for recoverable in-app copy.\n\nOptional JSON body may include ``device_token`` (mapper PushBody). Empty/`{}`\nfans out to every paired Garmin. Start sheet \"device\" is garmin/apple/phone \u2014\nnot a CIQ token; one-tap defaults to fan-out.",
+        "operationId": "watchDeliveryPush",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workout_id",
+            "required": true,
+            "schema": {
+              "title": "Workout Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatchDeliveryPushRequest"
+              }
+            }
+          },
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchResendResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing or invalid Clerk JWT"
+          },
+          "409": {
+            "description": "Active delivery conflict that cannot be re-queued"
+          },
+          "422": {
+            "description": "Not paired / empty converter / FIT too large (short codes from mapper-api)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Watch Delivery Push"
+      }
+    },
     "/v1/devices/watch-delivery/{workout_id}/resend": {
       "post": {
         "description": "iOS Resend \u2192 mapper-api POST /api/workout-delivery/{id}/resend (AMA-2028).\nMapper returns 202 on success; 409 (state can't resend) / 422 (no Garmin) flow through.",
@@ -4313,7 +5710,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/GamificationXPResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4381,6 +5780,85 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "discriminator": {
+                    "propertyName": "code"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/NoWorkoutFoundError"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "Validation error or no parseable workout found"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          }
+        },
+        "summary": "(W4) Parse freeform workout text into a structured exercise list"
+      }
+    },
+    "/v1/ingest/structure/apply": {
+      "post": {
+        "description": "iOS apply-structure \u2192 workout-ingestor-api POST /structure/apply.",
+        "operationId": "ingestStructureApply",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyStructureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplyStructureResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
@@ -4398,7 +5876,76 @@
             "description": "Bad Gateway"
           }
         },
-        "summary": "(W4) Parse freeform workout text into a structured exercise list"
+        "summary": "(AMA-2306) Apply structure ops or constrained NL note (ADR-017)"
+      }
+    },
+    "/v1/ingest/structure/suggest": {
+      "post": {
+        "description": "iOS structure suggest \u2192 workout-ingestor-api POST /structure/suggest.",
+        "operationId": "ingestStructureSuggest",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StructureSuggestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StructureSuggestResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          }
+        },
+        "summary": "(AMA-2306) Suggest structure from caption formatting (ADR-017)"
       }
     },
     "/v1/knowledge/cards": {
@@ -4409,7 +5956,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeCardListResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4434,7 +5983,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeCardResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4455,13 +6006,15 @@
     },
     "/v1/knowledge/cards/search": {
       "get": {
-        "description": "iOS KnowledgeService.searchCards \u2192 chat-api GET /api/knowledge/cards/search.",
+        "description": "iOS KnowledgeService.searchCards \u2192 chat-api POST /api/knowledge/search.\n\niOS issues GET /v1/knowledge/cards/search?q=<query>. chat-api's semantic\nsearch is POST /api/knowledge/search with a SearchRequest JSON body, so the\nBFF translates the query string into that body here (#615 \u2014 the #566\ncontract seam caught that the old GET /api/knowledge/cards/search upstream\nnever existed). Optional limit/offset/min_confidence/source_type/tag_names\npass through when iOS sends them; everything else uses chat-api defaults.",
         "operationId": "v1_knowledge_cards_search_v1_knowledge_cards_search_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeSearchResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4496,13 +6049,8 @@
           }
         ],
         "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
+          "204": {
+            "description": "Card deleted. Empty body forwarded from chat-api."
           },
           "422": {
             "content": {
@@ -4635,6 +6183,53 @@
           }
         },
         "summary": "V1 Library Item Detail"
+      }
+    },
+    "/v1/map/to-workoutkit": {
+      "post": {
+        "description": "iOS Apple Start \u2192 mapper-api POST /map/to-workoutkit (AMA-2351).",
+        "operationId": "mapToWorkoutKit",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkoutKitExportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Map To Workoutkit"
       }
     },
     "/v1/messaging/channels": {
@@ -4813,7 +6408,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/NutritionAnalyzePhotoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4851,7 +6448,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/NutritionBarcodeResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4888,7 +6487,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/NutritionFuelingStatusResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4915,7 +6516,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/NutritionParseTextResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4942,7 +6545,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/NutritionProteinNudgeResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -5178,6 +6783,234 @@
         "summary": "(W2b) Generate a proposed weekly plan"
       }
     },
+    "/v1/programs/design/stream": {
+      "post": {
+        "description": "iOS Program Wizard \u2192 chat-api POST /api/programs/design/stream (SSE).",
+        "operationId": "v1_programs_design_stream_v1_programs_design_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DesignProgramRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "examples": {
+                  "preview": {
+                    "summary": "Preview frame",
+                    "value": "event: preview\ndata: {\"preview_id\":\"preview-1\"}\n\n"
+                  },
+                  "stage": {
+                    "summary": "Pipeline progress frame",
+                    "value": "event: stage\ndata: {\"stage\":\"designing\",\"message\":\"Designing your program\"}\n\n"
+                  }
+                },
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Server-Sent Events stream. Each frame carries event: <type> and data: <JSON payload>."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Programs Design Stream",
+        "x-sse-event-envelope-schema": {
+          "$ref": "#/components/schemas/ProgramStreamEventEnvelope"
+        },
+        "x-sse-event-payload-schemas": {
+          "complete": {
+            "$ref": "#/components/schemas/ProgramCompleteEvent"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ProgramErrorEvent"
+          },
+          "preview": {
+            "$ref": "#/components/schemas/ProgramPreviewEvent"
+          },
+          "stage": {
+            "$ref": "#/components/schemas/ProgramStageEvent"
+          }
+        }
+      }
+    },
+    "/v1/programs/generate/stream": {
+      "post": {
+        "description": "iOS Program Wizard \u2192 chat-api POST /api/programs/generate/stream (SSE).",
+        "operationId": "v1_programs_generate_stream_v1_programs_generate_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateWorkoutsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "examples": {
+                  "preview": {
+                    "summary": "Preview frame",
+                    "value": "event: preview\ndata: {\"preview_id\":\"preview-1\"}\n\n"
+                  },
+                  "stage": {
+                    "summary": "Pipeline progress frame",
+                    "value": "event: stage\ndata: {\"stage\":\"designing\",\"message\":\"Designing your program\"}\n\n"
+                  }
+                },
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Server-Sent Events stream. Each frame carries event: <type> and data: <JSON payload>."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Programs Generate Stream",
+        "x-sse-event-envelope-schema": {
+          "$ref": "#/components/schemas/ProgramStreamEventEnvelope"
+        },
+        "x-sse-event-payload-schemas": {
+          "complete": {
+            "$ref": "#/components/schemas/ProgramCompleteEvent"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ProgramErrorEvent"
+          },
+          "preview": {
+            "$ref": "#/components/schemas/ProgramPreviewEvent"
+          },
+          "stage": {
+            "$ref": "#/components/schemas/ProgramStageEvent"
+          }
+        }
+      }
+    },
+    "/v1/programs/save/stream": {
+      "post": {
+        "description": "iOS Program Wizard \u2192 chat-api POST /api/programs/save/stream (SSE).",
+        "operationId": "v1_programs_save_stream_v1_programs_save_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveProgramRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "examples": {
+                  "preview": {
+                    "summary": "Preview frame",
+                    "value": "event: preview\ndata: {\"preview_id\":\"preview-1\"}\n\n"
+                  },
+                  "stage": {
+                    "summary": "Pipeline progress frame",
+                    "value": "event: stage\ndata: {\"stage\":\"designing\",\"message\":\"Designing your program\"}\n\n"
+                  }
+                },
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Server-Sent Events stream. Each frame carries event: <type> and data: <JSON payload>."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Programs Save Stream",
+        "x-sse-event-envelope-schema": {
+          "$ref": "#/components/schemas/ProgramStreamEventEnvelope"
+        },
+        "x-sse-event-payload-schemas": {
+          "complete": {
+            "$ref": "#/components/schemas/ProgramCompleteEvent"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ProgramErrorEvent"
+          },
+          "preview": {
+            "$ref": "#/components/schemas/ProgramPreviewEvent"
+          },
+          "stage": {
+            "$ref": "#/components/schemas/ProgramStageEvent"
+          }
+        }
+      }
+    },
     "/v1/readiness/sample": {
       "put": {
         "description": "iOS HealthKitHRVService \u2192 chat-api PUT /coach/readiness-sample.\n\nWrites a daily recovery sample (HRV/RHR/sleep) into daily_status with\nsource=apple_health. Thin passthrough \u2014 chat-api owns validation +\nthe daily_status upsert. Read side = /v1/readiness/today + /trend.",
@@ -5186,7 +7019,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessSampleResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -5509,6 +7344,109 @@
           }
         },
         "summary": "V1 Sync Pending"
+      }
+    },
+    "/v1/workout-types": {
+      "get": {
+        "description": "List canonical workout types.\n\nOmit ``ai_preset`` for the full catalog. ``true`` returns AI presets only;\n``false`` returns non-preset entries only.",
+        "operationId": "v1_workout_types_v1_workout_types_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ai_preset",
+            "required": false,
+            "schema": {
+              "title": "Ai Preset",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WorkoutTypeItem"
+                  },
+                  "title": "Response V1 Workout Types V1 Workout Types Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Workout Types"
+      }
+    },
+    "/v1/workout-types/match": {
+      "post": {
+        "description": "Match a freeform workout title to the canonical taxonomy.",
+        "operationId": "v1_workout_types_match_v1_workout_types_match_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkoutTypeMatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkoutTypeMatchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Workout Types Match"
       }
     },
     "/v1/workouts/complete": {
