@@ -13,17 +13,17 @@ struct EditorV2View: View {
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var saveModel: WorkoutEditorViewModel
-    @StateObject private var matchController: WorkoutTypeMatchController
+    @StateObject var matchController: WorkoutTypeMatchController
 
-    @State private var session: EditorV2Session
-    @State private var isReorderMode = false
-    @State private var toastMessage: String?
-    @State private var menuExerciseID: String?
-    @State private var editExerciseID: String?
-    @State private var configGroupKey: String?
-    @State private var pairSourceID: String?
-    @State private var addSheetOpen = false
-    @State private var replaceExerciseID: String?
+    @State var session: EditorV2Session
+    @State var isReorderMode = false
+    @State var toastMessage: String?
+    @State var menuExerciseID: String?
+    @State var editExerciseID: String?
+    @State var configGroupKey: String?
+    @State var pairSourceID: String?
+    @State var addSheetOpen = false
+    @State var replaceExerciseID: String?
     @State private var isMatchSheetPresented = false
     @FocusState private var isTitleFocused: Bool
     /// AMA-2336 — `workout_preferences` cache; fetched on the first quick-add.
@@ -249,7 +249,7 @@ struct EditorV2View: View {
         }
     }
 
-    private func addWarmupSets(to exerciseID: String) {
+    func addWarmupSets(to exerciseID: String) {
         Task {
             let prefs = await loadEnrichmentPrefs()
             let added = session.addDefaultWarmupSets(
