@@ -221,6 +221,10 @@ struct EditorV2EditSheet: View {
         draft.restOpen == true
     }
 
+    private var isTimedRest: Bool {
+        draft.restSeconds != nil && !isRestOpen
+    }
+
     @ViewBuilder
     private var restEditors: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -232,13 +236,13 @@ struct EditorV2EditSheet: View {
                     try? draft.setRestIntent(restSeconds: nil, restOpen: true)
                 }
                 .accessibilityIdentifier("editor_v2_edit_rest_open")
-                restModeChip(title: "Timed", selected: !isRestOpen) {
+                restModeChip(title: "Timed", selected: isTimedRest) {
                     let seconds = draft.restSeconds ?? PrescriptionDefaults.defaultRestSec
                     try? draft.setRestIntent(restSeconds: seconds, restOpen: false)
                 }
                 .accessibilityIdentifier("editor_v2_edit_rest_timed")
             }
-            if !isRestOpen {
+            if isTimedRest {
                 EditorV2Stepper(
                     label: "Duration",
                     value: draft.restSeconds ?? PrescriptionDefaults.defaultRestSec,
@@ -272,6 +276,7 @@ struct EditorV2EditSheet: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private func committedDraft() -> EditorV2Exercise {

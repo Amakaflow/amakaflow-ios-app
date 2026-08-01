@@ -462,6 +462,10 @@ final class EditorV2Tests: XCTestCase {
             exercise.fieldProvenance[WorkoutEnrichmentMutations.restOpenKey],
             .user
         )
+        XCTAssertEqual(
+            exercise.fieldProvenance[WorkoutEnrichmentMutations.restSecKey],
+            .user
+        )
     }
 
     func testSetRestIntentTimedClearsOpenFlag() throws {
@@ -474,5 +478,13 @@ final class EditorV2Tests: XCTestCase {
         try exercise.setRestIntent(restSeconds: 90, restOpen: false)
         XCTAssertEqual(exercise.restOpen, false)
         XCTAssertEqual(exercise.restSeconds, 90)
+        XCTAssertEqual(
+            exercise.fieldProvenance[WorkoutEnrichmentMutations.restOpenKey],
+            .user
+        )
+        XCTAssertEqual(
+            exercise.fieldProvenance[WorkoutEnrichmentMutations.restSecKey],
+            .user
+        )
     }
 }
