@@ -1043,11 +1043,11 @@ extension UnifiedWorkoutDetailView {
             return
         }
         handoffStatus = "Resetting warm-up/rest extras…"
-        let ok = await WorkoutEnrichmentPushCoordinator().restore(snapshot)
-        if ok, let refreshed = await onEditorDismiss?() {
+        let didRestore = await WorkoutEnrichmentPushCoordinator().restore(snapshot)
+        if didRestore, let refreshed = await onEditorDismiss?() {
             displayedWorkout = refreshed
         }
-        handoffStatus = ok
+        handoffStatus = didRestore
             ? "Apple schedule canceled — extras cleared."
             : "Apple schedule canceled — couldn’t clear extras; Start again to reset."
     }
