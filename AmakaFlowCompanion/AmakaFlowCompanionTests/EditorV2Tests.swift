@@ -487,4 +487,32 @@ final class EditorV2Tests: XCTestCase {
             .user
         )
     }
+
+    func testOpenRestNormalizesAwayTimedSecondsWithoutStamping() {
+        // Mirrors EditorV2EditSheet.committedDraft — clear seconds, keep provenance.
+        var exercise = EditorV2Exercise(
+            name: "Triceps Press Downs",
+            sets: 2,
+            reps: 12,
+            restSeconds: 60,
+            restOpen: true,
+            fieldProvenance: [
+                WorkoutEnrichmentMutations.restSecKey: .enrichmentDefault,
+                WorkoutEnrichmentMutations.restOpenKey: .enrichmentDefault,
+            ]
+        )
+        if exercise.restOpen == true {
+            exercise.restSeconds = nil
+        }
+        XCTAssertEqual(exercise.restOpen, true)
+        XCTAssertNil(exercise.restSeconds)
+        XCTAssertEqual(
+            exercise.fieldProvenance[WorkoutEnrichmentMutations.restOpenKey],
+            .enrichmentDefault
+        )
+        XCTAssertEqual(
+            exercise.fieldProvenance[WorkoutEnrichmentMutations.restSecKey],
+            .enrichmentDefault
+        )
+    }
 }

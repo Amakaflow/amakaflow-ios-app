@@ -281,6 +281,10 @@ struct EditorV2EditSheet: View {
 
     private func committedDraft() -> EditorV2Exercise {
         draft.commitRepRange(from: rangeText, useRangeMode: useRangeMode)
+        // AMA-2368 — open rest must not serialize with timed seconds (preserve provenance).
+        if draft.restOpen == true {
+            draft.restSeconds = nil
+        }
         return draft
     }
 }
