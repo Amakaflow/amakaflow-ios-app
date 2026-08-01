@@ -87,138 +87,6 @@ protocol AppleWatchPairingReading: Sendable {
     func pairingReadForCopy() -> AppleWatchPairingRead
 }
 
-/// Pure mapping for unit tests — keep recoverable copy ≤ a few seconds to read.
-enum AppleStartHandoffCopy {
-    private static let failureMessages: [AppleStartHandoffFailureCode: String] = [
-        .watchNotReachable: "Apple Watch not reachable — unlock watch, open AmakaFlowWatch, keep iPhone nearby.",
-        .watchAppNotInstalled: "AmakaFlowWatch not installed — install the watch app from the Watch app on iPhone.",
-        .sessionNotAvailable: "Watch connectivity unavailable — restart both apps and try again.",
-        .encodingFailed: "Could not encode workout for Watch — edit structure and retry.",
-        .watchDecodeFailed: "Watch could not read workout — simplify intervals and retry.",
-        .authorizationDenied: "Workout permission denied — Settings → Health → Data Access → AmakaFlow, allow Workouts.",
-        .iosVersionUnsupported: "Requires iOS 18 to schedule in the Workout app — update iPhone and retry.",
-        .emptyWorkout: "Workout has no steps — add exercises or intervals in Edit, then retry.",
-        .scheduleCapReached:
-            "Workout app schedule is full — open Manage scheduled plans (Devices → Scheduled in Workout) "
-                + "to remove old plans, then retry.",
-        .mapperComposeFailed:
-            "Could not build Apple Workout plan — check connection and workout structure, then retry."
-    ]
-
-    private static func messageWithOptionalDetail(prefix: String, detail: String?, fallback: String) -> String {
-        if let detail, !detail.isEmpty {
-            return "\(prefix) — \(detail)"
-        }
-        return "\(prefix) — \(fallback)"
-    }
-
-    static func failureMessage(code: AppleStartHandoffFailureCode, detail: String? = nil) -> String {
-        switch code {
-        case .watchSendFailed:
-            return messageWithOptionalDetail(
-                prefix: "Watch send failed",
-                detail: detail,
-                fallback: "confirm AmakaFlowWatch is open, then retry."
-            )
-        case .conversionFailed:
-            return messageWithOptionalDetail(
-                prefix: "WorkoutKit conversion failed",
-                detail: detail,
-                fallback: "check intervals use supported step types."
-            )
-        case .mapperComposeFailed:
-            return messageWithOptionalDetail(
-                prefix: "Could not build Apple Workout plan",
-                detail: detail,
-                fallback: "check connection and workout structure, then retry."
-            )
-        case .unknown:
-            return messageWithOptionalDetail(
-                prefix: "Apple try failed",
-                detail: detail,
-                fallback: "check Watch pairing and retry."
-            )
-        default:
-            return failureMessages[code]
-                ?? messageWithOptionalDetail(
-                    prefix: "Apple try failed",
-                    detail: detail,
-                    fallback: "check Watch pairing and retry."
-                )
-        }
-    }
-
-    static func sentToWatchMessage(workoutName: String) -> AppleStartHandoffResult {
-        AppleStartHandoffResult(
-            kind: .sentToWatch,
-            message: "Sent to Apple Watch — open AmakaFlowWatch to start \"\(workoutName)\"."
-        )
-    }
-
-    static func savedToFitnessMessage(workoutName: String) -> AppleStartHandoffResult {
-        scheduledInWorkoutMessage(workoutName: workoutName, pairing: .unknown)
-    }
-
-    static func scheduledInWorkoutMessage(
-        workoutName: String,
-        pairing: AppleWatchPairingRead,
-        compositionLine: String? = nil
-    ) -> AppleStartHandoffResult {
-        let compositionSuffix: String = {
-            guard let compositionLine, !compositionLine.isEmpty else { return "" }
-            return " \(compositionLine)."
-        }()
-        switch pairing {
-        case .confirmedUnpaired:
-            return AppleStartHandoffResult(
-                kind: .savedToFitness,
-                message: "Scheduled in Workout — pair an Apple Watch to run \"\(workoutName)\".\(compositionSuffix)",
-                showsManageScheduledPlans: true,
-                compositionLine: compositionLine
-            )
-        case .confirmedPaired, .unknown:
-            return AppleStartHandoffResult(
-                kind: .savedToFitness,
-                message: "Scheduled in Workout — open the Workout app on your Apple Watch for \"\(workoutName)\".\(compositionSuffix)",
-                showsManageScheduledPlans: true,
-                compositionLine: compositionLine
-            )
-        }
-    }
-
-    static func failureCode(from watchError: WatchConnectivityError) -> AppleStartHandoffFailureCode {
-        switch watchError {
-        case .watchNotReachable:
-            return .watchNotReachable
-        case .encodingFailed:
-            return .encodingFailed
-        case .sessionNotAvailable:
-            return .sessionNotAvailable
-        }
-    }
-
-    static func failureCode(from error: Error) -> AppleStartHandoffFailureCode {
-        if let watchError = error as? WatchConnectivityError {
-            return failureCode(from: watchError)
-        }
-        if let planError = error as? WorkoutPlanError {
-            switch planError {
-            case .authorizationDenied:
-                return .authorizationDenied
-            case .conversionFailed, .parsingFailed, .invalidJSONString:
-                return .conversionFailed
-            case .saveFailed:
-                return .unknown
-            }
-        }
-        let lowered = error.localizedDescription.lowercased()
-        if lowered.contains("authorization") || lowered.contains("denied") {
-            return .authorizationDenied
-        }
-        return .unknown
-    }
-}
-
 /// Outcome of a single WatchConnectivity send attempt.
 enum WatchWorkoutSendOutcome: Equatable {
     case sent
@@ -249,50 +117,6 @@ struct LiveAppleWatchPairingReader: AppleWatchPairingReading {
     }
 }
 
-/// AMA-2330: test seam for the at-cap preflight in `handoff(workout:)` — avoids
-/// linking WorkoutKit's `WorkoutScheduler` directly in unit tests. Non-throwing
-/// to mirror `WorkoutScheduler`'s own (non-throwing) `scheduledWorkouts` API.
-protocol ScheduleCapReading: Sendable {
-    func scheduleCapStatus() async -> (scheduledCount: Int, maxAllowedCount: Int)
-}
-
-#if canImport(WorkoutKit)
-@available(iOS 18.0, *)
-struct LiveScheduleCapReader: ScheduleCapReading {
-    func scheduleCapStatus() async -> (scheduledCount: Int, maxAllowedCount: Int) {
-        let count = await WorkoutScheduler.shared.scheduledWorkouts.count
-        return (count, WorkoutScheduler.maxAllowedScheduledWorkoutCount)
-    }
-}
-#endif
-
-/// How `AppleStartHandoffService` obtains a WorkoutKit saver — avoids nested-optional ambiguity.
-enum WorkoutKitSaverOverride {
-    /// Use `LiveWorkoutKitSaver` on iOS 18+; otherwise no saver (blocked).
-    case automatic
-    /// Inject a test/production double.
-    case injected(any WorkoutKitSaving)
-    /// Force no saver (blocked / iOS-unsupported path in tests).
-    case disabled
-}
-
-/// How `AppleStartHandoffService` obtains its at-cap preflight reader.
-///
-/// Defaults to `.disabled` — unlike `WorkoutKitSaverOverride`, every existing
-/// call site of this initializer predates this parameter, so an `.automatic`
-/// default here would silently start exercising live WorkoutKit APIs inside
-/// existing unit tests that never asked for it. The one production call site
-/// (`UnifiedWorkoutDetailView.beginAppleTryHandoff`) opts in explicitly with
-/// `.automatic`.
-enum ScheduleCapReaderOverride {
-    /// Use `LiveScheduleCapReader` on iOS 18+; otherwise no reader (no preflight).
-    case automatic
-    /// Inject a test/production double.
-    case injected(any ScheduleCapReading)
-    /// Never preflight (default — safe for tests that don't care about the cap).
-    case disabled
-}
-
 /// Coordinates mapper compose → preview → WorkoutKit schedule for Start → Apple.
 @MainActor
 final class AppleStartHandoffService {
@@ -300,6 +124,7 @@ final class AppleStartHandoffService {
     private let workoutKitSaver: (any WorkoutKitSaving)?
     private let planProvider: (any WorkoutKitPlanProviding)?
     private let scheduleCapReader: (any ScheduleCapReading)?
+    private let incompleteScheduleReplacer: (any IncompleteScheduleReplacing)?
     private let forceFailureCode: (() -> AppleStartHandoffFailureCode?)?
 
     init(
@@ -307,48 +132,80 @@ final class AppleStartHandoffService {
         workoutKitSaver: WorkoutKitSaverOverride = .automatic,
         planProvider: (any WorkoutKitPlanProviding)? = nil,
         scheduleCapReader: ScheduleCapReaderOverride = .disabled,
+        incompleteScheduleReplacer: IncompleteScheduleReplacerOverride = .disabled,
         forceFailureCode: (() -> AppleStartHandoffFailureCode?)? = nil
     ) {
         self.pairingReader = pairingReader
         self.planProvider = planProvider
-        switch workoutKitSaver {
+        self.workoutKitSaver = Self.resolveWorkoutKitSaver(workoutKitSaver)
+        self.scheduleCapReader = Self.resolveScheduleCapReader(scheduleCapReader)
+        self.incompleteScheduleReplacer = Self.resolveIncompleteScheduleReplacer(
+            incompleteScheduleReplacer
+        )
+        self.forceFailureCode = forceFailureCode ?? Self.defaultForceFailureCode
+    }
+
+    private static func resolveWorkoutKitSaver(
+        _ override: WorkoutKitSaverOverride
+    ) -> (any WorkoutKitSaving)? {
+        switch override {
         case .injected(let saver):
-            self.workoutKitSaver = saver
+            return saver
         case .automatic:
             if #available(iOS 18.0, *) {
-                self.workoutKitSaver = LiveWorkoutKitSaver()
-            } else {
-                self.workoutKitSaver = nil
+                return LiveWorkoutKitSaver()
             }
+            return nil
         case .disabled:
-            self.workoutKitSaver = nil
+            return nil
         }
-        switch scheduleCapReader {
+    }
+
+    private static func resolveScheduleCapReader(
+        _ override: ScheduleCapReaderOverride
+    ) -> (any ScheduleCapReading)? {
+        switch override {
         case .injected(let reader):
-            self.scheduleCapReader = reader
+            return reader
         case .automatic:
             #if canImport(WorkoutKit)
             if #available(iOS 18.0, *) {
-                self.scheduleCapReader = LiveScheduleCapReader()
-            } else {
-                self.scheduleCapReader = nil
-            }
-            #else
-            self.scheduleCapReader = nil
-            #endif
-        case .disabled:
-            self.scheduleCapReader = nil
-        }
-        self.forceFailureCode = forceFailureCode ?? {
-            #if DEBUG
-            if let raw = ProcessInfo.processInfo.environment["UITEST_APPLE_TRY_FAIL"]?
-                .trimmingCharacters(in: .whitespacesAndNewlines),
-               !raw.isEmpty {
-                return AppleStartHandoffFailureCode(rawValue: raw) ?? .unknown
+                return LiveScheduleCapReader()
             }
             #endif
             return nil
+        case .disabled:
+            return nil
         }
+    }
+
+    private static func resolveIncompleteScheduleReplacer(
+        _ override: IncompleteScheduleReplacerOverride
+    ) -> (any IncompleteScheduleReplacing)? {
+        switch override {
+        case .injected(let replacer):
+            return replacer
+        case .automatic:
+            #if canImport(WorkoutKit)
+            if #available(iOS 18.0, *) {
+                return LiveIncompleteScheduleReplacer()
+            }
+            #endif
+            return nil
+        case .disabled:
+            return nil
+        }
+    }
+
+    private static func defaultForceFailureCode() -> AppleStartHandoffFailureCode? {
+        #if DEBUG
+        if let raw = ProcessInfo.processInfo.environment["UITEST_APPLE_TRY_FAIL"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !raw.isEmpty {
+            return AppleStartHandoffFailureCode(rawValue: raw) ?? .unknown
+        }
+        #endif
+        return nil
     }
 
     /// Fetch mapper DTO for preview. Does not schedule.
@@ -380,7 +237,26 @@ final class AppleStartHandoffService {
 
         if let scheduleCapReader {
             let status = await scheduleCapReader.scheduleCapStatus()
-            if status.scheduledCount >= status.maxAllowedCount {
+            var effectiveCount = status.scheduledCount
+            // AMA-2367 — a matching incomplete plan frees a slot on confirm; don't
+            // hard-block prepare when replacement would make room.
+            if effectiveCount >= status.maxAllowedCount, let incompleteScheduleReplacer {
+                do {
+                    let replacements = try await incompleteScheduleReplacer.findIncompletePlans(
+                        titled: workout.name
+                    )
+                    effectiveCount -= replacements.count
+                } catch {
+                    return AppleStartHandoffResult(
+                        kind: .failed,
+                        message: AppleStartHandoffCopy.failureMessage(
+                            code: .unknown,
+                            detail: error.localizedDescription
+                        )
+                    )
+                }
+            }
+            if effectiveCount >= status.maxAllowedCount {
                 return AppleStartHandoffResult(
                     kind: .failed,
                     message: AppleStartHandoffCopy.failureMessage(code: .scheduleCapReached),
@@ -427,7 +303,28 @@ final class AppleStartHandoffService {
             )
         }
         do {
+            // AMA-2367 — discover replacements first; remove only after a successful save.
+            var replacements: [WorkoutScheduleRow] = []
+            if let incompleteScheduleReplacer {
+                replacements = try await incompleteScheduleReplacer.findIncompletePlans(
+                    titled: workoutName
+                )
+            }
+            if let scheduleCapReader {
+                let status = await scheduleCapReader.scheduleCapStatus()
+                let effectiveCount = status.scheduledCount - replacements.count
+                if effectiveCount >= status.maxAllowedCount {
+                    return AppleStartHandoffResult(
+                        kind: .failed,
+                        message: AppleStartHandoffCopy.failureMessage(code: .scheduleCapReached),
+                        showsManageScheduledPlans: true
+                    )
+                }
+            }
             try await workoutKitSaver.saveMapperPlanJSON(planJSON)
+            if let incompleteScheduleReplacer, !replacements.isEmpty {
+                await incompleteScheduleReplacer.remove(rows: replacements)
+            }
             return AppleStartHandoffCopy.scheduledInWorkoutMessage(
                 workoutName: workoutName,
                 pairing: pairingReader.pairingReadForCopy(),

@@ -7,6 +7,7 @@
 
 import XCTest
 import WatchConnectivity
+import WorkoutKit
 import WorkoutKitSync
 @testable import AmakaFlowCompanion
 
@@ -423,6 +424,173 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         let result = await service.handoff(workout: sampleWorkout())
         XCTAssertFalse(result.showsManageScheduledPlans)
     }
+
+    func testConfirmScheduleReplacesIncompleteSameTitlePlans() async {
+        let saver = MockWorkoutKitSaver()
+        let replacer = MockIncompleteScheduleReplacer(
+            matchingRows: [Self.incompleteRow(title: "Testing Apple 2")]
+        )
+        let planJSON = StubWorkoutKitPlanProvider.strengthFixture(title: "Testing Apple 2")
+        let meta = WorkoutKitPlanMeta(fromMapperJSON: planJSON)
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(saver),
+            incompleteScheduleReplacer: .injected(replacer)
+        )
+        let result = await service.confirmSchedule(
+            workoutName: "Testing Apple 2",
+            planJSON: planJSON,
+            meta: meta
+        )
+        XCTAssertEqual(result.kind, .savedToFitness)
+        XCTAssertEqual(replacer.findCallTitles, ["Testing Apple 2"])
+        XCTAssertEqual(replacer.removedTitles, ["Testing Apple 2"])
+        XCTAssertEqual(saver.saveCallCount, 1)
+    }
+
+    func testConfirmScheduleSurfacesReplacementLookupFailure() async {
+        let saver = MockWorkoutKitSaver()
+        let replacer = MockIncompleteScheduleReplacer(
+            findError: NSError(domain: "test", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "schedule fetch failed"
+            ])
+        )
+        let planJSON = StubWorkoutKitPlanProvider.strengthFixture(title: "Testing Apple 2")
+        let meta = WorkoutKitPlanMeta(fromMapperJSON: planJSON)
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(saver),
+            incompleteScheduleReplacer: .injected(replacer)
+        )
+        let result = await service.confirmSchedule(
+            workoutName: "Testing Apple 2",
+            planJSON: planJSON,
+            meta: meta
+        )
+        XCTAssertEqual(result.kind, .failed)
+        XCTAssertTrue(result.message.localizedCaseInsensitiveContains("schedule fetch failed"))
+        XCTAssertEqual(saver.saveCallCount, 0)
+        XCTAssertTrue(replacer.removedRows.isEmpty)
+    }
+
+    func testConfirmScheduleKeepsExistingOnSaveFailure() async {
+        let saver = MockWorkoutKitSaver()
+        saver.errorToThrow = WorkoutPlanError.saveFailed(
+            NSError(domain: "test", code: 2, userInfo: [
+                NSLocalizedDescriptionKey: "save blew up"
+            ])
+        )
+        let replacer = MockIncompleteScheduleReplacer(
+            matchingRows: [Self.incompleteRow(title: "Testing Apple 2")]
+        )
+        let planJSON = StubWorkoutKitPlanProvider.strengthFixture(title: "Testing Apple 2")
+        let meta = WorkoutKitPlanMeta(fromMapperJSON: planJSON)
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(saver),
+            incompleteScheduleReplacer: .injected(replacer)
+        )
+        let result = await service.confirmSchedule(
+            workoutName: "Testing Apple 2",
+            planJSON: planJSON,
+            meta: meta
+        )
+        XCTAssertEqual(result.kind, .failed)
+        XCTAssertEqual(saver.saveCallCount, 1)
+        XCTAssertEqual(replacer.findCallTitles, ["Testing Apple 2"])
+        XCTAssertTrue(replacer.removedRows.isEmpty, "must not remove existing schedule when save fails")
+    }
+
+    func testAtCapAllowsWhenMatchingIncompleteCanReplace() async {
+        let saver = MockWorkoutKitSaver()
+        let reader = MockScheduleCapReader(scheduledCount: 15, maxAllowedCount: 15)
+        let replacer = MockIncompleteScheduleReplacer(
+            matchingRows: [Self.incompleteRow(title: "Test Strength")]
+        )
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(saver),
+            planProvider: StubWorkoutKitPlanProvider(
+                json: StubWorkoutKitPlanProvider.strengthFixture(title: "Test Strength")
+            ),
+            scheduleCapReader: .injected(reader),
+            incompleteScheduleReplacer: .injected(replacer)
+        )
+        let result = await service.handoff(workout: sampleWorkout())
+        XCTAssertEqual(result.kind, .savedToFitness)
+        XCTAssertEqual(saver.saveCallCount, 1)
+        XCTAssertEqual(replacer.removedTitles, ["Test Strength"])
+        XCTAssertEqual(reader.statusCallCount, 2, "prepare + confirm both evaluate the live cap")
+    }
+
+    private static func incompleteRow(title: String) -> WorkoutScheduleRow {
+        WorkoutScheduleRow(
+            id: WorkoutScheduleRowID(
+                planID: "incomplete-\(title)",
+                date: DateComponents(year: 2026, month: 8, day: 1, hour: 9)
+            ),
+            title: title,
+            dateComponents: DateComponents(year: 2026, month: 8, day: 1, hour: 9),
+            scheduledAt: nil,
+            isComplete: false
+        )
+    }
+
+    func testEnrichmentFixtureParsesRestAndWarmupSteps() throws {
+        // AMA-2366 — mapper wire shape must decode under workoutkit-sync ≥ 1.5.0
+        let json = Data(
+            #"""
+            {
+              "title": "One Squat",
+              "sportType": "strengthTraining",
+              "composition": "custom",
+              "composition_effective": "custom",
+              "routing_reason": "strength_sets",
+              "intervals": [
+                { "kind": "reps", "reps": 1, "name": "Jump Rope" },
+                {
+                  "kind": "repeat",
+                  "reps": 1,
+                  "intervals": [
+                    { "kind": "reps", "reps": 8, "name": "WU · Barbell back squat" },
+                    { "kind": "rest", "name": "Rest · tap" },
+                    { "kind": "reps", "reps": 5, "name": "WU · Barbell back squat" }
+                  ]
+                },
+                {
+                  "kind": "repeat",
+                  "reps": 3,
+                  "intervals": [
+                    { "kind": "reps", "reps": 10, "name": "Barbell back squat" },
+                    { "kind": "rest", "name": "Rest · tap" }
+                  ]
+                }
+              ]
+            }
+            """#.utf8
+        )
+        let dto = try WorkoutKitSync.default.parse(from: json)
+        XCTAssertEqual(dto.intervals.count, 3)
+        let lines = WorkoutKitPlanStepSummary.lines(from: json, limit: 20)
+        XCTAssertTrue(lines.contains(where: { $0.contains("Jump Rope") }), String(describing: lines))
+        XCTAssertTrue(lines.contains(where: { $0.contains("WU ·") }), String(describing: lines))
+        XCTAssertTrue(lines.contains(where: { $0.contains("Rest · tap") }), String(describing: lines))
+        XCTAssertTrue(lines.contains(where: { $0.contains("Repeat ×3") }), String(describing: lines))
+
+        if #available(iOS 18.0, *) {
+            let plan = try WorkoutPlanConverter().convert(dto)
+            guard case .custom(let custom) = plan.workout else {
+                return XCTFail("expected custom workout")
+            }
+            // Jump Rope block + WU block + work block — must not collapse to work-only.
+            XCTAssertGreaterThanOrEqual(custom.blocks.count, 3, String(describing: custom.blocks.count))
+            let recoveryCount = custom.blocks
+                .flatMap(\.steps)
+                .filter { $0.purpose == .recovery }
+                .count
+            XCTAssertGreaterThanOrEqual(recoveryCount, 2, "open rest must map to recovery")
+        }
+    }
 }
 
 private struct MockPairingReader: AppleWatchPairingReading {
@@ -501,6 +669,34 @@ private final class MockWorkoutKitSaver: WorkoutKitSaving, @unchecked Sendable {
         if let errorToThrow { throw errorToThrow }
         let title = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["title"] as? String
         savedPlanTitles.append(title ?? "untitled")
+    }
+}
+
+private final class MockIncompleteScheduleReplacer: IncompleteScheduleReplacing, @unchecked Sendable {
+    private(set) var findCallTitles: [String] = []
+    private(set) var removedRows: [WorkoutScheduleRow] = []
+    var matchingRows: [WorkoutScheduleRow]
+    var findError: Error?
+
+    init(matchingRows: [WorkoutScheduleRow] = [], findError: Error? = nil) {
+        self.matchingRows = matchingRows
+        self.findError = findError
+    }
+
+    var removedTitles: [String] { removedRows.map(\.title) }
+
+    func findIncompletePlans(titled title: String) async throws -> [WorkoutScheduleRow] {
+        findCallTitles.append(title)
+        if let findError { throw findError }
+        let needle = title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return matchingRows.filter {
+            !$0.isComplete
+                && $0.title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == needle
+        }
+    }
+
+    func remove(rows: [WorkoutScheduleRow]) async {
+        removedRows.append(contentsOf: rows)
     }
 }
 
