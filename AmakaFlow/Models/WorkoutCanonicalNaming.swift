@@ -8,12 +8,6 @@
 import Combine
 import Foundation
 
-enum CanonicalSource: String, Codable, Equatable, Hashable, Sendable {
-    case auto
-    case userPick = "user_pick"
-    case preset
-}
-
 struct WorkoutTypeItem: Codable, Equatable, Sendable {
     let id: String
     let category: String
