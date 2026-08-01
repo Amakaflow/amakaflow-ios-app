@@ -714,16 +714,29 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
                     "enrichment_kind": "session_warmup",
                     "exercises": [["name": "Jump Rope", "duration_sec": NSNull()]]
                 ] as [String: Any],
+                // structure-only enrichment soft section (no type) — still stripped
+                [
+                    "structure": "warmup",
+                    "structure_source": "enrichment_default",
+                    "exercises": [["name": "Jump Rope"]]
+                ] as [String: Any],
                 // AMA-2364 leftover: name-only Jump Rope without type=warmup
                 [
                     "exercises": [["name": "Jump Rope"]]
                 ] as [String: Any],
+                // circuit with Jump Rope must not be treated as an orphan
+                [
+                    "type": "circuit",
+                    "exercises": [["name": "Jump Rope"]]
+                ] as [String: Any],
                 [
                     "type": "sets",
+                    "rest_sec": 90,
                     "rest_open": true,
                     "field_provenance": [
-                        "rest_sec": "enrichment_default",
-                        "rest_open": "enrichment_default"
+                        "rest_sec": "user",
+                        "rest_open": "enrichment_default",
+                        "notes": "user"
                     ],
                     "exercises": [
                         [
@@ -745,9 +758,15 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
             softActivityNames: ["Jump Rope"]
         )
         let blocks = stripped["blocks"] as? [[String: Any]] ?? []
-        XCTAssertEqual(blocks.count, 1, String(describing: blocks))
-        let main = blocks[0]
+        XCTAssertEqual(blocks.count, 2, String(describing: blocks))
+        XCTAssertEqual(blocks[0]["type"] as? String, "circuit")
+        let main = blocks[1]
         XCTAssertNil(main["rest_open"])
+        XCTAssertEqual(main["rest_sec"] as? Int, 90)
+        let prov = main["field_provenance"] as? [String: Any]
+        XCTAssertEqual(prov?["rest_sec"] as? String, "user")
+        XCTAssertEqual(prov?["notes"] as? String, "user")
+        XCTAssertNil(prov?["rest_open"])
         let squat = (main["exercises"] as? [[String: Any]])?.first
         XCTAssertNil(squat?["warmup_sets"])
         XCTAssertEqual(squat?["name"] as? String, "Barbell back squat")
@@ -793,6 +812,11 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
                 )
             )
         )
+        var jumpRopePrefs = WorkoutPreferences.defaults
+        jumpRopePrefs.sessionWarmup = SessionWarmupPrefs(
+            enabled: true,
+            activities: [EnrichmentActivityPref(name: "Jump Rope", durationSec: nil)]
+        )
         // Pretend prior cancel left an orphan Jump Rope + prior enrich.
         let prior: [String: Any] = [
             "blocks": [
@@ -815,22 +839,23 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
                 ] as [String: Any]
             ]
         ]
+        let softNames = WorkoutEnrichmentPushCoordinator.softActivityNames(from: jumpRopePrefs)
         let plan = WorkoutEnrichmentPushPlanner.plan(
             blocks: WorkoutEnrichmentBlocksJSON.parse(
                 WorkoutEnrichmentMutations.stripEnrichmentOwned(
                     in: prior,
-                    softActivityNames: ["Jump Rope"]
+                    softActivityNames: softNames
                 )
             ).blocks,
             tombstones: [],
-            prefs: .defaults,
+            prefs: jumpRopePrefs,
             target: .apple
         )
         let prepared = WorkoutEnrichmentPushCoordinator.Prepared(
             workoutId: "w1",
             title: "Testing",
             plan: plan,
-            prefs: .defaults,
+            prefs: jumpRopePrefs,
             tombstones: [],
             blocksJSON: prior,
             target: .apple

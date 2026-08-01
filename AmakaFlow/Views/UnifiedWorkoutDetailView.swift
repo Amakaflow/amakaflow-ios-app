@@ -120,7 +120,16 @@ struct UnifiedWorkoutDetailView: View {
         .preferredColorScheme(.dark)
         .ddSuppressFloatingChrome()
         .navigationBarHidden(true)
-        .sheet(item: $startFlowSheet) { sheet in
+        .sheet(
+            item: $startFlowSheet,
+            onDismiss: {
+                // AMA-2365 — Cancel / swipe-dismiss of Apple preview undoes enrich.
+                // Confirm clears `appleEnrichmentReset` before dismissing so this is a no-op.
+                guard appleEnrichmentReset != nil else { return }
+                lastAppleHandoffShowsManagePlans = false
+                Task { await resetAppleEnrichmentAfterCancel() }
+            },
+            content: { sheet in
             switch sheet {
             case .start:
                 WorkoutStartSheet(
@@ -161,6 +170,8 @@ struct UnifiedWorkoutDetailView: View {
                     stepLines: WorkoutKitPlanStepSummary.lines(from: planJSON),
                     prefsSummary: AppleWatchDeliveryPrefsStore.previewSummaryLine,
                     onConfirm: {
+                        // Keep enriched structure; clear before dismiss so onDismiss skips reset.
+                        appleEnrichmentReset = nil
                         startFlowSheet = nil
                         confirmAppleWorkoutKitSchedule(
                             workoutName: name,
@@ -171,7 +182,6 @@ struct UnifiedWorkoutDetailView: View {
                     onCancel: {
                         startFlowSheet = nil
                         lastAppleHandoffShowsManagePlans = false
-                        Task { await resetAppleEnrichmentAfterCancel() }
                     }
                 )
             case .enrichment(let prepared):
@@ -206,7 +216,8 @@ struct UnifiedWorkoutDetailView: View {
                 .presentationDragIndicator(.hidden)
                 .presentationBackground(DailyDriver.screenBackground)
             }
-        }
+            }
+        )
         .sheet(isPresented: $showingGarminPairing) {
             NavigationStack {
                 DevicesView()

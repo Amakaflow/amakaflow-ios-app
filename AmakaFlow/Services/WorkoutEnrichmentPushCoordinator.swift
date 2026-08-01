@@ -163,12 +163,15 @@ final class WorkoutEnrichmentPushCoordinator {
                 return ApplyOutcome(applied: false, note: nil)
             }
 
-            // Reset leftover enrichment from a prior Start/cancel, then add once.
+            // AMA-2365 — Apple Start resets leftover enrichment, then adds once.
+            // Garmin keeps existing enrichment (prepare does not strip for Garmin).
             let softNames = Self.softActivityNames(from: prepared.prefs)
-            let baseline = WorkoutEnrichmentMutations.stripEnrichmentOwned(
-                in: prepared.blocksJSON,
-                softActivityNames: softNames
-            )
+            let baseline = prepared.target == .apple
+                ? WorkoutEnrichmentMutations.stripEnrichmentOwned(
+                    in: prepared.blocksJSON,
+                    softActivityNames: softNames
+                )
+                : prepared.blocksJSON
             var blocksJSON = baseline
             var enrichNote: String?
             var enrichFailed = false
