@@ -1013,6 +1013,12 @@ extension UnifiedWorkoutDetailView {
             if outcome.applied, let refreshed = await onEditorDismiss?() {
                 displayedWorkout = refreshed
             }
+            // AMA-2363: do not schedule when enrich/save failed (no-op still allowed).
+            guard outcome.allowsAppleHandoff else {
+                handoffStatus = outcome.note
+                    ?? "Couldn’t add the warm-up/rest extras — fix and try again."
+                return
+            }
             beginAppleTryHandoff(statusNote: outcome.note)
         }
     }

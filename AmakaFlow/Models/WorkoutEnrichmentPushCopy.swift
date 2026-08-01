@@ -85,8 +85,10 @@ enum WorkoutEnrichmentPushCopy {
         return "\(defaults.count) warm-up sets (\(reps) reps) on \(exerciseCount) \(noun)"
     }
 
-    /// Seed the sheet's open-rest toggle. Apple: Lap-equivalent is Open rest;
-    /// prefer delivery prefs when configured, else default open (AMA-2362).
+    /// Seed the sheet's open-rest toggle.
+    /// Apple: Lap-equivalent is Open rest — always ON for this sheet unless
+    /// delivery prefs are explicitly ``omit`` (AMA-2363). Timed delivery prefs
+    /// must not silently force Timed 60s here.
     static func initialRestOpen(
         standing: BetweenSetRestPrefs,
         target: EnrichmentPushTarget
@@ -95,11 +97,11 @@ enum WorkoutEnrichmentPushCopy {
         case .garmin:
             return standing.restOpen
         case .apple:
-            guard AppleWatchDeliveryPrefsStore.hasConfigured else { return true }
-            switch AppleWatchDeliveryPrefsStore.current.restMode {
-            case .tap: return true
-            case .timed, .omit: return false
+            if AppleWatchDeliveryPrefsStore.hasConfigured,
+               AppleWatchDeliveryPrefsStore.current.restMode == .omit {
+                return false
             }
+            return true
         }
     }
 
