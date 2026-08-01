@@ -706,6 +706,179 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertEqual(exercises?.last?["exercise_id"] as? String, "wex_keep")
     }
 
+    func testStripEnrichmentOwnedRemovesSoftAndOrphanJumpRope() {
+        let input: [String: Any] = [
+            "blocks": [
+                [
+                    "type": "warmup",
+                    "enrichment_kind": "session_warmup",
+                    "exercises": [["name": "Jump Rope", "duration_sec": NSNull()]]
+                ] as [String: Any],
+                // AMA-2364 leftover: name-only Jump Rope without type=warmup
+                [
+                    "exercises": [["name": "Jump Rope"]]
+                ] as [String: Any],
+                [
+                    "type": "sets",
+                    "rest_open": true,
+                    "field_provenance": [
+                        "rest_sec": "enrichment_default",
+                        "rest_open": "enrichment_default"
+                    ],
+                    "exercises": [
+                        [
+                            "name": "Barbell back squat",
+                            "sets": 3,
+                            "reps": 10,
+                            "exercise_id": "wex_1",
+                            "warmup_sets": [
+                                ["reps": 8, "structure_source": "enrichment_default"],
+                                ["reps": 5, "structure_source": "enrichment_default"]
+                            ]
+                        ] as [String: Any]
+                    ]
+                ] as [String: Any]
+            ]
+        ]
+        let stripped = WorkoutEnrichmentMutations.stripEnrichmentOwned(
+            in: input,
+            softActivityNames: ["Jump Rope"]
+        )
+        let blocks = stripped["blocks"] as? [[String: Any]] ?? []
+        XCTAssertEqual(blocks.count, 1, String(describing: blocks))
+        let main = blocks[0]
+        XCTAssertNil(main["rest_open"])
+        let squat = (main["exercises"] as? [[String: Any]])?.first
+        XCTAssertNil(squat?["warmup_sets"])
+        XCTAssertEqual(squat?["name"] as? String, "Barbell back squat")
+    }
+
+    @MainActor
+    func testApplyStripsBeforeEnrichAndRestoreClearsExtras() async {
+        let mock = MockAPIService()
+        let enrichedBlocks: [String: Any] = [
+            "blocks": [
+                [
+                    "type": "warmup",
+                    "enrichment_kind": "session_warmup",
+                    "exercises": [["name": "Jump Rope"]]
+                ] as [String: Any],
+                [
+                    "type": "sets",
+                    "rest_open": true,
+                    "field_provenance": [
+                        "rest_sec": "enrichment_default",
+                        "rest_open": "enrichment_default"
+                    ],
+                    "exercises": [
+                        [
+                            "name": "Barbell back squat",
+                            "sets": 3,
+                            "reps": 10,
+                            "exercise_id": "wex_1",
+                            "warmup_sets": [
+                                ["reps": 8, "structure_source": "enrichment_default"]
+                            ]
+                        ] as [String: Any]
+                    ]
+                ] as [String: Any]
+            ]
+        ]
+        mock.enrichWorkoutResult = .success(
+            EnrichResponse(
+                blocksJSON: enrichedBlocks,
+                enrichmentApplied: EnrichmentAppliedSummary(
+                    prefsSource: "override",
+                    added: ["session_warmup", "between_set_rest", "exercise_warmup_sets"]
+                )
+            )
+        )
+        // Pretend prior cancel left an orphan Jump Rope + prior enrich.
+        let prior: [String: Any] = [
+            "blocks": [
+                ["exercises": [["name": "Jump Rope"]]] as [String: Any],
+                [
+                    "type": "warmup",
+                    "enrichment_kind": "session_warmup",
+                    "exercises": [["name": "Jump Rope"]]
+                ] as [String: Any],
+                [
+                    "type": "sets",
+                    "exercises": [
+                        [
+                            "name": "Barbell back squat",
+                            "sets": 3,
+                            "reps": 10,
+                            "exercise_id": "wex_1"
+                        ] as [String: Any]
+                    ]
+                ] as [String: Any]
+            ]
+        ]
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: WorkoutEnrichmentBlocksJSON.parse(
+                WorkoutEnrichmentMutations.stripEnrichmentOwned(
+                    in: prior,
+                    softActivityNames: ["Jump Rope"]
+                )
+            ).blocks,
+            tombstones: [],
+            prefs: .defaults,
+            target: .apple
+        )
+        let prepared = WorkoutEnrichmentPushCoordinator.Prepared(
+            workoutId: "w1",
+            title: "Testing",
+            plan: plan,
+            prefs: .defaults,
+            tombstones: [],
+            blocksJSON: prior,
+            target: .apple
+        )
+        let coordinator = WorkoutEnrichmentPushCoordinator(apiService: mock)
+        let outcome = await coordinator.apply(
+            prepared: prepared,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.sessionWarmup, .betweenSetRest, .exerciseWarmupSets],
+                restOpenOverride: true
+            )
+        )
+        XCTAssertTrue(outcome.allowsAppleHandoff)
+        guard let resetBlocks = outcome.resetBlocksJSON else {
+            XCTFail("expected reset baseline after apply")
+            return
+        }
+        // Enrich must see a clean baseline — no stacked Jump Rope in the request.
+        let sentBlocks = mock.lastEnrichRequest?.blocksJSON["blocks"] as? [[String: Any]] ?? []
+        let jumpInRequest = sentBlocks.filter { block in
+            ((block["exercises"] as? [[String: Any]]) ?? [])
+                .contains { ($0["name"] as? String) == "Jump Rope" }
+        }
+        XCTAssertEqual(jumpInRequest.count, 0, String(describing: sentBlocks))
+
+        let snapshot = WorkoutEnrichmentPushCoordinator.ResetSnapshot(
+            workoutId: "w1",
+            title: "Testing",
+            blocksJSON: resetBlocks,
+            tombstones: outcome.resetTombstones ?? []
+        )
+        let didRestore = await coordinator.restore(snapshot)
+        XCTAssertTrue(didRestore)
+        let restored = mock.savedWorkoutBlocksJSON.last?.blocksJSON
+        let restoredBlocks = restored?["blocks"] as? [[String: Any]] ?? []
+        XCTAssertFalse(
+            restoredBlocks.contains { ($0["type"] as? String) == "warmup" },
+            String(describing: restoredBlocks)
+        )
+        XCTAssertFalse(
+            restoredBlocks.contains { block in
+                ((block["exercises"] as? [[String: Any]]) ?? [])
+                    .contains { ($0["name"] as? String) == "Jump Rope" }
+            },
+            String(describing: restoredBlocks)
+        )
+    }
+
     @MainActor
     func testApplyMintsExerciseIdBeforeEnrichRequest() async {
         let mock = MockAPIService()

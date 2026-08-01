@@ -26,6 +26,8 @@ struct UnifiedWorkoutDetailView: View {
     @State private var showingAppleDeliveryPrefs = false
     /// AMA-2360: enrichment sheet may continue to Apple compose instead of Garmin push.
     @State private var enrichmentContinuesToApple = false
+    /// AMA-2365 — restore stripped baseline if Apple preview is canceled.
+    @State private var appleEnrichmentReset: WorkoutEnrichmentPushCoordinator.ResetSnapshot?
     /// AMA-2346: single sheet so Start → enrichment never races a second `.sheet`
     /// (dual sheets let push/openApp land before answers).
     @State private var startFlowSheet: WorkoutStartFlowSheet?
@@ -168,8 +170,8 @@ struct UnifiedWorkoutDetailView: View {
                     },
                     onCancel: {
                         startFlowSheet = nil
-                        handoffStatus = "Apple schedule canceled."
                         lastAppleHandoffShowsManagePlans = false
+                        Task { await resetAppleEnrichmentAfterCancel() }
                     }
                 )
             case .enrichment(let prepared):
@@ -1004,6 +1006,7 @@ extension UnifiedWorkoutDetailView {
         decision: WorkoutEnrichmentPushPlanner.Decision
     ) {
         enrichmentContinuesToApple = false
+        appleEnrichmentReset = nil
         handoffStatus = "Building Apple Workout plan…"
         Task {
             let outcome = await WorkoutEnrichmentPushCoordinator().apply(
@@ -1015,12 +1018,38 @@ extension UnifiedWorkoutDetailView {
             }
             // AMA-2363: do not schedule when enrich/save failed (no-op still allowed).
             guard outcome.allowsAppleHandoff else {
+                appleEnrichmentReset = nil
                 handoffStatus = outcome.note
                     ?? "Couldn’t add the warm-up/rest extras — fix and try again."
                 return
             }
+            if let resetBlocks = outcome.resetBlocksJSON {
+                appleEnrichmentReset = WorkoutEnrichmentPushCoordinator.ResetSnapshot(
+                    workoutId: prepared.workoutId,
+                    title: prepared.title,
+                    blocksJSON: resetBlocks,
+                    tombstones: outcome.resetTombstones ?? prepared.tombstones
+                )
+            }
             beginAppleTryHandoff(statusNote: outcome.note)
         }
+    }
+
+    /// AMA-2365 — Cancel on the Apple preview undoes enrich for this attempt.
+    fileprivate func resetAppleEnrichmentAfterCancel() async {
+        defer { appleEnrichmentReset = nil }
+        guard let snapshot = appleEnrichmentReset else {
+            handoffStatus = "Apple schedule canceled."
+            return
+        }
+        handoffStatus = "Resetting warm-up/rest extras…"
+        let ok = await WorkoutEnrichmentPushCoordinator().restore(snapshot)
+        if ok, let refreshed = await onEditorDismiss?() {
+            displayedWorkout = refreshed
+        }
+        handoffStatus = ok
+            ? "Apple schedule canceled — extras cleared."
+            : "Apple schedule canceled — couldn’t clear extras; Start again to reset."
     }
 
     fileprivate func pushToGarmin(gymTitle: String, statusNote: String?) {
@@ -1141,6 +1170,8 @@ extension UnifiedWorkoutDetailView {
     ) {
         guard !isAppleHandoffInFlight else { return }
         isAppleHandoffInFlight = true
+        // Keep enriched structure after a successful schedule.
+        appleEnrichmentReset = nil
         handoffStatus = "Scheduling in Workout…"
         Task {
             defer { isAppleHandoffInFlight = false }
