@@ -7,16 +7,16 @@ enum WorkoutTypeFavoritesOrdering {
     /// Locked UI sequence (spec §2).
     static let categorySequence: [String] = [
         "run", "strength", "conditioning", "mobility",
-        "recovery", "yoga", "ride", "mixed",
+        "recovery", "yoga", "ride", "mixed"
     ]
 
     static func orderedPresets(_ items: [WorkoutTypeItem]) -> [WorkoutTypeItem] {
         items
             .filter(\.aiPreset)
             .sorted { lhs, rhs in
-                let li = categoryIndex(lhs.category)
-                let ri = categoryIndex(rhs.category)
-                if li != ri { return li < ri }
+                let lhsIndex = categoryIndex(lhs.category)
+                let rhsIndex = categoryIndex(rhs.category)
+                if lhsIndex != rhsIndex { return lhsIndex < rhsIndex }
                 return lhs.displayName < rhs.displayName
             }
     }

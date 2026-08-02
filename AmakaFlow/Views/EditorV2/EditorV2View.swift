@@ -25,7 +25,7 @@ struct EditorV2View: View {
     @State var addSheetOpen = false
     @State var replaceExerciseID: String?
     @State private var isMatchSheetPresented = false
-    @State private var favoritePresets: [WorkoutTypeItem] = []
+    @State var favoritePresets: [WorkoutTypeItem] = []
     @FocusState private var isTitleFocused: Bool
     /// AMA-2336 — `workout_preferences` cache; fetched on the first quick-add.
     @State private var enrichmentPrefs: WorkoutPreferences?
@@ -322,17 +322,6 @@ struct EditorV2View: View {
             return
         }
         matchController.resolveLoadedDisplayName(from: catalog)
-    }
-
-    private func loadFavoritePresets() async {
-        do {
-            let items = try await AppDependencies.current.apiService.fetchWorkoutTypes(
-                aiPresetOnly: true
-            )
-            favoritePresets = WorkoutTypeFavoritesOrdering.visibleChips(from: items)
-        } catch {
-            favoritePresets = []
-        }
     }
 
     private func matchTitleIfNeeded() async {

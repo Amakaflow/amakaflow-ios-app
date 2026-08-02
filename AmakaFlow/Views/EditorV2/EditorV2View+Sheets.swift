@@ -10,6 +10,17 @@ import SwiftUI
 // MARK: - Sheets, toast, bindings (split for type_body_length)
 
 extension EditorV2View {
+    func loadFavoritePresets() async {
+        do {
+            let items = try await AppDependencies.current.apiService.fetchWorkoutTypes(
+                aiPresetOnly: true
+            )
+            favoritePresets = WorkoutTypeFavoritesOrdering.visibleChips(from: items)
+        } catch {
+            favoritePresets = []
+        }
+    }
+
     private var formatLabel: String? {
         guard let key = session.formatGroupKey else { return nil }
         return session.groups[key]?.type.label

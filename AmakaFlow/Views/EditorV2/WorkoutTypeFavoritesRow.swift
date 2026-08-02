@@ -99,7 +99,7 @@ struct WorkoutTypeFavoritesRow: View {
                 aiPreset: true,
                 equipment: [],
                 platformTags: [:]
-            ),
+            )
         ],
         selectedCanonicalId: "tempo_run",
         onSelect: { _ in },

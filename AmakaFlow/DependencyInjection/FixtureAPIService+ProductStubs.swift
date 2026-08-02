@@ -83,7 +83,7 @@ extension FixtureAPIService {
         stub(id: "full_body", category: "strength", name: "Full Body Strength"),
         stub(id: "emom", category: "conditioning", name: "EMOM"),
         stub(id: "recovery_flow", category: "mobility", name: "Recovery Flow"),
-        stub(id: "endurance_ride", category: "ride", name: "Endurance Ride", ai: false),
+        stub(id: "endurance_ride", category: "ride", name: "Endurance Ride", isAIPreset: false)
     ]
 
     private static func stub(
@@ -91,7 +91,7 @@ extension FixtureAPIService {
         category: String,
         name: String,
         aliases: [String] = [],
-        ai: Bool = true
+        isAIPreset: Bool = true
     ) -> WorkoutTypeItem {
         WorkoutTypeItem(
             id: id,
@@ -100,7 +100,7 @@ extension FixtureAPIService {
             focus: [],
             displayName: name,
             aliases: aliases,
-            aiPreset: ai,
+            aiPreset: isAIPreset,
             equipment: [],
             platformTags: [:]
         )

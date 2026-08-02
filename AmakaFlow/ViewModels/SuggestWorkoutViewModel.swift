@@ -6,8 +6,8 @@
 //  Calls POST /coach/suggest-workout and manages loading/success/error states.
 //
 
-import Foundation
 import Combine
+import Foundation
 import os
 
 // MARK: - Suggest Workout Request/Response Models
@@ -191,8 +191,10 @@ enum SuggestWorkoutState: Equatable {
         case (.needsOnboarding, .needsOnboarding): return true
         case (.loading, .loading): return true
         case (.empty, .empty): return true
-        case (.success(let a), .success(let b)): return a.id == b.id
-        case (.error(let a), .error(let b)): return a == b
+        case (.success(let lhsWorkout), .success(let rhsWorkout)):
+            return lhsWorkout.id == rhsWorkout.id
+        case (.error(let lhsError), .error(let rhsError)):
+            return lhsError == rhsError
         default: return false
         }
     }
@@ -229,6 +231,9 @@ class SuggestWorkoutViewModel: ObservableObject {
 
     private let dependencies: AppDependencies
     private static let profileKey = DefaultsKey.suggestedWorkoutCoachingProfile.rawValue
+    private var lastPromptNotes: String?
+    private var lastPromptDurationMinutes: Int?
+    private var lastPromptFocus: [String]?
 
     init(dependencies: AppDependencies = .current) {
         self.dependencies = dependencies
@@ -255,6 +260,9 @@ class SuggestWorkoutViewModel: ObservableObject {
 
     /// Check profile and request a suggestion
     func requestSuggestion() {
+        lastPromptNotes = nil
+        lastPromptDurationMinutes = nil
+        lastPromptFocus = nil
         state = .loading
         suggestedWorkout = nil
         ctaError = nil
@@ -273,6 +281,9 @@ class SuggestWorkoutViewModel: ObservableObject {
         durationMinutes: Int?,
         focusMuscleGroups: [String]?
     ) {
+        lastPromptNotes = notes
+        lastPromptDurationMinutes = durationMinutes
+        lastPromptFocus = focusMuscleGroups
         state = .loading
         suggestedWorkout = nil
         ctaError = nil
@@ -314,7 +325,11 @@ class SuggestWorkoutViewModel: ObservableObject {
         let profile = CoachingProfile(experience: experience, goal: goal, daysPerWeek: daysPerWeek)
         saveProfile(profile)
         Task {
-            await suggestWorkout()
+            await suggestWorkout(
+                durationMinutes: lastPromptDurationMinutes,
+                focusMuscleGroups: lastPromptFocus,
+                notes: lastPromptNotes
+            )
         }
     }
 
@@ -414,7 +429,13 @@ class SuggestWorkoutViewModel: ObservableObject {
     // MARK: - Actions
 
     func suggestAnother() async {
-        await suggestWorkout(notes: "Suggest a different session than the previous suggestion.")
+        let variationNote = "Suggest a different session than the previous suggestion."
+        let notes = lastPromptNotes.map { "\($0)\n\n\(variationNote)" } ?? variationNote
+        await suggestWorkout(
+            durationMinutes: lastPromptDurationMinutes,
+            focusMuscleGroups: lastPromptFocus,
+            notes: notes
+        )
     }
 
     func restToday() {
@@ -425,7 +446,11 @@ class SuggestWorkoutViewModel: ObservableObject {
     }
 
     func retry() async {
-        await suggestWorkout()
+        await suggestWorkout(
+            durationMinutes: lastPromptDurationMinutes,
+            focusMuscleGroups: lastPromptFocus,
+            notes: lastPromptNotes
+        )
     }
 
     func dismissError() {
@@ -447,5 +472,8 @@ class SuggestWorkoutViewModel: ObservableObject {
         state = .idle
         suggestedWorkout = nil
         ctaError = nil
+        lastPromptNotes = nil
+        lastPromptDurationMinutes = nil
+        lastPromptFocus = nil
     }
 }
