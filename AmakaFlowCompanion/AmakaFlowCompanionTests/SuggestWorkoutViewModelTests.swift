@@ -428,7 +428,17 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     XCTAssertNil(viewModel.suggestedWorkout)
   }
 
-  func testReset_clearsState() {
+  func testReset_clearsState() async throws {
+    mockAPI.suggestWorkoutResult = .success(.single(kind: .time(seconds: 300, target: "tempo")))
+    viewModel.requestSuggestionFromPrompt(
+      notes: "outdoor tempo run",
+      durationMinutes: 45,
+      focusMuscleGroups: ["legs"]
+    )
+    try await waitUntil { self.mockAPI.suggestWorkoutCalled }
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.notes, "outdoor tempo run")
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.durationMinutes, 45)
+
     viewModel.state = .error(.unknown(description: "test error"))
     viewModel.ctaError = .unknown(description: "test error")
     viewModel.suggestedWorkout = Workout(
@@ -444,6 +454,14 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.state, .idle)
     XCTAssertNil(viewModel.suggestedWorkout)
     XCTAssertNil(viewModel.ctaError)
+
+    let callCountBeforeRetry = mockAPI.suggestWorkoutCallCount
+    await viewModel.retry()
+
+    XCTAssertEqual(mockAPI.suggestWorkoutCallCount, callCountBeforeRetry + 1)
+    XCTAssertNil(mockAPI.lastSuggestWorkoutRequest?.notes)
+    XCTAssertNil(mockAPI.lastSuggestWorkoutRequest?.durationMinutes)
+    XCTAssertNil(mockAPI.lastSuggestWorkoutRequest?.focusMuscleGroups)
   }
 
   // MARK: - buildWorkout(from:) Translation Tests
