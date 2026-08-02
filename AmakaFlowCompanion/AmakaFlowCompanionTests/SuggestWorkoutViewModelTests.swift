@@ -103,6 +103,119 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     XCTAssertEqual(status, 500)
   }
 
+  func testRequestSuggestionFromPrompt_passesNotesDurationAndFocus() async throws {
+    mockAPI.getFatigueAdviceResult = .success(
+      FatigueAdvice(
+        level: .low,
+        message: "You’re recovered",
+        recommendations: [],
+        suggestedRestDays: nil,
+        recoveryActivities: nil
+      )
+    )
+    mockAPI.suggestWorkoutResult = .success(.single(kind: .time(seconds: 300, target: "zone 2")))
+
+    viewModel.requestSuggestionFromPrompt(
+      notes: "45 min tempo run outdoors",
+      durationMinutes: 45,
+      focusMuscleGroups: ["legs"]
+    )
+    try await waitUntil {
+      if case .success = self.viewModel.state { return true }
+      return false
+    }
+
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.notes, "45 min tempo run outdoors")
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.durationMinutes, 45)
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.focusMuscleGroups, ["legs"])
+  }
+
+  func testRequestSuggestionFromPrompt_allowsNilDuration() async throws {
+    mockAPI.getFatigueAdviceResult = .success(
+      FatigueAdvice(
+        level: .low,
+        message: "You’re recovered",
+        recommendations: [],
+        suggestedRestDays: nil,
+        recoveryActivities: nil
+      )
+    )
+    mockAPI.suggestWorkoutResult = .success(.single(kind: .time(seconds: 300, target: "zone 2")))
+
+    viewModel.requestSuggestionFromPrompt(
+      notes: "easy full body",
+      durationMinutes: nil,
+      focusMuscleGroups: nil
+    )
+    try await waitUntil {
+      if case .success = self.viewModel.state { return true }
+      return false
+    }
+
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.notes, "easy full body")
+    XCTAssertNil(mockAPI.lastSuggestWorkoutRequest?.durationMinutes)
+    XCTAssertNil(mockAPI.lastSuggestWorkoutRequest?.focusMuscleGroups)
+  }
+
+  func testRequestSuggestionFromPrompt_showsOnboardingWhenNoBackendProfile() async throws {
+    mockAPI.getCoachingProfileResult = .success(nil)
+
+    viewModel.requestSuggestionFromPrompt(
+      notes: "easy spin",
+      durationMinutes: 30,
+      focusMuscleGroups: nil
+    )
+    try await waitUntil { self.viewModel.state == .needsOnboarding }
+
+    XCTAssertFalse(mockAPI.suggestWorkoutCalled)
+  }
+
+  func testRetry_afterPromptFailureRetainsPromptContext() async throws {
+    mockAPI.suggestWorkoutResult = .failure(APIError.serverError(503))
+
+    viewModel.requestSuggestionFromPrompt(
+      notes: "45 min tempo run outdoors",
+      durationMinutes: 45,
+      focusMuscleGroups: ["legs"]
+    )
+    try await waitUntil {
+      if case .error = self.viewModel.state { return true }
+      return false
+    }
+
+    mockAPI.suggestWorkoutResult = .success(.single(kind: .time(seconds: 300, target: "tempo")))
+    await viewModel.retry()
+
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.notes, "45 min tempo run outdoors")
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.durationMinutes, 45)
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.focusMuscleGroups, ["legs"])
+  }
+
+  func testCompleteOnboarding_afterPromptRetainsPromptContext() async throws {
+    mockAPI.getCoachingProfileResult = .success(nil)
+    viewModel.requestSuggestionFromPrompt(
+      notes: "easy spin",
+      durationMinutes: 30,
+      focusMuscleGroups: ["quads"]
+    )
+    try await waitUntil { self.viewModel.state == .needsOnboarding }
+
+    mockAPI.suggestWorkoutResult = .success(.single(kind: .time(seconds: 300, target: "easy")))
+    viewModel.completeOnboarding(
+      experience: .beginner,
+      goal: .improveEndurance,
+      daysPerWeek: 3
+    )
+    try await waitUntil {
+      if case .success = self.viewModel.state { return true }
+      return false
+    }
+
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.notes, "easy spin")
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.durationMinutes, 30)
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.focusMuscleGroups, ["quads"])
+  }
+
   func testSuggestWorkout_setsLoadingWhileRequestIsPending() async throws {
     let delayedAPI = DelayedSuggestWorkoutAPIService(
       response: .single(kind: .time(seconds: 120, target: "easy spin"))
@@ -286,6 +399,28 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     }
   }
 
+  func testSuggestAnother_afterPromptPreservesPromptContext() async throws {
+    mockAPI.suggestWorkoutResult = .success(.single(kind: .time(seconds: 300, target: "zone 2")))
+    viewModel.requestSuggestionFromPrompt(
+      notes: "outdoor tempo run",
+      durationMinutes: 45,
+      focusMuscleGroups: ["legs"]
+    )
+    try await waitUntil {
+      if case .success = self.viewModel.state { return true }
+      return false
+    }
+
+    await viewModel.suggestAnother()
+
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.durationMinutes, 45)
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.focusMuscleGroups, ["legs"])
+    XCTAssertEqual(
+      mockAPI.lastSuggestWorkoutRequest?.notes,
+      "outdoor tempo run\n\nSuggest a different session than the previous suggestion."
+    )
+  }
+
   func testRestTodayMarksRestAndClearsSuggestion() {
     viewModel.suggestedWorkout = Workout(
       name: "Test",
@@ -303,7 +438,20 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     XCTAssertNil(viewModel.suggestedWorkout)
   }
 
-  func testReset_clearsState() {
+  func testReset_clearsState() async throws {
+    mockAPI.suggestWorkoutResult = .success(.single(kind: .time(seconds: 300, target: "tempo")))
+    viewModel.requestSuggestionFromPrompt(
+      notes: "outdoor tempo run",
+      durationMinutes: 45,
+      focusMuscleGroups: ["legs"]
+    )
+    try await waitUntil {
+      if case .success = self.viewModel.state { return true }
+      return false
+    }
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.notes, "outdoor tempo run")
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.durationMinutes, 45)
+
     viewModel.state = .error(.unknown(description: "test error"))
     viewModel.ctaError = .unknown(description: "test error")
     viewModel.suggestedWorkout = Workout(
@@ -319,6 +467,14 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.state, .idle)
     XCTAssertNil(viewModel.suggestedWorkout)
     XCTAssertNil(viewModel.ctaError)
+
+    let callCountBeforeRetry = mockAPI.suggestWorkoutCallCount
+    await viewModel.retry()
+
+    XCTAssertEqual(mockAPI.suggestWorkoutCallCount, callCountBeforeRetry + 1)
+    XCTAssertNil(mockAPI.lastSuggestWorkoutRequest?.notes)
+    XCTAssertNil(mockAPI.lastSuggestWorkoutRequest?.durationMinutes)
+    XCTAssertNil(mockAPI.lastSuggestWorkoutRequest?.focusMuscleGroups)
   }
 
   // MARK: - buildWorkout(from:) Translation Tests

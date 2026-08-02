@@ -25,6 +25,7 @@ struct EditorV2View: View {
     @State var addSheetOpen = false
     @State var replaceExerciseID: String?
     @State private var isMatchSheetPresented = false
+    @State var favoritePresets: [WorkoutTypeItem] = []
     @FocusState private var isTitleFocused: Bool
     /// AMA-2336 — `workout_preferences` cache; fetched on the first quick-add.
     @State private var enrichmentPrefs: WorkoutPreferences?
@@ -125,6 +126,10 @@ struct EditorV2View: View {
         .sheet(isPresented: $addSheetOpen) { addSheet }
         .sheet(isPresented: $isMatchSheetPresented) { workoutTypeMatchSheet }
         .task { await resolveLoadedMatchDisplayName() }
+        .task {
+            guard isNew else { return }
+            await loadFavoritePresets()
+        }
         .task(id: session.title) {
             matchController.noteTitleForSave(session.title)
             do {
@@ -192,6 +197,21 @@ struct EditorV2View: View {
                 .padding(.top, 10)
                 .focused($isTitleFocused)
                 .accessibilityIdentifier("workout_name_field")
+
+            if isNew, !favoritePresets.isEmpty {
+                WorkoutTypeFavoritesRow(
+                    presets: favoritePresets,
+                    selectedCanonicalId: matchController.canonicalId,
+                    onSelect: { preset in
+                        session.title = matchController.applyFavorite(
+                            preset,
+                            currentTitle: session.title
+                        )
+                    },
+                    onMore: { isMatchSheetPresented = true }
+                )
+                .padding(.top, 8)
+            }
 
             if let displayName = matchController.chipDisplayName {
                 WorkoutTypeMatchChip(displayName: displayName) {

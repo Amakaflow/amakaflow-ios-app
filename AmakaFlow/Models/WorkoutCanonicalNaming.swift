@@ -205,6 +205,19 @@ final class WorkoutTypeMatchController: ObservableObject {
         clearPendingMatch()
     }
 
+    /// Applies a favorites-chip selection. Always owns as `preset`.
+    /// Returns the title the editor must show: `displayName` when `currentTitle`
+    /// is trimmed-empty; otherwise the unchanged `currentTitle`.
+    @discardableResult
+    func applyFavorite(_ preset: WorkoutTypeItem, currentTitle: String) -> String {
+        applyPreset(canonicalId: preset.id, displayName: preset.displayName)
+        let trimmed = currentTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return preset.displayName
+        }
+        return currentTitle
+    }
+
     func resolveLoadedDisplayName(from catalog: [WorkoutTypeItem]) {
         state.resolveLoadedDisplayName(from: catalog)
     }

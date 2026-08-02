@@ -9,6 +9,7 @@ import SwiftUI
 
 struct SuggestWorkoutView: View {
     @ObservedObject var viewModel: SuggestWorkoutViewModel
+    var onWorkoutStarted: () -> Void = {}
     @EnvironmentObject var workoutsViewModel: WorkoutsViewModel
     @Environment(\.dismiss) private var dismiss
 
@@ -311,6 +312,7 @@ struct SuggestWorkoutView: View {
         // endpoint yet, so the view model's local store is the only thing
         // keeping this workout alive across the next API refresh.
         workoutsViewModel.acceptSuggestedWorkout(workout)
+        onWorkoutStarted()
         viewModel.reset()
         dismiss()
     }

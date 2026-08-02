@@ -12,28 +12,97 @@ extension FixtureAPIService {
     // MARK: - Canonical Workout Types
 
     func fetchWorkoutTypes(aiPresetOnly: Bool) async throws -> [WorkoutTypeItem] {
-        let tempoRun = WorkoutTypeItem(
-            id: "tempo_run",
-            category: "cardio",
-            format: "continuous",
-            focus: ["threshold"],
-            displayName: "Tempo Run",
-            aliases: ["threshold tempo"],
-            aiPreset: true,
-            equipment: ["running_shoes"],
-            platformTags: ["apple": "running", "garmin": "run"]
-        )
-        return [tempoRun]
+        let all = Self.fixtureWorkoutTypes
+        return aiPresetOnly ? all.filter(\.aiPreset) : all
     }
 
     func matchWorkoutType(title: String) async throws -> WorkoutTypeMatchResponse {
-        WorkoutTypeMatchResponse(
-            canonicalId: "tempo_run",
-            displayName: "Tempo Run",
-            confidence: 1,
-            method: "fixture",
-            normalizedTitle: title,
+        let normalized = title
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+
+        let all = Self.fixtureWorkoutTypes
+        if let exact = all.first(where: {
+            $0.id == normalized
+                || $0.displayName.lowercased() == normalized
+                || $0.aliases.contains(where: { $0.lowercased() == normalized })
+        }) {
+            return WorkoutTypeMatchResponse(
+                canonicalId: exact.id,
+                displayName: exact.displayName,
+                confidence: 1,
+                method: "exact",
+                normalizedTitle: normalized,
+                candidates: [
+                    WorkoutTypeCandidate(
+                        canonicalId: exact.id,
+                        displayName: exact.displayName,
+                        confidence: 1
+                    )
+                ]
+            )
+        }
+
+        if let fuzzy = all.first(where: {
+            normalized.contains($0.displayName.lowercased())
+                || $0.displayName.lowercased().contains(normalized)
+        }), !normalized.isEmpty {
+            return WorkoutTypeMatchResponse(
+                canonicalId: fuzzy.id,
+                displayName: fuzzy.displayName,
+                confidence: 0.8,
+                method: "fuzzy",
+                normalizedTitle: normalized,
+                candidates: [
+                    WorkoutTypeCandidate(
+                        canonicalId: fuzzy.id,
+                        displayName: fuzzy.displayName,
+                        confidence: 0.8
+                    )
+                ]
+            )
+        }
+
+        return WorkoutTypeMatchResponse(
+            canonicalId: nil,
+            displayName: nil,
+            confidence: 0,
+            method: "none",
+            normalizedTitle: normalized,
             candidates: []
+        )
+    }
+
+    private static let fixtureWorkoutTypes: [WorkoutTypeItem] = [
+        stub(id: "tempo_run", category: "run", name: "Tempo Run", aliases: ["threshold tempo"]),
+        stub(id: "long_run", category: "run", name: "Long Run"),
+        stub(id: "interval_run", category: "run", name: "Interval Run"),
+        stub(id: "upper_push", category: "strength", name: "Upper Push"),
+        stub(id: "lower_strength", category: "strength", name: "Lower Strength"),
+        stub(id: "full_body", category: "strength", name: "Full Body Strength"),
+        stub(id: "emom", category: "conditioning", name: "EMOM"),
+        stub(id: "recovery_flow", category: "mobility", name: "Recovery Flow"),
+        stub(id: "endurance_ride", category: "ride", name: "Endurance Ride", isAIPreset: false)
+    ]
+
+    private static func stub(
+        id: String,
+        category: String,
+        name: String,
+        aliases: [String] = [],
+        isAIPreset: Bool = true
+    ) -> WorkoutTypeItem {
+        WorkoutTypeItem(
+            id: id,
+            category: category,
+            format: "steady_state",
+            focus: [],
+            displayName: name,
+            aliases: aliases,
+            aiPreset: isAIPreset,
+            equipment: [],
+            platformTags: [:]
         )
     }
 
