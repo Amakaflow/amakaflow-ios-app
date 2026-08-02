@@ -7,8 +7,14 @@
 
 import SwiftUI
 
+enum SuggestWorkoutMode: Equatable {
+    case dailyCoach
+    case createWithAI
+}
+
 struct SuggestWorkoutView: View {
     @ObservedObject var viewModel: SuggestWorkoutViewModel
+    var mode: SuggestWorkoutMode = .dailyCoach
     var onWorkoutStarted: () -> Void = {}
     @EnvironmentObject var workoutsViewModel: WorkoutsViewModel
     @Environment(\.dismiss) private var dismiss
@@ -279,11 +285,15 @@ struct SuggestWorkoutView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                 AFTopBar(
-                    title: "Today’s suggestion",
-                    subtitle: "Readiness, rationale, and one generated session",
+                    title: topBarTitle,
+                    subtitle: topBarSubtitle,
                     backIdentifier: "suggest_workout_done",
                     backAction: { dismiss() },
-                    right: { AFChip(text: "AI Coach", outline: true) }
+                    right: {
+                        if mode == .dailyCoach {
+                            AFChip(text: "AI Coach", outline: true)
+                        }
+                    }
                 )
                 .padding(.horizontal, -Theme.Spacing.lg)
 
@@ -291,6 +301,24 @@ struct SuggestWorkoutView: View {
             }
             .padding(.horizontal, Theme.Spacing.lg)
             .padding(.bottom, 40)
+        }
+    }
+
+    private var topBarTitle: String {
+        switch mode {
+        case .dailyCoach:
+            return "Today’s suggestion"
+        case .createWithAI:
+            return "Create with AI"
+        }
+    }
+
+    private var topBarSubtitle: String? {
+        switch mode {
+        case .dailyCoach:
+            return "Readiness, rationale, and one generated session"
+        case .createWithAI:
+            return nil
         }
     }
 

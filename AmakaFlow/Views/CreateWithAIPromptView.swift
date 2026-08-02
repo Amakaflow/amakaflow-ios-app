@@ -29,6 +29,7 @@ struct CreateWithAIPromptView: View {
         if isShowingSuggestion {
             SuggestWorkoutView(
                 viewModel: viewModel,
+                mode: .createWithAI,
                 onWorkoutStarted: onSaved
             )
         } else {
