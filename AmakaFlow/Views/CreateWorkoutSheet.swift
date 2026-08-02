@@ -26,11 +26,11 @@ struct CreateWorkoutSheet: View {
                     icon: "sparkles",
                     iconBackground: DailyDriver.blue,
                     title: "Create with AI",
-                    subtitle: "Start from a workout type"
+                    subtitle: "Describe a workout"
                 ) {
                     dismissThen { onSelect(.createWithAI) }
                 }
-                .accessibilityIdentifier("create_door_ai_preset")
+                .accessibilityIdentifier("create_door_ai")
 
                 DDDoorRow(
                     icon: "link",

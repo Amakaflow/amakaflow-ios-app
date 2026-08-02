@@ -103,6 +103,69 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     XCTAssertEqual(status, 500)
   }
 
+  func testRequestSuggestionFromPrompt_passesNotesDurationAndFocus() async throws {
+    mockAPI.getFatigueAdviceResult = .success(
+      FatigueAdvice(
+        level: .low,
+        message: "You’re recovered",
+        recommendations: [],
+        suggestedRestDays: nil,
+        recoveryActivities: nil
+      )
+    )
+    mockAPI.suggestWorkoutResult = .success(.single(kind: .time(seconds: 300, target: "zone 2")))
+
+    viewModel.requestSuggestionFromPrompt(
+      notes: "45 min tempo run outdoors",
+      durationMinutes: 45,
+      focusMuscleGroups: ["legs"]
+    )
+    try await waitUntil { self.mockAPI.suggestWorkoutCalled }
+
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.notes, "45 min tempo run outdoors")
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.durationMinutes, 45)
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.focusMuscleGroups, ["legs"])
+    guard case .success = viewModel.state else {
+      return XCTFail("Expected success state, got \(viewModel.state)")
+    }
+  }
+
+  func testRequestSuggestionFromPrompt_allowsNilDuration() async throws {
+    mockAPI.getFatigueAdviceResult = .success(
+      FatigueAdvice(
+        level: .low,
+        message: "You’re recovered",
+        recommendations: [],
+        suggestedRestDays: nil,
+        recoveryActivities: nil
+      )
+    )
+    mockAPI.suggestWorkoutResult = .success(.single(kind: .time(seconds: 300, target: "zone 2")))
+
+    viewModel.requestSuggestionFromPrompt(
+      notes: "easy full body",
+      durationMinutes: nil,
+      focusMuscleGroups: nil
+    )
+    try await waitUntil { self.mockAPI.suggestWorkoutCalled }
+
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.notes, "easy full body")
+    XCTAssertNil(mockAPI.lastSuggestWorkoutRequest?.durationMinutes)
+  }
+
+  func testRequestSuggestionFromPrompt_showsOnboardingWhenNoBackendProfile() async throws {
+    mockAPI.getCoachingProfileResult = .success(nil)
+
+    viewModel.requestSuggestionFromPrompt(
+      notes: "easy spin",
+      durationMinutes: 30,
+      focusMuscleGroups: nil
+    )
+    try await waitUntil { self.viewModel.state == .needsOnboarding }
+
+    XCTAssertFalse(mockAPI.suggestWorkoutCalled)
+  }
+
   func testSuggestWorkout_setsLoadingWhileRequestIsPending() async throws {
     let delayedAPI = DelayedSuggestWorkoutAPIService(
       response: .single(kind: .time(seconds: 120, target: "easy spin"))

@@ -260,17 +260,47 @@ class SuggestWorkoutViewModel: ObservableObject {
         ctaError = nil
 
         Task {
-            await requestSuggestionAfterProfileCheck()
+            await requestSuggestionAfterProfileCheck(
+                durationMinutes: nil,
+                focusMuscleGroups: nil,
+                notes: nil
+            )
         }
     }
 
-    private func requestSuggestionAfterProfileCheck() async {
+    func requestSuggestionFromPrompt(
+        notes: String,
+        durationMinutes: Int?,
+        focusMuscleGroups: [String]?
+    ) {
+        state = .loading
+        suggestedWorkout = nil
+        ctaError = nil
+
+        Task {
+            await requestSuggestionAfterProfileCheck(
+                durationMinutes: durationMinutes,
+                focusMuscleGroups: focusMuscleGroups,
+                notes: notes
+            )
+        }
+    }
+
+    private func requestSuggestionAfterProfileCheck(
+        durationMinutes: Int?,
+        focusMuscleGroups: [String]?,
+        notes: String?
+    ) async {
         do {
             guard try await dependencies.apiService.getCoachingProfile() != nil else {
                 state = .needsOnboarding
                 return
             }
-            await suggestWorkout()
+            await suggestWorkout(
+                durationMinutes: durationMinutes,
+                focusMuscleGroups: focusMuscleGroups,
+                notes: notes
+            )
         } catch {
             let mapped = CTAError.map(error)
             suggestedWorkout = nil
