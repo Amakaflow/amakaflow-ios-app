@@ -14,6 +14,7 @@ struct DDEditorView: View {
     /// AMA-2372 — Builder v3 type-picker seed + its "return to picker" callback.
     var builderV3Seed: BuilderV3TypeSeed?
     var onBuilderV3ChangeType: (() -> Void)?
+    var onSaved: (() -> Void)?
     var onBackfillSaved: (() -> Void)?
 
     init(
@@ -22,6 +23,7 @@ struct DDEditorView: View {
         preset: WorkoutTypeItem? = nil,
         builderV3Seed: BuilderV3TypeSeed? = nil,
         onBuilderV3ChangeType: (() -> Void)? = nil,
+        onSaved: (() -> Void)? = nil,
         onBackfillSaved: (() -> Void)? = nil
     ) {
         self.mode = mode
@@ -29,6 +31,7 @@ struct DDEditorView: View {
         self.preset = preset
         self.builderV3Seed = builderV3Seed
         self.onBuilderV3ChangeType = onBuilderV3ChangeType
+        self.onSaved = onSaved
         self.onBackfillSaved = onBackfillSaved
     }
 
@@ -41,7 +44,8 @@ struct DDEditorView: View {
                 workout: workout,
                 preset: preset,
                 builderV3Seed: builderV3Seed,
-                onBuilderV3ChangeType: onBuilderV3ChangeType
+                onBuilderV3ChangeType: onBuilderV3ChangeType,
+                onSaved: onSaved
             )
         }
     }

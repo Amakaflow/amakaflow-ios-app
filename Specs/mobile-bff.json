@@ -5857,7 +5857,15 @@
             "description": "Validation Error"
           },
           "429": {
-            "description": "Upstream rate limited \u2014 Retry-After may be present"
+            "description": "Upstream rate limited \u2014 Retry-After may be present",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying (forwarded from mapper).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
           "500": {
             "description": "Upstream search failure (passthrough)"

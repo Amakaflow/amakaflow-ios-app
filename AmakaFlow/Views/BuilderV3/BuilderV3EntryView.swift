@@ -25,9 +25,11 @@ struct BuilderV3EntryView: View {
                         onSaved: onSaved
                     )
                 } else {
-                    WorkoutEditorView(builderV3Seed: seed) {
-                        selectedSeed = nil
-                    }
+                    WorkoutEditorView(
+                        builderV3Seed: seed,
+                        onBuilderV3ChangeType: { selectedSeed = nil },
+                        onSaved: onSaved
+                    )
                 }
             } else {
                 BuilderV3TypePickerView { seed in selectedSeed = seed }

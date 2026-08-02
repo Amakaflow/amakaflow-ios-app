@@ -13,6 +13,7 @@ struct WorkoutEditorView: View {
     private let preset: WorkoutTypeItem?
     private let builderV3Seed: BuilderV3TypeSeed?
     private let onBuilderV3ChangeType: (() -> Void)?
+    private let onSaved: (() -> Void)?
 
     /// Create mode — Editor v2 empty + optional format chips (AMA-2307 / ADR-017).
     init() {
@@ -21,6 +22,7 @@ struct WorkoutEditorView: View {
         preset = nil
         builderV3Seed = nil
         onBuilderV3ChangeType = nil
+        onSaved = nil
     }
 
     /// Preset mode — a new Editor v2 draft with canonical naming ownership.
@@ -30,6 +32,7 @@ struct WorkoutEditorView: View {
         self.preset = preset
         builderV3Seed = nil
         onBuilderV3ChangeType = nil
+        onSaved = nil
     }
 
     /// Edit mode — Editor v2 calm list (AMA-2307 / ADR-017).
@@ -39,17 +42,23 @@ struct WorkoutEditorView: View {
         preset = nil
         builderV3Seed = nil
         onBuilderV3ChangeType = nil
+        onSaved = nil
     }
 
     /// Builder v3 (AMA-2372) — a new Editor v2 draft pre-seeded from the type
     /// picker; `onBuilderV3ChangeType` returns to the picker via the
-    /// `TYPE · CHANGE` header button.
-    init(builderV3Seed: BuilderV3TypeSeed, onBuilderV3ChangeType: @escaping () -> Void) {
+    /// `TYPE · CHANGE` header button. `onSaved` reloads the library after save.
+    init(
+        builderV3Seed: BuilderV3TypeSeed,
+        onBuilderV3ChangeType: @escaping () -> Void,
+        onSaved: (() -> Void)? = nil
+    ) {
         mode = .new
         workout = nil
         preset = nil
         self.builderV3Seed = builderV3Seed
         self.onBuilderV3ChangeType = onBuilderV3ChangeType
+        self.onSaved = onSaved
     }
 
     var body: some View {
@@ -58,7 +67,8 @@ struct WorkoutEditorView: View {
             workout: workout,
             preset: preset,
             builderV3Seed: builderV3Seed,
-            onBuilderV3ChangeType: onBuilderV3ChangeType
+            onBuilderV3ChangeType: onBuilderV3ChangeType,
+            onSaved: onSaved
         )
     }
 }

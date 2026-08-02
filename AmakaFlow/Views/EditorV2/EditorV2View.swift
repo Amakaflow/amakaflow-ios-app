@@ -14,6 +14,9 @@ struct EditorV2View: View {
     /// `nil` for every non-Builder-v3 flow (edit, import review, favorite presets).
     var builderV3Seed: BuilderV3TypeSeed?
     var onBuilderV3ChangeType: (() -> Void)?
+    /// Called after a successful save (before dismiss). Used by Builder v3 to
+    /// reload the library after lift/conditioning/recover drafts land.
+    var onSaved: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @StateObject var saveModel: WorkoutEditorViewModel
@@ -43,12 +46,14 @@ struct EditorV2View: View {
         workout: Workout? = nil,
         preset: WorkoutTypeItem? = nil,
         builderV3Seed: BuilderV3TypeSeed? = nil,
-        onBuilderV3ChangeType: (() -> Void)? = nil
+        onBuilderV3ChangeType: (() -> Void)? = nil,
+        onSaved: (() -> Void)? = nil
     ) {
         self.mode = mode
         self.workout = workout
         self.builderV3Seed = builderV3Seed
         self.onBuilderV3ChangeType = onBuilderV3ChangeType
+        self.onSaved = onSaved
         let presetSeed = preset.map(WorkoutTypePresetEditorSeed.init)
         let initialSession = presetSeed.map { EditorV2Session(title: $0.title) }
             ?? builderV3Seed.map { BuilderV3TypeRegistry.makeEditorSession(for: $0) }
@@ -125,7 +130,10 @@ struct EditorV2View: View {
         .overlay(alignment: .top) { accessibilityMarkers }
         .overlay(alignment: .bottom) { toastOverlay }
         .onChange(of: saveModel.didSave) { _, saved in
-            if saved { dismiss() }
+            if saved {
+                onSaved?()
+                dismiss()
+            }
         }
         .onChange(of: saveModel.errorMessage) { _, message in
             if let message, !message.isEmpty {
