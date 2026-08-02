@@ -49,6 +49,20 @@ enum WorkoutEnrichmentPushCopy {
 
     static let restTimedSegmentLabel = "Timed"
 
+    /// Timed-rest stepper bounds — brief 2026-08-02 §Enhance sheet (15...300, 15s grid).
+    static let restSecRange = 15...300
+    private static let restSecStep = 15
+
+    /// Clamp + snap a persisted `restSec` to the sheet's supported stepper
+    /// range and 15s grid. Historic prefs (pre-AMA-2371 allowed 15...600, or
+    /// unaligned values from other clients) must not bypass the new bound —
+    /// a saved 600 would otherwise render and be confirmable as-is.
+    static func normalizedRestSec(_ restSec: Int?) -> Int {
+        let value = restSec ?? 60
+        let snapped = ((value + restSecStep / 2) / restSecStep) * restSecStep
+        return min(max(snapped, restSecRange.lowerBound), restSecRange.upperBound)
+    }
+
     static func offerTitle(for kind: EnrichmentKind, target: EnrichmentPushTarget) -> String {
         switch kind {
         case .sessionWarmup: return "Mobility prep"

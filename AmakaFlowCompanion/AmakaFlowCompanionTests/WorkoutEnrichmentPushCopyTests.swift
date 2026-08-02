@@ -52,4 +52,30 @@ final class WorkoutEnrichmentPushCopyTests: XCTestCase {
         XCTAssertEqual(WorkoutEnrichmentPushCopy.restOpenSegmentLabel(target: .garmin), "Lap button")
         XCTAssertEqual(WorkoutEnrichmentPushCopy.restTimedSegmentLabel, "Timed")
     }
+
+    // MARK: - AMA-2371 review fix: persisted restSec must not bypass 15...300
+
+    func testNormalizedRestSecClampsPersistedValueAboveNewRange() {
+        // A standing pref saved under the old 15...600 stepper (e.g. 600)
+        // must not render/confirm out-of-range once the sheet narrows to 300.
+        XCTAssertEqual(WorkoutEnrichmentPushCopy.normalizedRestSec(600), 300)
+    }
+
+    func testNormalizedRestSecClampsBelowRangeToMinimum() {
+        XCTAssertEqual(WorkoutEnrichmentPushCopy.normalizedRestSec(5), 15)
+        XCTAssertEqual(WorkoutEnrichmentPushCopy.normalizedRestSec(0), 15)
+    }
+
+    func testNormalizedRestSecSnapsToFifteenSecondGrid() {
+        XCTAssertEqual(WorkoutEnrichmentPushCopy.normalizedRestSec(22), 15)
+        XCTAssertEqual(WorkoutEnrichmentPushCopy.normalizedRestSec(23), 30)
+    }
+
+    func testNormalizedRestSecPassesThroughInRangeAlignedValue() {
+        XCTAssertEqual(WorkoutEnrichmentPushCopy.normalizedRestSec(90), 90)
+    }
+
+    func testNormalizedRestSecDefaultsToSixtyWhenNil() {
+        XCTAssertEqual(WorkoutEnrichmentPushCopy.normalizedRestSec(nil), 60)
+    }
 }

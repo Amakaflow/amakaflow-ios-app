@@ -36,7 +36,7 @@ struct WorkoutEnrichmentPushSheet: View {
         self.onSkip = onSkip
         self.onClose = onClose
         _checkedKinds = State(initialValue: plan.defaultCheckedKinds)
-        _restSec = State(initialValue: prefs.betweenSetRest.restSec ?? 60)
+        _restSec = State(initialValue: WorkoutEnrichmentPushCopy.normalizedRestSec(prefs.betweenSetRest.restSec))
         _restOpen = State(
             initialValue: WorkoutEnrichmentPushCopy.initialRestOpen(
                 standing: prefs.betweenSetRest,
@@ -175,7 +175,7 @@ struct WorkoutEnrichmentPushSheet: View {
                 Stepper(
                     "\(restSec)s",
                     value: restSecBinding,
-                    in: 15...300,
+                    in: WorkoutEnrichmentPushCopy.restSecRange,
                     step: 15
                 )
                 .font(.system(size: 11))
@@ -197,7 +197,10 @@ struct WorkoutEnrichmentPushSheet: View {
     private var restSecBinding: Binding<Int> {
         Binding(
             get: { restSec },
-            set: { restSec = $0 }
+            // Defensive: Stepper keeps its own increments in-range, but clamp
+            // here too so nothing else can push `restSec` out of the
+            // supported grid before it reaches `decision`.
+            set: { restSec = WorkoutEnrichmentPushCopy.normalizedRestSec($0) }
         )
     }
 
