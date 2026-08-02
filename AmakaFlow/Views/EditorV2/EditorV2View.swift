@@ -10,6 +10,10 @@ import SwiftUI
 struct EditorV2View: View {
     let mode: DDEditorMode
     var workout: Workout?
+    /// AMA-2372 — Builder v3 type-picker seed + its "return to picker" callback.
+    /// `nil` for every non-Builder-v3 flow (edit, import review, favorite presets).
+    var builderV3Seed: BuilderV3TypeSeed?
+    var onBuilderV3ChangeType: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var saveModel: WorkoutEditorViewModel
@@ -25,6 +29,10 @@ struct EditorV2View: View {
     @State var addSheetOpen = false
     @State var replaceExerciseID: String?
     @State private var isMatchSheetPresented = false
+    @State private var showBuilderV3ChangeTypeConfirm = false
+    /// AMA-2372 — gym overlay keys for the multi-select add sheet. `nil` = no
+    /// coaching profile loaded (or it failed) ⇒ never mark exercises missing.
+    @State var gymEquipmentKeys: Set<String>?
     @State var favoritePresets: [WorkoutTypeItem] = []
     @FocusState private var isTitleFocused: Bool
     /// AMA-2336 — `workout_preferences` cache; fetched on the first quick-add.
@@ -33,12 +41,17 @@ struct EditorV2View: View {
     init(
         mode: DDEditorMode,
         workout: Workout? = nil,
-        preset: WorkoutTypeItem? = nil
+        preset: WorkoutTypeItem? = nil,
+        builderV3Seed: BuilderV3TypeSeed? = nil,
+        onBuilderV3ChangeType: (() -> Void)? = nil
     ) {
         self.mode = mode
         self.workout = workout
+        self.builderV3Seed = builderV3Seed
+        self.onBuilderV3ChangeType = onBuilderV3ChangeType
         let presetSeed = preset.map(WorkoutTypePresetEditorSeed.init)
         let initialSession = presetSeed.map { EditorV2Session(title: $0.title) }
+            ?? builderV3Seed.map { BuilderV3TypeRegistry.makeEditorSession(for: $0) }
             ?? EditorV2Session.from(mode: mode, workout: workout)
         _session = State(initialValue: initialSession)
         _matchController = StateObject(
@@ -125,11 +138,18 @@ struct EditorV2View: View {
         .sheet(item: pairSourceBinding, content: pairSheet)
         .sheet(isPresented: $addSheetOpen) { addSheet }
         .sheet(isPresented: $isMatchSheetPresented) { workoutTypeMatchSheet }
+        .alert("Change workout type?", isPresented: $showBuilderV3ChangeTypeConfirm) {
+            Button("Keep editing", role: .cancel) {}
+            Button("Change type", role: .destructive) { onBuilderV3ChangeType?() }
+        } message: {
+            Text("This clears the exercises and format on this canvas.")
+        }
         .task { await resolveLoadedMatchDisplayName() }
         .task {
             guard isNew else { return }
             await loadFavoritePresets()
         }
+        .task { gymEquipmentKeys = await loadGymEquipmentKeys() }
         .task(id: session.title) {
             matchController.noteTitleForSave(session.title)
             do {
@@ -170,6 +190,20 @@ struct EditorV2View: View {
                 .buttonStyle(.plain)
 
                 Spacer(minLength: 0)
+
+                if let builderV3Seed, onBuilderV3ChangeType != nil {
+                    Button(action: builderV3ChangeTypeTapped) {
+                        Text("\(builderV3Seed.label.uppercased()) · CHANGE")
+                            .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                            .foregroundColor(DailyDriver.blue)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Capsule().fill(DailyDriver.blue.opacity(0.16)))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("builder_v3_type_change_button")
+                    .padding(.trailing, session.exercises.count > 1 ? 8 : 0)
+                }
 
                 if session.exercises.count > 1 {
                     Button {
@@ -322,6 +356,18 @@ struct EditorV2View: View {
             return
         }
         matchController.resolveLoadedDisplayName(from: catalog)
+    }
+
+    /// TYPE · CHANGE (AMA-2372) — returns to the picker. Confirms first when the
+    /// canvas is dirty (has exercises or a pinned format) so a stray tap can't
+    /// silently wipe seeded/user-added work.
+    private func builderV3ChangeTypeTapped() {
+        let isDirty = !session.exercises.isEmpty || !session.groups.isEmpty
+        if isDirty {
+            showBuilderV3ChangeTypeConfirm = true
+        } else {
+            onBuilderV3ChangeType?()
+        }
     }
 
     private func matchTitleIfNeeded() async {

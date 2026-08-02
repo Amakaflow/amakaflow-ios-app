@@ -1,0 +1,92 @@
+# AMA-2372 visual validation — Run type → run step builder
+#
+# Run seeds (Intervals/Tempo/Long run/Race pace) never go through Editor v2 —
+# they land on the dedicated run step builder (warmup/work/recover/cooldown
+# timeline). "Intervals" seeds a warm-up + repeat-block + cool-down; the add
+# chips extend the timeline; TYPE · CHANGE returns to the picker.
+#
+# Auth: UITEST_CLERK_TEST_SESSION + UITEST_SKIP_ONBOARDING + fixtures.
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2372_run_step,email=claude+clerk_test@amakaflow.dev,name=AMA2372 Visual"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn:
+    id: "library_tab"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_fab"
+    timeout: 15000
+- tapOn:
+    id: "af_library_fab"
+- extendedWaitUntil:
+    visible:
+      id: "create_workout_sheet"
+    timeout: 10000
+- tapOn:
+    id: "create_door_manual"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "builder_v3_type_picker_screen"
+    timeout: 15000
+- assertVisible:
+    id: "builder_v3_type_run_intervals"
+- tapOn:
+    id: "builder_v3_type_run_intervals"
+- waitForAnimationToEnd:
+    timeout: 3000
+# Run seeds skip Editor v2 entirely — land on the run step builder.
+- extendedWaitUntil:
+    visible:
+      id: "builder_v3_run_builder_screen"
+    timeout: 15000
+- assertVisible:
+    id: "builder_v3_type_change_button"
+- assertVisible: "Warm-up jog"
+- assertVisible: "400 m"
+- assertVisible: "Recover"
+- assertVisible: "Cool-down walk"
+- takeScreenshot: docs/ama-2372-visual-evidence/07-run-seeded
+# Add chips extend the timeline.
+- assertVisible:
+    id: "builder_v3_run_add_repeat_block"
+- tapOn:
+    id: "builder_v3_run_add_work"
+- waitForAnimationToEnd:
+    timeout: 1000
+- assertVisible: "Run"
+- takeScreenshot: docs/ama-2372-visual-evidence/08-run-add-chip
+- assertVisible:
+    id: "builder_v3_run_save_button"
+# TYPE · CHANGE — dirty draft confirms before returning to the picker.
+- tapOn:
+    id: "builder_v3_type_change_button"
+- extendedWaitUntil:
+    visible:
+      text: "Change workout type?"
+    timeout: 5000
+- tapOn: "Change type"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "builder_v3_type_picker_screen"
+    timeout: 10000
+- takeScreenshot: docs/ama-2372-visual-evidence/09-run-back-to-picker

@@ -149,31 +149,74 @@ extension EditorV2View {
         .presentationDetents([.medium, .large])
     }
 
+    /// AMA-2372 — replace stays single-select (old sheet); adding new exercises
+    /// goes through the Hevy-style multi-select picker with gym overlay + search.
+    @ViewBuilder
     var addSheet: some View {
-        EditorV2AddExerciseSheet(
-            formatLabel: formatLabel,
-            replaceMode: replaceExerciseID != nil,
-            onAdd: { name in
-                if let replaceID = replaceExerciseID {
+        if let replaceID = replaceExerciseID {
+            EditorV2AddExerciseSheet(
+                formatLabel: formatLabel,
+                replaceMode: true,
+                onAdd: { name in
                     session.replaceExercise(replaceID, with: name)
                     replaceExerciseID = nil
                     addSheetOpen = false
                     showToast("Replaced ✓")
-                } else {
-                    _ = session.addExercise(named: name)
-                    let fmt = formatLabel
-                    showToast(
-                        fmt.map { "\(name) added to the \($0)" }
-                            ?? "\(name) added · 3×10 · 60s — tap to tweak"
-                    )
+                },
+                onDone: {
+                    addSheetOpen = false
+                    replaceExerciseID = nil
                 }
-            },
-            onDone: {
-                addSheetOpen = false
-                replaceExerciseID = nil
+            )
+            .presentationDetents([.large])
+        } else {
+            BuilderV3ExercisePickerSheet(
+                formatLabel: formatLabel,
+                availableEquipmentKeys: gymEquipmentKeys,
+                onAddExercises: { names in
+                    for name in names {
+                        _ = session.addExercise(named: name)
+                    }
+                    guard !names.isEmpty else { return }
+                    if names.count == 1, let name = names.first {
+                        let fmt = formatLabel
+                        showToast(
+                            fmt.map { "\(name) added to the \($0)" }
+                                ?? "\(name) added · 3×10 · 60s — tap to tweak"
+                        )
+                    } else {
+                        showToast("\(names.count) exercises added ✓")
+                    }
+                },
+                onCreateCustom: { name in
+                    _ = session.addExercise(named: name)
+                },
+                onDone: {
+                    addSheetOpen = false
+                }
+            )
+            .presentationDetents([.large])
+        }
+    }
+
+    /// Coaching profile equipment → gym overlay keys. Any failure (network,
+    /// missing profile, decode) means "no profile" — never mark exercises
+    /// as missing from the gym.
+    func loadGymEquipmentKeys() async -> Set<String>? {
+        do {
+            guard let profile = try await AppDependencies.current.apiService.getCoachingProfile(),
+                  let equipment = profile.equipment else {
+                return nil
             }
-        )
-        .presentationDetents([.large])
+            return BuilderV3GymOverlay.availableEquipmentKeys(
+                bodyweight: equipment.bodyweight?.additionalProperties,
+                cardio: equipment.cardio?.additionalProperties,
+                strength: equipment.strength?.additionalProperties,
+                mobility: equipment.mobility?.additionalProperties
+            )
+        } catch {
+            return nil
+        }
     }
 
     var workoutTypeMatchSheet: some View {

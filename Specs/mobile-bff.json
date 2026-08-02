@@ -1627,6 +1627,103 @@
         "title": "ExerciseFollowAlongStep",
         "type": "object"
       },
+      "ExerciseSearchResponse": {
+        "description": "camelCase exercise search payload for iOS Builder v3.",
+        "properties": {
+          "count": {
+            "default": 0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "query": {
+            "default": "",
+            "title": "Query",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/ExerciseSearchResult"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "title": "ExerciseSearchResponse",
+        "type": "object"
+      },
+      "ExerciseSearchResult": {
+        "description": "One exercise-db search hit for Builder v3 picker (AMA-2372).",
+        "properties": {
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "defaultWeightSource": {
+            "title": "Defaultweightsource",
+            "type": "string"
+          },
+          "difficulty": {
+            "title": "Difficulty",
+            "type": "string"
+          },
+          "equipment": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Equipment",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "movementPattern": {
+            "title": "Movementpattern",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "primaryMuscles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Primarymuscles",
+            "type": "array"
+          },
+          "rank": {
+            "default": 0.0,
+            "title": "Rank",
+            "type": "number"
+          },
+          "secondaryMuscles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Secondarymuscles",
+            "type": "array"
+          },
+          "supports1Rm": {
+            "default": false,
+            "title": "Supports1Rm",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ExerciseSearchResult",
+        "type": "object"
+      },
       "FatigueAdviceRequest": {
         "description": "Request body for POST /v1/coach/fatigue-advice.",
         "properties": {
@@ -3938,13 +4035,6 @@
       },
       "ValidationError": {
         "properties": {
-          "ctx": {
-            "title": "Context",
-            "type": "object"
-          },
-          "input": {
-            "title": "Input"
-          },
           "loc": {
             "items": {
               "anyOf": [
@@ -5700,6 +5790,74 @@
           }
         },
         "summary": "V1 Devices Set Roles"
+      }
+    },
+    "/v1/exercises/search": {
+      "get": {
+        "description": "iOS Builder v3 exercise picker \u2192 mapper-api GET /exercises/search.\n\nMuscle/equipment chip filters apply client-side; gym availability is overlaid\nfrom the coaching equipment profile on device (AMA-2372).",
+        "operationId": "searchExercises",
+        "parameters": [
+          {
+            "description": "Search query",
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "description": "Search query",
+              "maxLength": 200,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Maximum results",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "description": "Maximum results",
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExerciseSearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DegradedResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "V1 Exercises Search"
       }
     },
     "/v1/gamification/xp": {
