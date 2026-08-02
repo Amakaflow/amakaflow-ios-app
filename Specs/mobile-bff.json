@@ -1631,12 +1631,10 @@
         "description": "camelCase exercise search payload for iOS Builder v3.",
         "properties": {
           "count": {
-            "default": 0,
             "title": "Count",
             "type": "integer"
           },
           "query": {
-            "default": "",
             "title": "Query",
             "type": "string"
           },
@@ -1648,6 +1646,11 @@
             "type": "array"
           }
         },
+        "required": [
+          "results",
+          "count",
+          "query"
+        ],
         "title": "ExerciseSearchResponse",
         "type": "object"
       },
@@ -4035,6 +4038,13 @@
       },
       "ValidationError": {
         "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
           "loc": {
             "items": {
               "anyOf": [
@@ -5794,7 +5804,7 @@
     },
     "/v1/exercises/search": {
       "get": {
-        "description": "iOS Builder v3 exercise picker \u2192 mapper-api GET /exercises/search.\n\nMuscle/equipment chip filters apply client-side; gym availability is overlaid\nfrom the coaching equipment profile on device (AMA-2372).",
+        "description": "iOS Builder v3 exercise picker \u2192 mapper-api GET /exercises/search.\n\nMuscle/equipment chip filters apply client-side; gym availability is overlaid\nfrom the coaching equipment profile on device (AMA-2372).\n\nAuth: Clerk JWT is forwarded to mapper (same as other BFF proxies). Mapper\nenforces the 30/minute search rate limit.",
         "operationId": "searchExercises",
         "parameters": [
           {
@@ -5845,6 +5855,15 @@
               }
             },
             "description": "Validation Error"
+          },
+          "429": {
+            "description": "Upstream rate limited \u2014 Retry-After may be present"
+          },
+          "500": {
+            "description": "Upstream search failure (passthrough)"
+          },
+          "502": {
+            "description": "Malformed exercise search payload from upstream"
           },
           "503": {
             "content": {

@@ -188,9 +188,6 @@ extension EditorV2View {
                         showToast("\(names.count) exercises added ✓")
                     }
                 },
-                onCreateCustom: { name in
-                    _ = session.addExercise(named: name)
-                },
                 onDone: {
                     addSheetOpen = false
                 }

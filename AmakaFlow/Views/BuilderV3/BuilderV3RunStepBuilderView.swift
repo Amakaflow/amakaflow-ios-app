@@ -22,7 +22,7 @@ struct BuilderV3RunStepBuilderView: View {
 
     init(
         seed: BuilderV3TypeSeed,
-        onChangeType: @escaping () -> Void,
+        onChangeType: @escaping () -> Void = {},
         onSaved: @escaping () -> Void = {}
     ) {
         self.seed = seed
@@ -39,9 +39,9 @@ struct BuilderV3RunStepBuilderView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 10) {
                         ForEach($session.blocks) { $block in
-                            BuilderV3RunBlockCard(block: $block, onRemove: {
+                            BuilderV3RunBlockCard(block: $block) {
                                 session.removeBlock(block.id)
-                            })
+                            }
                         }
                         addChips
                     }
@@ -246,6 +246,6 @@ private struct BuilderV3RunBlockCard: View {
 
 #if DEBUG
 #Preview {
-    BuilderV3RunStepBuilderView(seed: BuilderV3TypeRegistry.intervals, onChangeType: {})
+    BuilderV3RunStepBuilderView(seed: BuilderV3TypeRegistry.intervals) {}
 }
 #endif

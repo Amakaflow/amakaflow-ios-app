@@ -22,14 +22,16 @@ struct BuilderV3ExercisePickerSheet: View {
     /// `nil` = no coaching profile loaded — never mark anything missing.
     var availableEquipmentKeys: Set<String>?
     var onAddExercises: ([String]) -> Void
-    var onCreateCustom: (String) -> Void
     var onDone: () -> Void
 
     @State private var query = ""
     @State private var tab: Tab = .all
     @State private var muscleFilter: String?
     @State private var equipmentFilter: String?
-    @State private var selectedNames: Set<String> = []
+    /// Selection order is preserved (tap order → canvas order).
+    @State private var selectedNames: [String] = []
+    /// Custom names created from no-match search — survive filters until batch add.
+    @State private var createdItems: [BuilderV3ExerciseItem] = []
     @State private var searchResults: [BuilderV3ExerciseItem] = BuilderV3ExerciseLibrary.demo
     private let searchClient = BuilderV3ExerciseSearchClient()
 
@@ -38,7 +40,22 @@ struct BuilderV3ExercisePickerSheet: View {
     }
 
     private var baseItems: [BuilderV3ExerciseItem] {
-        tab == .recent ? BuilderV3ExerciseLibrary.recent : searchResults
+        let source: [BuilderV3ExerciseItem]
+        switch tab {
+        case .recent:
+            source = BuilderV3ExerciseLibrary.recent.filter {
+                BuilderV3ExerciseLibrary.matches($0, query: trimmedQuery)
+            }
+        case .all:
+            source = searchResults
+        }
+        var merged = source
+        for created in createdItems where !merged.contains(where: { $0.name == created.name }) {
+            if BuilderV3ExerciseLibrary.matches(created, query: trimmedQuery) {
+                merged.insert(created, at: 0)
+            }
+        }
+        return merged
     }
 
     private var filteredItems: [BuilderV3ExerciseItem] {
@@ -56,7 +73,11 @@ struct BuilderV3ExercisePickerSheet: View {
     }
 
     private var hasExactMatch: Bool {
-        filteredItems.contains { $0.name.lowercased() == trimmedQuery.lowercased() }
+        let needle = trimmedQuery.lowercased()
+        guard !needle.isEmpty else { return false }
+        return filteredItems.contains { $0.name.lowercased() == needle }
+            || searchResults.contains { $0.name.lowercased() == needle }
+            || BuilderV3ExerciseLibrary.demo.contains { $0.name.lowercased() == needle }
     }
 
     var body: some View {
@@ -179,8 +200,20 @@ struct BuilderV3ExercisePickerSheet: View {
 
                 if !trimmedQuery.isEmpty, !hasExactMatch {
                     Button {
-                        onCreateCustom(trimmedQuery)
-                        selectedNames.insert(trimmedQuery)
+                        // Select only — batch footer commits via onAddExercises (no double-add).
+                        if !selectedNames.contains(trimmedQuery) {
+                            selectedNames.append(trimmedQuery)
+                        }
+                        if !createdItems.contains(where: { $0.name == trimmedQuery }) {
+                            createdItems.append(
+                                BuilderV3ExerciseItem(
+                                    name: trimmedQuery,
+                                    muscle: "Custom",
+                                    equipmentKey: nil,
+                                    equipmentLabel: "Bodyweight"
+                                )
+                            )
+                        }
                         query = ""
                     } label: {
                         Text("＋ Create “\(trimmedQuery)”")
@@ -201,10 +234,10 @@ struct BuilderV3ExercisePickerSheet: View {
         let isSelected = selectedNames.contains(item.name)
         let inGym = BuilderV3GymOverlay.isInGym(equipmentKey: item.equipmentKey, availableKeys: availableEquipmentKeys)
         return Button {
-            if isSelected {
-                selectedNames.remove(item.name)
+            if let index = selectedNames.firstIndex(of: item.name) {
+                selectedNames.remove(at: index)
             } else {
-                selectedNames.insert(item.name)
+                selectedNames.append(item.name)
             }
         } label: {
             HStack(spacing: 11) {
@@ -244,9 +277,10 @@ struct BuilderV3ExercisePickerSheet: View {
             .frame(maxWidth: .infinity)
 
             Button {
-                let names = Array(selectedNames)
+                let names = selectedNames
                 onAddExercises(names)
                 selectedNames.removeAll()
+                createdItems.removeAll()
                 onDone()
             } label: {
                 Text(selectedNames.isEmpty ? "Add exercises" : "Add \(selectedNames.count) exercise\(selectedNames.count == 1 ? "" : "s")")
@@ -300,7 +334,6 @@ private struct OptionalAccessibilityId: ViewModifier {
         formatLabel: nil,
         availableEquipmentKeys: ["barbell"],
         onAddExercises: { _ in },
-        onCreateCustom: { _ in },
         onDone: {}
     )
 }

@@ -10,24 +10,25 @@
 
 import Foundation
 
+/// Wire row from mobile-bff `ExerciseSearchResult` (AMA-2372).
+private struct BuilderV3ExerciseSearchRow: Decodable {
+    var id: String?
+    var name: String
+    var primaryMuscles: [String]?
+    var secondaryMuscles: [String]?
+    var equipment: [String]?
+    var category: String?
+    var rank: Double?
+}
+
+/// Wire payload from mobile-bff `ExerciseSearchResponse` (AMA-2372).
+private struct BuilderV3ExerciseSearchResponse: Decodable {
+    var results: [BuilderV3ExerciseSearchRow]
+    var count: Int?
+    var query: String?
+}
+
 struct BuilderV3ExerciseSearchClient {
-    /// Wire shape from mobile-bff `ExerciseSearchResponse` (AMA-2372).
-    private struct SearchResponse: Decodable {
-        struct Row: Decodable {
-            var id: String?
-            var name: String
-            var primaryMuscles: [String]?
-            var secondaryMuscles: [String]?
-            var equipment: [String]?
-            var category: String?
-            var rank: Double?
-        }
-
-        var results: [Row]
-        var count: Int?
-        var query: String?
-    }
-
     private let apiService: APIService
     private let useFixtures: Bool
 
@@ -60,7 +61,7 @@ struct BuilderV3ExerciseSearchClient {
             // BFF already emits camelCase; use generated decoder (no snake_case).
             let response = try await apiService.request(
                 request,
-                decode: SearchResponse.self,
+                decode: BuilderV3ExerciseSearchResponse.self,
                 decoder: APIService.makeGeneratedDecoder()
             )
             guard !response.results.isEmpty else {
@@ -76,7 +77,7 @@ struct BuilderV3ExerciseSearchClient {
         BuilderV3ExerciseLibrary.demo.filter { BuilderV3ExerciseLibrary.matches($0, query: query) }
     }
 
-    private static func mapRow(_ row: SearchResponse.Row) -> BuilderV3ExerciseItem {
+    private static func mapRow(_ row: BuilderV3ExerciseSearchRow) -> BuilderV3ExerciseItem {
         let muscle = row.primaryMuscles?.first
             ?? row.secondaryMuscles?.first
             ?? row.category

@@ -55,8 +55,9 @@ appId: com.myamaka.AmakaFlowCompanion
     visible:
       id: "editor_v2_screen"
     timeout: 15000
-# Empty canvas — "+ Add exercise" opens the multi-select picker.
-- tapOn: "＋ Add exercise"
+# Empty canvas — editor_v2_add_exercise opens the multi-select picker.
+- tapOn:
+    id: "editor_v2_add_exercise"
 - extendedWaitUntil:
     visible:
       id: "builder_v3_exercise_picker_sheet"
@@ -67,6 +68,7 @@ appId: com.myamaka.AmakaFlowCompanion
     id: "builder_v3_tab_recent"
 - assertVisible:
     id: "builder_v3_exercise_search"
+- assertNotVisible: "NOT IN YOUR GYM"
 - takeScreenshot: docs/ama-2372-visual-evidence/04-exercise-picker
 # Filter by muscle, select two exercises, batch-add.
 - tapOn:
@@ -79,6 +81,10 @@ appId: com.myamaka.AmakaFlowCompanion
     id: "builder_v3_exercise_row_Back Squat"
 - tapOn:
     id: "builder_v3_muscle_chip_Quads"
+- extendedWaitUntil:
+    visible:
+      id: "builder_v3_exercise_checkbox_Bench Press"
+    timeout: 5000
 - tapOn:
     id: "builder_v3_exercise_row_Bench Press"
 - assertVisible: "2 selected"
