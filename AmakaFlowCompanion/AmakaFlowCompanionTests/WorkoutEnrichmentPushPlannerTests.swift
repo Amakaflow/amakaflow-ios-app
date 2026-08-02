@@ -613,7 +613,9 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
             target: .apple
         )
         XCTAssertEqual(apple.target, .apple)
-        XCTAssertEqual(apple.offer(.betweenSetRest)?.title, "Add rest (Open or timed)")
+        // AMA-2371: offer title is device-agnostic ("Rest between sets"); the
+        // Open-vs-Lap distinction now lives in `detail`, not the title.
+        XCTAssertEqual(apple.offer(.betweenSetRest)?.title, "Rest between sets")
         XCTAssertFalse(
             (apple.offer(.betweenSetRest)?.title ?? "").localizedCaseInsensitiveContains("Lap")
         )
@@ -630,7 +632,7 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
             prefs: prefs,
             target: .garmin
         )
-        XCTAssertEqual(garmin.offer(.betweenSetRest)?.title, "Add rest (Lap or timed)")
+        XCTAssertEqual(garmin.offer(.betweenSetRest)?.title, "Rest between sets")
         XCTAssertTrue((garmin.offer(.sessionWarmup)?.detail ?? "").contains("until Lap"))
     }
 

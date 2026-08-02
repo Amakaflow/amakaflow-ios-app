@@ -14,16 +14,47 @@ enum EnrichmentPushTarget: String, Equatable, Sendable {
 }
 
 enum WorkoutEnrichmentPushCopy {
+    // MARK: - AMA-2371 Peloton-style toggle rows
+
+    /// Enhance sheet title (redesign 2026-08-02 §Enhance sheet).
+    static let sheetTitle = "Make it watch-ready?"
+
+    /// Secondary CTA — always visible, wired to `onSkip`.
+    static let sendAsIsCTA = "Send as-is — no changes"
+
+    /// Primary CTA counts checked offers live; `Send` when nothing is checked.
+    static func primaryCTA(checkedCount: Int) -> String {
+        checkedCount > 0 ? "Add \(checkedCount) & send" : "Send"
+    }
+
+    /// Device name used in the sheet intro copy.
+    static func deviceName(for target: EnrichmentPushTarget) -> String {
+        switch target {
+        case .apple: return "Apple Watch"
+        case .garmin: return "Garmin"
+        }
+    }
+
+    static func introText(target: EnrichmentPushTarget) -> String {
+        "This workout is missing a few things you usually add before it hits your \(deviceName(for: target))."
+    }
+
+    /// Rest config segmented control's non-timed label — Apple `Open rest`, Garmin `Lap button`.
+    static func restOpenSegmentLabel(target: EnrichmentPushTarget) -> String {
+        switch target {
+        case .apple: return "Open rest"
+        case .garmin: return "Lap button"
+        }
+    }
+
+    static let restTimedSegmentLabel = "Timed"
+
     static func offerTitle(for kind: EnrichmentKind, target: EnrichmentPushTarget) -> String {
         switch kind {
-        case .sessionWarmup: return "Add mobility prep"
+        case .sessionWarmup: return "Mobility prep"
         case .cooldown: return "Cool-down"
-        case .betweenSetRest:
-            switch target {
-            case .apple: return "Add rest (Open or timed)"
-            case .garmin: return "Add rest (Lap or timed)"
-            }
-        case .exerciseWarmupSets: return "Exercise warm-up sets"
+        case .betweenSetRest: return "Rest between sets"
+        case .exerciseWarmupSets: return "Warm-up sets"
         }
     }
 
@@ -70,13 +101,6 @@ enum WorkoutEnrichmentPushCopy {
             }
         }
         return "Timed \(restSec)s between sets/rounds"
-    }
-
-    static func restOpenToggleTitle(target: EnrichmentPushTarget) -> String {
-        switch target {
-        case .apple: return "Open rest (no timer)"
-        case .garmin: return "Lap button press (no timer)"
-        }
     }
 
     static func warmupSetsDetail(_ defaults: [WarmupSetDefault], exerciseCount: Int) -> String {
