@@ -120,14 +120,14 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
       durationMinutes: 45,
       focusMuscleGroups: ["legs"]
     )
-    try await waitUntil { self.mockAPI.suggestWorkoutCalled }
+    try await waitUntil {
+      if case .success = self.viewModel.state { return true }
+      return false
+    }
 
     XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.notes, "45 min tempo run outdoors")
     XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.durationMinutes, 45)
     XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.focusMuscleGroups, ["legs"])
-    guard case .success = viewModel.state else {
-      return XCTFail("Expected success state, got \(viewModel.state)")
-    }
   }
 
   func testRequestSuggestionFromPrompt_allowsNilDuration() async throws {
@@ -147,10 +147,14 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
       durationMinutes: nil,
       focusMuscleGroups: nil
     )
-    try await waitUntil { self.mockAPI.suggestWorkoutCalled }
+    try await waitUntil {
+      if case .success = self.viewModel.state { return true }
+      return false
+    }
 
     XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.notes, "easy full body")
     XCTAssertNil(mockAPI.lastSuggestWorkoutRequest?.durationMinutes)
+    XCTAssertNil(mockAPI.lastSuggestWorkoutRequest?.focusMuscleGroups)
   }
 
   func testRequestSuggestionFromPrompt_showsOnboardingWhenNoBackendProfile() async throws {
@@ -202,7 +206,10 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
       goal: .improveEndurance,
       daysPerWeek: 3
     )
-    try await waitUntil { self.mockAPI.suggestWorkoutCalled }
+    try await waitUntil {
+      if case .success = self.viewModel.state { return true }
+      return false
+    }
 
     XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.notes, "easy spin")
     XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.durationMinutes, 30)
@@ -399,7 +406,10 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
       durationMinutes: 45,
       focusMuscleGroups: ["legs"]
     )
-    try await waitUntil { self.mockAPI.suggestWorkoutCalled }
+    try await waitUntil {
+      if case .success = self.viewModel.state { return true }
+      return false
+    }
 
     await viewModel.suggestAnother()
 
@@ -435,7 +445,10 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
       durationMinutes: 45,
       focusMuscleGroups: ["legs"]
     )
-    try await waitUntil { self.mockAPI.suggestWorkoutCalled }
+    try await waitUntil {
+      if case .success = self.viewModel.state { return true }
+      return false
+    }
     XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.notes, "outdoor tempo run")
     XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.durationMinutes, 45)
 
