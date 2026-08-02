@@ -16,7 +16,7 @@ struct EditorV2View: View {
     var onBuilderV3ChangeType: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var saveModel: WorkoutEditorViewModel
+    @StateObject var saveModel: WorkoutEditorViewModel
     @StateObject var matchController: WorkoutTypeMatchController
 
     @State var session: EditorV2Session
@@ -28,15 +28,15 @@ struct EditorV2View: View {
     @State var pairSourceID: String?
     @State var addSheetOpen = false
     @State var replaceExerciseID: String?
-    @State private var isMatchSheetPresented = false
-    @State private var showBuilderV3ChangeTypeConfirm = false
+    @State var isMatchSheetPresented = false
+    @State var showBuilderV3ChangeTypeConfirm = false
     /// AMA-2372 — gym overlay keys for the multi-select add sheet. `nil` = no
     /// coaching profile loaded (or it failed) ⇒ never mark exercises missing.
     @State var gymEquipmentKeys: Set<String>?
     @State var favoritePresets: [WorkoutTypeItem] = []
     @FocusState private var isTitleFocused: Bool
     /// AMA-2336 — `workout_preferences` cache; fetched on the first quick-add.
-    @State private var enrichmentPrefs: WorkoutPreferences?
+    @State var enrichmentPrefs: WorkoutPreferences?
 
     init(
         mode: DDEditorMode,
@@ -191,19 +191,7 @@ struct EditorV2View: View {
 
                 Spacer(minLength: 0)
 
-                if let builderV3Seed, onBuilderV3ChangeType != nil {
-                    Button(action: builderV3ChangeTypeTapped) {
-                        Text("\(builderV3Seed.label.uppercased()) · CHANGE")
-                            .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                            .foregroundColor(DailyDriver.blue)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Capsule().fill(DailyDriver.blue.opacity(0.16)))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("builder_v3_type_change_button")
-                    .padding(.trailing, session.exercises.count > 1 ? 8 : 0)
-                }
+                builderV3TypeChangeButton
 
                 if session.exercises.count > 1 {
                     Button {
@@ -274,108 +262,5 @@ struct EditorV2View: View {
             return "JUST ADD EXERCISES — STRUCTURE COMES LATER"
         }
         return "TAP AN EXERCISE TO EDIT IT · ⋯ FOR EVERYTHING ELSE"
-    }
-
-    /// Quick-add from prefs. An explicit tap re-opts in, so a previous delete
-    /// (tombstone) is cleared first — presence by type still blocks duplicates.
-    private func quickAddSoftSection(_ kind: EnrichmentKind) {
-        Task {
-            let prefs = await loadEnrichmentPrefs()
-            let added: Bool
-            switch kind {
-            case .cooldown:
-                added = session.quickAddCooldown(from: prefs, clearingTombstone: true)
-            case .sessionWarmup:
-                added = session.quickAddSessionWarmup(from: prefs, clearingTombstone: true)
-            case .betweenSetRest, .exerciseWarmupSets:
-                assertionFailure("quickAddSoftSection called with unsupported kind \(kind)")
-                return
-            }
-            guard added else {
-                showToast(
-                    kind == .cooldown
-                        ? "No cool-down defaults yet — set them in Settings › Garmin"
-                        : "No warm-up defaults yet — set them in Settings › Garmin"
-                )
-                return
-            }
-            showToast(kind == .cooldown ? "Cool-down added ✓" : "Warm-up added ✓")
-        }
-    }
-
-    func addWarmupSets(to exerciseID: String) {
-        Task {
-            let prefs = await loadEnrichmentPrefs()
-            let added = session.addDefaultWarmupSets(
-                to: exerciseID,
-                rows: prefs.defaultWarmupSetRows,
-                clearingTombstone: true
-            )
-            showToast(
-                added
-                    ? "Warm-up sets added ✓"
-                    : "No warm-up set defaults yet — set them in Settings › Garmin"
-            )
-        }
-    }
-
-    /// Prefs are a default source, never a gate: an unavailable mapper falls back
-    /// to the shipped defaults so the quick-add still works offline.
-    private func loadEnrichmentPrefs() async -> WorkoutPreferences {
-        if let enrichmentPrefs { return enrichmentPrefs }
-        let loaded = (try? await AppDependencies.current.apiService.fetchWorkoutPreferences())
-            ?? .defaults
-        enrichmentPrefs = loaded
-        return loaded
-    }
-
-    private func saveTapped() {
-        let trimmedTitle = session.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        saveModel.name = trimmedTitle
-        saveModel.intervals = session.toSaveIntervals()
-        session.mintMissingExerciseIDs()
-        saveModel.saveBlocks = session.toSocialImportBlocks()
-        // nil = leave server tombstones alone when this session never touched them.
-        saveModel.saveEnrichmentTombstones = session.enrichmentTombstonesDirty
-            ? session.enrichmentTombstones
-            : nil
-        Task {
-            matchController.noteTitleForSave(trimmedTitle)
-            let canonicalValues = await matchController.onSave(online: true)
-            saveModel.canonicalId = canonicalValues.canonicalId
-            saveModel.canonicalSource = canonicalValues.source
-            await saveModel.save()
-        }
-    }
-
-    private func resolveLoadedMatchDisplayName() async {
-        guard workout?.canonicalId != nil else { return }
-        guard let catalog = try? await AppDependencies.current.apiService.fetchWorkoutTypes(
-            aiPresetOnly: false
-        ) else {
-            return
-        }
-        matchController.resolveLoadedDisplayName(from: catalog)
-    }
-
-    /// TYPE · CHANGE (AMA-2372) — returns to the picker. Confirms first when the
-    /// canvas is dirty (has exercises or a pinned format) so a stray tap can't
-    /// silently wipe seeded/user-added work.
-    private func builderV3ChangeTypeTapped() {
-        let isDirty = !session.exercises.isEmpty || !session.groups.isEmpty
-        if isDirty {
-            showBuilderV3ChangeTypeConfirm = true
-        } else {
-            onBuilderV3ChangeType?()
-        }
-    }
-
-    private func matchTitleIfNeeded() async {
-        // Existing IDs are resolved against the catalog on load. A retired/unknown
-        // ID stays hidden until the user actually changes the title.
-        if workout?.canonicalId != nil, session.title == workout?.name {
-            return
-        }
-        await matchController.onTitleIdle(title: session.title)
     }
 }

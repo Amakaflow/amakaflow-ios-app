@@ -263,6 +263,126 @@ extension EditorV2View {
             set: { configGroupKey = $0?.id }
         )
     }
+
+    // MARK: - Actions (split for type_body_length)
+
+    @ViewBuilder
+    var builderV3TypeChangeButton: some View {
+        if let builderV3Seed, onBuilderV3ChangeType != nil {
+            Button(action: builderV3ChangeTypeTapped) {
+                Text("\(builderV3Seed.label.uppercased()) · CHANGE")
+                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                    .foregroundColor(DailyDriver.blue)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(DailyDriver.blue.opacity(0.16)))
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("builder_v3_type_change_button")
+            .padding(.trailing, session.exercises.count > 1 ? 8 : 0)
+        }
+    }
+
+    /// TYPE · CHANGE (AMA-2372) — confirms first when the canvas is dirty.
+    func builderV3ChangeTypeTapped() {
+        let isDirty = !session.exercises.isEmpty || !session.groups.isEmpty
+        if isDirty {
+            showBuilderV3ChangeTypeConfirm = true
+        } else {
+            onBuilderV3ChangeType?()
+        }
+    }
+
+    /// Quick-add from prefs. An explicit tap re-opts in, so a previous delete
+    /// (tombstone) is cleared first — presence by type still blocks duplicates.
+    func quickAddSoftSection(_ kind: EnrichmentKind) {
+        Task {
+            let prefs = await loadEnrichmentPrefs()
+            let added: Bool
+            switch kind {
+            case .cooldown:
+                added = session.quickAddCooldown(from: prefs, clearingTombstone: true)
+            case .sessionWarmup:
+                added = session.quickAddSessionWarmup(from: prefs, clearingTombstone: true)
+            case .betweenSetRest, .exerciseWarmupSets:
+                assertionFailure("quickAddSoftSection called with unsupported kind \(kind)")
+                return
+            }
+            guard added else {
+                showToast(
+                    kind == .cooldown
+                        ? "No cool-down defaults yet — set them in Settings › Garmin"
+                        : "No warm-up defaults yet — set them in Settings › Garmin"
+                )
+                return
+            }
+            showToast(kind == .cooldown ? "Cool-down added ✓" : "Warm-up added ✓")
+        }
+    }
+
+    func addWarmupSets(to exerciseID: String) {
+        Task {
+            let prefs = await loadEnrichmentPrefs()
+            let added = session.addDefaultWarmupSets(
+                to: exerciseID,
+                rows: prefs.defaultWarmupSetRows,
+                clearingTombstone: true
+            )
+            showToast(
+                added
+                    ? "Warm-up sets added ✓"
+                    : "No warm-up set defaults yet — set them in Settings › Garmin"
+            )
+        }
+    }
+
+    /// Prefs are a default source, never a gate: an unavailable mapper falls back
+    /// to the shipped defaults so the quick-add still works offline.
+    func loadEnrichmentPrefs() async -> WorkoutPreferences {
+        if let enrichmentPrefs { return enrichmentPrefs }
+        let loaded = (try? await AppDependencies.current.apiService.fetchWorkoutPreferences())
+            ?? .defaults
+        enrichmentPrefs = loaded
+        return loaded
+    }
+
+    func saveTapped() {
+        let trimmedTitle = session.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        saveModel.name = trimmedTitle
+        saveModel.intervals = session.toSaveIntervals()
+        session.mintMissingExerciseIDs()
+        saveModel.saveBlocks = session.toSocialImportBlocks()
+        // nil = leave server tombstones alone when this session never touched them.
+        saveModel.saveEnrichmentTombstones = session.enrichmentTombstonesDirty
+            ? session.enrichmentTombstones
+            : nil
+        Task {
+            matchController.noteTitleForSave(trimmedTitle)
+            let canonicalValues = await matchController.onSave(online: true)
+            saveModel.canonicalId = canonicalValues.canonicalId
+            saveModel.canonicalSource = canonicalValues.source
+            await saveModel.save()
+        }
+    }
+
+    func resolveLoadedMatchDisplayName() async {
+        guard workout?.canonicalId != nil else { return }
+        guard let catalog = try? await AppDependencies.current.apiService.fetchWorkoutTypes(
+            aiPresetOnly: false
+        ) else {
+            return
+        }
+        matchController.resolveLoadedDisplayName(from: catalog)
+    }
+
+    func matchTitleIfNeeded() async {
+        // Existing IDs are resolved against the catalog on load. A retired/unknown
+        // ID stays hidden until the user actually changes the title.
+        if workout?.canonicalId != nil, session.title == workout?.name {
+            return
+        }
+        await matchController.onTitleIdle(title: session.title)
+    }
 }
 
 struct ConfigGroupItem: Identifiable {
