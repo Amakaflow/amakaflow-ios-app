@@ -31,6 +31,18 @@ final class WorkoutTypeFavoritesOrderingTests: XCTestCase {
         XCTAssertEqual(WorkoutTypeFavoritesOrdering.visibleChipLimit, 8)
     }
 
+    #if DEBUG
+    @MainActor
+    func testFixtureServiceProvidesAtLeastEightAiPresets() async throws {
+        let fixtures = FixtureAPIService()
+        let items = try await fixtures.fetchWorkoutTypes(aiPresetOnly: true)
+        XCTAssertGreaterThanOrEqual(
+            items.filter(\.aiPreset).count,
+            WorkoutTypeFavoritesOrdering.visibleChipLimit
+        )
+    }
+    #endif
+
     private func item(id: String, category: String, name: String, ai: Bool) -> WorkoutTypeItem {
         WorkoutTypeItem(
             id: id,
