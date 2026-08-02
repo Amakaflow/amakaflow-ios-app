@@ -130,6 +130,46 @@ final class WorkoutCanonicalNamingTests: XCTestCase {
         XCTAssertEqual(controller.canonicalSource, .preset)
     }
 
+    func testApplyFavorite_emptyTitleSetsDisplayNameAndPreset() async {
+        let apiService = MockAPIService()
+        let controller = WorkoutTypeMatchController(apiService: apiService)
+        let preset = workoutType(id: "tempo_run", displayName: "Tempo Run", aiPreset: true)
+
+        let title = controller.applyFavorite(preset, currentTitle: "   ")
+
+        XCTAssertEqual(title, "Tempo Run")
+        XCTAssertEqual(controller.canonicalId, "tempo_run")
+        XCTAssertEqual(controller.canonicalSource, .preset)
+        XCTAssertEqual(controller.chipDisplayName, "Tempo Run")
+        XCTAssertNil(controller.clearSuppressionNormalizedTitle)
+    }
+
+    func testApplyFavorite_nonEmptyTitlePreservesTitleAndStillPresets() async {
+        let apiService = MockAPIService()
+        let controller = WorkoutTypeMatchController(apiService: apiService)
+        let preset = workoutType(id: "tempo_run", displayName: "Tempo Run", aiPreset: true)
+
+        let title = controller.applyFavorite(preset, currentTitle: "Hyde Park Thursday")
+
+        XCTAssertEqual(title, "Hyde Park Thursday")
+        XCTAssertEqual(controller.canonicalId, "tempo_run")
+        XCTAssertEqual(controller.canonicalSource, .preset)
+        XCTAssertEqual(controller.chipDisplayName, "Tempo Run")
+        XCTAssertNil(controller.clearSuppressionNormalizedTitle)
+    }
+
+    func testApplyFavorite_clearsClearSuppression() async {
+        let apiService = MockAPIService()
+        let controller = WorkoutTypeMatchController(apiService: apiService)
+        controller.clear(serverNormalizedTitle: "old title")
+        let preset = workoutType(id: "upper_push", displayName: "Upper Push", aiPreset: true)
+
+        _ = controller.applyFavorite(preset, currentTitle: "old title")
+
+        XCTAssertNil(controller.clearSuppressionNormalizedTitle)
+        XCTAssertEqual(controller.canonicalSource, .preset)
+    }
+
     func testMapperSaveBodyEmitsCanonicalFieldsInSnakeCase() throws {
         let request = WorkoutSaveRequest(
             name: "Tempo Run",
