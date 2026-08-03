@@ -439,6 +439,8 @@
 		AMA1791V1BLD /* V1_initial_schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791V1REF /* V1_initial_schema.swift */; };
 		AMA1823V2BLD /* V2_add_request_id_to_sync_queue.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1823V2REF /* V2_add_request_id_to_sync_queue.swift */; };
 		AMA2376V3BLD /* V3_workout_collections.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376V3REF /* V3_workout_collections.swift */; };
+		AMA2376REPBLO /* WorkoutCollectionsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376REPREFO /* WorkoutCollectionsRepository.swift */; };
+		AMA2376TESTBLD /* WorkoutCollectionsRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376TESTREF /* WorkoutCollectionsRepositoryTests.swift */; };
 		AMA1828CHAT000B /* APIService+Chat.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828CHAT000A /* APIService+Chat.swift */; };
 		AMA1828COACH00B /* APIService+Coach.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828COACH00A /* APIService+Coach.swift */; };
 		AMA1828DEVIC00B /* APIService+Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828DEVIC00A /* APIService+Device.swift */; };
@@ -1086,6 +1088,8 @@
 		AMA1791V1REF /* V1_initial_schema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V1_initial_schema.swift; path = ../AmakaFlow/Storage/Migrations/V1_initial_schema.swift; sourceTree = SOURCE_ROOT; };
 		AMA1823V2REF /* V2_add_request_id_to_sync_queue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V2_add_request_id_to_sync_queue.swift; path = ../AmakaFlow/Storage/Migrations/V2_add_request_id_to_sync_queue.swift; sourceTree = SOURCE_ROOT; };
 		AMA2376V3REF /* V3_workout_collections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V3_workout_collections.swift; path = ../AmakaFlow/Storage/Migrations/V3_workout_collections.swift; sourceTree = SOURCE_ROOT; };
+		AMA2376REPREFO /* WorkoutCollectionsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCollectionsRepository.swift; path = ../AmakaFlow/Storage/Repositories/WorkoutCollectionsRepository.swift; sourceTree = SOURCE_ROOT; };
+		AMA2376TESTREF /* WorkoutCollectionsRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCollectionsRepositoryTests.swift; path = AmakaFlowCompanionTests/WorkoutCollectionsRepositoryTests.swift; sourceTree = "<group>"; };
 		AMA1828CHAT000A /* APIService+Chat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+Chat.swift"; path = "../AmakaFlow/Services/APIService+Chat.swift"; sourceTree = SOURCE_ROOT; };
 		AMA1828COACH00A /* APIService+Coach.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+Coach.swift"; path = "../AmakaFlow/Services/APIService+Coach.swift"; sourceTree = SOURCE_ROOT; };
 		AMA1828DEVIC00A /* APIService+Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+Device.swift"; path = "../AmakaFlow/Services/APIService+Device.swift"; sourceTree = SOURCE_ROOT; };
@@ -1423,6 +1427,7 @@
 				AMA1791V1REF /* V1_initial_schema.swift */,
 				AMA1823V2REF /* V2_add_request_id_to_sync_queue.swift */,
 				AMA2376V3REF /* V3_workout_collections.swift */,
+				AMA2376REPREFO /* WorkoutCollectionsRepository.swift */,
 				A87B639F1BA04DF8A5301F4C /* UserDefaultsAcceptedMigration.swift */,
 				AMA1791LOCALRECREF /* LocalRecords.swift */,
 				AMA1791ACCEPTREPOREF /* AcceptedSuggestionsRepository.swift */,
@@ -1940,6 +1945,7 @@
 				AMA2351METATESTREF /* WorkoutKitPlanMetaTests.swift */,
 				AMA2330SCHVMTESTREF /* WorkoutScheduleViewModelTests.swift */,
 				AMA2375OYWTREF /* OnYourWatchesViewModelTests.swift */,
+				AMA2376TESTREF /* WorkoutCollectionsRepositoryTests.swift */,
 				AMA2289DIARYTSTREF /* TodayDiaryTests.swift */,
 				AMA2290BFTESTREF /* StrengthBackfillTests.swift */,
 				AK00TST010A /* MockURLProtocol.swift */,
@@ -2456,6 +2462,7 @@
 				AMA1791V1BLD /* V1_initial_schema.swift in Sources */,
 				AMA1823V2BLD /* V2_add_request_id_to_sync_queue.swift in Sources */,
 				AMA2376V3BLD /* V3_workout_collections.swift in Sources */,
+				AMA2376REPBLO /* WorkoutCollectionsRepository.swift in Sources */,
 				E2E9218685E5476B991B3979 /* UserDefaultsAcceptedMigration.swift in Sources */,
 				AMA1791LOCALRECBLD /* LocalRecords.swift in Sources */,
 				AMA1791ACCEPTREPOBLD /* AcceptedSuggestionsRepository.swift in Sources */,
@@ -2823,6 +2830,7 @@
 				AMA2351METATESTBLD /* WorkoutKitPlanMetaTests.swift in Sources */,
 				AMA2330SCHVMTESTBUILD /* WorkoutScheduleViewModelTests.swift in Sources */,
 				AMA2375OYWTBLD /* OnYourWatchesViewModelTests.swift in Sources */,
+				AMA2376TESTBLD /* WorkoutCollectionsRepositoryTests.swift in Sources */,
 				AMA2289DIARYTSTBLD /* TodayDiaryTests.swift in Sources */,
 				AMA2290BFTESTBLD /* StrengthBackfillTests.swift in Sources */,
 				AK00TST010B /* MockURLProtocol.swift in Sources */,
