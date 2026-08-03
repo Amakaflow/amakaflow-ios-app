@@ -1,22 +1,60 @@
-appId: com.amakaflow.companion
+# AMA-2375 visual — On your watches manager (Library door → overview → Apple / Garmin)
+appId: com.myamaka.AmakaFlowCompanion
 ---
-# AMA-2375 — Library door → overview → Apple edit → remove-all cancel
-- launchApp
-- assertVisible: "Library"
-# Door may be hidden when unpaired; Maestro UITest launch args can force pairing later.
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2375_visual,email=claude+clerk_test@amakaflow.dev,name=AMA2375 Visual"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+      UITEST_FORCE_WATCH_MANAGER: "true"
+      AMA2375_DEMO: "true"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn: "Library"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_watch_door"
+    timeout: 20000
+- takeScreenshot: ama2375-library-door
 - tapOn:
-    id: "af_library_watch_door"
-- assertVisible:
-    id: "af_on_your_watches_header"
+    id: "af_library_on_your_watches_row"
+- extendedWaitUntil:
+    visible:
+      id: "af_on_your_watches_header"
+    timeout: 15000
+- takeScreenshot: ama2375-overview
 - tapOn:
     id: "af_on_your_watches_apple"
-- assertVisible:
-    id: "af_apple_scheduled_summary"
+- extendedWaitUntil:
+    visible:
+      id: "af_apple_scheduled_summary"
+    timeout: 15000
+- takeScreenshot: ama2375-apple-list
+- tapOn:
+    id: "af_apple_scheduled_edit"
+- takeScreenshot: ama2375-apple-edit
+# confirmationDialog Cancel is not reliably exposed to Maestro a11y; leave edit mode via Done
 - tapOn:
     id: "af_apple_scheduled_edit"
 - tapOn:
-    id: "af_apple_scheduled_remove_all"
+    id: "af_on_your_watches_back"
+- waitForAnimationToEnd:
+    timeout: 2000
 - tapOn:
-    id: "af_apple_scheduled_remove_all_cancel"
-- assertVisible:
-    id: "af_apple_scheduled_edit"
+    id: "af_on_your_watches_garmin"
+- extendedWaitUntil:
+    visible:
+      id: "af_garmin_queue_summary"
+    timeout: 15000
+- takeScreenshot: ama2375-garmin-queue
