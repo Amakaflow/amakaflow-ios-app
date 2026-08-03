@@ -185,6 +185,8 @@
 		AMA2351WKAPIBLD /* APIService+WorkoutKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2351WKAPIREF /* APIService+WorkoutKit.swift */; };
 		AMA2351MAPPERBLD /* MapperWorkoutKitPlanProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2351MAPPERREF /* MapperWorkoutKitPlanProvider.swift */; };
 		AMA2360STEPSBLD01 /* WorkoutKitPlanStepSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2360STEPSREF01 /* WorkoutKitPlanStepSummary.swift */; };
+		AMA2374SECTSBLD01 /* WorkoutKitPlanStepSummary+Sections.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2374SECTSREF01 /* WorkoutKitPlanStepSummary+Sections.swift */; };
+		AMA2374DDBANDBLD1 /* DailyDriverTheme+WatchBands.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2374DDBANDREF1 /* DailyDriverTheme+WatchBands.swift */; };
 		AMA2351WKMETABLD /* WorkoutKitPlanMeta.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2351WKMETAREF /* WorkoutKitPlanMeta.swift */; };
 		AMA2351WKPREVBLD /* AppleWorkoutKitPreviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2351WKPREVREF /* AppleWorkoutKitPreviewSheet.swift */; };
 		AMA2336COORDBLD001 /* WorkoutEnrichmentPushCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336COORDREF001 /* WorkoutEnrichmentPushCoordinator.swift */; };
@@ -790,6 +792,8 @@
 		AMA2360SHEETREF01 /* AppleWatchDeliveryPrefsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleWatchDeliveryPrefsSheet.swift; path = ../AmakaFlow/Views/AppleWatchDeliveryPrefsSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2360PREFTESTREF /* AppleWatchDeliveryPrefsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleWatchDeliveryPrefsTests.swift; path = AmakaFlowCompanionTests/AppleWatchDeliveryPrefsTests.swift; sourceTree = "<group>"; };
 		AMA2360STEPSREF01 /* WorkoutKitPlanStepSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutKitPlanStepSummary.swift; path = ../AmakaFlow/Models/WorkoutKitPlanStepSummary.swift; sourceTree = SOURCE_ROOT; };
+		AMA2374SECTSREF01 /* WorkoutKitPlanStepSummary+Sections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutKitPlanStepSummary+Sections.swift"; path = "../AmakaFlow/Models/WorkoutKitPlanStepSummary+Sections.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2374DDBANDREF1 /* DailyDriverTheme+WatchBands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "DailyDriverTheme+WatchBands.swift"; path = "../AmakaFlow/DailyDriverTheme+WatchBands.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2316PREFREF001 /* GarminWatchDisplayPrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchDisplayPrefs.swift; path = ../AmakaFlow/Models/GarminWatchDisplayPrefs.swift; sourceTree = SOURCE_ROOT; };
 		AMA2316SHEETREF01 /* GarminWatchDisplayPrefsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchDisplayPrefsSheet.swift; path = ../AmakaFlow/Views/GarminWatchDisplayPrefsSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2316PREFTESTREF /* GarminWatchDisplayPrefsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchDisplayPrefsTests.swift; path = AmakaFlowCompanionTests/GarminWatchDisplayPrefsTests.swift; sourceTree = "<group>"; };
@@ -1490,6 +1494,7 @@
 				BL0CK5W1FT00000001 /* Block.swift */,
 				3X3RC1S35W1FT000001 /* Exercise.swift */,
 				AMA2360STEPSREF01 /* WorkoutKitPlanStepSummary.swift */,
+				AMA2374SECTSREF01 /* WorkoutKitPlanStepSummary+Sections.swift */,
 				AMA2351WKMETAREF /* WorkoutKitPlanMeta.swift */,
 				AMA2311PRESREF001 /* Prescription.swift */,
 				AMA2360PREFREF001 /* AppleWatchDeliveryPrefs.swift */,
@@ -1512,6 +1517,7 @@
 				F84E226D2ED0D55600459747 /* AmakaFlowApp.swift */,
 				F84E226E2ED0D55600459747 /* Theme.swift */,
 				AMA2292DDTHEME0000A /* DailyDriverTheme.swift */,
+				AMA2374DDBANDREF1 /* DailyDriverTheme+WatchBands.swift */,
 				AMA2292DDSCREENS00A /* DailyDriverScreens.swift */,
 				AMA2293DDCOMP0000A /* DailyDriverComponents.swift */,
 				F84E21762ED0B0C800459747 /* AmakaFlowCompanion */,
@@ -2563,6 +2569,8 @@
 				AMA2351WKAPIBLD /* APIService+WorkoutKit.swift in Sources */,
 				AMA2351MAPPERBLD /* MapperWorkoutKitPlanProvider.swift in Sources */,
 				AMA2360STEPSBLD01 /* WorkoutKitPlanStepSummary.swift in Sources */,
+				AMA2374SECTSBLD01 /* WorkoutKitPlanStepSummary+Sections.swift in Sources */,
+				AMA2374DDBANDBLD1 /* DailyDriverTheme+WatchBands.swift in Sources */,
 				AMA2351WKMETABLD /* WorkoutKitPlanMeta.swift in Sources */,
 				AMA2351WKPREVBLD /* AppleWorkoutKitPreviewSheet.swift in Sources */,
 				AMA2336COORDBLD001 /* WorkoutEnrichmentPushCoordinator.swift in Sources */,

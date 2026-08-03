@@ -32,8 +32,6 @@ enum DailyDriver {
     static let card = Color.white.opacity(0.055)
     static let card2 = Color.white.opacity(0.09)
     static let blue = Color(hex: "5AB8F4")
-    /// Mobility / prep band accent (AMA-2369 send-flow Runna bands, `#8890A0`).
-    static let mobilityBand = Color(hex: "8890A0")
     /// HR zone 2 / circuit accent (screens-daily-driver.jsx).
     static let zoneGreen = Color(hex: "4AD97F")
     static let orange = Color(hex: "F4A24A")
