@@ -259,6 +259,29 @@ final class AppleWatchDeliveryPrefsTests: XCTestCase {
         XCTAssertNil(sections[0].tag, "\"50 reps\" must not parse as seconds for ~N MIN")
     }
 
+    func testMobilityRepeatEmitsOneRowPerRepForDurationTag() throws {
+        let json = """
+        {
+          "title": "Mobility x3",
+          "sportType": "traditionalStrengthTraining",
+          "intervals": [
+            {
+              "kind": "repeat",
+              "reps": 3,
+              "intervals": [
+                { "kind": "work", "name": "Jump Rope", "seconds": 60 }
+              ]
+            }
+          ]
+        }
+        """.data(using: .utf8)!
+
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+        XCTAssertEqual(sections.map(\.band), ["Mobility prep"])
+        XCTAssertEqual(sections[0].steps.map(\.title), ["Jump Rope", "Jump Rope", "Jump Rope"])
+        XCTAssertEqual(sections[0].tag, "~3 MIN")
+    }
+
     func testMapperProviderForwardsDeliveryPrefs() async throws {
         let api = MockAPIService()
         api.fetchWorkoutBlocksJSONResult = .success([

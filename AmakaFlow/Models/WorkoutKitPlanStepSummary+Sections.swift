@@ -108,8 +108,10 @@ private enum PreviewSectionBuilder {
                 if let sharedRestChip { out.append(.rest(chip: sharedRestChip)) }
             }
         } else if isMobilityName(name) {
-            out.append(.mobility(title: name, detail: workDetail(for: only)))
-            if let sharedRestChip { out.append(.rest(chip: sharedRestChip)) }
+            for _ in 0..<reps {
+                out.append(.mobility(title: name, detail: workDetail(for: only)))
+                if let sharedRestChip { out.append(.rest(chip: sharedRestChip)) }
+            }
         } else {
             out.append(.work(exercise: exercise, detail: workDetail(for: only), repeatCount: reps))
             if let sharedRestChip { out.append(.rest(chip: sharedRestChip)) }
