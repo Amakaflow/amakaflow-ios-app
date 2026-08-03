@@ -218,7 +218,7 @@ struct AppleWorkoutKitPreviewSheet: View {
 private extension PreviewBandAccent {
     var accentColor: Color {
         switch self {
-        case .mobility: return Color(red: 0.53, green: 0.56, blue: 0.63) // #8890A0
+        case .mobility: return DailyDriver.mobilityBand
         case .work: return DailyDriver.lime
         case .cooldown: return DailyDriver.blue
         }
@@ -251,7 +251,7 @@ private extension PreviewBandAccent {
     return AppleWorkoutKitPreviewSheet(
         workoutName: "Test Apple workout",
         meta: .fallback,
-        intervalCount: 4,
+        intervalCount: 6,
         sections: WorkoutKitPlanStepSummary.sections(from: json),
         sportLabel: WorkoutKitSportLabel.label(from: json),
         prefsSummary: nil,

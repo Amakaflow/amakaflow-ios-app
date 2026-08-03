@@ -209,6 +209,7 @@ final class AppleWatchDeliveryPrefsTests: XCTestCase {
         let sections = WorkoutKitPlanStepSummary.sections(from: json)
         XCTAssertEqual(sections.map(\.band), ["Mobility prep", "Barbell back squat"])
         XCTAssertEqual(sections[0].steps.map(\.title), ["Jump Rope"])
+        XCTAssertEqual(sections[0].tag, "~2 MIN", "120s Jump Rope must aggregate to a minute tag")
         XCTAssertEqual(sections[1].tag, "5 SETS")
         XCTAssertEqual(
             sections[1].steps.map(\.title),
@@ -216,6 +217,46 @@ final class AppleWatchDeliveryPrefsTests: XCTestCase {
         )
         XCTAssertTrue(sections[1].steps.allSatisfy { $0.restChip == "REST · YOU END IT" })
         XCTAssertEqual(sections.flatMap(\.steps).map(\.number), [1, 2, 3, 4])
+    }
+
+    func testSectionsEmitCoolDownBandAndDropTrailingRest() throws {
+        let json = """
+        {
+          "title": "Cooldown",
+          "sportType": "traditionalStrengthTraining",
+          "intervals": [
+            { "kind": "work", "name": "Squat", "reps": 5 },
+            { "kind": "rest", "seconds": 60 },
+            { "kind": "cooldown", "seconds": 120 },
+            { "kind": "rest" }
+          ]
+        }
+        """.data(using: .utf8)!
+
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+        XCTAssertEqual(sections.map(\.band), ["Squat", "Cool-down"])
+        XCTAssertEqual(sections[0].steps.first?.restChip, "REST 60S")
+        XCTAssertEqual(sections[1].steps.map(\.title), ["Cool-down"])
+        XCTAssertEqual(sections[1].steps.first?.detail, "2 MIN")
+        // Trailing open rest after cool-down has nothing to pin to — dropped.
+        XCTAssertNil(sections[1].steps.first?.restChip)
+        XCTAssertFalse(sections.flatMap(\.steps).contains { $0.restChip == "REST · YOU END IT" })
+    }
+
+    func testMobilityDurationTagIgnoresRepsDetails() throws {
+        let json = """
+        {
+          "title": "Reps mobility",
+          "sportType": "traditionalStrengthTraining",
+          "intervals": [
+            { "kind": "work", "name": "Jump Rope", "reps": 50 }
+          ]
+        }
+        """.data(using: .utf8)!
+
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+        XCTAssertEqual(sections.map(\.band), ["Mobility prep"])
+        XCTAssertNil(sections[0].tag, "\"50 reps\" must not parse as seconds for ~N MIN")
     }
 
     func testMapperProviderForwardsDeliveryPrefs() async throws {
