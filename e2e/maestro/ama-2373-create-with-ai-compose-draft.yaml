@@ -1,0 +1,123 @@
+# AMA-2373 — Create with AI compose → draft → refine → Save/Start.
+#
+# What we're testing: the fixture-backed flow drafts without live services,
+# supports a refine + Undo, saves through the shared Library path, and starts
+# through the shared device/enhancement sheet.
+appId: com.myamaka.AmakaFlowCompanion
+---
+# 1) Compose → draft → refine → Undo → Save to Library.
+- launchApp:
+    clearState: true
+    arguments:
+      UITEST_MODE: "1"
+      UITEST_USE_FIXTURES: "1"
+      UITEST_CLERK_TEST_SESSION: "true"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn:
+    id: "library_tab"
+- extendedWaitUntil:
+    visible:
+      id: "af_library_fab"
+    timeout: 15000
+- tapOn:
+    id: "af_library_fab"
+- extendedWaitUntil:
+    visible:
+      id: "create_workout_sheet"
+    timeout: 10000
+- tapOn:
+    id: "create_door_ai"
+- extendedWaitUntil:
+    visible:
+      id: "create_with_ai_prompt_field"
+    timeout: 10000
+- tapOn:
+    id: "create_with_ai_prompt_field"
+- inputText: "A 45 minute upper body strength session with extra core"
+- hideKeyboard
+- tapOn:
+    id: "create_with_ai_draft_it"
+- extendedWaitUntil:
+    visible:
+      id: "create_with_ai_draft_root"
+    timeout: 30000
+- assertVisible:
+    id: "create_with_ai_save"
+- assertVisible:
+    id: "create_with_ai_start"
+- scrollUntilVisible:
+    element:
+      text: "Make it shorter"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    text: "Make it shorter"
+- extendedWaitUntil:
+    visible:
+      id: "create_with_ai_refine_undo"
+    timeout: 30000
+- tapOn:
+    id: "create_with_ai_refine_undo"
+- scrollUntilVisible:
+    element:
+      id: "create_with_ai_save"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "create_with_ai_save"
+- extendedWaitUntil:
+    visible:
+      id: "af_library_fab"
+    timeout: 15000
+- takeScreenshot: ama-2373-create-with-ai-saved
+---
+# 2) Compose → draft → Start opens the shared start/enhancement path.
+- launchApp:
+    clearState: true
+    arguments:
+      UITEST_MODE: "1"
+      UITEST_USE_FIXTURES: "1"
+      UITEST_CLERK_TEST_SESSION: "true"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn:
+    id: "library_tab"
+- tapOn:
+    id: "af_library_fab"
+- tapOn:
+    id: "create_door_ai"
+- extendedWaitUntil:
+    visible:
+      id: "create_with_ai_prompt_field"
+    timeout: 10000
+- tapOn:
+    id: "create_with_ai_prompt_field"
+- inputText: "A short full body strength session"
+- hideKeyboard
+- tapOn:
+    id: "create_with_ai_draft_it"
+- extendedWaitUntil:
+    visible:
+      id: "create_with_ai_draft_root"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "create_with_ai_start"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "create_with_ai_start"
+- extendedWaitUntil:
+    visible:
+      id: "af_start_sheet"
+    timeout: 15000
+- takeScreenshot: ama-2373-create-with-ai-start

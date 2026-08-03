@@ -166,6 +166,24 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     XCTAssertNil(mockAPI.lastSuggestWorkoutRequest?.focusMuscleGroups)
   }
 
+  func testFixtureAPIServiceSupportsOfflineCreateWithAIFlow() async throws {
+    let response = try await FixtureAPIService().suggestWorkout(
+      request: SuggestWorkoutRequest(
+        durationMinutes: 45,
+        excludeExercises: nil,
+        focusMuscleGroups: nil,
+        includeContext: IncludeContextFlags(gym: true, memories: true, profile: true),
+        notes: "Upper-body strength with extra core"
+      )
+    )
+
+    XCTAssertEqual(response.name, "Upper Body + Core")
+    XCTAssertEqual(response.durationSeconds, 2_700)
+    XCTAssertEqual(response.warmUp?.seconds, 300)
+    XCTAssertEqual(response.whyThis?.count, 2)
+    XCTAssertFalse(response.blocks.isEmpty)
+  }
+
   func testRequestSuggestionFromPrompt_showsOnboardingWhenNoBackendProfile() async throws {
     mockAPI.getCoachingProfileResult = .success(nil)
 

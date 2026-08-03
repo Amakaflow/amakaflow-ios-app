@@ -298,7 +298,47 @@ extension FixtureAPIService {
     // MARK: - Coach Suggestions (AMA-1412)
 
     func suggestWorkout(request: SuggestWorkoutRequest) async throws -> SuggestWorkoutResponse {
-        throw APIError.notImplemented
+        SuggestWorkoutResponse(
+            blocks: [
+                Components.Schemas.SuggestWorkoutInterval(
+                    workoutInterval: .reps(
+                        sets: 3,
+                        reps: 8,
+                        name: "Dumbbell bench press",
+                        load: nil,
+                        restSec: 75,
+                        followAlongUrl: nil
+                    )
+                ),
+                Components.Schemas.SuggestWorkoutInterval(
+                    workoutInterval: .reps(
+                        sets: 3,
+                        reps: 10,
+                        name: "Single-arm row",
+                        load: nil,
+                        restSec: 60,
+                        followAlongUrl: nil
+                    )
+                ),
+                Components.Schemas.SuggestWorkoutInterval(
+                    workoutInterval: .time(seconds: 180, target: "Core finisher")
+                ),
+            ],
+            cooldown: WarmUpCooldown(seconds: 180, target: "Easy upper-body mobility"),
+            description: "A balanced fixture draft for offline Create with AI validation.",
+            durationSeconds: request.durationMinutes.map { $0 * 60 } ?? 2_700,
+            name: "Upper Body + Core",
+            sport: WorkoutSport.strength.rawValue,
+            suggestionId: "fixture-create-with-ai",
+            warmUp: WarmUpCooldown(
+                seconds: 300,
+                target: "Band pull-aparts and shoulder circles"
+            ),
+            whyThis: [
+                "Uses equipment available at your gym",
+                "Keeps the session focused and repeatable",
+            ]
+        )
     }
 
     func postRPEFeedback(_ feedback: RPEFeedbackRequest) async throws -> RPEFeedbackResponse {

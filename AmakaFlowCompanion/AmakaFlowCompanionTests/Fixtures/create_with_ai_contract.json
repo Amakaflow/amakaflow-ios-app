@@ -1,0 +1,35 @@
+{
+  "request": {
+    "duration_minutes": 45,
+    "include_context": {
+      "gym": true,
+      "history": false,
+      "memories": true,
+      "profile": true,
+      "readiness": false
+    },
+    "notes": "Upper-body strength with extra core"
+  },
+  "response": {
+    "blocks": [
+      {
+        "kind": "reps",
+        "sets": 3,
+        "reps": 8,
+        "name": "Dumbbell bench press",
+        "rest_sec": 75
+      }
+    ],
+    "durationSeconds": 2700,
+    "name": "Upper Body + Core",
+    "sport": "strength",
+    "warmUp": {
+      "seconds": 300,
+      "target": "Band pull-aparts and shoulder circles"
+    },
+    "whyThis": [
+      "Uses equipment available at your gym",
+      "Keeps the session inside 45 minutes"
+    ]
+  }
+}
