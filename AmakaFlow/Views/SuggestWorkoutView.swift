@@ -20,9 +20,11 @@ struct SuggestWorkoutView: View {
     var onEditAsk: () -> Void = {}
     @EnvironmentObject var workoutsViewModel: WorkoutsViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var showingStartSheet = false
-    @State private var showingWorkoutPlayer = false
-    @State private var startSheetWorkout: Workout?
+    /// AMA-2373 fix round 1: createWithAI's "▸ Start" hands off to the same
+    /// gym/device sheet + enrichment → push handoff as Library's detail view,
+    /// instead of a bespoke save-and-close for Garmin/Apple.
+    @State private var showingUnifiedStart = false
+    @State private var unifiedStartWorkout: Workout?
 
     var body: some View {
         NavigationStack {
@@ -31,18 +33,33 @@ struct SuggestWorkoutView: View {
 
                 switch viewModel.state {
                 case .idle:
-                    loadingView
+                    // AMA-2373 fix round 1: cancelGenerate() lands here. For createWithAI
+                    // that must not be an indefinite spinner with no escape — bounce back
+                    // to compose. (cancelGeneration() below already calls onEditAsk, so
+                    // this is a defensive fallback for any other path into `.idle`.)
+                    if mode == .createWithAI {
+                        createWithAICancelledView
+                    } else {
+                        loadingView
+                    }
 
                 case .needsOnboarding:
                     CoachingProfileOnboardingView(viewModel: viewModel)
 
                 case .loading:
                     if mode == .createWithAI {
-                        CreateWithAIGeneratingView(
-                            ask: viewModel.currentAsk,
-                            chips: attachedSignalChips,
-                            onCancel: { viewModel.cancelGenerate() }
-                        )
+                        // AMA-2373 fix round 1: only the *initial* generate uses the
+                        // staged full-screen generating view. A refine keeps the draft
+                        // + refine dock on screen with an "applying…" indicator.
+                        if viewModel.isApplyingRefine, let refiningWorkout = viewModel.suggestedWorkout {
+                            createWithAIDraftView(refiningWorkout)
+                        } else {
+                            CreateWithAIGeneratingView(
+                                ask: viewModel.currentAsk,
+                                chips: attachedSignalChips,
+                                onCancel: cancelGeneration
+                            )
+                        }
                     } else {
                         loadingView
                     }
@@ -77,22 +94,10 @@ struct SuggestWorkoutView: View {
             }
         }
         .preferredColorScheme(mode == .createWithAI ? .dark : nil)
-        .sheet(isPresented: $showingStartSheet) {
-            if let startSheetWorkout {
-                WorkoutStartSheet(
-                    workout: startSheetWorkout,
-                    garminPaired: GarminCIQPairingStore.shared.hasPairedGarmin,
-                    appleWatchReachable: WatchConnectivityManager.shared.isWatchReachable,
-                    onConfirm: { gym, device in
-                        handleStartConfirm(gym: gym, device: device, workout: startSheetWorkout)
-                    },
-                    onPairGarmin: { showingStartSheet = false },
-                    onClose: { showingStartSheet = false }
-                )
+        .fullScreenCover(isPresented: $showingUnifiedStart, onDismiss: finishAfterStart) {
+            if let unifiedStartWorkout {
+                UnifiedWorkoutDetailView(workout: unifiedStartWorkout, autoStartOnAppear: true)
             }
-        }
-        .fullScreenCover(isPresented: $showingWorkoutPlayer, onDismiss: finishAfterStart) {
-            WorkoutPlayerView()
         }
     }
 
@@ -261,6 +266,39 @@ struct SuggestWorkoutView: View {
                 .accessibilityIdentifier("af_suggest_rest")
             }
         }
+    }
+
+    // MARK: - Create with AI cancel
+
+    /// AMA-2373 fix round 1: cancel from the generating view must not dead-end
+    /// on an indefinite spinner — return to compose so the user can re-ask.
+    private func cancelGeneration() {
+        viewModel.cancelGenerate()
+        onEditAsk()
+    }
+
+    private var createWithAICancelledView: some View {
+        VStack(spacing: Theme.Spacing.lg) {
+            Image(systemName: "xmark.circle")
+                .font(.system(size: 32, weight: .semibold))
+                .foregroundColor(DailyDriver.foregroundMuted)
+            Text("Generation cancelled")
+                .ddDisplayText(17, weight: .bold)
+                .foregroundColor(DailyDriver.foreground)
+            Button(action: onEditAsk) {
+                Text(CreateWithAICopy.editAsk)
+                    .ddDisplayText(14, weight: .bold)
+                    .foregroundColor(DailyDriver.ink)
+                    .padding(.horizontal, 22)
+                    .padding(.vertical, 12)
+                    .background(DailyDriver.lime)
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("create_with_ai_cancelled_edit_ask")
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityIdentifier("create_with_ai_cancelled")
     }
 
     // MARK: - Create with AI draft
@@ -545,6 +583,8 @@ struct SuggestWorkoutView: View {
                     .clipShape(Capsule())
             }
             .buttonStyle(.plain)
+            .disabled(viewModel.isApplyingRefine)
+            .opacity(viewModel.isApplyingRefine ? 0.5 : 1)
             .accessibilityIdentifier("create_with_ai_save")
 
             Button {
@@ -560,6 +600,8 @@ struct SuggestWorkoutView: View {
                     .ddLimeGlow()
             }
             .buttonStyle(.plain)
+            .disabled(viewModel.isApplyingRefine)
+            .opacity(viewModel.isApplyingRefine ? 0.5 : 1)
             .accessibilityIdentifier("create_with_ai_start")
         }
         .padding(.top, 4)
@@ -577,24 +619,8 @@ struct SuggestWorkoutView: View {
 
     private func presentStartSheet(_ workout: Workout) {
         workoutsViewModel.acceptSuggestedWorkout(workout)
-        startSheetWorkout = workout
-        showingStartSheet = true
-    }
-
-    private func handleStartConfirm(gym _: WorkoutStartGym, device: WorkoutStartDevice, workout: Workout) {
-        switch WorkoutStartHandoffResolver.handoff(for: device) {
-        case .phone:
-            showingStartSheet = false
-            WorkoutEngine.shared.start(workout: workout)
-            showingWorkoutPlayer = true
-        case .garmin, .apple:
-            // AMA-2373: the full Garmin/Apple push + enrichment handoff lives in
-            // UnifiedWorkoutDetailView's start flow. The draft is already saved to
-            // the library above, so hand off there for now (Task 12 wires the
-            // shared start → enhance path from Library for these devices).
-            showingStartSheet = false
-            finishAfterStart()
-        }
+        unifiedStartWorkout = workout
+        showingUnifiedStart = true
     }
 
     private func finishAfterStart() {

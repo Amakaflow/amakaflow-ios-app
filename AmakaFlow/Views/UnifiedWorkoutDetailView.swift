@@ -47,6 +47,8 @@ struct UnifiedWorkoutDetailView: View {
     @State private var isSavingImport = false
     @State private var showingDeleteConfirm = false
     @State private var isDeleting = false
+    /// AMA-2373: guards `autoStartOnAppear` so it only fires once per presentation.
+    @State private var hasAutoStarted = false
 
     @Environment(\.scenePhase) private var scenePhase
     private let handoffStore = GarminHandoffStateStore()
@@ -65,6 +67,10 @@ struct UnifiedWorkoutDetailView: View {
     var onClose: (() -> Void)?
     /// AMA-2298: delete saved Library import; return `true` to dismiss.
     var onDelete: (() async -> Bool)?
+    /// AMA-2373: Create with AI's Start CTA hands off here already knowing the
+    /// user wants to start — skip straight to the gym/device sheet instead of
+    /// making them tap Start again on the detail screen.
+    var autoStartOnAppear: Bool = false
 
     init(
         workout: Workout,
@@ -73,7 +79,8 @@ struct UnifiedWorkoutDetailView: View {
         onEditorDismiss: (() async -> Workout?)? = nil,
         importContext: WorkoutDetailImportContext? = nil,
         onClose: (() -> Void)? = nil,
-        onDelete: (() async -> Bool)? = nil
+        onDelete: (() async -> Bool)? = nil,
+        autoStartOnAppear: Bool = false
     ) {
         _displayedWorkout = State(initialValue: workout)
         self.garminPairedOverride = garminPairedOverride
@@ -82,6 +89,7 @@ struct UnifiedWorkoutDetailView: View {
         self.importContext = importContext
         self.onClose = onClose
         self.onDelete = onDelete
+        self.autoStartOnAppear = autoStartOnAppear
     }
 
     private var workout: Workout { displayedWorkout }
@@ -270,7 +278,10 @@ struct UnifiedWorkoutDetailView: View {
         } message: {
             Text(GarminLifecycleCopy.deleteWorkoutMessage(name: workout.name, isWorkout: true))
         }
-        .onAppear(perform: restoreHandoffStatus)
+        .onAppear {
+            restoreHandoffStatus()
+            triggerAutoStartIfNeeded()
+        }
         .onChange(of: scenePhase) { phase in
             handleScenePhaseChange(phase)
         }
@@ -1101,6 +1112,15 @@ extension UnifiedWorkoutDetailView {
               let message = restored.message else { return }
         handoffStatus = GarminLifecycleCopy.handoffRestored(message: message)
         showsHandoffNextSteps = restored.outcome != .failed
+    }
+
+    /// AMA-2373: opens the same gym/device sheet a manual Start tap would,
+    /// so Create with AI's Garmin/Apple Start goes through the real
+    /// enrichment → push handoff instead of a bespoke save-and-close.
+    fileprivate func triggerAutoStartIfNeeded() {
+        guard autoStartOnAppear, !hasAutoStarted, startFlowSheet == nil else { return }
+        hasAutoStarted = true
+        startFlowSheet = .start
     }
 
     fileprivate func handleScenePhaseChange(_ phase: ScenePhase) {

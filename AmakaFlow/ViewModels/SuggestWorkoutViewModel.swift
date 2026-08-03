@@ -389,7 +389,12 @@ class SuggestWorkoutViewModel: ObservableObject {
         let generation = requestedGeneration ?? beginGeneration()
         guard isCurrentGeneration(generation) else { return }
         state = .loading
-        suggestedWorkout = nil
+        // AMA-2373 fix round 1: a refine keeps the current draft on screen
+        // (refine dock shows "applying…") instead of nulling it and forcing
+        // the full-screen generating view — that view is for initial generate only.
+        if !isApplyingRefine {
+            suggestedWorkout = nil
+        }
         ctaError = nil
         didChooseRestToday = false
 
