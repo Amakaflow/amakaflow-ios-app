@@ -50,6 +50,13 @@ struct CreateWithAIDraftView: View {
     @Binding var showingUnifiedStart: Bool
     @Binding var unifiedStartWorkout: Workout?
 
+    private enum PendingCommit {
+        case save
+        case start
+    }
+
+    @State private var pendingCommit: PendingCommit?
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -162,7 +169,7 @@ struct CreateWithAIDraftView: View {
 
     private func metaPill(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 11, weight: .semibold))
+            .font(.system(size: 11, weight: .semibold, design: .monospaced))
             .foregroundColor(DailyDriver.foregroundMuted)
             .padding(.horizontal, 11)
             .padding(.vertical, 6)
@@ -174,8 +181,9 @@ struct CreateWithAIDraftView: View {
     private var mainBandTitle: String {
         let name = workout.name.trimmingCharacters(in: .whitespacesAndNewlines)
         if name.isEmpty { return "Session" }
-        // Prefer a short block label: strip trailing "— 45" style suffixes.
-        if let dash = name.range(of: "—") ?? name.range(of: "-") {
+        // Prefer a short block label: strip trailing "— 45" / " - 45" suffixes.
+        // Require whitespace around ASCII hyphen so "Full-Body" stays intact.
+        if let dash = name.range(of: "—") ?? name.range(of: " - ") {
             let head = name[..<dash.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
             if !head.isEmpty { return head }
         }
@@ -236,7 +244,7 @@ struct CreateWithAIDraftView: View {
                 saveToLibrary()
             } label: {
                 HStack(spacing: 8) {
-                    if viewModel.isPersistingDraft {
+                    if pendingCommit == .save {
                         ProgressView().tint(DailyDriver.foreground).scaleEffect(0.8)
                     }
                     Text(CreateWithAICopy.saveToLibrary)
@@ -260,7 +268,7 @@ struct CreateWithAIDraftView: View {
                 presentStartSheet()
             } label: {
                 HStack(spacing: 8) {
-                    if viewModel.isPersistingDraft {
+                    if pendingCommit == .start {
                         ProgressView().tint(DailyDriver.ink).scaleEffect(0.8)
                     } else {
                         Image(systemName: "play.fill")
@@ -286,6 +294,7 @@ struct CreateWithAIDraftView: View {
 
     private func saveToLibrary() {
         persistError = nil
+        pendingCommit = .save
         Task {
             await persistThenProceed(
                 retry: { saveToLibrary() },
@@ -301,6 +310,7 @@ struct CreateWithAIDraftView: View {
 
     private func presentStartSheet() {
         persistError = nil
+        pendingCommit = .start
         Task {
             await persistThenProceed(
                 retry: { presentStartSheet() },
@@ -319,6 +329,7 @@ struct CreateWithAIDraftView: View {
         retry: @escaping () -> Void,
         onSuccess: (Workout) -> Void
     ) async {
+        defer { pendingCommit = nil }
         switch await viewModel.persistDraftToBackend(workout) {
         case .success(let saved):
             onSuccess(saved)

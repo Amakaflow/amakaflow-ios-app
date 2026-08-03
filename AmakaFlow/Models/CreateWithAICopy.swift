@@ -22,7 +22,7 @@ enum CreateWithAICopy {
     static let refineApplying = "applying…"
     static let rateLimited =
         "You’re refining too quickly. Wait a moment, then try again."
-    static let noWearableNote = "No wearable? We build from history — no big empty card."
+    static let noWearableNote = "No wearable data used — based on your ask and available context."
     static let editAsk = "Edit ask"
     static let saveToLibrary = "Save to Library"
     static let startCTA = "Start"

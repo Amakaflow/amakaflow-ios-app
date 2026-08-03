@@ -122,7 +122,8 @@ struct CreateWithAIRefineDock: View {
     }
 
     private var textField: some View {
-        HStack(spacing: 8) {
+        let submitDisabled = trimmedFreeText.isEmpty || isApplying
+        return HStack(spacing: 8) {
             TextField(CreateWithAICopy.refinePlaceholder, text: $freeText)
                 .font(.system(size: 13))
                 .foregroundColor(DailyDriver.foreground)
@@ -138,13 +139,14 @@ struct CreateWithAIRefineDock: View {
             Button(action: submitFreeText) {
                 Image(systemName: "paperplane.fill")
                     .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(trimmedFreeText.isEmpty ? DailyDriver.foregroundDim : DailyDriver.ink)
+                    .foregroundColor(submitDisabled ? DailyDriver.foregroundDim : DailyDriver.ink)
                     .frame(width: 40, height: 40)
-                    .background(trimmedFreeText.isEmpty ? DailyDriver.card2 : DailyDriver.lime)
+                    .background(submitDisabled ? DailyDriver.card2 : DailyDriver.lime)
                     .clipShape(Circle())
             }
             .buttonStyle(.plain)
-            .disabled(trimmedFreeText.isEmpty || isApplying)
+            .disabled(submitDisabled)
+            .accessibilityLabel("Send refinement")
             .accessibilityIdentifier("create_with_ai_refine_submit")
         }
     }

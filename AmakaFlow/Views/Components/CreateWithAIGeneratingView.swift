@@ -43,6 +43,11 @@ struct CreateWithAIGeneratingView: View {
         return CGFloat(progressStep) / CGFloat(steps.count)
     }
 
+    private var displayStepIndex: Int {
+        guard !steps.isEmpty else { return 0 }
+        return min(stepIndex, steps.count - 1)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -78,13 +83,13 @@ struct CreateWithAIGeneratingView: View {
                         .accessibilityIdentifier("create_with_ai_generating_ask")
                 }
 
-                Text(steps[safe: stepIndex % max(steps.count, 1)] ?? "Generating…")
+                Text(steps[safe: displayStepIndex] ?? "Generating…")
                     .ddDisplayText(20, weight: .bold)
                     .foregroundColor(DailyDriver.foreground)
                     .multilineTextAlignment(.center)
-                    .id(stepIndex)
+                    .id(displayStepIndex)
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
-                    .animation(.easeOut(duration: 0.3), value: stepIndex)
+                    .animation(.easeOut(duration: 0.3), value: displayStepIndex)
                     .padding(.horizontal, 24)
 
                 if !chips.isEmpty {

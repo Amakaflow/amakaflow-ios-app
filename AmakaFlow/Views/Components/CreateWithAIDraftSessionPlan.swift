@@ -41,7 +41,11 @@ struct CreateWithAIDraftSessionPlan: View {
             if !mainRows.isEmpty {
                 bandCard(
                     title: mainTitle,
-                    trailing: "\(mainRows.count) EXERCISES",
+                    trailing: CreateWithAIDraftPresentation.exerciseCountLabel(
+                        warmUp: nil,
+                        blocks: blocks,
+                        cooldown: nil
+                    ),
                     titleColor: DailyDriver.lime,
                     borderColor: DailyDriver.lime.opacity(0.55)
                 ) {
@@ -124,7 +128,7 @@ struct CreateWithAIDraftRow: View {
                     .foregroundColor(DailyDriver.foreground)
                 if let detail {
                     Text(detail)
-                        .font(.system(size: 12, weight: detailIsSwap ? .bold : .regular))
+                        .font(.system(size: 12, weight: detailIsSwap ? .bold : .regular, design: .monospaced))
                         .foregroundColor(detailIsSwap ? DailyDriver.amber : DailyDriver.foregroundMuted)
                 }
             }
