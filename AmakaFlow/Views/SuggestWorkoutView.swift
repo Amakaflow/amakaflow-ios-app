@@ -202,14 +202,16 @@ struct SuggestWorkoutView: View {
             .buttonStyle(AFGhostButtonStyle(size: .lg))
             .accessibilityIdentifier("af_suggest_swap")
 
-            Button {
-                viewModel.restToday()
-                dismiss()
-            } label: {
-                Label("Rest today", systemImage: "moon.zzz")
+            if mode == .dailyCoach {
+                Button {
+                    viewModel.restToday()
+                    dismiss()
+                } label: {
+                    Label("Rest today", systemImage: "moon.zzz")
+                }
+                .buttonStyle(AFGhostButtonStyle(size: .lg))
+                .accessibilityIdentifier("af_suggest_rest")
             }
-            .buttonStyle(AFGhostButtonStyle(size: .lg))
-            .accessibilityIdentifier("af_suggest_rest")
         }
     }
 

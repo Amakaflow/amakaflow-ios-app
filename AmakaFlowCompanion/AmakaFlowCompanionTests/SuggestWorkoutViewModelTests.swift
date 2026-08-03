@@ -392,17 +392,26 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     }
   }
 
-  func testSuggestAnotherReRequestsFreshSuggestionWithVariationNote() async {
+  func testSuggestAnotherReRequestsFreshSuggestionWithoutRefineTweaks() async throws {
     mockAPI.suggestWorkoutResult = .success(.single(kind: .time(seconds: 300, target: "zone 2")))
 
-    await viewModel.suggestWorkout()
+    viewModel.requestSuggestionFromPrompt(
+      notes: "outdoor run",
+      durationMinutes: 30,
+      focusMuscleGroups: nil
+    )
+    try await waitUntil {
+      if case .success = self.viewModel.state { return true }
+      return false
+    }
+    mockAPI.suggestWorkoutResult = .success(.single(kind: .time(seconds: 240, target: "tempo")))
+    await viewModel.applyRefine(tweak: "make it harder")
     await viewModel.suggestAnother()
 
-    XCTAssertEqual(mockAPI.suggestWorkoutCallCount, 2)
-    XCTAssertEqual(
-      mockAPI.lastSuggestWorkoutRequest?.notes,
-      "Suggest a different session than the previous suggestion."
-    )
+    XCTAssertEqual(mockAPI.suggestWorkoutCallCount, 3)
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.notes, "outdoor run")
+    XCTAssertTrue(viewModel.appliedTweaks.isEmpty)
+    XCTAssertTrue(viewModel.undoStack.isEmpty)
     guard case .success = viewModel.state else {
       return XCTFail("Expected success after swap re-request, got \(viewModel.state)")
     }
@@ -424,10 +433,79 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
 
     XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.durationMinutes, 45)
     XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.focusMuscleGroups, ["legs"])
-    XCTAssertEqual(
-      mockAPI.lastSuggestWorkoutRequest?.notes,
-      "outdoor tempo run\n\nSuggest a different session than the previous suggestion."
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.notes, "outdoor tempo run")
+  }
+
+  func testApplyRefineCapsNotesAndPassesIncludeContextThrough() async throws {
+    let ask = String(repeating: "a", count: 900)
+    let includeContext = IncludeContextFlags(
+      gym: true,
+      history: false,
+      memories: true,
+      profile: false,
+      readiness: false
     )
+    mockAPI.suggestWorkoutResult = .success(.named("Original", whyThis: ["Initial reason"]))
+    viewModel.requestSuggestionFromPrompt(
+      notes: ask,
+      durationMinutes: 45,
+      focusMuscleGroups: ["legs"],
+      includeContext: includeContext
+    )
+    try await waitUntil {
+      self.viewModel.suggestedWorkout?.name == "Original"
+    }
+
+    let tweak = String(repeating: "harder ", count: 39) + "harder"
+    mockAPI.suggestWorkoutResult = .success(.named("Refined", whyThis: ["Refined reason"]))
+    await viewModel.applyRefine(tweak: tweak)
+
+    let sentNotes = try XCTUnwrap(mockAPI.lastSuggestWorkoutRequest?.notes)
+    XCTAssertLessThanOrEqual(sentNotes.count, 1_000)
+    XCTAssertTrue(sentNotes.hasPrefix(ask))
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.includeContext, includeContext)
+    XCTAssertEqual(viewModel.appliedTweaks, [tweak])
+    XCTAssertEqual(viewModel.whyThis, ["Refined reason"])
+  }
+
+  func testUndoRefineRestoresPreviousDraft() async throws {
+    let originalResponse = SuggestWorkoutResponse.named("Workout A", whyThis: ["Reason A"])
+    mockAPI.suggestWorkoutResult = .success(originalResponse)
+    viewModel.requestSuggestionFromPrompt(
+      notes: "strength session",
+      durationMinutes: 30,
+      focusMuscleGroups: nil
+    )
+    try await waitUntil {
+      self.viewModel.suggestedWorkout?.name == "Workout A"
+    }
+
+    mockAPI.suggestWorkoutResult = .success(.named("Workout B", whyThis: ["Reason B"]))
+    await viewModel.applyRefine(tweak: "make it shorter")
+    XCTAssertEqual(viewModel.suggestedWorkout?.name, "Workout B")
+    XCTAssertEqual(viewModel.undoStack.count, 1)
+
+    viewModel.undoRefine()
+
+    XCTAssertEqual(viewModel.suggestedWorkout?.name, "Workout A")
+    XCTAssertEqual(viewModel.whyThis, ["Reason A"])
+    XCTAssertTrue(viewModel.appliedTweaks.isEmpty)
+    XCTAssertTrue(viewModel.undoStack.isEmpty)
+    guard case .success(let workout) = viewModel.state else {
+      return XCTFail("Expected restored success state, got \(viewModel.state)")
+    }
+    XCTAssertEqual(workout.name, "Workout A")
+  }
+
+  func testSuggestWorkout429UsesCreateWithAIRateLimitCopy() async {
+    mockAPI.suggestWorkoutResult = .failure(APIError.serverError(429))
+
+    await viewModel.suggestWorkout()
+
+    guard case .error(let error) = viewModel.state else {
+      return XCTFail("Expected error state, got \(viewModel.state)")
+    }
+    XCTAssertEqual(error.userMessage, CreateWithAICopy.rateLimited)
   }
 
   func testRestTodayMarksRestAndClearsSuggestion() {
@@ -1024,6 +1102,20 @@ extension SuggestWorkoutResponse {
       sport: nil,
       durationSeconds: nil,
       description: nil
+    )
+  }
+
+  fileprivate static func named(_ name: String, whyThis: [String]) -> SuggestWorkoutResponse {
+    Components.Schemas.SuggestWorkoutResponse(
+      blocks: [
+        Components.Schemas.SuggestWorkoutInterval(
+          workoutInterval: .time(seconds: 300, target: "steady")
+        )
+      ],
+      durationSeconds: 300,
+      name: name,
+      sport: WorkoutSport.strength.rawValue,
+      whyThis: whyThis
     )
   }
 

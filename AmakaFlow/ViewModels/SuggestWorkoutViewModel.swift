@@ -219,12 +219,25 @@ enum SuggestReadinessLevel: Equatable {
     }
 }
 
+struct DraftSnapshot {
+    let workout: Workout
+    let whyThis: [String]?
+    let response: SuggestWorkoutResponse
+    let ask: String
+    let includeContext: IncludeContextFlags?
+    let appliedTweaks: [String]
+}
+
 // MARK: - ViewModel
 
 @MainActor
 class SuggestWorkoutViewModel: ObservableObject {
     @Published var state: SuggestWorkoutState = .idle
     @Published var suggestedWorkout: Workout?
+    @Published private(set) var whyThis: [String]?
+    @Published private(set) var appliedTweaks: [String] = []
+    @Published private(set) var undoStack: [DraftSnapshot] = []
+    @Published private(set) var isApplyingRefine = false
     @Published var readinessLevel: SuggestReadinessLevel = .unknown
     @Published var readinessMessage: String?
     @Published var ctaError: CTAError?
@@ -236,6 +249,9 @@ class SuggestWorkoutViewModel: ObservableObject {
     private var lastPromptDurationMinutes: Int?
     private var lastPromptFocus: [String]?
     private var lastPromptIncludeContext: IncludeContextFlags?
+    private var lastPromptAsk: String?
+    private var latestResponse: SuggestWorkoutResponse?
+    private var generationTask: Task<Void, Never>?
 
     init(dependencies: AppDependencies = .current) {
         self.dependencies = dependencies
@@ -262,15 +278,18 @@ class SuggestWorkoutViewModel: ObservableObject {
 
     /// Check profile and request a suggestion
     func requestSuggestion() {
+        generationTask?.cancel()
         lastPromptNotes = nil
         lastPromptDurationMinutes = nil
         lastPromptFocus = nil
         lastPromptIncludeContext = nil
+        lastPromptAsk = nil
+        clearDraftHistory()
         state = .loading
         suggestedWorkout = nil
         ctaError = nil
 
-        Task {
+        generationTask = Task {
             await requestSuggestionAfterProfileCheck(
                 durationMinutes: nil,
                 focusMuscleGroups: nil,
@@ -286,15 +305,18 @@ class SuggestWorkoutViewModel: ObservableObject {
         focusMuscleGroups: [String]?,
         includeContext: IncludeContextFlags? = nil
     ) {
+        generationTask?.cancel()
         lastPromptNotes = notes
         lastPromptDurationMinutes = durationMinutes
         lastPromptFocus = focusMuscleGroups
         lastPromptIncludeContext = includeContext
+        lastPromptAsk = notes
+        clearDraftHistory()
         state = .loading
         suggestedWorkout = nil
         ctaError = nil
 
-        Task {
+        generationTask = Task {
             await requestSuggestionAfterProfileCheck(
                 durationMinutes: durationMinutes,
                 focusMuscleGroups: focusMuscleGroups,
@@ -322,6 +344,7 @@ class SuggestWorkoutViewModel: ObservableObject {
                 notes: notes
             )
         } catch {
+            guard !CTAError.isCancellation(error) else { return }
             let mapped = CTAError.map(error)
             suggestedWorkout = nil
             ctaError = mapped
@@ -333,7 +356,8 @@ class SuggestWorkoutViewModel: ObservableObject {
     func completeOnboarding(experience: ExperienceLevel, goal: TrainingGoal, daysPerWeek: Int) {
         let profile = CoachingProfile(experience: experience, goal: goal, daysPerWeek: daysPerWeek)
         saveProfile(profile)
-        Task {
+        generationTask?.cancel()
+        generationTask = Task {
             await suggestWorkout(
                 durationMinutes: lastPromptDurationMinutes,
                 focusMuscleGroups: lastPromptFocus,
@@ -356,6 +380,7 @@ class SuggestWorkoutViewModel: ObservableObject {
         didChooseRestToday = false
 
         await fetchReadinessLevel()
+        guard !Task.isCancelled else { return }
 
         let body = SuggestWorkoutRequest(
             durationMinutes: durationMinutes,
@@ -374,15 +399,18 @@ class SuggestWorkoutViewModel: ObservableObject {
             }
 
             let workout = buildWorkout(from: decoded)
+            latestResponse = decoded
+            whyThis = decoded.whyThis
             suggestedWorkout = workout
             state = .success(workout)
         } catch {
+            guard !CTAError.isCancellation(error) else { return }
             // AMA-1803 P1: route through CTAError.map so the user UI
             // sees a typed failure (error_code, retryability, request_id)
             // instead of a stringly-typed `localizedDescription`. When
             // the upstream throws an AnnotatedAPIError (AMA-1808), its
             // requestId propagates here for Report-button correlation.
-            let mapped = CTAError.map(error)
+            let mapped = Self.mapSuggestError(error)
             suggestedWorkout = nil
             ctaError = mapped
             state = .error(mapped)
@@ -446,14 +474,76 @@ class SuggestWorkoutViewModel: ObservableObject {
     // MARK: - Actions
 
     func suggestAnother() async {
-        let variationNote = "Suggest a different session than the previous suggestion."
-        let notes = lastPromptNotes.map { "\($0)\n\n\(variationNote)" } ?? variationNote
+        appliedTweaks = []
+        undoStack = []
+        let notes = lastPromptAsk.map {
+            CreateWithAIPromptBuilder.composeNotes(ask: $0)
+        }
+        lastPromptNotes = notes
         await suggestWorkout(
             durationMinutes: lastPromptDurationMinutes,
             focusMuscleGroups: lastPromptFocus,
             includeContext: lastPromptIncludeContext,
             notes: notes
         )
+    }
+
+    func applyRefine(tweak: String) async {
+        guard
+            let workout = suggestedWorkout,
+            let response = latestResponse,
+            let ask = lastPromptAsk
+        else { return }
+
+        let trimmedTweak = tweak.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTweak.isEmpty else { return }
+
+        undoStack.append(
+            DraftSnapshot(
+                workout: workout,
+                whyThis: whyThis,
+                response: response,
+                ask: ask,
+                includeContext: lastPromptIncludeContext,
+                appliedTweaks: appliedTweaks
+            )
+        )
+        appliedTweaks.append(trimmedTweak)
+        let notes = CreateWithAIPromptBuilder.composeNotes(ask: ask, tweaks: appliedTweaks)
+        lastPromptNotes = notes
+        isApplyingRefine = true
+        defer { isApplyingRefine = false }
+
+        await suggestWorkout(
+            durationMinutes: lastPromptDurationMinutes,
+            focusMuscleGroups: lastPromptFocus,
+            includeContext: lastPromptIncludeContext,
+            notes: notes
+        )
+    }
+
+    func undoRefine() {
+        guard let snapshot = undoStack.popLast() else { return }
+        suggestedWorkout = snapshot.workout
+        whyThis = snapshot.whyThis
+        latestResponse = snapshot.response
+        lastPromptAsk = snapshot.ask
+        lastPromptIncludeContext = snapshot.includeContext
+        appliedTweaks = snapshot.appliedTweaks
+        lastPromptNotes = CreateWithAIPromptBuilder.composeNotes(
+            ask: snapshot.ask,
+            tweaks: snapshot.appliedTweaks
+        )
+        ctaError = nil
+        state = .success(snapshot.workout)
+    }
+
+    func cancelGenerate() {
+        generationTask?.cancel()
+        generationTask = nil
+        isApplyingRefine = false
+        ctaError = nil
+        state = .idle
     }
 
     func restToday() {
@@ -488,6 +578,8 @@ class SuggestWorkoutViewModel: ObservableObject {
     }
 
     func reset() {
+        generationTask?.cancel()
+        generationTask = nil
         state = .idle
         suggestedWorkout = nil
         ctaError = nil
@@ -495,5 +587,23 @@ class SuggestWorkoutViewModel: ObservableObject {
         lastPromptDurationMinutes = nil
         lastPromptFocus = nil
         lastPromptIncludeContext = nil
+        lastPromptAsk = nil
+        clearDraftHistory()
+    }
+
+    private func clearDraftHistory() {
+        whyThis = nil
+        latestResponse = nil
+        appliedTweaks = []
+        undoStack = []
+        isApplyingRefine = false
+    }
+
+    private static func mapSuggestError(_ error: Error) -> CTAError {
+        let mapped = CTAError.map(error)
+        guard case .http(let status, _, let requestId) = mapped, status == 429 else {
+            return mapped
+        }
+        return .unknown(description: CreateWithAICopy.rateLimited, requestId: requestId)
     }
 }
