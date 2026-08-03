@@ -299,7 +299,7 @@ struct DevicesView: View {
     @available(iOS 18.0, *)
     private var scheduledWorkoutPlansRow: some View {
         NavigationLink {
-            WorkoutScheduleView()
+            AppleWatchScheduledListView()
         } label: {
             AFCard {
                 HStack(alignment: .center, spacing: Theme.Spacing.md) {

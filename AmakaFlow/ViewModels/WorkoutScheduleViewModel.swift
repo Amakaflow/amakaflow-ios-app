@@ -175,4 +175,21 @@ final class WorkoutScheduleViewModel: ObservableObject {
             statusMessage = "Some plans could not be removed — pull to refresh."
         }
     }
+
+    /// AMA-2375 Move v1 — remove+re-add at a new date via the scheduler seam.
+    func move(row: WorkoutScheduleRow, to date: Date) async {
+        guard !isMutating else { return }
+        isMutating = true
+        defer { isMutating = false }
+        do {
+            try await scheduler.reschedule(row: row, to: date)
+            _ = await performRefresh(mode: .manual)
+            statusMessage = "Moved \(row.title)."
+            isEditing = true
+        } catch {
+            statusMessage = error.localizedDescription
+        }
+    }
+
+    var maxAllowedCount: Int { scheduler.maxAllowedCount }
 }

@@ -1,0 +1,22 @@
+appId: com.amakaflow.companion
+---
+# AMA-2375 — Library door → overview → Apple edit → remove-all cancel
+- launchApp
+- assertVisible: "Library"
+# Door may be hidden when unpaired; Maestro UITest launch args can force pairing later.
+- tapOn:
+    id: "af_library_watch_door"
+- assertVisible:
+    id: "af_on_your_watches_header"
+- tapOn:
+    id: "af_on_your_watches_apple"
+- assertVisible:
+    id: "af_apple_scheduled_summary"
+- tapOn:
+    id: "af_apple_scheduled_edit"
+- tapOn:
+    id: "af_apple_scheduled_remove_all"
+- tapOn:
+    id: "af_apple_scheduled_remove_all_cancel"
+- assertVisible:
+    id: "af_apple_scheduled_edit"

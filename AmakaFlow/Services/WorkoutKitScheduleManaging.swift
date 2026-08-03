@@ -68,6 +68,8 @@ protocol WorkoutKitScheduleManaging: Sendable {
     func fetchScheduledRows() async throws -> [WorkoutScheduleRow]
     func remove(row: WorkoutScheduleRow) async
     func removeAll() async
+    /// AMA-2375 Move v1: remove at the old slot and schedule the cached plan at `date`.
+    func reschedule(row: WorkoutScheduleRow, to date: Date) async throws
 }
 
 #if DEBUG
@@ -116,6 +118,22 @@ final class MockWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
         guard !removeAllIsNoOp else { return }
         rows = []
     }
+
+    func reschedule(row: WorkoutScheduleRow, to date: Date) async throws {
+        guard let index = rows.firstIndex(where: { $0.id == row.id }) else { return }
+        let components = Calendar.current.dateComponents(
+            [.year, .month, .day, .hour, .minute, .second],
+            from: date
+        )
+        let updated = WorkoutScheduleRow(
+            id: WorkoutScheduleRowID(planID: row.id.planID, date: components),
+            title: row.title,
+            dateComponents: components,
+            scheduledAt: date,
+            isComplete: row.isComplete
+        )
+        rows[index] = updated
+    }
 }
 #else
 /// Unreachable in shipping builds — schedule UI entry points are iOS 18+ only.
@@ -126,6 +144,7 @@ struct UnavailableWorkoutKitScheduler: WorkoutKitScheduleManaging {
     func fetchScheduledRows() async throws -> [WorkoutScheduleRow] { [] }
     func remove(row: WorkoutScheduleRow) async {}
     func removeAll() async {}
+    func reschedule(row: WorkoutScheduleRow, to date: Date) async throws {}
 }
 #endif
 
@@ -191,6 +210,18 @@ final class LiveWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
     func removeAll() async {
         await WorkoutScheduler.shared.removeAllWorkouts()
         planCache = [:]
+    }
+
+    func reschedule(row: WorkoutScheduleRow, to date: Date) async throws {
+        guard let plan = planCache[row.id] else { return }
+        let components = calendar.dateComponents(
+            [.year, .month, .day, .hour, .minute],
+            from: date
+        )
+        await WorkoutScheduler.shared.remove(plan, at: row.dateComponents)
+        try await WorkoutScheduler.shared.schedule(plan, at: components)
+        // Refresh cache key for the new slot.
+        _ = try await fetchScheduledRows()
     }
 
     private static func mapAuthorizationState(

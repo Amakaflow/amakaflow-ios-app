@@ -93,6 +93,11 @@ class UITestEnvironment {
         Self.isTruthy("UITEST_SKIP_APPLE_WATCH") || Self.isTruthy("UITEST_FAKE_WATCH")
     }
 
+    /// AMA-2375: force Library door + watch manager screens with fixture data (simulator dogfood).
+    var forceWatchManagerDemo: Bool {
+        Self.isTruthy("UITEST_FORCE_WATCH_MANAGER") || Self.isTruthy("AMA2375_DEMO")
+    }
+
     /// Clerk-backed UI tests should sign in as a real Clerk test user instead of using header bypasses.
     var hasClerkTestUser: Bool {
         guard Self.value(for: "UITEST_CLERK_EMAIL")?.isEmpty == false,
