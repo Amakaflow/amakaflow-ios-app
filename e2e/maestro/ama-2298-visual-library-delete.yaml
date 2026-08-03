@@ -84,7 +84,7 @@ appId: com.myamaka.AmakaFlowCompanion
       id: "af_workout_detail_screen"
     timeout: 15000
 - tapOn:
-    id: "af_workout_detail_delete"
+    id: "af_workout_detail_delete_icon"
 - waitForAnimationToEnd:
     timeout: 2000
 - extendedWaitUntil:

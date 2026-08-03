@@ -41,6 +41,25 @@ extension GarminStartHandoffResult.Kind {
     }
 }
 
+extension GarminHandoffRecord.Outcome {
+    /// AMA-2371 — only `.sent` / `.readyOnWatch` are a *terminal* Garmin
+    /// success. `.queued` still has downloading left to do, so the detail
+    /// screen's lime "Sent to Garmin" card must not show for it — same as a
+    /// `.failed` push gets plain status text, not the card.
+    var isTerminalGarminSentCardSuccess: Bool {
+        switch self {
+        case .sent, .readyOnWatch: return true
+        case .queued, .failed: return false
+        }
+    }
+
+    /// Restore path for `UnifiedWorkoutDetailView.restoreHandoffStatus` —
+    /// non-terminal / missing outcomes keep `sentCardTarget` nil.
+    static func showsSentCardOnRestore(_ outcome: GarminHandoffRecord.Outcome?) -> Bool {
+        outcome?.isTerminalGarminSentCardSuccess == true
+    }
+}
+
 /// UserDefaults-backed store for the most recent Garmin handoff.
 ///
 /// Only one handoff is tracked at a time — Start → Garmin is a single-shot

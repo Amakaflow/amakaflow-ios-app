@@ -178,6 +178,56 @@ final class GarminStartHandoffRecordingTests: XCTestCase {
     }
 }
 
+/// AMA-2371 — the detail screen's compact lime "Sent to Garmin" card must only
+/// appear once the handoff is *terminal*: `.queued` still has the download
+/// ahead of it, so it must read the same as a failure (plain status text).
+final class GarminSentCardGateTests: XCTestCase {
+    func testQueuedIsNotATerminalSentCardSuccess() {
+        XCTAssertFalse(
+            GarminHandoffRecord.Outcome.queued.isTerminalGarminSentCardSuccess,
+            "A queued push has not reached the watch yet — no card, no reassurance body"
+        )
+    }
+
+    func testFailedIsNotATerminalSentCardSuccess() {
+        XCTAssertFalse(GarminHandoffRecord.Outcome.failed.isTerminalGarminSentCardSuccess)
+    }
+
+    func testSentIsATerminalSentCardSuccess() {
+        XCTAssertTrue(GarminHandoffRecord.Outcome.sent.isTerminalGarminSentCardSuccess)
+    }
+
+    func testReadyOnWatchIsATerminalSentCardSuccess() {
+        XCTAssertTrue(GarminHandoffRecord.Outcome.readyOnWatch.isTerminalGarminSentCardSuccess)
+    }
+
+    func testGarminStartHandoffResultKindMapsThroughTelemetryOutcomeConsistently() {
+        XCTAssertFalse(GarminStartHandoffResult.Kind.queued.telemetryOutcome.isTerminalGarminSentCardSuccess)
+        XCTAssertFalse(GarminStartHandoffResult.Kind.failed.telemetryOutcome.isTerminalGarminSentCardSuccess)
+        XCTAssertTrue(GarminStartHandoffResult.Kind.sent.telemetryOutcome.isTerminalGarminSentCardSuccess)
+        XCTAssertTrue(GarminStartHandoffResult.Kind.readyOnWatch.telemetryOutcome.isTerminalGarminSentCardSuccess)
+    }
+
+    /// Mirrors `restoreHandoffStatus`: restored `.queued` / `.failed` must not
+    /// light the lime sent card (nothing has reached the watch yet).
+    func testRestoredQueuedOutcomeDoesNotShowSentCard() {
+        XCTAssertFalse(GarminHandoffRecord.Outcome.showsSentCardOnRestore(.queued))
+    }
+
+    func testRestoredFailedOutcomeDoesNotShowSentCard() {
+        XCTAssertFalse(GarminHandoffRecord.Outcome.showsSentCardOnRestore(.failed))
+    }
+
+    func testRestoredNilOutcomeDoesNotShowSentCard() {
+        XCTAssertFalse(GarminHandoffRecord.Outcome.showsSentCardOnRestore(nil))
+    }
+
+    func testRestoredSentOutcomeShowsSentCard() {
+        XCTAssertTrue(GarminHandoffRecord.Outcome.showsSentCardOnRestore(.sent))
+        XCTAssertTrue(GarminHandoffRecord.Outcome.showsSentCardOnRestore(.readyOnWatch))
+    }
+}
+
 final class GarminPairFollowUpTests: XCTestCase {
     func testPrefsSheetFollowsAFirstSuccessfulPair() {
         XCTAssertTrue(

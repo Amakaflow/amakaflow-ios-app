@@ -1,7 +1,7 @@
 # AMA-2286 / AMA-2310: Start → Garmin shows real push status (not stub).
 # Device row confirms immediately (no separate confirm control).
 # Forced fail: relaunch with UITEST_GARMIN_PUSH_FAIL=not_paired.
-appId: com.amakaflow.companion
+appId: com.myamaka.AmakaFlowCompanion
 ---
 - launchApp:
     clearState: true

@@ -20,13 +20,13 @@ struct SuggestWorkoutView: View {
 
                 switch viewModel.state {
                 case .idle:
-                    loadingView
+                    SuggestWorkoutGeneratingView(viewModel: viewModel) { dismiss() }
 
                 case .needsOnboarding:
                     CoachingProfileOnboardingView(viewModel: viewModel)
 
                 case .loading:
-                    loadingView
+                    SuggestWorkoutGeneratingView(viewModel: viewModel) { dismiss() }
 
                 case .success(let workout):
                     contentView(workout)
@@ -53,27 +53,6 @@ struct SuggestWorkoutView: View {
                 }
             }
         }
-    }
-
-    // MARK: - Loading
-
-    private var loadingView: some View {
-        VStack(spacing: Theme.Spacing.lg) {
-            ProgressView()
-                .scaleEffect(1.4)
-                .tint(Theme.Colors.textPrimary)
-
-            VStack(spacing: Theme.Spacing.sm) {
-                Text("Generating your workout")
-                    .afH2()
-                Text("The coach is using today’s available signals. No fallback workout will be shown if generation fails.")
-                    .afMuted()
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, Theme.Spacing.xl)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityIdentifier("suggest_workout_loading")
     }
 
     // MARK: - Content
@@ -320,7 +299,9 @@ struct SuggestWorkoutView: View {
 
 // MARK: - Display helpers
 
-private extension SuggestReadinessLevel {
+// Internal (not `private`) — `SuggestWorkoutGeneratingView.swift` also reads
+// `.badgeText` for the readiness signal chip.
+extension SuggestReadinessLevel {
     var title: String {
         switch self {
         case .green: return "Ready to train"

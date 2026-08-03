@@ -59,6 +59,20 @@ final class GarminLifecycleCopyTests: XCTestCase {
         XCTAssertTrue(restored.contains("Sent to Garmin"))
     }
 
+    // MARK: - Detail sent-state card
+
+    func testSentCardTitle() {
+        XCTAssertEqual(GarminLifecycleCopy.sentCardTitle, "Sent to Garmin")
+    }
+
+    func testSentCardBodyMentionsWidget() {
+        XCTAssertTrue(GarminLifecycleCopy.sentCardBody.contains("AmakaFlow widget"))
+    }
+
+    func testScheduledOnAppleWatchCardTitle() {
+        XCTAssertEqual(GarminLifecycleCopy.scheduledOnAppleWatchCardTitle, "Scheduled on Apple Watch")
+    }
+
     // MARK: - Pairing lifecycle
 
     func testPairCodeCopySaysOneTimeAndPersistent() {

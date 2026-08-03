@@ -132,6 +132,6 @@ final class MapperBlockCircuitTypeTests: XCTestCase {
             detail: "Jump Rope · until Lap",
             tombstonedExerciseIds: []
         )
-        XCTAssertEqual(offer.title, "Add mobility prep")
+        XCTAssertEqual(offer.title, "Mobility prep")
     }
 }

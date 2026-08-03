@@ -24,9 +24,10 @@ struct CreateWorkoutSheet: View {
             VStack(spacing: 10) {
                 DDDoorRow(
                     icon: "sparkles",
-                    iconBackground: DailyDriver.blue,
+                    iconBackground: DailyDriver.lime,
+                    iconForeground: DailyDriver.ink,
                     title: "Create with AI",
-                    subtitle: "Describe a workout"
+                    subtitle: "Describe it — the coach drafts it"
                 ) {
                     dismissThen { onSelect(.createWithAI) }
                 }
@@ -54,16 +55,6 @@ struct CreateWorkoutSheet: View {
                 .accessibilityIdentifier("create_door_screenshot")
 
                 DDDoorRow(
-                    icon: "mic.fill",
-                    iconBackground: DailyDriver.blue,
-                    title: "Speak or describe it",
-                    subtitle: "Coming soon — use URL or scratch for now"
-                ) {
-                    dismissThen { onSelect(.speak) }
-                }
-                .accessibilityIdentifier("create_door_speak")
-
-                DDDoorRow(
                     icon: "square.and.pencil",
                     iconBackground: DailyDriver.card2,
                     title: "Build from scratch",
@@ -72,9 +63,26 @@ struct CreateWorkoutSheet: View {
                     dismissThen { onSelect(.manual) }
                 }
                 .accessibilityIdentifier("create_door_manual")
+
+                speakComingSoonFooter
             }
         }
         .accessibilityIdentifier("create_workout_sheet")
+    }
+
+    private var speakComingSoonFooter: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "mic.fill")
+                .font(.system(size: 14, weight: .semibold))
+            Text("Speak it — coming soon")
+                .font(Theme.Typography.caption)
+        }
+        .foregroundColor(DailyDriver.foregroundMuted)
+        .opacity(0.5)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Speak it, coming soon")
     }
 
     private func dismissThen(_ action: @escaping () -> Void) {

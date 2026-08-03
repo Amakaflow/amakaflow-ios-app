@@ -5,6 +5,7 @@
 //  AMA-2336 — the offer shown before a Garmin push when a workout is missing
 //  something the user has asked for (spec §5).
 //  AMA-2362 — Apple Start uses Open-rest copy + open default (not Garmin Lap).
+//  AMA-2371 — Peloton-style toggle rows + live "Add N & send" (redesign 2026-08-02).
 //
 
 import SwiftUI
@@ -35,7 +36,7 @@ struct WorkoutEnrichmentPushSheet: View {
         self.onSkip = onSkip
         self.onClose = onClose
         _checkedKinds = State(initialValue: plan.defaultCheckedKinds)
-        _restSec = State(initialValue: prefs.betweenSetRest.restSec ?? 60)
+        _restSec = State(initialValue: WorkoutEnrichmentPushCopy.normalizedRestSec(prefs.betweenSetRest.restSec))
         _restOpen = State(
             initialValue: WorkoutEnrichmentPushCopy.initialRestOpen(
                 standing: prefs.betweenSetRest,
@@ -52,7 +53,7 @@ struct WorkoutEnrichmentPushSheet: View {
                 .padding(.top, 8)
 
             HStack(alignment: .top) {
-                Text("Add before sending?")
+                Text(WorkoutEnrichmentPushCopy.sheetTitle)
                     .ddDisplayText(17, weight: .bold)
                     .foregroundColor(DailyDriver.foreground)
                 Spacer(minLength: 0)
@@ -71,7 +72,7 @@ struct WorkoutEnrichmentPushSheet: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("This workout is missing a few things you usually want.")
+                    Text(WorkoutEnrichmentPushCopy.introText(target: target))
                         .font(.system(size: 11.5))
                         .foregroundColor(DailyDriver.foregroundMuted)
 
@@ -87,13 +88,13 @@ struct WorkoutEnrichmentPushSheet: View {
                     Button {
                         onConfirm(decision)
                     } label: {
-                        Text(checkedKinds.isEmpty ? "Send as it is" : "Add and send")
+                        Text(WorkoutEnrichmentPushCopy.primaryCTA(checkedCount: checkedKinds.count))
                     }
                     .buttonStyle(AFPrimaryButtonStyle(size: .lg))
                     .accessibilityIdentifier("af_enrichment_push_confirm")
 
                     Button(action: onSkip) {
-                        Text("Skip — send as it is")
+                        Text(WorkoutEnrichmentPushCopy.sendAsIsCTA)
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(DailyDriver.foregroundDim)
                             .frame(maxWidth: .infinity)
@@ -122,37 +123,27 @@ struct WorkoutEnrichmentPushSheet: View {
     private func offerRow(_ offer: WorkoutEnrichmentPushPlanner.Offer) -> some View {
         let isChecked = checkedKinds.contains(offer.kind)
         return VStack(alignment: .leading, spacing: 8) {
-            Button {
-                toggle(offer.kind)
-            } label: {
-                HStack(alignment: .top, spacing: 11) {
-                    Image(systemName: isChecked ? "checkmark.square.fill" : "square")
-                        .font(.system(size: 17))
-                        .foregroundColor(isChecked ? DailyDriver.lime : DailyDriver.foregroundMuted)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(offer.title)
-                            .ddDisplayText(14, weight: .bold)
-                            .foregroundColor(DailyDriver.foreground)
-                        Text(detail(for: offer))
-                            .font(.system(size: 10.5))
-                            .foregroundColor(DailyDriver.foregroundMuted)
-                            .monospacedDigit()
+            Toggle(isOn: checkedBinding(for: offer.kind)) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(offer.title)
+                        .ddDisplayText(14, weight: .bold)
+                        .foregroundColor(DailyDriver.foreground)
+                    Text(detail(for: offer))
+                        .font(.system(size: 10.5))
+                        .foregroundColor(DailyDriver.foregroundMuted)
+                        .monospacedDigit()
+                        .multilineTextAlignment(.leading)
+                    // Default-unchecked + tombstoned = true re-opt-in. Partial
+                    // warm-up-sets offers stay checked and must not warn.
+                    if offer.wasTombstoned, !offer.isChecked {
+                        Text("You removed this before — tick to add it back.")
+                            .font(.system(size: 10))
+                            .foregroundColor(DailyDriver.amber)
                             .multilineTextAlignment(.leading)
-                        // Default-unchecked + tombstoned = true re-opt-in. Partial
-                        // warm-up-sets offers stay checked and must not warn.
-                        if offer.wasTombstoned, !offer.isChecked {
-                            Text("You removed this before — tick to add it back.")
-                                .font(.system(size: 10))
-                                .foregroundColor(DailyDriver.amber)
-                                .multilineTextAlignment(.leading)
-                        }
                     }
-
-                    Spacer(minLength: 0)
                 }
             }
-            .buttonStyle(.plain)
+            .tint(DailyDriver.lime)
             .accessibilityIdentifier("af_enrichment_push_offer_\(offer.kind.rawValue)")
             .accessibilityAddTraits(isChecked ? [.isSelected] : [])
 
@@ -165,27 +156,26 @@ struct WorkoutEnrichmentPushSheet: View {
         .background(DailyDriver.card)
         .overlay(
             RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous)
-                .stroke(isChecked ? DailyDriver.lime.opacity(0.6) : DailyDriver.border, lineWidth: 1)
+                .stroke(DailyDriver.border, lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous))
     }
 
     private var restOverride: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Toggle(
-                WorkoutEnrichmentPushCopy.restOpenToggleTitle(target: target),
-                isOn: restOpenBinding
-            )
-                .tint(DailyDriver.lime)
-                .font(.system(size: 11))
-                .foregroundColor(DailyDriver.foregroundMuted)
-                .accessibilityIdentifier("af_enrichment_push_rest_open")
+        VStack(alignment: .leading, spacing: 8) {
+            Picker("", selection: restOpenBinding) {
+                Text(WorkoutEnrichmentPushCopy.restOpenSegmentLabel(target: target)).tag(true)
+                Text(WorkoutEnrichmentPushCopy.restTimedSegmentLabel).tag(false)
+            }
+            .pickerStyle(.segmented)
+            .tint(DailyDriver.lime)
+            .accessibilityIdentifier("af_enrichment_push_rest_open")
 
             if !restOpen {
                 Stepper(
-                    "Timed · \(restSec)s",
+                    "\(restSec)s",
                     value: restSecBinding,
-                    in: 15...600,
+                    in: WorkoutEnrichmentPushCopy.restSecRange,
                     step: 15
                 )
                 .font(.system(size: 11))
@@ -207,7 +197,10 @@ struct WorkoutEnrichmentPushSheet: View {
     private var restSecBinding: Binding<Int> {
         Binding(
             get: { restSec },
-            set: { restSec = $0 }
+            // Defensive: Stepper keeps its own increments in-range, but clamp
+            // here too so nothing else can push `restSec` out of the
+            // supported grid before it reaches `decision`.
+            set: { restSec = WorkoutEnrichmentPushCopy.normalizedRestSec($0) }
         )
     }
 
@@ -223,12 +216,17 @@ struct WorkoutEnrichmentPushSheet: View {
         )
     }
 
-    private func toggle(_ kind: EnrichmentKind) {
-        if checkedKinds.contains(kind) {
-            checkedKinds.remove(kind)
-        } else {
-            checkedKinds.insert(kind)
-        }
+    private func checkedBinding(for kind: EnrichmentKind) -> Binding<Bool> {
+        Binding(
+            get: { checkedKinds.contains(kind) },
+            set: { isOn in
+                if isOn {
+                    checkedKinds.insert(kind)
+                } else {
+                    checkedKinds.remove(kind)
+                }
+            }
+        )
     }
 }
 

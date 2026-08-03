@@ -53,6 +53,33 @@ final class WorkoutStartSelectionTests: XCTestCase {
         XCTAssertFalse(WorkoutStartDevice.apple.subtitle.localizedCaseInsensitiveContains("Fitness"))
     }
 
+    // MARK: - AMA-2371: honest device delivery lines
+
+    func testAppleSubtitleReviewsSteps() {
+        XCTAssertEqual(
+            WorkoutStartDevice.apple.subtitle,
+            "Native Workout app · you'll review the steps first"
+        )
+    }
+
+    func testGarminPairedSubtitleWidget() {
+        XCTAssertEqual(
+            WorkoutStartDevice.garmin.pairedSubtitle,
+            "Downloads via the AmakaFlow widget · lap to advance"
+        )
+    }
+
+    func testAppleAvailabilityLabelIsScheduleTag() {
+        XCTAssertEqual(
+            WorkoutStartDefaults.appleAvailabilityLabel(watchReachable: true),
+            "SCHEDULE"
+        )
+    }
+
+    func testGarminPairedTagIsFitPush() {
+        XCTAssertEqual(WorkoutStartDefaults.garminPairedTag, "FIT PUSH")
+    }
+
     func testAppleAvailabilityLabelDoesNotDependOnReachability() {
         XCTAssertEqual(
             WorkoutStartDefaults.appleAvailabilityLabel(watchReachable: true),
