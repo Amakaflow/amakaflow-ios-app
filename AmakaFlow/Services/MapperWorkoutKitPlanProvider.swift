@@ -16,7 +16,7 @@ struct MapperWorkoutKitPlanProvider: WorkoutKitPlanProviding {
     let api: any APIServiceProviding
     let deliveryPrefs: [String: Any]?
 
-    init(api: any APIServiceProviding = APIService.shared, deliveryPrefs: [String: Any]? = nil) {
+    init(api: any APIServiceProviding = AppDependencies.current.apiService, deliveryPrefs: [String: Any]? = nil) {
         self.api = api
         self.deliveryPrefs = deliveryPrefs
     }

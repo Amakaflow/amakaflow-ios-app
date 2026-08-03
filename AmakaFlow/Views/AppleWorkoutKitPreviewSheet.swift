@@ -5,6 +5,8 @@
 //  AMA-2351 / AMA-2360 — preview mapper composition + step list before schedule.
 //  AMA-2371 — Runna-style banded step cards on DailyDriver chrome; rest is a
 //  chip, not a monospace dump line, and mapper jargon is demoted off this sheet.
+//  AMA-2374 — exercise-named band headers + rest chips on the right of each row
+//  (parity with `SDWatchSteps` / AMA-2369 redesign).
 //
 
 import SwiftUI
@@ -25,7 +27,8 @@ struct AppleWorkoutKitPreviewSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            backRow
+            sheetTitle
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     header
@@ -44,6 +47,16 @@ struct AppleWorkoutKitPreviewSheet: View {
                     }
                     .buttonStyle(AFPrimaryButtonStyle(size: .lg))
                     .accessibilityIdentifier("af_apple_wk_preview_confirm")
+
+                    Button(action: onCancel) {
+                        Text("Back")
+                            .ddDisplayText(12.5, weight: .bold)
+                            .foregroundColor(DailyDriver.foregroundMuted)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 4)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("af_apple_wk_preview_back")
                 }
                 .padding(.horizontal, 18)
                 .padding(.top, 8)
@@ -55,48 +68,42 @@ struct AppleWorkoutKitPreviewSheet: View {
         .accessibilityIdentifier("af_apple_wk_preview_sheet")
     }
 
-    private var backRow: some View {
+    private var sheetTitle: some View {
         HStack {
+            Text("To your Apple Watch")
+                .ddDisplayText(17, weight: .bold)
+                .foregroundColor(DailyDriver.foreground)
+                .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: 0)
             Button(action: onCancel) {
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text("Back")
-                        .font(.system(size: 13, weight: .semibold))
-                }
-                .foregroundColor(DailyDriver.foregroundMuted)
-                .frame(minWidth: 44, minHeight: 44, alignment: .leading)
+                Image(systemName: "xmark")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                    .frame(width: 32, height: 32)
             }
             .buttonStyle(.plain)
-            .accessibilityIdentifier("af_apple_wk_preview_back")
-            Spacer(minLength: 0)
+            .accessibilityLabel("Close preview")
         }
-        .padding(.horizontal, 10)
-        .padding(.top, 4)
+        .padding(.horizontal, 18)
+        .padding(.top, 14)
+        .padding(.bottom, 4)
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 12) {
-                DDIconChip(systemName: "applewatch", background: DailyDriver.lime, foreground: DailyDriver.ink, size: 40)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("To your Apple Watch")
-                        .ddDisplayText(19, weight: .bold)
-                        .foregroundColor(DailyDriver.foreground)
-                        .accessibilityAddTraits(.isHeader)
-                    Text(workoutName)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(DailyDriver.foregroundMuted)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 0)
+        HStack(spacing: 11) {
+            DDIconChip(systemName: "applewatch", background: DailyDriver.card2, foreground: DailyDriver.foreground, size: 40)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(workoutName)
+                    .ddDisplayText(15, weight: .bold)
+                    .foregroundColor(DailyDriver.foreground)
+                    .lineLimit(2)
+                Text(metaLine)
+                    .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                    .tracking(0.4)
+                    .foregroundColor(DailyDriver.foregroundDim)
+                    .accessibilityIdentifier("af_apple_wk_composition_line")
             }
-
-            Text(metaLine)
-                .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
-                .tracking(0.4)
-                .foregroundColor(DailyDriver.foregroundDim)
-                .accessibilityIdentifier("af_apple_wk_composition_line")
+            Spacer(minLength: 0)
         }
     }
 
@@ -109,7 +116,7 @@ struct AppleWorkoutKitPreviewSheet: View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Display settings use the strength defaults — change them per device in Settings › Connected wearables.")
                 .font(.system(size: 10.5))
-                .foregroundColor(DailyDriver.foregroundMuted)
+                .foregroundColor(DailyDriver.foregroundDim)
                 .lineSpacing(2)
 
             // Only surface the live summary once it's actually customized —
@@ -126,87 +133,92 @@ struct AppleWorkoutKitPreviewSheet: View {
     }
 
     private func sectionCard(_ section: PreviewSection) -> some View {
-        let accent = section.kind.accentColor
-        return VStack(alignment: .leading, spacing: 8) {
+        let accent = section.accent.accentColor
+        return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Text(section.band)
-                    .font(.system(size: 10.5, weight: .bold, design: .monospaced))
-                    .tracking(0.8)
+                    .ddDisplayText(12, weight: .bold)
                     .foregroundColor(accent)
+                Spacer(minLength: 0)
                 if let tag = section.tag {
                     Text(tag)
-                        .font(.system(size: 10, weight: .bold))
-                        .monospacedDigit()
-                        .foregroundColor(DailyDriver.ink)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 2)
-                        .background(accent)
-                        .clipShape(Capsule(style: .continuous))
+                        .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                        .foregroundColor(DailyDriver.foregroundMuted)
                 }
-                Spacer(minLength: 0)
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(accent.opacity(0.16))
+            .overlay(
+                Rectangle()
+                    .stroke(accent.opacity(0.4), lineWidth: 1)
+            )
 
-            VStack(alignment: .leading, spacing: 7) {
-                ForEach(section.steps) { step in
-                    stepRow(step, accent: accent)
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(section.steps.enumerated()), id: \.element.id) { index, step in
+                    stepRow(step, showDivider: index > 0)
                 }
             }
+            .padding(.horizontal, 12)
+            .background(DailyDriver.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: 0, style: .continuous)
+                    .stroke(DailyDriver.border, lineWidth: 1)
+            )
         }
-        .padding(.leading, 11)
-        .padding(.trailing, 13)
-        .padding(.vertical, 12)
-        .background(DailyDriver.card)
-        .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .fill(accent)
-                .frame(width: 3)
-        }
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(accent.opacity(0.3), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(DailyDriver.border, lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
-    private func stepRow(_ step: PreviewStep, accent: Color) -> some View {
-        HStack(spacing: 10) {
-            if let restChip = step.restChip {
-                Text(restChip)
-                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                    .foregroundColor(DailyDriver.foregroundMuted)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 4)
-                    .background(DailyDriver.card2)
-                    .clipShape(Capsule(style: .continuous))
-                    .accessibilityIdentifier("af_apple_wk_rest_chip")
-            } else {
+    private func stepRow(_ step: PreviewStep, showDivider: Bool) -> some View {
+        VStack(spacing: 0) {
+            if showDivider {
+                DailyDriver.border.frame(height: 1)
+            }
+            HStack(alignment: .center, spacing: 10) {
                 Text("\(step.number)")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundColor(DailyDriver.ink)
-                    .frame(width: 20, height: 20)
-                    .background(accent.opacity(0.85))
-                    .clipShape(Circle())
-                VStack(alignment: .leading, spacing: 1) {
+                    .foregroundColor(DailyDriver.foregroundDim)
+                    .frame(width: 16, alignment: .leading)
+
+                VStack(alignment: .leading, spacing: 2) {
                     Text(step.title)
-                        .font(.system(size: 12.5, weight: .semibold))
+                        .ddDisplayText(13, weight: .semibold)
                         .foregroundColor(DailyDriver.foreground)
                     if let detail = step.detail {
                         Text(detail)
-                            .font(.system(size: 10.5))
+                            .font(.system(size: 9, weight: .medium, design: .monospaced))
                             .monospacedDigit()
                             .foregroundColor(DailyDriver.foregroundMuted)
                     }
                 }
+
+                Spacer(minLength: 0)
+
+                if let restChip = step.restChip {
+                    Text(restChip)
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .foregroundColor(DailyDriver.foregroundMuted)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(DailyDriver.card2)
+                        .clipShape(Capsule(style: .continuous))
+                        .accessibilityIdentifier("af_apple_wk_rest_chip")
+                }
             }
-            Spacer(minLength: 0)
+            .padding(.vertical, 10)
         }
     }
 }
 
-private extension PreviewBandKind {
+private extension PreviewBandAccent {
     var accentColor: Color {
         switch self {
-        case .warmup: return DailyDriver.amber
+        case .mobility: return DailyDriver.mobilityBand
         case .work: return DailyDriver.lime
         case .cooldown: return DailyDriver.blue
         }
@@ -214,29 +226,32 @@ private extension PreviewBandKind {
 }
 
 #if DEBUG
-#Preview("Strength · warm-up + repeat") {
+#Preview("Strength · mobility + warm-ups + work") {
     let json = Data("""
     {
-      "title": "Full Body Strength",
+      "title": "Test Apple workout",
       "sportType": "traditionalStrengthTraining",
       "intervals": [
-        { "kind": "warmup", "seconds": 300 },
+        { "kind": "work", "name": "Jump Rope", "seconds": 120 },
+        { "kind": "work", "name": "WU · Barbell back squat", "reps": 8 },
+        { "kind": "rest" },
+        { "kind": "work", "name": "WU · Barbell back squat", "reps": 5 },
+        { "kind": "rest" },
         {
           "kind": "repeat",
           "reps": 3,
           "intervals": [
-            { "kind": "work", "name": "Barbell Back Squat", "reps": 8 },
-            { "kind": "rest", "seconds": 60 }
+            { "kind": "work", "name": "Barbell back squat", "reps": 10 },
+            { "kind": "rest" }
           ]
-        },
-        { "kind": "cooldown", "seconds": 120 }
+        }
       ]
     }
     """.utf8)
     return AppleWorkoutKitPreviewSheet(
-        workoutName: "Full Body Strength",
+        workoutName: "Test Apple workout",
         meta: .fallback,
-        intervalCount: 3,
+        intervalCount: 6,
         sections: WorkoutKitPlanStepSummary.sections(from: json),
         sportLabel: WorkoutKitSportLabel.label(from: json),
         prefsSummary: nil,
