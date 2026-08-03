@@ -20,13 +20,27 @@ final class CreateWithAICopyTests: XCTestCase {
         XCTAssertEqual(flags.history, false)
     }
 
-    func testComposeNotesTrimsAndCapsAskAtOneThousandCharacters() {
+    func testComposeNotesTrimsAndCapsAskAtOneThousandScalars() {
         let notes = CreateWithAIPromptBuilder.composeNotes(
             ask: "  \(String(repeating: "a", count: 1_100))  "
         )
 
-        XCTAssertEqual(notes.count, 1_000)
+        XCTAssertEqual(notes.unicodeScalars.count, 1_000)
         XCTAssertEqual(notes, String(repeating: "a", count: 1_000))
+    }
+
+    func testComposeNotesCapsByUnicodeScalarsNotGraphemes() {
+        // Each family emoji is multiple scalars; Character.count would under-count
+        // vs Pydantic max_length (code points).
+        let emoji = "👨‍👩‍👧‍👦"
+        XCTAssertEqual(emoji.count, 1)
+        XCTAssertGreaterThan(emoji.unicodeScalars.count, 1)
+
+        let ask = String(repeating: emoji, count: 400)
+        let notes = CreateWithAIPromptBuilder.composeNotes(ask: ask)
+
+        XCTAssertLessThanOrEqual(notes.unicodeScalars.count, 1_000)
+        XCTAssertGreaterThan(notes.count, 0)
     }
 
     func testComposeNotesKeepsNewestTweakWhenAskExceedsLimit() {
@@ -36,9 +50,58 @@ final class CreateWithAICopyTests: XCTestCase {
             tweaks: ["Use dumbbells", newestTweak]
         )
 
-        XCTAssertLessThanOrEqual(notes.count, 1_000)
+        XCTAssertLessThanOrEqual(notes.unicodeScalars.count, 1_000)
         XCTAssertTrue(notes.contains(newestTweak))
         XCTAssertTrue(notes.hasSuffix(newestTweak))
+    }
+
+    func testDiscoverContextAttachesGymFromProfileEquipmentWithoutActiveGym() {
+        let profile = Components.Schemas.CoachingProfile(
+            createdAt: "2026-01-01T00:00:00Z",
+            equipment: .init(
+                strength: .init(additionalProperties: ["dumbbells": true]),
+                trainingLocation: "home"
+            ),
+            experienceLevel: "intermediate",
+            sessionsPerWeek: 3,
+            updatedAt: "2026-01-01T00:00:00Z",
+            userId: "user-1"
+        )
+
+        let discovery = CreateWithAIPromptBuilder.discoverContext(
+            hasActiveGym: false,
+            profile: .success(profile),
+            memories: .success([])
+        )
+
+        XCTAssertTrue(discovery.attached.contains(.gym))
+        XCTAssertTrue(discovery.attached.contains(.profile))
+        XCTAssertFalse(discovery.attached.contains(.memories))
+    }
+
+    func testDiscoverContextProbeFailureDefaultsChipsAttached() {
+        struct Boom: Error {}
+        let discovery = CreateWithAIPromptBuilder.discoverContext(
+            hasActiveGym: false,
+            profile: .failure(Boom()),
+            memories: .failure(Boom())
+        )
+
+        XCTAssertEqual(discovery.attached, [.profile, .memories])
+        let flags = CreateWithAIPromptBuilder.includeContext(attached: discovery.attached)
+        XCTAssertEqual(flags.profile, true)
+        XCTAssertEqual(flags.memories, true)
+        XCTAssertEqual(flags.gym, false)
+    }
+
+    func testChipsFromIncludeContextRoundTrip() {
+        let flags = CreateWithAIPromptBuilder.includeContext(
+            attached: [.gym, .profile]
+        )
+        XCTAssertEqual(
+            CreateWithAIPromptBuilder.chips(from: flags),
+            [.gym, .profile]
+        )
     }
 
     func testDraftBadge() {

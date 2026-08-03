@@ -15,6 +15,9 @@ struct CreateWithAIPromptView: View {
     @State private var attached = Set<CreateWithAIContextChip>()
     @State private var isShowingSuggestion = false
     @State private var toastMessage: String?
+    /// Prevents Edit-ask return from re-running discovery and silently
+    /// re-attaching chips the user already detached.
+    @State private var hasLoadedContext = false
 
     private let onSaved: () -> Void
     private let contextAPI: APIServiceProviding
@@ -226,6 +229,8 @@ struct CreateWithAIPromptView: View {
         Button {
             withAnimation(.easeOut(duration: 0.2)) {
                 _ = attached.remove(chip)
+                // Freeze discovery so an in-flight load cannot re-attach.
+                hasLoadedContext = true
             }
         } label: {
             HStack(spacing: 7) {
@@ -290,6 +295,7 @@ struct CreateWithAIPromptView: View {
     private func generateWorkout() {
         let notes = CreateWithAIPromptBuilder.composeNotes(ask: ask)
         guard !notes.isEmpty else { return }
+        hasLoadedContext = true
         isShowingSuggestion = true
         viewModel.requestSuggestionFromPrompt(
             notes: notes,
@@ -301,19 +307,40 @@ struct CreateWithAIPromptView: View {
 
     @MainActor
     private func loadAvailableContext() async {
-        var discovered = Set<CreateWithAIContextChip>()
+        guard !hasLoadedContext else { return }
 
-        if DDActiveGymStore.load() != nil {
-            discovered.insert(.gym)
-        }
-        if (try? await contextAPI.getCoachingProfile()) != nil {
-            discovered.insert(.profile)
-        }
-        if let memories = try? await contextAPI.fetchCoachMemories(), !memories.isEmpty {
-            discovered.insert(.memories)
+        // Returning via Edit ask: prefer the flags that produced the draft so
+        // detached chips stay detached.
+        if let flags = viewModel.currentIncludeContext {
+            attached = CreateWithAIPromptBuilder.chips(from: flags)
+            hasLoadedContext = true
+            return
         }
 
-        attached = discovered
+        let profileResult: Result<Components.Schemas.CoachingProfile?, Error>
+        do {
+            profileResult = .success(try await contextAPI.getCoachingProfile())
+        } catch {
+            profileResult = .failure(error)
+        }
+
+        let memoriesResult: Result<[CoachMemory], Error>
+        do {
+            memoriesResult = .success(try await contextAPI.fetchCoachMemories())
+        } catch {
+            memoriesResult = .failure(error)
+        }
+
+        // User may have detached a chip or tapped Draft while probes were in flight.
+        guard !hasLoadedContext else { return }
+
+        let discovery = CreateWithAIPromptBuilder.discoverContext(
+            hasActiveGym: DDActiveGymStore.load() != nil,
+            profile: profileResult,
+            memories: memoriesResult
+        )
+        attached = discovery.attached
+        hasLoadedContext = true
     }
 
     private func showMicUnavailable() {
