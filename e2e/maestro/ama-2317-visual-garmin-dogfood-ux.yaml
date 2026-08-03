@@ -37,7 +37,8 @@ appId: com.amakaflow.companion
     id: "af_start_garmin_prefs_note"
 - takeScreenshot: ama-2317-start-sheet-settings-pointer
 ---
-# 2) Push succeeds → handoff is named, and the "not a crash" note is shown.
+# 2) Push succeeds → handoff is named (compact lime "Sent to Garmin" card),
+#    and the "not a crash" reassurance body is shown (AMA-2371 compact card).
 - launchApp:
     clearState: true
     arguments:
@@ -55,10 +56,12 @@ appId: com.amakaflow.companion
 - tapOn:
     id: "af_start_device_garmin"
 - assertVisible:
-    id: "af_workout_detail_handoff_status"
+    id: "af_workout_detail_sent_card_title"
 - assertVisible: "Sent to Garmin"
 - assertVisible:
-    id: "af_workout_detail_handoff_next_steps"
+    id: "af_workout_detail_handoff_status"
+- assertVisible:
+    id: "af_workout_detail_sent_card_body"
 - assertVisible: "not a crash"
 - takeScreenshot: ama-2317-handoff-not-a-crash
 ---
@@ -123,7 +126,7 @@ appId: com.amakaflow.companion
 - tapOn:
     id: "af_library_workout_row"
 - tapOn:
-    id: "af_workout_detail_delete"
+    id: "af_workout_detail_delete_icon"
 - assertVisible: "Delete from Library?"
 - assertVisible: "Strength Workouts"
 - takeScreenshot: ama-2317-delete-scope-copy
