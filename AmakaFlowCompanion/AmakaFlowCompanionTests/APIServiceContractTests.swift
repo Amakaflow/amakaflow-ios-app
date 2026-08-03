@@ -49,6 +49,26 @@ final class APIServiceContractTests: XCTestCase {
     }
   }
 
+  func testCreateWithAIContractDecodesGeneratedRequestAndResponseTypes() throws {
+    let fixture = try APIService.makeGeneratedDecoder().decode(
+      CreateWithAIContractFixture.self,
+      from: fixtureData("create_with_ai_contract")
+    )
+
+    XCTAssertEqual(fixture.request.includeContext?.gym, true)
+    XCTAssertEqual(fixture.request.includeContext?.memories, true)
+    XCTAssertEqual(fixture.request.includeContext?.profile, true)
+    XCTAssertEqual(fixture.response.whyThis, [
+      "Uses equipment available at your gym",
+      "Keeps the session inside 45 minutes",
+    ])
+    XCTAssertEqual(fixture.response.warmUp?.seconds, 300)
+    XCTAssertEqual(
+      fixture.response.warmUp?.target,
+      "Band pull-aparts and shoulder circles"
+    )
+  }
+
   func testCoachMessageResponseDecodesWorkoutSuggestionMetadata() throws {
     let response = try decodeFixture("coach_message_response", as: CoachResponse.self)
 
@@ -214,4 +234,9 @@ private struct StreamFunctionResultEnvelope: Decodable {
   let toolUseId: String
   let name: String
   let result: String
+}
+
+private struct CreateWithAIContractFixture: Decodable {
+  let request: Components.Schemas.SuggestWorkoutRequest
+  let response: Components.Schemas.SuggestWorkoutResponse
 }

@@ -1985,6 +1985,39 @@
         "title": "HealthMetrics",
         "type": "object"
       },
+      "IncludeContextFlags": {
+        "properties": {
+          "gym": {
+            "default": true,
+            "title": "Gym",
+            "type": "boolean"
+          },
+          "history": {
+            "default": true,
+            "description": "Reserved no-op in v1. Accepted for forward compatibility; does not change prompt context.",
+            "title": "History",
+            "type": "boolean"
+          },
+          "memories": {
+            "default": true,
+            "title": "Memories",
+            "type": "boolean"
+          },
+          "profile": {
+            "default": true,
+            "title": "Profile",
+            "type": "boolean"
+          },
+          "readiness": {
+            "default": true,
+            "description": "Reserved no-op in v1. Accepted for forward compatibility; does not change prompt context.",
+            "title": "Readiness",
+            "type": "boolean"
+          }
+        },
+        "title": "IncludeContextFlags",
+        "type": "object"
+      },
       "KnowledgeCardListResponse": {
         "additionalProperties": true,
         "description": "Response for GET /v1/knowledge/cards.",
@@ -3911,6 +3944,9 @@
             "title": "Focus Muscle Groups",
             "type": "array"
           },
+          "include_context": {
+            "$ref": "#/components/schemas/IncludeContextFlags"
+          },
           "notes": {
             "maxLength": 1000,
             "title": "Notes",
@@ -3956,6 +3992,13 @@
           },
           "warmUp": {
             "$ref": "#/components/schemas/SuggestWarmUpCooldown"
+          },
+          "whyThis": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Whythis",
+            "type": "array"
           }
         },
         "required": [

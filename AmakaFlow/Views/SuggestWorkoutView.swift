@@ -7,29 +7,82 @@
 
 import SwiftUI
 
+enum SuggestWorkoutMode: Equatable {
+    case dailyCoach
+    case createWithAI
+}
+
 struct SuggestWorkoutView: View {
     @ObservedObject var viewModel: SuggestWorkoutViewModel
+    var mode: SuggestWorkoutMode = .dailyCoach
     var onWorkoutStarted: () -> Void = {}
+    /// AMA-2373: lets the createWithAI draft's "Edit ask" link return to compose.
+    var onEditAsk: () -> Void = {}
     @EnvironmentObject var workoutsViewModel: WorkoutsViewModel
     @Environment(\.dismiss) private var dismiss
+    /// AMA-2373 fix round 1: createWithAI's "▸ Start" hands off to the same
+    /// gym/device sheet + enrichment → push handoff as Library's detail view,
+    /// instead of a bespoke save-and-close for Garmin/Apple.
+    @State private var showingUnifiedStart = false
+    @State private var unifiedStartWorkout: Workout?
+    /// AMA-2373 fix round 2: surfaces a failed `persistDraftToBackend` without
+    /// touching `viewModel.ctaError` (see the overlay above for why).
+    @State private var persistError: CTAError?
+    @State private var retryPersist: (() -> Void)?
 
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.Colors.background.ignoresSafeArea()
+                backgroundColor.ignoresSafeArea()
 
                 switch viewModel.state {
                 case .idle:
-                    SuggestWorkoutGeneratingView(viewModel: viewModel) { dismiss() }
+                    // AMA-2373 fix round 1: cancelGenerate() lands here. For createWithAI
+                    // that must not be an indefinite spinner with no escape — bounce back
+                    // to compose. (cancelGeneration() below already calls onEditAsk, so
+                    // this is a defensive fallback for any other path into `.idle`.)
+                    if mode == .createWithAI {
+                        CreateWithAICancelledView(onEditAsk: onEditAsk)
+                    } else {
+                        // AMA-2371: daily-coach staged generating (extracted from loadingView).
+                        SuggestWorkoutGeneratingView(viewModel: viewModel) { dismiss() }
+                    }
 
                 case .needsOnboarding:
                     CoachingProfileOnboardingView(viewModel: viewModel)
 
                 case .loading:
-                    SuggestWorkoutGeneratingView(viewModel: viewModel) { dismiss() }
+                    if mode == .createWithAI {
+                        // AMA-2373 fix round 1: only the *initial* generate uses the
+                        // staged full-screen generating view. A refine keeps the draft
+                        // + refine dock on screen with an "applying…" indicator.
+                        if viewModel.isApplyingRefine, let refiningWorkout = viewModel.suggestedWorkout {
+                            createWithAIDraft(refiningWorkout)
+                        } else {
+                            CreateWithAIGeneratingView(
+                                ask: viewModel.currentAsk,
+                                chips: attachedSignalChips,
+                                onCancel: cancelGeneration
+                            )
+                        }
+                    } else {
+                        SuggestWorkoutGeneratingView(viewModel: viewModel) { dismiss() }
+                    }
 
                 case .success(let workout):
-                    contentView(workout)
+                    if mode == .createWithAI {
+                        createWithAIDraft(workout)
+                    } else {
+                        scrollContainer {
+                            SuggestWorkoutDailyCoachContent(
+                                viewModel: viewModel,
+                                workout: workout,
+                                mode: mode,
+                                onStart: { startWorkout(workout) },
+                                onDismiss: { dismiss() }
+                            )
+                        }
+                    }
 
                 case .empty:
                     emptyView
@@ -40,7 +93,22 @@ struct SuggestWorkoutView: View {
             }
             .navigationBarHidden(true)
             .overlay(alignment: .top) {
-                if let error = viewModel.ctaError {
+                // AMA-2373 fix round 2: a failed Save/Start persist gets its own
+                // toast (Retry re-runs the persist), never `viewModel.ctaError` —
+                // that error's Retry re-runs suggestWorkout() (regenerate), which
+                // would silently throw away this draft.
+                if let persistError {
+                    ErrorToast(
+                        actionTitle: "Couldn't save workout",
+                        error: persistError,
+                        onRetry: retryPersist
+                    ) {
+                        self.persistError = nil
+                        self.retryPersist = nil
+                    }
+                    .padding(.horizontal, Theme.Spacing.lg)
+                    .padding(.top, Theme.Spacing.md)
+                } else if let error = viewModel.ctaError {
                     ErrorToast(
                         actionTitle: "Couldn't generate workout",
                         error: error,
@@ -53,137 +121,53 @@ struct SuggestWorkoutView: View {
                 }
             }
         }
-    }
-
-    // MARK: - Content
-
-    private func contentView(_ workout: Workout) -> some View {
-        scrollContainer {
-            readinessCard
-            workoutCard(workout)
-            actionButtons(for: workout)
-        }
-        .accessibilityIdentifier("ama1842.suggest.preview")
-    }
-
-    private var readinessCard: some View {
-        AFCard {
-            HStack(alignment: .top, spacing: Theme.Spacing.md) {
-                ZStack {
-                    Circle()
-                        .fill(viewModel.readinessLevel.color.opacity(0.14))
-                    Circle()
-                        .fill(viewModel.readinessLevel.color)
-                        .frame(width: 14, height: 14)
-                }
-                .frame(width: 42, height: 42)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    AFLabel(text: "Readiness")
-                    HStack(spacing: Theme.Spacing.sm) {
-                        Text(viewModel.readinessLevel.title)
-                            .afH2()
-                        AFChip(text: viewModel.readinessLevel.badgeText, outline: true)
-                    }
-
-                    if let message = viewModel.readinessMessage, !message.isEmpty {
-                        Text(message)
-                            .afMuted()
-                            .fixedSize(horizontal: false, vertical: true)
-                    } else {
-                        Text("Connect a wearable for detailed metrics.")
-                            .afMuted()
-                    }
-                }
-
-                Spacer(minLength: 0)
-            }
-        }
-        .accessibilityIdentifier("af_suggest_readiness")
-    }
-
-    private func workoutCard(_ workout: Workout) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            AFCard(padding: Theme.Spacing.lg) {
-                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                    HStack(alignment: .top, spacing: Theme.Spacing.md) {
-                        iconTile(symbolName: workout.sport.symbolName)
-
-                        VStack(alignment: .leading, spacing: 8) {
-                            AFLabel(text: "Suggested workout")
-                            Text(workout.name)
-                                .font(Theme.Typography.title1)
-                                .foregroundColor(Theme.Colors.textPrimary)
-                                .fixedSize(horizontal: false, vertical: true)
-                            workoutMeta(workout)
-                        }
-                    }
-
-                    if let rationale = workout.description?.trimmingCharacters(in: .whitespacesAndNewlines), !rationale.isEmpty {
-                        Divider()
-                            .overlay(Theme.Colors.borderLight)
-
-                        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                            AFLabel(text: "About this session")
-                            Text(rationale)
-                                .afBody()
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                }
-            }
-
-            if !workout.intervals.isEmpty {
-                AFCard {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                        AFLabel(text: "Session plan")
-                        LazyVStack(spacing: Theme.Spacing.sm) {
-                            ForEach(Array(workout.intervals.enumerated()), id: \.offset) { index, interval in
-                                SuggestIntervalRow(index: index + 1, interval: interval)
-                            }
-                        }
-                    }
-                }
+        .preferredColorScheme(mode == .createWithAI ? .dark : nil)
+        .fullScreenCover(isPresented: $showingUnifiedStart, onDismiss: finishAfterStart) {
+            if let unifiedStartWorkout {
+                UnifiedWorkoutDetailView(workout: unifiedStartWorkout, autoStartOnAppear: true)
             }
         }
     }
 
-    private func workoutMeta(_ workout: Workout) -> some View {
-        HStack(spacing: Theme.Spacing.sm) {
-            AFChip(text: workout.formattedDuration)
-            AFChip(text: workout.sport.displayName)
-            AFChip(text: "\(workout.intervals.count) steps")
-        }
-        .fixedSize(horizontal: false, vertical: true)
+    private var backgroundColor: Color {
+        mode == .createWithAI ? DailyDriver.screenBackground : Theme.Colors.background
     }
 
-    private func actionButtons(for workout: Workout) -> some View {
-        VStack(spacing: Theme.Spacing.sm) {
-            Button {
-                startWorkout(workout)
-            } label: {
-                Label("Start workout", systemImage: "play.fill")
-            }
-            .buttonStyle(AFPrimaryButtonStyle(size: .lg))
-            .accessibilityIdentifier("af_suggest_start")
+    private var attachedSignalChips: [CreateWithAIContextChip] {
+        guard let flags = viewModel.currentIncludeContext else { return [] }
+        var chips: [CreateWithAIContextChip] = []
+        if flags.gym == true { chips.append(.gym) }
+        if flags.profile == true { chips.append(.profile) }
+        if flags.memories == true { chips.append(.memories) }
+        return chips
+    }
 
-            Button {
-                Task { await viewModel.suggestAnother() }
-            } label: {
-                Label("Suggest another", systemImage: "arrow.triangle.2.circlepath")
-            }
-            .buttonStyle(AFGhostButtonStyle(size: .lg))
-            .accessibilityIdentifier("af_suggest_swap")
+    // MARK: - Create with AI
 
-            Button {
-                viewModel.restToday()
-                dismiss()
-            } label: {
-                Label("Rest today", systemImage: "moon.zzz")
-            }
-            .buttonStyle(AFGhostButtonStyle(size: .lg))
-            .accessibilityIdentifier("af_suggest_rest")
-        }
+    /// AMA-2373 fix round 1: cancel from the generating view must not dead-end
+    /// on an indefinite spinner — return to compose so the user can re-ask.
+    private func cancelGeneration() {
+        viewModel.cancelGenerate()
+        onEditAsk()
+    }
+
+    private func createWithAIDraft(_ workout: Workout) -> some View {
+        CreateWithAIDraftView(
+            viewModel: viewModel,
+            workout: workout,
+            onEditAsk: onEditAsk,
+            onWorkoutStarted: onWorkoutStarted,
+            persistError: $persistError,
+            retryPersist: $retryPersist,
+            showingUnifiedStart: $showingUnifiedStart,
+            unifiedStartWorkout: $unifiedStartWorkout
+        )
+    }
+
+    private func finishAfterStart() {
+        onWorkoutStarted()
+        viewModel.reset()
+        dismiss()
     }
 
     // MARK: - Empty + Error
@@ -258,11 +242,15 @@ struct SuggestWorkoutView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                 AFTopBar(
-                    title: "Today’s suggestion",
-                    subtitle: "Readiness, rationale, and one generated session",
+                    title: topBarTitle,
+                    subtitle: topBarSubtitle,
                     backIdentifier: "suggest_workout_done",
                     backAction: { dismiss() },
-                    right: { AFChip(text: "AI Coach", outline: true) }
+                    right: {
+                        if mode == .dailyCoach {
+                            AFChip(text: "AI Coach", outline: true)
+                        }
+                    }
                 )
                 .padding(.horizontal, -Theme.Spacing.lg)
 
@@ -273,15 +261,22 @@ struct SuggestWorkoutView: View {
         }
     }
 
-    private func iconTile(symbolName: String) -> some View {
-        RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous)
-            .fill(Theme.Colors.accentBackground)
-            .frame(width: 46, height: 46)
-            .overlay(
-                Image(systemName: symbolName)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(Theme.Colors.textPrimary)
-            )
+    private var topBarTitle: String {
+        switch mode {
+        case .dailyCoach:
+            return "Today’s suggestion"
+        case .createWithAI:
+            return "Create with AI"
+        }
+    }
+
+    private var topBarSubtitle: String? {
+        switch mode {
+        case .dailyCoach:
+            return "Readiness, rationale, and one generated session"
+        case .createWithAI:
+            return nil
+        }
     }
 
     // MARK: - Actions
@@ -294,131 +289,6 @@ struct SuggestWorkoutView: View {
         onWorkoutStarted()
         viewModel.reset()
         dismiss()
-    }
-}
-
-// MARK: - Display helpers
-
-// Internal (not `private`) — `SuggestWorkoutGeneratingView.swift` also reads
-// `.badgeText` for the readiness signal chip.
-extension SuggestReadinessLevel {
-    var title: String {
-        switch self {
-        case .green: return "Ready to train"
-        case .yellow: return "Proceed with care"
-        case .red: return "Recovery-first day"
-        case .unknown: return "Readiness unavailable"
-        }
-    }
-
-    var badgeText: String {
-        switch self {
-        case .green: return "Green"
-        case .yellow: return "Yellow"
-        case .red: return "Red"
-        case .unknown: return "Unknown"
-        }
-    }
-
-    var color: Color {
-        switch self {
-        case .green: return Theme.Colors.readyHigh
-        case .yellow: return Theme.Colors.readyModerate
-        case .red: return Theme.Colors.readyLow
-        case .unknown: return Theme.Colors.textTertiary
-        }
-    }
-}
-
-private extension WorkoutSport {
-    var displayName: String {
-        rawValue.capitalized
-    }
-
-    var symbolName: String {
-        switch self {
-        case .running: return "figure.run"
-        case .cycling: return "figure.outdoor.cycle"
-        case .strength: return "dumbbell.fill"
-        case .mobility: return "figure.flexibility"
-        case .swimming: return "figure.pool.swim"
-        case .cardio: return "heart.fill"
-        case .other: return "figure.mixed.cardio"
-        }
-    }
-}
-
-// MARK: - Interval Row
-
-private struct SuggestIntervalRow: View {
-    let index: Int
-    let interval: WorkoutInterval
-
-    var body: some View {
-        HStack(spacing: Theme.Spacing.md) {
-            Text("\(index)")
-                .font(Theme.Typography.captionBold)
-                .foregroundColor(.white)
-                .frame(width: 28, height: 28)
-                .background(intervalColor)
-                .clipShape(Circle())
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(intervalName)
-                    .afH3()
-
-                if let detail = intervalDetail {
-                    Text(detail)
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(Theme.Colors.textSecondary)
-                }
-            }
-
-            Spacer()
-        }
-        .padding(.vertical, Theme.Spacing.xs)
-    }
-
-    private var intervalName: String {
-        switch interval {
-        case .warmup: return "Warm Up"
-        case .cooldown: return "Cool Down"
-        case .time(_, let target): return target ?? "Timed Interval"
-        case .reps(_, _, let name, _, _, _): return name
-        case .distance(let meters, _): return "\(meters)m"
-        case .repeat(let reps, _): return "Repeat x\(reps)"
-        case .rest: return "Rest"
-        }
-    }
-
-    private var intervalDetail: String? {
-        switch interval {
-        case .warmup(let seconds, _), .cooldown(let seconds, _), .time(let seconds, _):
-            return "\(seconds / 60) min"
-        case .reps(let sets, let reps, _, let load, let restSec, _):
-            var parts: [String] = []
-            if let sets = sets { parts.append("\(sets) sets x") }
-            parts.append("\(reps) reps")
-            if let load = load { parts.append("@ \(load)") }
-            if let rest = restSec { parts.append("(\(rest)s rest)") }
-            return parts.joined(separator: " ")
-        case .distance(_, let target): return target
-        case .repeat(_, let intervals): return "\(intervals.count) exercises"
-        case .rest(let seconds):
-            if let sec = seconds { return "\(sec)s" }
-            return "Until ready"
-        }
-    }
-
-    private var intervalColor: Color {
-        switch interval {
-        case .warmup: return .orange
-        case .cooldown: return .blue
-        case .reps: return Theme.Colors.accentGreen
-        case .time: return Theme.Colors.accentBlue
-        case .rest: return .gray
-        default: return Theme.Colors.accentBlue
-        }
     }
 }
 

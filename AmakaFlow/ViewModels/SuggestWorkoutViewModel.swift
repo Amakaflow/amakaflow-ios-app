@@ -16,6 +16,7 @@ import os
 typealias SuggestWorkoutRequest = Components.Schemas.SuggestWorkoutRequest
 typealias SuggestWorkoutResponse = Components.Schemas.SuggestWorkoutResponse
 typealias WarmUpCooldown = Components.Schemas.SuggestWarmUpCooldown
+typealias IncludeContextFlags = Components.Schemas.IncludeContextFlags
 
 extension Components.Schemas.SuggestWorkoutRequest {
     init(durationMinutes: Int?, focusMuscleGroups: [String]?, notes: String?) {
@@ -218,12 +219,28 @@ enum SuggestReadinessLevel: Equatable {
     }
 }
 
+struct DraftSnapshot {
+    let workout: Workout
+    let whyThis: [String]?
+    let response: SuggestWorkoutResponse
+    let ask: String
+    let includeContext: IncludeContextFlags?
+    let appliedTweaks: [String]
+}
+
 // MARK: - ViewModel
 
 @MainActor
 class SuggestWorkoutViewModel: ObservableObject {
     @Published var state: SuggestWorkoutState = .idle
     @Published var suggestedWorkout: Workout?
+    @Published private(set) var whyThis: [String]?
+    @Published private(set) var appliedTweaks: [String] = []
+    @Published private(set) var undoStack: [DraftSnapshot] = []
+    @Published private(set) var isApplyingRefine = false
+    /// AMA-2373 fix round 2: true while Save/Start is awaiting the real
+    /// `POST /workouts/save` before proceeding — see `persistDraftToBackend`.
+    @Published private(set) var isPersistingDraft = false
     @Published var readinessLevel: SuggestReadinessLevel = .unknown
     @Published var readinessMessage: String?
     @Published var ctaError: CTAError?
@@ -234,6 +251,11 @@ class SuggestWorkoutViewModel: ObservableObject {
     private var lastPromptNotes: String?
     private var lastPromptDurationMinutes: Int?
     private var lastPromptFocus: [String]?
+    private var lastPromptIncludeContext: IncludeContextFlags?
+    private var lastPromptAsk: String?
+    private var latestResponse: SuggestWorkoutResponse?
+    private var generationTask: Task<Void, Never>?
+    private var generationVersion: UInt64 = 0
 
     init(dependencies: AppDependencies = .current) {
         self.dependencies = dependencies
@@ -260,18 +282,25 @@ class SuggestWorkoutViewModel: ObservableObject {
 
     /// Check profile and request a suggestion
     func requestSuggestion() {
+        generationTask?.cancel()
+        let generation = beginGeneration()
         lastPromptNotes = nil
         lastPromptDurationMinutes = nil
         lastPromptFocus = nil
+        lastPromptIncludeContext = nil
+        lastPromptAsk = nil
+        clearDraftHistory()
         state = .loading
         suggestedWorkout = nil
         ctaError = nil
 
-        Task {
+        generationTask = Task {
             await requestSuggestionAfterProfileCheck(
                 durationMinutes: nil,
                 focusMuscleGroups: nil,
-                notes: nil
+                includeContext: nil,
+                notes: nil,
+                generation: generation
             )
         }
     }
@@ -279,20 +308,28 @@ class SuggestWorkoutViewModel: ObservableObject {
     func requestSuggestionFromPrompt(
         notes: String,
         durationMinutes: Int?,
-        focusMuscleGroups: [String]?
+        focusMuscleGroups: [String]?,
+        includeContext: IncludeContextFlags? = nil
     ) {
+        generationTask?.cancel()
+        let generation = beginGeneration()
         lastPromptNotes = notes
         lastPromptDurationMinutes = durationMinutes
         lastPromptFocus = focusMuscleGroups
+        lastPromptIncludeContext = includeContext
+        lastPromptAsk = notes
+        clearDraftHistory()
         state = .loading
         suggestedWorkout = nil
         ctaError = nil
 
-        Task {
+        generationTask = Task {
             await requestSuggestionAfterProfileCheck(
                 durationMinutes: durationMinutes,
                 focusMuscleGroups: focusMuscleGroups,
-                notes: notes
+                includeContext: includeContext,
+                notes: notes,
+                generation: generation
             )
         }
     }
@@ -300,19 +337,26 @@ class SuggestWorkoutViewModel: ObservableObject {
     private func requestSuggestionAfterProfileCheck(
         durationMinutes: Int?,
         focusMuscleGroups: [String]?,
-        notes: String?
+        includeContext: IncludeContextFlags?,
+        notes: String?,
+        generation: UInt64
     ) async {
         do {
-            guard try await dependencies.apiService.getCoachingProfile() != nil else {
+            let profile = try await dependencies.apiService.getCoachingProfile()
+            guard isCurrentGeneration(generation) else { return }
+            guard profile != nil else {
                 state = .needsOnboarding
                 return
             }
             await suggestWorkout(
                 durationMinutes: durationMinutes,
                 focusMuscleGroups: focusMuscleGroups,
-                notes: notes
+                includeContext: includeContext,
+                notes: notes,
+                generation: generation
             )
         } catch {
+            guard isCurrentGeneration(generation), !CTAError.isCancellation(error) else { return }
             let mapped = CTAError.map(error)
             suggestedWorkout = nil
             ctaError = mapped
@@ -324,32 +368,55 @@ class SuggestWorkoutViewModel: ObservableObject {
     func completeOnboarding(experience: ExperienceLevel, goal: TrainingGoal, daysPerWeek: Int) {
         let profile = CoachingProfile(experience: experience, goal: goal, daysPerWeek: daysPerWeek)
         saveProfile(profile)
-        Task {
+        generationTask?.cancel()
+        let generation = beginGeneration()
+        generationTask = Task {
             await suggestWorkout(
                 durationMinutes: lastPromptDurationMinutes,
                 focusMuscleGroups: lastPromptFocus,
-                notes: lastPromptNotes
+                includeContext: lastPromptIncludeContext,
+                notes: lastPromptNotes,
+                generation: generation
             )
         }
     }
 
     /// Call the suggest-workout API
-    func suggestWorkout(durationMinutes: Int? = nil, focusMuscleGroups: [String]? = nil, notes: String? = nil) async {
+    func suggestWorkout(
+        durationMinutes: Int? = nil,
+        focusMuscleGroups: [String]? = nil,
+        includeContext: IncludeContextFlags? = nil,
+        notes: String? = nil,
+        generation requestedGeneration: UInt64? = nil
+    ) async {
+        let generation = requestedGeneration ?? beginGeneration()
+        guard isCurrentGeneration(generation) else { return }
         state = .loading
-        suggestedWorkout = nil
+        // AMA-2373 fix round 1: a refine keeps the current draft on screen
+        // (refine dock shows "applying…") instead of nulling it and forcing
+        // the full-screen generating view — that view is for initial generate only.
+        if !isApplyingRefine {
+            suggestedWorkout = nil
+        }
         ctaError = nil
         didChooseRestToday = false
 
-        await fetchReadinessLevel()
+        let readiness = await fetchReadinessLevel()
+        guard isCurrentGeneration(generation) else { return }
+        readinessLevel = readiness.level
+        readinessMessage = readiness.message
 
         let body = SuggestWorkoutRequest(
             durationMinutes: durationMinutes,
+            excludeExercises: nil,
             focusMuscleGroups: focusMuscleGroups,
+            includeContext: includeContext,
             notes: notes
         )
 
         do {
             let decoded = try await dependencies.apiService.suggestWorkout(request: body)
+            guard isCurrentGeneration(generation) else { return }
             guard Self.hasSuggestedWorkout(decoded) else {
                 suggestedWorkout = nil
                 state = .empty
@@ -357,29 +424,30 @@ class SuggestWorkoutViewModel: ObservableObject {
             }
 
             let workout = buildWorkout(from: decoded)
+            latestResponse = decoded
+            whyThis = decoded.whyThis
             suggestedWorkout = workout
             state = .success(workout)
         } catch {
+            guard isCurrentGeneration(generation), !CTAError.isCancellation(error) else { return }
             // AMA-1803 P1: route through CTAError.map so the user UI
             // sees a typed failure (error_code, retryability, request_id)
             // instead of a stringly-typed `localizedDescription`. When
             // the upstream throws an AnnotatedAPIError (AMA-1808), its
             // requestId propagates here for Report-button correlation.
-            let mapped = CTAError.map(error)
+            let mapped = Self.mapSuggestError(error)
             suggestedWorkout = nil
             ctaError = mapped
             state = .error(mapped)
         }
     }
 
-    private func fetchReadinessLevel() async {
+    private func fetchReadinessLevel() async -> (level: SuggestReadinessLevel, message: String?) {
         do {
             let advice = try await dependencies.apiService.getFatigueAdvice(fatigueScore: nil, loadHistory: nil)
-            readinessLevel = SuggestReadinessLevel(fatigueLevel: advice.level)
-            readinessMessage = advice.message
+            return (SuggestReadinessLevel(fatigueLevel: advice.level), advice.message)
         } catch {
-            readinessLevel = .unknown
-            readinessMessage = nil
+            return (.unknown, nil)
         }
     }
 
@@ -429,13 +497,144 @@ class SuggestWorkoutViewModel: ObservableObject {
     // MARK: - Actions
 
     func suggestAnother() async {
-        let variationNote = "Suggest a different session than the previous suggestion."
-        let notes = lastPromptNotes.map { "\($0)\n\n\(variationNote)" } ?? variationNote
+        appliedTweaks = []
+        undoStack = []
+        // AMA-2373 final-review fix: Create with AI (ask set) reroll composes
+        // fresh notes from the ask alone, dropping refine tweaks. The daily
+        // coach path (`requestSuggestion()`, no ask) has no ask to compose
+        // from, so restore the pre-AMA-2373 variation-note behavior or
+        // "suggest another" would resend identical notes and not vary.
+        let notes: String?
+        if let ask = lastPromptAsk {
+            notes = CreateWithAIPromptBuilder.composeNotes(ask: ask)
+        } else {
+            let variationNote = "Suggest a different session than the previous suggestion."
+            notes = lastPromptNotes.map { "\($0)\n\n\(variationNote)" } ?? variationNote
+        }
+        lastPromptNotes = notes
         await suggestWorkout(
             durationMinutes: lastPromptDurationMinutes,
             focusMuscleGroups: lastPromptFocus,
+            includeContext: lastPromptIncludeContext,
             notes: notes
         )
+    }
+
+    func applyRefine(tweak: String) async {
+        guard
+            let workout = suggestedWorkout,
+            let response = latestResponse,
+            let ask = lastPromptAsk
+        else { return }
+
+        let trimmedTweak = tweak.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTweak.isEmpty else { return }
+
+        undoStack.append(
+            DraftSnapshot(
+                workout: workout,
+                whyThis: whyThis,
+                response: response,
+                ask: ask,
+                includeContext: lastPromptIncludeContext,
+                appliedTweaks: appliedTweaks
+            )
+        )
+        let composed = CreateWithAIPromptBuilder.compose(
+            ask: ask,
+            tweaks: appliedTweaks + [trimmedTweak]
+        )
+        appliedTweaks = composed.includedTweaks
+        lastPromptNotes = composed.notes
+        let generation = beginGeneration()
+        isApplyingRefine = true
+        defer {
+            if generation == generationVersion {
+                isApplyingRefine = false
+            }
+        }
+
+        await suggestWorkout(
+            durationMinutes: lastPromptDurationMinutes,
+            focusMuscleGroups: lastPromptFocus,
+            includeContext: lastPromptIncludeContext,
+            notes: composed.notes,
+            generation: generation
+        )
+    }
+
+    func undoRefine() {
+        guard let snapshot = undoStack.popLast() else { return }
+        // AMA-2373 final-review fix: cancel any in-flight refine generation
+        // (same as cancelGenerate()) so a late-arriving response for the
+        // refine we're undoing can't land after and clobber the restored draft.
+        generationTask?.cancel()
+        generationTask = nil
+        _ = beginGeneration()
+        isApplyingRefine = false
+        suggestedWorkout = snapshot.workout
+        whyThis = snapshot.whyThis
+        latestResponse = snapshot.response
+        lastPromptAsk = snapshot.ask
+        lastPromptIncludeContext = snapshot.includeContext
+        appliedTweaks = snapshot.appliedTweaks
+        lastPromptNotes = CreateWithAIPromptBuilder.composeNotes(
+            ask: snapshot.ask,
+            tweaks: snapshot.appliedTweaks
+        )
+        ctaError = nil
+        state = .success(snapshot.workout)
+    }
+
+    // MARK: - Create with AI draft accessors
+
+    /// The most recent ask text sent to the coach (compose ask + any prior tweaks).
+    var currentAsk: String { lastPromptAsk ?? "" }
+
+    /// Context flags attached to the current draft's request, for signal-chip display.
+    var currentIncludeContext: IncludeContextFlags? { lastPromptIncludeContext }
+
+    /// Raw warm-up interval from the latest response, for band-summary rendering.
+    var draftWarmUp: WorkoutInterval? {
+        latestResponse?.warmUp.map { WorkoutInterval.warmup(seconds: $0.seconds, target: $0.target) }
+    }
+
+    /// Raw cooldown interval from the latest response, for band-summary rendering.
+    var draftCooldown: WorkoutInterval? {
+        latestResponse?.cooldown.map { WorkoutInterval.cooldown(seconds: $0.seconds, target: $0.target) }
+    }
+
+    /// Main-block intervals (excludes warm-up/cooldown) from the latest response.
+    var draftMainBlocks: [WorkoutInterval] {
+        latestResponse?.blocks.compactMap(\.workoutInterval) ?? []
+    }
+
+    /// AMA-2373 fix round 2: Save/Start must await a real backend id before any
+    /// enrichment/push flow looks the workout up by id — `acceptSuggestedWorkout`
+    /// alone is local-first (GRDB write + background sync), so a Garmin/Apple
+    /// push fired right after it can race the sync and hit a workout Supabase
+    /// hasn't seen yet. This mirrors `WorkoutEditorViewModel.save()` /
+    /// `SocialImportViewModel.saveToLibrary()`, which both await
+    /// `apiService.saveWorkout(...)` and only proceed with the server-returned
+    /// (real-id) workout.
+    func persistDraftToBackend(_ workout: Workout) async -> Result<Workout, CTAError> {
+        isPersistingDraft = true
+        defer { isPersistingDraft = false }
+        do {
+            let saved = try await dependencies.apiService.saveWorkout(.from(workout: workout))
+            return .success(saved)
+        } catch {
+            return .failure(CTAError.map(error))
+        }
+    }
+
+    func cancelGenerate() {
+        generationTask?.cancel()
+        generationTask = nil
+        _ = beginGeneration()
+        isApplyingRefine = false
+        ctaError = nil
+        state = .idle
     }
 
     func restToday() {
@@ -449,6 +648,7 @@ class SuggestWorkoutViewModel: ObservableObject {
         await suggestWorkout(
             durationMinutes: lastPromptDurationMinutes,
             focusMuscleGroups: lastPromptFocus,
+            includeContext: lastPromptIncludeContext,
             notes: lastPromptNotes
         )
     }
@@ -469,11 +669,42 @@ class SuggestWorkoutViewModel: ObservableObject {
     }
 
     func reset() {
+        generationTask?.cancel()
+        generationTask = nil
+        _ = beginGeneration()
         state = .idle
         suggestedWorkout = nil
         ctaError = nil
         lastPromptNotes = nil
         lastPromptDurationMinutes = nil
         lastPromptFocus = nil
+        lastPromptIncludeContext = nil
+        lastPromptAsk = nil
+        clearDraftHistory()
+    }
+
+    private func clearDraftHistory() {
+        whyThis = nil
+        latestResponse = nil
+        appliedTweaks = []
+        undoStack = []
+        isApplyingRefine = false
+    }
+
+    private func beginGeneration() -> UInt64 {
+        generationVersion &+= 1
+        return generationVersion
+    }
+
+    private func isCurrentGeneration(_ generation: UInt64) -> Bool {
+        !Task.isCancelled && generation == generationVersion
+    }
+
+    private static func mapSuggestError(_ error: Error) -> CTAError {
+        let mapped = CTAError.map(error)
+        guard case .http(let status, _, let requestId) = mapped, status == 429 else {
+            return mapped
+        }
+        return .unknown(description: CreateWithAICopy.rateLimited, requestId: requestId)
     }
 }
