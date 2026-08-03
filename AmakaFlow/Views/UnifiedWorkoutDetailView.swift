@@ -1105,8 +1105,8 @@ extension UnifiedWorkoutDetailView {
             gymTitle: gymTitle
         )
         handoffStatus = [statusNote, result.message].compactMap { $0 }.joined(separator: " ")
+        sentCardTarget = result.kind.telemetryOutcome.isTerminalGarminSentCardSuccess ? .garmin : nil
         guard result.kind != .failed else { return }
-        sentCardTarget = .garmin
         await requestGarminOpen()
     }
 
@@ -1122,13 +1122,14 @@ extension UnifiedWorkoutDetailView {
 
     /// Re-show the last handoff result — the status must still be there whether
     /// iOS suspended us or killed us while Garmin Connect was in front. A failed
-    /// push gets no next-steps card: nothing reached the watch to go and find.
+    /// or still-queued push gets no sent card: nothing has reached the watch yet
+    /// to go and find.
     fileprivate func restoreHandoffStatus() {
         guard handoffStatus == nil,
               let restored = handoffStore.restorable(workoutId: workout.id),
               let message = restored.message else { return }
         handoffStatus = GarminLifecycleCopy.handoffRestored(message: message)
-        sentCardTarget = restored.outcome != .failed ? .garmin : nil
+        sentCardTarget = restored.outcome?.isTerminalGarminSentCardSuccess == true ? .garmin : nil
     }
 
     fileprivate func handleScenePhaseChange(_ phase: ScenePhase) {
