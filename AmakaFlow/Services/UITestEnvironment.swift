@@ -93,6 +93,11 @@ class UITestEnvironment {
         Self.isTruthy("UITEST_SKIP_APPLE_WATCH") || Self.isTruthy("UITEST_FAKE_WATCH")
     }
 
+    /// AMA-2375: force Library door + watch manager screens with fixture data (simulator dogfood).
+    var forceWatchManagerDemo: Bool {
+        Self.isTruthy("UITEST_FORCE_WATCH_MANAGER") || Self.isTruthy("AMA2375_DEMO")
+    }
+
     /// DEBUG visual host: show Create-with-AI generating chrome without auth.
     var showCreateWithAIGeneratingHost: Bool {
         Self.isTruthy("UITEST_SHOW_CREATE_WITH_AI_GENERATING")

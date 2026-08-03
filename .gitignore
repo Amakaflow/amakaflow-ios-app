@@ -119,3 +119,4 @@ maestro-evidence*/
 # Python bytecode from .github/scripts/ci helpers
 __pycache__/
 *.pyc
+ama2375-*.png

@@ -55,6 +55,33 @@ struct WorkoutScheduleRow: Identifiable, Equatable, Sendable {
     let isComplete: Bool
 }
 
+/// Errors from AMA-2375 Move (reschedule) — never silent success.
+enum WorkoutScheduleRescheduleError: LocalizedError, Equatable {
+    case rowNotFound
+    case planNotCached
+    case unavailable
+    case targetSlotMissing
+    case oldSlotStillPresent
+    case compensationFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .rowNotFound:
+            return "That scheduled workout is no longer on the watch."
+        case .planNotCached:
+            return "Couldn't move this plan — pull to refresh and try again."
+        case .unavailable:
+            return "Scheduling isn't available on this device."
+        case .targetSlotMissing:
+            return "Move didn't land on the new day — pull to refresh."
+        case .oldSlotStillPresent:
+            return "The old schedule slot is still there — pull to refresh."
+        case .compensationFailed:
+            return "Move left the watch schedule inconsistent — pull to refresh."
+        }
+    }
+}
+
 /// App-shaped seam over `WorkoutScheduler` — mirrors `WorkoutKitSaving` in `AppleStartHandoff.swift`
 /// so ViewModels/tests never link WorkoutKit directly.
 ///
@@ -68,6 +95,9 @@ protocol WorkoutKitScheduleManaging: Sendable {
     func fetchScheduledRows() async throws -> [WorkoutScheduleRow]
     func remove(row: WorkoutScheduleRow) async
     func removeAll() async
+    /// AMA-2375 Move v1: remove at the old slot and schedule the cached plan at `date`.
+    /// Throws when the move cannot be proven (missing plan/row or post-refresh mismatch).
+    func reschedule(row: WorkoutScheduleRow, to date: Date) async throws
 }
 
 #if DEBUG
@@ -116,6 +146,26 @@ final class MockWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
         guard !removeAllIsNoOp else { return }
         rows = []
     }
+
+    func reschedule(row: WorkoutScheduleRow, to date: Date) async throws {
+        guard let index = rows.firstIndex(where: { $0.id == row.id }) else {
+            throw WorkoutScheduleRescheduleError.rowNotFound
+        }
+        let components = Calendar.current.dateComponents(
+            [.year, .month, .day, .hour, .minute],
+            from: date
+        )
+        let newID = WorkoutScheduleRowID(planID: row.id.planID, date: components)
+        guard newID != row.id else { return }
+        let updated = WorkoutScheduleRow(
+            id: newID,
+            title: row.title,
+            dateComponents: components,
+            scheduledAt: date,
+            isComplete: row.isComplete
+        )
+        rows[index] = updated
+    }
 }
 #else
 /// Unreachable in shipping builds — schedule UI entry points are iOS 18+ only.
@@ -126,6 +176,9 @@ struct UnavailableWorkoutKitScheduler: WorkoutKitScheduleManaging {
     func fetchScheduledRows() async throws -> [WorkoutScheduleRow] { [] }
     func remove(row: WorkoutScheduleRow) async {}
     func removeAll() async {}
+    func reschedule(row: WorkoutScheduleRow, to date: Date) async throws {
+        throw WorkoutScheduleRescheduleError.unavailable
+    }
 }
 #endif
 
@@ -193,6 +246,56 @@ final class LiveWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
         planCache = [:]
     }
 
+    func reschedule(row: WorkoutScheduleRow, to date: Date) async throws {
+        guard let plan = planCache[row.id] else {
+            throw WorkoutScheduleRescheduleError.planNotCached
+        }
+        let components = calendar.dateComponents(
+            [.year, .month, .day, .hour, .minute],
+            from: date
+        )
+        let oldID = row.id
+        let newID = WorkoutScheduleRowID(planID: row.id.planID, date: components)
+        // Same minute slot — leave the schedule alone (Save on current Move date).
+        // Compare fields, not IDs: WorkoutKit may include seconds on the existing slot.
+        if Self.isSameMinuteSlot(row.dateComponents, components) {
+            return
+        }
+        await WorkoutScheduler.shared.remove(plan, at: row.dateComponents)
+        await WorkoutScheduler.shared.schedule(plan, at: components)
+        let refreshed = try await fetchScheduledRows()
+        let hasOld = refreshed.contains { $0.id == oldID }
+        let hasNew = refreshed.contains { $0.id == newID }
+
+        if hasOld && hasNew {
+            // Duplicate slots — prefer restoring the prior schedule.
+            await WorkoutScheduler.shared.remove(plan, at: components)
+            let after = try await fetchScheduledRows()
+            let compensated = after.contains { $0.id == oldID }
+                && !after.contains { $0.id == newID }
+            guard compensated else {
+                throw WorkoutScheduleRescheduleError.compensationFailed
+            }
+            throw WorkoutScheduleRescheduleError.oldSlotStillPresent
+        }
+
+        if hasOld {
+            throw WorkoutScheduleRescheduleError.oldSlotStillPresent
+        }
+
+        guard hasNew else {
+            // Target missing — put the original slot back before surfacing the error.
+            await WorkoutScheduler.shared.schedule(plan, at: row.dateComponents)
+            let after = try await fetchScheduledRows()
+            let restored = after.contains { $0.id == oldID }
+                && !after.contains { $0.id == newID }
+            guard restored else {
+                throw WorkoutScheduleRescheduleError.compensationFailed
+            }
+            throw WorkoutScheduleRescheduleError.targetSlotMissing
+        }
+    }
+
     private static func mapAuthorizationState(
         _ state: WorkoutScheduler.AuthorizationState
     ) -> ScheduleAuthState {
@@ -206,6 +309,14 @@ final class LiveWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
         @unknown default:
             return .notDetermined
         }
+    }
+
+    private static func isSameMinuteSlot(_ lhs: DateComponents, _ rhs: DateComponents) -> Bool {
+        lhs.year == rhs.year
+            && lhs.month == rhs.month
+            && lhs.day == rhs.day
+            && lhs.hour == rhs.hour
+            && lhs.minute == rhs.minute
     }
 
     /// AmakaFlow always schedules `.custom(CustomWorkout)` with `displayName` set

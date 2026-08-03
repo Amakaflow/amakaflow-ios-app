@@ -453,6 +453,70 @@ final class WorkoutScheduleViewModelTests: XCTestCase {
         XCTAssertNotEqual(vm.statusMessage, "Some plans could not be removed — pull to refresh.")
     }
 
+    func testMoveReschedulesRowAndReturnsSuccess() async {
+        let mock = MockWorkoutKitScheduler()
+        let original = row(id: "m1", title: "Move Me", minutesAgo: 60)
+        mock.rows = [original]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        let target = Date().addingTimeInterval(3_600)
+        let ok = await vm.move(row: original, to: target)
+        XCTAssertTrue(ok)
+        XCTAssertEqual(vm.statusMessage, "Moved Move Me.")
+        XCTAssertEqual(mock.rows.count, 1)
+        XCTAssertEqual(mock.rows[0].title, "Move Me")
+        XCTAssertEqual(mock.rows[0].id.planID, original.id.planID)
+        XCTAssertNotEqual(mock.rows[0].id, original.id)
+        let expectedComponents = Calendar.current.dateComponents(
+            [.year, .month, .day, .hour, .minute],
+            from: target
+        )
+        XCTAssertEqual(mock.rows[0].dateComponents, expectedComponents)
+    }
+
+    func testMoveToCurrentSlotIsANoOp() async {
+        let mock = MockWorkoutKitScheduler()
+        let original = row(id: "same", title: "Stay Put", minutesAgo: 30)
+        mock.rows = [original]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        guard let scheduledAt = original.scheduledAt else {
+            XCTFail("fixture row needs scheduledAt")
+            return
+        }
+        let ok = await vm.move(row: original, to: scheduledAt)
+        XCTAssertTrue(ok)
+        XCTAssertEqual(mock.rows.count, 1)
+        XCTAssertEqual(mock.rows[0].id, original.id)
+        XCTAssertEqual(mock.rows[0].dateComponents, original.dateComponents)
+    }
+
+    func testMoveReturnsFalseWhenRefreshFailsAfterReschedule() async {
+        let mock = MockWorkoutKitScheduler()
+        let original = row(id: "m2", title: "Move Me", minutesAgo: 60)
+        mock.rows = [original]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        mock.fetchError = DummyFetchError()
+        let ok = await vm.move(row: original, to: Date().addingTimeInterval(3_600))
+        XCTAssertFalse(ok)
+        XCTAssertEqual(
+            vm.statusMessage,
+            "Moved Move Me, but the list couldn't refresh — pull to refresh."
+        )
+    }
+
+    func testMoveFailsWhenRowMissing() async {
+        let mock = MockWorkoutKitScheduler()
+        let missing = row(id: "gone", title: "Gone", minutesAgo: 1)
+        mock.rows = []
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        let ok = await vm.move(row: missing, to: Date().addingTimeInterval(3_600))
+        XCTAssertFalse(ok)
+        XCTAssertEqual(vm.statusMessage, WorkoutScheduleRescheduleError.rowNotFound.localizedDescription)
+    }
+
     func testRefreshDoesNotTrapOnDuplicateRowIDs() async {
         let mock = MockWorkoutKitScheduler()
         let a = row(id: "dup", title: "First", minutesAgo: 1)

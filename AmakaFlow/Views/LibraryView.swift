@@ -16,9 +16,22 @@ struct LibraryView: View {
     @State private var sourceFilter: DDPlatform = .all
     @State private var pendingDelete: LibraryListEntry?
     @State private var navigationPath: [LibraryDestination] = []
+    @StateObject private var watchesVM = OnYourWatchesViewModel()
+    /// Gates content/empty `.task` so state flips don't double-refresh watches.
+    @State private var watchesDidInitialRefresh = false
+    /// AMA-2375: Garmin Fix opens the editor directly (not detail → Edit).
+    @State private var garminFixWorkoutID: String?
 
     init(viewModel: LibraryViewModel? = nil) {
         _viewModel = StateObject(wrappedValue: viewModel ?? LibraryViewModel())
+    }
+
+    private func refreshWatches(force: Bool = false) async {
+        if !force {
+            guard !watchesDidInitialRefresh else { return }
+            watchesDidInitialRefresh = true
+        }
+        await watchesVM.refresh()
     }
 
     private var filteredEntries: [LibraryListEntry] {
@@ -67,6 +80,28 @@ struct LibraryView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .sheet(
+            isPresented: Binding(
+                get: { garminFixWorkoutID != nil },
+                set: { if !$0 { garminFixWorkoutID = nil } }
+            ),
+            onDismiss: {
+                Task { await viewModel.load() }
+            },
+            content: {
+                if let workoutID = garminFixWorkoutID,
+                   let workout = viewModel.workout(for: workoutID)
+                    ?? viewModel.resolveWorkout(for: .unifiedWorkout(workoutID: workoutID)) {
+                    WorkoutEditorView(workout: workout)
+                        .accessibilityIdentifier("af_garmin_queue_fix_editor")
+                } else {
+                    Text("Workout unavailable")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(DailyDriver.foregroundMuted)
+                        .accessibilityIdentifier("af_garmin_queue_fix_editor_missing")
+                }
+            }
+        )
         .overlay(alignment: .top) {
             if let error = viewModel.ctaError {
                 ErrorToast(
@@ -156,7 +191,14 @@ extension LibraryView {
     private var contentView: some View {
         VStack(spacing: 0) {
             DDScreenHeader(title: "Library") {
-                DDLibraryHeaderAddButton(action: presentAddSheet)
+                HStack(spacing: 10) {
+                    if watchesVM.snapshot.hasAnyWearable {
+                        LibraryWatchHeaderButton(badgeCount: watchesVM.snapshot.badgeCount) {
+                            navigationPath.append(.onYourWatches)
+                        }
+                    }
+                    DDLibraryHeaderAddButton(action: presentAddSheet)
+                }
             }
 
             ScrollView {
@@ -169,26 +211,51 @@ extension LibraryView {
                         .padding(.horizontal, 18)
                         .padding(.top, 10)
 
-                    itemList
+                    if watchesVM.snapshot.hasAnyWearable {
+                        OnYourWatchesSummaryRow(summaryLine: watchesVM.snapshot.librarySummaryLine) {
+                            navigationPath.append(.onYourWatches)
+                        }
                         .padding(.horizontal, 18)
                         .padding(.top, 14)
+                    }
+
+                    itemList
+                        .padding(.horizontal, 18)
+                        .padding(.top, watchesVM.snapshot.hasAnyWearable ? 10 : 14)
                 }
                 .padding(.bottom, 100)
             }
             .refreshable {
                 await viewModel.load()
+                await refreshWatches(force: true)
             }
+        }
+        .task {
+            await refreshWatches()
         }
     }
 
     private var emptyView: some View {
         VStack(spacing: 0) {
             DDScreenHeader(title: "Library") {
-                DDLibraryHeaderAddButton(action: presentAddSheet)
+                HStack(spacing: 10) {
+                    if watchesVM.snapshot.hasAnyWearable {
+                        LibraryWatchHeaderButton(badgeCount: watchesVM.snapshot.badgeCount) {
+                            navigationPath.append(.onYourWatches)
+                        }
+                    }
+                    DDLibraryHeaderAddButton(action: presentAddSheet)
+                }
             }
 
             ScrollView {
                 VStack(spacing: Theme.Spacing.lg) {
+                    if watchesVM.snapshot.hasAnyWearable {
+                        OnYourWatchesSummaryRow(summaryLine: watchesVM.snapshot.librarySummaryLine) {
+                            navigationPath.append(.onYourWatches)
+                        }
+                    }
+
                     if hasLocalFilters {
                         DDSearchField(text: $searchText)
                         DDSourceFilterPills(selection: $sourceFilter)
@@ -206,6 +273,9 @@ extension LibraryView {
                 }
                 .padding(.horizontal, 18)
                 .padding(.bottom, 100)
+            }
+            .task {
+                await refreshWatches()
             }
         }
     }
@@ -350,6 +420,25 @@ extension LibraryView {
                     return false
                 }
                 return await viewModel.deleteEntry(target)
+            }
+        case .onYourWatches:
+            OnYourWatchesView(viewModel: watchesVM)
+        case .appleScheduled:
+            AppleWatchScheduledListView {
+                navigationPath.append(.libraryPick(.appleSchedule))
+            }
+        case .garminQueue:
+            GarminWatchQueueView(
+                onPushFromLibrary: {
+                    navigationPath.append(.libraryPick(.garminPush))
+                },
+                onFix: { item in
+                    garminFixWorkoutID = item.workoutID
+                }
+            )
+        case .libraryPick(let target):
+            WatchLibraryPickView(target: target) { workoutID in
+                navigationPath.append(.unifiedWorkout(workoutID: workoutID))
             }
         }
     }

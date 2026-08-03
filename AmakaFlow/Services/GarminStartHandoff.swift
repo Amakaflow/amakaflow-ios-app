@@ -197,6 +197,7 @@ final class GarminStartHandoffService {
             }
 
             // Best-effort status enrich; push success alone is enough for queued/sent UX.
+            GarminWatchQueueStore.shared.recordPush(workoutID: workoutId, title: gymTitle)
             if let status = try? await apiService.watchDeliveryStatus(workoutId: workoutId) {
                 return finish(
                     workoutId: workoutId,

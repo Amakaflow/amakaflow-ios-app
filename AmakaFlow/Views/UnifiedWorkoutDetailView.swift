@@ -250,7 +250,7 @@ struct UnifiedWorkoutDetailView: View {
         }
         .sheet(isPresented: $showingWorkoutSchedule) {
             NavigationStack {
-                WorkoutScheduleView()
+                AppleWatchScheduledListView()
             }
         }
         .sheet(

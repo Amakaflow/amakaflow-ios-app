@@ -196,6 +196,16 @@
 		AMA2360STEPSBLD01 /* WorkoutKitPlanStepSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2360STEPSREF01 /* WorkoutKitPlanStepSummary.swift */; };
 		AMA2374SECTSBLD01 /* WorkoutKitPlanStepSummary+Sections.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2374SECTSREF01 /* WorkoutKitPlanStepSummary+Sections.swift */; };
 		AMA2374DDBANDBLD1 /* DailyDriverTheme+WatchBands.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2374DDBANDREF1 /* DailyDriverTheme+WatchBands.swift */; };
+		AMA2375COPYBLD /* OnYourWatchesCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375COPYREF /* OnYourWatchesCopy.swift */; };
+		AMA2375MODLBLD /* OnYourWatchesModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375MODLREF /* OnYourWatchesModels.swift */; };
+		AMA2375QSTRBLD /* GarminWatchQueueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375QSTRREF /* GarminWatchQueueStore.swift */; };
+		AMA2375DEMOBLD /* OnYourWatchesDemoSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375DEMOREF /* OnYourWatchesDemoSupport.swift */; };
+		AMA2375OYVMBLD /* OnYourWatchesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375OYVMREF /* OnYourWatchesViewModel.swift */; };
+		AMA2375GQVMBLD /* GarminWatchQueueViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375GQVMREF /* GarminWatchQueueViewModel.swift */; };
+		AMA2375OYWVBLD /* OnYourWatchesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375OYWVREF /* OnYourWatchesView.swift */; };
+		AMA2375APLSBLD /* AppleWatchScheduledListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375APLSREF /* AppleWatchScheduledListView.swift */; };
+		AMA2375GARQBLD /* GarminWatchQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375GARQREF /* GarminWatchQueueView.swift */; };
+		AMA2375PICKBLD /* WatchLibraryPickView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375PICKREF /* WatchLibraryPickView.swift */; };
 		AMA2351WKMETABLD /* WorkoutKitPlanMeta.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2351WKMETAREF /* WorkoutKitPlanMeta.swift */; };
 		AMA2351WKPREVBLD /* AppleWorkoutKitPreviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2351WKPREVREF /* AppleWorkoutKitPreviewSheet.swift */; };
 		AMA2336COORDBLD001 /* WorkoutEnrichmentPushCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336COORDREF001 /* WorkoutEnrichmentPushCoordinator.swift */; };
@@ -215,6 +225,7 @@
 		AMA2366OVRDBUILD /* AppleStartHandoffOverrides.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2366OVRDREF /* AppleStartHandoffOverrides.swift */; };
 		AMA2330SCHVMBUILD /* WorkoutScheduleViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2330SCHVMREF /* WorkoutScheduleViewModel.swift */; };
 		AMA2330SCHVMTESTBUILD /* WorkoutScheduleViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2330SCHVMTESTREF /* WorkoutScheduleViewModelTests.swift */; };
+		AMA2375OYWTBLD /* OnYourWatchesViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375OYWTREF /* OnYourWatchesViewModelTests.swift */; };
 		AMA2330SCHVIEWBUILD /* WorkoutScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2330SCHVIEWREF /* WorkoutScheduleView.swift */; };
 		AMA2286RUNINTBLD /* running_intervals_4x800.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA2286RUNINTREF /* running_intervals_4x800.json */; };
 		AMA2289DIARYBLD /* TodayDiary.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2289DIARYREF /* TodayDiary.swift */; };
@@ -812,6 +823,16 @@
 		AMA2360STEPSREF01 /* WorkoutKitPlanStepSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutKitPlanStepSummary.swift; path = ../AmakaFlow/Models/WorkoutKitPlanStepSummary.swift; sourceTree = SOURCE_ROOT; };
 		AMA2374SECTSREF01 /* WorkoutKitPlanStepSummary+Sections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutKitPlanStepSummary+Sections.swift"; path = "../AmakaFlow/Models/WorkoutKitPlanStepSummary+Sections.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2374DDBANDREF1 /* DailyDriverTheme+WatchBands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "DailyDriverTheme+WatchBands.swift"; path = "../AmakaFlow/DailyDriverTheme+WatchBands.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2375COPYREF /* OnYourWatchesCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnYourWatchesCopy.swift; path = ../AmakaFlow/Models/OnYourWatchesCopy.swift; sourceTree = SOURCE_ROOT; };
+		AMA2375MODLREF /* OnYourWatchesModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnYourWatchesModels.swift; path = ../AmakaFlow/Models/OnYourWatchesModels.swift; sourceTree = SOURCE_ROOT; };
+		AMA2375QSTRREF /* GarminWatchQueueStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchQueueStore.swift; path = ../AmakaFlow/Services/GarminWatchQueueStore.swift; sourceTree = SOURCE_ROOT; };
+		AMA2375DEMOREF /* OnYourWatchesDemoSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnYourWatchesDemoSupport.swift; path = ../AmakaFlow/Services/OnYourWatchesDemoSupport.swift; sourceTree = SOURCE_ROOT; };
+		AMA2375OYVMREF /* OnYourWatchesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnYourWatchesViewModel.swift; path = ../AmakaFlow/ViewModels/OnYourWatchesViewModel.swift; sourceTree = SOURCE_ROOT; };
+		AMA2375GQVMREF /* GarminWatchQueueViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchQueueViewModel.swift; path = ../AmakaFlow/ViewModels/GarminWatchQueueViewModel.swift; sourceTree = SOURCE_ROOT; };
+		AMA2375OYWVREF /* OnYourWatchesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnYourWatchesView.swift; path = ../AmakaFlow/Views/OnYourWatchesView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2375APLSREF /* AppleWatchScheduledListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleWatchScheduledListView.swift; path = ../AmakaFlow/Views/AppleWatchScheduledListView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2375GARQREF /* GarminWatchQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchQueueView.swift; path = ../AmakaFlow/Views/GarminWatchQueueView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2375PICKREF /* WatchLibraryPickView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchLibraryPickView.swift; path = ../AmakaFlow/Views/WatchLibraryPickView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2316PREFREF001 /* GarminWatchDisplayPrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchDisplayPrefs.swift; path = ../AmakaFlow/Models/GarminWatchDisplayPrefs.swift; sourceTree = SOURCE_ROOT; };
 		AMA2316SHEETREF01 /* GarminWatchDisplayPrefsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchDisplayPrefsSheet.swift; path = ../AmakaFlow/Views/GarminWatchDisplayPrefsSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2316PREFTESTREF /* GarminWatchDisplayPrefsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchDisplayPrefsTests.swift; path = AmakaFlowCompanionTests/GarminWatchDisplayPrefsTests.swift; sourceTree = "<group>"; };
@@ -844,6 +865,7 @@
 		AMA2366OVRDREF /* AppleStartHandoffOverrides.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleStartHandoffOverrides.swift; path = ../AmakaFlow/Services/AppleStartHandoffOverrides.swift; sourceTree = SOURCE_ROOT; };
 		AMA2330SCHVMREF /* WorkoutScheduleViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutScheduleViewModel.swift; path = ../AmakaFlow/ViewModels/WorkoutScheduleViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA2330SCHVMTESTREF /* WorkoutScheduleViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutScheduleViewModelTests.swift; path = AmakaFlowCompanionTests/WorkoutScheduleViewModelTests.swift; sourceTree = "<group>"; };
+		AMA2375OYWTREF /* OnYourWatchesViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnYourWatchesViewModelTests.swift; path = AmakaFlowCompanionTests/OnYourWatchesViewModelTests.swift; sourceTree = "<group>"; };
 		AMA2330SCHVIEWREF /* WorkoutScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutScheduleView.swift; path = ../AmakaFlow/Views/WorkoutScheduleView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2289DIARYREF /* TodayDiary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TodayDiary.swift; path = ../AmakaFlow/Models/TodayDiary.swift; sourceTree = SOURCE_ROOT; };
 		AMA2289DIARYTSTREF /* TodayDiaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TodayDiaryTests.swift; path = AmakaFlowCompanionTests/TodayDiaryTests.swift; sourceTree = "<group>"; };
@@ -1388,6 +1410,10 @@
 				AMA2287APPHANDREF /* AppleStartHandoff.swift */,
 				AMA2287APHCOPYREF /* AppleStartHandoffCopy.swift */,
 				AMA2330SCHMANREF /* WorkoutKitScheduleManaging.swift */,
+				AMA2375QSTRREF /* GarminWatchQueueStore.swift */,
+				AMA2375DEMOREF /* OnYourWatchesDemoSupport.swift */,
+				AMA2375COPYREF /* OnYourWatchesCopy.swift */,
+				AMA2375MODLREF /* OnYourWatchesModels.swift */,
 				AMA2367REPLREF /* IncompleteScheduleReplacing.swift */,
 				AMA2366OVRDREF /* AppleStartHandoffOverrides.swift */,
 				D3BUG10G00000001B0000001 /* DebugLogService.swift */,
@@ -1450,6 +1476,10 @@
 				AMA1995EQVIEW00000000A /* EquipmentProfileView.swift */,
 				AMA1996DEVVIEW000000A /* DevicesView.swift */,
 				AMA2330SCHVIEWREF /* WorkoutScheduleView.swift */,
+				AMA2375OYWVREF /* OnYourWatchesView.swift */,
+				AMA2375APLSREF /* AppleWatchScheduledListView.swift */,
+				AMA2375GARQREF /* GarminWatchQueueView.swift */,
+				AMA2375PICKREF /* WatchLibraryPickView.swift */,
 				AMA2054RDVIEW000000A /* ReadinessDetailView.swift */,
 				AMA2004LIBVIEW00000A /* LibraryView.swift */,
 				AMA2292TODAYVIEW0000A /* TodayDiaryView.swift */,
@@ -1789,6 +1819,8 @@
 				AMA2027MSGVM0000000A /* MessagingViewModel.swift */,
 				AMA2028WDVM00000000A /* WatchDeliveryViewModel.swift */,
 				AMA2330SCHVMREF /* WorkoutScheduleViewModel.swift */,
+				AMA2375OYVMREF /* OnYourWatchesViewModel.swift */,
+				AMA2375GQVMREF /* GarminWatchQueueViewModel.swift */,
 				V01C300600000000000000 /* VoiceWorkoutView.swift */,
 				V01C300700000000000000 /* VoiceRecordingView.swift */,
 				V01C300800000000000000 /* TranscriptionReviewView.swift */,
@@ -1904,6 +1936,7 @@
 				AMA2287APHTESTREF /* AppleStartHandoffTests.swift */,
 				AMA2351METATESTREF /* WorkoutKitPlanMetaTests.swift */,
 				AMA2330SCHVMTESTREF /* WorkoutScheduleViewModelTests.swift */,
+				AMA2375OYWTREF /* OnYourWatchesViewModelTests.swift */,
 				AMA2289DIARYTSTREF /* TodayDiaryTests.swift */,
 				AMA2290BFTESTREF /* StrengthBackfillTests.swift */,
 				AK00TST010A /* MockURLProtocol.swift */,
@@ -2607,6 +2640,16 @@
 				AMA2360STEPSBLD01 /* WorkoutKitPlanStepSummary.swift in Sources */,
 				AMA2374SECTSBLD01 /* WorkoutKitPlanStepSummary+Sections.swift in Sources */,
 				AMA2374DDBANDBLD1 /* DailyDriverTheme+WatchBands.swift in Sources */,
+				AMA2375COPYBLD /* OnYourWatchesCopy.swift in Sources */,
+				AMA2375MODLBLD /* OnYourWatchesModels.swift in Sources */,
+				AMA2375QSTRBLD /* GarminWatchQueueStore.swift in Sources */,
+				AMA2375DEMOBLD /* OnYourWatchesDemoSupport.swift in Sources */,
+				AMA2375OYVMBLD /* OnYourWatchesViewModel.swift in Sources */,
+				AMA2375GQVMBLD /* GarminWatchQueueViewModel.swift in Sources */,
+				AMA2375OYWVBLD /* OnYourWatchesView.swift in Sources */,
+				AMA2375APLSBLD /* AppleWatchScheduledListView.swift in Sources */,
+				AMA2375GARQBLD /* GarminWatchQueueView.swift in Sources */,
+				AMA2375PICKBLD /* WatchLibraryPickView.swift in Sources */,
 				AMA2351WKMETABLD /* WorkoutKitPlanMeta.swift in Sources */,
 				AMA2351WKPREVBLD /* AppleWorkoutKitPreviewSheet.swift in Sources */,
 				AMA2336COORDBLD001 /* WorkoutEnrichmentPushCoordinator.swift in Sources */,
@@ -2775,6 +2818,7 @@
 				AMA2287APHTESTBLD /* AppleStartHandoffTests.swift in Sources */,
 				AMA2351METATESTBLD /* WorkoutKitPlanMetaTests.swift in Sources */,
 				AMA2330SCHVMTESTBUILD /* WorkoutScheduleViewModelTests.swift in Sources */,
+				AMA2375OYWTBLD /* OnYourWatchesViewModelTests.swift in Sources */,
 				AMA2289DIARYTSTBLD /* TodayDiaryTests.swift in Sources */,
 				AMA2290BFTESTBLD /* StrengthBackfillTests.swift in Sources */,
 				AK00TST010B /* MockURLProtocol.swift in Sources */,

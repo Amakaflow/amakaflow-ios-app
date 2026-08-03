@@ -11,6 +11,11 @@ import Foundation
 enum LibraryDestination: Hashable, Identifiable {
     case unifiedWorkout(workoutID: String)
     case knowledgeDetail(itemID: String)
+    /// AMA-2375 — watch workout manager overview.
+    case onYourWatches
+    case appleScheduled
+    case garminQueue
+    case libraryPick(WatchLibraryPickTarget)
 
     var id: String {
         switch self {
@@ -18,6 +23,14 @@ enum LibraryDestination: Hashable, Identifiable {
             return "workout:\(workoutID)"
         case .knowledgeDetail(let itemID):
             return "knowledge:\(itemID)"
+        case .onYourWatches:
+            return "onYourWatches"
+        case .appleScheduled:
+            return "appleScheduled"
+        case .garminQueue:
+            return "garminQueue"
+        case .libraryPick(let target):
+            return "libraryPick:\(target.rawValue)"
         }
     }
 }
