@@ -95,7 +95,7 @@ struct BuilderV3RunStepBuilderView: View {
 
                 Button(action: changeTypeTapped) {
                     Text("\(seed.label.uppercased()) · CHANGE")
-                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                        .font(.system(size: 9.5, weight: .bold))
                         .foregroundColor(accent)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
@@ -111,7 +111,7 @@ struct BuilderV3RunStepBuilderView: View {
                 .foregroundColor(DailyDriver.foreground)
                 .accessibilityIdentifier("workout_name_field")
 
-            Text("DEFAULTS APPLIED — TAP ANYTHING TO TWEAK")
+            Text(BuilderV3RunInstructionCopy.line(isBlankDraft: session.isBlankDraft))
                 .font(.system(size: 9, weight: .medium, design: .monospaced))
                 .foregroundColor(DailyDriver.foregroundDim)
         }
@@ -245,6 +245,16 @@ private struct BuilderV3RunBlockCard: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .accessibilityIdentifier("builder_v3_run_block_\(block.id)")
+    }
+}
+
+/// Instruction subtitle under the run title (AMA-2372 mockup chrome).
+enum BuilderV3RunInstructionCopy {
+    static func line(isBlankDraft: Bool) -> String {
+        if isBlankDraft {
+            return "JUST ADD STEPS — STRUCTURE COMES LATER"
+        }
+        return "DEFAULTS APPLIED — TAP ANYTHING TO TWEAK"
     }
 }
 

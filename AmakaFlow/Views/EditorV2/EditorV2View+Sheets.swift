@@ -272,7 +272,7 @@ extension EditorV2View {
             let accent = Color(hex: builderV3Seed.category.accentHex)
             Button(action: builderV3ChangeTypeTapped) {
                 Text("\(builderV3Seed.label.uppercased()) · CHANGE")
-                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                    .font(.system(size: 9.5, weight: .bold))
                     .foregroundColor(accent)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
@@ -287,7 +287,8 @@ extension EditorV2View {
 
     /// TYPE · CHANGE (AMA-2372) — confirms first when the canvas is dirty.
     func builderV3ChangeTypeTapped() {
-        let isDirty = !session.exercises.isEmpty || !session.groups.isEmpty
+        let titleDirty = builderV3InitialTitle.map { $0 != session.title } ?? false
+        let isDirty = !session.exercises.isEmpty || !session.groups.isEmpty || titleDirty
         if isDirty {
             showBuilderV3ChangeTypeConfirm = true
         } else {

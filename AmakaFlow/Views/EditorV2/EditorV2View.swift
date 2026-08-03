@@ -41,6 +41,10 @@ struct EditorV2View: View {
     /// AMA-2336 — `workout_preferences` cache; fetched on the first quick-add.
     @State var enrichmentPrefs: WorkoutPreferences?
 
+    /// AMA-2372 — title captured at open; title-only edits count as dirty for
+    /// TYPE · CHANGE so we don't discard an unnamed→named draft silently.
+    private let builderV3InitialTitle: String?
+
     init(
         mode: DDEditorMode,
         workout: Workout? = nil,
@@ -58,6 +62,7 @@ struct EditorV2View: View {
         let initialSession = presetSeed.map { EditorV2Session(title: $0.title) }
             ?? builderV3Seed.map { BuilderV3TypeRegistry.makeEditorSession(for: $0) }
             ?? EditorV2Session.from(mode: mode, workout: workout)
+        self.builderV3InitialTitle = builderV3Seed != nil ? initialSession.title : nil
         _session = State(initialValue: initialSession)
         _matchController = StateObject(
             wrappedValue: WorkoutTypeMatchController(

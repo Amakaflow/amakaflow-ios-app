@@ -113,7 +113,7 @@ struct BuilderV3TypePickerView: View {
                     .fill(accent)
                     .frame(width: 7, height: 7)
                 Text(category.label.uppercased())
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .font(.system(size: 10, weight: .bold))
                     .foregroundColor(DailyDriver.foregroundMuted)
             }
             LazyVGrid(

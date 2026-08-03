@@ -87,6 +87,7 @@ enum EditorV2Content {
                     + "Pair into supersets or pin a format anytime."
             )
             .font(.system(size: 13))
+            .monospacedDigit()
             .foregroundColor(DailyDriver.foregroundMuted)
             .multilineTextAlignment(.center)
             .lineSpacing(3)
