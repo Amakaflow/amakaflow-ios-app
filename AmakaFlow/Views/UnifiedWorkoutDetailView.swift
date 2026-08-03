@@ -167,7 +167,8 @@ struct UnifiedWorkoutDetailView: View {
                     workoutName: name,
                     meta: meta,
                     intervalCount: intervalCount,
-                    stepLines: WorkoutKitPlanStepSummary.lines(from: planJSON),
+                    sections: WorkoutKitPlanStepSummary.sections(from: planJSON),
+                    sportLabel: WorkoutKitSportLabel.label(from: planJSON),
                     prefsSummary: AppleWatchDeliveryPrefsStore.previewSummaryLine,
                     onConfirm: {
                         // Keep enriched structure; clear before dismiss so onDismiss skips reset.
@@ -184,6 +185,9 @@ struct UnifiedWorkoutDetailView: View {
                         lastAppleHandoffShowsManagePlans = false
                     }
                 )
+                .presentationDetents([.large, .medium])
+                .presentationDragIndicator(.hidden)
+                .presentationBackground(DailyDriver.screenBackground)
             case .enrichment(let prepared):
                 WorkoutEnrichmentPushSheet(
                     plan: prepared.plan,
