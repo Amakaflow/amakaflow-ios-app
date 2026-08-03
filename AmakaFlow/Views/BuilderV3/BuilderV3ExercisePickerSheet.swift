@@ -115,7 +115,7 @@ struct BuilderV3ExercisePickerSheet: View {
     }
 
     private var searchField: some View {
-        TextField("Search exercises...", text: $query)
+        TextField("Search — chest press, pull up...", text: $query)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
             .padding(12)

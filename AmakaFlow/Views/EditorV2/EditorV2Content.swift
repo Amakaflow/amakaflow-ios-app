@@ -25,18 +25,31 @@ enum EditorV2Content {
     static func main(
         session: EditorV2Session,
         isReorderMode: Bool,
-        actions: EditorV2ContentActions
+        actions: EditorV2ContentActions,
+        builderV3Canvas: Bool = false
     ) -> some View {
         if isReorderMode {
             reorderList(session: session, actions: actions)
         } else if session.exercises.isEmpty, session.formatGroupKey == nil {
-            emptyState(onStartFormat: actions.onStartFormat)
-            addExerciseButton(emphasized: true, onAdd: actions.onAdd)
+            if builderV3Canvas {
+                builderV3BlankEmptyState()
+            } else {
+                emptyState(onStartFormat: actions.onStartFormat)
+            }
+            addExerciseButton(
+                emphasized: !builderV3Canvas,
+                plural: builderV3Canvas,
+                onAdd: actions.onAdd
+            )
         } else if session.exercises.isEmpty,
                   let fmtKey = session.formatGroupKey,
                   let group = session.groups[fmtKey] {
             formatPinnedPlaceholder(group: group, key: fmtKey, onConfig: actions.onConfigGroup)
-            addExerciseButton(emphasized: false, onAdd: actions.onAdd)
+            addExerciseButton(
+                emphasized: false,
+                plural: builderV3Canvas,
+                onAdd: actions.onAdd
+            )
         } else {
             enrichmentChips(session: session, actions: actions)
             ForEach(session.runs) { run in
@@ -58,8 +71,32 @@ enum EditorV2Content {
                     }
                 }
             }
-            addExerciseButton(emphasized: false, onAdd: actions.onAdd)
+            addExerciseButton(
+                emphasized: false,
+                plural: builderV3Canvas,
+                onAdd: actions.onAdd
+            )
         }
+    }
+
+    /// AMA-2372 mockup 6 — blank Builder v3 canvas (no format chips / old door).
+    static func builderV3BlankEmptyState() -> some View {
+        VStack(spacing: 0) {
+            Text(
+                "Every exercise lands as 3 × 10 · 60s rest. "
+                    + "Pair into supersets or pin a format anytime."
+            )
+            .font(.system(size: 13))
+            .monospacedDigit()
+            .foregroundColor(DailyDriver.foregroundMuted)
+            .multilineTextAlignment(.center)
+            .lineSpacing(3)
+            .padding(.horizontal, 8)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 28)
+        .padding(.horizontal, 10)
+        .accessibilityIdentifier("builder_v3_blank_empty_state")
     }
 
     /// AMA-2336 — quiet "add the section you're missing" row. Presence by type:
@@ -228,9 +265,14 @@ enum EditorV2Content {
         }
     }
 
-    static func addExerciseButton(emphasized: Bool, onAdd: @escaping () -> Void) -> some View {
-        Button(action: onAdd) {
-            Text("＋ Add exercise")
+    static func addExerciseButton(
+        emphasized: Bool,
+        plural: Bool = false,
+        onAdd: @escaping () -> Void
+    ) -> some View {
+        let label = plural ? "＋ Add exercises" : "＋ Add exercise"
+        return Button(action: onAdd) {
+            Text(label)
                 .ddDisplayText(13.5, weight: .bold)
                 .foregroundColor(emphasized ? DailyDriver.ink : DailyDriver.foregroundMuted)
                 .frame(maxWidth: .infinity)

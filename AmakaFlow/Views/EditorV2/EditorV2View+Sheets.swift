@@ -269,13 +269,15 @@ extension EditorV2View {
     @ViewBuilder
     var builderV3TypeChangeButton: some View {
         if let builderV3Seed, onBuilderV3ChangeType != nil {
+            let accent = Color(hex: builderV3Seed.category.accentHex)
             Button(action: builderV3ChangeTypeTapped) {
                 Text("\(builderV3Seed.label.uppercased()) · CHANGE")
-                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                    .foregroundColor(DailyDriver.blue)
+                    .font(.system(size: 9.5, weight: .bold))
+                    .foregroundColor(accent)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(Capsule().fill(DailyDriver.blue.opacity(0.16)))
+                    .background(Capsule().fill(accent.opacity(0.18)))
+                    .overlay(Capsule().stroke(accent.opacity(0.45), lineWidth: 1))
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("builder_v3_type_change_button")
@@ -285,7 +287,8 @@ extension EditorV2View {
 
     /// TYPE · CHANGE (AMA-2372) — confirms first when the canvas is dirty.
     func builderV3ChangeTypeTapped() {
-        let isDirty = !session.exercises.isEmpty || !session.groups.isEmpty
+        let titleDirty = builderV3InitialTitle.map { $0 != session.title } ?? false
+        let isDirty = !session.exercises.isEmpty || !session.groups.isEmpty || titleDirty
         if isDirty {
             showBuilderV3ChangeTypeConfirm = true
         } else {

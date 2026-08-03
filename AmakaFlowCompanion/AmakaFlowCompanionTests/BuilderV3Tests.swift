@@ -42,6 +42,62 @@ final class BuilderV3Tests: XCTestCase {
         XCTAssertEqual(session.formatGroupKey, "fmt")
         XCTAssertEqual(session.groups["fmt"]?.type, .superset)
         XCTAssertTrue(session.exercises.isEmpty)
+        XCTAssertEqual(session.title, "Supersets")
+    }
+
+    func testSeedDefaultTitlesMatchMockupCanvas() {
+        let untitled: [BuilderV3TypeSeed] = [
+            BuilderV3TypeRegistry.straightSets,
+            BuilderV3TypeRegistry.blank
+        ]
+        for seed in untitled {
+            XCTAssertNil(seed.defaultTitle, seed.id)
+            if BuilderV3TypeRegistry.isRunSeed(seed) {
+                XCTAssertEqual(BuilderV3RunRegistry.makeRunSession(for: seed).title, "")
+            } else {
+                XCTAssertEqual(BuilderV3TypeRegistry.makeEditorSession(for: seed).title, "")
+            }
+        }
+
+        let titledCases: [(BuilderV3TypeSeed, String)] = BuilderV3TypeRegistry.all.compactMap { seed in
+            guard let title = seed.defaultTitle else { return nil }
+            return (seed, title)
+        }
+        XCTAssertEqual(titledCases.count, BuilderV3TypeRegistry.all.count - untitled.count)
+
+        for (seed, expectedTitle) in titledCases {
+            if BuilderV3TypeRegistry.isRunSeed(seed) {
+                XCTAssertEqual(
+                    BuilderV3RunRegistry.makeRunSession(for: seed).title,
+                    expectedTitle,
+                    seed.id
+                )
+            } else {
+                XCTAssertEqual(
+                    BuilderV3TypeRegistry.makeEditorSession(for: seed).title,
+                    expectedTitle,
+                    seed.id
+                )
+            }
+        }
+    }
+
+    func testRunInstructionCopyBlankVsSeeded() {
+        XCTAssertEqual(
+            BuilderV3RunInstructionCopy.line(isBlankDraft: true),
+            "JUST ADD STEPS — STRUCTURE COMES LATER"
+        )
+        XCTAssertEqual(
+            BuilderV3RunInstructionCopy.line(isBlankDraft: false),
+            "DEFAULTS APPLIED — TAP ANYTHING TO TWEAK"
+        )
+        let seeded = BuilderV3RunRegistry.makeRunSession(for: BuilderV3TypeRegistry.intervals)
+        XCTAssertFalse(seeded.isBlankDraft)
+        var cleared = seeded
+        while let first = cleared.blocks.first {
+            cleared.removeBlock(first.id)
+        }
+        XCTAssertTrue(cleared.isBlankDraft)
     }
 
     func testPushSeedSeedsFixedStarterNamesWithDefaultPrescription() {
