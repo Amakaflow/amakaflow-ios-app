@@ -152,11 +152,13 @@ final class MockWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
             throw WorkoutScheduleRescheduleError.rowNotFound
         }
         let components = Calendar.current.dateComponents(
-            [.year, .month, .day, .hour, .minute, .second],
+            [.year, .month, .day, .hour, .minute],
             from: date
         )
+        let newID = WorkoutScheduleRowID(planID: row.id.planID, date: components)
+        guard newID != row.id else { return }
         let updated = WorkoutScheduleRow(
-            id: WorkoutScheduleRowID(planID: row.id.planID, date: components),
+            id: newID,
             title: row.title,
             dateComponents: components,
             scheduledAt: date,
@@ -254,6 +256,11 @@ final class LiveWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
         )
         let oldID = row.id
         let newID = WorkoutScheduleRowID(planID: row.id.planID, date: components)
+        // Same minute slot — leave the schedule alone (Save on current Move date).
+        // Compare fields, not IDs: WorkoutKit may include seconds on the existing slot.
+        if Self.isSameMinuteSlot(row.dateComponents, components) {
+            return
+        }
         await WorkoutScheduler.shared.remove(plan, at: row.dateComponents)
         await WorkoutScheduler.shared.schedule(plan, at: components)
         let refreshed = try await fetchScheduledRows()
@@ -302,6 +309,14 @@ final class LiveWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
         @unknown default:
             return .notDetermined
         }
+    }
+
+    private static func isSameMinuteSlot(_ lhs: DateComponents, _ rhs: DateComponents) -> Bool {
+        lhs.year == rhs.year
+            && lhs.month == rhs.month
+            && lhs.day == rhs.day
+            && lhs.hour == rhs.hour
+            && lhs.minute == rhs.minute
     }
 
     /// AmakaFlow always schedules `.custom(CustomWorkout)` with `displayName` set

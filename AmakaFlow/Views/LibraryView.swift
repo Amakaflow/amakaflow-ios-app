@@ -19,6 +19,8 @@ struct LibraryView: View {
     @StateObject private var watchesVM = OnYourWatchesViewModel()
     /// Gates content/empty `.task` so state flips don't double-refresh watches.
     @State private var watchesDidInitialRefresh = false
+    /// AMA-2375: Garmin Fix opens the editor directly (not detail → Edit).
+    @State private var garminFixWorkoutID: String?
 
     init(viewModel: LibraryViewModel? = nil) {
         _viewModel = StateObject(wrappedValue: viewModel ?? LibraryViewModel())
@@ -78,6 +80,27 @@ struct LibraryView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .sheet(
+            isPresented: Binding(
+                get: { garminFixWorkoutID != nil },
+                set: { if !$0 { garminFixWorkoutID = nil } }
+            ),
+            onDismiss: {
+                Task { await viewModel.load() }
+            }
+        ) {
+            if let workoutID = garminFixWorkoutID,
+               let workout = viewModel.workout(for: workoutID)
+                ?? viewModel.resolveWorkout(for: .unifiedWorkout(workoutID: workoutID)) {
+                WorkoutEditorView(workout: workout)
+                    .accessibilityIdentifier("af_garmin_queue_fix_editor")
+            } else {
+                Text("Workout unavailable")
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                    .accessibilityIdentifier("af_garmin_queue_fix_editor_missing")
+            }
+        }
         .overlay(alignment: .top) {
             if let error = viewModel.ctaError {
                 ErrorToast(
@@ -409,7 +432,7 @@ extension LibraryView {
                     navigationPath.append(.libraryPick(.garminPush))
                 },
                 onFix: { item in
-                    navigationPath.append(.unifiedWorkout(workoutID: item.workoutID))
+                    garminFixWorkoutID = item.workoutID
                 }
             )
         case .libraryPick(let target):

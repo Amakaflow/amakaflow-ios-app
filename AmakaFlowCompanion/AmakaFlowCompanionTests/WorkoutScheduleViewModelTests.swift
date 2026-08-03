@@ -468,10 +468,27 @@ final class WorkoutScheduleViewModelTests: XCTestCase {
         XCTAssertEqual(mock.rows[0].id.planID, original.id.planID)
         XCTAssertNotEqual(mock.rows[0].id, original.id)
         let expectedComponents = Calendar.current.dateComponents(
-            [.year, .month, .day, .hour, .minute, .second],
+            [.year, .month, .day, .hour, .minute],
             from: target
         )
         XCTAssertEqual(mock.rows[0].dateComponents, expectedComponents)
+    }
+
+    func testMoveToCurrentSlotIsANoOp() async {
+        let mock = MockWorkoutKitScheduler()
+        let original = row(id: "same", title: "Stay Put", minutesAgo: 30)
+        mock.rows = [original]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        guard let scheduledAt = original.scheduledAt else {
+            XCTFail("fixture row needs scheduledAt")
+            return
+        }
+        let ok = await vm.move(row: original, to: scheduledAt)
+        XCTAssertTrue(ok)
+        XCTAssertEqual(mock.rows.count, 1)
+        XCTAssertEqual(mock.rows[0].id, original.id)
+        XCTAssertEqual(mock.rows[0].dateComponents, original.dateComponents)
     }
 
     func testMoveReturnsFalseWhenRefreshFailsAfterReschedule() async {
