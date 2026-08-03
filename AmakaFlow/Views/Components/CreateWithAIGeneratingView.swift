@@ -2,13 +2,12 @@
 //  CreateWithAIGeneratingView.swift
 //  AmakaFlow
 //
-//  AMA-2373: Create with AI — staged generating screen (ring, cycling steps,
-//  ask echo, attached signal chips, cancel). Daily Driver chrome only; no
+//  AMA-2373: Create with AI — staged generating screen matching the approved
+//  rig (ring + ask echo + status + chips + progress bar + cancel). No
 //  readiness/history claims are ever rendered here (createWithAI never
 //  requests those signals).
 //
 
-import Combine
 import SwiftUI
 
 struct CreateWithAIGeneratingView: View {
@@ -17,16 +16,15 @@ struct CreateWithAIGeneratingView: View {
     let onCancel: () -> Void
 
     @State private var stepIndex = 0
-    @State private var spin = false
-    private let timer = Timer.publish(every: 1.6, on: .main, in: .common).autoconnect()
+    @State private var ringSpinning = false
 
     private var steps: [String] {
-        var result = ["Reading your ask"]
-        if chips.contains(.gym) { result.append("Checking your gym equipment") }
-        if chips.contains(.profile) { result.append("Applying your training profile") }
-        if chips.contains(.memories) { result.append("Recalling coach notes") }
-        result.append("Building your session")
-        result.append("Finalizing details")
+        var result = ["Reading your ask…"]
+        if chips.contains(.gym) { result.append("Checking gym + equipment…") }
+        if chips.contains(.profile) { result.append("Applying your training profile…") }
+        if chips.contains(.memories) { result.append("Recalling coach notes…") }
+        result.append("Picking movements…")
+        result.append("Building your session…")
         return result
     }
 
@@ -34,80 +32,117 @@ struct CreateWithAIGeneratingView: View {
         ask.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// Progress bar / STEP label clamp at the final step once one full pass
+    /// completes (same AMA-2371 rule — never visibly run backwards).
+    private var progressStep: Int {
+        min(stepIndex + 1, steps.count)
+    }
+
+    private var progressFraction: CGFloat {
+        guard !steps.isEmpty else { return 0 }
+        return CGFloat(progressStep) / CGFloat(steps.count)
+    }
+
     var body: some View {
-        VStack(spacing: 22) {
-            ring
+        VStack(spacing: 0) {
+            HStack {
+                Button(action: onCancel) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(DailyDriver.foregroundMuted)
+                        .frame(width: 36, height: 36)
+                        .background(DailyDriver.card2)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Cancel")
+                .accessibilityIdentifier("create_with_ai_generating_cancel")
 
-            Text(steps[safe: stepIndex] ?? steps.last ?? "Generating…")
-                .ddDisplayText(16, weight: .bold)
-                .foregroundColor(DailyDriver.foreground)
-                .id(stepIndex)
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
-                .animation(.easeOut(duration: 0.3), value: stepIndex)
-
-            if !trimmedAsk.isEmpty {
-                Text("“\(trimmedAsk)”")
-                    .font(.system(size: 13))
-                    .foregroundColor(DailyDriver.foregroundMuted)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .padding(.horizontal, 24)
-                    .accessibilityIdentifier("create_with_ai_generating_ask")
+                Spacer()
             }
+            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.top, Theme.Spacing.sm)
 
-            if !chips.isEmpty {
-                chipsRow
-            }
+            Spacer(minLength: 0)
 
-            Text("STEP \(min(stepIndex + 1, steps.count)) OF \(steps.count)")
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
-                .foregroundColor(DailyDriver.foregroundDim)
+            VStack(spacing: 18) {
+                generatingRing
 
-            Button(action: onCancel) {
-                Text("Cancel")
-                    .ddDisplayText(13, weight: .bold)
+                if !trimmedAsk.isEmpty {
+                    Text("“\(trimmedAsk)”")
+                        .font(.system(size: 14).italic())
+                        .foregroundColor(DailyDriver.foregroundMuted)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(3)
+                        .padding(.horizontal, 28)
+                        .accessibilityIdentifier("create_with_ai_generating_ask")
+                }
+
+                Text(steps[safe: stepIndex % max(steps.count, 1)] ?? "Generating…")
+                    .ddDisplayText(20, weight: .bold)
                     .foregroundColor(DailyDriver.foreground)
-                    .padding(.horizontal, 22)
-                    .padding(.vertical, 11)
-                    .background(DailyDriver.card2)
-                    .overlay(Capsule().stroke(DailyDriver.borderStrong, lineWidth: 1))
-                    .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("create_with_ai_generating_cancel")
+                    .multilineTextAlignment(.center)
+                    .id(stepIndex)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    .animation(.easeOut(duration: 0.3), value: stepIndex)
+                    .padding(.horizontal, 24)
 
-            Text(CreateWithAICopy.failureFinePrint)
-                .font(.system(size: 11))
-                .foregroundColor(DailyDriver.foregroundDim)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 30)
+                if !chips.isEmpty {
+                    chipsRow
+                }
+
+                progressSection
+                    .padding(.horizontal, 36)
+                    .padding(.top, 8)
+
+                Text(CreateWithAICopy.failureFinePrint)
+                    .font(.system(size: 11))
+                    .foregroundColor(DailyDriver.foregroundDim)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 30)
+                    .padding(.top, 4)
+            }
+
+            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.vertical, 32)
-        .onAppear { spin = true }
-        .onReceive(timer) { _ in
-            stepIndex = (stepIndex + 1) % steps.count
-        }
+        .task { await cycleSteps() }
         .accessibilityIdentifier("create_with_ai_generating")
     }
 
-    private var ring: some View {
+    /// Fixed-size ZStack + filled center disc. The orphaned-arc bug came from
+    /// animating a bare `Circle().trim` without a stable frame/center glyph —
+    /// the rotating stroke's layout bounds drifted off the sparkles.
+    private var generatingRing: some View {
         ZStack {
             Circle()
-                .stroke(Color.white.opacity(0.08), lineWidth: 3)
-                .frame(width: 84, height: 84)
+                .stroke(DailyDriver.lime.opacity(0.18), lineWidth: 3)
+                .frame(width: 88, height: 88)
 
             Circle()
                 .trim(from: 0, to: 0.28)
                 .stroke(DailyDriver.lime, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                .frame(width: 84, height: 84)
-                .rotationEffect(.degrees(spin ? 360 : 0))
-                .animation(.linear(duration: 0.9).repeatForever(autoreverses: false), value: spin)
+                .frame(width: 88, height: 88)
+                .rotationEffect(.degrees(-90))
+                .rotationEffect(.degrees(ringSpinning ? 360 : 0))
+                .animation(
+                    .linear(duration: 1.1).repeatForever(autoreverses: false),
+                    value: ringSpinning
+                )
 
-            Image(systemName: "sparkles")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundColor(DailyDriver.lime)
+            Circle()
+                .fill(DailyDriver.lime)
+                .frame(width: 56, height: 56)
+                .overlay(
+                    Image(systemName: "plus")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(DailyDriver.ink)
+                )
+                .ddLimeGlow()
         }
+        .frame(width: 88, height: 88)
+        .onAppear { ringSpinning = true }
+        .accessibilityHidden(true)
     }
 
     private var chipsRow: some View {
@@ -115,7 +150,7 @@ struct CreateWithAIGeneratingView: View {
             ForEach(chips) { chip in
                 HStack(spacing: 6) {
                     Image(systemName: chip.icon)
-                    Text(chip.label)
+                    Text(chip.label.uppercased())
                 }
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(DailyDriver.foregroundMuted)
@@ -125,6 +160,33 @@ struct CreateWithAIGeneratingView: View {
                 .overlay(Capsule().stroke(DailyDriver.border, lineWidth: 1))
                 .clipShape(Capsule())
             }
+        }
+        .padding(.horizontal, 24)
+    }
+
+    private var progressSection: some View {
+        VStack(spacing: Theme.Spacing.xs) {
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(DailyDriver.card2)
+                    Capsule()
+                        .fill(DailyDriver.lime)
+                        .frame(width: max(4, geo.size.width * progressFraction))
+                }
+            }
+            .frame(height: 4)
+
+            Text("STEP \(progressStep) OF \(steps.count) · \(CreateWithAICopy.usuallyUnder)")
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .foregroundColor(DailyDriver.foregroundDim)
+        }
+    }
+
+    private func cycleSteps() async {
+        while !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: 1_600_000_000)
+            guard !Task.isCancelled else { return }
+            stepIndex += 1
         }
     }
 }
@@ -140,7 +202,7 @@ private extension Array {
     ZStack {
         DailyDriver.screenBackground.ignoresSafeArea()
         CreateWithAIGeneratingView(
-            ask: "A 30-minute full-body strength session",
+            ask: "Chest pump, about 45 minutes, nothing on cables",
             chips: [.gym, .profile]
         ) {}
     }

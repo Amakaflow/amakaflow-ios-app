@@ -180,4 +180,32 @@ final class CreateWithAICopyTests: XCTestCase {
         XCTAssertEqual(rows.filter { $0.band == .cooldown }.count, 1)
         XCTAssertEqual(rows.filter { $0.band == .main }.count, 1)
     }
+
+    func testExerciseCountLabelIgnoresRestIntervals() {
+        let label = CreateWithAIDraftPresentation.exerciseCountLabel(
+            warmUp: .warmup(seconds: 300, target: "WU"),
+            blocks: [
+                .reps(sets: 3, reps: 8, name: "Bench", load: "77kg", restSec: 90, followAlongUrl: nil),
+                .rest(seconds: 60),
+                .reps(sets: 3, reps: 10, name: "Row", load: nil, restSec: nil, followAlongUrl: nil),
+            ],
+            cooldown: nil
+        )
+
+        XCTAssertEqual(label, "2 EXERCISES + WU")
+    }
+
+    func testFitsGymLabelOnlyWhenAttached() {
+        XCTAssertNil(
+            CreateWithAIDraftPresentation.fitsGymLabel(gymAttached: false, gymName: "Home gym")
+        )
+        XCTAssertEqual(
+            CreateWithAIDraftPresentation.fitsGymLabel(gymAttached: true, gymName: "Home gym"),
+            "FITS HOME GYM ✓"
+        )
+        XCTAssertEqual(
+            CreateWithAIDraftPresentation.fitsGymLabel(gymAttached: true, gymName: nil),
+            "FITS GYM ✓"
+        )
+    }
 }

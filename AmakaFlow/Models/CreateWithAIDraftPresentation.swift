@@ -91,6 +91,31 @@ enum CreateWithAIDraftPresentation {
         return rows
     }
 
+    /// Meta pill for exercise count — never raw interval count (rests inflate
+    /// "10 steps" for 5 exercises). Matches rig: `5 EXERCISES + WU`.
+    static func exerciseCountLabel(
+        warmUp: WorkoutInterval?,
+        blocks: [WorkoutInterval],
+        cooldown _: WorkoutInterval?
+    ) -> String {
+        let mainCount = collapseRests(intervals: blocks).count
+        var label = mainCount == 1 ? "1 EXERCISE" : "\(mainCount) EXERCISES"
+        if warmUp != nil { label += " + WU" }
+        return label
+    }
+
+    /// Gym-fit pill when gym context was attached. Never invents readiness.
+    static func fitsGymLabel(gymAttached: Bool, gymName: String?) -> String? {
+        guard gymAttached else { return nil }
+        if let gymName {
+            let trimmed = gymName.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                return "FITS \(trimmed.uppercased()) ✓"
+            }
+        }
+        return "FITS GYM ✓"
+    }
+
     private static func normalizedBullets(_ values: [String]) -> [String] {
         var seen = Set<String>()
         return values.compactMap { value in
