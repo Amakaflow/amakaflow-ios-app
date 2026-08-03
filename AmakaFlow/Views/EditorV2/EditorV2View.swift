@@ -10,9 +10,16 @@ import SwiftUI
 struct EditorV2View: View {
     let mode: DDEditorMode
     var workout: Workout?
+    /// AMA-2372 — Builder v3 type-picker seed + its "return to picker" callback.
+    /// `nil` for every non-Builder-v3 flow (edit, import review, favorite presets).
+    var builderV3Seed: BuilderV3TypeSeed?
+    var onBuilderV3ChangeType: (() -> Void)?
+    /// Called after a successful save (before dismiss). Used by Builder v3 to
+    /// reload the library after lift/conditioning/recover drafts land.
+    var onSaved: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var saveModel: WorkoutEditorViewModel
+    @StateObject var saveModel: WorkoutEditorViewModel
     @StateObject var matchController: WorkoutTypeMatchController
 
     @State var session: EditorV2Session
@@ -24,21 +31,32 @@ struct EditorV2View: View {
     @State var pairSourceID: String?
     @State var addSheetOpen = false
     @State var replaceExerciseID: String?
-    @State private var isMatchSheetPresented = false
+    @State var isMatchSheetPresented = false
+    @State var showBuilderV3ChangeTypeConfirm = false
+    /// AMA-2372 — gym overlay keys for the multi-select add sheet. `nil` = no
+    /// coaching profile loaded (or it failed) ⇒ never mark exercises missing.
+    @State var gymEquipmentKeys: Set<String>?
     @State var favoritePresets: [WorkoutTypeItem] = []
     @FocusState private var isTitleFocused: Bool
     /// AMA-2336 — `workout_preferences` cache; fetched on the first quick-add.
-    @State private var enrichmentPrefs: WorkoutPreferences?
+    @State var enrichmentPrefs: WorkoutPreferences?
 
     init(
         mode: DDEditorMode,
         workout: Workout? = nil,
-        preset: WorkoutTypeItem? = nil
+        preset: WorkoutTypeItem? = nil,
+        builderV3Seed: BuilderV3TypeSeed? = nil,
+        onBuilderV3ChangeType: (() -> Void)? = nil,
+        onSaved: (() -> Void)? = nil
     ) {
         self.mode = mode
         self.workout = workout
+        self.builderV3Seed = builderV3Seed
+        self.onBuilderV3ChangeType = onBuilderV3ChangeType
+        self.onSaved = onSaved
         let presetSeed = preset.map(WorkoutTypePresetEditorSeed.init)
         let initialSession = presetSeed.map { EditorV2Session(title: $0.title) }
+            ?? builderV3Seed.map { BuilderV3TypeRegistry.makeEditorSession(for: $0) }
             ?? EditorV2Session.from(mode: mode, workout: workout)
         _session = State(initialValue: initialSession)
         _matchController = StateObject(
@@ -112,7 +130,10 @@ struct EditorV2View: View {
         .overlay(alignment: .top) { accessibilityMarkers }
         .overlay(alignment: .bottom) { toastOverlay }
         .onChange(of: saveModel.didSave) { _, saved in
-            if saved { dismiss() }
+            if saved {
+                onSaved?()
+                dismiss()
+            }
         }
         .onChange(of: saveModel.errorMessage) { _, message in
             if let message, !message.isEmpty {
@@ -125,11 +146,18 @@ struct EditorV2View: View {
         .sheet(item: pairSourceBinding, content: pairSheet)
         .sheet(isPresented: $addSheetOpen) { addSheet }
         .sheet(isPresented: $isMatchSheetPresented) { workoutTypeMatchSheet }
+        .alert("Change workout type?", isPresented: $showBuilderV3ChangeTypeConfirm) {
+            Button("Keep editing", role: .cancel) {}
+            Button("Change type", role: .destructive) { onBuilderV3ChangeType?() }
+        } message: {
+            Text("This clears the exercises and format on this canvas.")
+        }
         .task { await resolveLoadedMatchDisplayName() }
         .task {
             guard isNew else { return }
             await loadFavoritePresets()
         }
+        .task { gymEquipmentKeys = await loadGymEquipmentKeys() }
         .task(id: session.title) {
             matchController.noteTitleForSave(session.title)
             do {
@@ -170,6 +198,8 @@ struct EditorV2View: View {
                 .buttonStyle(.plain)
 
                 Spacer(minLength: 0)
+
+                builderV3TypeChangeButton
 
                 if session.exercises.count > 1 {
                     Button {
@@ -240,96 +270,5 @@ struct EditorV2View: View {
             return "JUST ADD EXERCISES — STRUCTURE COMES LATER"
         }
         return "TAP AN EXERCISE TO EDIT IT · ⋯ FOR EVERYTHING ELSE"
-    }
-
-    /// Quick-add from prefs. An explicit tap re-opts in, so a previous delete
-    /// (tombstone) is cleared first — presence by type still blocks duplicates.
-    private func quickAddSoftSection(_ kind: EnrichmentKind) {
-        Task {
-            let prefs = await loadEnrichmentPrefs()
-            let added: Bool
-            switch kind {
-            case .cooldown:
-                added = session.quickAddCooldown(from: prefs, clearingTombstone: true)
-            case .sessionWarmup:
-                added = session.quickAddSessionWarmup(from: prefs, clearingTombstone: true)
-            case .betweenSetRest, .exerciseWarmupSets:
-                assertionFailure("quickAddSoftSection called with unsupported kind \(kind)")
-                return
-            }
-            guard added else {
-                showToast(
-                    kind == .cooldown
-                        ? "No cool-down defaults yet — set them in Settings › Garmin"
-                        : "No warm-up defaults yet — set them in Settings › Garmin"
-                )
-                return
-            }
-            showToast(kind == .cooldown ? "Cool-down added ✓" : "Warm-up added ✓")
-        }
-    }
-
-    func addWarmupSets(to exerciseID: String) {
-        Task {
-            let prefs = await loadEnrichmentPrefs()
-            let added = session.addDefaultWarmupSets(
-                to: exerciseID,
-                rows: prefs.defaultWarmupSetRows,
-                clearingTombstone: true
-            )
-            showToast(
-                added
-                    ? "Warm-up sets added ✓"
-                    : "No warm-up set defaults yet — set them in Settings › Garmin"
-            )
-        }
-    }
-
-    /// Prefs are a default source, never a gate: an unavailable mapper falls back
-    /// to the shipped defaults so the quick-add still works offline.
-    private func loadEnrichmentPrefs() async -> WorkoutPreferences {
-        if let enrichmentPrefs { return enrichmentPrefs }
-        let loaded = (try? await AppDependencies.current.apiService.fetchWorkoutPreferences())
-            ?? .defaults
-        enrichmentPrefs = loaded
-        return loaded
-    }
-
-    private func saveTapped() {
-        let trimmedTitle = session.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        saveModel.name = trimmedTitle
-        saveModel.intervals = session.toSaveIntervals()
-        session.mintMissingExerciseIDs()
-        saveModel.saveBlocks = session.toSocialImportBlocks()
-        // nil = leave server tombstones alone when this session never touched them.
-        saveModel.saveEnrichmentTombstones = session.enrichmentTombstonesDirty
-            ? session.enrichmentTombstones
-            : nil
-        Task {
-            matchController.noteTitleForSave(trimmedTitle)
-            let canonicalValues = await matchController.onSave(online: true)
-            saveModel.canonicalId = canonicalValues.canonicalId
-            saveModel.canonicalSource = canonicalValues.source
-            await saveModel.save()
-        }
-    }
-
-    private func resolveLoadedMatchDisplayName() async {
-        guard workout?.canonicalId != nil else { return }
-        guard let catalog = try? await AppDependencies.current.apiService.fetchWorkoutTypes(
-            aiPresetOnly: false
-        ) else {
-            return
-        }
-        matchController.resolveLoadedDisplayName(from: catalog)
-    }
-
-    private func matchTitleIfNeeded() async {
-        // Existing IDs are resolved against the catalog on load. A retired/unknown
-        // ID stays hidden until the user actually changes the title.
-        if workout?.canonicalId != nil, session.title == workout?.name {
-            return
-        }
-        await matchController.onTitleIdle(title: session.title)
     }
 }

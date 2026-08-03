@@ -1,0 +1,104 @@
+# AMA-2372 visual validation — multi-select exercise picker (batch add)
+#
+# Straight sets lands on an empty canvas; the Hevy-style picker supports
+# muscle/equipment chips, Recent/All tabs, and adding several exercises in
+# one tap via "Add N exercises". Coaching profile is unset in this fixture
+# run, so the amber "NOT IN YOUR GYM" marker should never appear (no
+# profile ⇒ never mark missing).
+#
+# Auth: UITEST_CLERK_TEST_SESSION + UITEST_SKIP_ONBOARDING + fixtures.
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2372_batch_add,email=claude+clerk_test@amakaflow.dev,name=AMA2372 Visual"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn:
+    id: "library_tab"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_fab"
+    timeout: 15000
+- tapOn:
+    id: "af_library_fab"
+- extendedWaitUntil:
+    visible:
+      id: "create_workout_sheet"
+    timeout: 10000
+- tapOn:
+    id: "create_door_manual"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "builder_v3_type_picker_screen"
+    timeout: 15000
+- tapOn:
+    id: "builder_v3_type_lift_straight_sets"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "editor_v2_screen"
+    timeout: 15000
+# Empty canvas — editor_v2_add_exercise opens the multi-select picker.
+- tapOn:
+    id: "editor_v2_add_exercise"
+- extendedWaitUntil:
+    visible:
+      id: "builder_v3_exercise_picker_sheet"
+    timeout: 10000
+- assertVisible:
+    id: "builder_v3_tab_all"
+- assertVisible:
+    id: "builder_v3_tab_recent"
+- assertVisible:
+    id: "builder_v3_exercise_search"
+- assertNotVisible: "NOT IN YOUR GYM"
+- takeScreenshot: docs/ama-2372-visual-evidence/04-exercise-picker
+# Filter by muscle, select two exercises, batch-add.
+- tapOn:
+    id: "builder_v3_muscle_chip_Quads"
+- extendedWaitUntil:
+    visible:
+      id: "builder_v3_exercise_checkbox_Back Squat"
+    timeout: 5000
+- tapOn:
+    id: "builder_v3_exercise_row_Back Squat"
+- tapOn:
+    id: "builder_v3_muscle_chip_Quads"
+- extendedWaitUntil:
+    visible:
+      id: "builder_v3_exercise_checkbox_Bench Press"
+    timeout: 5000
+- tapOn:
+    id: "builder_v3_exercise_row_Bench Press"
+- assertVisible: "2 selected"
+- assertVisible:
+    id: "builder_v3_add_exercises_button"
+- takeScreenshot: docs/ama-2372-visual-evidence/05-multi-select
+- tapOn:
+    id: "builder_v3_add_exercises_button"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "editor_v2_screen"
+    timeout: 10000
+- assertVisible: "Back Squat"
+- assertVisible: "Bench Press"
+- takeScreenshot: docs/ama-2372-visual-evidence/06-batch-added

@@ -85,7 +85,7 @@ struct CreateFlowSheetsModifier: ViewModifier {
                         onSaved: onLibraryReload
                     )
                 case .manualEditor:
-                    WorkoutEditorView()
+                    BuilderV3EntryView(onSaved: onLibraryReload)
                         .ddSuppressFloatingChrome()
                 }
             }

@@ -1,0 +1,83 @@
+# AMA-2372 visual validation — Builder v3 type picker → seeded Editor v2
+#
+# "Build from scratch" must land on the type picker (never an empty
+# Editor v2). Selecting "Push" seeds fixed starter exercises straight into
+# the canvas; TYPE · CHANGE returns to the picker.
+#
+# Auth: UITEST_CLERK_TEST_SESSION + UITEST_SKIP_ONBOARDING + fixtures.
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2372_type_seed,email=claude+clerk_test@amakaflow.dev,name=AMA2372 Visual"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn:
+    id: "library_tab"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_fab"
+    timeout: 15000
+- tapOn:
+    id: "af_library_fab"
+- extendedWaitUntil:
+    visible:
+      id: "create_workout_sheet"
+    timeout: 10000
+- tapOn:
+    id: "create_door_manual"
+- waitForAnimationToEnd:
+    timeout: 3000
+# Lands on the type picker — never an empty Editor v2.
+- extendedWaitUntil:
+    visible:
+      id: "builder_v3_type_picker_screen"
+    timeout: 15000
+- assertVisible:
+    id: "builder_v3_type_lift_push"
+- assertVisible:
+    id: "builder_v3_start_blank"
+- takeScreenshot: docs/ama-2372-visual-evidence/01-type-picker
+- tapOn:
+    id: "builder_v3_type_lift_push"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "editor_v2_screen"
+    timeout: 15000
+# Push seeds fixed starter names — canvas is never empty for a split starter.
+- assertVisible: "Bench Press"
+- assertVisible: "Overhead Press"
+- assertVisible: "Triceps Pushdown"
+- assertVisible:
+    id: "builder_v3_type_change_button"
+- takeScreenshot: docs/ama-2372-visual-evidence/02-push-seeded
+# TYPE · CHANGE — dirty canvas confirms before discarding the seeded draft.
+- tapOn:
+    id: "builder_v3_type_change_button"
+- extendedWaitUntil:
+    visible:
+      text: "Change workout type?"
+    timeout: 5000
+- tapOn: "Change type"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "builder_v3_type_picker_screen"
+    timeout: 10000
+- takeScreenshot: docs/ama-2372-visual-evidence/03-back-to-picker

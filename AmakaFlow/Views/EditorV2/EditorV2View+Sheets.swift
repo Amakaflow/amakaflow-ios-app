@@ -149,31 +149,71 @@ extension EditorV2View {
         .presentationDetents([.medium, .large])
     }
 
+    /// AMA-2372 — replace stays single-select (old sheet); adding new exercises
+    /// goes through the Hevy-style multi-select picker with gym overlay + search.
+    @ViewBuilder
     var addSheet: some View {
-        EditorV2AddExerciseSheet(
-            formatLabel: formatLabel,
-            replaceMode: replaceExerciseID != nil,
-            onAdd: { name in
-                if let replaceID = replaceExerciseID {
+        if let replaceID = replaceExerciseID {
+            EditorV2AddExerciseSheet(
+                formatLabel: formatLabel,
+                replaceMode: true,
+                onAdd: { name in
                     session.replaceExercise(replaceID, with: name)
                     replaceExerciseID = nil
                     addSheetOpen = false
                     showToast("Replaced ✓")
-                } else {
-                    _ = session.addExercise(named: name)
-                    let fmt = formatLabel
-                    showToast(
-                        fmt.map { "\(name) added to the \($0)" }
-                            ?? "\(name) added · 3×10 · 60s — tap to tweak"
-                    )
+                },
+                onDone: {
+                    addSheetOpen = false
+                    replaceExerciseID = nil
                 }
-            },
-            onDone: {
-                addSheetOpen = false
-                replaceExerciseID = nil
+            )
+            .presentationDetents([.large])
+        } else {
+            BuilderV3ExercisePickerSheet(
+                formatLabel: formatLabel,
+                availableEquipmentKeys: gymEquipmentKeys,
+                onAddExercises: { names in
+                    for name in names {
+                        _ = session.addExercise(named: name)
+                    }
+                    guard !names.isEmpty else { return }
+                    if names.count == 1, let name = names.first {
+                        let fmt = formatLabel
+                        showToast(
+                            fmt.map { "\(name) added to the \($0)" }
+                                ?? "\(name) added · 3×10 · 60s — tap to tweak"
+                        )
+                    } else {
+                        showToast("\(names.count) exercises added ✓")
+                    }
+                },
+                onDone: {
+                    addSheetOpen = false
+                }
+            )
+            .presentationDetents([.large])
+        }
+    }
+
+    /// Coaching profile equipment → gym overlay keys. Any failure (network,
+    /// missing profile, decode) means "no profile" — never mark exercises
+    /// as missing from the gym.
+    func loadGymEquipmentKeys() async -> Set<String>? {
+        do {
+            guard let profile = try await AppDependencies.current.apiService.getCoachingProfile(),
+                  let equipment = profile.equipment else {
+                return nil
             }
-        )
-        .presentationDetents([.large])
+            return BuilderV3GymOverlay.availableEquipmentKeys(
+                bodyweight: equipment.bodyweight?.additionalProperties,
+                cardio: equipment.cardio?.additionalProperties,
+                strength: equipment.strength?.additionalProperties,
+                mobility: equipment.mobility?.additionalProperties
+            )
+        } catch {
+            return nil
+        }
     }
 
     var workoutTypeMatchSheet: some View {
@@ -222,6 +262,126 @@ extension EditorV2View {
             },
             set: { configGroupKey = $0?.id }
         )
+    }
+
+    // MARK: - Actions (split for type_body_length)
+
+    @ViewBuilder
+    var builderV3TypeChangeButton: some View {
+        if let builderV3Seed, onBuilderV3ChangeType != nil {
+            Button(action: builderV3ChangeTypeTapped) {
+                Text("\(builderV3Seed.label.uppercased()) · CHANGE")
+                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                    .foregroundColor(DailyDriver.blue)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(DailyDriver.blue.opacity(0.16)))
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("builder_v3_type_change_button")
+            .padding(.trailing, session.exercises.count > 1 ? 8 : 0)
+        }
+    }
+
+    /// TYPE · CHANGE (AMA-2372) — confirms first when the canvas is dirty.
+    func builderV3ChangeTypeTapped() {
+        let isDirty = !session.exercises.isEmpty || !session.groups.isEmpty
+        if isDirty {
+            showBuilderV3ChangeTypeConfirm = true
+        } else {
+            onBuilderV3ChangeType?()
+        }
+    }
+
+    /// Quick-add from prefs. An explicit tap re-opts in, so a previous delete
+    /// (tombstone) is cleared first — presence by type still blocks duplicates.
+    func quickAddSoftSection(_ kind: EnrichmentKind) {
+        Task {
+            let prefs = await loadEnrichmentPrefs()
+            let added: Bool
+            switch kind {
+            case .cooldown:
+                added = session.quickAddCooldown(from: prefs, clearingTombstone: true)
+            case .sessionWarmup:
+                added = session.quickAddSessionWarmup(from: prefs, clearingTombstone: true)
+            case .betweenSetRest, .exerciseWarmupSets:
+                assertionFailure("quickAddSoftSection called with unsupported kind \(kind)")
+                return
+            }
+            guard added else {
+                showToast(
+                    kind == .cooldown
+                        ? "No cool-down defaults yet — set them in Settings › Garmin"
+                        : "No warm-up defaults yet — set them in Settings › Garmin"
+                )
+                return
+            }
+            showToast(kind == .cooldown ? "Cool-down added ✓" : "Warm-up added ✓")
+        }
+    }
+
+    func addWarmupSets(to exerciseID: String) {
+        Task {
+            let prefs = await loadEnrichmentPrefs()
+            let added = session.addDefaultWarmupSets(
+                to: exerciseID,
+                rows: prefs.defaultWarmupSetRows,
+                clearingTombstone: true
+            )
+            showToast(
+                added
+                    ? "Warm-up sets added ✓"
+                    : "No warm-up set defaults yet — set them in Settings › Garmin"
+            )
+        }
+    }
+
+    /// Prefs are a default source, never a gate: an unavailable mapper falls back
+    /// to the shipped defaults so the quick-add still works offline.
+    func loadEnrichmentPrefs() async -> WorkoutPreferences {
+        if let enrichmentPrefs { return enrichmentPrefs }
+        let loaded = (try? await AppDependencies.current.apiService.fetchWorkoutPreferences())
+            ?? .defaults
+        enrichmentPrefs = loaded
+        return loaded
+    }
+
+    func saveTapped() {
+        let trimmedTitle = session.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        saveModel.name = trimmedTitle
+        saveModel.intervals = session.toSaveIntervals()
+        session.mintMissingExerciseIDs()
+        saveModel.saveBlocks = session.toSocialImportBlocks()
+        // nil = leave server tombstones alone when this session never touched them.
+        saveModel.saveEnrichmentTombstones = session.enrichmentTombstonesDirty
+            ? session.enrichmentTombstones
+            : nil
+        Task {
+            matchController.noteTitleForSave(trimmedTitle)
+            let canonicalValues = await matchController.onSave(online: true)
+            saveModel.canonicalId = canonicalValues.canonicalId
+            saveModel.canonicalSource = canonicalValues.source
+            await saveModel.save()
+        }
+    }
+
+    func resolveLoadedMatchDisplayName() async {
+        guard workout?.canonicalId != nil else { return }
+        guard let catalog = try? await AppDependencies.current.apiService.fetchWorkoutTypes(
+            aiPresetOnly: false
+        ) else {
+            return
+        }
+        matchController.resolveLoadedDisplayName(from: catalog)
+    }
+
+    func matchTitleIfNeeded() async {
+        // Existing IDs are resolved against the catalog on load. A retired/unknown
+        // ID stays hidden until the user actually changes the title.
+        if workout?.canonicalId != nil, session.title == workout?.name {
+            return
+        }
+        await matchController.onTitleIdle(title: session.title)
     }
 }
 
