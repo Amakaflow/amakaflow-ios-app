@@ -25,6 +25,10 @@ struct SuggestWorkoutView: View {
     /// instead of a bespoke save-and-close for Garmin/Apple.
     @State private var showingUnifiedStart = false
     @State private var unifiedStartWorkout: Workout?
+    /// AMA-2373 fix round 2: surfaces a failed `persistDraftToBackend` without
+    /// touching `viewModel.ctaError` (see the overlay above for why).
+    @State private var persistError: CTAError?
+    @State private var retryPersist: (() -> Void)?
 
     var body: some View {
         NavigationStack {
@@ -80,7 +84,23 @@ struct SuggestWorkoutView: View {
             }
             .navigationBarHidden(true)
             .overlay(alignment: .top) {
-                if let error = viewModel.ctaError {
+                // AMA-2373 fix round 2: a failed Save/Start persist gets its own
+                // toast (Retry re-runs the persist), never `viewModel.ctaError` —
+                // that error's Retry re-runs suggestWorkout() (regenerate), which
+                // would silently throw away this draft.
+                if let persistError {
+                    ErrorToast(
+                        actionTitle: "Couldn't save workout",
+                        error: persistError,
+                        onRetry: retryPersist,
+                        onDismiss: {
+                            self.persistError = nil
+                            self.retryPersist = nil
+                        }
+                    )
+                    .padding(.horizontal, Theme.Spacing.lg)
+                    .padding(.top, Theme.Spacing.md)
+                } else if let error = viewModel.ctaError {
                     ErrorToast(
                         actionTitle: "Couldn't generate workout",
                         error: error,
@@ -568,59 +588,98 @@ struct SuggestWorkoutView: View {
             .foregroundColor(DailyDriver.foregroundDim)
     }
 
+    private var commitCTAsDisabled: Bool {
+        viewModel.isApplyingRefine || viewModel.isPersistingDraft
+    }
+
     private func commitCTAs(_ workout: Workout) -> some View {
         VStack(spacing: 10) {
             Button {
                 saveToLibrary(workout)
             } label: {
-                Text(CreateWithAICopy.saveToLibrary)
-                    .ddDisplayText(15, weight: .bold)
-                    .foregroundColor(DailyDriver.foreground)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 15)
-                    .background(DailyDriver.tabBarBackground)
-                    .overlay(Capsule().stroke(DailyDriver.borderStrong, lineWidth: 1))
-                    .clipShape(Capsule())
+                HStack(spacing: 8) {
+                    if viewModel.isPersistingDraft {
+                        ProgressView().tint(DailyDriver.foreground).scaleEffect(0.8)
+                    }
+                    Text(CreateWithAICopy.saveToLibrary)
+                        .ddDisplayText(15, weight: .bold)
+                        .foregroundColor(DailyDriver.foreground)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .background(DailyDriver.tabBarBackground)
+                .overlay(Capsule().stroke(DailyDriver.borderStrong, lineWidth: 1))
+                .clipShape(Capsule())
             }
             .buttonStyle(.plain)
-            .disabled(viewModel.isApplyingRefine)
-            .opacity(viewModel.isApplyingRefine ? 0.5 : 1)
+            .disabled(commitCTAsDisabled)
+            .opacity(commitCTAsDisabled ? 0.5 : 1)
             .accessibilityIdentifier("create_with_ai_save")
 
             Button {
                 presentStartSheet(workout)
             } label: {
-                Text(CreateWithAICopy.startCTA)
-                    .ddDisplayText(15, weight: .bold)
-                    .foregroundColor(DailyDriver.ink)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 15)
-                    .background(DailyDriver.lime)
-                    .clipShape(Capsule())
-                    .ddLimeGlow()
+                HStack(spacing: 8) {
+                    if viewModel.isPersistingDraft {
+                        ProgressView().tint(DailyDriver.ink).scaleEffect(0.8)
+                    }
+                    Text(CreateWithAICopy.startCTA)
+                        .ddDisplayText(15, weight: .bold)
+                        .foregroundColor(DailyDriver.ink)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .background(DailyDriver.lime)
+                .clipShape(Capsule())
+                .ddLimeGlow()
             }
             .buttonStyle(.plain)
-            .disabled(viewModel.isApplyingRefine)
-            .opacity(viewModel.isApplyingRefine ? 0.5 : 1)
+            .disabled(commitCTAsDisabled)
+            .opacity(commitCTAsDisabled ? 0.5 : 1)
             .accessibilityIdentifier("create_with_ai_start")
         }
         .padding(.top, 4)
     }
 
     private func saveToLibrary(_ workout: Workout) {
-        // AMA-1751: persist + surface. Backend has no accept-suggestion
-        // endpoint yet, so the view model's local store is the only thing
-        // keeping this workout alive across the next API refresh.
-        workoutsViewModel.acceptSuggestedWorkout(workout)
-        onWorkoutStarted()
-        viewModel.reset()
-        dismiss()
+        persistError = nil
+        Task {
+            await persistThenProceed(workout, retry: { saveToLibrary(workout) }) { saved in
+                workoutsViewModel.acceptSuggestedWorkout(saved)
+                onWorkoutStarted()
+                viewModel.reset()
+                dismiss()
+            }
+        }
     }
 
     private func presentStartSheet(_ workout: Workout) {
-        workoutsViewModel.acceptSuggestedWorkout(workout)
-        unifiedStartWorkout = workout
-        showingUnifiedStart = true
+        persistError = nil
+        Task {
+            await persistThenProceed(workout, retry: { presentStartSheet(workout) }) { saved in
+                workoutsViewModel.acceptSuggestedWorkout(saved)
+                unifiedStartWorkout = saved
+                showingUnifiedStart = true
+            }
+        }
+    }
+
+    /// AMA-2373 fix round 2: awaits the real `POST /workouts/save` (via
+    /// `viewModel.persistDraftToBackend`) so `onSuccess` always receives a
+    /// workout with a genuine server id before Save bookkeeps it locally or
+    /// Start hands off to `UnifiedWorkoutDetailView`'s enrichment/push path.
+    private func persistThenProceed(
+        _ workout: Workout,
+        retry: @escaping () -> Void,
+        onSuccess: (Workout) -> Void
+    ) async {
+        switch await viewModel.persistDraftToBackend(workout) {
+        case .success(let saved):
+            onSuccess(saved)
+        case .failure(let error):
+            persistError = error
+            retryPersist = retry
+        }
     }
 
     private func finishAfterStart() {

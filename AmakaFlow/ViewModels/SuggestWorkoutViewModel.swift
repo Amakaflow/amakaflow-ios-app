@@ -238,6 +238,9 @@ class SuggestWorkoutViewModel: ObservableObject {
     @Published private(set) var appliedTweaks: [String] = []
     @Published private(set) var undoStack: [DraftSnapshot] = []
     @Published private(set) var isApplyingRefine = false
+    /// AMA-2373 fix round 2: true while Save/Start is awaiting the real
+    /// `POST /workouts/save` before proceeding — see `persistDraftToBackend`.
+    @Published private(set) var isPersistingDraft = false
     @Published var readinessLevel: SuggestReadinessLevel = .unknown
     @Published var readinessMessage: String?
     @Published var ctaError: CTAError?
@@ -588,6 +591,25 @@ class SuggestWorkoutViewModel: ObservableObject {
     /// Main-block intervals (excludes warm-up/cooldown) from the latest response.
     var draftMainBlocks: [WorkoutInterval] {
         latestResponse?.blocks.compactMap(\.workoutInterval) ?? []
+    }
+
+    /// AMA-2373 fix round 2: Save/Start must await a real backend id before any
+    /// enrichment/push flow looks the workout up by id — `acceptSuggestedWorkout`
+    /// alone is local-first (GRDB write + background sync), so a Garmin/Apple
+    /// push fired right after it can race the sync and hit a workout Supabase
+    /// hasn't seen yet. This mirrors `WorkoutEditorViewModel.save()` /
+    /// `SocialImportViewModel.saveToLibrary()`, which both await
+    /// `apiService.saveWorkout(...)` and only proceed with the server-returned
+    /// (real-id) workout.
+    func persistDraftToBackend(_ workout: Workout) async -> Result<Workout, CTAError> {
+        isPersistingDraft = true
+        defer { isPersistingDraft = false }
+        do {
+            let saved = try await dependencies.apiService.saveWorkout(.from(workout: workout))
+            return .success(saved)
+        } catch {
+            return .failure(CTAError.map(error))
+        }
     }
 
     func cancelGenerate() {
