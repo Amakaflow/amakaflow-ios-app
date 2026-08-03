@@ -132,6 +132,8 @@
 		MANCRAIPROMPTBLD /* CreateWithAIPromptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MANCRAIPROMPTREF /* CreateWithAIPromptView.swift */; };
 		AMA2373COPYBLD /* CreateWithAICopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2373COPYREF /* CreateWithAICopy.swift */; };
 		AMA2373PRESBLD /* CreateWithAIDraftPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2373PRESREF /* CreateWithAIDraftPresentation.swift */; };
+		AMA2373GENVBLD /* CreateWithAIGeneratingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2373GENVREF /* CreateWithAIGeneratingView.swift */; };
+		AMA2373DOCKBLD /* CreateWithAIRefineDock.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2373DOCKREF /* CreateWithAIRefineDock.swift */; };
 		AMA2305VMXBLD /* SocialImportViewModel+StructureClarify.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305VMXREF /* SocialImportViewModel+StructureClarify.swift */; };
 		AMA2308VMXBLD /* SocialImportViewModel+Failure.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2308VMXREF /* SocialImportViewModel+Failure.swift */; };
 		AMA2305VWBLD /* StructureClarifyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2305VWREF /* StructureClarifyView.swift */; };
@@ -751,6 +753,8 @@
 		MANCRAIPROMPTREF /* CreateWithAIPromptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CreateWithAIPromptView.swift; path = ../AmakaFlow/Views/CreateWithAIPromptView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2373COPYREF /* CreateWithAICopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CreateWithAICopy.swift; path = ../AmakaFlow/Models/CreateWithAICopy.swift; sourceTree = SOURCE_ROOT; };
 		AMA2373PRESREF /* CreateWithAIDraftPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CreateWithAIDraftPresentation.swift; path = ../AmakaFlow/Models/CreateWithAIDraftPresentation.swift; sourceTree = SOURCE_ROOT; };
+		AMA2373GENVREF /* CreateWithAIGeneratingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CreateWithAIGeneratingView.swift; path = ../AmakaFlow/Views/Components/CreateWithAIGeneratingView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2373DOCKREF /* CreateWithAIRefineDock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CreateWithAIRefineDock.swift; path = ../AmakaFlow/Views/Components/CreateWithAIRefineDock.swift; sourceTree = SOURCE_ROOT; };
 		AMA2305VMXREF /* SocialImportViewModel+StructureClarify.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "SocialImportViewModel+StructureClarify.swift"; path = "../AmakaFlow/ViewModels/SocialImportViewModel+StructureClarify.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2308VMXREF /* SocialImportViewModel+Failure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "SocialImportViewModel+Failure.swift"; path = "../AmakaFlow/ViewModels/SocialImportViewModel+Failure.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2305VWREF /* StructureClarifyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StructureClarifyView.swift; path = ../AmakaFlow/Views/SocialImport/StructureClarifyView.swift; sourceTree = SOURCE_ROOT; };
@@ -1457,6 +1461,8 @@
 				AMA2290WCVCOMPREF /* WorkoutCompletionView+Components.swift */,
 				AMA2360PREFNOTEREF /* WorkoutStartSheetPrefNotes.swift */,
 				AMA2291STARTSHREF /* WorkoutStartSheet.swift */,
+				AMA2373GENVREF /* CreateWithAIGeneratingView.swift */,
+				AMA2373DOCKREF /* CreateWithAIRefineDock.swift */,
 				AMA2360SHEETREF01 /* AppleWatchDeliveryPrefsSheet.swift */,
 				AMA2316SHEETREF01 /* GarminWatchDisplayPrefsSheet.swift */,
 				AMA2027MSGVIEW000000A /* MessagingView.swift */,
@@ -2375,6 +2381,8 @@
 				F84E22722ED0D56C00459747 /* Workout.swift in Sources */,
 				AMA2373COPYBLD /* CreateWithAICopy.swift in Sources */,
 				AMA2373PRESBLD /* CreateWithAIDraftPresentation.swift in Sources */,
+				AMA2373GENVBLD /* CreateWithAIGeneratingView.swift in Sources */,
+				AMA2373DOCKBLD /* CreateWithAIRefineDock.swift in Sources */,
 				D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */,
 				AMA1791APPDBBLD /* AppDatabase.swift in Sources */,
 				AMA1791V1BLD /* V1_initial_schema.swift in Sources */,

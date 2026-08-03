@@ -562,6 +562,29 @@ class SuggestWorkoutViewModel: ObservableObject {
         state = .success(snapshot.workout)
     }
 
+    // MARK: - Create with AI draft accessors
+
+    /// The most recent ask text sent to the coach (compose ask + any prior tweaks).
+    var currentAsk: String { lastPromptAsk ?? "" }
+
+    /// Context flags attached to the current draft's request, for signal-chip display.
+    var currentIncludeContext: IncludeContextFlags? { lastPromptIncludeContext }
+
+    /// Raw warm-up interval from the latest response, for band-summary rendering.
+    var draftWarmUp: WorkoutInterval? {
+        latestResponse?.warmUp.map { WorkoutInterval.warmup(seconds: $0.seconds, target: $0.target) }
+    }
+
+    /// Raw cooldown interval from the latest response, for band-summary rendering.
+    var draftCooldown: WorkoutInterval? {
+        latestResponse?.cooldown.map { WorkoutInterval.cooldown(seconds: $0.seconds, target: $0.target) }
+    }
+
+    /// Main-block intervals (excludes warm-up/cooldown) from the latest response.
+    var draftMainBlocks: [WorkoutInterval] {
+        latestResponse?.blocks.compactMap(\.workoutInterval) ?? []
+    }
+
     func cancelGenerate() {
         generationTask?.cancel()
         generationTask = nil

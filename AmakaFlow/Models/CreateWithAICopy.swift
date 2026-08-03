@@ -22,6 +22,14 @@ enum CreateWithAICopy {
     static let refineApplying = "applying…"
     static let rateLimited =
         "You’re refining too quickly. Wait a moment, then try again."
+    static let noWearableNote = "No wearable data used — based on your ask and available context."
+    static let editAsk = "Edit ask"
+    static let saveToLibrary = "Save to Library"
+    static let startCTA = "▸ Start"
+    static let suggestAnother = "Suggest another"
+    static let whyThisHeading = "WHY THIS"
+    static let refineHeading = "REFINE"
+    static let refinePlaceholder = "Tell the coach what to change…"
 }
 
 enum CreateWithAIContextChip: String, CaseIterable, Hashable, Identifiable {

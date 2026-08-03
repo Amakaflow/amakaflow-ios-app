@@ -35,7 +35,8 @@ struct CreateWithAIPromptView: View {
             SuggestWorkoutView(
                 viewModel: viewModel,
                 mode: .createWithAI,
-                onWorkoutStarted: onSaved
+                onWorkoutStarted: onSaved,
+                onEditAsk: { isShowingSuggestion = false }
             )
         } else {
             promptForm
@@ -72,7 +73,7 @@ struct CreateWithAIPromptView: View {
                         .buttonStyle(.plain)
                         .disabled(trimmedAsk.isEmpty)
                         .opacity(trimmedAsk.isEmpty ? 0.35 : 1)
-                        .accessibilityIdentifier("create_with_ai_draft")
+                        .accessibilityIdentifier("create_with_ai_draft_it")
                     }
                     .padding(.horizontal, 18)
                     .padding(.top, 18)
