@@ -187,7 +187,7 @@ final class WorkoutScheduleViewModel: ObservableObject {
             try await scheduler.reschedule(row: row, to: date)
             guard await performRefresh(mode: .manual) else {
                 statusMessage = "Moved \(row.title), but the list couldn't refresh — pull to refresh."
-                return true
+                return false
             }
             statusMessage = "Moved \(row.title)."
             isEditing = true

@@ -125,19 +125,35 @@ struct GarminWatchQueueView: View {
             Spacer(minLength: 0)
 
             if item.state == .failed {
-                Button {
-                    onFix?(item)
-                } label: {
-                    Text(OnYourWatchesCopy.garminFix)
-                        .ddDisplayText(12, weight: .bold)
-                        .foregroundColor(DailyDriver.amber)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(DailyDriver.card2)
-                        .clipShape(Capsule())
+                HStack(spacing: 8) {
+                    Button {
+                        onFix?(item)
+                    } label: {
+                        Text(OnYourWatchesCopy.garminFix)
+                            .ddDisplayText(12, weight: .bold)
+                            .foregroundColor(DailyDriver.amber)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(DailyDriver.card2)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("af_garmin_queue_fix_\(item.id)")
+
+                    Button {
+                        Task { await viewModel.remove(item: item) }
+                    } label: {
+                        Text(OnYourWatchesCopy.garminRemove)
+                            .ddDisplayText(12, weight: .bold)
+                            .foregroundColor(DailyDriver.foregroundMuted)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(DailyDriver.card2)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("af_garmin_queue_remove_\(item.id)")
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("af_garmin_queue_fix_\(item.id)")
             } else {
                 Button {
                     Task { await viewModel.remove(item: item) }

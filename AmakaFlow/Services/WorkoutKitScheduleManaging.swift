@@ -62,6 +62,7 @@ enum WorkoutScheduleRescheduleError: LocalizedError, Equatable {
     case unavailable
     case targetSlotMissing
     case oldSlotStillPresent
+    case compensationFailed
 
     var errorDescription: String? {
         switch self {
@@ -75,6 +76,8 @@ enum WorkoutScheduleRescheduleError: LocalizedError, Equatable {
             return "Move didn't land on the new day — pull to refresh."
         case .oldSlotStillPresent:
             return "The old schedule slot is still there — pull to refresh."
+        case .compensationFailed:
+            return "Move left the watch schedule inconsistent — pull to refresh."
         }
     }
 }
@@ -254,10 +257,34 @@ final class LiveWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
         await WorkoutScheduler.shared.remove(plan, at: row.dateComponents)
         await WorkoutScheduler.shared.schedule(plan, at: components)
         let refreshed = try await fetchScheduledRows()
-        if refreshed.contains(where: { $0.id == oldID }) {
+        let hasOld = refreshed.contains(where: { $0.id == oldID })
+        let hasNew = refreshed.contains(where: { $0.id == newID })
+
+        if hasOld && hasNew {
+            // Duplicate slots — prefer restoring the prior schedule.
+            await WorkoutScheduler.shared.remove(plan, at: components)
+            let after = try await fetchScheduledRows()
+            let compensated = after.contains(where: { $0.id == oldID })
+                && !after.contains(where: { $0.id == newID })
+            guard compensated else {
+                throw WorkoutScheduleRescheduleError.compensationFailed
+            }
             throw WorkoutScheduleRescheduleError.oldSlotStillPresent
         }
-        guard refreshed.contains(where: { $0.id == newID }) else {
+
+        if hasOld {
+            throw WorkoutScheduleRescheduleError.oldSlotStillPresent
+        }
+
+        guard hasNew else {
+            // Target missing — put the original slot back before surfacing the error.
+            await WorkoutScheduler.shared.schedule(plan, at: row.dateComponents)
+            let after = try await fetchScheduledRows()
+            let restored = after.contains(where: { $0.id == oldID })
+                && !after.contains(where: { $0.id == newID })
+            guard restored else {
+                throw WorkoutScheduleRescheduleError.compensationFailed
+            }
             throw WorkoutScheduleRescheduleError.targetSlotMissing
         }
     }

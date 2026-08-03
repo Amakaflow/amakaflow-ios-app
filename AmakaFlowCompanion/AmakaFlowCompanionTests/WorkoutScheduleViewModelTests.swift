@@ -465,7 +465,28 @@ final class WorkoutScheduleViewModelTests: XCTestCase {
         XCTAssertEqual(vm.statusMessage, "Moved Move Me.")
         XCTAssertEqual(mock.rows.count, 1)
         XCTAssertEqual(mock.rows[0].title, "Move Me")
+        XCTAssertEqual(mock.rows[0].id.planID, original.id.planID)
         XCTAssertNotEqual(mock.rows[0].id, original.id)
+        let expectedComponents = Calendar.current.dateComponents(
+            [.year, .month, .day, .hour, .minute, .second],
+            from: target
+        )
+        XCTAssertEqual(mock.rows[0].dateComponents, expectedComponents)
+    }
+
+    func testMoveReturnsFalseWhenRefreshFailsAfterReschedule() async {
+        let mock = MockWorkoutKitScheduler()
+        let original = row(id: "m2", title: "Move Me", minutesAgo: 60)
+        mock.rows = [original]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+        mock.fetchError = DummyFetchError()
+        let ok = await vm.move(row: original, to: Date().addingTimeInterval(3_600))
+        XCTAssertFalse(ok)
+        XCTAssertEqual(
+            vm.statusMessage,
+            "Moved Move Me, but the list couldn't refresh — pull to refresh."
+        )
     }
 
     func testMoveFailsWhenRowMissing() async {
