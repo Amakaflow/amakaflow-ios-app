@@ -1,6 +1,6 @@
 # AMA-2310: Unpaired Start → Garmin is tappable recovery (not dead grey row).
 # Opens Devices pairing surface; status copy mentions not paired / Devices / CIQ.
-appId: com.amakaflow.companion
+appId: com.myamaka.AmakaFlowCompanion
 ---
 - launchApp:
     clearState: true

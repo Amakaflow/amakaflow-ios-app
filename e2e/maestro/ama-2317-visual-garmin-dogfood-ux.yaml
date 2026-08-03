@@ -10,7 +10,7 @@
 # Externals: no mapper/BFF needed — UITEST fixtures back the push, and
 # UITEST_GARMIN_PUSH_FAIL covers the failure branch. Nothing here 500s when
 # Garmin Connect Mobile or the CIQ widget are absent.
-appId: com.amakaflow.companion
+appId: com.myamaka.AmakaFlowCompanion
 ---
 # 1) The Start sheet points to Settings for watch display defaults instead of
 #    a per-device "Edit" row (AMA-2371 removed af_start_garmin_prefs_note).
