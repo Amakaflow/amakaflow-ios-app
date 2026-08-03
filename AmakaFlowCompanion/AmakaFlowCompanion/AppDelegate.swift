@@ -20,16 +20,20 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
 
-        // Skip push registration in E2E test mode
+        // Skip push registration in E2E test mode / visual hosts
     #if DEBUG
-    if UITestEnvironment.shared.hasClerkTestUser || UITestEnvironment.shared.useFixtures {
+    if UITestEnvironment.shared.hasClerkTestUser
+        || UITestEnvironment.shared.useFixtures
+        || UITestEnvironment.shared.showCreateWithAIGeneratingHost {
       print("[AppDelegate] Test mode — skipping push notification registration")
     }
     if AuthViewModel.uiTestRealSessionRequested() {
       let pwdPresent = UITestEnvironment.value(for: "UITEST_CLERK_PASSWORD") != nil
       print("[AppDelegate] UITest launch probe: realSession=1 pwdKey=\(pwdPresent)")
     }
-    if UITestEnvironment.shared.hasClerkTestUser || UITestEnvironment.shared.useFixtures
+    if UITestEnvironment.shared.hasClerkTestUser
+        || UITestEnvironment.shared.useFixtures
+        || UITestEnvironment.shared.showCreateWithAIGeneratingHost
         || AuthViewModel.uiTestRealSessionRequested() {
       return true
     }
