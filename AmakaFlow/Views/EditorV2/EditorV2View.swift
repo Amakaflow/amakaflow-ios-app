@@ -43,7 +43,7 @@ struct EditorV2View: View {
 
     /// AMA-2372 — title captured at open; title-only edits count as dirty for
     /// TYPE · CHANGE so we don't discard an unnamed→named draft silently.
-    private let builderV3InitialTitle: String?
+    let builderV3InitialTitle: String?
 
     init(
         mode: DDEditorMode,
