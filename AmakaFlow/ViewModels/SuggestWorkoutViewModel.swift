@@ -499,8 +499,17 @@ class SuggestWorkoutViewModel: ObservableObject {
     func suggestAnother() async {
         appliedTweaks = []
         undoStack = []
-        let notes = lastPromptAsk.map {
-            CreateWithAIPromptBuilder.composeNotes(ask: $0)
+        // AMA-2373 final-review fix: Create with AI (ask set) reroll composes
+        // fresh notes from the ask alone, dropping refine tweaks. The daily
+        // coach path (`requestSuggestion()`, no ask) has no ask to compose
+        // from, so restore the pre-AMA-2373 variation-note behavior or
+        // "suggest another" would resend identical notes and not vary.
+        let notes: String?
+        if let ask = lastPromptAsk {
+            notes = CreateWithAIPromptBuilder.composeNotes(ask: ask)
+        } else {
+            let variationNote = "Suggest a different session than the previous suggestion."
+            notes = lastPromptNotes.map { "\($0)\n\n\(variationNote)" } ?? variationNote
         }
         lastPromptNotes = notes
         await suggestWorkout(
@@ -556,6 +565,13 @@ class SuggestWorkoutViewModel: ObservableObject {
 
     func undoRefine() {
         guard let snapshot = undoStack.popLast() else { return }
+        // AMA-2373 final-review fix: cancel any in-flight refine generation
+        // (same as cancelGenerate()) so a late-arriving response for the
+        // refine we're undoing can't land after and clobber the restored draft.
+        generationTask?.cancel()
+        generationTask = nil
+        _ = beginGeneration()
+        isApplyingRefine = false
         suggestedWorkout = snapshot.workout
         whyThis = snapshot.whyThis
         latestResponse = snapshot.response

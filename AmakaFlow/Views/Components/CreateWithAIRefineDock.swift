@@ -22,7 +22,7 @@ struct CreateWithAIRefineDock: View {
         "Make it shorter",
         "Make it harder",
         "Lower impact",
-        "Add more core",
+        "Add more core"
     ]
 
     var body: some View {
@@ -91,6 +91,8 @@ struct CreateWithAIRefineDock: View {
                         Button("Undo", action: onUndo)
                             .font(.system(size: 11, weight: .bold))
                             .foregroundColor(DailyDriver.lime)
+                            .disabled(isApplying)
+                            .opacity(isApplying ? 0.5 : 1)
                             .accessibilityIdentifier("create_with_ai_refine_undo")
                     }
                 }

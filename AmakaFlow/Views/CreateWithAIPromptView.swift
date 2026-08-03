@@ -35,9 +35,8 @@ struct CreateWithAIPromptView: View {
             SuggestWorkoutView(
                 viewModel: viewModel,
                 mode: .createWithAI,
-                onWorkoutStarted: onSaved,
-                onEditAsk: { isShowingSuggestion = false }
-            )
+                onWorkoutStarted: onSaved
+            ) { isShowingSuggestion = false }
         } else {
             promptForm
         }

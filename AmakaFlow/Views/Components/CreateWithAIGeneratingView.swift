@@ -141,9 +141,8 @@ private extension Array {
         DailyDriver.screenBackground.ignoresSafeArea()
         CreateWithAIGeneratingView(
             ask: "A 30-minute full-body strength session",
-            chips: [.gym, .profile],
-            onCancel: {}
-        )
+            chips: [.gym, .profile]
+        ) {}
     }
     .preferredColorScheme(.dark)
 }

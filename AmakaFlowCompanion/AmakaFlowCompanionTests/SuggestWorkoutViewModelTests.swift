@@ -494,6 +494,34 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     }
   }
 
+  func testSuggestAnotherAfterPlainRequestSuggestionUsesVariationNote() async throws {
+    mockAPI.suggestWorkoutResult = .success(.single(kind: .time(seconds: 300, target: "zone 2")))
+
+    viewModel.requestSuggestion()
+    try await waitUntil {
+      if case .success = self.viewModel.state { return true }
+      return false
+    }
+
+    await viewModel.suggestAnother()
+
+    XCTAssertEqual(mockAPI.suggestWorkoutCallCount, 2)
+    XCTAssertEqual(
+      mockAPI.lastSuggestWorkoutRequest?.notes,
+      "Suggest a different session than the previous suggestion."
+    )
+    guard case .success = viewModel.state else {
+      return XCTFail("Expected success after reroll, got \(viewModel.state)")
+    }
+
+    await viewModel.suggestAnother()
+
+    XCTAssertEqual(
+      mockAPI.lastSuggestWorkoutRequest?.notes,
+      "Suggest a different session than the previous suggestion.\n\nSuggest a different session than the previous suggestion."
+    )
+  }
+
   func testSuggestAnother_afterPromptPreservesPromptContext() async throws {
     mockAPI.suggestWorkoutResult = .success(.single(kind: .time(seconds: 300, target: "zone 2")))
     viewModel.requestSuggestionFromPrompt(

@@ -14,7 +14,7 @@ enum CreateWithAICopy {
         "A 30-minute full-body strength session",
         "An easy run with a strong finish",
         "A low-impact workout for a busy day",
-        "Mobility and core to loosen up",
+        "Mobility and core to loosen up"
     ]
     static let draftBadge = "DRAFT · NOT SAVED"
     static let failureFinePrint =
