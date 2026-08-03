@@ -208,15 +208,7 @@ struct AmakaFlowCompanionApp: App {
     private var rootContent: some View {
         #if DEBUG
         if UITestEnvironment.shared.showCreateWithAIGeneratingHost {
-            ZStack {
-                DailyDriver.screenBackground.ignoresSafeArea()
-                CreateWithAIGeneratingView(
-                    ask: "Chest pump, about 45 minutes, nothing on cables",
-                    chips: [.gym, .profile]
-                ) {}
-            }
-            .preferredColorScheme(.dark)
-            .accessibilityIdentifier("create_with_ai_generating_host")
+            CreateWithAIGeneratingHostView()
         } else {
             productionRootContent
         }
@@ -409,3 +401,21 @@ struct AmakaFlowCompanionApp: App {
     }
 
 }
+
+#if DEBUG
+/// Visual host for Create-with-AI generating spinner verification (AMA-2373).
+/// Launch with `SIMCTL_CHILD_UITEST_SHOW_CREATE_WITH_AI_GENERATING=true`.
+private struct CreateWithAIGeneratingHostView: View {
+    var body: some View {
+        ZStack {
+            DailyDriver.screenBackground.ignoresSafeArea()
+            CreateWithAIGeneratingView(
+                ask: "Chest pump, about 45 minutes, nothing on cables",
+                chips: [.gym, .profile]
+            ) {}
+        }
+        .preferredColorScheme(.dark)
+        .accessibilityIdentifier("create_with_ai_generating_host")
+    }
+}
+#endif
