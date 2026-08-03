@@ -8,6 +8,27 @@ import XCTest
 @testable import AmakaFlowCompanion
 
 final class CreateWithAICopyTests: XCTestCase {
+    func testDetachedGymSetsIncludeContextGymFalse() {
+        let flags = CreateWithAIPromptBuilder.includeContext(
+            attached: [.profile, .memories]
+        )
+
+        XCTAssertEqual(flags.gym, false)
+        XCTAssertEqual(flags.profile, true)
+        XCTAssertEqual(flags.memories, true)
+        XCTAssertEqual(flags.readiness, false)
+        XCTAssertEqual(flags.history, false)
+    }
+
+    func testComposeNotesTrimsAndCapsAskAtOneThousandCharacters() {
+        let notes = CreateWithAIPromptBuilder.composeNotes(
+            ask: "  \(String(repeating: "a", count: 1_100))  "
+        )
+
+        XCTAssertEqual(notes.count, 1_000)
+        XCTAssertEqual(notes, String(repeating: "a", count: 1_000))
+    }
+
     func testDraftBadge() {
         XCTAssertEqual(CreateWithAICopy.draftBadge, "DRAFT · NOT SAVED")
     }

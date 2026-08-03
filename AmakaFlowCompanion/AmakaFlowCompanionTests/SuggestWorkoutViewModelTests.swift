@@ -118,7 +118,14 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     viewModel.requestSuggestionFromPrompt(
       notes: "45 min tempo run outdoors",
       durationMinutes: 45,
-      focusMuscleGroups: ["legs"]
+      focusMuscleGroups: ["legs"],
+      includeContext: IncludeContextFlags(
+        gym: false,
+        history: false,
+        memories: true,
+        profile: true,
+        readiness: false
+      )
     )
     try await waitUntil {
       if case .success = self.viewModel.state { return true }
@@ -128,6 +135,8 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.notes, "45 min tempo run outdoors")
     XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.durationMinutes, 45)
     XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.focusMuscleGroups, ["legs"])
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.includeContext?.gym, false)
+    XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.includeContext?.profile, true)
   }
 
   func testRequestSuggestionFromPrompt_allowsNilDuration() async throws {

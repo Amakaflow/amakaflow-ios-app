@@ -16,6 +16,7 @@ import os
 typealias SuggestWorkoutRequest = Components.Schemas.SuggestWorkoutRequest
 typealias SuggestWorkoutResponse = Components.Schemas.SuggestWorkoutResponse
 typealias WarmUpCooldown = Components.Schemas.SuggestWarmUpCooldown
+typealias IncludeContextFlags = Components.Schemas.IncludeContextFlags
 
 extension Components.Schemas.SuggestWorkoutRequest {
     init(durationMinutes: Int?, focusMuscleGroups: [String]?, notes: String?) {
@@ -234,6 +235,7 @@ class SuggestWorkoutViewModel: ObservableObject {
     private var lastPromptNotes: String?
     private var lastPromptDurationMinutes: Int?
     private var lastPromptFocus: [String]?
+    private var lastPromptIncludeContext: IncludeContextFlags?
 
     init(dependencies: AppDependencies = .current) {
         self.dependencies = dependencies
@@ -263,6 +265,7 @@ class SuggestWorkoutViewModel: ObservableObject {
         lastPromptNotes = nil
         lastPromptDurationMinutes = nil
         lastPromptFocus = nil
+        lastPromptIncludeContext = nil
         state = .loading
         suggestedWorkout = nil
         ctaError = nil
@@ -271,6 +274,7 @@ class SuggestWorkoutViewModel: ObservableObject {
             await requestSuggestionAfterProfileCheck(
                 durationMinutes: nil,
                 focusMuscleGroups: nil,
+                includeContext: nil,
                 notes: nil
             )
         }
@@ -279,11 +283,13 @@ class SuggestWorkoutViewModel: ObservableObject {
     func requestSuggestionFromPrompt(
         notes: String,
         durationMinutes: Int?,
-        focusMuscleGroups: [String]?
+        focusMuscleGroups: [String]?,
+        includeContext: IncludeContextFlags? = nil
     ) {
         lastPromptNotes = notes
         lastPromptDurationMinutes = durationMinutes
         lastPromptFocus = focusMuscleGroups
+        lastPromptIncludeContext = includeContext
         state = .loading
         suggestedWorkout = nil
         ctaError = nil
@@ -292,6 +298,7 @@ class SuggestWorkoutViewModel: ObservableObject {
             await requestSuggestionAfterProfileCheck(
                 durationMinutes: durationMinutes,
                 focusMuscleGroups: focusMuscleGroups,
+                includeContext: includeContext,
                 notes: notes
             )
         }
@@ -300,6 +307,7 @@ class SuggestWorkoutViewModel: ObservableObject {
     private func requestSuggestionAfterProfileCheck(
         durationMinutes: Int?,
         focusMuscleGroups: [String]?,
+        includeContext: IncludeContextFlags?,
         notes: String?
     ) async {
         do {
@@ -310,6 +318,7 @@ class SuggestWorkoutViewModel: ObservableObject {
             await suggestWorkout(
                 durationMinutes: durationMinutes,
                 focusMuscleGroups: focusMuscleGroups,
+                includeContext: includeContext,
                 notes: notes
             )
         } catch {
@@ -328,13 +337,19 @@ class SuggestWorkoutViewModel: ObservableObject {
             await suggestWorkout(
                 durationMinutes: lastPromptDurationMinutes,
                 focusMuscleGroups: lastPromptFocus,
+                includeContext: lastPromptIncludeContext,
                 notes: lastPromptNotes
             )
         }
     }
 
     /// Call the suggest-workout API
-    func suggestWorkout(durationMinutes: Int? = nil, focusMuscleGroups: [String]? = nil, notes: String? = nil) async {
+    func suggestWorkout(
+        durationMinutes: Int? = nil,
+        focusMuscleGroups: [String]? = nil,
+        includeContext: IncludeContextFlags? = nil,
+        notes: String? = nil
+    ) async {
         state = .loading
         suggestedWorkout = nil
         ctaError = nil
@@ -344,7 +359,9 @@ class SuggestWorkoutViewModel: ObservableObject {
 
         let body = SuggestWorkoutRequest(
             durationMinutes: durationMinutes,
+            excludeExercises: nil,
             focusMuscleGroups: focusMuscleGroups,
+            includeContext: includeContext,
             notes: notes
         )
 
@@ -434,6 +451,7 @@ class SuggestWorkoutViewModel: ObservableObject {
         await suggestWorkout(
             durationMinutes: lastPromptDurationMinutes,
             focusMuscleGroups: lastPromptFocus,
+            includeContext: lastPromptIncludeContext,
             notes: notes
         )
     }
@@ -449,6 +467,7 @@ class SuggestWorkoutViewModel: ObservableObject {
         await suggestWorkout(
             durationMinutes: lastPromptDurationMinutes,
             focusMuscleGroups: lastPromptFocus,
+            includeContext: lastPromptIncludeContext,
             notes: lastPromptNotes
         )
     }
@@ -475,5 +494,6 @@ class SuggestWorkoutViewModel: ObservableObject {
         lastPromptNotes = nil
         lastPromptDurationMinutes = nil
         lastPromptFocus = nil
+        lastPromptIncludeContext = nil
     }
 }
