@@ -16,7 +16,6 @@ struct CreateWithAIGeneratingView: View {
     let onCancel: () -> Void
 
     @State private var stepIndex = 0
-    @State private var ringSpinning = false
 
     private var steps: [String] {
         var result = ["Reading your ask…"]
@@ -115,25 +114,25 @@ struct CreateWithAIGeneratingView: View {
         .accessibilityIdentifier("create_with_ai_generating")
     }
 
-    /// Fixed-size ZStack + filled center disc. The orphaned-arc bug came from
-    /// animating a bare `Circle().trim` without a stable frame/center glyph —
-    /// the rotating stroke's layout bounds drifted off the sparkles.
+    /// Spinner arc is driven by `TimelineView` (frame-based degrees), not
+    /// `.animation(.repeatForever)` on `rotationEffect`. The latter still let
+    /// the trimmed stroke's animated layout bounds detach from the ring and
+    /// paint in a screen corner on device.
     private var generatingRing: some View {
         ZStack {
             Circle()
                 .stroke(DailyDriver.lime.opacity(0.18), lineWidth: 3)
-                .frame(width: 88, height: 88)
 
-            Circle()
-                .trim(from: 0, to: 0.28)
-                .stroke(DailyDriver.lime, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                .frame(width: 88, height: 88)
-                .rotationEffect(.degrees(-90))
-                .rotationEffect(.degrees(ringSpinning ? 360 : 0))
-                .animation(
-                    .linear(duration: 1.1).repeatForever(autoreverses: false),
-                    value: ringSpinning
-                )
+            TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: false)) { context in
+                let period = 1.1
+                let turns = context.date.timeIntervalSinceReferenceDate / period
+                let degrees = turns.truncatingRemainder(dividingBy: 1) * 360.0
+                Circle()
+                    .trim(from: 0, to: 0.28)
+                    .stroke(DailyDriver.lime, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    // Start at 12 o'clock; rotate in place inside the fixed frame.
+                    .rotationEffect(.degrees(degrees - 90))
+            }
 
             Circle()
                 .fill(DailyDriver.lime)
@@ -143,10 +142,11 @@ struct CreateWithAIGeneratingView: View {
                         .font(.system(size: 22, weight: .bold))
                         .foregroundColor(DailyDriver.ink)
                 )
-                .ddLimeGlow()
         }
         .frame(width: 88, height: 88)
-        .onAppear { ringSpinning = true }
+        // Isolate lime glow so shadow painting cannot expand sibling layout.
+        .compositingGroup()
+        .shadow(color: DailyDriver.lime.opacity(0.55), radius: 11, x: 0, y: 0)
         .accessibilityHidden(true)
     }
 

@@ -179,25 +179,7 @@ struct AmakaFlowCompanionApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if !authViewModel.hasResolvedInitialSession {
-                    // Wait for Clerk session hydration to avoid auth flash on startup
-                    Color.black.ignoresSafeArea()
-                } else if authViewModel.isAuthenticated {
-                    if FeatureFlags.paywallGateEnabled && !subscriptionAccess.isAccessResolved {
-                        Color.black.ignoresSafeArea()
-                            .task {
-                                await subscriptionAccess.refresh()
-                            }
-                    } else if FeatureFlags.paywallGateEnabled
-                        && !subscriptionAccess.hasProAccess {
-                        PaywallView(allowsDismiss: false)
-                            .environmentObject(subscriptionAccess)
-                    } else {
-                        authenticatedAppRoot
-                    }
-                } else {
-                    unauthenticatedRoot
-                }
+                rootContent
             }
             .environment(Clerk.shared)
             .environmentObject(authViewModel)
@@ -219,6 +201,42 @@ struct AmakaFlowCompanionApp: App {
                     }
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var rootContent: some View {
+        #if DEBUG
+        if UITestEnvironment.shared.showCreateWithAIGeneratingHost {
+            CreateWithAIGeneratingHostView()
+        } else {
+            productionRootContent
+        }
+        #else
+        productionRootContent
+        #endif
+    }
+
+    @ViewBuilder
+    private var productionRootContent: some View {
+        if !authViewModel.hasResolvedInitialSession {
+            // Wait for Clerk session hydration to avoid auth flash on startup
+            Color.black.ignoresSafeArea()
+        } else if authViewModel.isAuthenticated {
+            if FeatureFlags.paywallGateEnabled && !subscriptionAccess.isAccessResolved {
+                Color.black.ignoresSafeArea()
+                    .task {
+                        await subscriptionAccess.refresh()
+                    }
+            } else if FeatureFlags.paywallGateEnabled
+                && !subscriptionAccess.hasProAccess {
+                PaywallView(allowsDismiss: false)
+                    .environmentObject(subscriptionAccess)
+            } else {
+                authenticatedAppRoot
+            }
+        } else {
+            unauthenticatedRoot
         }
     }
 
@@ -383,3 +401,21 @@ struct AmakaFlowCompanionApp: App {
     }
 
 }
+
+#if DEBUG
+/// Visual host for Create-with-AI generating spinner verification (AMA-2373).
+/// Launch with `SIMCTL_CHILD_UITEST_SHOW_CREATE_WITH_AI_GENERATING=true`.
+private struct CreateWithAIGeneratingHostView: View {
+    var body: some View {
+        ZStack {
+            DailyDriver.screenBackground.ignoresSafeArea()
+            CreateWithAIGeneratingView(
+                ask: "Chest pump, about 45 minutes, nothing on cables",
+                chips: [.gym, .profile]
+            ) {}
+        }
+        .preferredColorScheme(.dark)
+        .accessibilityIdentifier("create_with_ai_generating_host")
+    }
+}
+#endif
