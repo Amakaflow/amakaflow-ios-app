@@ -2,8 +2,9 @@
 //  CreateWithAIRefineDock.swift
 //  AmakaFlow
 //
-//  AMA-2373: Create with AI — refine dock (quick chips + free text, applied
-//  tweak history with Undo, "applying…" state, Suggest another = reroll).
+//  AMA-2373: Create with AI — refine dock matching the mock (quick chips +
+//  free-text bar, ↳ applied rows with Undo). Suggest another stays available
+//  but is not a primary chrome element.
 //
 
 import SwiftUI
@@ -18,17 +19,17 @@ struct CreateWithAIRefineDock: View {
 
     @State private var freeText = ""
 
-    private static let quickTweaks = [
-        "Make it shorter",
-        "Make it harder",
-        "Lower impact",
-        "Add more core"
+    /// Short chip labels matching the rig; applied as full tweak phrases so the
+    /// coach still gets clear instructions.
+    private static let quickTweaks: [(label: String, tweak: String)] = [
+        ("Shorter", "Make it shorter"),
+        ("Harder", "Make it harder"),
+        ("Lower impact", "Lower impact"),
+        ("More volume", "Add more volume")
     ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionLabel(CreateWithAICopy.refineHeading)
-
             if !appliedTweaks.isEmpty {
                 appliedRows
             }
@@ -44,7 +45,6 @@ struct CreateWithAIRefineDock: View {
             }
 
             quickChips
-
             textField
 
             Button(action: onSuggestAnother) {
@@ -52,26 +52,16 @@ struct CreateWithAIRefineDock: View {
                     Image(systemName: "arrow.triangle.2.circlepath")
                     Text(CreateWithAICopy.suggestAnother)
                 }
-                .ddDisplayText(13, weight: .bold)
-                .foregroundColor(DailyDriver.foreground)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(DailyDriver.foregroundDim)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 13)
-                .background(DailyDriver.card)
-                .overlay(Capsule().stroke(DailyDriver.borderStrong, lineWidth: 1))
-                .clipShape(Capsule())
+                .padding(.vertical, 10)
             }
             .buttonStyle(.plain)
             .disabled(isApplying)
             .opacity(isApplying ? 0.5 : 1)
             .accessibilityIdentifier("create_with_ai_suggest_another")
         }
-        .padding(14)
-        .background(DailyDriver.backgroundElevated)
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(DailyDriver.border, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .accessibilityIdentifier("create_with_ai_refine_dock")
     }
 
@@ -79,12 +69,10 @@ struct CreateWithAIRefineDock: View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(Array(appliedTweaks.enumerated()), id: \.offset) { index, tweak in
                 let isLast = index == appliedTweaks.count - 1
-                HStack(alignment: .top, spacing: 8) {
-                    Text("↳")
-                        .foregroundColor(DailyDriver.foregroundDim)
-                    Text(tweak)
+                HStack(alignment: .center, spacing: 8) {
+                    Text("↳ '\(tweak)'\(CreateWithAICopy.refineAppliedSuffix)")
                         .font(.system(size: 12.5))
-                        .foregroundColor(DailyDriver.foregroundMuted)
+                        .foregroundColor(DailyDriver.blue)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 8)
                     if isLast, canUndo {
@@ -96,6 +84,14 @@ struct CreateWithAIRefineDock: View {
                             .accessibilityIdentifier("create_with_ai_refine_undo")
                     }
                 }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(DailyDriver.card)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(DailyDriver.blue.opacity(0.45), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
         }
     }
@@ -103,11 +99,11 @@ struct CreateWithAIRefineDock: View {
     private var quickChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(Self.quickTweaks, id: \.self) { tweak in
+                ForEach(Self.quickTweaks, id: \.label) { item in
                     Button {
-                        onApply(tweak)
+                        onApply(item.tweak)
                     } label: {
-                        Text(tweak)
+                        Text(item.label)
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(DailyDriver.foreground)
                             .padding(.horizontal, 12)
@@ -126,12 +122,13 @@ struct CreateWithAIRefineDock: View {
     }
 
     private var textField: some View {
-        HStack(spacing: 8) {
+        let submitDisabled = trimmedFreeText.isEmpty || isApplying
+        return HStack(spacing: 8) {
             TextField(CreateWithAICopy.refinePlaceholder, text: $freeText)
                 .font(.system(size: 13))
                 .foregroundColor(DailyDriver.foreground)
                 .padding(.horizontal, 13)
-                .padding(.vertical, 10)
+                .padding(.vertical, 12)
                 .background(DailyDriver.inputBackground)
                 .overlay(Capsule().stroke(DailyDriver.borderStrong, lineWidth: 1))
                 .clipShape(Capsule())
@@ -140,15 +137,16 @@ struct CreateWithAIRefineDock: View {
                 .onSubmit(submitFreeText)
 
             Button(action: submitFreeText) {
-                Image(systemName: "arrow.up")
+                Image(systemName: "paperplane.fill")
                     .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(DailyDriver.ink)
-                    .frame(width: 36, height: 36)
-                    .background(trimmedFreeText.isEmpty ? DailyDriver.card2 : DailyDriver.lime)
+                    .foregroundColor(submitDisabled ? DailyDriver.foregroundDim : DailyDriver.ink)
+                    .frame(width: 40, height: 40)
+                    .background(submitDisabled ? DailyDriver.card2 : DailyDriver.lime)
                     .clipShape(Circle())
             }
             .buttonStyle(.plain)
-            .disabled(trimmedFreeText.isEmpty || isApplying)
+            .disabled(submitDisabled)
+            .accessibilityLabel("Send refinement")
             .accessibilityIdentifier("create_with_ai_refine_submit")
         }
     }
@@ -163,13 +161,6 @@ struct CreateWithAIRefineDock: View {
         onApply(text)
         freeText = ""
     }
-
-    private func sectionLabel(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 10, weight: .bold))
-            .tracking(1.25)
-            .foregroundColor(DailyDriver.foregroundDim)
-    }
 }
 
 #if DEBUG
@@ -177,7 +168,7 @@ struct CreateWithAIRefineDock: View {
     ZStack {
         DailyDriver.screenBackground.ignoresSafeArea()
         CreateWithAIRefineDock(
-            appliedTweaks: ["Make it shorter"],
+            appliedTweaks: ["make it 30 minutes"],
             canUndo: true,
             isApplying: false,
             onApply: { _ in },

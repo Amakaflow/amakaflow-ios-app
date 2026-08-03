@@ -52,11 +52,11 @@ appId: com.myamaka.AmakaFlowCompanion
     id: "create_with_ai_start"
 - scrollUntilVisible:
     element:
-      text: "Make it shorter"
+      text: "Shorter"
     direction: DOWN
     timeout: 10000
 - tapOn:
-    text: "Make it shorter"
+    text: "Shorter"
 - extendedWaitUntil:
     visible:
       id: "create_with_ai_refine_undo"

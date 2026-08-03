@@ -2,9 +2,9 @@
 //  CreateWithAIDraftView.swift
 //  AmakaFlow
 //
-//  AMA-2373 — Create with AI draft / cancelled UI extracted from
-//  SuggestWorkoutView to satisfy SwiftLint file_length / type_body_length
-//  (mirrors SuggestWorkoutGeneratingView for AMA-2371).
+//  AMA-2373 — Create with AI draft matching the approved mock: Edit ask +
+//  purple DRAFT badge, meta pills, WHY THIS card, grouped blocks, refine dock,
+//  Save | Start side-by-side.
 //
 
 import SwiftUI
@@ -50,22 +50,26 @@ struct CreateWithAIDraftView: View {
     @Binding var showingUnifiedStart: Bool
     @Binding var unifiedStartWorkout: Workout?
 
+    private enum PendingCommit {
+        case save
+        case start
+    }
+
+    @State private var pendingCommit: PendingCommit?
+
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                closeRow
-                draftHeader
+            VStack(alignment: .leading, spacing: 18) {
+                draftNav
+                draftTitle
                 draftMetaPills
                 draftWhyThis
                 CreateWithAIDraftSessionPlan(
+                    mainTitle: mainBandTitle,
                     warmUp: viewModel.draftWarmUp,
                     blocks: viewModel.draftMainBlocks,
                     cooldown: viewModel.draftCooldown
                 )
-
-                Text(CreateWithAICopy.noWearableNote)
-                    .font(.system(size: 11))
-                    .foregroundColor(DailyDriver.foregroundDim)
 
                 CreateWithAIRefineDock(
                     appliedTweaks: viewModel.appliedTweaks,
@@ -79,69 +83,93 @@ struct CreateWithAIDraftView: View {
                 commitCTAs
             }
             .padding(.horizontal, Theme.Spacing.lg)
-            .padding(.top, Theme.Spacing.lg)
+            .padding(.top, Theme.Spacing.md)
             .padding(.bottom, 40)
         }
         .accessibilityIdentifier("create_with_ai_draft_root")
     }
 
-    private var closeRow: some View {
-        HStack {
-            Spacer()
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(DailyDriver.foreground)
-                    .frame(width: 32, height: 32)
-                    .background(DailyDriver.card2)
-                    .clipShape(Circle())
+    private var draftNav: some View {
+        HStack(spacing: 10) {
+            Button(action: onEditAsk) {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(CreateWithAICopy.editAsk)
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .foregroundColor(DailyDriver.foregroundMuted)
             }
             .buttonStyle(.plain)
-            .accessibilityIdentifier("suggest_workout_done")
+            .accessibilityIdentifier("create_with_ai_edit_ask")
+
+            Spacer()
+
+            Text(CreateWithAICopy.draftBadge)
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundColor(DailyDriver.foreground)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(DailyDriver.purple.opacity(0.22))
+                .overlay(Capsule().stroke(DailyDriver.purple.opacity(0.55), lineWidth: 1))
+                .clipShape(Capsule())
+                .accessibilityIdentifier("create_with_ai_draft_badge")
         }
     }
 
-    private var draftHeader: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(workout.name)
-                .ddDisplayText(24, weight: .heavy)
-                .foregroundColor(DailyDriver.foreground)
-                .fixedSize(horizontal: false, vertical: true)
-
-            HStack(spacing: 10) {
-                Text(CreateWithAICopy.draftBadge)
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundColor(DailyDriver.amber)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(DailyDriver.amber.opacity(0.14))
-                    .overlay(Capsule().stroke(DailyDriver.amber.opacity(0.4), lineWidth: 1))
-                    .clipShape(Capsule())
-
-                Button(action: onEditAsk) {
-                    Text(CreateWithAICopy.editAsk)
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(DailyDriver.lime)
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("create_with_ai_edit_ask")
-            }
-        }
+    private var draftTitle: some View {
+        Text(workout.name)
+            .ddDisplayText(26, weight: .heavy)
+            .foregroundColor(DailyDriver.foreground)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private var draftMetaPills: some View {
-        HStack(spacing: 8) {
-            metaPill(workout.formattedDuration)
-            metaPill(workout.sport.displayName)
-            metaPill("\(workout.intervals.count) steps")
+        let pills = metaPillTexts
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                ForEach(pills.prefix(3), id: \.self) { text in
+                    metaPill(text)
+                }
+            }
+            if pills.count > 3 {
+                HStack(spacing: 8) {
+                    ForEach(pills.dropFirst(3), id: \.self) { text in
+                        metaPill(text)
+                    }
+                }
+            }
         }
+    }
+
+    private var metaPillTexts: [String] {
+        var pills = [
+            durationPill,
+            workout.sport.displayName.uppercased(),
+            CreateWithAIDraftPresentation.exerciseCountLabel(
+                warmUp: viewModel.draftWarmUp,
+                blocks: viewModel.draftMainBlocks,
+                cooldown: viewModel.draftCooldown
+            )
+        ]
+        let gymAttached = viewModel.currentIncludeContext?.gym == true
+        if let fits = CreateWithAIDraftPresentation.fitsGymLabel(
+            gymAttached: gymAttached,
+            gymName: DDActiveGymStore.load()?.name
+        ) {
+            pills.append(fits)
+        }
+        return pills
+    }
+
+    private var durationPill: String {
+        let minutes = max(1, workout.duration / 60)
+        return "~\(minutes) MIN"
     }
 
     private func metaPill(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 11.5, weight: .semibold))
+            .font(.system(size: 11, weight: .semibold, design: .monospaced))
             .foregroundColor(DailyDriver.foregroundMuted)
             .padding(.horizontal, 11)
             .padding(.vertical, 6)
@@ -150,15 +178,32 @@ struct CreateWithAIDraftView: View {
             .clipShape(Capsule())
     }
 
+    private var mainBandTitle: String {
+        let name = workout.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if name.isEmpty { return "Session" }
+        // Prefer a short block label: strip trailing "— 45" / " - 45" suffixes.
+        // Require whitespace around ASCII hyphen so "Full-Body" stays intact.
+        if let dash = name.range(of: "—") ?? name.range(of: " - ") {
+            let head = name[..<dash.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
+            if !head.isEmpty { return head }
+        }
+        return name
+    }
+
     @ViewBuilder
     private var draftWhyThis: some View {
         let bullets = CreateWithAIDraftPresentation.whyThisBullets(
             whyThis: viewModel.whyThis,
             description: workout.description
         )
-        if !bullets.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                sectionLabel(CreateWithAICopy.whyThisHeading)
+        VStack(alignment: .leading, spacing: 10) {
+            Text(CreateWithAICopy.whyThisHeading)
+                .font(.system(size: 10, weight: .bold))
+                .tracking(1.25)
+                .foregroundColor(DailyDriver.foregroundDim)
+                .frame(maxWidth: .infinity, alignment: .center)
+
+            if !bullets.isEmpty {
                 ForEach(bullets, id: \.self) { bullet in
                     HStack(alignment: .top, spacing: 8) {
                         Circle()
@@ -172,15 +217,21 @@ struct CreateWithAIDraftView: View {
                     }
                 }
             }
-            .accessibilityIdentifier("create_with_ai_why_this")
-        }
-    }
 
-    private func sectionLabel(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 10, weight: .bold))
-            .tracking(1.25)
-            .foregroundColor(DailyDriver.foregroundDim)
+            Text(CreateWithAICopy.noWearableNote.uppercased())
+                .font(.system(size: 9, weight: .semibold))
+                .tracking(0.6)
+                .foregroundColor(DailyDriver.foregroundDim)
+                .padding(.top, 2)
+        }
+        .padding(14)
+        .background(DailyDriver.card)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(DailyDriver.border, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .accessibilityIdentifier("create_with_ai_why_this")
     }
 
     private var commitCTAsDisabled: Bool {
@@ -188,17 +239,19 @@ struct CreateWithAIDraftView: View {
     }
 
     private var commitCTAs: some View {
-        VStack(spacing: 10) {
+        HStack(spacing: 10) {
             Button {
                 saveToLibrary()
             } label: {
                 HStack(spacing: 8) {
-                    if viewModel.isPersistingDraft {
+                    if pendingCommit == .save {
                         ProgressView().tint(DailyDriver.foreground).scaleEffect(0.8)
                     }
                     Text(CreateWithAICopy.saveToLibrary)
-                        .ddDisplayText(15, weight: .bold)
+                        .ddDisplayText(13, weight: .bold)
                         .foregroundColor(DailyDriver.foreground)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 15)
@@ -215,13 +268,16 @@ struct CreateWithAIDraftView: View {
                 presentStartSheet()
             } label: {
                 HStack(spacing: 8) {
-                    if viewModel.isPersistingDraft {
+                    if pendingCommit == .start {
                         ProgressView().tint(DailyDriver.ink).scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 12, weight: .bold))
                     }
                     Text(CreateWithAICopy.startCTA)
                         .ddDisplayText(15, weight: .bold)
-                        .foregroundColor(DailyDriver.ink)
                 }
+                .foregroundColor(DailyDriver.ink)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 15)
                 .background(DailyDriver.lime)
@@ -238,6 +294,7 @@ struct CreateWithAIDraftView: View {
 
     private func saveToLibrary() {
         persistError = nil
+        pendingCommit = .save
         Task {
             await persistThenProceed(
                 retry: { saveToLibrary() },
@@ -253,6 +310,7 @@ struct CreateWithAIDraftView: View {
 
     private func presentStartSheet() {
         persistError = nil
+        pendingCommit = .start
         Task {
             await persistThenProceed(
                 retry: { presentStartSheet() },
@@ -271,6 +329,7 @@ struct CreateWithAIDraftView: View {
         retry: @escaping () -> Void,
         onSuccess: (Workout) -> Void
     ) async {
+        defer { pendingCommit = nil }
         switch await viewModel.persistDraftToBackend(workout) {
         case .success(let saved):
             onSuccess(saved)

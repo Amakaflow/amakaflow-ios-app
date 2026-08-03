@@ -2,114 +2,156 @@
 //  CreateWithAIDraftSessionPlan.swift
 //  AmakaFlow
 //
-//  AMA-2373 — session-plan rows extracted from CreateWithAIDraftView for
-//  SwiftLint type_body_length.
+//  AMA-2373 — grouped warm-up / main / cooldown blocks matching the approved
+//  draft mock (bordered bands, rest chips on rows, no numbered Rest steps).
 //
 
 import SwiftUI
 
-struct CreateWithAINumberedDraftRow: Equatable {
-    let offset: Int
-    let row: DraftRow
-    let number: Int?
-}
-
 struct CreateWithAIDraftSessionPlan: View {
+    let mainTitle: String
     let warmUp: WorkoutInterval?
     let blocks: [WorkoutInterval]
     let cooldown: WorkoutInterval?
 
+    private var mainRows: [DraftRow] {
+        CreateWithAIDraftPresentation.collapseRests(intervals: blocks)
+    }
+
     var body: some View {
-        let rows = CreateWithAIDraftPresentation.bandRows(
-            warmUp: warmUp,
-            blocks: blocks,
-            cooldown: cooldown
-        )
-        return VStack(alignment: .leading, spacing: 10) {
-            sectionLabel("SESSION PLAN")
-            ForEach(Self.numberedDraftRows(rows), id: \.offset) { item in
-                CreateWithAIDraftRow(row: item.row, number: item.number)
+        VStack(alignment: .leading, spacing: 12) {
+            if let warmUp {
+                bandCard(
+                    title: "Warm-up",
+                    trailing: summaryMinutesLabel(warmUp),
+                    titleColor: DailyDriver.foreground,
+                    borderColor: DailyDriver.borderStrong
+                ) {
+                    CreateWithAIDraftRow(
+                        row: DraftRow(
+                            interval: warmUp,
+                            band: .warmUp,
+                            restChipSeconds: nil,
+                            isSummary: true
+                        )
+                    )
+                }
+            }
+
+            if !mainRows.isEmpty {
+                bandCard(
+                    title: mainTitle,
+                    trailing: CreateWithAIDraftPresentation.exerciseCountLabel(
+                        warmUp: nil,
+                        blocks: blocks,
+                        cooldown: nil
+                    ),
+                    titleColor: DailyDriver.lime,
+                    borderColor: DailyDriver.lime.opacity(0.55)
+                ) {
+                    ForEach(Array(mainRows.enumerated()), id: \.offset) { _, row in
+                        CreateWithAIDraftRow(row: row)
+                    }
+                }
+            }
+
+            if let cooldown {
+                bandCard(
+                    title: "Cool-down",
+                    trailing: summaryMinutesLabel(cooldown),
+                    titleColor: DailyDriver.foreground,
+                    borderColor: DailyDriver.borderStrong
+                ) {
+                    CreateWithAIDraftRow(
+                        row: DraftRow(
+                            interval: cooldown,
+                            band: .cooldown,
+                            restChipSeconds: nil,
+                            isSummary: true
+                        )
+                    )
+                }
             }
         }
         .accessibilityIdentifier("create_with_ai_session_plan")
     }
 
-    private static func numberedDraftRows(_ rows: [DraftRow]) -> [CreateWithAINumberedDraftRow] {
-        var mainIndex = 0
-        return rows.enumerated().map { offset, row in
-            guard row.band == .main, !row.isSummary else {
-                return CreateWithAINumberedDraftRow(offset: offset, row: row, number: nil)
+    private func bandCard<Content: View>(
+        title: String,
+        trailing: String?,
+        titleColor: Color,
+        borderColor: Color,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(title)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(titleColor)
+                Spacer(minLength: 8)
+                if let trailing {
+                    Text(trailing)
+                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .foregroundColor(DailyDriver.foregroundDim)
+                }
             }
-            mainIndex += 1
-            return CreateWithAINumberedDraftRow(offset: offset, row: row, number: mainIndex)
+
+            content()
         }
+        .padding(14)
+        .background(DailyDriver.card)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(borderColor, lineWidth: 1.2)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
-    private func sectionLabel(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 10, weight: .bold))
-            .tracking(1.25)
-            .foregroundColor(DailyDriver.foregroundDim)
+    private func summaryMinutesLabel(_ interval: WorkoutInterval) -> String? {
+        switch interval {
+        case .warmup(let seconds, _), .cooldown(let seconds, _):
+            return "~\(max(1, seconds / 60)) MIN"
+        default:
+            return nil
+        }
     }
 }
 
 struct CreateWithAIDraftRow: View {
     let row: DraftRow
-    let number: Int?
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            badge
-
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(DailyDriver.foreground)
                 if let detail {
                     Text(detail)
-                        .font(.system(size: 11))
-                        .foregroundColor(DailyDriver.foregroundMuted)
+                        .font(.system(size: 12, weight: detailIsSwap ? .bold : .regular, design: .monospaced))
+                        .foregroundColor(detailIsSwap ? DailyDriver.amber : DailyDriver.foregroundMuted)
                 }
             }
 
             Spacer(minLength: 8)
 
             if let restSeconds = row.restChipSeconds {
-                Text("\(restSeconds)s rest")
-                    .font(.system(size: 10, weight: .semibold))
+                Text("REST \(restSeconds)S")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundColor(DailyDriver.foregroundMuted)
                     .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 5)
                     .background(DailyDriver.card2)
                     .clipShape(Capsule())
             }
         }
-        .padding(.vertical, 6)
-    }
-
-    @ViewBuilder
-    private var badge: some View {
-        if row.isSummary {
-            Image(systemName: row.band == .warmUp ? "flame.fill" : "wind")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(DailyDriver.ink)
-                .frame(width: 26, height: 26)
-                .background(DailyDriver.amber)
-                .clipShape(Circle())
-        } else {
-            Text("\(number ?? 0)")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundColor(DailyDriver.ink)
-                .frame(width: 26, height: 26)
-                .background(DailyDriver.lime)
-                .clipShape(Circle())
-        }
+        .padding(.vertical, 4)
     }
 
     private var title: String {
         switch row.band {
-        case .warmUp: return "Warm-up"
-        case .cooldown: return "Cool-down"
+        case .warmUp: return summaryTitle(fallback: "Warm-up")
+        case .cooldown: return summaryTitle(fallback: "Cool-down")
         case .main: return mainIntervalName(row.interval)
         }
     }
@@ -121,11 +163,22 @@ struct CreateWithAIDraftRow: View {
         switch row.interval {
         case .reps(let sets, let reps, _, let load, _, _):
             var parts: [String] = []
-            if let sets { parts.append("\(sets)x") }
-            parts.append("\(reps) reps")
-            if let load { parts.append("@ \(load)") }
+            if let sets {
+                parts.append("\(sets) x \(reps)")
+            } else {
+                parts.append("\(reps) reps")
+            }
+            if let load {
+                let upper = load.uppercased()
+                if upper.contains("SWAP") {
+                    parts.append("· \(upper)")
+                } else {
+                    parts.append("· \(load)")
+                }
+            }
             return parts.joined(separator: " ")
-        case .time(let seconds, _):
+        case .time(let seconds, let target):
+            if let target, !target.isEmpty { return target }
             return "\(max(1, seconds / 60)) min"
         case .distance(_, let target):
             return target
@@ -133,6 +186,26 @@ struct CreateWithAIDraftRow: View {
             return "\(intervals.count) exercises"
         default:
             return nil
+        }
+    }
+
+    private var detailIsSwap: Bool {
+        guard let detail else { return false }
+        return detail.uppercased().contains("SWAP")
+    }
+
+    private func summaryTitle(fallback: String) -> String {
+        switch row.interval {
+        case .warmup(_, let target), .cooldown(_, let target):
+            guard let target, !target.isEmpty else { return fallback }
+            let first = target
+                .split(separator: ",", maxSplits: 1)
+                .first
+                .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+            if let first, !first.isEmpty { return first }
+            return fallback
+        default:
+            return fallback
         }
     }
 
@@ -153,7 +226,13 @@ struct CreateWithAIDraftRow: View {
         case .warmup(let seconds, let target), .cooldown(let seconds, let target):
             let minutes = max(1, seconds / 60)
             if let target, !target.isEmpty {
-                return "\(minutes) min · \(target)"
+                // If title already used the first clause, show remaining + time.
+                let parts = target.split(separator: ",", maxSplits: 1)
+                if parts.count > 1 {
+                    let rest = parts[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                    return "\(minutes) min · \(rest)"
+                }
+                return "\(minutes) min"
             }
             return "\(minutes) min"
         default:
