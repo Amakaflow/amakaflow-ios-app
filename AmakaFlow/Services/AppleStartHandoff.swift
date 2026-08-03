@@ -52,6 +52,21 @@ struct AppleStartHandoffResult: Equatable {
     }
 }
 
+extension AppleStartHandoffResult.Kind {
+    /// AMA-2371 final review I4 — mirrors
+    /// `GarminHandoffRecord.Outcome.isTerminalGarminSentCardSuccess`. Both
+    /// `.savedToFitness` (scheduled in Workout) and `.sentToWatch` (pushed
+    /// straight to the watch) are terminal Apple successes that should show
+    /// the detail screen's lime "Scheduled on Apple Watch" card; `.failed`,
+    /// `.blocked`, and `.previewReady` (still mid-flow) must not.
+    var isTerminalAppleSentCardSuccess: Bool {
+        switch self {
+        case .savedToFitness, .sentToWatch: return true
+        case .failed, .blocked, .previewReady: return false
+        }
+    }
+}
+
 enum AppleStartHandoffFailureCode: String, Equatable {
     case watchNotReachable = "watch_not_reachable"
     case watchAppNotInstalled = "watch_app_not_installed"

@@ -172,7 +172,9 @@ struct UnifiedWorkoutDetailView: View {
                     intervalCount: intervalCount,
                     sections: WorkoutKitPlanStepSummary.sections(from: planJSON),
                     sportLabel: WorkoutKitSportLabel.label(from: planJSON),
-                    prefsSummary: AppleWatchDeliveryPrefsStore.previewSummaryLine,
+                    prefsSummary: AppleWatchDeliveryPrefsStore.hasConfigured
+                        ? AppleWatchDeliveryPrefsStore.current.summaryLine
+                        : nil,
                     onConfirm: {
                         // Keep enriched structure; clear before dismiss so onDismiss skips reset.
                         appleEnrichmentReset = nil
@@ -435,13 +437,14 @@ struct UnifiedWorkoutDetailView: View {
     /// device, the real status line, and (Garmin only) a two-line honest body
     /// about the widget download + the normal Garmin Connect app-switch.
     private func sentStatusCard(target: EnrichmentPushTarget, status: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(target == .garmin ? GarminLifecycleCopy.sentCardTitle : GarminLifecycleCopy.scheduledOnAppleWatchCardTitle)
+        let title = target == .garmin ? GarminLifecycleCopy.sentCardTitle : GarminLifecycleCopy.scheduledOnAppleWatchCardTitle
+        return VStack(alignment: .leading, spacing: 4) {
+            Text(title)
                 .font(Theme.Typography.caption.weight(.bold))
                 .foregroundColor(DailyDriver.lime)
                 .accessibilityIdentifier("af_workout_detail_sent_card_title")
 
-            Text(status)
+            Text(cardStatusLine(title: title, status: status))
                 .font(Theme.Typography.caption)
                 .foregroundColor(Theme.Colors.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -465,6 +468,17 @@ struct UnifiedWorkoutDetailView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous))
         .accessibilityIdentifier("af_workout_detail_sent_card")
+    }
+
+    /// AMA-2371 final review I2 — the card title already names the device
+    /// ("Sent to Garmin"), so drop a leading `"<title> — "` from the status
+    /// line instead of repeating it verbatim above the Garmin body copy.
+    /// Anything that isn't an exact repeat (e.g. "Ready on watch — …") is
+    /// left untouched since it adds real information, not a duplicate.
+    private func cardStatusLine(title: String, status: String) -> String {
+        let redundantPrefix = "\(title) — "
+        guard status.hasPrefix(redundantPrefix) else { return status }
+        return String(status.dropFirst(redundantPrefix.count))
     }
 
     /// AMA-2330: after a successful Apple schedule, offer a direct path to the
@@ -1199,7 +1213,7 @@ extension UnifiedWorkoutDetailView {
                 lastAppleHandoffShowsManagePlans = prepared.showsManageScheduledPlans
             case .savedToFitness, .sentToWatch:
                 handoffStatus = composedMessage
-                sentCardTarget = .apple
+                sentCardTarget = prepared.kind.isTerminalAppleSentCardSuccess ? .apple : nil
                 lastAppleHandoffShowsManagePlans = prepared.showsManageScheduledPlans
             }
         }
@@ -1228,7 +1242,7 @@ extension UnifiedWorkoutDetailView {
                 meta: meta
             )
             handoffStatus = result.message
-            sentCardTarget = result.kind == .savedToFitness ? .apple : nil
+            sentCardTarget = result.kind.isTerminalAppleSentCardSuccess ? .apple : nil
             lastAppleHandoffShowsManagePlans = result.showsManageScheduledPlans
         }
     }

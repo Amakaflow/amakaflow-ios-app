@@ -15,7 +15,11 @@ struct AppleWorkoutKitPreviewSheet: View {
     let intervalCount: Int
     let sections: [PreviewSection]
     let sportLabel: String
-    let prefsSummary: String
+    /// `nil` when prefs are unset — the sheet must never render the
+    /// "Mapper sport defaults" copy that backs the unset state (AMA-2371
+    /// final review I1). Passing the intent instead of sniffing the
+    /// rendered string keeps that rule expressed once, in the prefs store.
+    let prefsSummary: String?
     let onConfirm: () -> Void
     let onCancel: () -> Void
 
@@ -109,9 +113,10 @@ struct AppleWorkoutKitPreviewSheet: View {
                 .lineSpacing(2)
 
             // Only surface the live summary once it's actually customized —
-            // the unset copy reads "Mapper sport defaults", which this sheet
-            // must never show (demoted in favor of the pointer above).
-            if !prefsSummary.localizedCaseInsensitiveContains("mapper") {
+            // callers pass `nil` for the unset case (AppleWatchDeliveryPrefsStore
+            // .hasConfigured == false), so the "Mapper sport defaults" jargon
+            // this sheet must never show never reaches this view at all.
+            if let prefsSummary {
                 Text(prefsSummary)
                     .font(.system(size: 10))
                     .foregroundColor(DailyDriver.foregroundDim)
@@ -232,7 +237,7 @@ private extension PreviewBandKind {
         intervalCount: 3,
         sections: WorkoutKitPlanStepSummary.sections(from: json),
         sportLabel: WorkoutKitSportLabel.label(from: json),
-        prefsSummary: "Mapper sport defaults (not customized)",
+        prefsSummary: nil,
         onConfirm: {},
         onCancel: {}
     )
