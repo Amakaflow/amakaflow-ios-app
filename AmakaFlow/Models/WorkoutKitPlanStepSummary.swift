@@ -5,34 +5,27 @@
 //  AMA-2360 — human-readable step lines from mapper WKPlanDTO for Apple preview.
 //  AMA-2371 — banded `sections(from:)` for the Runna-style Apple Watch preview
 //  sheet; rest becomes a chip instead of a monospace dump line.
+//  AMA-2374 — exercise-named bands (Mobility prep / Barbell back squat · N SETS)
+//  matching `SDWatchSteps` in the send-flow redesign, not WARM-UP/WORK labels.
 //
 
 import Foundation
 import WorkoutKitSync
 
-// MARK: - Section banding (AMA-2371)
+// MARK: - Section banding (AMA-2371 / AMA-2374)
 
-/// One colored band on the Apple Watch preview sheet (e.g. "WARM-UP", "WORK").
-enum PreviewBandKind: Equatable {
-    case warmup
+/// Visual accent for a preview band — drives header tint, not the athlete-facing label.
+enum PreviewBandAccent: Equatable {
+    case mobility
     case work
     case cooldown
-
-    var label: String {
-        switch self {
-        case .warmup: return "WARM-UP"
-        case .work: return "WORK"
-        case .cooldown: return "COOL-DOWN"
-        }
-    }
 }
 
-/// A single row inside a `PreviewSection`. Rest intervals set `restChip`
-/// instead of a numbered `title`/`detail` pair — the sheet renders those as
-/// small chips (`REST 60S` / `REST · YOU END IT`), never as monospace text.
+/// A single row inside a `PreviewSection`. Rest is attached to the work row as
+/// `restChip` (right side), never as its own numbered step.
 struct PreviewStep: Equatable, Identifiable {
     let id = UUID()
-    /// 1-based within its section; `0` for rest chips (no numbered badge).
+    /// 1-based across the whole preview (Runna numbering).
     let number: Int
     let title: String
     let detail: String?
@@ -46,18 +39,26 @@ struct PreviewStep: Equatable, Identifiable {
     }
 }
 
-/// A banded group of steps for the preview sheet (warm-up, a repeat set, cool-down, …).
+/// A banded group of steps for the preview sheet.
+/// Band titles are athlete-facing (`Mobility prep`, exercise name) — never
+/// `WARM-UP` / `WORK` / `COOL-DOWN`.
 struct PreviewSection: Equatable, Identifiable {
     let id = UUID()
-    let kind: PreviewBandKind
-    /// Display label for the band, e.g. "WARM-UP" — mirrors `kind.label`.
-    var band: String { kind.label }
-    /// Repeat count badge, e.g. "×3". `nil` for warm-up/cool-down/ungrouped work.
+    let accent: PreviewBandAccent
+    /// Athlete-facing band title, e.g. "Mobility prep" or "Barbell back squat".
+    let band: String
+    /// Right-side tag, e.g. "~2 MIN" or "5 SETS".
     let tag: String?
     let steps: [PreviewStep]
 
+    /// AMA-2371 compatibility — older call sites keyed off `kind`.
+    var kind: PreviewBandAccent { accent }
+
     static func == (lhs: PreviewSection, rhs: PreviewSection) -> Bool {
-        lhs.kind == rhs.kind && lhs.tag == rhs.tag && lhs.steps == rhs.steps
+        lhs.accent == rhs.accent
+            && lhs.band == rhs.band
+            && lhs.tag == rhs.tag
+            && lhs.steps == rhs.steps
     }
 }
 
@@ -191,62 +192,314 @@ enum WorkoutKitPlanStepSummary {
         }
     }
 
-    /// Banded preview sections for the Apple Watch preview sheet (AMA-2371).
-    /// Warm-up / cool-down each get their own single-step band; repeat sets
-    /// get a "WORK ×N" band with rest children demoted to chips; consecutive
-    /// standalone work steps are grouped into a single "WORK" band.
+    // MARK: - Runna exercise-named sections (AMA-2374)
+
+    /// Banded preview sections matching `SDWatchSteps`: Mobility prep / exercise · N SETS.
+    /// Rest chips attach to the preceding work row (right side), never as dump lines.
     static func sections(from planJSON: Data) -> [PreviewSection] {
         guard let dto = try? WorkoutKitSync.default.parse(from: planJSON) else { return [] }
-        var out: [PreviewSection] = []
-        var pendingSteps: [WKPlanDTO.Interval.Step] = []
+        let atoms = flatten(intervals: dto.intervals)
+        return buildSections(from: atoms)
+    }
 
-        func flushPendingWork() {
-            guard !pendingSteps.isEmpty else { return }
-            out.append(PreviewSection(kind: .work, tag: nil, steps: previewSteps(for: pendingSteps)))
-            pendingSteps = []
-        }
+    private enum Atom {
+        case mobility(title: String, detail: String?)
+        case warmupSet(exercise: String, detail: String?)
+        case work(exercise: String, detail: String?, repeatCount: Int)
+        case rest(chip: String)
+        case cooldown(detail: String)
+    }
 
-        for interval in dto.intervals {
+    private static func flatten(intervals: [WKPlanDTO.Interval]) -> [Atom] {
+        var out: [Atom] = []
+        for interval in intervals {
             switch interval {
             case .warmup(let seconds, _):
-                flushPendingWork()
-                out.append(PreviewSection(
-                    kind: .warmup,
-                    tag: nil,
-                    steps: [PreviewStep(number: 1, title: "Warm-up", detail: durationLabel(seconds), restChip: nil)]
-                ))
+                out.append(.mobility(title: "Warm-up", detail: durationLabel(seconds)))
             case .cooldown(let seconds, _):
-                flushPendingWork()
-                out.append(PreviewSection(
-                    kind: .cooldown,
-                    tag: nil,
-                    steps: [PreviewStep(number: 1, title: "Cool-down", detail: durationLabel(seconds), restChip: nil)]
-                ))
+                out.append(.cooldown(detail: durationLabel(seconds)))
             case .repeatSet(let reps, let steps):
-                flushPendingWork()
-                out.append(PreviewSection(kind: .work, tag: "×\(reps)", steps: previewSteps(for: steps)))
+                out.append(contentsOf: flattenRepeat(reps: max(reps, 1), steps: steps))
             case .step(let step):
-                pendingSteps.append(step)
+                out.append(contentsOf: flattenStep(step, repeatCount: 1))
             }
         }
-        flushPendingWork()
         return out
     }
 
-    /// Converts a flat run of DTO steps into numbered work rows / rest chips,
-    /// renumbering so rest children don't consume a number badge.
-    private static func previewSteps(for steps: [WKPlanDTO.Interval.Step]) -> [PreviewStep] {
-        var out: [PreviewStep] = []
-        var number = 1
+    private static func flattenRepeat(reps: Int, steps: [WKPlanDTO.Interval.Step]) -> [Atom] {
+        var out: [Atom] = []
+        let workSteps = steps.filter { !isRest($0) }
+        let restSteps = steps.filter { isRest($0) }
+        let sharedRestChip = restSteps.first.map { restChipLabel(for: $0) }
+
+        if workSteps.count == 1, let only = workSteps.first {
+            let name = displayName(for: only)
+            let exercise = exerciseFamily(from: name)
+            if isWarmupSetName(name) {
+                // Unlikely inside a repeat, but keep honest.
+                for _ in 0..<reps {
+                    out.append(.warmupSet(exercise: exercise, detail: workDetail(for: only)))
+                    if let sharedRestChip { out.append(.rest(chip: sharedRestChip)) }
+                }
+            } else if isMobilityName(name) {
+                out.append(.mobility(title: name, detail: workDetail(for: only)))
+                if let sharedRestChip { out.append(.rest(chip: sharedRestChip)) }
+            } else {
+                out.append(.work(exercise: exercise, detail: workDetail(for: only), repeatCount: reps))
+                if let sharedRestChip { out.append(.rest(chip: sharedRestChip)) }
+            }
+            return out
+        }
+
+        // Multi-step repeats: expand one cycle's labels, then attach ×reps on work rows.
         for step in steps {
             if isRest(step) {
-                out.append(PreviewStep(number: 0, title: "", detail: nil, restChip: restChip(for: step)))
+                out.append(.rest(chip: restChipLabel(for: step)))
             } else {
-                out.append(PreviewStep(number: number, title: workTitle(for: step), detail: workDetail(for: step), restChip: nil))
-                number += 1
+                let name = displayName(for: step)
+                let exercise = exerciseFamily(from: name)
+                if isWarmupSetName(name) {
+                    out.append(.warmupSet(exercise: exercise, detail: workDetail(for: step)))
+                } else if isMobilityName(name) {
+                    out.append(.mobility(title: name, detail: workDetail(for: step)))
+                } else {
+                    out.append(.work(exercise: exercise, detail: workDetail(for: step), repeatCount: reps))
+                }
             }
         }
         return out
+    }
+
+    private static func flattenStep(_ step: WKPlanDTO.Interval.Step, repeatCount: Int) -> [Atom] {
+        if isRest(step) {
+            return [.rest(chip: restChipLabel(for: step))]
+        }
+        let name = displayName(for: step)
+        let exercise = exerciseFamily(from: name)
+        if isWarmupSetName(name) {
+            return [.warmupSet(exercise: exercise, detail: workDetail(for: step))]
+        }
+        if isMobilityName(name) {
+            return [.mobility(title: name, detail: workDetail(for: step))]
+        }
+        return [.work(exercise: exercise, detail: workDetail(for: step), repeatCount: max(repeatCount, 1))]
+    }
+
+    private static func buildSections(from atoms: [Atom]) -> [PreviewSection] {
+        var sections: [PreviewSection] = []
+        var number = 1
+
+        var mobilitySteps: [(title: String, detail: String?, rest: String?)] = []
+        var pendingRest: String?
+
+        func flushMobility() {
+            guard !mobilitySteps.isEmpty else { return }
+            let tagged = attachPendingRest(&mobilitySteps, pending: &pendingRest)
+            let previewSteps = tagged.map { item -> PreviewStep in
+                defer { number += 1 }
+                return PreviewStep(number: number, title: item.title, detail: uppercaseDetail(item.detail), restChip: item.rest)
+            }
+            let tag = mobilityDurationTag(from: tagged.map(\.detail))
+            sections.append(PreviewSection(
+                accent: .mobility,
+                band: "Mobility prep",
+                tag: tag,
+                steps: previewSteps
+            ))
+            mobilitySteps = []
+        }
+
+        var exerciseName: String?
+        var exerciseRows: [(title: String, detail: String?, rest: String?, setCount: Int)] = []
+
+        func flushExercise() {
+            guard let name = exerciseName, !exerciseRows.isEmpty else {
+                exerciseName = nil
+                exerciseRows = []
+                return
+            }
+            let tagged = attachPendingRestToExercise(&exerciseRows, pending: &pendingRest)
+            let setCount = tagged.reduce(0) { $0 + $1.setCount }
+            let previewSteps = tagged.map { item -> PreviewStep in
+                defer { number += 1 }
+                return PreviewStep(number: number, title: item.title, detail: uppercaseDetail(item.detail), restChip: item.rest)
+            }
+            sections.append(PreviewSection(
+                accent: .work,
+                band: name,
+                tag: "\(setCount) SETS",
+                steps: previewSteps
+            ))
+            exerciseName = nil
+            exerciseRows = []
+        }
+
+        for atom in atoms {
+            switch atom {
+            case .mobility(let title, let detail):
+                flushExercise()
+                if let chip = pendingRest {
+                    if !mobilitySteps.isEmpty {
+                        let last = mobilitySteps.removeLast()
+                        mobilitySteps.append((last.title, last.detail, chip))
+                    }
+                    pendingRest = nil
+                }
+                mobilitySteps.append((title, detail, nil))
+
+            case .warmupSet(let exercise, let detail):
+                flushMobility()
+                if exerciseName != exercise {
+                    flushExercise()
+                    exerciseName = exercise
+                }
+                if let chip = pendingRest {
+                    if !exerciseRows.isEmpty {
+                        let last = exerciseRows.removeLast()
+                        exerciseRows.append((last.title, last.detail, chip, last.setCount))
+                    }
+                    pendingRest = nil
+                }
+                exerciseRows.append(("Warm-up set", detail, nil, 1))
+
+            case .work(let exercise, let detail, let repeatCount):
+                flushMobility()
+                if exerciseName != exercise {
+                    flushExercise()
+                    exerciseName = exercise
+                }
+                if let chip = pendingRest {
+                    if !exerciseRows.isEmpty {
+                        let last = exerciseRows.removeLast()
+                        exerciseRows.append((last.title, last.detail, chip, last.setCount))
+                    }
+                    pendingRest = nil
+                }
+                let title = repeatCount > 1 ? "Working sets ×\(repeatCount)" : "Working set"
+                exerciseRows.append((title, detail, nil, max(repeatCount, 1)))
+
+            case .rest(let chip):
+                pendingRest = chip
+
+            case .cooldown(let detail):
+                flushMobility()
+                flushExercise()
+                pendingRest = nil
+                sections.append(PreviewSection(
+                    accent: .cooldown,
+                    band: "Cool-down",
+                    tag: nil,
+                    steps: [PreviewStep(number: number, title: "Cool-down", detail: uppercaseDetail(detail), restChip: nil)]
+                ))
+                number += 1
+            }
+        }
+
+        flushMobility()
+        flushExercise()
+        // Trailing rest with no prior work is dropped (nothing to pin the chip to).
+        return sections
+    }
+
+    private static func attachPendingRest(
+        _ rows: inout [(title: String, detail: String?, rest: String?)],
+        pending: inout String?
+    ) -> [(title: String, detail: String?, rest: String?)] {
+        if let pending, !rows.isEmpty {
+            let last = rows.removeLast()
+            rows.append((last.title, last.detail, pending))
+        }
+        pending = nil
+        return rows
+    }
+
+    private static func attachPendingRestToExercise(
+        _ rows: inout [(title: String, detail: String?, rest: String?, setCount: Int)],
+        pending: inout String?
+    ) -> [(title: String, detail: String?, rest: String?, setCount: Int)] {
+        if let pending, !rows.isEmpty {
+            let last = rows.removeLast()
+            rows.append((last.title, last.detail, pending, last.setCount))
+        }
+        pending = nil
+        return rows
+    }
+
+    private static func mobilityDurationTag(from details: [String?]) -> String? {
+        var totalSeconds = 0
+        var matched = false
+        for detail in details {
+            guard let detail else { continue }
+            if let minutes = parseMinutes(detail) {
+                totalSeconds += minutes * 60
+                matched = true
+            } else if let seconds = parseSeconds(detail) {
+                totalSeconds += seconds
+                matched = true
+            }
+        }
+        guard matched, totalSeconds > 0 else { return nil }
+        let minutes = max(1, Int((Double(totalSeconds) / 60.0).rounded()))
+        return "~\(minutes) MIN"
+    }
+
+    private static func parseMinutes(_ detail: String) -> Int? {
+        let lower = detail.lowercased()
+        guard lower.contains("min") else { return nil }
+        let digits = lower.prefix(while: { $0.isNumber || $0 == " " }).filter(\.isNumber)
+        return Int(String(digits))
+    }
+
+    private static func parseSeconds(_ detail: String) -> Int? {
+        let lower = detail.lowercased()
+        guard lower.hasSuffix("s"), !lower.contains("min") else { return nil }
+        let digits = lower.filter(\.isNumber)
+        return Int(String(digits))
+    }
+
+    private static func uppercaseDetail(_ detail: String?) -> String? {
+        guard let detail, !detail.isEmpty else { return nil }
+        return detail.uppercased()
+    }
+
+    private static func displayName(for step: WKPlanDTO.Interval.Step) -> String {
+        let name = step.name?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let name, !name.isEmpty { return name }
+        return step.kind.isEmpty ? "Step" : step.kind.capitalized
+    }
+
+    /// Strip warm-up prefixes so "WU · Barbell back squat" groups under the exercise band.
+    private static func exerciseFamily(from name: String) -> String {
+        var s = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let prefixes = ["WU · ", "WU - ", "WU–", "WU—", "WU ", "Warm-up · ", "Warm-up - ", "Warm up · "]
+        for prefix in prefixes {
+            if s.lowercased().hasPrefix(prefix.lowercased()) {
+                s = String(s.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+                break
+            }
+        }
+        return s.isEmpty ? name : s
+    }
+
+    private static func isWarmupSetName(_ name: String) -> Bool {
+        let lower = name.lowercased()
+        return lower.hasPrefix("wu ")
+            || lower.hasPrefix("wu ·")
+            || lower.hasPrefix("wu -")
+            || lower.hasPrefix("wu–")
+            || lower.hasPrefix("wu—")
+            || lower.hasPrefix("warm-up")
+            || lower.hasPrefix("warmup")
+    }
+
+    private static func isMobilityName(_ name: String) -> Bool {
+        let lower = name.lowercased()
+        let tokens = [
+            "jump rope", "jumprope", "mobility", "foam roll", "foam roller",
+            "world's greatest", "openers", "dynamic stretch", "band pull"
+        ]
+        return tokens.contains { lower.contains($0) }
     }
 
     private static func isRest(_ step: WKPlanDTO.Interval.Step) -> Bool {
@@ -255,17 +508,11 @@ enum WorkoutKitPlanStepSummary {
     }
 
     /// `REST 60S` for timed rest, `REST · YOU END IT` for open/tap-to-end rest.
-    private static func restChip(for step: WKPlanDTO.Interval.Step) -> String {
+    private static func restChipLabel(for step: WKPlanDTO.Interval.Step) -> String {
         if let seconds = step.seconds, seconds > 0 {
             return "REST \(seconds)S"
         }
         return "REST · YOU END IT"
-    }
-
-    private static func workTitle(for step: WKPlanDTO.Interval.Step) -> String {
-        let name = step.name?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let name, !name.isEmpty { return name }
-        return step.kind.isEmpty ? "Step" : step.kind.capitalized
     }
 
     private static func workDetail(for step: WKPlanDTO.Interval.Step) -> String? {

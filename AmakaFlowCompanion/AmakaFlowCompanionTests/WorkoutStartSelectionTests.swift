@@ -47,8 +47,9 @@ final class WorkoutStartSelectionTests: XCTestCase {
         }
     }
 
-    func testAppleDeviceLabelIsWorkoutOnAppleWatch() {
-        XCTAssertEqual(WorkoutStartDevice.apple.title, "Workout on Apple Watch")
+    func testAppleDeviceLabelIsAppleWatch() {
+        XCTAssertEqual(WorkoutStartDevice.apple.title, "Apple Watch")
+        XCTAssertEqual(WorkoutStartDevice.phone.title, "This phone")
         XCTAssertFalse(WorkoutStartDevice.apple.subtitle.localizedCaseInsensitiveContains("AMA-2287"))
         XCTAssertFalse(WorkoutStartDevice.apple.subtitle.localizedCaseInsensitiveContains("Fitness"))
     }

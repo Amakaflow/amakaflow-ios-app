@@ -26,10 +26,33 @@ extension FixtureAPIService {
     ) async throws -> Data {
         _ = blocksJSON
         _ = deliveryPrefs
-        print("[FixtureAPIService] Stub: mapToWorkoutKit")
+        print("[FixtureAPIService] Stub: mapToWorkoutKit (AMA-2374 enriched preview shape)")
+        // Shape mirrors the AMA-2369 redesign dogfood (Jump rope + warm-up sets +
+        // working sets) so Watch preview visual tests can assert exercise-named bands.
         return Data(
             #"""
-            {"title":"Fixture","sportType":"strengthTraining","composition":"custom","composition_effective":"custom","routing_reason":"strength_sets","intervals":[{"kind":"reps","reps":8,"name":"Squat"}]}
+            {
+              "title": "Fixture",
+              "sportType": "traditionalStrengthTraining",
+              "composition": "custom",
+              "composition_effective": "custom",
+              "routing_reason": "strength_sets",
+              "intervals": [
+                { "kind": "work", "name": "Jump Rope", "seconds": 120 },
+                { "kind": "work", "name": "WU · Barbell back squat", "reps": 8 },
+                { "kind": "rest" },
+                { "kind": "work", "name": "WU · Barbell back squat", "reps": 5 },
+                { "kind": "rest" },
+                {
+                  "kind": "repeat",
+                  "reps": 3,
+                  "intervals": [
+                    { "kind": "work", "name": "Barbell back squat", "reps": 10 },
+                    { "kind": "rest" }
+                  ]
+                }
+              ]
+            }
             """#.utf8
         )
     }

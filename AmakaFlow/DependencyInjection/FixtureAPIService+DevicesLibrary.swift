@@ -135,18 +135,43 @@ extension FixtureAPIService {
         return prefs
     }
 
-    /// Echoes `blocks_json` back: the fixture app exercises the surfaces, not
-    /// `enrich_blocks_json` (that is server-owned and unit-tested in mapper-api).
+    /// Echoes `blocks_json` back with a complete applied summary so Apple Start
+    /// handoff is not blocked by AMA-2363 incomplete-enrich checks (AMA-2374).
     func enrichWorkout(_ enrich: EnrichRequest) async throws -> EnrichResponse {
-        print("[FixtureAPIService] Stub: enrichWorkout(mode=\(enrich.mode.rawValue)) -> echo")
+        print("[FixtureAPIService] Stub: enrichWorkout(mode=\(enrich.mode.rawValue)) -> echo + satisfied summary")
+        var added: [String] = []
+        if let prefs = enrich.prefs {
+            if prefs.sessionWarmup.enabled { added.append("session_warmup") }
+            if prefs.cooldown.enabled { added.append("cooldown") }
+            if prefs.betweenSetRest.enabled { added.append("between_set_rest") }
+            if prefs.exerciseWarmupSets.enabled { added.append("exercise_warmup_sets") }
+        }
         return EnrichResponse(
             blocksJSON: enrich.blocksJSON,
-            enrichmentApplied: EnrichmentAppliedSummary(prefsSource: "fixture")
+            enrichmentApplied: EnrichmentAppliedSummary(
+                prefsSource: "fixture",
+                added: added
+            )
         )
     }
 
     func fetchWorkoutBlocksJSON(workoutId: String) async throws -> [String: Any] {
-        fixtureWorkoutBlocksJSON[workoutId] ?? ["blocks": []]
+        if let stored = fixtureWorkoutBlocksJSON[workoutId] {
+            return stored
+        }
+        // Seed non-empty blocks so Apple Watch compose (MapperWorkoutKitPlanProvider)
+        // is not blocked by emptyBlocks before the fixture mapToWorkoutKit stub runs.
+        return [
+            "title": "Fixture workout",
+            "blocks": [
+                [
+                    "name": "Main",
+                    "exercises": [
+                        ["name": "Barbell back squat", "reps": 10, "sets": 3]
+                    ]
+                ]
+            ]
+        ]
     }
 
     func saveWorkoutBlocksJSON(

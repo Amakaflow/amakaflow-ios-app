@@ -18,8 +18,8 @@ enum WorkoutStartDevice: String, CaseIterable, Identifiable, Equatable {
     var title: String {
         switch self {
         case .garmin: return "Garmin"
-        case .apple: return "Workout on Apple Watch"
-        case .phone: return "Phone"
+        case .apple: return "Apple Watch"
+        case .phone: return "This phone"
         }
     }
 
@@ -27,7 +27,7 @@ enum WorkoutStartDevice: String, CaseIterable, Identifiable, Equatable {
         switch self {
         case .garmin: return "Primary — one-tap CIQ push"
         case .apple: return "Native Workout app · you'll review the steps first"
-        case .phone: return "Record on phone — Watch optional"
+        case .phone: return "Follow-along player · always works"
         }
     }
 

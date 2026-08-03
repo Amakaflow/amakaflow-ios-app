@@ -56,18 +56,6 @@ struct WorkoutStartSheet: View {
         WorkoutStartDefaults.preferredDevice(garminPaired: garminPaired)
     }
 
-    private var sportTag: String {
-        switch workout.sport {
-        case .strength: return "STRENGTH"
-        case .running: return "RUN"
-        case .cycling: return "RIDE"
-        case .cardio: return "HIIT"
-        case .mobility: return "MOBILITY"
-        case .swimming: return "SWIM"
-        case .other: return "WORKOUT"
-        }
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             Capsule()
@@ -173,29 +161,27 @@ struct WorkoutStartSheet: View {
 
             deviceRow(
                 device: .phone,
-                icon: "iphone",
+                icon: "message.fill",
                 iconBackground: DailyDriver.card2,
                 iconForeground: .white,
-                title: "This phone",
-                subtitle: "Follow-along player · always works",
+                title: WorkoutStartDevice.phone.title,
+                subtitle: WorkoutStartDevice.phone.subtitle,
                 tag: nil
             )
 
             deviceRow(
                 device: .apple,
                 icon: "applewatch",
-                iconBackground: defaultDevice == .apple ? DailyDriver.lime : DailyDriver.card2,
-                iconForeground: defaultDevice == .apple ? DailyDriver.ink : .white,
+                iconBackground: DailyDriver.lime,
+                iconForeground: DailyDriver.ink,
                 title: WorkoutStartDevice.apple.title,
                 subtitle: WorkoutStartDevice.apple.subtitle,
-                tag: defaultDevice == .apple
-                    ? "DEFAULT · \(sportTag)"
-                    : WorkoutStartDefaults.appleAvailabilityLabel(watchReachable: appleWatchReachable)
+                tag: WorkoutStartDefaults.appleAvailabilityLabel(watchReachable: appleWatchReachable)
             )
 
             deviceRow(
                 device: .garmin,
-                icon: "applewatch.side.right",
+                icon: "applewatch",
                 iconBackground: DailyDriver.blue,
                 iconForeground: .white,
                 title: "Garmin",
@@ -268,18 +254,22 @@ struct WorkoutStartSheet: View {
                         .font(.system(size: 8.5, weight: .bold, design: .monospaced))
                         .foregroundColor(DailyDriver.lime)
                 }
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(DailyDriver.foregroundDim)
             }
-            .padding(.horizontal, 15)
-            .padding(.vertical, 11)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
             .background(DailyDriver.card)
             .overlay(
-                Capsule(style: .continuous)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(
                         needsGarminPairing ? DailyDriver.amber.opacity(0.55) : DailyDriver.border,
                         lineWidth: 1
                     )
             )
-            .clipShape(Capsule(style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(device.accessibilityIdentifier)

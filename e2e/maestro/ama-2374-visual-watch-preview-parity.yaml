@@ -1,0 +1,86 @@
+# AMA-2374 visual — Start session + Enhance + Apple Watch preview
+#
+# Captures the three screens that diverged from the AMA-2369 redesign mockups.
+# Auth: UITEST fixtures (no live mapper/Clerk). UITEST_SKIP_APPLE_WATCH stays
+# false so WCSession setup is skipped via... wait — we need SKIP true to avoid
+# the Health/Watch permission modal, but Apple handoff still works via fixtures
+# (mapper stub + preview sheet). SKIP only skips WCSession activation.
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2374_visual,email=claude+clerk_test@amakaflow.dev,name=AMA2374 Visual"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+      UITEST_GARMIN_PAIRED: "true"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+# iOS 26 often hides child accessibilityIdentifiers on the floating tab bar;
+# tap by visible label instead of library_tab id.
+- tapOn: "Library"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_fab"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: "Manual EMOM Strength"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    text: "Manual EMOM Strength"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "Start"
+    timeout: 15000
+- tapOn: "Start"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_start_sheet"
+    timeout: 10000
+- assertVisible:
+    text: "Apple Watch"
+- assertVisible:
+    text: "This phone"
+- takeScreenshot: docs/ama-2374-visual-evidence/01-start-session
+- tapOn:
+    text: "Apple Watch"
+- waitForAnimationToEnd:
+    timeout: 4000
+- extendedWaitUntil:
+    visible:
+      id: "af_enrichment_push_sheet"
+    timeout: 20000
+- assertVisible:
+    text: "Make it watch-ready?"
+- takeScreenshot: docs/ama-2374-visual-evidence/02-enhance-sheet
+- tapOn:
+    text: ".*Add .*& send.*"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible: "To your Apple Watch"
+    timeout: 45000
+- assertVisible:
+    text: "Mobility prep"
+- assertVisible:
+    text: "Barbell back squat"
+- assertVisible:
+    text: "Schedule on the watch"
+- takeScreenshot: docs/ama-2374-visual-evidence/03-watch-preview
+- scroll
+- takeScreenshot: docs/ama-2374-visual-evidence/04-watch-preview-cta

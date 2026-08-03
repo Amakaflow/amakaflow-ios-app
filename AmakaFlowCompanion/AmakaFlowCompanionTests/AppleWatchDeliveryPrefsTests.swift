@@ -149,6 +149,14 @@ final class AppleWatchDeliveryPrefsTests: XCTestCase {
         let sections = WorkoutKitPlanStepSummary.sections(from: json)
 
         XCTAssertFalse(sections.isEmpty, "expect at least one section band")
+        XCTAssertEqual(sections.map(\.band), ["Mobility prep", "Squat"])
+        XCTAssertFalse(
+            sections.contains { $0.band == "WARM-UP" || $0.band == "WORK" || $0.band == "COOL-DOWN" },
+            "bands must be exercise-named, not WorkoutKit kind labels"
+        )
+        XCTAssertEqual(sections[1].tag, "3 SETS")
+        XCTAssertEqual(sections[1].steps.first?.title, "Working sets ×3")
+        XCTAssertEqual(sections[1].steps.first?.restChip, "REST 60S")
 
         let allChips = sections.flatMap { $0.steps.compactMap(\.restChip) }
         XCTAssertFalse(allChips.isEmpty, "rest interval should produce a chip, not a plain line")
@@ -173,6 +181,41 @@ final class AppleWatchDeliveryPrefsTests: XCTestCase {
             allPublicText.contains { $0.localizedCaseInsensitiveContains("from mapper") },
             "Apple Watch preview must demote mapper jargon"
         )
+    }
+
+    func testSectionsUseExerciseNamedBandsLikeRedesign() throws {
+        let json = """
+        {
+          "title": "Test Apple workout",
+          "sportType": "traditionalStrengthTraining",
+          "intervals": [
+            { "kind": "work", "name": "Jump Rope", "seconds": 120 },
+            { "kind": "work", "name": "WU · Barbell back squat", "reps": 8 },
+            { "kind": "rest" },
+            { "kind": "work", "name": "WU · Barbell back squat", "reps": 5 },
+            { "kind": "rest" },
+            {
+              "kind": "repeat",
+              "reps": 3,
+              "intervals": [
+                { "kind": "work", "name": "Barbell back squat", "reps": 10 },
+                { "kind": "rest" }
+              ]
+            }
+          ]
+        }
+        """.data(using: .utf8)!
+
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+        XCTAssertEqual(sections.map(\.band), ["Mobility prep", "Barbell back squat"])
+        XCTAssertEqual(sections[0].steps.map(\.title), ["Jump Rope"])
+        XCTAssertEqual(sections[1].tag, "5 SETS")
+        XCTAssertEqual(
+            sections[1].steps.map(\.title),
+            ["Warm-up set", "Warm-up set", "Working sets ×3"]
+        )
+        XCTAssertTrue(sections[1].steps.allSatisfy { $0.restChip == "REST · YOU END IT" })
+        XCTAssertEqual(sections.flatMap(\.steps).map(\.number), [1, 2, 3, 4])
     }
 
     func testMapperProviderForwardsDeliveryPrefs() async throws {
