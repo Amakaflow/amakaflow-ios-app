@@ -98,6 +98,11 @@ class UITestEnvironment {
         Self.isTruthy("UITEST_FORCE_WATCH_MANAGER") || Self.isTruthy("AMA2375_DEMO")
     }
 
+    /// DEBUG visual host: show Create-with-AI generating chrome without auth.
+    var showCreateWithAIGeneratingHost: Bool {
+        Self.isTruthy("UITEST_SHOW_CREATE_WITH_AI_GENERATING")
+    }
+
     /// Clerk-backed UI tests should sign in as a real Clerk test user instead of using header bypasses.
     var hasClerkTestUser: Bool {
         guard Self.value(for: "UITEST_CLERK_EMAIL")?.isEmpty == false,
