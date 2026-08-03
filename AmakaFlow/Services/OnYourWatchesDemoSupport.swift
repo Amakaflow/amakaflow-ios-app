@@ -73,23 +73,29 @@ enum OnYourWatchesDemoSupport {
     }
 
     #if DEBUG
+    private struct DemoAppleSample {
+        let title: String
+        let components: DateComponents
+        let dayKind: String
+    }
+
     static func makeAppleScheduler() -> MockWorkoutKitScheduler {
         let scheduler = MockWorkoutKitScheduler()
         scheduler.maxAllowedCount = 15
         let cal = Calendar.current
-        let samples: [(String, DateComponents, String)] = [
-            ("Chest Pump - 45", DateComponents(hour: 6, minute: 0), "tomorrow"),
-            ("Interval repeats", DateComponents(hour: 0, minute: 0), "wed"),
-            ("Hyrox Sim – Stations 1–4", DateComponents(hour: 10, minute: 0), "thu"),
-            ("Full Body Aesthetics", DateComponents(), "none"),
-            ("Zone 2 base run", DateComponents(hour: 0, minute: 0), "sat"),
-            ("Engine EMOM", DateComponents(), "none"),
-            ("Push day", DateComponents(hour: 7, minute: 30), "today")
+        let samples: [DemoAppleSample] = [
+            DemoAppleSample(title: "Chest Pump - 45", components: DateComponents(hour: 6, minute: 0), dayKind: "tomorrow"),
+            DemoAppleSample(title: "Interval repeats", components: DateComponents(hour: 0, minute: 0), dayKind: "wed"),
+            DemoAppleSample(title: "Hyrox Sim – Stations 1–4", components: DateComponents(hour: 10, minute: 0), dayKind: "thu"),
+            DemoAppleSample(title: "Full Body Aesthetics", components: DateComponents(), dayKind: "none"),
+            DemoAppleSample(title: "Zone 2 base run", components: DateComponents(hour: 0, minute: 0), dayKind: "sat"),
+            DemoAppleSample(title: "Engine EMOM", components: DateComponents(), dayKind: "none"),
+            DemoAppleSample(title: "Push day", components: DateComponents(hour: 7, minute: 30), dayKind: "today")
         ]
         scheduler.rows = samples.enumerated().map { index, sample in
             let date: Date?
-            var comps = sample.1
-            switch sample.2 {
+            var comps = sample.components
+            switch sample.dayKind {
             case "today":
                 date = cal.date(bySettingHour: comps.hour ?? 7, minute: comps.minute ?? 0, second: 0, of: Date())
             case "tomorrow":
@@ -106,7 +112,7 @@ enum OnYourWatchesDemoSupport {
             }
             return WorkoutScheduleRow(
                 id: WorkoutScheduleRowID(planID: "demo-\(index)", date: comps),
-                title: sample.0,
+                title: sample.title,
                 dateComponents: comps,
                 scheduledAt: date,
                 isComplete: false

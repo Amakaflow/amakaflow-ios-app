@@ -8,6 +8,7 @@
 
 import SwiftUI
 
+// swiftlint:disable:next type_body_length
 struct AppleWatchScheduledListView: View {
     @StateObject private var viewModel: WorkoutScheduleViewModel
     @State private var didLoad = false

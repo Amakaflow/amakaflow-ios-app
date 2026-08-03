@@ -87,20 +87,21 @@ struct LibraryView: View {
             ),
             onDismiss: {
                 Task { await viewModel.load() }
+            },
+            content: {
+                if let workoutID = garminFixWorkoutID,
+                   let workout = viewModel.workout(for: workoutID)
+                    ?? viewModel.resolveWorkout(for: .unifiedWorkout(workoutID: workoutID)) {
+                    WorkoutEditorView(workout: workout)
+                        .accessibilityIdentifier("af_garmin_queue_fix_editor")
+                } else {
+                    Text("Workout unavailable")
+                        .font(Theme.Typography.caption)
+                        .foregroundColor(DailyDriver.foregroundMuted)
+                        .accessibilityIdentifier("af_garmin_queue_fix_editor_missing")
+                }
             }
-        ) {
-            if let workoutID = garminFixWorkoutID,
-               let workout = viewModel.workout(for: workoutID)
-                ?? viewModel.resolveWorkout(for: .unifiedWorkout(workoutID: workoutID)) {
-                WorkoutEditorView(workout: workout)
-                    .accessibilityIdentifier("af_garmin_queue_fix_editor")
-            } else {
-                Text("Workout unavailable")
-                    .font(Theme.Typography.caption)
-                    .foregroundColor(DailyDriver.foregroundMuted)
-                    .accessibilityIdentifier("af_garmin_queue_fix_editor_missing")
-            }
-        }
+        )
         .overlay(alignment: .top) {
             if let error = viewModel.ctaError {
                 ErrorToast(
@@ -423,9 +424,9 @@ extension LibraryView {
         case .onYourWatches:
             OnYourWatchesView(viewModel: watchesVM)
         case .appleScheduled:
-            AppleWatchScheduledListView(onScheduleFromLibrary: {
+            AppleWatchScheduledListView {
                 navigationPath.append(.libraryPick(.appleSchedule))
-            })
+            }
         case .garminQueue:
             GarminWatchQueueView(
                 onPushFromLibrary: {

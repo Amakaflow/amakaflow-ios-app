@@ -89,11 +89,11 @@ enum OnYourWatchesCopy {
             parts.append("APPLE · \(appleScheduled) SCHEDULED")
         }
         if let garminOnWatch {
-            var g = "GARMIN · \(garminOnWatch) ON WATCH"
+            var garminLine = "GARMIN · \(garminOnWatch) ON WATCH"
             if let garminFailed, garminFailed > 0 {
-                g += " · \(garminFailed) FAILED"
+                garminLine += " · \(garminFailed) FAILED"
             }
-            parts.append(g)
+            parts.append(garminLine)
         }
         return parts.joined(separator: " · ")
     }

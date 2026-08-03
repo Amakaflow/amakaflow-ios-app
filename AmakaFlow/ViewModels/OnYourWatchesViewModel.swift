@@ -57,54 +57,64 @@ final class OnYourWatchesViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
-        var runError: String?
-        let applePaired = pairingReader.pairingReadForCopy() != .confirmedUnpaired
-        let garminPaired = garminPairing()
         var next = OnYourWatchesSnapshot.empty
-        next.showsGarmin = garminPaired
-        next.showsApple = applePaired && scheduler != nil
+        next.showsGarmin = garminPairing()
+        next.showsApple = pairingReader.pairingReadForCopy() != .confirmedUnpaired && scheduler != nil
 
-        if next.showsApple, let scheduler {
-            next.appleMaxAllowed = scheduler.maxAllowedCount
-            let auth = await scheduler.authorizationState
-            if auth != .denied {
-                do {
-                    let rows = try await scheduler.fetchScheduledRows()
-                    let incomplete = rows.filter { !$0.isComplete }
-                    next.appleScheduledCount = incomplete.count
-                    next.appleNextLabel = Self.nextLabel(from: incomplete, calendar: calendar)
-                } catch {
-                    runError = error.localizedDescription
-                }
-            }
-        }
-
-        if next.showsGarmin {
-            let entries = queueStore.load()
-            var onWatch = 0
-            var waiting = 0
-            var failed = 0
-            for entry in entries {
-                do {
-                    let status = try await statusFetcher(entry.workoutID)
-                    switch GarminQueueItemState.from(delivery: status.state) {
-                    case .onWatch: onWatch += 1
-                    case .waiting: waiting += 1
-                    case .failed: failed += 1
-                    case .none: waiting += 1
-                    }
-                } catch {
-                    // Keep the local entry visible as waiting if status can't be fetched.
-                    waiting += 1
-                }
-            }
-            next.garminOnWatch = onWatch
-            next.garminWaiting = waiting
-            next.garminFailed = failed
-        }
-
+        let appleError = await Self.fillApple(into: &next, scheduler: scheduler, calendar: calendar)
+        await Self.fillGarmin(
+            into: &next,
+            queueStore: queueStore,
+            statusFetcher: statusFetcher
+        )
         snapshot = next
-        statusMessage = runError
+        statusMessage = appleError
+    }
+
+    private static func fillApple(
+        into next: inout OnYourWatchesSnapshot,
+        scheduler: (any WorkoutKitScheduleManaging)?,
+        calendar: Calendar
+    ) async -> String? {
+        guard next.showsApple, let scheduler else { return nil }
+        next.appleMaxAllowed = scheduler.maxAllowedCount
+        let auth = await scheduler.authorizationState
+        guard auth != .denied else { return nil }
+        do {
+            let rows = try await scheduler.fetchScheduledRows()
+            let incomplete = rows.filter { !$0.isComplete }
+            next.appleScheduledCount = incomplete.count
+            next.appleNextLabel = nextLabel(from: incomplete, calendar: calendar)
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
+    private static func fillGarmin(
+        into next: inout OnYourWatchesSnapshot,
+        queueStore: any GarminWatchQueueStoring,
+        statusFetcher: (String) async throws -> Components.Schemas.WatchDeliveryStatus
+    ) async {
+        guard next.showsGarmin else { return }
+        var onWatch = 0
+        var waiting = 0
+        var failed = 0
+        for entry in queueStore.load() {
+            do {
+                let status = try await statusFetcher(entry.workoutID)
+                switch GarminQueueItemState.from(delivery: status.state) {
+                case .onWatch: onWatch += 1
+                case .waiting, .none: waiting += 1
+                case .failed: failed += 1
+                }
+            } catch {
+                waiting += 1
+            }
+        }
+        next.garminOnWatch = onWatch
+        next.garminWaiting = waiting
+        next.garminFailed = failed
     }
 
     private static func nextLabel(from rows: [WorkoutScheduleRow], calendar: Calendar) -> String? {

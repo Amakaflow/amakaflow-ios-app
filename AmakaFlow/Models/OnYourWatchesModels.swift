@@ -59,10 +59,10 @@ struct OnYourWatchesSnapshot: Equatable, Sendable {
     }
 
     var badgeCount: Int {
-        var n = 0
-        if showsApple { n += appleScheduledCount }
-        if showsGarmin { n += garminWaiting + garminFailed }
-        return n
+        var total = 0
+        if showsApple { total += appleScheduledCount }
+        if showsGarmin { total += garminWaiting + garminFailed }
+        return total
     }
 
     var librarySummaryLine: String {

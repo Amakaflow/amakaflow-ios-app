@@ -264,15 +264,15 @@ final class LiveWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
         await WorkoutScheduler.shared.remove(plan, at: row.dateComponents)
         await WorkoutScheduler.shared.schedule(plan, at: components)
         let refreshed = try await fetchScheduledRows()
-        let hasOld = refreshed.contains(where: { $0.id == oldID })
-        let hasNew = refreshed.contains(where: { $0.id == newID })
+        let hasOld = refreshed.contains { $0.id == oldID }
+        let hasNew = refreshed.contains { $0.id == newID }
 
         if hasOld && hasNew {
             // Duplicate slots — prefer restoring the prior schedule.
             await WorkoutScheduler.shared.remove(plan, at: components)
             let after = try await fetchScheduledRows()
-            let compensated = after.contains(where: { $0.id == oldID })
-                && !after.contains(where: { $0.id == newID })
+            let compensated = after.contains { $0.id == oldID }
+                && !after.contains { $0.id == newID }
             guard compensated else {
                 throw WorkoutScheduleRescheduleError.compensationFailed
             }
@@ -287,8 +287,8 @@ final class LiveWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
             // Target missing — put the original slot back before surfacing the error.
             await WorkoutScheduler.shared.schedule(plan, at: row.dateComponents)
             let after = try await fetchScheduledRows()
-            let restored = after.contains(where: { $0.id == oldID })
-                && !after.contains(where: { $0.id == newID })
+            let restored = after.contains { $0.id == oldID }
+                && !after.contains { $0.id == newID }
             guard restored else {
                 throw WorkoutScheduleRescheduleError.compensationFailed
             }
