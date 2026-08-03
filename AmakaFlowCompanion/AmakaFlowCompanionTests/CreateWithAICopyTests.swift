@@ -29,6 +29,18 @@ final class CreateWithAICopyTests: XCTestCase {
         XCTAssertEqual(notes, String(repeating: "a", count: 1_000))
     }
 
+    func testComposeNotesKeepsNewestTweakWhenAskExceedsLimit() {
+        let newestTweak = "Make the finish much harder"
+        let notes = CreateWithAIPromptBuilder.composeNotes(
+            ask: String(repeating: "a", count: 1_100),
+            tweaks: ["Use dumbbells", newestTweak]
+        )
+
+        XCTAssertLessThanOrEqual(notes.count, 1_000)
+        XCTAssertTrue(notes.contains(newestTweak))
+        XCTAssertTrue(notes.hasSuffix(newestTweak))
+    }
+
     func testDraftBadge() {
         XCTAssertEqual(CreateWithAICopy.draftBadge, "DRAFT · NOT SAVED")
     }

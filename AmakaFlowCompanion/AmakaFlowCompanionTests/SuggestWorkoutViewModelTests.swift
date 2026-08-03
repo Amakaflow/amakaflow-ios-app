@@ -239,6 +239,65 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
     await task.value
   }
 
+  func testCancelGenerateIgnoresLateSuggestionResult() async throws {
+    let delayedAPI = DelayedSuggestWorkoutAPIService(
+      response: .named("Too Late", whyThis: ["Stale"])
+    )
+    viewModel = SuggestWorkoutViewModel(dependencies: makeDependencies(apiService: delayedAPI))
+
+    viewModel.requestSuggestionFromPrompt(
+      notes: "easy run",
+      durationMinutes: 30,
+      focusMuscleGroups: nil
+    )
+    try await waitUntil { delayedAPI.isPending }
+
+    viewModel.cancelGenerate()
+    delayedAPI.resume()
+    try await Task.sleep(nanoseconds: 50_000_000)
+
+    XCTAssertEqual(viewModel.state, .idle)
+    XCTAssertNil(viewModel.suggestedWorkout)
+  }
+
+  func testCancelGenerateIgnoresLateOnboardingResult() async throws {
+    let delayedAPI = DelayedCoachingProfileAPIService(result: nil)
+    viewModel = SuggestWorkoutViewModel(dependencies: makeDependencies(apiService: delayedAPI))
+
+    viewModel.requestSuggestion()
+    try await waitUntil { delayedAPI.isPending }
+
+    viewModel.cancelGenerate()
+    delayedAPI.resume()
+    try await Task.sleep(nanoseconds: 50_000_000)
+
+    XCTAssertEqual(viewModel.state, .idle)
+  }
+
+  func testNewGenerationIgnoresStaleProfileResult() async throws {
+    let delayedAPI = DelayedCoachingProfileAPIService(result: nil)
+    delayedAPI.suggestWorkoutResult = .success(.named("Fresh", whyThis: ["Current"]))
+    viewModel = SuggestWorkoutViewModel(dependencies: makeDependencies(apiService: delayedAPI))
+
+    viewModel.requestSuggestion()
+    try await waitUntil { delayedAPI.isPending }
+
+    viewModel.requestSuggestionFromPrompt(
+      notes: "fresh request",
+      durationMinutes: 30,
+      focusMuscleGroups: nil
+    )
+    try await waitUntil { self.viewModel.suggestedWorkout?.name == "Fresh" }
+
+    delayedAPI.resume()
+    try await Task.sleep(nanoseconds: 50_000_000)
+
+    XCTAssertEqual(viewModel.suggestedWorkout?.name, "Fresh")
+    guard case .success = viewModel.state else {
+      return XCTFail("Expected newer success to survive stale profile result, got \(viewModel.state)")
+    }
+  }
+
   func testSuggestWorkout_successBuildsWorkoutAndStoresSuggestion() async {
     mockAPI.getFatigueAdviceResult = .success(
       FatigueAdvice(
@@ -462,7 +521,8 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
 
     let sentNotes = try XCTUnwrap(mockAPI.lastSuggestWorkoutRequest?.notes)
     XCTAssertLessThanOrEqual(sentNotes.count, 1_000)
-    XCTAssertTrue(sentNotes.hasPrefix(ask))
+    XCTAssertTrue(sentNotes.contains(tweak))
+    XCTAssertTrue(sentNotes.hasSuffix(tweak))
     XCTAssertEqual(mockAPI.lastSuggestWorkoutRequest?.includeContext, includeContext)
     XCTAssertEqual(viewModel.appliedTweaks, [tweak])
     XCTAssertEqual(viewModel.whyThis, ["Refined reason"])
@@ -1074,6 +1134,10 @@ private final class DelayedSuggestWorkoutAPIService: MockAPIService {
     super.init()
   }
 
+  var isPending: Bool {
+    continuation != nil
+  }
+
   override func suggestWorkout(request: SuggestWorkoutRequest) async throws
     -> SuggestWorkoutResponse
   {
@@ -1084,6 +1148,37 @@ private final class DelayedSuggestWorkoutAPIService: MockAPIService {
       self.continuation = continuation
     }
     return response
+  }
+
+  func resume() {
+    continuation?.resume()
+    continuation = nil
+  }
+}
+
+private final class DelayedCoachingProfileAPIService: MockAPIService {
+  private let result: Components.Schemas.CoachingProfile?
+  private var continuation: CheckedContinuation<Void, Never>?
+  private var didDelayFirstCall = false
+
+  init(result: Components.Schemas.CoachingProfile?) {
+    self.result = result
+    super.init()
+  }
+
+  var isPending: Bool {
+    continuation != nil
+  }
+
+  override func getCoachingProfile() async throws -> Components.Schemas.CoachingProfile? {
+    guard !didDelayFirstCall else {
+      return try await super.getCoachingProfile()
+    }
+    didDelayFirstCall = true
+    await withCheckedContinuation { continuation in
+      self.continuation = continuation
+    }
+    return result
   }
 
   func resume() {

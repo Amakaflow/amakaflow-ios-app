@@ -252,6 +252,7 @@ class SuggestWorkoutViewModel: ObservableObject {
     private var lastPromptAsk: String?
     private var latestResponse: SuggestWorkoutResponse?
     private var generationTask: Task<Void, Never>?
+    private var generationVersion: UInt64 = 0
 
     init(dependencies: AppDependencies = .current) {
         self.dependencies = dependencies
@@ -279,6 +280,7 @@ class SuggestWorkoutViewModel: ObservableObject {
     /// Check profile and request a suggestion
     func requestSuggestion() {
         generationTask?.cancel()
+        let generation = beginGeneration()
         lastPromptNotes = nil
         lastPromptDurationMinutes = nil
         lastPromptFocus = nil
@@ -294,7 +296,8 @@ class SuggestWorkoutViewModel: ObservableObject {
                 durationMinutes: nil,
                 focusMuscleGroups: nil,
                 includeContext: nil,
-                notes: nil
+                notes: nil,
+                generation: generation
             )
         }
     }
@@ -306,6 +309,7 @@ class SuggestWorkoutViewModel: ObservableObject {
         includeContext: IncludeContextFlags? = nil
     ) {
         generationTask?.cancel()
+        let generation = beginGeneration()
         lastPromptNotes = notes
         lastPromptDurationMinutes = durationMinutes
         lastPromptFocus = focusMuscleGroups
@@ -321,7 +325,8 @@ class SuggestWorkoutViewModel: ObservableObject {
                 durationMinutes: durationMinutes,
                 focusMuscleGroups: focusMuscleGroups,
                 includeContext: includeContext,
-                notes: notes
+                notes: notes,
+                generation: generation
             )
         }
     }
@@ -330,10 +335,13 @@ class SuggestWorkoutViewModel: ObservableObject {
         durationMinutes: Int?,
         focusMuscleGroups: [String]?,
         includeContext: IncludeContextFlags?,
-        notes: String?
+        notes: String?,
+        generation: UInt64
     ) async {
         do {
-            guard try await dependencies.apiService.getCoachingProfile() != nil else {
+            let profile = try await dependencies.apiService.getCoachingProfile()
+            guard isCurrentGeneration(generation) else { return }
+            guard profile != nil else {
                 state = .needsOnboarding
                 return
             }
@@ -341,10 +349,11 @@ class SuggestWorkoutViewModel: ObservableObject {
                 durationMinutes: durationMinutes,
                 focusMuscleGroups: focusMuscleGroups,
                 includeContext: includeContext,
-                notes: notes
+                notes: notes,
+                generation: generation
             )
         } catch {
-            guard !CTAError.isCancellation(error) else { return }
+            guard isCurrentGeneration(generation), !CTAError.isCancellation(error) else { return }
             let mapped = CTAError.map(error)
             suggestedWorkout = nil
             ctaError = mapped
@@ -357,12 +366,14 @@ class SuggestWorkoutViewModel: ObservableObject {
         let profile = CoachingProfile(experience: experience, goal: goal, daysPerWeek: daysPerWeek)
         saveProfile(profile)
         generationTask?.cancel()
+        let generation = beginGeneration()
         generationTask = Task {
             await suggestWorkout(
                 durationMinutes: lastPromptDurationMinutes,
                 focusMuscleGroups: lastPromptFocus,
                 includeContext: lastPromptIncludeContext,
-                notes: lastPromptNotes
+                notes: lastPromptNotes,
+                generation: generation
             )
         }
     }
@@ -372,15 +383,20 @@ class SuggestWorkoutViewModel: ObservableObject {
         durationMinutes: Int? = nil,
         focusMuscleGroups: [String]? = nil,
         includeContext: IncludeContextFlags? = nil,
-        notes: String? = nil
+        notes: String? = nil,
+        generation requestedGeneration: UInt64? = nil
     ) async {
+        let generation = requestedGeneration ?? beginGeneration()
+        guard isCurrentGeneration(generation) else { return }
         state = .loading
         suggestedWorkout = nil
         ctaError = nil
         didChooseRestToday = false
 
-        await fetchReadinessLevel()
-        guard !Task.isCancelled else { return }
+        let readiness = await fetchReadinessLevel()
+        guard isCurrentGeneration(generation) else { return }
+        readinessLevel = readiness.level
+        readinessMessage = readiness.message
 
         let body = SuggestWorkoutRequest(
             durationMinutes: durationMinutes,
@@ -392,6 +408,7 @@ class SuggestWorkoutViewModel: ObservableObject {
 
         do {
             let decoded = try await dependencies.apiService.suggestWorkout(request: body)
+            guard isCurrentGeneration(generation) else { return }
             guard Self.hasSuggestedWorkout(decoded) else {
                 suggestedWorkout = nil
                 state = .empty
@@ -404,7 +421,7 @@ class SuggestWorkoutViewModel: ObservableObject {
             suggestedWorkout = workout
             state = .success(workout)
         } catch {
-            guard !CTAError.isCancellation(error) else { return }
+            guard isCurrentGeneration(generation), !CTAError.isCancellation(error) else { return }
             // AMA-1803 P1: route through CTAError.map so the user UI
             // sees a typed failure (error_code, retryability, request_id)
             // instead of a stringly-typed `localizedDescription`. When
@@ -417,14 +434,12 @@ class SuggestWorkoutViewModel: ObservableObject {
         }
     }
 
-    private func fetchReadinessLevel() async {
+    private func fetchReadinessLevel() async -> (level: SuggestReadinessLevel, message: String?) {
         do {
             let advice = try await dependencies.apiService.getFatigueAdvice(fatigueScore: nil, loadHistory: nil)
-            readinessLevel = SuggestReadinessLevel(fatigueLevel: advice.level)
-            readinessMessage = advice.message
+            return (SuggestReadinessLevel(fatigueLevel: advice.level), advice.message)
         } catch {
-            readinessLevel = .unknown
-            readinessMessage = nil
+            return (.unknown, nil)
         }
     }
 
@@ -508,17 +523,26 @@ class SuggestWorkoutViewModel: ObservableObject {
                 appliedTweaks: appliedTweaks
             )
         )
-        appliedTweaks.append(trimmedTweak)
-        let notes = CreateWithAIPromptBuilder.composeNotes(ask: ask, tweaks: appliedTweaks)
-        lastPromptNotes = notes
+        let composed = CreateWithAIPromptBuilder.compose(
+            ask: ask,
+            tweaks: appliedTweaks + [trimmedTweak]
+        )
+        appliedTweaks = composed.includedTweaks
+        lastPromptNotes = composed.notes
+        let generation = beginGeneration()
         isApplyingRefine = true
-        defer { isApplyingRefine = false }
+        defer {
+            if generation == generationVersion {
+                isApplyingRefine = false
+            }
+        }
 
         await suggestWorkout(
             durationMinutes: lastPromptDurationMinutes,
             focusMuscleGroups: lastPromptFocus,
             includeContext: lastPromptIncludeContext,
-            notes: notes
+            notes: composed.notes,
+            generation: generation
         )
     }
 
@@ -541,6 +565,7 @@ class SuggestWorkoutViewModel: ObservableObject {
     func cancelGenerate() {
         generationTask?.cancel()
         generationTask = nil
+        _ = beginGeneration()
         isApplyingRefine = false
         ctaError = nil
         state = .idle
@@ -580,6 +605,7 @@ class SuggestWorkoutViewModel: ObservableObject {
     func reset() {
         generationTask?.cancel()
         generationTask = nil
+        _ = beginGeneration()
         state = .idle
         suggestedWorkout = nil
         ctaError = nil
@@ -597,6 +623,15 @@ class SuggestWorkoutViewModel: ObservableObject {
         appliedTweaks = []
         undoStack = []
         isApplyingRefine = false
+    }
+
+    private func beginGeneration() -> UInt64 {
+        generationVersion &+= 1
+        return generationVersion
+    }
+
+    private func isCurrentGeneration(_ generation: UInt64) -> Bool {
+        !Task.isCancelled && generation == generationVersion
     }
 
     private static func mapSuggestError(_ error: Error) -> CTAError {

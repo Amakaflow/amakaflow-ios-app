@@ -50,6 +50,13 @@ enum CreateWithAIContextChip: String, CaseIterable, Hashable, Identifiable {
 
 enum CreateWithAIPromptBuilder {
     typealias IncludeContext = Components.Schemas.IncludeContextFlags
+    private static let notesLimit = 1_000
+    private static let separator = "\n\n"
+
+    struct ComposedNotes {
+        let notes: String
+        let includedTweaks: [String]
+    }
 
     static func includeContext(
         attached: Set<CreateWithAIContextChip>
@@ -64,11 +71,46 @@ enum CreateWithAIPromptBuilder {
     }
 
     static func composeNotes(ask: String, tweaks: [String] = []) -> String {
+        compose(ask: ask, tweaks: tweaks).notes
+    }
+
+    static func compose(ask: String, tweaks: [String] = []) -> ComposedNotes {
         let trimmedAsk = ask.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedTweaks = tweaks
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
-        let composed = ([trimmedAsk] + trimmedTweaks).filter { !$0.isEmpty }.joined(separator: "\n\n")
-        return String(composed.prefix(1_000))
+
+        guard !trimmedTweaks.isEmpty else {
+            return ComposedNotes(
+                notes: String(trimmedAsk.prefix(notesLimit)),
+                includedTweaks: []
+            )
+        }
+
+        var newestTweaks: [String] = []
+        var tweaksLength = 0
+        for tweak in trimmedTweaks.reversed() {
+            let separatorLength = newestTweaks.isEmpty ? 0 : separator.count
+            guard tweaksLength + separatorLength + tweak.count <= notesLimit else {
+                break
+            }
+            newestTweaks.append(tweak)
+            tweaksLength += separatorLength + tweak.count
+        }
+        newestTweaks.reverse()
+
+        if newestTweaks.isEmpty, let newest = trimmedTweaks.last {
+            let cappedNewest = String(newest.prefix(notesLimit))
+            return ComposedNotes(notes: cappedNewest, includedTweaks: [cappedNewest])
+        }
+
+        let tweaksText = newestTweaks.joined(separator: separator)
+        let askSeparatorLength = trimmedAsk.isEmpty ? 0 : separator.count
+        let askBudget = max(0, notesLimit - tweaksText.count - askSeparatorLength)
+        let askHead = String(trimmedAsk.prefix(askBudget))
+        let notes = [askHead, tweaksText]
+            .filter { !$0.isEmpty }
+            .joined(separator: separator)
+        return ComposedNotes(notes: notes, includedTweaks: newestTweaks)
     }
 }
