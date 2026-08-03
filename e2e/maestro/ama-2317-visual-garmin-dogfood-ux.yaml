@@ -1,18 +1,19 @@
 # AMA-2317 — Garmin post-push dogfood UX.
 #
-# What we're testing: before a Start → Garmin push the sheet states the exact
-# work/rest prefs that will be sent (and warns when rest is still a countdown);
-# after the push the handoff is named "opening Garmin Connect" instead of
-# looking like a crash; Devices says the pairing lasts until you remove it; and
-# Delete/Remove copy says watch copies are not touched.
+# What we're testing: the Start sheet no longer echoes exact work/rest prefs
+# per device — AMA-2371 replaced that per-device "Edit" row with one footer
+# pointing to Settings › Connected wearables; after a push the handoff is
+# named "opening Garmin Connect" instead of looking like a crash; Devices says
+# the pairing lasts until you remove it; and Delete/Remove copy says watch
+# copies are not touched.
 #
 # Externals: no mapper/BFF needed — UITEST fixtures back the push, and
 # UITEST_GARMIN_PUSH_FAIL covers the failure branch. Nothing here 500s when
 # Garmin Connect Mobile or the CIQ widget are absent.
 appId: com.amakaflow.companion
 ---
-# 1) Prefs the push will send are visible on the Start sheet, with the
-#    timed-rest warning that explains the surprise 60s countdown.
+# 1) The Start sheet points to Settings for watch display defaults instead of
+#    a per-device "Edit" row (AMA-2371 removed af_start_garmin_prefs_note).
 - launchApp:
     clearState: true
     arguments:
@@ -30,20 +31,11 @@ appId: com.amakaflow.companion
 - assertVisible:
     id: "af_start_sheet"
 - assertVisible:
+    id: "af_start_settings_pointer"
+- assertVisible: "Watch display defaults live in Settings"
+- assertNotVisible:
     id: "af_start_garmin_prefs_note"
-- assertVisible: "Watch display"
-- assertVisible: "60"
-- takeScreenshot: ama-2317-start-sheet-prefs-visible
-# Tapping the note opens the prefs editor so Lap can be chosen before pushing.
-- tapOn:
-    id: "af_start_garmin_prefs_note"
-- assertVisible:
-    id: "af_garmin_display_prefs_sheet"
-- assertVisible: "Press Lap when you’re ready"
-- tapOn: "Press Lap when you’re ready"
-- tapOn:
-    id: "af_garmin_display_prefs_save"
-- takeScreenshot: ama-2317-prefs-lap-selected
+- takeScreenshot: ama-2317-start-sheet-settings-pointer
 ---
 # 2) Push succeeds → handoff is named, and the "not a crash" note is shown.
 - launchApp:

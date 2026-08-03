@@ -26,8 +26,18 @@ enum WorkoutStartDevice: String, CaseIterable, Identifiable, Equatable {
     var subtitle: String {
         switch self {
         case .garmin: return "Primary — one-tap CIQ push"
-        case .apple: return "Native Workout app via WorkoutKit"
+        case .apple: return "Native Workout app · you'll review the steps first"
         case .phone: return "Record on phone — Watch optional"
+        }
+    }
+
+    /// AMA-2371: subtitle once the device is ready for one-tap delivery
+    /// (paired Garmin). Other devices' default `subtitle` already describes
+    /// their ready state, so they fall through unchanged.
+    var pairedSubtitle: String {
+        switch self {
+        case .garmin: return "Downloads via the AmakaFlow widget · lap to advance"
+        case .apple, .phone: return subtitle
         }
     }
 
@@ -107,8 +117,13 @@ enum WorkoutStartDefaults {
 
     static func appleAvailabilityLabel(watchReachable: Bool) -> String {
         _ = watchReachable
-        return "Schedule"
+        return "SCHEDULE"
     }
+
+    /// AMA-2371: Garmin Start-sheet tag once paired — an honest delivery-method
+    /// tag beats the old "DEFAULT · {SPORT}" tag, which only ever described
+    /// default-ness, not what the push actually does.
+    static let garminPairedTag = "FIT PUSH"
 }
 
 /// Where Start confirm should hand off. Full push/player e2e lives in downstream issues.
