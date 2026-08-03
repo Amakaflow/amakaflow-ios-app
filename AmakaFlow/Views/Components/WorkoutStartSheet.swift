@@ -15,25 +15,22 @@ struct WorkoutStartSheet: View {
     /// AMA-2310: unpaired Garmin → one-tap recovery (Devices / CIQ pair), not a dead grey row.
     let onPairGarmin: () -> Void
     /// AMA-2317: change the work/rest display prefs this push will send.
+    /// AMA-2371: no longer triggered from an in-sheet row — editing now lives
+    /// in Settings › Connected wearables. Kept for callers wiring a future
+    /// direct entry point.
     let onEditGarminPrefs: () -> Void
     /// AMA-2360: edit Apple delivery prefs (tap/timed rest) before compose.
+    /// AMA-2371: see `onEditGarminPrefs` — same Settings-only rationale.
     let onEditApplePrefs: () -> Void
     let onClose: () -> Void
 
     @State private var selectedGym: WorkoutStartGym = .home
-
-    private let displayPrefs: GarminWatchDisplayPrefs
-    private let hasConfiguredDisplayPrefs: Bool
-    private let appleDeliveryPrefsSummary: String
 
     init(
         workout: Workout,
         garminPaired: Bool,
         appleWatchReachable: Bool,
         initialGym: WorkoutStartGym = .home,
-        displayPrefs: GarminWatchDisplayPrefs? = nil,
-        hasConfiguredDisplayPrefs: Bool? = nil,
-        appleDeliveryPrefs: AppleWatchDeliveryPrefs? = nil,
         onConfirm: @escaping (WorkoutStartGym, WorkoutStartDevice) -> Void,
         onPairGarmin: @escaping () -> Void,
         onEditGarminPrefs: @escaping () -> Void = {},
@@ -48,13 +45,6 @@ struct WorkoutStartSheet: View {
         self.onEditGarminPrefs = onEditGarminPrefs
         self.onEditApplePrefs = onEditApplePrefs
         self.onClose = onClose
-        self.displayPrefs = displayPrefs ?? GarminWatchDisplayPrefsStore.current
-        self.hasConfiguredDisplayPrefs = hasConfiguredDisplayPrefs ?? GarminWatchDisplayPrefsStore.hasConfigured
-        if let appleDeliveryPrefs {
-            self.appleDeliveryPrefsSummary = appleDeliveryPrefs.summaryLine
-        } else {
-            self.appleDeliveryPrefsSummary = AppleWatchDeliveryPrefsStore.previewSummaryLine
-        }
         _selectedGym = State(initialValue: initialGym == .unset ? .home : initialGym)
     }
 
@@ -111,9 +101,7 @@ struct WorkoutStartSheet: View {
                     deviceSection
                         .padding(.top, 16)
 
-                    Text("Defaults come from Settings › Connected wearables.")
-                        .font(.system(size: 10))
-                        .foregroundColor(DailyDriver.foregroundDim)
+                    WorkoutStartSettingsPointerFooter()
                         .padding(.top, 12)
 
                     unsetGymLink
@@ -205,8 +193,6 @@ struct WorkoutStartSheet: View {
                     : WorkoutStartDefaults.appleAvailabilityLabel(watchReachable: appleWatchReachable)
             )
 
-            applePrefsNote
-
             deviceRow(
                 device: .garmin,
                 icon: "applewatch.side.right",
@@ -214,32 +200,13 @@ struct WorkoutStartSheet: View {
                 iconForeground: .white,
                 title: "Garmin",
                 subtitle: garminRowMode == .push
-                    ? "Push via FIT"
+                    ? WorkoutStartDevice.garmin.pairedSubtitle
                     : GarminStartHandoffCopy.unpairedRecoverySubtitle,
                 tag: garminRowMode == .needsPairing
                     ? GarminStartHandoffCopy.unpairedRecoveryTag
-                    : (defaultDevice == .garmin ? "DEFAULT · \(sportTag)" : nil)
+                    : WorkoutStartDefaults.garminPairedTag
             )
-
-            if garminRowMode == .push {
-                garminPrefsNote
-            }
         }
-    }
-
-    private var applePrefsNote: some View {
-        WorkoutStartApplePrefsNote(
-            summary: appleDeliveryPrefsSummary,
-            onEdit: onEditApplePrefs
-        )
-    }
-
-    private var garminPrefsNote: some View {
-        WorkoutStartGarminPrefsNote(
-            displayPrefs: displayPrefs,
-            hasConfiguredDisplayPrefs: hasConfiguredDisplayPrefs,
-            onEdit: onEditGarminPrefs
-        )
     }
 
     private var unsetGymLink: some View {

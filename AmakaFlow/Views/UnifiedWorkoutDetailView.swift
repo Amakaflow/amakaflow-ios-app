@@ -35,11 +35,14 @@ struct UnifiedWorkoutDetailView: View {
     @State private var handoffStatus: String?
     /// AMA-2317: true while the CIQ open request is handing off to Garmin Connect.
     @State private var isOpeningGarmin = false
-    @State private var showsHandoffNextSteps = false
+    /// AMA-2371: which device the workout last landed on, once that handoff
+    /// reached a terminal success — drives the compact "sent" status card.
+    /// `nil` while queueing/building or after a failure (plain status text only).
+    @State private var sentCardTarget: EnrichmentPushTarget?
     /// Prevents overlapping Apple WorkoutKit schedules if Start is confirmed again mid-handoff.
     @State private var isAppleHandoffInFlight = false
     /// AMA-2330: tracks the last Apple handoff outcome specifically (separate from the
-    /// shared `handoffStatus`/`showsHandoffNextSteps`, which Garmin also writes to) so
+    /// shared `handoffStatus`/`sentCardTarget`, which Garmin also writes to) so
     /// "Manage scheduled plans" appears after a successful Apple schedule *or* an
     /// at-cap failure — both point at the same cleanup screen as the fix.
     @State private var lastAppleHandoffShowsManagePlans = false
@@ -150,7 +153,7 @@ struct UnifiedWorkoutDetailView: View {
                     onPairGarmin: {
                         startFlowSheet = nil
                         handoffStatus = GarminStartHandoffCopy.unpairedRecoveryStatusMessage
-                        showsHandoffNextSteps = false
+                        sentCardTarget = nil
                         lastAppleHandoffShowsManagePlans = false
                         showingGarminPairing = true
                     },
@@ -175,8 +178,11 @@ struct UnifiedWorkoutDetailView: View {
                     workoutName: name,
                     meta: meta,
                     intervalCount: intervalCount,
-                    stepLines: WorkoutKitPlanStepSummary.lines(from: planJSON),
-                    prefsSummary: AppleWatchDeliveryPrefsStore.previewSummaryLine,
+                    sections: WorkoutKitPlanStepSummary.sections(from: planJSON),
+                    sportLabel: WorkoutKitSportLabel.label(from: planJSON),
+                    prefsSummary: AppleWatchDeliveryPrefsStore.hasConfigured
+                        ? AppleWatchDeliveryPrefsStore.current.summaryLine
+                        : nil,
                     onConfirm: {
                         // Keep enriched structure; clear before dismiss so onDismiss skips reset.
                         appleEnrichmentReset = nil
@@ -192,6 +198,9 @@ struct UnifiedWorkoutDetailView: View {
                         lastAppleHandoffShowsManagePlans = false
                     }
                 )
+                .presentationDetents([.large, .medium])
+                .presentationDragIndicator(.hidden)
+                .presentationBackground(DailyDriver.screenBackground)
             case .enrichment(let prepared):
                 WorkoutEnrichmentPushSheet(
                     plan: prepared.plan,
@@ -390,20 +399,6 @@ struct UnifiedWorkoutDetailView: View {
             creditRow
                 .padding(.top, 12)
 
-            if canDeleteFromLibrary {
-                Button {
-                    showingDeleteConfirm = true
-                } label: {
-                    Label("Delete from Library", systemImage: "trash")
-                        .font(Theme.Typography.caption)
-                        .foregroundColor(DailyDriver.coral)
-                }
-                .buttonStyle(.plain)
-                .disabled(isDeleting)
-                .padding(.top, 12)
-                .accessibilityIdentifier("af_workout_detail_delete")
-            }
-
             blockList
                 .padding(.top, 4)
 
@@ -418,6 +413,8 @@ struct UnifiedWorkoutDetailView: View {
 
     /// AMA-2317: the app-switch to Garmin Connect used to read as a crash —
     /// name the handoff, keep the status parked, and say it survives leaving.
+    /// AMA-2371: once the handoff reaches a terminal success, the status moves
+    /// into a compact lime "sent" card instead of the old long paragraph.
     @ViewBuilder
     private func garminHandoffPanel(status: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -433,22 +430,66 @@ struct UnifiedWorkoutDetailView: View {
                 .accessibilityIdentifier("af_workout_detail_handoff_opening")
             }
 
-            Text(status)
+            if let sentCardTarget {
+                sentStatusCard(target: sentCardTarget, status: status)
+            } else {
+                Text(status)
+                    .font(Theme.Typography.caption)
+                    .foregroundColor(Theme.Colors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("af_workout_detail_handoff_status")
+            }
+
+            manageScheduledPlansControl
+        }
+    }
+
+    /// Compact lime card for a terminal "sent" state — a title naming the
+    /// device, the real status line, and (Garmin only) a two-line honest body
+    /// about the widget download + the normal Garmin Connect app-switch.
+    private func sentStatusCard(target: EnrichmentPushTarget, status: String) -> some View {
+        let title = target == .garmin ? GarminLifecycleCopy.sentCardTitle : GarminLifecycleCopy.scheduledOnAppleWatchCardTitle
+        return VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(Theme.Typography.caption.weight(.bold))
+                .foregroundColor(DailyDriver.lime)
+                .accessibilityIdentifier("af_workout_detail_sent_card_title")
+
+            Text(cardStatusLine(title: title, status: status))
                 .font(Theme.Typography.caption)
                 .foregroundColor(Theme.Colors.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("af_workout_detail_handoff_status")
 
-            if showsHandoffNextSteps {
-                Text(GarminLifecycleCopy.handoffNextSteps)
+            if target == .garmin {
+                Text(GarminLifecycleCopy.sentCardBody)
                     .font(.system(size: 10.5))
                     .foregroundColor(DailyDriver.foregroundDim)
                     .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("af_workout_detail_handoff_next_steps")
+                    .accessibilityIdentifier("af_workout_detail_sent_card_body")
             }
-
-            manageScheduledPlansControl
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DailyDriver.lime.opacity(0.12))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous)
+                .stroke(DailyDriver.lime.opacity(0.4), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous))
+        .accessibilityIdentifier("af_workout_detail_sent_card")
+    }
+
+    /// AMA-2371 final review I2 — the card title already names the device
+    /// ("Sent to Garmin"), so drop a leading `"<title> — "` from the status
+    /// line instead of repeating it verbatim above the Garmin body copy.
+    /// Anything that isn't an exact repeat (e.g. "Ready on watch — …") is
+    /// left untouched since it adds real information, not a duplicate.
+    private func cardStatusLine(title: String, status: String) -> String {
+        let redundantPrefix = "\(title) — "
+        guard status.hasPrefix(redundantPrefix) else { return status }
+        return String(status.dropFirst(redundantPrefix.count))
     }
 
     /// AMA-2330: after a successful Apple schedule, offer a direct path to the
@@ -946,7 +987,7 @@ extension UnifiedWorkoutDetailView {
         case .garmin:
             // AMA-2346: do NOT set Queueing / push / openApp until enrichment
             // answers are applied (or there is nothing to ask).
-            showsHandoffNextSteps = false
+            sentCardTarget = nil
             lastAppleHandoffShowsManagePlans = false
             enrichmentContinuesToApple = false
             pendingGarminGymTitle = gym.title
@@ -974,7 +1015,7 @@ extension UnifiedWorkoutDetailView {
             // AMA-2360: same enrichment offer as Garmin, then mapper compose with
             // Apple delivery prefs (not deliveryPrefs: nil).
             // AMA-2362: Apple Open-rest copy + open default (not Garmin Lap / timed 60).
-            showsHandoffNextSteps = false
+            sentCardTarget = nil
             lastAppleHandoffShowsManagePlans = false
             enrichmentContinuesToApple = true
             pendingGarminGymTitle = nil
@@ -997,6 +1038,7 @@ extension UnifiedWorkoutDetailView {
             WorkoutEngine.shared.start(workout: workout)
             showingWorkoutPlayer = true
             handoffStatus = "Recording on Phone — stop anytime, then log sets"
+            sentCardTarget = nil
             lastAppleHandoffShowsManagePlans = false
         }
     }
@@ -1088,8 +1130,8 @@ extension UnifiedWorkoutDetailView {
             gymTitle: gymTitle
         )
         handoffStatus = [statusNote, result.message].compactMap { $0 }.joined(separator: " ")
+        sentCardTarget = result.kind.telemetryOutcome.isTerminalGarminSentCardSuccess ? .garmin : nil
         guard result.kind != .failed else { return }
-        showsHandoffNextSteps = true
         await requestGarminOpen()
     }
 
@@ -1105,13 +1147,15 @@ extension UnifiedWorkoutDetailView {
 
     /// Re-show the last handoff result — the status must still be there whether
     /// iOS suspended us or killed us while Garmin Connect was in front. A failed
-    /// push gets no next-steps card: nothing reached the watch to go and find.
+    /// or still-queued push gets no sent card: nothing has reached the watch yet
+    /// to go and find.
     fileprivate func restoreHandoffStatus() {
         guard handoffStatus == nil,
               let restored = handoffStore.restorable(workoutId: workout.id),
               let message = restored.message else { return }
         handoffStatus = GarminLifecycleCopy.handoffRestored(message: message)
-        showsHandoffNextSteps = restored.outcome != .failed
+        sentCardTarget = GarminHandoffRecord.Outcome.showsSentCardOnRestore(restored.outcome)
+            ? .garmin : nil
     }
 
     /// AMA-2373: opens the same gym/device sheet a manual Start tap would,
@@ -1149,7 +1193,7 @@ extension UnifiedWorkoutDetailView {
     fileprivate func beginAppleTryHandoff(statusNote: String? = nil) {
         guard !isAppleHandoffInFlight else { return }
         isAppleHandoffInFlight = true
-        showsHandoffNextSteps = false
+        sentCardTarget = nil
         lastAppleHandoffShowsManagePlans = false
         handoffStatus = "Building Apple Workout plan…"
         Task {
@@ -1190,6 +1234,7 @@ extension UnifiedWorkoutDetailView {
                 lastAppleHandoffShowsManagePlans = prepared.showsManageScheduledPlans
             case .savedToFitness, .sentToWatch:
                 handoffStatus = composedMessage
+                sentCardTarget = prepared.kind.isTerminalAppleSentCardSuccess ? .apple : nil
                 lastAppleHandoffShowsManagePlans = prepared.showsManageScheduledPlans
             }
         }
@@ -1204,6 +1249,7 @@ extension UnifiedWorkoutDetailView {
         isAppleHandoffInFlight = true
         // Keep enriched structure after a successful schedule.
         appleEnrichmentReset = nil
+        sentCardTarget = nil
         handoffStatus = "Scheduling in Workout…"
         Task {
             defer { isAppleHandoffInFlight = false }
@@ -1217,6 +1263,7 @@ extension UnifiedWorkoutDetailView {
                 meta: meta
             )
             handoffStatus = result.message
+            sentCardTarget = result.kind.isTerminalAppleSentCardSuccess ? .apple : nil
             lastAppleHandoffShowsManagePlans = result.showsManageScheduledPlans
         }
     }

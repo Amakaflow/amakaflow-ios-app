@@ -127,6 +127,54 @@ final class AppleWatchDeliveryPrefsTests: XCTestCase {
         XCTAssertTrue(lines[1].hasPrefix("… +"), "omitted nested rest + cooldown need a marker")
     }
 
+    func testSectionsBandRestIntoChipsNotMonospaceDump() throws {
+        let json = """
+        {
+          "title": "Test",
+          "sportType": "traditionalStrengthTraining",
+          "intervals": [
+            { "kind": "warmup", "seconds": 300 },
+            {
+              "kind": "repeat",
+              "reps": 3,
+              "intervals": [
+                { "kind": "work", "name": "Squat", "reps": 8 },
+                { "kind": "rest", "seconds": 60 }
+              ]
+            }
+          ]
+        }
+        """.data(using: .utf8)!
+
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+
+        XCTAssertFalse(sections.isEmpty, "expect at least one section band")
+
+        let allChips = sections.flatMap { $0.steps.compactMap(\.restChip) }
+        XCTAssertFalse(allChips.isEmpty, "rest interval should produce a chip, not a plain line")
+        XCTAssertTrue(
+            allChips.contains { $0 == "REST 60S" || $0 == "REST · YOU END IT" },
+            "rest chip must use the exact banded copy, got: \(allChips)"
+        )
+
+        // Rest must never show up as a monospace dump line inside a step title/detail.
+        let allTitlesAndDetails = sections.flatMap { section in
+            section.steps.flatMap { [$0.title, $0.detail ?? ""] }
+        }
+        XCTAssertFalse(
+            allTitlesAndDetails.contains { $0.localizedCaseInsensitiveContains("rest ·") },
+            "rest should be demoted to a chip, not left as a 'Rest · 60s' dump line"
+        )
+
+        let allPublicText = sections.flatMap { section -> [String] in
+            [section.band, section.tag ?? ""] + section.steps.flatMap { [$0.title, $0.detail ?? "", $0.restChip ?? ""] }
+        }
+        XCTAssertFalse(
+            allPublicText.contains { $0.localizedCaseInsensitiveContains("from mapper") },
+            "Apple Watch preview must demote mapper jargon"
+        )
+    }
+
     func testMapperProviderForwardsDeliveryPrefs() async throws {
         let api = MockAPIService()
         api.fetchWorkoutBlocksJSONResult = .success([

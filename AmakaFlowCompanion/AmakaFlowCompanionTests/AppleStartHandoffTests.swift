@@ -113,6 +113,35 @@ final class AppleStartHandoffCopyTests: XCTestCase {
     }
 }
 
+/// AMA-2371 final review I4 — mirrors `GarminSentCardGateTests`. The detail
+/// screen's compact lime "Scheduled on Apple Watch" card must only appear
+/// for a terminal Apple success (`.savedToFitness` / `.sentToWatch`), not
+/// for a still-in-flight preview or a failure/blocked outcome.
+final class AppleSentCardGateTests: XCTestCase {
+    func testSavedToFitnessIsATerminalSentCardSuccess() {
+        XCTAssertTrue(AppleStartHandoffResult.Kind.savedToFitness.isTerminalAppleSentCardSuccess)
+    }
+
+    func testSentToWatchIsATerminalSentCardSuccess() {
+        XCTAssertTrue(AppleStartHandoffResult.Kind.sentToWatch.isTerminalAppleSentCardSuccess)
+    }
+
+    func testFailedIsNotATerminalSentCardSuccess() {
+        XCTAssertFalse(AppleStartHandoffResult.Kind.failed.isTerminalAppleSentCardSuccess)
+    }
+
+    func testBlockedIsNotATerminalSentCardSuccess() {
+        XCTAssertFalse(AppleStartHandoffResult.Kind.blocked.isTerminalAppleSentCardSuccess)
+    }
+
+    func testPreviewReadyIsNotATerminalSentCardSuccess() {
+        XCTAssertFalse(
+            AppleStartHandoffResult.Kind.previewReady.isTerminalAppleSentCardSuccess,
+            "The preview sheet is still in flight — nothing has been scheduled yet"
+        )
+    }
+}
+
 @MainActor
 final class AppleWatchPairingReadTests: XCTestCase {
     func testNotActivatedIsUnknownEvenIfIsPairedFalse() {

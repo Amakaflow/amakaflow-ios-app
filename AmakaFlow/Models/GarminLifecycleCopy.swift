@@ -47,9 +47,31 @@ enum GarminLifecycleCopy {
     }
 
     /// Next steps card under the status line after a successful push.
+    /// AMA-2371 — superseded in the detail screen by the compact `sentCard*`
+    /// strings below; kept so existing copy tests / callers do not regress.
     static let handoffNextSteps = """
     AmakaFlow may switch to Garmin Connect while the watch downloads. \
     That's the handoff, not a crash — come back here any time and this status will still be waiting.
+    """
+
+    // MARK: - Detail sent-state card (AMA-2371 dogfood item 5)
+    //
+    // Replaces the long `handoffNextSteps` paragraph in the detail screen with
+    // a compact lime status card: a one-line title naming which device the
+    // workout landed on, plus (for Garmin) a two-line honest handoff body.
+
+    /// Compact card title once a Garmin push has succeeded.
+    static let sentCardTitle = "Sent to Garmin"
+
+    /// Compact card title once an Apple Watch schedule has succeeded.
+    static let scheduledOnAppleWatchCardTitle = "Scheduled on Apple Watch"
+
+    /// Two-line reassurance body under the Garmin sent card — names the real
+    /// watch-side download spot and the normal Garmin Connect app-switch so
+    /// neither reads as a crash.
+    static let sentCardBody = """
+    Look for it in the AmakaFlow widget on your watch.
+    Garmin Connect may briefly open to hand it off — that's normal, not a crash.
     """
 
     // MARK: - Pairing lifecycle (dogfood item 3)

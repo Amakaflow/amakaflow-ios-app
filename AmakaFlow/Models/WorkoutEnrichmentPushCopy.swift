@@ -14,16 +14,61 @@ enum EnrichmentPushTarget: String, Equatable, Sendable {
 }
 
 enum WorkoutEnrichmentPushCopy {
+    // MARK: - AMA-2371 Peloton-style toggle rows
+
+    /// Enhance sheet title (redesign 2026-08-02 §Enhance sheet).
+    static let sheetTitle = "Make it watch-ready?"
+
+    /// Secondary CTA — always visible, wired to `onSkip`.
+    static let sendAsIsCTA = "Send as-is — no changes"
+
+    /// Primary CTA counts checked offers live; `Send` when nothing is checked.
+    static func primaryCTA(checkedCount: Int) -> String {
+        checkedCount > 0 ? "Add \(checkedCount) & send" : "Send"
+    }
+
+    /// Device name used in the sheet intro copy.
+    static func deviceName(for target: EnrichmentPushTarget) -> String {
+        switch target {
+        case .apple: return "Apple Watch"
+        case .garmin: return "Garmin"
+        }
+    }
+
+    static func introText(target: EnrichmentPushTarget) -> String {
+        "This workout is missing a few things you usually add before it hits your \(deviceName(for: target))."
+    }
+
+    /// Rest config segmented control's non-timed label — Apple `Open rest`, Garmin `Lap button`.
+    static func restOpenSegmentLabel(target: EnrichmentPushTarget) -> String {
+        switch target {
+        case .apple: return "Open rest"
+        case .garmin: return "Lap button"
+        }
+    }
+
+    static let restTimedSegmentLabel = "Timed"
+
+    /// Timed-rest stepper bounds — brief 2026-08-02 §Enhance sheet (15...300, 15s grid).
+    static let restSecRange = 15...300
+    private static let restSecStep = 15
+
+    /// Clamp + snap a persisted `restSec` to the sheet's supported stepper
+    /// range and 15s grid. Historic prefs (pre-AMA-2371 allowed 15...600, or
+    /// unaligned values from other clients) must not bypass the new bound —
+    /// a saved 600 would otherwise render and be confirmable as-is.
+    static func normalizedRestSec(_ restSec: Int?) -> Int {
+        let value = restSec ?? 60
+        let snapped = ((value + restSecStep / 2) / restSecStep) * restSecStep
+        return min(max(snapped, restSecRange.lowerBound), restSecRange.upperBound)
+    }
+
     static func offerTitle(for kind: EnrichmentKind, target: EnrichmentPushTarget) -> String {
         switch kind {
-        case .sessionWarmup: return "Add mobility prep"
+        case .sessionWarmup: return "Mobility prep"
         case .cooldown: return "Cool-down"
-        case .betweenSetRest:
-            switch target {
-            case .apple: return "Add rest (Open or timed)"
-            case .garmin: return "Add rest (Lap or timed)"
-            }
-        case .exerciseWarmupSets: return "Exercise warm-up sets"
+        case .betweenSetRest: return "Rest between sets"
+        case .exerciseWarmupSets: return "Warm-up sets"
         }
     }
 
@@ -70,13 +115,6 @@ enum WorkoutEnrichmentPushCopy {
             }
         }
         return "Timed \(restSec)s between sets/rounds"
-    }
-
-    static func restOpenToggleTitle(target: EnrichmentPushTarget) -> String {
-        switch target {
-        case .apple: return "Open rest (no timer)"
-        case .garmin: return "Lap button press (no timer)"
-        }
     }
 
     static func warmupSetsDetail(_ defaults: [WarmupSetDefault], exerciseCount: Int) -> String {
