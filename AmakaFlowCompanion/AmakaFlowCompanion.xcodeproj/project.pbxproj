@@ -438,6 +438,7 @@
 		AMA1791QUEUEREPOBLD /* SyncQueueRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791QUEUEREPOREF /* SyncQueueRepository.swift */; };
 		AMA1791V1BLD /* V1_initial_schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1791V1REF /* V1_initial_schema.swift */; };
 		AMA1823V2BLD /* V2_add_request_id_to_sync_queue.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1823V2REF /* V2_add_request_id_to_sync_queue.swift */; };
+		AMA2376V3BLD /* V3_workout_collections.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376V3REF /* V3_workout_collections.swift */; };
 		AMA1828CHAT000B /* APIService+Chat.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828CHAT000A /* APIService+Chat.swift */; };
 		AMA1828COACH00B /* APIService+Coach.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828COACH00A /* APIService+Coach.swift */; };
 		AMA1828DEVIC00B /* APIService+Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828DEVIC00A /* APIService+Device.swift */; };
@@ -1084,6 +1085,7 @@
 		AMA1791QUEUEREPOREF /* SyncQueueRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SyncQueueRepository.swift; path = ../AmakaFlow/Storage/Repositories/SyncQueueRepository.swift; sourceTree = SOURCE_ROOT; };
 		AMA1791V1REF /* V1_initial_schema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V1_initial_schema.swift; path = ../AmakaFlow/Storage/Migrations/V1_initial_schema.swift; sourceTree = SOURCE_ROOT; };
 		AMA1823V2REF /* V2_add_request_id_to_sync_queue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V2_add_request_id_to_sync_queue.swift; path = ../AmakaFlow/Storage/Migrations/V2_add_request_id_to_sync_queue.swift; sourceTree = SOURCE_ROOT; };
+		AMA2376V3REF /* V3_workout_collections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V3_workout_collections.swift; path = ../AmakaFlow/Storage/Migrations/V3_workout_collections.swift; sourceTree = SOURCE_ROOT; };
 		AMA1828CHAT000A /* APIService+Chat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+Chat.swift"; path = "../AmakaFlow/Services/APIService+Chat.swift"; sourceTree = SOURCE_ROOT; };
 		AMA1828COACH00A /* APIService+Coach.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+Coach.swift"; path = "../AmakaFlow/Services/APIService+Coach.swift"; sourceTree = SOURCE_ROOT; };
 		AMA1828DEVIC00A /* APIService+Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+Device.swift"; path = "../AmakaFlow/Services/APIService+Device.swift"; sourceTree = SOURCE_ROOT; };
@@ -1420,6 +1422,7 @@
 				AMA1791APPDBREF /* AppDatabase.swift */,
 				AMA1791V1REF /* V1_initial_schema.swift */,
 				AMA1823V2REF /* V2_add_request_id_to_sync_queue.swift */,
+				AMA2376V3REF /* V3_workout_collections.swift */,
 				A87B639F1BA04DF8A5301F4C /* UserDefaultsAcceptedMigration.swift */,
 				AMA1791LOCALRECREF /* LocalRecords.swift */,
 				AMA1791ACCEPTREPOREF /* AcceptedSuggestionsRepository.swift */,
@@ -2452,6 +2455,7 @@
 				AMA1791APPDBBLD /* AppDatabase.swift in Sources */,
 				AMA1791V1BLD /* V1_initial_schema.swift in Sources */,
 				AMA1823V2BLD /* V2_add_request_id_to_sync_queue.swift in Sources */,
+				AMA2376V3BLD /* V3_workout_collections.swift in Sources */,
 				E2E9218685E5476B991B3979 /* UserDefaultsAcceptedMigration.swift in Sources */,
 				AMA1791LOCALRECBLD /* LocalRecords.swift in Sources */,
 				AMA1791ACCEPTREPOBLD /* AcceptedSuggestionsRepository.swift in Sources */,

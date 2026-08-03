@@ -176,3 +176,62 @@ struct SyncQueueSummary: Equatable {
     let lastAttemptedAt: Date?
     let latestError: String?
 }
+
+struct LocalWorkoutCollection: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
+    static let databaseTableName = "workout_collections"
+    static let persistenceConflictPolicy = PersistenceConflictPolicy(insert: .replace, update: .replace)
+
+    var id: String
+    var name: String
+    var note: String?
+    var createdAt: Date
+    var updatedAt: Date
+
+    enum Columns: String, ColumnExpression {
+        case id, name, note, createdAt = "created_at", updatedAt = "updated_at"
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, note
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+struct LocalWorkoutCollectionMember: Codable, FetchableRecord, MutablePersistableRecord, Equatable {
+    static let databaseTableName = "workout_collection_members"
+    static let persistenceConflictPolicy = PersistenceConflictPolicy(insert: .replace, update: .replace)
+
+    var collectionId: String
+    var workoutId: String
+    var position: Int
+
+    enum Columns: String, ColumnExpression {
+        case collectionId = "collection_id", workoutId = "workout_id", position
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case collectionId = "collection_id"
+        case workoutId = "workout_id"
+        case position
+    }
+}
+
+struct LocalPinnedWorkout: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
+    static let databaseTableName = "pinned_workouts"
+    static let persistenceConflictPolicy = PersistenceConflictPolicy(insert: .replace, update: .replace)
+
+    var workoutId: String
+    var pinnedAt: Date
+
+    var id: String { workoutId }
+
+    enum Columns: String, ColumnExpression {
+        case workoutId = "workout_id", pinnedAt = "pinned_at"
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case workoutId = "workout_id"
+        case pinnedAt = "pinned_at"
+    }
+}
