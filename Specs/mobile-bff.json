@@ -1994,6 +1994,7 @@
           },
           "history": {
             "default": true,
+            "description": "Reserved no-op in v1. Accepted for forward compatibility; does not change prompt context.",
             "title": "History",
             "type": "boolean"
           },
@@ -2009,6 +2010,7 @@
           },
           "readiness": {
             "default": true,
+            "description": "Reserved no-op in v1. Accepted for forward compatibility; does not change prompt context.",
             "title": "Readiness",
             "type": "boolean"
           }

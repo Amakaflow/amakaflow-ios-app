@@ -99,7 +99,7 @@ enum CreateWithAIPromptBuilder {
             inventory.strength?.additionalProperties,
             inventory.cardio?.additionalProperties,
             inventory.bodyweight?.additionalProperties,
-            inventory.mobility?.additionalProperties,
+            inventory.mobility?.additionalProperties
         ]
         return categories.contains { dict in
             dict?.values.contains(true) == true
