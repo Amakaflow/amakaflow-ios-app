@@ -109,7 +109,8 @@ struct EditorV2View: View {
                             },
                             onAddWarmup: { quickAddSoftSection(.sessionWarmup) },
                             onAddCooldown: { quickAddSoftSection(.cooldown) }
-                        )
+                        ),
+                        builderV3Canvas: builderV3Seed != nil
                     )
                     .padding(.horizontal, 18)
                     .padding(.top, 12)
@@ -154,7 +155,9 @@ struct EditorV2View: View {
         }
         .task { await resolveLoadedMatchDisplayName() }
         .task {
-            guard isNew else { return }
+            // Favorite chips are the non–Builder-v3 "new workout" door. Builder v3
+            // owns type selection on the picker — keep them off that canvas.
+            guard isNew, builderV3Seed == nil else { return }
             await loadFavoritePresets()
         }
         .task { gymEquipmentKeys = await loadGymEquipmentKeys() }
@@ -186,11 +189,17 @@ struct EditorV2View: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Button { dismiss() } label: {
+                Button {
+                    if builderV3Seed != nil, onBuilderV3ChangeType != nil {
+                        builderV3ChangeTypeTapped()
+                    } else {
+                        dismiss()
+                    }
+                } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 16, weight: .semibold))
-                        Text("Back")
+                        Text(builderV3Seed != nil ? "Type" : "Back")
                             .font(.system(size: 13, weight: .semibold))
                     }
                     .foregroundColor(DailyDriver.foregroundMuted)
@@ -228,7 +237,7 @@ struct EditorV2View: View {
                 .focused($isTitleFocused)
                 .accessibilityIdentifier("workout_name_field")
 
-            if isNew, !favoritePresets.isEmpty {
+            if isNew, builderV3Seed == nil, !favoritePresets.isEmpty {
                 WorkoutTypeFavoritesRow(
                     presets: favoritePresets,
                     selectedCanonicalId: matchController.canonicalId,
@@ -243,7 +252,7 @@ struct EditorV2View: View {
                 .padding(.top, 8)
             }
 
-            if let displayName = matchController.chipDisplayName {
+            if builderV3Seed == nil, let displayName = matchController.chipDisplayName {
                 WorkoutTypeMatchChip(displayName: displayName) {
                     isMatchSheetPresented = true
                 }
@@ -265,6 +274,15 @@ struct EditorV2View: View {
         }
         if swapCount > 0 {
             return "⚠ \(swapCount) SWAP SUGGESTIONS"
+        }
+        if builderV3Seed != nil {
+            let isBlankCanvas = session.exercises.isEmpty
+                && session.formatGroupKey == nil
+                && session.groups.isEmpty
+            if isBlankCanvas {
+                return "JUST ADD EXERCISES — GROUP OR FORMAT THEM ANYTIME"
+            }
+            return "DEFAULTS APPLIED — TAP ANYTHING TO TWEAK"
         }
         if session.exercises.isEmpty {
             return "JUST ADD EXERCISES — STRUCTURE COMES LATER"

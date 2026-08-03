@@ -25,6 +25,16 @@ enum BuilderV3Category: String, CaseIterable, Equatable, Sendable {
         case .recover: return "Recover"
         }
     }
+
+    /// Section accent (mockup: green Lift · orange Conditioning · blue Run).
+    var accentHex: String {
+        switch self {
+        case .lift: return "7AB953"
+        case .conditioning: return "F4A24A"
+        case .run: return "5AB8F4"
+        case .recover: return "A0A0A0"
+        }
+    }
 }
 
 /// Push/Pull/Legs/Full body starter splits — fixed starter exercise names (spec).
@@ -71,6 +81,10 @@ struct BuilderV3TypeSeed: Identifiable, Equatable, Sendable {
     var label: String
     var subtitle: String
     var structureKind: BuilderV3StructureKind
+    /// SF Symbol on the type-picker tile (mockup icons).
+    var systemImage: String
+    /// Pre-filled canvas title; `nil` keeps the "Name your workout" placeholder.
+    var defaultTitle: String?
 
     /// `builder_v3_type_<id>` accessibility identifier for the picker tile.
     var accessibilityId: String { "builder_v3_type_\(id)" }
@@ -86,43 +100,54 @@ enum BuilderV3TypeRegistry {
         id: "lift_straight_sets",
         category: .lift,
         label: "Straight sets",
-        subtitle: "One move at a time · sets × reps",
-        structureKind: .straightSets
+        subtitle: "Pick moves · 3×10 default",
+        structureKind: .straightSets,
+        systemImage: "dumbbell.fill"
     )
     static let superset = BuilderV3TypeSeed(
         id: "lift_superset",
         category: .lift,
-        label: "Superset",
-        subtitle: "Pair two moves back to back",
-        structureKind: .superset
+        label: "Supersets",
+        subtitle: "Pairs, back to back",
+        structureKind: .superset,
+        systemImage: "arrow.triangle.2.circlepath",
+        defaultTitle: "Supersets"
     )
     static let push = BuilderV3TypeSeed(
         id: "lift_push",
         category: .lift,
-        label: "Push",
-        subtitle: "Chest · shoulders · triceps",
-        structureKind: .splitStarter(.push)
+        label: "Push day",
+        subtitle: "Chest · shoulders · tris",
+        structureKind: .splitStarter(.push),
+        systemImage: "dumbbell.fill",
+        defaultTitle: "Push day"
     )
     static let pull = BuilderV3TypeSeed(
         id: "lift_pull",
         category: .lift,
-        label: "Pull",
+        label: "Pull day",
         subtitle: "Back · biceps",
-        structureKind: .splitStarter(.pull)
+        structureKind: .splitStarter(.pull),
+        systemImage: "dumbbell.fill",
+        defaultTitle: "Pull day"
     )
     static let legs = BuilderV3TypeSeed(
         id: "lift_legs",
         category: .lift,
-        label: "Legs",
-        subtitle: "Quads · hamstrings · glutes",
-        structureKind: .splitStarter(.legs)
+        label: "Leg day",
+        subtitle: "Quads · glutes · hams",
+        structureKind: .splitStarter(.legs),
+        systemImage: "figure.strengthtraining.traditional",
+        defaultTitle: "Leg day"
     )
     static let fullBody = BuilderV3TypeSeed(
         id: "lift_full_body",
         category: .lift,
         label: "Full body",
-        subtitle: "One lift per major pattern",
-        structureKind: .splitStarter(.fullBody)
+        subtitle: "One of everything",
+        structureKind: .splitStarter(.fullBody),
+        systemImage: "figure.stand",
+        defaultTitle: "Full body"
     )
 
     // MARK: - Conditioning
@@ -132,35 +157,45 @@ enum BuilderV3TypeRegistry {
         category: .conditioning,
         label: "EMOM",
         subtitle: "Every minute on the minute",
-        structureKind: .format(.emom)
+        structureKind: .format(.emom),
+        systemImage: "clock.fill",
+        defaultTitle: "Engine EMOM"
     )
     static let amrap = BuilderV3TypeSeed(
         id: "conditioning_amrap",
         category: .conditioning,
         label: "AMRAP",
-        subtitle: "As many rounds as possible",
-        structureKind: .format(.amrap)
+        subtitle: "Max rounds in a time cap",
+        structureKind: .format(.amrap),
+        systemImage: "bolt.fill",
+        defaultTitle: "AMRAP"
     )
     static let tabata = BuilderV3TypeSeed(
         id: "conditioning_tabata",
         category: .conditioning,
         label: "Tabata",
-        subtitle: "20s on · 10s off",
-        structureKind: .format(.tabata)
+        subtitle: "20s on · 10s off ×8",
+        structureKind: .format(.tabata),
+        systemImage: "hourglass",
+        defaultTitle: "Tabata"
     )
     static let forTime = BuilderV3TypeSeed(
         id: "conditioning_for_time",
         category: .conditioning,
         label: "For time",
-        subtitle: "Finish the work as fast as possible",
-        structureKind: .format(.fortime)
+        subtitle: "Fixed work, race the clock",
+        structureKind: .format(.fortime),
+        systemImage: "trophy.fill",
+        defaultTitle: "For time"
     )
     static let circuit = BuilderV3TypeSeed(
         id: "conditioning_circuit",
         category: .conditioning,
         label: "Circuit",
         subtitle: "Fixed rounds of the same moves",
-        structureKind: .format(.circuit)
+        structureKind: .format(.circuit),
+        systemImage: "circle.grid.cross.fill",
+        defaultTitle: "Circuit"
     )
 
     // MARK: - Run
@@ -170,28 +205,36 @@ enum BuilderV3TypeRegistry {
         category: .run,
         label: "Intervals",
         subtitle: "Repeated work + recovery",
-        structureKind: .blank
+        structureKind: .blank,
+        systemImage: "figure.run",
+        defaultTitle: "Interval repeats"
     )
     static let tempo = BuilderV3TypeSeed(
         id: "run_tempo",
         category: .run,
         label: "Tempo",
         subtitle: "Sustained effort, comfortably hard",
-        structureKind: .blank
+        structureKind: .blank,
+        systemImage: "figure.run",
+        defaultTitle: "Tempo"
     )
     static let longRun = BuilderV3TypeSeed(
         id: "run_long_run",
         category: .run,
         label: "Long run",
         subtitle: "Easy, continuous distance",
-        structureKind: .blank
+        structureKind: .blank,
+        systemImage: "figure.run",
+        defaultTitle: "Long run"
     )
     static let racePace = BuilderV3TypeSeed(
         id: "run_race_pace",
         category: .run,
         label: "Race pace",
         subtitle: "Reps at target race effort",
-        structureKind: .blank
+        structureKind: .blank,
+        systemImage: "flag.checkered",
+        defaultTitle: "Race pace"
     )
 
     // MARK: - Recover
@@ -201,14 +244,17 @@ enum BuilderV3TypeRegistry {
         category: .recover,
         label: "Mobility",
         subtitle: "Stretches and prep work",
-        structureKind: .mobility
+        structureKind: .mobility,
+        systemImage: "figure.cooldown",
+        defaultTitle: "Mobility"
     )
     static let blank = BuilderV3TypeSeed(
         id: "recover_blank",
         category: .recover,
         label: "Blank",
         subtitle: "Start with nothing pinned",
-        structureKind: .blank
+        structureKind: .blank,
+        systemImage: "square.dashed"
     )
 
     static let lift: [BuilderV3TypeSeed] = [straightSets, superset, push, pull, legs, fullBody]
@@ -240,6 +286,9 @@ enum BuilderV3TypeRegistry {
     /// Never called for `.run` seeds — use `BuilderV3RunRegistry` instead.
     static func makeEditorSession(for seed: BuilderV3TypeSeed) -> EditorV2Session {
         var session = EditorV2Session()
+        if let defaultTitle = seed.defaultTitle {
+            session.title = defaultTitle
+        }
         switch seed.structureKind {
         case .straightSets, .blank:
             break

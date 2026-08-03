@@ -42,6 +42,30 @@ final class BuilderV3Tests: XCTestCase {
         XCTAssertEqual(session.formatGroupKey, "fmt")
         XCTAssertEqual(session.groups["fmt"]?.type, .superset)
         XCTAssertTrue(session.exercises.isEmpty)
+        XCTAssertEqual(session.title, "Supersets")
+    }
+
+    func testSeedDefaultTitlesMatchMockupCanvas() {
+        XCTAssertEqual(
+            BuilderV3TypeRegistry.makeEditorSession(for: BuilderV3TypeRegistry.straightSets).title,
+            ""
+        )
+        XCTAssertEqual(
+            BuilderV3TypeRegistry.makeEditorSession(for: BuilderV3TypeRegistry.blank).title,
+            ""
+        )
+        XCTAssertEqual(
+            BuilderV3TypeRegistry.makeEditorSession(for: BuilderV3TypeRegistry.emom).title,
+            "Engine EMOM"
+        )
+        XCTAssertEqual(
+            BuilderV3TypeRegistry.makeEditorSession(for: BuilderV3TypeRegistry.push).title,
+            "Push day"
+        )
+        XCTAssertEqual(
+            BuilderV3RunRegistry.makeRunSession(for: BuilderV3TypeRegistry.intervals).title,
+            "Interval repeats"
+        )
     }
 
     func testPushSeedSeedsFixedStarterNamesWithDefaultPrescription() {

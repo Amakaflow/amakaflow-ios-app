@@ -261,6 +261,9 @@ private extension BuilderV3RunStep {
 enum BuilderV3RunRegistry {
     static func makeRunSession(for seed: BuilderV3TypeSeed) -> BuilderV3RunSession {
         var session = BuilderV3RunSession()
+        if let defaultTitle = seed.defaultTitle {
+            session.title = defaultTitle
+        }
         switch seed.id {
         case BuilderV3TypeRegistry.intervals.id:
             session.addWarmup()

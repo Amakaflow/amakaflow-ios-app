@@ -77,12 +77,15 @@ struct BuilderV3RunStepBuilderView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let accent = Color(hex: seed.category.accentHex)
+        return VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Button { dismiss() } label: {
+                Button {
+                    changeTypeTapped()
+                } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold))
-                        Text("Back").font(.system(size: 13, weight: .semibold))
+                        Text("Type").font(.system(size: 13, weight: .semibold))
                     }
                     .foregroundColor(DailyDriver.foregroundMuted)
                 }
@@ -93,10 +96,11 @@ struct BuilderV3RunStepBuilderView: View {
                 Button(action: changeTypeTapped) {
                     Text("\(seed.label.uppercased()) · CHANGE")
                         .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                        .foregroundColor(DailyDriver.blue)
+                        .foregroundColor(accent)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(Capsule().fill(DailyDriver.blue.opacity(0.16)))
+                        .background(Capsule().fill(accent.opacity(0.18)))
+                        .overlay(Capsule().stroke(accent.opacity(0.45), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("builder_v3_type_change_button")
@@ -107,7 +111,7 @@ struct BuilderV3RunStepBuilderView: View {
                 .foregroundColor(DailyDriver.foreground)
                 .accessibilityIdentifier("workout_name_field")
 
-            Text("WARM-UP · REPEAT BLOCKS · COOL-DOWN — TAP + TO ADD")
+            Text("DEFAULTS APPLIED — TAP ANYTHING TO TWEAK")
                 .font(.system(size: 9, weight: .medium, design: .monospaced))
                 .foregroundColor(DailyDriver.foregroundDim)
         }
