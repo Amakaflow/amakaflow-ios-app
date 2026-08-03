@@ -45,16 +45,19 @@ final class OnYourWatchesViewModel: ObservableObject {
     }
 
     func refresh() async {
+        guard !isLoading else { return }
+
         if OnYourWatchesDemoSupport.isEnabled {
             OnYourWatchesDemoSupport.seedGarminQueueIfNeeded(store: queueStore)
             snapshot = OnYourWatchesDemoSupport.snapshot
-            isLoading = false
+            statusMessage = nil
             return
         }
 
         isLoading = true
         defer { isLoading = false }
 
+        var runError: String?
         let applePaired = pairingReader.pairingReadForCopy() != .confirmedUnpaired
         let garminPaired = garminPairing()
         var next = OnYourWatchesSnapshot.empty
@@ -71,7 +74,7 @@ final class OnYourWatchesViewModel: ObservableObject {
                     next.appleScheduledCount = incomplete.count
                     next.appleNextLabel = Self.nextLabel(from: incomplete, calendar: calendar)
                 } catch {
-                    statusMessage = error.localizedDescription
+                    runError = error.localizedDescription
                 }
             }
         }
@@ -101,9 +104,7 @@ final class OnYourWatchesViewModel: ObservableObject {
         }
 
         snapshot = next
-        if statusMessage == nil {
-            statusMessage = nil
-        }
+        statusMessage = runError
     }
 
     private static func nextLabel(from rows: [WorkoutScheduleRow], calendar: Calendar) -> String? {

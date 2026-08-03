@@ -43,6 +43,9 @@ final class GarminWatchQueueViewModel: ObservableObject {
 
     func refresh() async {
         guard !isMutating else { return }
+        isMutating = true
+        defer { isMutating = false }
+
         if OnYourWatchesDemoSupport.isEnabled {
             OnYourWatchesDemoSupport.seedGarminQueueIfNeeded(store: queueStore)
         }

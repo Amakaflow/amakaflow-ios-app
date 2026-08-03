@@ -46,6 +46,28 @@ final class OnYourWatchesViewModelTests: XCTestCase {
         XCTAssertTrue(vm.snapshot.librarySummaryLine.contains("GARMIN"))
     }
 
+    func testLibrarySummaryHidesWhenBothUnpaired() async {
+        let vm = OnYourWatchesViewModel(
+            scheduler: MockWorkoutKitScheduler(),
+            pairingReader: FixedAppleWatchPairingReader(.confirmedUnpaired),
+            garminPairing: { false },
+            queueStore: InMemoryGarminWatchQueueStore(),
+            statusFetcher: { _ in
+                Components.Schemas.WatchDeliveryStatus(
+                    state: .pushed,
+                    subtitle: nil,
+                    title: "Waiting"
+                )
+            }
+        )
+        await vm.refresh()
+        XCTAssertFalse(vm.snapshot.showsApple)
+        XCTAssertFalse(vm.snapshot.showsGarmin)
+        XCTAssertFalse(vm.snapshot.hasAnyWearable)
+        XCTAssertFalse(vm.snapshot.librarySummaryLine.contains("APPLE"))
+        XCTAssertFalse(vm.snapshot.librarySummaryLine.contains("GARMIN"))
+    }
+
     func testGarminStateMapping() {
         XCTAssertEqual(GarminQueueItemState.from(delivery: .confirmedOnDevice), .onWatch)
         XCTAssertEqual(GarminQueueItemState.from(delivery: .fetchedByWidget), .onWatch)

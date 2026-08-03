@@ -54,6 +54,14 @@ struct AppleWatchScheduledListView: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 topChrome
+                if let status = viewModel.statusMessage, !status.isEmpty {
+                    Text(status)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(DailyDriver.amber)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 8)
+                        .accessibilityIdentifier("af_apple_scheduled_status")
+                }
                 listBody
             }
 
@@ -70,9 +78,6 @@ struct AppleWatchScheduledListView: View {
             didLoad = true
             await viewModel.refresh(mode: .manual)
         }
-        .onAppear {
-            Task { await viewModel.refresh(mode: .manual) }
-        }
         .sheet(item: $moveTarget) { row in
             moveSheet(for: row)
         }
@@ -84,7 +89,10 @@ struct AppleWatchScheduledListView: View {
             Button(OnYourWatchesCopy.appleRemoveAllConfirm(count: rows.count), role: .destructive) {
                 Task {
                     await viewModel.clearAll()
-                    viewModel.exitEditing()
+                    let cleared = viewModel.incompleteRows.isEmpty && viewModel.completedRows.isEmpty
+                    if cleared {
+                        viewModel.exitEditing()
+                    }
                 }
             }
             .accessibilityIdentifier("af_apple_scheduled_remove_all_confirm")
@@ -297,7 +305,7 @@ struct AppleWatchScheduledListView: View {
                         .padding(.vertical, 15)
                         .background(DailyDriver.lime)
                         .clipShape(Capsule())
-                        .shadow(color: DailyDriver.lime.opacity(0.35), radius: 12, y: 2)
+                        .ddLimeGlow()
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("af_apple_scheduled_from_library")
@@ -323,6 +331,14 @@ struct AppleWatchScheduledListView: View {
                     .foregroundColor(DailyDriver.foregroundMuted)
                     .padding(.horizontal)
 
+                if let status = viewModel.statusMessage, !status.isEmpty {
+                    Text(status)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(DailyDriver.amber)
+                        .padding(.horizontal)
+                        .accessibilityIdentifier("af_apple_scheduled_move_status")
+                }
+
                 Spacer()
             }
             .navigationTitle("Move")
@@ -334,8 +350,9 @@ struct AppleWatchScheduledListView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         Task {
-                            await viewModel.move(row: row, to: moveDate)
-                            moveTarget = nil
+                            if await viewModel.move(row: row, to: moveDate) {
+                                moveTarget = nil
+                            }
                         }
                     }
                     .accessibilityIdentifier("af_apple_scheduled_move_save")
@@ -344,6 +361,18 @@ struct AppleWatchScheduledListView: View {
         }
         .presentationDetents([.medium, .large])
     }
+
+    private static let weekdayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE"
+        return formatter
+    }()
+
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter
+    }()
 
     private func whenLine(for row: WorkoutScheduleRow) -> String {
         guard let date = row.scheduledAt else {
@@ -355,13 +384,9 @@ struct AppleWatchScheduledListView: View {
         } else if calendar.isDateInTomorrow(date) {
             day = "TOMORROW"
         } else {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "EEE"
-            day = formatter.string(from: date).uppercased()
+            day = Self.weekdayFormatter.string(from: date).uppercased()
         }
-        let timeFormatter = DateFormatter()
-        timeFormatter.dateFormat = "HH:mm"
-        let time = timeFormatter.string(from: date)
+        let time = Self.timeFormatter.string(from: date)
         let complete = row.isComplete ? " · DONE" : ""
         return "\(day) · \(time)\(complete)"
     }

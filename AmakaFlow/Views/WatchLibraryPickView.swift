@@ -82,10 +82,18 @@ struct WatchLibraryPickView: View {
                         }
 
                         if workouts.isEmpty {
-                            Text("No workouts in Library yet.")
-                                .font(.system(size: 12))
-                                .foregroundColor(DailyDriver.foregroundMuted)
-                                .padding(.vertical, 24)
+                            Group {
+                                if viewModel.state == .loading {
+                                    ProgressView()
+                                        .tint(DailyDriver.lime)
+                                        .padding(.vertical, 24)
+                                } else {
+                                    Text("No workouts in Library yet.")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(DailyDriver.foregroundMuted)
+                                        .padding(.vertical, 24)
+                                }
+                            }
                         }
                     }
                     .padding(.horizontal, 18)

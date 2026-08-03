@@ -62,9 +62,6 @@ struct OnYourWatchesView: View {
             didLoad = true
             await viewModel.refresh()
         }
-        .onAppear {
-            Task { await viewModel.refresh() }
-        }
     }
 
     private var header: some View {

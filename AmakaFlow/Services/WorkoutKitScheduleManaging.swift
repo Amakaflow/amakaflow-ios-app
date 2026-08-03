@@ -55,6 +55,30 @@ struct WorkoutScheduleRow: Identifiable, Equatable, Sendable {
     let isComplete: Bool
 }
 
+/// Errors from AMA-2375 Move (reschedule) — never silent success.
+enum WorkoutScheduleRescheduleError: LocalizedError, Equatable {
+    case rowNotFound
+    case planNotCached
+    case unavailable
+    case targetSlotMissing
+    case oldSlotStillPresent
+
+    var errorDescription: String? {
+        switch self {
+        case .rowNotFound:
+            return "That scheduled workout is no longer on the watch."
+        case .planNotCached:
+            return "Couldn't move this plan — pull to refresh and try again."
+        case .unavailable:
+            return "Scheduling isn't available on this device."
+        case .targetSlotMissing:
+            return "Move didn't land on the new day — pull to refresh."
+        case .oldSlotStillPresent:
+            return "The old schedule slot is still there — pull to refresh."
+        }
+    }
+}
+
 /// App-shaped seam over `WorkoutScheduler` — mirrors `WorkoutKitSaving` in `AppleStartHandoff.swift`
 /// so ViewModels/tests never link WorkoutKit directly.
 ///
@@ -69,6 +93,7 @@ protocol WorkoutKitScheduleManaging: Sendable {
     func remove(row: WorkoutScheduleRow) async
     func removeAll() async
     /// AMA-2375 Move v1: remove at the old slot and schedule the cached plan at `date`.
+    /// Throws when the move cannot be proven (missing plan/row or post-refresh mismatch).
     func reschedule(row: WorkoutScheduleRow, to date: Date) async throws
 }
 
@@ -120,7 +145,9 @@ final class MockWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
     }
 
     func reschedule(row: WorkoutScheduleRow, to date: Date) async throws {
-        guard let index = rows.firstIndex(where: { $0.id == row.id }) else { return }
+        guard let index = rows.firstIndex(where: { $0.id == row.id }) else {
+            throw WorkoutScheduleRescheduleError.rowNotFound
+        }
         let components = Calendar.current.dateComponents(
             [.year, .month, .day, .hour, .minute, .second],
             from: date
@@ -144,7 +171,9 @@ struct UnavailableWorkoutKitScheduler: WorkoutKitScheduleManaging {
     func fetchScheduledRows() async throws -> [WorkoutScheduleRow] { [] }
     func remove(row: WorkoutScheduleRow) async {}
     func removeAll() async {}
-    func reschedule(row: WorkoutScheduleRow, to date: Date) async throws {}
+    func reschedule(row: WorkoutScheduleRow, to date: Date) async throws {
+        throw WorkoutScheduleRescheduleError.unavailable
+    }
 }
 #endif
 
@@ -213,15 +242,24 @@ final class LiveWorkoutKitScheduler: WorkoutKitScheduleManaging, @unchecked Send
     }
 
     func reschedule(row: WorkoutScheduleRow, to date: Date) async throws {
-        guard let plan = planCache[row.id] else { return }
+        guard let plan = planCache[row.id] else {
+            throw WorkoutScheduleRescheduleError.planNotCached
+        }
         let components = calendar.dateComponents(
             [.year, .month, .day, .hour, .minute],
             from: date
         )
+        let oldID = row.id
+        let newID = WorkoutScheduleRowID(planID: row.id.planID, date: components)
         await WorkoutScheduler.shared.remove(plan, at: row.dateComponents)
-        try await WorkoutScheduler.shared.schedule(plan, at: components)
-        // Refresh cache key for the new slot.
-        _ = try await fetchScheduledRows()
+        await WorkoutScheduler.shared.schedule(plan, at: components)
+        let refreshed = try await fetchScheduledRows()
+        if refreshed.contains(where: { $0.id == oldID }) {
+            throw WorkoutScheduleRescheduleError.oldSlotStillPresent
+        }
+        guard refreshed.contains(where: { $0.id == newID }) else {
+            throw WorkoutScheduleRescheduleError.targetSlotMissing
+        }
     }
 
     private static func mapAuthorizationState(

@@ -17,9 +17,19 @@ struct LibraryView: View {
     @State private var pendingDelete: LibraryListEntry?
     @State private var navigationPath: [LibraryDestination] = []
     @StateObject private var watchesVM = OnYourWatchesViewModel()
+    /// Gates content/empty `.task` so state flips don't double-refresh watches.
+    @State private var watchesDidInitialRefresh = false
 
     init(viewModel: LibraryViewModel? = nil) {
         _viewModel = StateObject(wrappedValue: viewModel ?? LibraryViewModel())
+    }
+
+    private func refreshWatches(force: Bool = false) async {
+        if !force {
+            guard !watchesDidInitialRefresh else { return }
+            watchesDidInitialRefresh = true
+        }
+        await watchesVM.refresh()
     }
 
     private var filteredEntries: [LibraryListEntry] {
@@ -193,11 +203,11 @@ extension LibraryView {
             }
             .refreshable {
                 await viewModel.load()
-                await watchesVM.refresh()
+                await refreshWatches(force: true)
             }
         }
         .task {
-            await watchesVM.refresh()
+            await refreshWatches()
         }
     }
 
@@ -241,7 +251,7 @@ extension LibraryView {
                 .padding(.bottom, 100)
             }
             .task {
-                await watchesVM.refresh()
+                await refreshWatches()
             }
         }
     }

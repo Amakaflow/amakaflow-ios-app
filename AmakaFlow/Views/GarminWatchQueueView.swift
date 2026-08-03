@@ -69,7 +69,7 @@ struct GarminWatchQueueView: View {
                         .padding(.vertical, 15)
                         .background(DailyDriver.lime)
                         .clipShape(Capsule())
-                        .shadow(color: DailyDriver.lime.opacity(0.35), radius: 12, y: 2)
+                        .ddLimeGlow()
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal, 12)
@@ -82,9 +82,6 @@ struct GarminWatchQueueView: View {
             guard !didLoad else { return }
             didLoad = true
             await viewModel.refresh()
-        }
-        .onAppear {
-            Task { await viewModel.refresh() }
         }
     }
 
