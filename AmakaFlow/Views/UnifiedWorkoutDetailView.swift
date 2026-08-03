@@ -1143,7 +1143,8 @@ extension UnifiedWorkoutDetailView {
               let restored = handoffStore.restorable(workoutId: workout.id),
               let message = restored.message else { return }
         handoffStatus = GarminLifecycleCopy.handoffRestored(message: message)
-        sentCardTarget = restored.outcome?.isTerminalGarminSentCardSuccess == true ? .garmin : nil
+        sentCardTarget = GarminHandoffRecord.Outcome.showsSentCardOnRestore(restored.outcome)
+            ? .garmin : nil
     }
 
     fileprivate func handleScenePhaseChange(_ phase: ScenePhase) {

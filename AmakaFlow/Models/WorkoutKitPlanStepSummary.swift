@@ -284,13 +284,13 @@ enum WorkoutKitPlanStepSummary {
     }
 
     private static func label(for step: WKPlanDTO.Interval.Step) -> String {
-        let kind = step.kind.lowercased()
-        if kind == "rest" || kind == "recovery" {
+        if isRest(step) {
             if let seconds = step.seconds {
                 return "Rest · \(seconds)s"
             }
             return "Rest · tap"
         }
+        let kind = step.kind.lowercased()
         let name = step.name?.trimmingCharacters(in: .whitespacesAndNewlines)
         let base: String
         if let name, !name.isEmpty {

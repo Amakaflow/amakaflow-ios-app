@@ -52,6 +52,12 @@ extension GarminHandoffRecord.Outcome {
         case .queued, .failed: return false
         }
     }
+
+    /// Restore path for `UnifiedWorkoutDetailView.restoreHandoffStatus` —
+    /// non-terminal / missing outcomes keep `sentCardTarget` nil.
+    static func showsSentCardOnRestore(_ outcome: GarminHandoffRecord.Outcome?) -> Bool {
+        outcome?.isTerminalGarminSentCardSuccess == true
+    }
 }
 
 /// UserDefaults-backed store for the most recent Garmin handoff.

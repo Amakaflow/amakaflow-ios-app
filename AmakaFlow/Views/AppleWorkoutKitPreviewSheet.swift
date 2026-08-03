@@ -136,6 +136,7 @@ struct AppleWorkoutKitPreviewSheet: View {
                 if let tag = section.tag {
                     Text(tag)
                         .font(.system(size: 10, weight: .bold))
+                        .monospacedDigit()
                         .foregroundColor(DailyDriver.ink)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 2)
@@ -192,6 +193,7 @@ struct AppleWorkoutKitPreviewSheet: View {
                     if let detail = step.detail {
                         Text(detail)
                             .font(.system(size: 10.5))
+                            .monospacedDigit()
                             .foregroundColor(DailyDriver.foregroundMuted)
                     }
                 }

@@ -207,6 +207,25 @@ final class GarminSentCardGateTests: XCTestCase {
         XCTAssertTrue(GarminStartHandoffResult.Kind.sent.telemetryOutcome.isTerminalGarminSentCardSuccess)
         XCTAssertTrue(GarminStartHandoffResult.Kind.readyOnWatch.telemetryOutcome.isTerminalGarminSentCardSuccess)
     }
+
+    /// Mirrors `restoreHandoffStatus`: restored `.queued` / `.failed` must not
+    /// light the lime sent card (nothing has reached the watch yet).
+    func testRestoredQueuedOutcomeDoesNotShowSentCard() {
+        XCTAssertFalse(GarminHandoffRecord.Outcome.showsSentCardOnRestore(.queued))
+    }
+
+    func testRestoredFailedOutcomeDoesNotShowSentCard() {
+        XCTAssertFalse(GarminHandoffRecord.Outcome.showsSentCardOnRestore(.failed))
+    }
+
+    func testRestoredNilOutcomeDoesNotShowSentCard() {
+        XCTAssertFalse(GarminHandoffRecord.Outcome.showsSentCardOnRestore(nil))
+    }
+
+    func testRestoredSentOutcomeShowsSentCard() {
+        XCTAssertTrue(GarminHandoffRecord.Outcome.showsSentCardOnRestore(.sent))
+        XCTAssertTrue(GarminHandoffRecord.Outcome.showsSentCardOnRestore(.readyOnWatch))
+    }
 }
 
 final class GarminPairFollowUpTests: XCTestCase {
