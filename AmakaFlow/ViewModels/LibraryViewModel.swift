@@ -211,9 +211,20 @@ final class LibraryViewModel: ObservableObject {
         }
     }
 
+    /// AMA-2376: IDs that may own collection membership / pins — saved workouts
+    /// plus workout-kind knowledge cards (synthetic unified-detail destinations).
+    /// Video/article/plan knowledge IDs are excluded (`knowledgeDetail` only).
+    var knownCollectionWorkoutIDs: Set<String> {
+        var ids = Set(allWorkouts.map(\.id))
+        for item in allItems where item.kind == .workout {
+            ids.insert(item.id)
+        }
+        return ids
+    }
+
     /// AMA-2376: refresh collections; skip orphan wipe when known set is empty.
     func syncCollectionsAfterLoad() {
-        let knownWorkoutIDs = Set(allWorkouts.map(\.id))
+        let knownWorkoutIDs = knownCollectionWorkoutIDs
         if knownWorkoutIDs.isEmpty {
             try? collectionsStore.reload()
         } else {

@@ -88,6 +88,7 @@ struct AddToCollectionSheet: View {
                         .lineLimit(1)
                     Text(item.workoutCount == 1 ? "1 workout" : "\(item.workoutCount) workouts")
                         .font(.system(size: 10.5))
+                        .monospacedDigit()
                         .foregroundColor(DailyDriver.foregroundMuted)
                 }
 

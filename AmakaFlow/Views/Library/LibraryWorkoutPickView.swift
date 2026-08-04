@@ -78,10 +78,13 @@ struct LibraryWorkoutPickView: View {
             Spacer(minLength: 0)
 
             Button {
-                onAdd(Array(selectedIDs))
+                // Preserve displayed list order — Set iteration order is unstable.
+                let orderedIDs = filteredWorkouts.map(\.id).filter(selectedIDs.contains)
+                onAdd(orderedIDs)
             } label: {
                 Text(selectedIDs.isEmpty ? "Add" : "Add (\(selectedIDs.count))")
                     .font(.system(size: 14, weight: .bold))
+                    .monospacedDigit()
             }
             .foregroundColor(selectedIDs.isEmpty ? DailyDriver.foregroundDim : DailyDriver.lime)
             .disabled(selectedIDs.isEmpty)

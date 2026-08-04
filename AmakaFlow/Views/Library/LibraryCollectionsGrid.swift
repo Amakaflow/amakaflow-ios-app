@@ -78,6 +78,7 @@ private struct LibraryCollectionCard: View {
                         .lineLimit(1)
                     Text(caption)
                         .font(.system(size: 9.5, weight: .semibold))
+                        .monospacedDigit()
                         .foregroundColor(DailyDriver.foregroundDim)
                         .lineLimit(1)
                 }

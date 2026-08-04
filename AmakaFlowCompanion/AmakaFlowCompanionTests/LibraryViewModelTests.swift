@@ -309,6 +309,9 @@ final class LibraryViewModelTests: XCTestCase {
     /// than observing it, so pin/unpin (or any collections mutation) must be forwarded
     /// through `LibraryViewModel.objectWillChange` or the pinned row never refreshes.
     func testCollectionsStoreChangesForwardToViewModelObjectWillChange() throws {
+        let collectionsDB = try AppDatabase.makeTestDatabase()
+        let collectionsStore = LibraryCollectionsStore(repo: WorkoutCollectionsRepository(database: collectionsDB))
+        viewModel = LibraryViewModel(apiService: api, collectionsStore: collectionsStore)
         var publishCount = 0
         let cancellable = viewModel.objectWillChange.sink { _ in publishCount += 1 }
         defer { cancellable.cancel() }
@@ -340,6 +343,46 @@ final class LibraryViewModelTests: XCTestCase {
 
         XCTAssertEqual(try collectionsRepo.memberWorkoutIds(collectionId: collection.id), ["keep"])
         XCTAssertEqual(try collectionsRepo.uncategorizedWorkoutIds(from: ["keep"]), [])
+    }
+
+    /// Workout-kind knowledge cards open synthetic unified detail, so their IDs must
+    /// survive prune alongside saved workouts. Article/video/plan IDs stay excluded.
+    func testLoadKeepsWorkoutKindKnowledgeIDsWhenPruning() async throws {
+        let collectionsDB = try AppDatabase.makeTestDatabase()
+        let collectionsRepo = WorkoutCollectionsRepository(database: collectionsDB)
+        let collectionsStore = LibraryCollectionsStore(repo: collectionsRepo)
+        let collection = try collectionsRepo.createCollection(name: "Hyrox Prep", note: nil)
+        try collectionsRepo.addMember(collectionId: collection.id, workoutId: "knowledge-workout")
+        try collectionsRepo.addMember(collectionId: collection.id, workoutId: "gone")
+        try collectionsRepo.setPinned(workoutId: "knowledge-workout", isPinned: true)
+        viewModel = LibraryViewModel(apiService: api, collectionsStore: collectionsStore)
+
+        api.listLibraryItemsResult = .success(
+            Components.Schemas.LibraryItemList(
+                items: [
+                    item(id: "knowledge-workout", kind: .workout),
+                    item(id: "knowledge-article", kind: .article),
+                ],
+                total: 2
+            )
+        )
+        api.fetchWorkoutsResult = .success([])
+
+        await viewModel.load()
+
+        XCTAssertEqual(
+            try collectionsRepo.memberWorkoutIds(collectionId: collection.id),
+            ["knowledge-workout"],
+            "Workout-kind knowledge IDs must remain known during orphan prune"
+        )
+        XCTAssertTrue(
+            try collectionsRepo.isPinned(workoutId: "knowledge-workout"),
+            "Pins for workout-kind knowledge cards must survive prune"
+        )
+        XCTAssertFalse(
+            viewModel.knownCollectionWorkoutIDs.contains("knowledge-article"),
+            "Non-workout knowledge IDs must not enter the known collection set"
+        )
     }
 
     /// Critical fix: an empty known-workout set on `load()` (e.g. transient/partial

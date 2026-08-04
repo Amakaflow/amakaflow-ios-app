@@ -60,9 +60,9 @@ extension LibraryViewModel {
                 try await apiService.deleteKnowledgeCard(id: item.id)
             case .workout(let workout):
                 try await apiService.deleteWorkout(id: workout.id)
-                // AMA-2376: allWorkouts already reflects the optimistic removal above,
-                // so remaining IDs exclude the just-deleted workout.
-                try? collectionsStore.pruneOrphans(knownWorkoutIds: Set(allWorkouts.map(\.id)))
+                // AMA-2376: optimistic removal already dropped this workout; known set
+                // still includes workout-kind knowledge IDs that open synthetic detail.
+                try? collectionsStore.pruneOrphans(knownWorkoutIds: knownCollectionWorkoutIDs)
             }
 
             let elapsedMs = Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1000)

@@ -398,7 +398,8 @@ private extension CollectionDetailView {
     }
 
     func moveSelection(to targetID: String) {
-        let ids = Array(selectedIDs)
+        // Preserve source collection / displayed order — Set iteration is unstable.
+        let ids = memberWorkouts.map(\.id).filter(selectedIDs.contains)
         guard !ids.isEmpty else { return }
         try? collectionsStore.moveMembers(
             workoutIds: ids,
