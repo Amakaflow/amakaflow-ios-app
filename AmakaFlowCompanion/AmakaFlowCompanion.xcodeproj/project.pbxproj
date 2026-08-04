@@ -340,8 +340,10 @@
 		AMA2054RDVM00000000B /* ReadinessDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2054RDVM00000000A /* ReadinessDetailViewModel.swift */; };
 		AMA2054RDVIEW000000B /* ReadinessDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2054RDVIEW000000A /* ReadinessDetailView.swift */; };
 		AMA2004LIBVM0000000B /* LibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2004LIBVM0000000A /* LibraryViewModel.swift */; };
+		AMA2376LIBVMACTBLD /* LibraryViewModel+LibraryActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376LIBVMACTREF /* LibraryViewModel+LibraryActions.swift */; };
 		AMA2004LIBVIEW00000B /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2004LIBVIEW00000A /* LibraryView.swift */; };
 		AMA2376PINSECBLD /* LibraryPinnedSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376PINSECREF /* LibraryPinnedSection.swift */; };
+		AMA2376LIBCOLEXTBLD /* LibraryView+Collections.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376LIBCOLEXTREF /* LibraryView+Collections.swift */; };
 		AMA2376COLGRIDBLD /* LibraryCollectionsGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376COLGRIDREF /* LibraryCollectionsGrid.swift */; };
 		AMA2376COLDETBLD /* CollectionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376COLDETREF /* CollectionDetailView.swift */; };
 		AMA2376MOVESHTBLD /* MoveToCollectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376MOVESHTREF /* MoveToCollectionSheet.swift */; };
@@ -998,8 +1000,10 @@
 		AMA2054RDVM00000000A /* ReadinessDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReadinessDetailViewModel.swift; path = ../AmakaFlow/ViewModels/ReadinessDetailViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA2054RDVIEW000000A /* ReadinessDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReadinessDetailView.swift; path = ../AmakaFlow/Views/ReadinessDetailView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2004LIBVM0000000A /* LibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryViewModel.swift; path = ../AmakaFlow/ViewModels/LibraryViewModel.swift; sourceTree = SOURCE_ROOT; };
+		AMA2376LIBVMACTREF /* LibraryViewModel+LibraryActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "LibraryViewModel+LibraryActions.swift"; path = "../AmakaFlow/ViewModels/LibraryViewModel+LibraryActions.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2004LIBVIEW00000A /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryView.swift; path = ../AmakaFlow/Views/LibraryView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2376PINSECREF /* LibraryPinnedSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryPinnedSection.swift; path = ../AmakaFlow/Views/Library/LibraryPinnedSection.swift; sourceTree = SOURCE_ROOT; };
+		AMA2376LIBCOLEXTREF /* LibraryView+Collections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "LibraryView+Collections.swift"; path = "../AmakaFlow/Views/Library/LibraryView+Collections.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2376COLGRIDREF /* LibraryCollectionsGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryCollectionsGrid.swift; path = ../AmakaFlow/Views/Library/LibraryCollectionsGrid.swift; sourceTree = SOURCE_ROOT; };
 		AMA2376COLDETREF /* CollectionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CollectionDetailView.swift; path = ../AmakaFlow/Views/Library/CollectionDetailView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2376MOVESHTREF /* MoveToCollectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MoveToCollectionSheet.swift; path = ../AmakaFlow/Views/Library/MoveToCollectionSheet.swift; sourceTree = SOURCE_ROOT; };
@@ -1517,6 +1521,7 @@
 				AMA2054RDVIEW000000A /* ReadinessDetailView.swift */,
 				AMA2004LIBVIEW00000A /* LibraryView.swift */,
 				AMA2376PINSECREF /* LibraryPinnedSection.swift */,
+				AMA2376LIBCOLEXTREF /* LibraryView+Collections.swift */,
 				AMA2376COLGRIDREF /* LibraryCollectionsGrid.swift */,
 				AMA2376COLDETREF /* CollectionDetailView.swift */,
 				AMA2376MEMROWREF /* CollectionMemberRow.swift */,
@@ -1857,6 +1862,7 @@
 				AMA1996DEVVM00000000A /* DevicesViewModel.swift */,
 				AMA2054RDVM00000000A /* ReadinessDetailViewModel.swift */,
 				AMA2004LIBVM0000000A /* LibraryViewModel.swift */,
+				AMA2376LIBVMACTREF /* LibraryViewModel+LibraryActions.swift */,
 				AMA2376STORFREF /* LibraryCollectionsStore.swift */,
 				AMA2005LIBDVM000000A /* LibraryDetailViewModel.swift */,
 				AMA2027MSGVM0000000A /* MessagingViewModel.swift */,
@@ -2520,6 +2526,7 @@
 				AMA1996DEVVM00000000B /* DevicesViewModel.swift in Sources */,
 				AMA2054RDVM00000000B /* ReadinessDetailViewModel.swift in Sources */,
 				AMA2004LIBVM0000000B /* LibraryViewModel.swift in Sources */,
+				AMA2376LIBVMACTBLD /* LibraryViewModel+LibraryActions.swift in Sources */,
 				AMA2376STORFBLD /* LibraryCollectionsStore.swift in Sources */,
 				AMA2005LIBDVM000000B /* LibraryDetailViewModel.swift in Sources */,
 				AMA2027MSGVM0000000B /* MessagingViewModel.swift in Sources */,
@@ -2534,6 +2541,7 @@
 				AMA2054RDVIEW000000B /* ReadinessDetailView.swift in Sources */,
 				AMA2004LIBVIEW00000B /* LibraryView.swift in Sources */,
 				AMA2376PINSECBLD /* LibraryPinnedSection.swift in Sources */,
+				AMA2376LIBCOLEXTBLD /* LibraryView+Collections.swift in Sources */,
 				AMA2376COLGRIDBLD /* LibraryCollectionsGrid.swift in Sources */,
 				AMA2376COLDETBLD /* CollectionDetailView.swift in Sources */,
 				AMA2376MEMROWBLD /* CollectionMemberRow.swift in Sources */,

@@ -400,7 +400,11 @@ private extension CollectionDetailView {
     func moveSelection(to targetID: String) {
         let ids = Array(selectedIDs)
         guard !ids.isEmpty else { return }
-        try? collectionsStore.moveMembers(workoutIds: ids, from: collectionID, to: targetID)
+        try? collectionsStore.moveMembers(
+            workoutIds: ids,
+            fromCollectionId: collectionID,
+            toCollectionId: targetID
+        )
         selectedIDs.removeAll()
     }
 

@@ -82,7 +82,7 @@ final class WorkoutCollectionsRepositoryTests: XCTestCase {
         let from = try repo.createCollection(name: "A", note: nil)
         let to = try repo.createCollection(name: "B", note: nil)
         try repo.addMember(collectionId: from.id, workoutId: "w1")
-        try repo.moveMembers(workoutIds: ["w1"], from: from.id, to: to.id)
+        try repo.moveMembers(workoutIds: ["w1"], fromCollectionId: from.id, toCollectionId: to.id)
         XCTAssertTrue(try repo.memberWorkoutIds(collectionId: from.id).isEmpty)
         XCTAssertEqual(try repo.memberWorkoutIds(collectionId: to.id), ["w1"])
     }

@@ -80,8 +80,12 @@ final class LibraryCollectionsStore: ObservableObject {
         try reload()
     }
 
-    func moveMembers(workoutIds: [String], from: String, to: String) throws {
-        try repo.moveMembers(workoutIds: workoutIds, from: from, to: to)
+    func moveMembers(workoutIds: [String], fromCollectionId: String, toCollectionId: String) throws {
+        try repo.moveMembers(
+            workoutIds: workoutIds,
+            fromCollectionId: fromCollectionId,
+            toCollectionId: toCollectionId
+        )
         try reload()
     }
 

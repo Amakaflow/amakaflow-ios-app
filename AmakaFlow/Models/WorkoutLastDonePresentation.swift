@@ -16,9 +16,9 @@ enum WorkoutLastDonePresentation {
         rpe: Int? = nil
     ) -> String? {
         let matching = completions.filter { $0.workoutId == workoutId }
-        guard !matching.isEmpty else { return nil }
-
-        let latest = matching.max(by: { $0.startedAt < $1.startedAt })!
+        guard let latest = matching.max { $0.startedAt < $1.startedAt } else {
+            return nil
+        }
         let weekday = latest.startedAt.formatted(.dateTime.weekday(.abbreviated))
         let count = matching.count
 

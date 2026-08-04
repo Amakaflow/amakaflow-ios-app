@@ -40,11 +40,9 @@ struct LibraryCollectionsGrid: View {
             if !items.isEmpty {
                 LazyVGrid(columns: columns, spacing: 12) {
                     ForEach(items) { item in
-                        LibraryCollectionCard(
-                            item: item,
-                            workoutsByID: workoutsByID,
-                            action: { onSelectCollection(item.id) }
-                        )
+                        LibraryCollectionCard(item: item, workoutsByID: workoutsByID) {
+                            onSelectCollection(item.id)
+                        }
                     }
                 }
             }

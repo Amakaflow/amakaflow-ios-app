@@ -28,95 +28,95 @@ nonisolated final class WorkoutCollectionsRepository {
             createdAt: timestamp,
             updatedAt: timestamp
         )
-        try dbQueue.write { db in
-            try record.insert(db)
+        try dbQueue.write { database in
+            try record.insert(database)
         }
         return record
     }
 
     func renameCollection(id: String, name: String, note: String?) throws {
-        try dbQueue.write { db in
-            guard var record = try LocalWorkoutCollection.fetchOne(db, key: id) else { return }
+        try dbQueue.write { database in
+            guard var record = try LocalWorkoutCollection.fetchOne(database, key: id) else { return }
             record.name = name
             record.note = note
             record.updatedAt = self.now()
-            try record.update(db)
+            try record.update(database)
         }
     }
 
     func deleteCollection(id: String) throws {
-        try dbQueue.write { db in
+        try dbQueue.write { database in
             // Members cascade via the FK's `onDelete: .cascade` (V3WorkoutCollections migration).
-            _ = try LocalWorkoutCollection.deleteOne(db, key: id)
+            _ = try LocalWorkoutCollection.deleteOne(database, key: id)
         }
     }
 
     func listCollections() throws -> [LocalWorkoutCollection] {
-        try dbQueue.read { db in
+        try dbQueue.read { database in
             try LocalWorkoutCollection
                 .order(LocalWorkoutCollection.Columns.updatedAt.desc)
-                .fetchAll(db)
+                .fetchAll(database)
         }
     }
 
     func addMember(collectionId: String, workoutId: String) throws {
-        try dbQueue.write { db in
+        try dbQueue.write { database in
             let alreadyMember = try LocalWorkoutCollectionMember
                 .filter(LocalWorkoutCollectionMember.Columns.collectionId == collectionId
                     && LocalWorkoutCollectionMember.Columns.workoutId == workoutId)
-                .fetchCount(db) > 0
+                .fetchCount(database) > 0
             if alreadyMember {
                 return
             }
-            let nextPosition = try Int.fetchOne(db, sql: """
+            let nextPosition = try Int.fetchOne(database, sql: """
                 SELECT COALESCE(MAX(position), 0) + 1 FROM workout_collection_members
                 WHERE collection_id = ?
                 """, arguments: [collectionId]) ?? 1
             var member = LocalWorkoutCollectionMember(collectionId: collectionId, workoutId: workoutId, position: nextPosition)
-            try member.insert(db)
-            try self.touchCollection(collectionId, db: db)
+            try member.insert(database)
+            try self.touchCollection(collectionId, database: database)
         }
     }
 
     func removeMember(collectionId: String, workoutId: String) throws {
-        try dbQueue.write { db in
+        try dbQueue.write { database in
             _ = try LocalWorkoutCollectionMember
                 .filter(LocalWorkoutCollectionMember.Columns.collectionId == collectionId
                     && LocalWorkoutCollectionMember.Columns.workoutId == workoutId)
-                .deleteAll(db)
-            try self.touchCollection(collectionId, db: db)
+                .deleteAll(database)
+            try self.touchCollection(collectionId, database: database)
         }
     }
 
-    func moveMembers(workoutIds: [String], from: String, to: String) throws {
-        try dbQueue.write { db in
+    func moveMembers(workoutIds: [String], fromCollectionId: String, toCollectionId: String) throws {
+        try dbQueue.write { database in
             for workoutId in workoutIds {
                 _ = try LocalWorkoutCollectionMember
-                    .filter(LocalWorkoutCollectionMember.Columns.collectionId == from
+                    .filter(LocalWorkoutCollectionMember.Columns.collectionId == fromCollectionId
                         && LocalWorkoutCollectionMember.Columns.workoutId == workoutId)
-                    .deleteAll(db)
+                    .deleteAll(database)
 
                 let alreadyMember = try LocalWorkoutCollectionMember
-                    .filter(LocalWorkoutCollectionMember.Columns.collectionId == to
+                    .filter(LocalWorkoutCollectionMember.Columns.collectionId == toCollectionId
                         && LocalWorkoutCollectionMember.Columns.workoutId == workoutId)
-                    .fetchCount(db) > 0
+                    .fetchCount(database) > 0
                 if !alreadyMember {
-                    let nextPosition = try Int.fetchOne(db, sql: """
+                    let nextPosition = try Int.fetchOne(database, sql: """
                         SELECT COALESCE(MAX(position), 0) + 1 FROM workout_collection_members
                         WHERE collection_id = ?
-                        """, arguments: [to]) ?? 1
-                    var member = LocalWorkoutCollectionMember(collectionId: to, workoutId: workoutId, position: nextPosition)
-                    try member.insert(db)
+                        """, arguments: [toCollectionId]) ?? 1
+                    var member = LocalWorkoutCollectionMember(collectionId: toCollectionId, workoutId: workoutId, position: nextPosition)
+                    try member.insert(database)
                 }
             }
-            try self.touchCollection(from, db: db)
-            try self.touchCollection(to, db: db)
+            try self.touchCollection(fromCollectionId, database: database)
+            try self.touchCollection(toCollectionId, database: database)
         }
     }
 
     func memberWorkoutIds(collectionId: String) throws -> [String] {
-        try dbQueue.read { db in
-            try String.fetchAll(db, sql: """
+        try dbQueue.read { database in
+            try String.fetchAll(database, sql: """
                 SELECT workout_id FROM workout_collection_members
                 WHERE collection_id = ? ORDER BY position ASC
                 """, arguments: [collectionId])
@@ -124,8 +124,8 @@ nonisolated final class WorkoutCollectionsRepository {
     }
 
     func collectionIds(containing workoutId: String) throws -> [String] {
-        try dbQueue.read { db in
-            try String.fetchAll(db, sql: """
+        try dbQueue.read { database in
+            try String.fetchAll(database, sql: """
                 SELECT collection_id FROM workout_collection_members
                 WHERE workout_id = ?
                 """, arguments: [workoutId])
@@ -133,63 +133,63 @@ nonisolated final class WorkoutCollectionsRepository {
     }
 
     func uncategorizedWorkoutIds(from knownWorkoutIds: Set<String>) throws -> [String] {
-        try dbQueue.read { db in
-            let memberWorkoutIds = try Set(String.fetchAll(db, sql: "SELECT DISTINCT workout_id FROM workout_collection_members"))
+        try dbQueue.read { database in
+            let memberWorkoutIds = try Set(String.fetchAll(database, sql: "SELECT DISTINCT workout_id FROM workout_collection_members"))
             return knownWorkoutIds.subtracting(memberWorkoutIds).sorted()
         }
     }
 
     func setPinned(workoutId: String, isPinned: Bool) throws {
-        try dbQueue.write { db in
+        try dbQueue.write { database in
             if isPinned {
                 var pin = LocalPinnedWorkout(workoutId: workoutId, pinnedAt: self.now())
-                try pin.upsert(db)
+                try pin.upsert(database)
             } else {
-                _ = try LocalPinnedWorkout.deleteOne(db, key: workoutId)
+                _ = try LocalPinnedWorkout.deleteOne(database, key: workoutId)
             }
         }
     }
 
     func isPinned(workoutId: String) throws -> Bool {
-        try dbQueue.read { db in
-            try LocalPinnedWorkout.filter(key: workoutId).fetchCount(db) > 0
+        try dbQueue.read { database in
+            try LocalPinnedWorkout.filter(key: workoutId).fetchCount(database) > 0
         }
     }
 
     func listPinnedWorkoutIds() throws -> [String] {
-        try dbQueue.read { db in
-            try String.fetchAll(db, sql: "SELECT workout_id FROM pinned_workouts ORDER BY pinned_at DESC")
+        try dbQueue.read { database in
+            try String.fetchAll(database, sql: "SELECT workout_id FROM pinned_workouts ORDER BY pinned_at DESC")
         }
     }
 
     @discardableResult
     func pruneOrphans(knownWorkoutIds: Set<String>) throws -> Int {
-        try dbQueue.write { db in
+        try dbQueue.write { database in
             var deleted = 0
             if knownWorkoutIds.isEmpty {
-                deleted += try LocalWorkoutCollectionMember.deleteAll(db)
-                deleted += try LocalPinnedWorkout.deleteAll(db)
+                deleted += try LocalWorkoutCollectionMember.deleteAll(database)
+                deleted += try LocalPinnedWorkout.deleteAll(database)
             } else {
                 let placeholders = knownWorkoutIds.map { _ in "?" }.joined(separator: ", ")
                 let arguments = StatementArguments(Array(knownWorkoutIds))
-                try db.execute(
+                try database.execute(
                     sql: "DELETE FROM workout_collection_members WHERE workout_id NOT IN (\(placeholders))",
                     arguments: arguments
                 )
-                deleted += db.changesCount
-                try db.execute(
+                deleted += database.changesCount
+                try database.execute(
                     sql: "DELETE FROM pinned_workouts WHERE workout_id NOT IN (\(placeholders))",
                     arguments: arguments
                 )
-                deleted += db.changesCount
+                deleted += database.changesCount
             }
             return deleted
         }
     }
 
-    private func touchCollection(_ collectionId: String, db: Database) throws {
-        guard var collection = try LocalWorkoutCollection.fetchOne(db, key: collectionId) else { return }
+    private func touchCollection(_ collectionId: String, database: Database) throws {
+        guard var collection = try LocalWorkoutCollection.fetchOne(database, key: collectionId) else { return }
         collection.updatedAt = now()
-        try collection.update(db)
+        try collection.update(database)
     }
 }

@@ -10,16 +10,15 @@
 import SwiftUI
 
 struct LibraryView: View {
-    @StateObject private var viewModel: LibraryViewModel
+    @StateObject var viewModel: LibraryViewModel
     @Environment(\.openCreateSheet) private var openCreateSheet
     @State private var searchText = ""
     @State private var sourceFilter: DDPlatform = .all
     @State private var pendingDelete: LibraryListEntry?
-    @State private var navigationPath: [LibraryDestination] = []
+    @State var navigationPath: [LibraryDestination] = []
     @StateObject private var watchesVM = OnYourWatchesViewModel()
-    /// AMA-2376: "+ New" collection name prompt.
-    @State private var isPresentingNewCollection = false
-    @State private var newCollectionName = ""
+    @State var isPresentingNewCollection = false
+    @State var newCollectionName = ""
     /// Gates content/empty `.task` so state flips don't double-refresh watches.
     @State private var watchesDidInitialRefresh = false
     /// AMA-2375: Garmin Fix opens the editor directly (not detail → Edit).
@@ -268,29 +267,11 @@ extension LibraryView {
         .task {
             await refreshWatches()
         }
-        .alert("New Collection", isPresented: $isPresentingNewCollection) {
-            TextField("Collection name", text: $newCollectionName)
-            Button("Cancel", role: .cancel) {
-                newCollectionName = ""
-            }
-            Button("Create") {
-                createCollection()
-            }
-        } message: {
-            Text("Group workouts together, e.g. \u{201C}Hyrox Prep\u{201D} or \u{201C}Push / Pull / Legs\u{201D}.")
-        }
-    }
-
-    private var pinnedWorkouts: [Workout] {
-        viewModel.collectionsStore.pinnedIDs.compactMap { viewModel.workoutsByID[$0] }
-    }
-
-    private func createCollection() {
-        let name = newCollectionName.trimmingCharacters(in: .whitespacesAndNewlines)
-        newCollectionName = ""
-        guard !name.isEmpty else { return }
-        guard let created = try? viewModel.collectionsStore.createCollection(name: name, note: nil) else { return }
-        navigationPath.append(.collection(id: created.id))
+        .libraryNewCollectionAlert(
+            isPresented: $isPresentingNewCollection,
+            name: $newCollectionName,
+            onCreate: createCollection
+        )
     }
 
     private var emptyView: some View {
