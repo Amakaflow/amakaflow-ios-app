@@ -656,4 +656,34 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertNil(exercise.distanceMeters)
         XCTAssertNil(exercise.calories)
     }
+
+    func testEditSheetUntouchedDistancePreservesTargetAndProvenance() {
+        var exercise = EditorV2Exercise(
+            name: "Run",
+            sets: 3,
+            distanceMeters: 400,
+            fieldProvenance: ["distance_meters": .inferred]
+        )
+        var memory = EditorV2EditTargetMemory(exercise: exercise)
+        memory.apply(to: &exercise)
+
+        XCTAssertEqual(exercise.distanceMeters, 400)
+        XCTAssertNil(exercise.reps)
+        XCTAssertEqual(exercise.fieldProvenance["distance_meters"], .inferred)
+        XCTAssertNil(exercise.fieldProvenance["reps"])
+    }
+
+    func testEditSheetUnchangedTargetDoesNotStampUserProvenance() {
+        var exercise = EditorV2Exercise(
+            name: "Bench Press",
+            sets: 3,
+            reps: 10,
+            fieldProvenance: ["reps": .inferred]
+        )
+        var memory = EditorV2EditTargetMemory(exercise: exercise)
+        memory.apply(to: &exercise)
+
+        XCTAssertEqual(exercise.reps, 10)
+        XCTAssertEqual(exercise.fieldProvenance["reps"], .inferred)
+    }
 }

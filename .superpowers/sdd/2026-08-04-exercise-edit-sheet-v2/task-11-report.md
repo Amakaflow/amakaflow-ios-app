@@ -22,3 +22,15 @@
 
 - Done applies the selected target to the draft atomically, preserving sets
   while clearing every mutually exclusive metric field (including distance).
+
+## Review follow-up
+
+- Fixed distance-only rows: their displayed Reps default is inert until the
+  athlete selects or edits a TARGET value, so Done preserves `distanceMeters`.
+- Target provenance is now stamped only when the target intent differs from
+  the sheet's initial intent; edits limited to sets or rest retain existing
+  target provenance.
+- Added regression tests for untouched distance preservation and unchanged
+  target provenance.
+- The focused XCTest retry again stalled resolving the remote RevenueCat
+  package, so no XCTest result is available.

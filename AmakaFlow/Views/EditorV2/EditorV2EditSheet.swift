@@ -30,6 +30,14 @@ enum EditorV2EditTargetKind: String, CaseIterable, Equatable {
     }
 }
 
+private enum EditorV2EditTargetIntent: Equatable {
+    case reps(Int)
+    case range(min: Int, max: Int)
+    case timed(Int)
+    case cals(Int)
+    case open
+}
+
 /// Session-local values for each target family. Switching targets never destroys a
 /// value the athlete just entered; an absent family receives its product default.
 struct EditorV2EditTargetMemory: Equatable {
@@ -39,24 +47,37 @@ struct EditorV2EditTargetMemory: Equatable {
     var rangeMax: Int = 12
     var workSeconds: Int = 40
     var calories: Int = 15
+    private let initialIntent: EditorV2EditTargetIntent?
+    private var shouldApplyTarget: Bool
 
     init(exercise: EditorV2Exercise) {
         if exercise.openGoal {
             kind = .open
+            initialIntent = .open
         } else if let range = exercise.repsRange {
             kind = .range
             rangeMin = range.low
             rangeMax = range.high
+            initialIntent = .range(min: range.low, max: range.high)
         } else if let seconds = exercise.durationSeconds {
             kind = .timed
             workSeconds = seconds
+            initialIntent = .timed(seconds)
         } else if let targetCalories = exercise.calories {
             kind = .cals
             calories = targetCalories
+            initialIntent = .cals(targetCalories)
         } else {
             kind = .reps
-            reps = exercise.reps ?? Self.defaultReps
+            if let targetReps = exercise.reps {
+                reps = targetReps
+                initialIntent = .reps(targetReps)
+            } else {
+                reps = Self.defaultReps
+                initialIntent = nil
+            }
         }
+        shouldApplyTarget = initialIntent != nil
     }
 
     static let defaultReps = 10
@@ -66,14 +87,38 @@ struct EditorV2EditTargetMemory: Equatable {
     static let defaultCalories = 15
 
     mutating func setRangeMin(_ value: Int) {
+        shouldApplyTarget = true
         rangeMin = Swift.min(Swift.max(1, value), rangeMax)
     }
 
     mutating func setRangeMax(_ value: Int) {
+        shouldApplyTarget = true
         rangeMax = Swift.max(rangeMin, Swift.min(50, value))
     }
 
+    mutating func select(_ targetKind: EditorV2EditTargetKind) {
+        kind = targetKind
+        shouldApplyTarget = true
+    }
+
+    mutating func setReps(_ value: Int) {
+        reps = value
+        shouldApplyTarget = true
+    }
+
+    mutating func setWorkSeconds(_ value: Int) {
+        workSeconds = value
+        shouldApplyTarget = true
+    }
+
+    mutating func setCalories(_ value: Int) {
+        calories = value
+        shouldApplyTarget = true
+    }
+
     mutating func apply(to exercise: inout EditorV2Exercise) {
+        guard shouldApplyTarget else { return }
+        let changed = currentIntent != initialIntent
         exercise.openGoal = false
         exercise.reps = nil
         exercise.repsRange = nil
@@ -84,19 +129,29 @@ struct EditorV2EditTargetMemory: Equatable {
         switch kind {
         case .reps:
             exercise.reps = reps
-            exercise.stampUser("reps")
+            if changed { exercise.stampUser("reps") }
         case .range:
             exercise.repsRange = RepsRange(low: rangeMin, high: rangeMax)
-            exercise.stampUser("reps_range")
+            if changed { exercise.stampUser("reps_range") }
         case .timed:
             exercise.durationSeconds = workSeconds
-            exercise.stampUser("duration_seconds")
+            if changed { exercise.stampUser("duration_seconds") }
         case .cals:
             exercise.calories = calories
-            exercise.stampUser("calories")
+            if changed { exercise.stampUser("calories") }
         case .open:
             exercise.openGoal = true
-            exercise.stampUser("open_goal")
+            if changed { exercise.stampUser("open_goal") }
+        }
+    }
+
+    private var currentIntent: EditorV2EditTargetIntent {
+        switch kind {
+        case .reps: return .reps(reps)
+        case .range: return .range(min: rangeMin, max: rangeMax)
+        case .timed: return .timed(workSeconds)
+        case .cals: return .cals(calories)
+        case .open: return .open
         }
     }
 }
@@ -237,7 +292,7 @@ struct EditorV2EditSheet: View {
                     min: 1,
                     max: 50,
                     accessibilityIdentifier: "af_exsheet_reps"
-                ) { targetMemory.reps = $0 }
+                ) { targetMemory.setReps($0) }
             case .range:
                 rangeCell
             case .timed:
@@ -249,7 +304,7 @@ struct EditorV2EditSheet: View {
                     step: 10,
                     valueText: formatSeconds,
                     accessibilityIdentifier: "af_exsheet_work"
-                ) { targetMemory.workSeconds = $0 }
+                ) { targetMemory.setWorkSeconds($0) }
             case .cals:
                 stepperCell(
                     label: "CALORIES",
@@ -258,7 +313,7 @@ struct EditorV2EditSheet: View {
                     max: 500,
                     step: 5,
                     accessibilityIdentifier: "af_exsheet_calories"
-                ) { targetMemory.calories = $0 }
+                ) { targetMemory.setCalories($0) }
             case .open:
                 openGoalCell
             }
@@ -311,7 +366,7 @@ struct EditorV2EditSheet: View {
 
     private func targetKindChip(_ kind: EditorV2EditTargetKind) -> some View {
         Button {
-            targetMemory.kind = kind
+            targetMemory.select(kind)
         } label: {
             Text(kind.title)
                 .font(.system(size: 11.5, weight: .semibold))
