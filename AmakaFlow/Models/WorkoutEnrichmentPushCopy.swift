@@ -313,6 +313,7 @@ enum WorkoutEnrichmentPushCopy {
 /// Mobility prep vs cooldown share one `SequenceScreen` anatomy — only copy
 /// differs (design §Surface 2 / §Surface 5). Distinct from `EnrichmentKind`
 /// (which also covers `betweenSetRest` / `exerciseWarmupSets`, not sequences).
-enum EnrichmentSequenceKind: String, Equatable, Sendable {
+/// `Hashable` so the enhance sheet can drive `navigationDestination(item:)`.
+enum EnrichmentSequenceKind: String, Hashable, Sendable {
     case mobility, cooldown
 }

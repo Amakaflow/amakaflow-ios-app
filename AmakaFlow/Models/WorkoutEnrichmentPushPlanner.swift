@@ -26,7 +26,15 @@ enum WorkoutEnrichmentPushPlanner {
         /// Per-exercise tombstones to clear when `exercise_warmup_sets` is applied.
         var tombstonedExerciseIds: [String]
         /// Candidate exercise ids covered by a warm-up-sets offer (reject → tombstone).
+        /// Ids-only subset — exercises without a minted `exercise_id` yet are absent.
         var candidateExerciseIds: [String]
+        /// AMA-2378 v2 — every candidate's display name, in the same order as
+        /// `warmupSetCandidates`. Unlike `candidateExerciseIds` this is not
+        /// filtered to exercises with a minted id: the enhance sheet's live
+        /// `warmupSetsSummaryV2` row needs a name for every candidate, matched
+        /// to a `PerExerciseRamp` by normalized name (id-based matching lands
+        /// once ids are minted ahead of the push in a later task).
+        var candidateExerciseNames: [String]
 
         var id: String { kind.rawValue }
 
@@ -38,6 +46,7 @@ enum WorkoutEnrichmentPushPlanner {
             title: String? = nil,
             tombstonedExerciseIds: [String] = [],
             candidateExerciseIds: [String] = [],
+            candidateExerciseNames: [String] = [],
             target: EnrichmentPushTarget = .garmin
         ) {
             self.kind = kind
@@ -47,6 +56,7 @@ enum WorkoutEnrichmentPushPlanner {
             self.detail = detail
             self.tombstonedExerciseIds = tombstonedExerciseIds
             self.candidateExerciseIds = candidateExerciseIds
+            self.candidateExerciseNames = candidateExerciseNames
         }
     }
 
@@ -174,11 +184,12 @@ enum WorkoutEnrichmentPushPlanner {
                             prefs.exerciseWarmupSets.defaultSets,
                             exerciseCount: candidates.count
                         ),
-                        tombstonedExerciseIds: tombstonedIds,
-                        candidateExerciseIds: candidateIds,
-                        target: target
-                    )
+                    tombstonedExerciseIds: tombstonedIds,
+                    candidateExerciseIds: candidateIds,
+                    candidateExerciseNames: candidates.map(\.name),
+                    target: target
                 )
+            )
             }
         }
 
