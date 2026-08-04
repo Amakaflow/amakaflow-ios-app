@@ -121,6 +121,15 @@ final class PrescriptionDisplayTests: XCTestCase {
         XCTAssertFalse(exercise.ddDetailLine.uppercased().contains("EACH LEG"))
     }
 
+    func testRepsRangeKeepsHyphenForStorageButUsesEnDashInSummary() {
+        let range = RepsRange(low: 8, high: 12)
+        let exercise = EditorV2Exercise(name: "Squat", sets: 3, repsRange: range)
+
+        XCTAssertEqual(range.display, "8-12")
+        XCTAssertEqual(exercise.summaryLine, "3 × 8–12")
+        XCTAssertEqual(RepsRange.parse("8–12"), range)
+    }
+
     // MARK: - Preview duration
 
     func testPreviewWorkoutUsesZeroNotExerciseHeuristic() {

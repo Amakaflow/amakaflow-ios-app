@@ -405,8 +405,28 @@ final class EditorV2Tests: XCTestCase {
             restSeconds: 60
         )
 
-        XCTAssertEqual(exercise.summaryLine, "3 × 8-10 · 60S REST")
+        XCTAssertEqual(exercise.summaryLine, "3 × 8–10 · 60S REST")
         XCTAssertNotEqual(exercise.summaryLine, "60S REST")
+    }
+
+    func testOpenGoalClearsMutuallyExclusiveTargetsAndFormatsOpenRest() {
+        var exercise = EditorV2Exercise(
+            name: "Assault Bike",
+            sets: 3,
+            reps: 10,
+            repsRange: RepsRange(low: 8, high: 12),
+            durationSeconds: 40,
+            calories: 15,
+            restOpen: true
+        )
+        exercise.openGoal = true
+
+        XCTAssertTrue(exercise.openGoal)
+        XCTAssertNil(exercise.reps)
+        XCTAssertNil(exercise.repsRange)
+        XCTAssertNil(exercise.durationSeconds)
+        XCTAssertNil(exercise.calories)
+        XCTAssertEqual(exercise.summaryLine, "3 × OPEN · OPEN REST")
     }
 
     func testRepRangeExportsThroughSocialImportBlocks() {

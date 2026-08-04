@@ -78,14 +78,29 @@ final class PrescriptionTests: XCTestCase {
         } else {
             XCTFail("Expected repsRange primary, got \(prescription.primary)")
         }
-        XCTAssertEqual(PrescriptionFormatter.line(prescription), "3 × 8-10")
+        XCTAssertEqual(PrescriptionFormatter.line(prescription), "3 × 8–10")
     }
 
     func testRepRangeWithoutSetsShowsRangeOnly() {
         let exercise = makeExercise(reps: "8-10")
 
         let line = PrescriptionFormatter.line(PrescriptionFormatter.effective(from: exercise))
-        XCTAssertEqual(line, "8-10")
+        XCTAssertEqual(line, "8–10")
+    }
+
+    func testPrimarySummaryFormatsMatchCopyContract() {
+        XCTAssertEqual(
+            PrescriptionFormatter.primaryLine(.duration(seconds: 40, sets: 3)),
+            "3 × 0:40"
+        )
+        XCTAssertEqual(
+            PrescriptionFormatter.primaryLine(.calories(15, sets: 3)),
+            "3 × 15 CAL"
+        )
+        XCTAssertEqual(
+            PrescriptionFormatter.primaryLine(.open(sets: 3)),
+            "3 × OPEN"
+        )
     }
 
     // MARK: - Plain reps vs range priority
