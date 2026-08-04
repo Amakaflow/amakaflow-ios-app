@@ -110,7 +110,7 @@ final class LibraryViewModel: ObservableObject {
                 return Self.syntheticWorkout(from: knowledge)
             }
             return nil
-        case .knowledgeDetail, .onYourWatches, .appleScheduled, .garminQueue, .libraryPick:
+        case .knowledgeDetail, .onYourWatches, .appleScheduled, .garminQueue, .libraryPick, .collection:
             return nil
         }
     }

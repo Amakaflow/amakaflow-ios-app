@@ -16,6 +16,8 @@ enum LibraryDestination: Hashable, Identifiable {
     case appleScheduled
     case garminQueue
     case libraryPick(WatchLibraryPickTarget)
+    /// AMA-2376 — collection folder detail (includes Uncategorized sentinel id).
+    case collection(id: String)
 
     var id: String {
         switch self {
@@ -31,6 +33,8 @@ enum LibraryDestination: Hashable, Identifiable {
             return "garminQueue"
         case .libraryPick(let target):
             return "libraryPick:\(target.rawValue)"
+        case .collection(let collectionID):
+            return "collection:\(collectionID)"
         }
     }
 }

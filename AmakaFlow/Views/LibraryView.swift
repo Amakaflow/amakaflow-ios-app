@@ -440,6 +440,12 @@ extension LibraryView {
             WatchLibraryPickView(target: target) { workoutID in
                 navigationPath.append(.unifiedWorkout(workoutID: workoutID))
             }
+        case .collection:
+            // CollectionDetailView wired in AMA-2376 Task 6.
+            Text("Collection")
+                .font(Theme.Typography.caption)
+                .foregroundColor(DailyDriver.foregroundMuted)
+                .accessibilityIdentifier("af_collection_detail_placeholder")
         }
     }
 
