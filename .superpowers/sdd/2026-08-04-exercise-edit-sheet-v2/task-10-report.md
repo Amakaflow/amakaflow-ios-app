@@ -9,18 +9,20 @@
   `goal: {"kind": "open"}`. Open goals retain `sets` but omit all competing
   metric fields (`reps`, `reps_range`, `duration_sec`, `distance_m`, and
   `calories`) even if stale values enter the mapper.
+- Mapper now emits `sets` with every target kind, including calories, timed,
+  distance, and open goals.
 - Ingest decodes both `calories` and an open `goal.kind` back to the draft.
-- Added regression coverage for Editor V2 → block → mapper persistence and
-  ingest decoding.
+- Added regression coverage for Editor V2 → block → mapper persistence,
+  ingest decoding, and the closed mapper → ingest → mapper round trip.
 
 ## Verification
 
 - `git diff --check`: passed.
 - IDE diagnostics: no errors in the six changed Swift files.
-- Attempted Xcode project discovery before the focused XCTest run. It stalled
-  for three minutes in Swift Package dependency resolution while fetching
-  remote dependencies, so it was stopped. No XCTest result is available.
+- Focused XCTest was attempted for the persistence regressions. It stalled
+  during Swift Package dependency resolution while fetching remote
+  dependencies, so it was stopped. No XCTest result is available.
 
 ## Commit
 
-Pending.
+`607db0d feat(AMA-2379): persist calories + goal.kind=open on exercise wire`

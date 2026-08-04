@@ -136,8 +136,8 @@ extension APIService {
 
     static func provenanceExercise(from exercise: SocialImportExercise) -> [String: Any] {
         var object: [String: Any] = ["name": exercise.name]
+        if let sets = exercise.sets { object["sets"] = sets }
         if exercise.openGoal == true {
-            if let sets = exercise.sets { object["sets"] = sets }
             object["goal"] = ["kind": "open"]
         } else {
             if let seconds = exercise.seconds, seconds > 0 {
@@ -147,7 +147,6 @@ extension APIService {
             } else if let calories = exercise.calories, calories > 0 {
                 object["calories"] = calories
             } else {
-                if let sets = exercise.sets { object["sets"] = sets }
                 if let range = exercise.repsRange?.trimmingCharacters(in: .whitespacesAndNewlines), !range.isEmpty {
                     object["reps_range"] = range.replacingOccurrences(of: "–", with: "-")
                 }

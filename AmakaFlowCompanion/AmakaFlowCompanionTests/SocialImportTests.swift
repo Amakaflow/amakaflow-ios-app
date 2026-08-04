@@ -550,6 +550,36 @@ final class SocialImportTests: XCTestCase {
         XCTAssertEqual(draft.exercises[1].openGoal, true)
     }
 
+    func testMapperIngestMapperRoundTripPreservesCaloriesAndOpenGoal() throws {
+        let inputBlock = SocialImportBlock(
+            label: "Conditioning",
+            rounds: 1,
+            exercises: [
+                SocialImportExercise(name: "SkiErg", sets: 3, calories: 15),
+                SocialImportExercise(name: "Assault Bike", sets: 2, openGoal: true)
+            ]
+        )
+        let initialWireBlock = APIService.mapperBlockObject(from: inputBlock)
+        let data = try JSONSerialization.data(
+            withJSONObject: ["title": "Conditioning", "blocks": [initialWireBlock]]
+        )
+
+        let draft = try SocialImportDraft.fromIngestJSON(
+            data,
+            platform: .manual,
+            sourceURL: nil,
+            equipmentEmpty: false,
+            equipmentNote: nil
+        )
+        let reexported = APIService.mapperBlockObject(from: try XCTUnwrap(draft.blocks.first))
+        let wireExercises = try XCTUnwrap(reexported["exercises"] as? [[String: Any]])
+
+        XCTAssertEqual(wireExercises[0]["calories"] as? Int, 15)
+        XCTAssertEqual(wireExercises[0]["sets"] as? Int, 3)
+        XCTAssertEqual(wireExercises[1]["goal"] as? [String: String], ["kind": "open"])
+        XCTAssertEqual(wireExercises[1]["sets"] as? Int, 2)
+    }
+
     func testWorkoutSaveRequestPreservesPositiveLoadWithoutUnit() {
         let workout = Workout(
             name: "Load Day",

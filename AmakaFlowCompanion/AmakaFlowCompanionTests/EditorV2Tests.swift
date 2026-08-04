@@ -542,7 +542,7 @@ final class EditorV2Tests: XCTestCase {
         let session = EditorV2Session(
             title: "Conditioning",
             exercises: [
-                EditorV2Exercise(name: "SkiErg", calories: 15),
+                EditorV2Exercise(name: "SkiErg", sets: 3, calories: 15),
                 EditorV2Exercise(name: "Assault Bike", sets: 3, openGoal: true)
             ]
         )
@@ -574,6 +574,7 @@ final class EditorV2Tests: XCTestCase {
         let wireExercises = try XCTUnwrap(mapped["exercises"] as? [[String: Any]])
 
         XCTAssertEqual(wireExercises[0]["calories"] as? Int, 15)
+        XCTAssertEqual(wireExercises[0]["sets"] as? Int, 3)
         XCTAssertNil(wireExercises[0]["notes"])
         XCTAssertEqual(wireExercises[1]["goal"] as? [String: String], ["kind": "open"])
         XCTAssertEqual(wireExercises[1]["sets"] as? Int, 3)
