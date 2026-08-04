@@ -44,6 +44,9 @@ final class LibraryViewModel: ObservableObject {
     private(set) var workoutsByID: [String: Workout] = [:]
 
     private let apiService: APIServiceProviding
+    /// AMA-2376: local-first collections/pins state; pruned to known workout IDs
+    /// after every load and workout delete so stale memberships never linger.
+    let collectionsStore: LibraryCollectionsStore
     private var allItems: [LibraryItem] = []
     private var allWorkouts: [Workout] = []
     /// Serializes delete so a second tap cannot race the optimistic restore path.
@@ -53,8 +56,9 @@ final class LibraryViewModel: ObservableObject {
     /// Bumps on each load(); stale completions ignore cancelled superseded requests.
     private var loadGeneration = 0
 
-    init(apiService: APIServiceProviding? = nil) {
+    init(apiService: APIServiceProviding? = nil, collectionsStore: LibraryCollectionsStore? = nil) {
         self.apiService = apiService ?? AppDependencies.current.apiService
+        self.collectionsStore = collectionsStore ?? LibraryCollectionsStore()
     }
 
     /// Toast title for the current recoverable error (load vs delete).
@@ -174,6 +178,9 @@ final class LibraryViewModel: ObservableObject {
             allItems = response.items ?? []
             allWorkouts = WorkoutLibraryDetailStore.enrichCollection(workouts)
             workoutsByID = Dictionary(uniqueKeysWithValues: allWorkouts.map { ($0.id, $0) })
+            // AMA-2376: drop collection memberships/pins for workouts no longer known
+            // to Library (deleted elsewhere, e.g. another device), then refresh the store.
+            try? collectionsStore.pruneOrphans(knownWorkoutIds: Set(allWorkouts.map(\.id)))
             applyFilters()
         } catch {
             guard !isStale() else {
@@ -260,6 +267,9 @@ final class LibraryViewModel: ObservableObject {
                 try await apiService.deleteKnowledgeCard(id: item.id)
             case .workout(let workout):
                 try await apiService.deleteWorkout(id: workout.id)
+                // AMA-2376: allWorkouts already reflects the optimistic removal above,
+                // so remaining IDs exclude the just-deleted workout.
+                try? collectionsStore.pruneOrphans(knownWorkoutIds: Set(allWorkouts.map(\.id)))
             }
 
             let elapsedMs = Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1000)

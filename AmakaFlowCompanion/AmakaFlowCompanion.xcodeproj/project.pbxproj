@@ -444,6 +444,8 @@
 		AMA2376CPRESBLD /* CollectionPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376CPRESREF /* CollectionPresentation.swift */; };
 		AMA2376LASTBLD /* WorkoutLastDonePresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376LASTREF /* WorkoutLastDonePresentation.swift */; };
 		AMA2376CPTESTBLD /* CollectionPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376CPTESTREF /* CollectionPresentationTests.swift */; };
+		AMA2376STORFBLD /* LibraryCollectionsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376STORFREF /* LibraryCollectionsStore.swift */; };
+		AMA2376STORTBLD /* LibraryCollectionsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376STORTREF /* LibraryCollectionsStoreTests.swift */; };
 		AMA1828CHAT000B /* APIService+Chat.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828CHAT000A /* APIService+Chat.swift */; };
 		AMA1828COACH00B /* APIService+Coach.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828COACH00A /* APIService+Coach.swift */; };
 		AMA1828DEVIC00B /* APIService+Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1828DEVIC00A /* APIService+Device.swift */; };
@@ -1096,6 +1098,8 @@
 		AMA2376CPRESREF /* CollectionPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CollectionPresentation.swift; path = ../AmakaFlow/Models/CollectionPresentation.swift; sourceTree = SOURCE_ROOT; };
 		AMA2376LASTREF /* WorkoutLastDonePresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutLastDonePresentation.swift; path = ../AmakaFlow/Models/WorkoutLastDonePresentation.swift; sourceTree = SOURCE_ROOT; };
 		AMA2376CPTESTREF /* CollectionPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CollectionPresentationTests.swift; path = AmakaFlowCompanionTests/CollectionPresentationTests.swift; sourceTree = "<group>"; };
+		AMA2376STORFREF /* LibraryCollectionsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryCollectionsStore.swift; path = ../AmakaFlow/ViewModels/LibraryCollectionsStore.swift; sourceTree = SOURCE_ROOT; };
+		AMA2376STORTREF /* LibraryCollectionsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryCollectionsStoreTests.swift; path = AmakaFlowCompanionTests/LibraryCollectionsStoreTests.swift; sourceTree = "<group>"; };
 		AMA1828CHAT000A /* APIService+Chat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+Chat.swift"; path = "../AmakaFlow/Services/APIService+Chat.swift"; sourceTree = SOURCE_ROOT; };
 		AMA1828COACH00A /* APIService+Coach.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+Coach.swift"; path = "../AmakaFlow/Services/APIService+Coach.swift"; sourceTree = SOURCE_ROOT; };
 		AMA1828DEVIC00A /* APIService+Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+Device.swift"; path = "../AmakaFlow/Services/APIService+Device.swift"; sourceTree = SOURCE_ROOT; };
@@ -1829,6 +1833,7 @@
 				AMA1996DEVVM00000000A /* DevicesViewModel.swift */,
 				AMA2054RDVM00000000A /* ReadinessDetailViewModel.swift */,
 				AMA2004LIBVM0000000A /* LibraryViewModel.swift */,
+				AMA2376STORFREF /* LibraryCollectionsStore.swift */,
 				AMA2005LIBDVM000000A /* LibraryDetailViewModel.swift */,
 				AMA2027MSGVM0000000A /* MessagingViewModel.swift */,
 				AMA2028WDVM00000000A /* WatchDeliveryViewModel.swift */,
@@ -1955,6 +1960,7 @@
 				AMA2375OYWTREF /* OnYourWatchesViewModelTests.swift */,
 				AMA2376TESTREF /* WorkoutCollectionsRepositoryTests.swift */,
 				AMA2376CPTESTREF /* CollectionPresentationTests.swift */,
+				AMA2376STORTREF /* LibraryCollectionsStoreTests.swift */,
 				AMA2289DIARYTSTREF /* TodayDiaryTests.swift */,
 				AMA2290BFTESTREF /* StrengthBackfillTests.swift */,
 				AK00TST010A /* MockURLProtocol.swift */,
@@ -2490,6 +2496,7 @@
 				AMA1996DEVVM00000000B /* DevicesViewModel.swift in Sources */,
 				AMA2054RDVM00000000B /* ReadinessDetailViewModel.swift in Sources */,
 				AMA2004LIBVM0000000B /* LibraryViewModel.swift in Sources */,
+				AMA2376STORFBLD /* LibraryCollectionsStore.swift in Sources */,
 				AMA2005LIBDVM000000B /* LibraryDetailViewModel.swift in Sources */,
 				AMA2027MSGVM0000000B /* MessagingViewModel.swift in Sources */,
 				AMA2028WDVM00000000B /* WatchDeliveryViewModel.swift in Sources */,
@@ -2843,6 +2850,7 @@
 				AMA2375OYWTBLD /* OnYourWatchesViewModelTests.swift in Sources */,
 				AMA2376TESTBLD /* WorkoutCollectionsRepositoryTests.swift in Sources */,
 				AMA2376CPTESTBLD /* CollectionPresentationTests.swift in Sources */,
+				AMA2376STORTBLD /* LibraryCollectionsStoreTests.swift in Sources */,
 				AMA2289DIARYTSTBLD /* TodayDiaryTests.swift in Sources */,
 				AMA2290BFTESTBLD /* StrengthBackfillTests.swift in Sources */,
 				AK00TST010B /* MockURLProtocol.swift in Sources */,

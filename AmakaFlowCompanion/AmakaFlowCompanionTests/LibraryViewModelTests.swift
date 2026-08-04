@@ -304,6 +304,47 @@ final class LibraryViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.entries.isEmpty)
     }
 
+    // MARK: - AMA-2376 prune on load/delete
+
+    func testLoadPrunesOrphanCollectionMembersToKnownWorkouts() async throws {
+        let collectionsDB = try AppDatabase.makeTestDatabase()
+        let collectionsRepo = WorkoutCollectionsRepository(database: collectionsDB)
+        let collectionsStore = LibraryCollectionsStore(repo: collectionsRepo)
+        let collection = try collectionsRepo.createCollection(name: "Hyrox Prep", note: nil)
+        try collectionsRepo.addMember(collectionId: collection.id, workoutId: "keep")
+        try collectionsRepo.addMember(collectionId: collection.id, workoutId: "gone")
+        viewModel = LibraryViewModel(apiService: api, collectionsStore: collectionsStore)
+
+        api.listLibraryItemsResult = .success(Components.Schemas.LibraryItemList(items: [], total: 0))
+        api.fetchWorkoutsResult = .success([makeWorkout(id: "keep", name: "Keep")])
+
+        await viewModel.load()
+
+        XCTAssertEqual(try collectionsRepo.memberWorkoutIds(collectionId: collection.id), ["keep"])
+        XCTAssertEqual(try collectionsRepo.uncategorizedWorkoutIds(from: ["keep"]), [])
+    }
+
+    func testDeleteWorkoutPrunesCollectionMembershipWithRemainingIDs() async throws {
+        let collectionsDB = try AppDatabase.makeTestDatabase()
+        let collectionsRepo = WorkoutCollectionsRepository(database: collectionsDB)
+        let collectionsStore = LibraryCollectionsStore(repo: collectionsRepo)
+        let collection = try collectionsRepo.createCollection(name: "Hyrox Prep", note: nil)
+        try collectionsRepo.addMember(collectionId: collection.id, workoutId: "keep")
+        try collectionsRepo.addMember(collectionId: collection.id, workoutId: "delete-me")
+        viewModel = LibraryViewModel(apiService: api, collectionsStore: collectionsStore)
+
+        let keep = makeWorkout(id: "keep", name: "Keep")
+        let deleteMe = makeWorkout(id: "delete-me", name: "Delete me")
+        api.listLibraryItemsResult = .success(Components.Schemas.LibraryItemList(items: [], total: 0))
+        api.fetchWorkoutsResult = .success([keep, deleteMe])
+        await viewModel.load()
+
+        let deleted = await viewModel.deleteEntry(.workout(deleteMe))
+
+        XCTAssertTrue(deleted)
+        XCTAssertEqual(try collectionsRepo.memberWorkoutIds(collectionId: collection.id), ["keep"])
+    }
+
     func testDeleteFailureRestoresEntryAndSurfacesToast() async {
         let knowledge = item(id: "article-1", kind: .article, title: "Zone two")
         api.listLibraryItemsResult = .success(Components.Schemas.LibraryItemList(items: [knowledge], total: 1))
