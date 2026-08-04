@@ -100,6 +100,10 @@ struct CollectionDetailView: View {
             .presentationBackground(DailyDriver.screenBackground)
         }
         .accessibilityIdentifier("af_collection_detail")
+        // AMA-2376: without this, the global floating tab bar (ContentView)
+        // renders on top of organizeBar / addWorkoutsFooter, which are also
+        // bottom-pinned — same pattern as UnifiedWorkoutDetailView.
+        .ddSuppressFloatingChrome()
     }
 }
 
