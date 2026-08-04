@@ -126,7 +126,9 @@ struct EditorV2ExerciseCard: View {
     }
 
     private var warmupSetsSummary: String {
-        exercise.warmupSets.map { "\($0.reps)" }.joined(separator: " · ") + " REPS"
+        exercise.warmupSets.map { row in
+            row.reps.map(String.init) ?? row.kind?.rawValue ?? "—"
+        }.joined(separator: " · ") + " REPS"
     }
 }
 

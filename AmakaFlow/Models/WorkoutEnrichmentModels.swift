@@ -73,31 +73,67 @@ struct EnrichmentTombstone: Equatable, Codable, Sendable {
     }
 }
 
+/// Soft-goal kind for a session warm-up / cooldown activity (AMA-2378).
+/// `open` → lap at delivery; the other three carry a `value` (sec / meters / kcal).
+enum ActivityGoalKind: String, Codable, CaseIterable, Equatable, Sendable {
+    case time, distance, cals, open
+}
+
+/// Declared intent for a soft activity — sibling of `duration_sec`, richer than
+/// the time-only shape it grew from. Mirrors backend `ActivityGoal` exactly:
+/// `open` must carry no `value`; every other kind requires one.
+struct ActivityGoal: Equatable, Codable, Sendable {
+    var kind: ActivityGoalKind
+    private(set) var value: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case kind, value
+    }
+
+    init(kind: ActivityGoalKind, value: Int?) throws {
+        self.kind = kind
+        self.value = try WorkoutEnrichmentMutations.validatedActivityGoal(kind: kind, value: value)
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let kind = try container.decode(ActivityGoalKind.self, forKey: .kind)
+        let value = try container.decodeIfPresent(Int.self, forKey: .value)
+        try self.init(kind: kind, value: value)
+    }
+}
+
 /// One free-form row inside a session warm-up / cooldown soft section.
 struct EnrichmentActivity: Equatable, Codable, Sendable {
     var name: String
     /// `nil` → open intent (lap at delivery).
     var durationSec: Int?
     var structureSource: StructureSource
+    /// AMA-2378 — declared soft goal (time/distance/cals/open); `duration_sec`
+    /// stays the timed-goal projection callers already read.
+    var goal: ActivityGoal?
 
     enum CodingKeys: String, CodingKey {
         case name
         case durationSec = "duration_sec"
         case structureSource = "structure_source"
+        case goal
     }
 
     init(
         name: String,
         durationSec: Int? = nil,
-        structureSource: StructureSource = .enrichmentDefault
+        structureSource: StructureSource = .enrichmentDefault,
+        goal: ActivityGoal? = nil
     ) {
         self.name = name
         self.durationSec = durationSec
         self.structureSource = structureSource
+        self.goal = goal
     }
 
     init(pref: EnrichmentActivityPref) {
-        self.init(name: pref.name, durationSec: pref.durationSec)
+        self.init(name: pref.name, durationSec: pref.durationSec, goal: pref.goal)
     }
 
     init(from decoder: Decoder) throws {
@@ -106,27 +142,73 @@ struct EnrichmentActivity: Equatable, Codable, Sendable {
         durationSec = try container.decodeIfPresent(Int.self, forKey: .durationSec)
         structureSource = try container.decodeIfPresent(StructureSource.self, forKey: .structureSource)
             ?? .enrichmentDefault
+        goal = try container.decodeIfPresent(ActivityGoal.self, forKey: .goal)
+    }
+}
+
+/// Ramp-set kind for a declared per-exercise warm-up set (AMA-2378).
+/// `open` → lap at delivery; the other three carry a `value` (reps / sec / kcal).
+enum WarmupSetKind: String, Codable, CaseIterable, Equatable, Sendable {
+    case reps, time, cals, open
+}
+
+/// One prescribed set inside a `PerExerciseRamp` (backend `RampSet`).
+/// `open` must carry no `value`; every other kind requires one.
+struct RampSet: Equatable, Codable, Sendable {
+    var kind: WarmupSetKind
+    private(set) var value: Int?
+    var intensityNote: String?
+
+    enum CodingKeys: String, CodingKey {
+        case kind, value
+        case intensityNote = "intensity_note"
+    }
+
+    init(kind: WarmupSetKind, value: Int?, intensityNote: String? = nil) throws {
+        self.kind = kind
+        self.value = try WorkoutEnrichmentMutations.validatedRampSet(kind: kind, value: value)
+        self.intensityNote = intensityNote
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let kind = try container.decode(WarmupSetKind.self, forKey: .kind)
+        let value = try container.decodeIfPresent(Int.self, forKey: .value)
+        let intensityNote = try container.decodeIfPresent(String.self, forKey: .intensityNote)
+        try self.init(kind: kind, value: value, intensityNote: intensityNote)
     }
 }
 
 /// Declared sibling of `sets: Int` — warm-up sets are rows, `sets` shape is unchanged.
+/// AMA-2378: rows may declare `kind`/`value`/`intensity_note` instead of `reps`
+/// (per-exercise ramps), so `reps` is optional — a row must carry `reps` or `kind`.
 struct WarmupSetRow: Equatable, Codable, Sendable {
-    var reps: Int
+    var reps: Int?
     var weight: Double?
+    var kind: WarmupSetKind?
+    var value: Int?
+    var intensityNote: String?
     var structureSource: StructureSource
 
     enum CodingKeys: String, CodingKey {
-        case reps, weight
+        case reps, weight, kind, value
+        case intensityNote = "intensity_note"
         case structureSource = "structure_source"
     }
 
     init(
-        reps: Int,
+        reps: Int? = nil,
         weight: Double? = nil,
+        kind: WarmupSetKind? = nil,
+        value: Int? = nil,
+        intensityNote: String? = nil,
         structureSource: StructureSource = .enrichmentDefault
     ) {
         self.reps = reps
         self.weight = weight
+        self.kind = kind
+        self.value = value
+        self.intensityNote = intensityNote
         self.structureSource = structureSource
     }
 
@@ -136,23 +218,83 @@ struct WarmupSetRow: Equatable, Codable, Sendable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        reps = try container.decodeIfPresent(Int.self, forKey: .reps) ?? 1
+        let reps = try container.decodeIfPresent(Int.self, forKey: .reps)
+        let kind = try container.decodeIfPresent(WarmupSetKind.self, forKey: .kind)
+        guard reps != nil || kind != nil else {
+            throw WorkoutPreferencesValidationError.warmupSetRowRequiresRepsOrKind
+        }
+        self.reps = reps
+        self.kind = kind
         weight = try container.decodeIfPresent(Double.self, forKey: .weight)
+        value = try container.decodeIfPresent(Int.self, forKey: .value)
+        intensityNote = try container.decodeIfPresent(String.self, forKey: .intensityNote)
         structureSource = try container.decodeIfPresent(StructureSource.self, forKey: .structureSource)
             ?? .enrichmentDefault
     }
 
-    /// Lenient list parse from ingest JSON (`warmup_sets`).
+    /// Lenient list parse from ingest JSON (`warmup_sets`) — rows need `reps` or `kind`.
     static func parseList(_ raw: Any?) -> [WarmupSetRow]? {
         guard let items = raw as? [[String: Any]] else { return nil }
         let rows: [WarmupSetRow] = items.compactMap { item in
-            guard let reps = item["reps"] as? Int else { return nil }
             let weight = (item["weight"] as? Double) ?? (item["weight"] as? Int).map(Double.init)
             let source = (item["structure_source"] as? String)
                 .flatMap(StructureSource.init(rawValue:)) ?? .enrichmentDefault
-            return WarmupSetRow(reps: reps, weight: weight, structureSource: source)
+            let kind = (item["kind"] as? String).flatMap(WarmupSetKind.init(rawValue:))
+            let value = item["value"] as? Int
+            let intensityNote = item["intensity_note"] as? String
+            guard let reps = item["reps"] as? Int else {
+                guard let kind else { return nil }
+                return WarmupSetRow(
+                    kind: kind,
+                    value: value,
+                    intensityNote: intensityNote,
+                    structureSource: source
+                )
+            }
+            return WarmupSetRow(
+                reps: reps,
+                weight: weight,
+                kind: kind,
+                value: value,
+                intensityNote: intensityNote,
+                structureSource: source
+            )
         }
         return rows.isEmpty ? nil : rows
+    }
+}
+
+/// Declared per-exercise ramp override (backend `PerExerciseRamp`). Matched by
+/// `exercise_ref` (id or normalized name) at enrich time — server-side, not here.
+/// `id` is UI-only (stable ForEach identity) and never encoded.
+struct PerExerciseRamp: Identifiable, Equatable, Codable, Sendable {
+    var id: UUID
+    var exerciseRef: String
+    var enabled: Bool
+    var sets: [RampSet]
+
+    enum CodingKeys: String, CodingKey {
+        case exerciseRef = "exercise_ref"
+        case enabled, sets
+    }
+
+    init(exerciseRef: String, enabled: Bool = true, sets: [RampSet] = [], id: UUID = UUID()) {
+        self.id = id
+        self.exerciseRef = exerciseRef
+        self.enabled = enabled
+        self.sets = sets
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = UUID()
+        exerciseRef = try container.decode(String.self, forKey: .exerciseRef)
+        enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
+        sets = try container.decodeIfPresent([RampSet].self, forKey: .sets) ?? []
+    }
+
+    static func == (lhs: PerExerciseRamp, rhs: PerExerciseRamp) -> Bool {
+        lhs.exerciseRef == rhs.exerciseRef && lhs.enabled == rhs.enabled && lhs.sets == rhs.sets
     }
 }
 
@@ -165,16 +307,20 @@ struct EnrichmentActivityPref: Identifiable, Equatable, Codable, Sendable {
     var id: UUID
     var name: String
     var durationSec: Int?
+    /// AMA-2378 — declared soft goal override; absent → `duration_sec`-only v1 shape.
+    var goal: ActivityGoal?
 
     enum CodingKeys: String, CodingKey {
         case name
         case durationSec = "duration_sec"
+        case goal
     }
 
-    init(name: String, durationSec: Int? = nil, id: UUID = UUID()) {
+    init(name: String, durationSec: Int? = nil, goal: ActivityGoal? = nil, id: UUID = UUID()) {
         self.id = id
         self.name = name
         self.durationSec = durationSec
+        self.goal = goal
     }
 
     init(from decoder: Decoder) throws {
@@ -182,10 +328,11 @@ struct EnrichmentActivityPref: Identifiable, Equatable, Codable, Sendable {
         id = UUID()
         name = try container.decode(String.self, forKey: .name)
         durationSec = try container.decodeIfPresent(Int.self, forKey: .durationSec)
+        goal = try container.decodeIfPresent(ActivityGoal.self, forKey: .goal)
     }
 
     static func == (lhs: EnrichmentActivityPref, rhs: EnrichmentActivityPref) -> Bool {
-        lhs.name == rhs.name && lhs.durationSec == rhs.durationSec
+        lhs.name == rhs.name && lhs.durationSec == rhs.durationSec && lhs.goal == rhs.goal
     }
 }
 
@@ -315,21 +462,27 @@ struct ExerciseWarmupSetsPrefs: Equatable, Codable, Sendable {
     var defaultSets: [WarmupSetDefault]
     /// Normalized name keys — matching runs server-side at enrich time.
     var excludeExerciseKeys: [String]
+    /// AMA-2378 — per-exercise ramp overrides (`exercise_ref` → sets). `nil`/empty
+    /// keeps the v1 global `default_sets` + `exclude_exercise_keys` path unchanged.
+    var perExercise: [PerExerciseRamp]?
 
     enum CodingKeys: String, CodingKey {
         case enabled
         case defaultSets = "default_sets"
         case excludeExerciseKeys = "exclude_exercise_keys"
+        case perExercise = "per_exercise"
     }
 
     init(
         enabled: Bool = true,
         defaultSets: [WarmupSetDefault] = [],
-        excludeExerciseKeys: [String] = []
+        excludeExerciseKeys: [String] = [],
+        perExercise: [PerExerciseRamp]? = nil
     ) {
         self.enabled = enabled
         self.defaultSets = defaultSets
         self.excludeExerciseKeys = excludeExerciseKeys
+        self.perExercise = perExercise
     }
 
     init(from decoder: Decoder) throws {
@@ -337,6 +490,7 @@ struct ExerciseWarmupSetsPrefs: Equatable, Codable, Sendable {
         enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
         defaultSets = try container.decodeIfPresent([WarmupSetDefault].self, forKey: .defaultSets) ?? []
         excludeExerciseKeys = try container.decodeIfPresent([String].self, forKey: .excludeExerciseKeys) ?? []
+        perExercise = try container.decodeIfPresent([PerExerciseRamp].self, forKey: .perExercise)
     }
 
     static let defaults = ExerciseWarmupSetsPrefs(
@@ -405,4 +559,14 @@ struct WorkoutPreferences: Equatable, Codable, Sendable {
 enum WorkoutPreferencesValidationError: Error, Equatable {
     /// `rest_open == true` requires `rest_sec` to be nil (spec §2 / backend 400).
     case restOpenWithRestSec
+    /// `ActivityGoal.kind == .open` must not carry a `value` (AMA-2378 backend 422).
+    case activityGoalOpenWithValue
+    /// `ActivityGoal.kind != .open` requires a `value` (AMA-2378 backend 422).
+    case activityGoalRequiresValue
+    /// `RampSet.kind == .open` must not carry a `value` (AMA-2378 backend 422).
+    case rampSetOpenWithValue
+    /// `RampSet.kind != .open` requires a `value` (AMA-2378 backend 422).
+    case rampSetRequiresValue
+    /// `WarmupSetRow` (backend `DeclaredWarmupSet`) requires `reps` or `kind`.
+    case warmupSetRowRequiresRepsOrKind
 }

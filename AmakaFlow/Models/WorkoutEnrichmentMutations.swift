@@ -221,4 +221,34 @@ enum WorkoutEnrichmentMutations {
         }
         return (restSec, restOpen)
     }
+
+    /// AMA-2378 — `ActivityGoal.kind == .open` must carry no `value`; every other
+    /// kind requires one (mirrors backend `ActivityGoal.value_rules`).
+    static func validatedActivityGoal(kind: ActivityGoalKind, value: Int?) throws -> Int? {
+        if kind == .open {
+            guard value == nil else {
+                throw WorkoutPreferencesValidationError.activityGoalOpenWithValue
+            }
+            return nil
+        }
+        guard value != nil else {
+            throw WorkoutPreferencesValidationError.activityGoalRequiresValue
+        }
+        return value
+    }
+
+    /// AMA-2378 — `RampSet.kind == .open` must carry no `value`; every other kind
+    /// requires one (mirrors backend `RampSet.value_rules`).
+    static func validatedRampSet(kind: WarmupSetKind, value: Int?) throws -> Int? {
+        if kind == .open {
+            guard value == nil else {
+                throw WorkoutPreferencesValidationError.rampSetOpenWithValue
+            }
+            return nil
+        }
+        guard value != nil else {
+            throw WorkoutPreferencesValidationError.rampSetRequiresValue
+        }
+        return value
+    }
 }

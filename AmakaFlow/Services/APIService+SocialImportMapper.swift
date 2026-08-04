@@ -213,13 +213,25 @@ extension APIService {
     }
 
     /// Declared `warmup_sets` row — sibling of `sets`, never an underscore key (AMA-2336).
+    /// AMA-2378: rows carry `reps` or `kind`/`value`/`intensity_note` (per-exercise ramps).
     static func warmupSetObject(from row: WarmupSetRow) -> [String: Any] {
         var object: [String: Any] = [
-            "reps": row.reps,
             "structure_source": row.structureSource.rawValue
         ]
+        if let reps = row.reps {
+            object["reps"] = reps
+        }
         if let weight = row.weight {
             object["weight"] = weight
+        }
+        if let kind = row.kind {
+            object["kind"] = kind.rawValue
+        }
+        if let value = row.value {
+            object["value"] = value
+        }
+        if let intensityNote = row.intensityNote {
+            object["intensity_note"] = intensityNote
         }
         return object
     }
