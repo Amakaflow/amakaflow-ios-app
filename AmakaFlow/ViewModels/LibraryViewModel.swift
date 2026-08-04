@@ -64,9 +64,12 @@ final class LibraryViewModel: ObservableObject {
         // AMA-2376: LibraryView reads `collectionsStore` off this view model rather than
         // observing it directly, so its @Published changes (pin/unpin, membership edits)
         // never trigger a re-render unless forwarded through our own objectWillChange.
+        // Capture the publisher (not `[weak self]`) so the relay stays live for the
+        // VM lifetime — weak self inside init-created sinks can miss early publishes.
+        let viewModelWillChange = objectWillChange
         resolvedCollectionsStore.objectWillChange
-            .sink { [weak self] _ in
-                self?.objectWillChange.send()
+            .sink { _ in
+                viewModelWillChange.send()
             }
             .store(in: &cancellables)
     }
