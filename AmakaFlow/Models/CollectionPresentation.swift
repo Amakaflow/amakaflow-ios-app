@@ -23,4 +23,25 @@ enum CollectionPresentation {
         }
         return "~\(minutes)M"
     }
+
+    /// Collection/Uncategorized detail meta line, e.g.
+    /// `6 WORKOUTS · ~4H 10M · RACE DAY - OCT 12` (note appended when present).
+    static func detailMeta(workoutCount: Int, totalSeconds: Int, note: String?) -> String {
+        let unit = workoutCount == 1 ? "WORKOUT" : "WORKOUTS"
+        var line = "\(workoutCount) \(unit) · \(formattedTotalDuration(seconds: totalSeconds))"
+        if let trimmedNote = note?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmedNote.isEmpty {
+            line += " · \(trimmedNote)"
+        }
+        return line
+    }
+
+    /// Organize-mode header, e.g. `2 SELECTED · DESELECT ALL`.
+    static func organizeHeader(selectedCount: Int) -> String {
+        "\(selectedCount) SELECTED · DESELECT ALL"
+    }
+
+    /// Exact toast copy for a membership removal in Organize mode (Global Constraints).
+    static func removedFromCollectionToast(collectionName: String) -> String {
+        "removed from \(collectionName) — still in Library."
+    }
 }

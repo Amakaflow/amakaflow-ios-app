@@ -28,6 +28,52 @@ final class CollectionPresentationTests: XCTestCase {
         XCTAssertEqual(CollectionPresentation.uncategorizedID, "uncategorized")
     }
 
+    // MARK: - Detail meta (Task 6: Collection detail)
+
+    func testDetailMetaPluralWithoutNote() {
+        XCTAssertEqual(
+            CollectionPresentation.detailMeta(workoutCount: 6, totalSeconds: 15_000, note: nil),
+            "6 WORKOUTS · ~4H 10M"
+        )
+    }
+
+    func testDetailMetaSingularWorkout() {
+        XCTAssertEqual(
+            CollectionPresentation.detailMeta(workoutCount: 1, totalSeconds: 600, note: nil),
+            "1 WORKOUT · ~10M"
+        )
+    }
+
+    func testDetailMetaAppendsTrimmedNote() {
+        XCTAssertEqual(
+            CollectionPresentation.detailMeta(workoutCount: 6, totalSeconds: 15_000, note: "  Race day - Oct 12  "),
+            "6 WORKOUTS · ~4H 10M · Race day - Oct 12"
+        )
+    }
+
+    func testDetailMetaIgnoresBlankNote() {
+        XCTAssertEqual(
+            CollectionPresentation.detailMeta(workoutCount: 0, totalSeconds: 0, note: "   "),
+            "0 WORKOUTS · ~0H"
+        )
+    }
+
+    // MARK: - Organize mode header
+
+    func testOrganizeHeaderFormatsSelectedCount() {
+        XCTAssertEqual(CollectionPresentation.organizeHeader(selectedCount: 2), "2 SELECTED · DESELECT ALL")
+        XCTAssertEqual(CollectionPresentation.organizeHeader(selectedCount: 0), "0 SELECTED · DESELECT ALL")
+    }
+
+    // MARK: - Remove toast copy (exact per Global Constraints)
+
+    func testRemovedFromCollectionToastExactCopy() {
+        XCTAssertEqual(
+            CollectionPresentation.removedFromCollectionToast(collectionName: "Hyrox Prep"),
+            "removed from Hyrox Prep — still in Library."
+        )
+    }
+
     // MARK: - LibraryDestination.collection
 
     func testCollectionDestinationID() {

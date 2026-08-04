@@ -91,6 +91,27 @@ final class LibraryCollectionsStoreTests: XCTestCase {
         XCTAssertEqual(grid.count, 1)
     }
 
+    /// Task 6: `uncategorizedWorkoutIds` must stay available even when the set is
+    /// empty — unlike `gridModels`, which hides the empty Uncategorized card.
+    func testUncategorizedWorkoutIdsReflectsEmptySet() throws {
+        let collection = try store.createCollection(name: "Hyrox Prep", note: nil)
+        try store.addMember(collectionId: collection.id, workoutId: "w1")
+
+        let workoutsByID: [String: Workout] = ["w1": makeWorkout(id: "w1", duration: 100)]
+        XCTAssertEqual(store.uncategorizedWorkoutIds(workoutsByID: workoutsByID), [])
+    }
+
+    func testUncategorizedWorkoutIdsReturnsUnfiledSet() throws {
+        let collection = try store.createCollection(name: "Hyrox Prep", note: nil)
+        try store.addMember(collectionId: collection.id, workoutId: "w1")
+
+        let workoutsByID: [String: Workout] = [
+            "w1": makeWorkout(id: "w1", duration: 100),
+            "w2": makeWorkout(id: "w2", duration: 200)
+        ]
+        XCTAssertEqual(store.uncategorizedWorkoutIds(workoutsByID: workoutsByID), ["w2"])
+    }
+
     // MARK: - Helpers
 
     private func makeWorkout(id: String, duration: Int) -> Workout {

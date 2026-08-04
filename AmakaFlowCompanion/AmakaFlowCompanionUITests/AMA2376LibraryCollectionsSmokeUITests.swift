@@ -84,10 +84,9 @@ final class AMA2376LibraryCollectionsSmokeUITests: XCTestCase {
 
         app.buttons["Create"].tap()
 
-        // Task 6 owns the real detail screen; Task 5 only needs the placeholder to appear,
-        // proving navigation fired after `collectionsStore.createCollection`.
-        let placeholder = element("af_collection_detail_placeholder")
-        XCTAssertTrue(placeholder.waitForExistence(timeout: 10), "Creating a collection should navigate to its (placeholder) detail")
+        // AMA-2376 Task 6: creating a collection navigates to its real detail screen.
+        let detail = element("af_collection_detail")
+        XCTAssertTrue(detail.waitForExistence(timeout: 10), "Creating a collection should navigate to its detail screen")
 
         attachScreenshot(named: "library-new-collection-navigated")
     }

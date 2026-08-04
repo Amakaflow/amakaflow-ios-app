@@ -85,6 +85,13 @@ final class LibraryCollectionsStore: ObservableObject {
         try repo.memberWorkoutIds(collectionId: collectionId)
     }
 
+    /// Uncategorized member ids for the given known workouts — always reflects the
+    /// current unfiled set, even when empty (unlike `gridModels`, which hides the
+    /// empty Uncategorized card). Used by `CollectionDetailView` for the derived folder.
+    func uncategorizedWorkoutIds(workoutsByID: [String: Workout]) -> [String] {
+        (try? repo.uncategorizedWorkoutIds(from: Set(workoutsByID.keys))) ?? []
+    }
+
     /// Grid cards for the Library collections screen: one per named collection,
     /// plus a derived Uncategorized folder when any known workout has no membership.
     /// Errors from the underlying repo are swallowed — local-first reads should

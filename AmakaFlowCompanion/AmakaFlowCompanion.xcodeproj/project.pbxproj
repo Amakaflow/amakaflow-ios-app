@@ -343,6 +343,10 @@
 		AMA2004LIBVIEW00000B /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2004LIBVIEW00000A /* LibraryView.swift */; };
 		AMA2376PINSECBLD /* LibraryPinnedSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376PINSECREF /* LibraryPinnedSection.swift */; };
 		AMA2376COLGRIDBLD /* LibraryCollectionsGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376COLGRIDREF /* LibraryCollectionsGrid.swift */; };
+		AMA2376COLDETBLD /* CollectionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376COLDETREF /* CollectionDetailView.swift */; };
+		AMA2376MOVESHTBLD /* MoveToCollectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376MOVESHTREF /* MoveToCollectionSheet.swift */; };
+		AMA2376WOPICKBLD /* LibraryWorkoutPickView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376WOPICKREF /* LibraryWorkoutPickView.swift */; };
+		AMA2376MEMROWBLD /* CollectionMemberRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376MEMROWREF /* CollectionMemberRow.swift */; };
 		AMA2292TODAYVIEW0000B /* TodayDiaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2292TODAYVIEW0000A /* TodayDiaryView.swift */; };
 		AMA2292PROFILEHUB00B /* ProfileHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2292PROFILEHUB00A /* ProfileHubView.swift */; };
 		AMA2292DDTHEME0000B /* DailyDriverTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2292DDTHEME0000A /* DailyDriverTheme.swift */; };
@@ -995,6 +999,10 @@
 		AMA2004LIBVIEW00000A /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryView.swift; path = ../AmakaFlow/Views/LibraryView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2376PINSECREF /* LibraryPinnedSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryPinnedSection.swift; path = ../AmakaFlow/Views/Library/LibraryPinnedSection.swift; sourceTree = SOURCE_ROOT; };
 		AMA2376COLGRIDREF /* LibraryCollectionsGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryCollectionsGrid.swift; path = ../AmakaFlow/Views/Library/LibraryCollectionsGrid.swift; sourceTree = SOURCE_ROOT; };
+		AMA2376COLDETREF /* CollectionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CollectionDetailView.swift; path = ../AmakaFlow/Views/Library/CollectionDetailView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2376MOVESHTREF /* MoveToCollectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MoveToCollectionSheet.swift; path = ../AmakaFlow/Views/Library/MoveToCollectionSheet.swift; sourceTree = SOURCE_ROOT; };
+		AMA2376WOPICKREF /* LibraryWorkoutPickView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryWorkoutPickView.swift; path = ../AmakaFlow/Views/Library/LibraryWorkoutPickView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2376MEMROWREF /* CollectionMemberRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CollectionMemberRow.swift; path = ../AmakaFlow/Views/Library/CollectionMemberRow.swift; sourceTree = SOURCE_ROOT; };
 		AMA2292TODAYVIEW0000A /* TodayDiaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TodayDiaryView.swift; path = ../AmakaFlow/Views/TodayDiaryView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2292PROFILEHUB00A /* ProfileHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProfileHubView.swift; path = ../AmakaFlow/Views/ProfileHubView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2292DDTHEME0000A /* DailyDriverTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DailyDriverTheme.swift; path = ../AmakaFlow/DailyDriverTheme.swift; sourceTree = SOURCE_ROOT; };
@@ -1506,6 +1514,10 @@
 				AMA2004LIBVIEW00000A /* LibraryView.swift */,
 				AMA2376PINSECREF /* LibraryPinnedSection.swift */,
 				AMA2376COLGRIDREF /* LibraryCollectionsGrid.swift */,
+				AMA2376COLDETREF /* CollectionDetailView.swift */,
+				AMA2376MEMROWREF /* CollectionMemberRow.swift */,
+				AMA2376MOVESHTREF /* MoveToCollectionSheet.swift */,
+				AMA2376WOPICKREF /* LibraryWorkoutPickView.swift */,
 				AMA2292TODAYVIEW0000A /* TodayDiaryView.swift */,
 				AMA2292PROFILEHUB00A /* ProfileHubView.swift */,
 				AMA2292DDCREATE00A /* CreateWorkoutSheet.swift */,
@@ -2517,6 +2529,10 @@
 				AMA2004LIBVIEW00000B /* LibraryView.swift in Sources */,
 				AMA2376PINSECBLD /* LibraryPinnedSection.swift in Sources */,
 				AMA2376COLGRIDBLD /* LibraryCollectionsGrid.swift in Sources */,
+				AMA2376COLDETBLD /* CollectionDetailView.swift in Sources */,
+				AMA2376MEMROWBLD /* CollectionMemberRow.swift in Sources */,
+				AMA2376MOVESHTBLD /* MoveToCollectionSheet.swift in Sources */,
+				AMA2376WOPICKBLD /* LibraryWorkoutPickView.swift in Sources */,
 				AMA2292TODAYVIEW0000B /* TodayDiaryView.swift in Sources */,
 				AMA2292PROFILEHUB00B /* ProfileHubView.swift in Sources */,
 				AMA2292DDTHEME0000B /* DailyDriverTheme.swift in Sources */,
