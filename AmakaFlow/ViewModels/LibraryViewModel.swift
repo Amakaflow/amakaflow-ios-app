@@ -55,10 +55,20 @@ final class LibraryViewModel: ObservableObject {
     private var contentEpoch = 0
     /// Bumps on each load(); stale completions ignore cancelled superseded requests.
     private var loadGeneration = 0
+    private var cancellables = Set<AnyCancellable>()
 
     init(apiService: APIServiceProviding? = nil, collectionsStore: LibraryCollectionsStore? = nil) {
         self.apiService = apiService ?? AppDependencies.current.apiService
-        self.collectionsStore = collectionsStore ?? LibraryCollectionsStore()
+        let resolvedCollectionsStore = collectionsStore ?? LibraryCollectionsStore()
+        self.collectionsStore = resolvedCollectionsStore
+        // AMA-2376: LibraryView reads `collectionsStore` off this view model rather than
+        // observing it directly, so its @Published changes (pin/unpin, membership edits)
+        // never trigger a re-render unless forwarded through our own objectWillChange.
+        resolvedCollectionsStore.objectWillChange
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
+            .store(in: &cancellables)
     }
 
     /// Toast title for the current recoverable error (load vs delete).
@@ -180,7 +190,16 @@ final class LibraryViewModel: ObservableObject {
             workoutsByID = Dictionary(uniqueKeysWithValues: allWorkouts.map { ($0.id, $0) })
             // AMA-2376: drop collection memberships/pins for workouts no longer known
             // to Library (deleted elsewhere, e.g. another device), then refresh the store.
-            try? collectionsStore.pruneOrphans(knownWorkoutIds: Set(allWorkouts.map(\.id)))
+            // Guard against an empty known-IDs set: that can mean "no workouts fetched
+            // yet" (e.g. transient/partial response) rather than "truly zero workouts",
+            // and pruneOrphans([]) wipes every membership/pin. Only prune when we have
+            // a real known set; otherwise just refresh the store's cached state.
+            let knownWorkoutIDs = Set(allWorkouts.map(\.id))
+            if knownWorkoutIDs.isEmpty {
+                try? collectionsStore.reload()
+            } else {
+                try? collectionsStore.pruneOrphans(knownWorkoutIds: knownWorkoutIDs)
+            }
             applyFilters()
         } catch {
             guard !isStale() else {

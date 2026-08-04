@@ -23,17 +23,34 @@ struct CollectionGridItem: Identifiable, Equatable {
 final class LibraryCollectionsStore: ObservableObject {
     @Published private(set) var collections: [LocalWorkoutCollection] = []
     @Published private(set) var pinnedIDs: [String] = []
+    /// AMA-2376: member workout IDs per collection, refreshed on every `reload()`.
+    /// `gridModels` / `CollectionDetailView` read this instead of hitting SQLite
+    /// once per named collection on every SwiftUI render (N+1 read path).
+    @Published private(set) var membersByCollectionID: [String: [String]] = [:]
 
     private let repo: WorkoutCollectionsRepository
+    /// Memoizes `uncategorizedWorkoutIds(workoutsByID:)` for the last-seen known-ID
+    /// set so repeated renders with an unchanged workout set don't re-query SQLite.
+    /// Invalidated on every `reload()` since membership may have changed underneath.
+    private var uncategorizedCacheKey: Set<String>?
+    private var uncategorizedCacheValue: [String] = []
 
     init(repo: WorkoutCollectionsRepository = WorkoutCollectionsRepository()) {
         self.repo = repo
     }
 
-    /// Re-reads collections + pins from the repository.
+    /// Re-reads collections + pins from the repository, and re-populates the
+    /// per-collection member cache used by `gridModels` / `memberWorkoutIds`.
     func reload() throws {
         collections = try repo.listCollections()
         pinnedIDs = try repo.listPinnedWorkoutIds()
+        var membersMap: [String: [String]] = [:]
+        for collection in collections {
+            membersMap[collection.id] = try repo.memberWorkoutIds(collectionId: collection.id)
+        }
+        membersByCollectionID = membersMap
+        uncategorizedCacheKey = nil
+        uncategorizedCacheValue = []
     }
 
     @discardableResult
@@ -81,33 +98,45 @@ final class LibraryCollectionsStore: ObservableObject {
         return removed
     }
 
+    /// Reads from the `reload()`-populated cache — no SQLite hit on the common path.
+    /// Falls back to a direct repo read if called before any `reload()` has happened.
     func memberWorkoutIds(collectionId: String) throws -> [String] {
-        try repo.memberWorkoutIds(collectionId: collectionId)
+        if let cached = membersByCollectionID[collectionId] {
+            return cached
+        }
+        return try repo.memberWorkoutIds(collectionId: collectionId)
     }
 
     /// Real collections (never the derived Uncategorized bucket) currently containing
-    /// `workoutId` — drives detail chips (AMA-2376 Task 7). Errors degrade to empty
-    /// (no chips) rather than crash the detail screen.
+    /// `workoutId` — drives detail chips (AMA-2376 Task 7). Reads the same cache as
+    /// `memberWorkoutIds` rather than issuing its own query per call.
     func collections(containing workoutId: String) -> [LocalWorkoutCollection] {
-        let memberIDs = Set((try? repo.collectionIds(containing: workoutId)) ?? [])
-        guard !memberIDs.isEmpty else { return [] }
-        return collections.filter { memberIDs.contains($0.id) }
+        collections.filter { membersByCollectionID[$0.id]?.contains(workoutId) ?? false }
     }
 
     /// Uncategorized member ids for the given known workouts — always reflects the
     /// current unfiled set, even when empty (unlike `gridModels`, which hides the
     /// empty Uncategorized card). Used by `CollectionDetailView` for the derived folder.
+    /// Memoized against the last-seen known-ID set so repeated calls with an unchanged
+    /// `workoutsByID` (e.g. across SwiftUI re-renders) don't re-query SQLite.
     func uncategorizedWorkoutIds(workoutsByID: [String: Workout]) -> [String] {
-        (try? repo.uncategorizedWorkoutIds(from: Set(workoutsByID.keys))) ?? []
+        let knownIDs = Set(workoutsByID.keys)
+        if uncategorizedCacheKey == knownIDs {
+            return uncategorizedCacheValue
+        }
+        let result = (try? repo.uncategorizedWorkoutIds(from: knownIDs)) ?? []
+        uncategorizedCacheKey = knownIDs
+        uncategorizedCacheValue = result
+        return result
     }
 
     /// Grid cards for the Library collections screen: one per named collection,
     /// plus a derived Uncategorized folder when any known workout has no membership.
-    /// Errors from the underlying repo are swallowed — local-first reads should
-    /// degrade to an empty/partial grid rather than crash the Library tab.
+    /// Reads member IDs from the `reload()`-populated cache instead of hitting SQLite
+    /// once per collection on every SwiftUI render (N+1 read path).
     func gridModels(workoutsByID: [String: Workout]) -> [CollectionGridItem] {
         var items: [CollectionGridItem] = collections.compactMap { collection in
-            guard let workoutIDs = try? repo.memberWorkoutIds(collectionId: collection.id) else { return nil }
+            guard let workoutIDs = membersByCollectionID[collection.id] else { return nil }
             return CollectionGridItem(
                 id: collection.id,
                 name: collection.name,
@@ -117,7 +146,7 @@ final class LibraryCollectionsStore: ObservableObject {
             )
         }
 
-        let unfiled = (try? repo.uncategorizedWorkoutIds(from: Set(workoutsByID.keys))) ?? []
+        let unfiled = uncategorizedWorkoutIds(workoutsByID: workoutsByID)
         if !unfiled.isEmpty {
             items.append(
                 CollectionGridItem(

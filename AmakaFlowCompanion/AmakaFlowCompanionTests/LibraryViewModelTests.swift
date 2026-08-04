@@ -5,6 +5,7 @@
 //  AMA-2004: Library tab list, filters, empty/error coverage.
 //
 
+import Combine
 import XCTest
 
 @testable import AmakaFlowCompanion
@@ -304,6 +305,23 @@ final class LibraryViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.entries.isEmpty)
     }
 
+    /// Important fix: `LibraryView` reads `viewModel.collectionsStore` directly rather
+    /// than observing it, so pin/unpin (or any collections mutation) must be forwarded
+    /// through `LibraryViewModel.objectWillChange` or the pinned row never refreshes.
+    func testCollectionsStoreChangesForwardToViewModelObjectWillChange() throws {
+        var publishCount = 0
+        let cancellable = viewModel.objectWillChange.sink { _ in publishCount += 1 }
+        defer { cancellable.cancel() }
+
+        try viewModel.collectionsStore.setPinned(workoutId: "w1", isPinned: true)
+
+        XCTAssertGreaterThan(
+            publishCount,
+            0,
+            "LibraryViewModel must republish when collectionsStore changes (e.g. pin/unpin)"
+        )
+    }
+
     // MARK: - AMA-2376 prune on load/delete
 
     func testLoadPrunesOrphanCollectionMembersToKnownWorkouts() async throws {
@@ -322,6 +340,34 @@ final class LibraryViewModelTests: XCTestCase {
 
         XCTAssertEqual(try collectionsRepo.memberWorkoutIds(collectionId: collection.id), ["keep"])
         XCTAssertEqual(try collectionsRepo.uncategorizedWorkoutIds(from: ["keep"]), [])
+    }
+
+    /// Critical fix: an empty known-workout set on `load()` (e.g. transient/partial
+    /// API response) must NOT wipe every existing membership/pin. Only a non-empty
+    /// known set should trigger `pruneOrphans`.
+    func testLoadWithEmptyKnownWorkoutsDoesNotWipeExistingMemberships() async throws {
+        let collectionsDB = try AppDatabase.makeTestDatabase()
+        let collectionsRepo = WorkoutCollectionsRepository(database: collectionsDB)
+        let collectionsStore = LibraryCollectionsStore(repo: collectionsRepo)
+        let collection = try collectionsRepo.createCollection(name: "Hyrox Prep", note: nil)
+        try collectionsRepo.addMember(collectionId: collection.id, workoutId: "w1")
+        try collectionsRepo.setPinned(workoutId: "w1", isPinned: true)
+        viewModel = LibraryViewModel(apiService: api, collectionsStore: collectionsStore)
+
+        api.listLibraryItemsResult = .success(Components.Schemas.LibraryItemList(items: [], total: 0))
+        api.fetchWorkoutsResult = .success([])
+
+        await viewModel.load()
+
+        XCTAssertEqual(
+            try collectionsRepo.memberWorkoutIds(collectionId: collection.id),
+            ["w1"],
+            "Empty known-workout set on load must not prune existing memberships"
+        )
+        XCTAssertTrue(
+            try collectionsRepo.isPinned(workoutId: "w1"),
+            "Empty known-workout set on load must not clear existing pins"
+        )
     }
 
     func testDeleteWorkoutPrunesCollectionMembershipWithRemainingIDs() async throws {

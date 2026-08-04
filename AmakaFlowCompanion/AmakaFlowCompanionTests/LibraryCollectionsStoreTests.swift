@@ -5,6 +5,7 @@
 //  AMA-2376: LibraryCollectionsStore reload/mutators + Uncategorized grid derivation.
 //
 
+import Combine
 import XCTest
 @testable import AmakaFlowCompanion
 
@@ -110,6 +111,48 @@ final class LibraryCollectionsStoreTests: XCTestCase {
             "w2": makeWorkout(id: "w2", duration: 200)
         ]
         XCTAssertEqual(store.uncategorizedWorkoutIds(workoutsByID: workoutsByID), ["w2"])
+    }
+
+    /// Important fix: pinning/unpinning must publish so observers (LibraryView's
+    /// pinned row, forwarded via LibraryViewModel) invalidate and re-render.
+    func testSetPinnedTriggersObjectWillChangePublish() throws {
+        var publishCount = 0
+        let cancellable = store.objectWillChange.sink { _ in publishCount += 1 }
+        defer { cancellable.cancel() }
+
+        try store.setPinned(workoutId: "w1", isPinned: true)
+        XCTAssertGreaterThan(publishCount, 0, "setPinned(true) must trigger objectWillChange")
+
+        publishCount = 0
+        try store.setPinned(workoutId: "w1", isPinned: false)
+        XCTAssertGreaterThan(publishCount, 0, "setPinned(false) (unpin) must trigger objectWillChange")
+    }
+
+    /// N+1 fix: `gridModels` must read the `reload()`-populated cache rather than
+    /// re-querying SQLite live on every call. Proven by mutating the repo directly
+    /// (bypassing the store) after reload — a live query would see the change, the
+    /// cache must not.
+    func testGridModelsReadsCacheAndDoesNotQueryLiveAfterReload() throws {
+        let collection = try store.createCollection(name: "Hyrox Prep", note: nil)
+        try store.addMember(collectionId: collection.id, workoutId: "w1")
+
+        // Bypass the store's reload() so the cache goes stale relative to the DB.
+        try repo.removeMember(collectionId: collection.id, workoutId: "w1")
+
+        let workoutsByID: [String: Workout] = ["w1": makeWorkout(id: "w1", duration: 100)]
+        let grid = store.gridModels(workoutsByID: workoutsByID)
+        let named = grid.first { $0.id == collection.id }
+
+        XCTAssertEqual(
+            named?.workoutIDs,
+            ["w1"],
+            "gridModels must reflect the last reload()'d cache, not a live SQLite read"
+        )
+        XCTAssertEqual(
+            try store.memberWorkoutIds(collectionId: collection.id),
+            ["w1"],
+            "memberWorkoutIds must also read the cache, not a live SQLite read"
+        )
     }
 
     // MARK: - Helpers
