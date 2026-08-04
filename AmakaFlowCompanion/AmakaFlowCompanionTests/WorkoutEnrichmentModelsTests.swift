@@ -227,6 +227,60 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
         XCTAssertNil(legacy.perExercise)
     }
 
+    // MARK: - AMA-2378 Task 5: warm-up pick + ramp editor pure helpers
+
+    /// The seeded default mirrors the backend design spec's own example ramp
+    /// (8·5 reps with `LIGHT · ~40%` / `MODERATE · ~60%` intensity notes).
+    func testDefaultRampSetsMatchesGlobalEightFiveWithIntensityNotes() {
+        let sets = WorkoutEnrichmentMutations.defaultRampSets()
+        XCTAssertEqual(sets.map(\.kind), [.reps, .reps])
+        XCTAssertEqual(sets.map(\.value), [8, 5])
+        XCTAssertEqual(sets.first?.intensityNote, "LIGHT · ~40%")
+        XCTAssertEqual(sets.last?.intensityNote, "MODERATE · ~60%")
+    }
+
+    /// Core isolation guarantee for "Apply this ramp to all selected": every
+    /// enabled ramp receives its own copy of the source sets, disabled ramps
+    /// are untouched, and mutating one exercise's sets afterward never
+    /// reaches through to another's — the pure half of Task 5's apply-to-all.
+    func testApplyRampSetsCopiesThenDiverge() throws {
+        let sourceSets = [
+            try RampSet(kind: .reps, value: 10, intensityNote: "custom"),
+            try RampSet(kind: .open, value: nil)
+        ]
+        var ramps = [
+            PerExerciseRamp(exerciseRef: "deadlift", enabled: true, sets: sourceSets),
+            PerExerciseRamp(exerciseRef: "overhead press", enabled: true, sets: [try RampSet(kind: .reps, value: 3)]),
+            PerExerciseRamp(exerciseRef: "leg press", enabled: false, sets: [try RampSet(kind: .reps, value: 12)])
+        ]
+
+        ramps = WorkoutEnrichmentMutations.applyRampSets(sourceSets, toEnabledRampsIn: ramps)
+
+        XCTAssertEqual(ramps[0].sets, sourceSets)
+        XCTAssertEqual(ramps[1].sets, sourceSets)
+        // Disabled ramp is untouched — apply-to-all only reaches enabled exercises.
+        XCTAssertEqual(ramps[2].sets, [try RampSet(kind: .reps, value: 12)])
+
+        // Diverge: mutating exercise A's copy after the apply must not move B's.
+        ramps[0].sets[0] = try RampSet(kind: .cals, value: 20)
+        XCTAssertEqual(ramps[1].sets, sourceSets, "mutating A's sets must never mutate B's independent copy")
+        XCTAssertNotEqual(ramps[0].sets, ramps[1].sets)
+    }
+
+    /// Applying with no enabled ramps at all is a safe no-op — never crashes,
+    /// never mutates a disabled entry.
+    func testApplyRampSetsNoEnabledRampsIsNoOp() throws {
+        let disabledOnly = [
+            PerExerciseRamp(exerciseRef: "a", enabled: false, sets: [try RampSet(kind: .reps, value: 1)]),
+            PerExerciseRamp(exerciseRef: "b", enabled: false, sets: [])
+        ]
+        let result = WorkoutEnrichmentMutations.applyRampSets(
+            [try RampSet(kind: .reps, value: 9)],
+            toEnabledRampsIn: disabledOnly
+        )
+        XCTAssertEqual(result, disabledOnly)
+    }
+
     func testWarmupSetRowKindAndValueWithoutReps() throws {
         let data = Data(#"{"kind": "time", "value": 30, "intensity_note": "hard"}"#.utf8)
         let row = try WorkoutEnrichmentJSON.decoder.decode(WarmupSetRow.self, from: data)

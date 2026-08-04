@@ -79,7 +79,8 @@ struct WorkoutEnrichmentPushSheet: View {
                     case .warmupPick:
                         EnrichmentWarmupPickScreen(
                             ramps: $perExerciseRamps,
-                            exercises: warmupCandidateNames
+                            exercises: warmupCandidateNames,
+                            workingSetCounts: plan.offer(.exerciseWarmupSets)?.candidateWorkingSetCounts ?? []
                         )
                     }
                 }

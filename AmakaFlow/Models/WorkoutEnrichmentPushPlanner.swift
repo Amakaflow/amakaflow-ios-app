@@ -35,6 +35,11 @@ enum WorkoutEnrichmentPushPlanner {
         /// to a `PerExerciseRamp` by normalized name (id-based matching lands
         /// once ids are minted ahead of the push in a later task).
         var candidateExerciseNames: [String]
+        /// AMA-2378 Task 5 — each candidate's declared working-set count
+        /// (`nil` when the ingest draft never declared one), same order as
+        /// `candidateExerciseNames`. Feeds the ramp editor's "→ THEN YOUR K
+        /// WORKING SETS" header meta; unknown stays unknown, never a guess.
+        var candidateWorkingSetCounts: [Int?]
 
         var id: String { kind.rawValue }
 
@@ -47,6 +52,7 @@ enum WorkoutEnrichmentPushPlanner {
             tombstonedExerciseIds: [String] = [],
             candidateExerciseIds: [String] = [],
             candidateExerciseNames: [String] = [],
+            candidateWorkingSetCounts: [Int?] = [],
             target: EnrichmentPushTarget = .garmin
         ) {
             self.kind = kind
@@ -57,6 +63,7 @@ enum WorkoutEnrichmentPushPlanner {
             self.tombstonedExerciseIds = tombstonedExerciseIds
             self.candidateExerciseIds = candidateExerciseIds
             self.candidateExerciseNames = candidateExerciseNames
+            self.candidateWorkingSetCounts = candidateWorkingSetCounts
         }
     }
 
@@ -187,6 +194,7 @@ enum WorkoutEnrichmentPushPlanner {
                     tombstonedExerciseIds: tombstonedIds,
                     candidateExerciseIds: candidateIds,
                     candidateExerciseNames: candidates.map(\.name),
+                    candidateWorkingSetCounts: candidates.map(\.sets),
                     target: target
                 )
             )

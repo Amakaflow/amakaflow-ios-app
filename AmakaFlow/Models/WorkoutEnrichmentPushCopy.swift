@@ -174,6 +174,24 @@ enum WorkoutEnrichmentPushCopy {
     /// Per-exercise pick row caption when that exercise's ramp toggle is off.
     static let warmupOffCaption = "STRAIGHT TO WORKING SETS"
 
+    /// Per-exercise warm-up pick screen header meta — `N OF M EXERCISES · <hint>`.
+    static func warmupPickHeaderMeta(enabledCount: Int, total: Int) -> String {
+        let noun = total == 1 ? "EXERCISE" : "EXERCISES"
+        return "\(enabledCount) OF \(total) \(noun) · \(warmupPickHint)"
+    }
+
+    /// Ramp editor header meta — `N WARM-UP SETS → THEN YOUR K WORKING SETS`.
+    /// `workingSetCount` is `nil` when the ingest draft never declared one —
+    /// the header reads "YOUR WORKING SETS" rather than inventing a number.
+    static func rampEditorHeaderMeta(setCount: Int, workingSetCount: Int?) -> String {
+        let setsLabel = "\(setCount) WARM-UP SET\(setCount == 1 ? "" : "S")"
+        guard let workingSetCount, workingSetCount > 0 else {
+            return "\(setsLabel) → THEN YOUR WORKING SETS"
+        }
+        let workingLabel = "YOUR \(workingSetCount) WORKING SET\(workingSetCount == 1 ? "" : "S")"
+        return "\(setsLabel) → THEN \(workingLabel)"
+    }
+
     /// Watch preview band caption — an exercise with no ramp, straight to working sets.
     static let noWarmupsYourCall = "NO WARM-UPS — YOUR CALL"
 

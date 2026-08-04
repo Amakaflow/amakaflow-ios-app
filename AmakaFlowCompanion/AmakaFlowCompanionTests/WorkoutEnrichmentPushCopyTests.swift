@@ -294,4 +294,39 @@ final class WorkoutEnrichmentV2CopyTests: XCTestCase {
             "8 REPS → OPEN · END ON TAP"
         )
     }
+
+    // MARK: AMA-2378 Task 5 — pick screen + ramp editor header meta
+
+    func testWarmupPickHeaderMetaJoinsCountAndHint() {
+        XCTAssertEqual(
+            WorkoutEnrichmentPushCopy.warmupPickHeaderMeta(enabledCount: 1, total: 3),
+            "1 OF 3 EXERCISES · NOT EVERY LIFT NEEDS A RAMP"
+        )
+        XCTAssertEqual(
+            WorkoutEnrichmentPushCopy.warmupPickHeaderMeta(enabledCount: 1, total: 1),
+            "1 OF 1 EXERCISE · NOT EVERY LIFT NEEDS A RAMP"
+        )
+    }
+
+    func testRampEditorHeaderMetaWithKnownWorkingSetCount() {
+        XCTAssertEqual(
+            WorkoutEnrichmentPushCopy.rampEditorHeaderMeta(setCount: 2, workingSetCount: 3),
+            "2 WARM-UP SETS → THEN YOUR 3 WORKING SETS"
+        )
+        XCTAssertEqual(
+            WorkoutEnrichmentPushCopy.rampEditorHeaderMeta(setCount: 1, workingSetCount: 1),
+            "1 WARM-UP SET → THEN YOUR 1 WORKING SET"
+        )
+    }
+
+    func testRampEditorHeaderMetaFallsBackWhenWorkingSetCountUnknown() {
+        XCTAssertEqual(
+            WorkoutEnrichmentPushCopy.rampEditorHeaderMeta(setCount: 2, workingSetCount: nil),
+            "2 WARM-UP SETS → THEN YOUR WORKING SETS"
+        )
+        XCTAssertEqual(
+            WorkoutEnrichmentPushCopy.rampEditorHeaderMeta(setCount: 0, workingSetCount: 0),
+            "0 WARM-UP SETS → THEN YOUR WORKING SETS"
+        )
+    }
 }

@@ -222,6 +222,30 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertNil(plan.offer(.exerciseWarmupSets))
     }
 
+    /// AMA-2378 Task 5 — the ramp editor's "→ THEN YOUR K WORKING SETS" header
+    /// needs a real working-set count per candidate, in the same order as
+    /// `candidateExerciseNames` (a candidate's own `sets` is always declared —
+    /// `warmupSetCandidates` requires it — but the type stays `[Int?]` so a
+    /// caller with a name that has no matching candidate can still ask for an
+    /// honestly-unknown count instead of a guess).
+    func testWarmupSetsOfferCarriesWorkingSetCountsPerCandidateInOrder() throws {
+        let blocks = [
+            SocialImportBlock(
+                label: "Main",
+                rounds: 1,
+                exercises: [
+                    SocialImportExercise(name: "Bench Press", sets: 4, reps: 8),
+                    SocialImportExercise(name: "Barbell Row", sets: 3, reps: 8)
+                ],
+                type: "sets"
+            )
+        ]
+        let plan = WorkoutEnrichmentPushPlanner.plan(blocks: blocks, tombstones: [], prefs: .defaults)
+        let offer = try XCTUnwrap(plan.offer(.exerciseWarmupSets))
+        XCTAssertEqual(offer.candidateExerciseNames, ["Bench Press", "Barbell Row"])
+        XCTAssertEqual(offer.candidateWorkingSetCounts, [4, 3])
+    }
+
     // MARK: - Tombstoned kinds appear unchecked
 
     func testTombstonedKindIsOfferedUnchecked() throws {

@@ -251,4 +251,37 @@ enum WorkoutEnrichmentMutations {
         }
         return value
     }
+
+    // MARK: - AMA-2378 Task 5 — per-exercise ramp pick/editor helpers
+
+    /// Seed sets for an exercise that has no declared ramp yet, minted the
+    /// moment its pick-screen toggle flips ON. Mirrors the global v1 default
+    /// (backend `ExerciseWarmupSetsPrefs.defaults` — 8·5 reps) plus intensity
+    /// notes matching the design spec example (`LIGHT · ~40%` / `MODERATE · ~60%`)
+    /// so a freshly-seeded ramp reads the same as the backend's own sample.
+    static func defaultRampSets() -> [RampSet] {
+        [
+            try? RampSet(kind: .reps, value: 8, intensityNote: "LIGHT · ~40%"),
+            try? RampSet(kind: .reps, value: 5, intensityNote: "MODERATE · ~60%")
+        ].compactMap { $0 }
+    }
+
+    /// "Apply this ramp to all selected" — copies `sourceSets` onto every
+    /// **enabled** ramp's `sets`, leaving disabled ramps untouched. `RampSet`
+    /// and `[RampSet]` are value types, so every returned ramp owns its own
+    /// copy of `sourceSets` from the instant this returns: mutating one
+    /// exercise's sets afterward can never reach through to another's — the
+    /// isolation the design calls for is Swift's copy-on-write, not a runtime
+    /// check. Pure + no UI so it is unit-testable on its own (AMA-2378 Task 5).
+    static func applyRampSets(
+        _ sourceSets: [RampSet],
+        toEnabledRampsIn ramps: [PerExerciseRamp]
+    ) -> [PerExerciseRamp] {
+        ramps.map { ramp in
+            guard ramp.enabled else { return ramp }
+            var copy = ramp
+            copy.sets = sourceSets
+            return copy
+        }
+    }
 }
