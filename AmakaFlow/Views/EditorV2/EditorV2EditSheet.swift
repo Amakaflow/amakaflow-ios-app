@@ -7,177 +7,6 @@
 
 import SwiftUI
 
-/// The five mutually exclusive work-target families presented by the focused editor.
-enum EditorV2EditTargetKind: String, CaseIterable, Equatable {
-    case reps
-    case range
-    case timed
-    case cals
-    case open
-
-    var title: String {
-        switch self {
-        case .reps: return "Reps"
-        case .range: return "Range"
-        case .timed: return "Timed"
-        case .cals: return "Cals"
-        case .open: return "Open"
-        }
-    }
-
-    var accessibilityIdentifier: String {
-        "af_exsheet_target_\(rawValue)"
-    }
-}
-
-private enum EditorV2EditTargetIntent: Equatable {
-    case reps(Int)
-    case range(min: Int, max: Int)
-    case timed(Int)
-    case cals(Int)
-    case open
-}
-
-/// Session-local values for each target family. Switching targets never destroys a
-/// value the athlete just entered; an absent family receives its product default.
-struct EditorV2EditTargetMemory: Equatable {
-    var kind: EditorV2EditTargetKind
-    var reps: Int = 10
-    var rangeMin: Int = 8
-    var rangeMax: Int = 12
-    var workSeconds: Int = 40
-    var calories: Int = 15
-    private let initialIntent: EditorV2EditTargetIntent?
-    private var shouldApplyTarget: Bool
-
-    init(exercise: EditorV2Exercise) {
-        if exercise.openGoal {
-            kind = .open
-            initialIntent = .open
-        } else if let range = exercise.repsRange {
-            kind = .range
-            rangeMin = range.low
-            rangeMax = range.high
-            initialIntent = .range(min: range.low, max: range.high)
-        } else if let seconds = exercise.durationSeconds {
-            kind = .timed
-            workSeconds = seconds
-            initialIntent = .timed(seconds)
-        } else if let targetCalories = exercise.calories {
-            kind = .cals
-            calories = targetCalories
-            initialIntent = .cals(targetCalories)
-        } else {
-            kind = .reps
-            if let targetReps = exercise.reps {
-                reps = targetReps
-                initialIntent = .reps(targetReps)
-            } else {
-                reps = Self.defaultReps
-                initialIntent = nil
-            }
-        }
-        shouldApplyTarget = initialIntent != nil
-    }
-
-    static let defaultReps = 10
-    static let defaultRangeMin = 8
-    static let defaultRangeMax = 12
-    static let defaultWorkSeconds = 40
-    static let defaultCalories = 15
-
-    mutating func setRangeMin(_ value: Int) {
-        let updated = Swift.min(Swift.max(1, value), rangeMax)
-        guard updated != rangeMin else { return }
-        rangeMin = updated
-        shouldApplyTarget = true
-    }
-
-    mutating func setRangeMax(_ value: Int) {
-        let updated = Swift.max(rangeMin, Swift.min(50, value))
-        guard updated != rangeMax else { return }
-        rangeMax = updated
-        shouldApplyTarget = true
-    }
-
-    mutating func select(_ targetKind: EditorV2EditTargetKind) {
-        guard targetKind != kind else { return }
-        kind = targetKind
-        shouldApplyTarget = true
-    }
-
-    mutating func setReps(_ value: Int) {
-        guard value != reps else { return }
-        reps = value
-        shouldApplyTarget = true
-    }
-
-    mutating func setWorkSeconds(_ value: Int) {
-        guard value != workSeconds else { return }
-        workSeconds = value
-        shouldApplyTarget = true
-    }
-
-    mutating func setCalories(_ value: Int) {
-        guard value != calories else { return }
-        calories = value
-        shouldApplyTarget = true
-    }
-
-    mutating func apply(to exercise: inout EditorV2Exercise) {
-        guard shouldApplyTarget else { return }
-        let changed = currentIntent != initialIntent
-        exercise.openGoal = false
-        exercise.reps = nil
-        exercise.repsRange = nil
-        exercise.durationSeconds = nil
-        exercise.distanceMeters = nil
-        exercise.calories = nil
-
-        switch kind {
-        case .reps:
-            exercise.reps = reps
-            if changed { exercise.stampUser("reps") }
-        case .range:
-            exercise.repsRange = RepsRange(low: rangeMin, high: rangeMax)
-            if changed { exercise.stampUser("reps_range") }
-        case .timed:
-            exercise.durationSeconds = workSeconds
-            if changed { exercise.stampUser("duration_seconds") }
-        case .cals:
-            exercise.calories = calories
-            if changed { exercise.stampUser("calories") }
-        case .open:
-            exercise.openGoal = true
-            if changed { exercise.stampUser("open_goal") }
-        }
-    }
-
-    private var currentIntent: EditorV2EditTargetIntent {
-        switch kind {
-        case .reps: return .reps(reps)
-        case .range: return .range(min: rangeMin, max: rangeMax)
-        case .timed: return .timed(workSeconds)
-        case .cals: return .cals(calories)
-        case .open: return .open
-        }
-    }
-}
-
-func editorV2CommitEditDraft(
-    _ draft: EditorV2Exercise,
-    targetMemory: EditorV2EditTargetMemory
-) -> EditorV2Exercise {
-    var committed = draft
-    var targetMemory = targetMemory
-    targetMemory.apply(to: &committed)
-    // AMA-2368 — open rest must not serialize with timed seconds.
-    if committed.restOpen == true {
-        committed.restSeconds = nil
-    }
-    return committed
-}
-
 struct EditorV2EditSheet: View {
     @State private var draft: EditorV2Exercise
     @State private var targetMemory: EditorV2EditTargetMemory
@@ -238,12 +67,14 @@ struct EditorV2EditSheet: View {
             }
         }
         proportionalGrid {
-            stepperCell(
-                label: "SETS",
-                value: draft.sets ?? PrescriptionDefaults.defaultSets,
-                min: 1,
-                max: 12,
-                accessibilityIdentifier: "af_exsheet_sets"
+            EditorV2EditSheetStepperCell(
+                configuration: .init(
+                    label: "SETS",
+                    value: draft.sets ?? PrescriptionDefaults.defaultSets,
+                    min: 1,
+                    max: 12,
+                    accessibilityIdentifier: "af_exsheet_sets"
+                )
             ) { newValue in
                 draft.sets = newValue
                 draft.stampUser("sets")
@@ -285,14 +116,16 @@ struct EditorV2EditSheet: View {
             }
         } right: {
             if isTimedRest {
-                stepperCell(
-                    label: "DURATION",
-                    value: draft.restSeconds ?? PrescriptionDefaults.defaultRestSec,
-                    min: 15,
-                    max: 300,
-                    step: 15,
-                    valueText: { "\($0)s" },
-                    accessibilityIdentifier: "af_exsheet_rest_duration"
+                EditorV2EditSheetStepperCell(
+                    configuration: .init(
+                        label: "DURATION",
+                        value: draft.restSeconds ?? PrescriptionDefaults.defaultRestSec,
+                        min: 15,
+                        max: 300,
+                        step: 15,
+                        valueText: formatSecondsWithSuffix,
+                        accessibilityIdentifier: "af_exsheet_rest_duration"
+                    )
                 ) { try? draft.setRestIntent(restSeconds: $0, restOpen: false) }
             } else {
                 Text("YOU END REST ON THE WATCH — TAP / LAP")
@@ -308,33 +141,39 @@ struct EditorV2EditSheet: View {
         Group {
             switch targetMemory.kind {
             case .reps:
-                stepperCell(
-                    label: "REPS",
-                    value: targetMemory.reps,
-                    min: 1,
-                    max: 50,
-                    accessibilityIdentifier: "af_exsheet_reps"
+                EditorV2EditSheetStepperCell(
+                    configuration: .init(
+                        label: "REPS",
+                        value: targetMemory.reps,
+                        min: 1,
+                        max: 50,
+                        accessibilityIdentifier: "af_exsheet_reps"
+                    )
                 ) { targetMemory.setReps($0) }
             case .range:
                 rangeCell
             case .timed:
-                stepperCell(
-                    label: "WORK",
-                    value: targetMemory.workSeconds,
-                    min: 10,
-                    max: 3_600,
-                    step: 10,
-                    valueText: formatSeconds,
-                    accessibilityIdentifier: "af_exsheet_work"
+                EditorV2EditSheetStepperCell(
+                    configuration: .init(
+                        label: "WORK",
+                        value: targetMemory.workSeconds,
+                        min: 10,
+                        max: 3_600,
+                        step: 10,
+                        valueText: formatSeconds,
+                        accessibilityIdentifier: "af_exsheet_work"
+                    )
                 ) { targetMemory.setWorkSeconds($0) }
             case .cals:
-                stepperCell(
-                    label: "CALORIES",
-                    value: targetMemory.calories,
-                    min: 5,
-                    max: 500,
-                    step: 5,
-                    accessibilityIdentifier: "af_exsheet_calories"
+                EditorV2EditSheetStepperCell(
+                    configuration: .init(
+                        label: "CALORIES",
+                        value: targetMemory.calories,
+                        min: 5,
+                        max: 500,
+                        step: 5,
+                        accessibilityIdentifier: "af_exsheet_calories"
+                    )
                 ) { targetMemory.setCalories($0) }
             case .open:
                 openGoalCell
@@ -402,30 +241,9 @@ struct EditorV2EditSheet: View {
         .accessibilityIdentifier(kind.accessibilityIdentifier)
         .accessibilityAddTraits(targetMemory.kind == kind ? .isSelected : [])
     }
+}
 
-    private func stepperCell(
-        label: String,
-        value: Int,
-        min: Int,
-        max: Int,
-        step: Int = 1,
-        valueText: ((Int) -> String)? = nil,
-        accessibilityIdentifier: String,
-        onChange: @escaping (Int) -> Void
-    ) -> some View {
-        EditorV2Stepper(
-            label: label,
-            value: value,
-            min: min,
-            max: max,
-            step: step,
-            valueText: valueText,
-            onChange: onChange
-        )
-        .frame(maxWidth: .infinity, minHeight: 72, maxHeight: 72)
-        .accessibilityIdentifier(accessibilityIdentifier)
-    }
-
+extension EditorV2EditSheet {
     private func proportionalGrid<Left: View, Right: View>(
         @ViewBuilder left: () -> Left,
         @ViewBuilder right: () -> Right
@@ -500,6 +318,10 @@ struct EditorV2EditSheet: View {
     private func formatSeconds(_ seconds: Int) -> String {
         if seconds < 60 { return "\(seconds)s" }
         return "\(seconds / 60):" + String(format: "%02d", seconds % 60)
+    }
+
+    private func formatSecondsWithSuffix(_ seconds: Int) -> String {
+        "\(seconds)s"
     }
 
     private var summaryDraft: EditorV2Exercise {

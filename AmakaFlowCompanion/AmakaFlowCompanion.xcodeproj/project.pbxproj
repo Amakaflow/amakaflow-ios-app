@@ -149,6 +149,8 @@
 		AMA2307CMPBLD /* EditorV2Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307CMPREF /* EditorV2Components.swift */; };
 		AMA2307SHTBLD /* EditorV2Sheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307SHTREF /* EditorV2Sheets.swift */; };
 		AMA2312EDITBLD /* EditorV2EditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2312EDITREF /* EditorV2EditSheet.swift */; };
+		AMA2379EDITCMPBLD /* EditorV2EditSheet+Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2379EDITCMPREF /* EditorV2EditSheet+Components.swift */; };
+		AMA2379EDITMEMBLD /* EditorV2EditSheet+TargetMemory.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2379EDITMEMREF /* EditorV2EditSheet+TargetMemory.swift */; };
 		AMA2307VWBLD /* EditorV2View.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307VWREF /* EditorV2View.swift */; };
 		AMA2372REGBLD /* BuilderV3TypeRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2372REGREF /* BuilderV3TypeRegistry.swift */; };
 		AMA2372RUNMBLD /* BuilderV3RunModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2372RUNMREF /* BuilderV3RunModels.swift */; };
@@ -808,6 +810,8 @@
 		AMA2307CMPREF /* EditorV2Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2Components.swift; path = ../AmakaFlow/Views/EditorV2/EditorV2Components.swift; sourceTree = SOURCE_ROOT; };
 		AMA2307SHTREF /* EditorV2Sheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2Sheets.swift; path = ../AmakaFlow/Views/EditorV2/EditorV2Sheets.swift; sourceTree = SOURCE_ROOT; };
 		AMA2312EDITREF /* EditorV2EditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2EditSheet.swift; path = ../AmakaFlow/Views/EditorV2/EditorV2EditSheet.swift; sourceTree = SOURCE_ROOT; };
+		AMA2379EDITCMPREF /* EditorV2EditSheet+Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "EditorV2EditSheet+Components.swift"; path = "../AmakaFlow/Views/EditorV2/EditorV2EditSheet+Components.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2379EDITMEMREF /* EditorV2EditSheet+TargetMemory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "EditorV2EditSheet+TargetMemory.swift"; path = "../AmakaFlow/Views/EditorV2/EditorV2EditSheet+TargetMemory.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2307VWREF /* EditorV2View.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2View.swift; path = ../AmakaFlow/Views/EditorV2/EditorV2View.swift; sourceTree = SOURCE_ROOT; };
 		AMA2372REGREF /* BuilderV3TypeRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuilderV3TypeRegistry.swift; path = ../AmakaFlow/Models/BuilderV3/BuilderV3TypeRegistry.swift; sourceTree = SOURCE_ROOT; };
 		AMA2372RUNMREF /* BuilderV3RunModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuilderV3RunModels.swift; path = ../AmakaFlow/Models/BuilderV3/BuilderV3RunModels.swift; sourceTree = SOURCE_ROOT; };
@@ -1932,6 +1936,8 @@
 				AMA2307CMPREF /* EditorV2Components.swift */,
 				AMA2307SHTREF /* EditorV2Sheets.swift */,
 				AMA2312EDITREF /* EditorV2EditSheet.swift */,
+				AMA2379EDITCMPREF /* EditorV2EditSheet+Components.swift */,
+				AMA2379EDITMEMREF /* EditorV2EditSheet+TargetMemory.swift */,
 				AMA2307VWREF /* EditorV2View.swift */,
 				AMA2372REGREF /* BuilderV3TypeRegistry.swift */,
 				AMA2372RUNMREF /* BuilderV3RunModels.swift */,
@@ -2662,6 +2668,8 @@
 				AMA2307CMPBLD /* EditorV2Components.swift in Sources */,
 				AMA2307SHTBLD /* EditorV2Sheets.swift in Sources */,
 				AMA2312EDITBLD /* EditorV2EditSheet.swift in Sources */,
+				AMA2379EDITCMPBLD /* EditorV2EditSheet+Components.swift in Sources */,
+				AMA2379EDITMEMBLD /* EditorV2EditSheet+TargetMemory.swift in Sources */,
 				AMA2307VWBLD /* EditorV2View.swift in Sources */,
 				AMA2372REGBLD /* BuilderV3TypeRegistry.swift in Sources */,
 				AMA2372RUNMBLD /* BuilderV3RunModels.swift in Sources */,
