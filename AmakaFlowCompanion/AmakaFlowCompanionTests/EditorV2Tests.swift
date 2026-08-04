@@ -584,4 +584,76 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertNil(wireExercises[1]["distance_m"])
         XCTAssertNil(wireExercises[1]["calories"])
     }
+
+    // MARK: - AMA-2379 target edit sheet
+
+    func testEditSheetTargetMemoryRetainsValuesAcrossKindSwitches() {
+        var memory = EditorV2EditTargetMemory(
+            exercise: EditorV2Exercise(name: "Bike", sets: 3, reps: 12)
+        )
+        XCTAssertEqual(memory.kind, .reps)
+        XCTAssertEqual(memory.reps, 12)
+        XCTAssertEqual(memory.rangeMin, 8)
+        XCTAssertEqual(memory.rangeMax, 12)
+
+        memory.kind = .timed
+        memory.workSeconds = 70
+        memory.kind = .reps
+        XCTAssertEqual(memory.reps, 12)
+        memory.kind = .timed
+        XCTAssertEqual(memory.workSeconds, 70)
+    }
+
+    func testEditSheetRangeMemoryClampsBothBounds() {
+        var memory = EditorV2EditTargetMemory(
+            exercise: EditorV2Exercise(
+                name: "Squat",
+                repsRange: RepsRange(low: 8, high: 12)
+            )
+        )
+
+        memory.setRangeMin(20)
+        XCTAssertEqual(memory.rangeMin, 12)
+        memory.setRangeMax(4)
+        XCTAssertEqual(memory.rangeMax, 12)
+        memory.setRangeMin(-1)
+        XCTAssertEqual(memory.rangeMin, 1)
+        memory.setRangeMax(99)
+        XCTAssertEqual(memory.rangeMax, 50)
+    }
+
+    func testEditSheetTargetAccessibilityIdentifiersAreStable() {
+        XCTAssertEqual(
+            EditorV2EditTargetKind.allCases.map(\.accessibilityIdentifier),
+            [
+                "af_exsheet_target_reps",
+                "af_exsheet_target_range",
+                "af_exsheet_target_timed",
+                "af_exsheet_target_cals",
+                "af_exsheet_target_open",
+            ]
+        )
+    }
+
+    func testEditSheetOpenCommitClearsAllMetricTargets() {
+        var exercise = EditorV2Exercise(
+            name: "Assault Bike",
+            sets: 3,
+            reps: 10,
+            repsRange: RepsRange(low: 8, high: 12),
+            durationSeconds: 40,
+            distanceMeters: 400,
+            calories: 15
+        )
+        var memory = EditorV2EditTargetMemory(exercise: exercise)
+        memory.kind = .open
+        memory.apply(to: &exercise)
+
+        XCTAssertTrue(exercise.openGoal)
+        XCTAssertNil(exercise.reps)
+        XCTAssertNil(exercise.repsRange)
+        XCTAssertNil(exercise.durationSeconds)
+        XCTAssertNil(exercise.distanceMeters)
+        XCTAssertNil(exercise.calories)
+    }
 }

@@ -1,0 +1,24 @@
+# Task 11 report — Editor V2 edit sheet
+
+## Delivered
+
+- Rebuilt the focused sheet around a full-width TARGET segmented control:
+  Reps, Range, Timed, Cals, and Open.
+- Added a live `summaryLine` below the exercise title, a stable 1:1.35 value
+  grid, 72pt cells, range min/max clamping, timed and calorie step sizes, and
+  the amber open-goal card.
+- Kept AMA-2368 REST Open/Timed behavior and the open-rest watch caption.
+- Added the requested `af_exsheet_*` accessibility identifiers and unit
+  coverage for target-memory retention, range clamping, target identifiers,
+  and Open serialization clearing competing targets.
+
+## Verification
+
+- `git diff --check`: passed.
+- Focused `EditorV2Tests` was started with `xcodebuild`, but stopped while
+  resolving the remote RevenueCat package. No XCTest result is available.
+
+## Notes
+
+- Done applies the selected target to the draft atomically, preserving sets
+  while clearing every mutually exclusive metric field (including distance).
