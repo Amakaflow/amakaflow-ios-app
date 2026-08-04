@@ -245,8 +245,8 @@ struct EditorV2EditSheet: View {
 
 extension EditorV2EditSheet {
     private func proportionalGrid<Left: View, Right: View>(
-        @ViewBuilder left: () -> Left,
-        @ViewBuilder right: () -> Right
+        @ViewBuilder left: @escaping () -> Left,
+        @ViewBuilder right: @escaping () -> Right
     ) -> some View {
         GeometryReader { geometry in
             let availableWidth = geometry.size.width - 10
