@@ -85,6 +85,15 @@ final class LibraryCollectionsStore: ObservableObject {
         try repo.memberWorkoutIds(collectionId: collectionId)
     }
 
+    /// Real collections (never the derived Uncategorized bucket) currently containing
+    /// `workoutId` — drives detail chips (AMA-2376 Task 7). Errors degrade to empty
+    /// (no chips) rather than crash the detail screen.
+    func collections(containing workoutId: String) -> [LocalWorkoutCollection] {
+        let memberIDs = Set((try? repo.collectionIds(containing: workoutId)) ?? [])
+        guard !memberIDs.isEmpty else { return [] }
+        return collections.filter { memberIDs.contains($0.id) }
+    }
+
     /// Uncategorized member ids for the given known workouts — always reflects the
     /// current unfiled set, even when empty (unlike `gridModels`, which hides the
     /// empty Uncategorized card). Used by `CollectionDetailView` for the derived folder.

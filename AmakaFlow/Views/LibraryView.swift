@@ -454,6 +454,7 @@ extension LibraryView {
             if let workout = viewModel.resolveWorkout(for: destination) {
                 UnifiedWorkoutDetailView(
                     workout: workout,
+                    collectionsStore: viewModel.collectionsStore,
                     onEditorDismiss: {
                         await viewModel.load()
                         return viewModel.workout(for: workoutID)

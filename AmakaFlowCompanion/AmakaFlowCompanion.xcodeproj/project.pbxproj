@@ -347,6 +347,8 @@
 		AMA2376MOVESHTBLD /* MoveToCollectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376MOVESHTREF /* MoveToCollectionSheet.swift */; };
 		AMA2376WOPICKBLD /* LibraryWorkoutPickView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376WOPICKREF /* LibraryWorkoutPickView.swift */; };
 		AMA2376MEMROWBLD /* CollectionMemberRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376MEMROWREF /* CollectionMemberRow.swift */; };
+		AMA2376ADDSHTBLD /* AddToCollectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376ADDSHTREF /* AddToCollectionSheet.swift */; };
+		AMA2376ORGCHRBLD /* WorkoutDetailOrganizeChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376ORGCHRREF /* WorkoutDetailOrganizeChrome.swift */; };
 		AMA2292TODAYVIEW0000B /* TodayDiaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2292TODAYVIEW0000A /* TodayDiaryView.swift */; };
 		AMA2292PROFILEHUB00B /* ProfileHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2292PROFILEHUB00A /* ProfileHubView.swift */; };
 		AMA2292DDTHEME0000B /* DailyDriverTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2292DDTHEME0000A /* DailyDriverTheme.swift */; };
@@ -1003,6 +1005,8 @@
 		AMA2376MOVESHTREF /* MoveToCollectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MoveToCollectionSheet.swift; path = ../AmakaFlow/Views/Library/MoveToCollectionSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2376WOPICKREF /* LibraryWorkoutPickView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryWorkoutPickView.swift; path = ../AmakaFlow/Views/Library/LibraryWorkoutPickView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2376MEMROWREF /* CollectionMemberRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CollectionMemberRow.swift; path = ../AmakaFlow/Views/Library/CollectionMemberRow.swift; sourceTree = SOURCE_ROOT; };
+		AMA2376ADDSHTREF /* AddToCollectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AddToCollectionSheet.swift; path = ../AmakaFlow/Views/Library/AddToCollectionSheet.swift; sourceTree = SOURCE_ROOT; };
+		AMA2376ORGCHRREF /* WorkoutDetailOrganizeChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutDetailOrganizeChrome.swift; path = ../AmakaFlow/Views/Library/WorkoutDetailOrganizeChrome.swift; sourceTree = SOURCE_ROOT; };
 		AMA2292TODAYVIEW0000A /* TodayDiaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TodayDiaryView.swift; path = ../AmakaFlow/Views/TodayDiaryView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2292PROFILEHUB00A /* ProfileHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProfileHubView.swift; path = ../AmakaFlow/Views/ProfileHubView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2292DDTHEME0000A /* DailyDriverTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DailyDriverTheme.swift; path = ../AmakaFlow/DailyDriverTheme.swift; sourceTree = SOURCE_ROOT; };
@@ -1518,6 +1522,8 @@
 				AMA2376MEMROWREF /* CollectionMemberRow.swift */,
 				AMA2376MOVESHTREF /* MoveToCollectionSheet.swift */,
 				AMA2376WOPICKREF /* LibraryWorkoutPickView.swift */,
+				AMA2376ADDSHTREF /* AddToCollectionSheet.swift */,
+				AMA2376ORGCHRREF /* WorkoutDetailOrganizeChrome.swift */,
 				AMA2292TODAYVIEW0000A /* TodayDiaryView.swift */,
 				AMA2292PROFILEHUB00A /* ProfileHubView.swift */,
 				AMA2292DDCREATE00A /* CreateWorkoutSheet.swift */,
@@ -2533,6 +2539,8 @@
 				AMA2376MEMROWBLD /* CollectionMemberRow.swift in Sources */,
 				AMA2376MOVESHTBLD /* MoveToCollectionSheet.swift in Sources */,
 				AMA2376WOPICKBLD /* LibraryWorkoutPickView.swift in Sources */,
+				AMA2376ADDSHTBLD /* AddToCollectionSheet.swift in Sources */,
+				AMA2376ORGCHRBLD /* WorkoutDetailOrganizeChrome.swift in Sources */,
 				AMA2292TODAYVIEW0000B /* TodayDiaryView.swift in Sources */,
 				AMA2292PROFILEHUB00B /* ProfileHubView.swift in Sources */,
 				AMA2292DDTHEME0000B /* DailyDriverTheme.swift in Sources */,
