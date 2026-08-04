@@ -157,18 +157,17 @@ extension WorkoutEnrichmentPushSheet {
         .accessibilityIdentifier("af_enrichment_push_sheet")
     }
 
-    // TODO(AMA-2378 Task 6): `decision` only carries checkedKinds + the rest
-    // override. `mobilityActivities` / `cooldownActivities` / `perExerciseRamps`
-    // edits made in the door screens above are not yet persisted — Task 6 must
-    // extend `WorkoutEnrichmentPushPlanner.Decision` + `.application(...)` to
-    // override `prefs.sessionWarmup.activities` / `prefs.cooldown.activities` /
-    // `prefs.exerciseWarmupSets.perExercise` from this local state before
-    // confirm. Until then, confirm applies the standing prefs exactly as v1 did.
+    /// AMA-2378 Task 6 — door-screen edits only ride along when their kind is
+    /// checked (an unchecked kind's local state stays retained but unsent,
+    /// same pattern as the rest override above).
     private var decision: WorkoutEnrichmentPushPlanner.Decision {
         WorkoutEnrichmentPushPlanner.Decision(
             checkedKinds: checkedKinds,
             restSecOverride: checkedKinds.contains(.betweenSetRest) && !restOpen ? restSec : nil,
-            restOpenOverride: checkedKinds.contains(.betweenSetRest) ? restOpen : nil
+            restOpenOverride: checkedKinds.contains(.betweenSetRest) ? restOpen : nil,
+            sessionWarmupActivities: checkedKinds.contains(.sessionWarmup) ? mobilityActivities : nil,
+            cooldownActivities: checkedKinds.contains(.cooldown) ? cooldownActivities : nil,
+            perExerciseRamps: checkedKinds.contains(.exerciseWarmupSets) ? perExerciseRamps : nil
         )
     }
 

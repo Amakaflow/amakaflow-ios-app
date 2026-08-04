@@ -483,6 +483,183 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertTrue(application.rejectedTombstones.contains(where: { $0.kind == .betweenSetRest }))
     }
 
+    // MARK: - Door-screen edits (AMA-2378 Task 6)
+
+    /// Sequence builder edits to the mobility door must override the standing
+    /// Jump Rope default rather than being silently dropped.
+    func testApplyOverridesMobilityActivitiesFromDecision() throws {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock()],
+            tombstones: [],
+            prefs: .defaults
+        )
+        let editedActivities = [EnrichmentActivityPref(name: "Row 500m", durationSec: 180)]
+
+        let application = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.sessionWarmup],
+                sessionWarmupActivities: editedActivities
+            ),
+            prefs: .defaults,
+            tombstones: []
+        )
+
+        XCTAssertTrue(application.prefs.sessionWarmup.enabled)
+        XCTAssertEqual(application.prefs.sessionWarmup.activities, editedActivities)
+        XCTAssertNotEqual(
+            application.prefs.sessionWarmup.activities,
+            WorkoutPreferences.defaults.sessionWarmup.activities
+        )
+    }
+
+    /// Cooldown sequence edits mirror mobility — same override path.
+    func testApplyOverridesCooldownActivitiesFromDecision() throws {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock()],
+            tombstones: [],
+            prefs: .defaults
+        )
+        let editedActivities = [EnrichmentActivityPref(name: "Easy Bike", durationSec: 300)]
+
+        let application = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.cooldown],
+                cooldownActivities: editedActivities
+            ),
+            prefs: .defaults,
+            tombstones: []
+        )
+
+        XCTAssertTrue(application.prefs.cooldown.enabled)
+        XCTAssertEqual(application.prefs.cooldown.activities, editedActivities)
+    }
+
+    /// A configured per-exercise ramp must land in the applied prefs' `per_exercise`.
+    func testApplyIncludesPerExerciseRampInAppliedPrefs() throws {
+        let blocks = [
+            SocialImportBlock(
+                label: "Main",
+                rounds: 1,
+                exercises: [
+                    SocialImportExercise(name: "Bench Press", sets: 4, reps: 8),
+                    SocialImportExercise(name: "Barbell Row", sets: 3, reps: 8)
+                ],
+                type: "sets"
+            )
+        ]
+        let plan = WorkoutEnrichmentPushPlanner.plan(blocks: blocks, tombstones: [], prefs: .defaults)
+        let rampSets = [
+            try RampSet(kind: .reps, value: 3),
+            try RampSet(kind: .open, value: nil)
+        ]
+        let benchRamp = PerExerciseRamp(exerciseRef: "Bench Press", enabled: true, sets: rampSets)
+
+        let application = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.exerciseWarmupSets],
+                perExerciseRamps: [benchRamp]
+            ),
+            prefs: .defaults,
+            tombstones: []
+        )
+
+        XCTAssertTrue(application.prefs.exerciseWarmupSets.enabled)
+        XCTAssertEqual(application.prefs.exerciseWarmupSets.perExercise, [benchRamp])
+        // Barbell Row was never configured in the pick screen ("skipped") —
+        // it must be excluded rather than silently falling back to the
+        // global default_sets scheme.
+        XCTAssertTrue(application.prefs.exerciseWarmupSets.excludeExerciseKeys.contains("Barbell Row"))
+        XCTAssertFalse(application.prefs.exerciseWarmupSets.excludeExerciseKeys.contains("Bench Press"))
+    }
+
+    /// A ramp the user explicitly turned off in the pick screen is excluded too
+    /// (an `enabled: false` entry means "no warm-up sets", not "use the default").
+    func testApplyExcludesDisabledPerExerciseRamps() throws {
+        let blocks = [
+            SocialImportBlock(
+                label: "Main",
+                rounds: 1,
+                exercises: [SocialImportExercise(name: "Bench Press", sets: 4, reps: 8)],
+                type: "sets"
+            )
+        ]
+        let plan = WorkoutEnrichmentPushPlanner.plan(blocks: blocks, tombstones: [], prefs: .defaults)
+        let disabledRamp = PerExerciseRamp(exerciseRef: "Bench Press", enabled: false, sets: [])
+
+        let application = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.exerciseWarmupSets],
+                perExerciseRamps: [disabledRamp]
+            ),
+            prefs: .defaults,
+            tombstones: []
+        )
+
+        XCTAssertEqual(application.prefs.exerciseWarmupSets.perExercise, [disabledRamp])
+        XCTAssertTrue(application.prefs.exerciseWarmupSets.excludeExerciseKeys.contains("Bench Press"))
+    }
+
+    /// Toggling a door off never requires the sheet to clear its local
+    /// activities/ramps — the decision can still carry them, but they must
+    /// not be applied while the kind is unchecked.
+    func testApplyToggleOffDoesNotRequireClearingActivitiesInDecision() throws {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock()],
+            tombstones: [],
+            prefs: .defaults
+        )
+        let editedActivities = [EnrichmentActivityPref(name: "Row 500m", durationSec: 180)]
+
+        let application = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.betweenSetRest],
+                sessionWarmupActivities: editedActivities
+            ),
+            prefs: .defaults,
+            tombstones: []
+        )
+
+        XCTAssertFalse(application.prefs.sessionWarmup.enabled)
+        // Unchecked kind → the override is ignored, standing activities remain.
+        XCTAssertEqual(
+            application.prefs.sessionWarmup.activities,
+            WorkoutPreferences.defaults.sessionWarmup.activities
+        )
+    }
+
+    /// An untouched sheet (no door edits — toggles/rest only) must produce
+    /// v1-equivalent prefs: no `per_exercise`, no new excludes.
+    func testApplyWithNoDoorEditsStaysV1Equivalent() throws {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock()],
+            tombstones: [],
+            prefs: .defaults
+        )
+        let application = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.sessionWarmup, .betweenSetRest, .exerciseWarmupSets]
+            ),
+            prefs: .defaults,
+            tombstones: []
+        )
+
+        XCTAssertEqual(
+            application.prefs.sessionWarmup.activities,
+            WorkoutPreferences.defaults.sessionWarmup.activities
+        )
+        XCTAssertNil(application.prefs.exerciseWarmupSets.perExercise)
+        XCTAssertEqual(
+            application.prefs.exerciseWarmupSets.excludeExerciseKeys,
+            WorkoutPreferences.defaults.exerciseWarmupSets.excludeExerciseKeys
+        )
+    }
+
     // MARK: - Coordinator apply (AMA-2346)
 
     @MainActor
