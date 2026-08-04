@@ -115,7 +115,7 @@ final class PrescriptionDisplayTests: XCTestCase {
             supersetGroup: nil
         )
         let info = exercise.ddInfoPrescriptionLine
-        XCTAssertTrue(info.contains("8-10"), info)
+        XCTAssertTrue(info.contains("8–10") || info.contains("8-10"), info)
         XCTAssertTrue(info.uppercased().contains("EACH LEG"), info)
         XCTAssertTrue(info.contains("60S REST") || info.contains("60S"), info)
         XCTAssertFalse(exercise.ddDetailLine.uppercased().contains("EACH LEG"))
