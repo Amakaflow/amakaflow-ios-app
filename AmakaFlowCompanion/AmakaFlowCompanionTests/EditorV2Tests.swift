@@ -673,6 +673,20 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertNil(exercise.fieldProvenance["reps"])
     }
 
+    func testEditSheetCommitPreservesDistanceAfterSetsChangeWithoutTargetChange() {
+        let exercise = EditorV2Exercise(name: "Run", sets: 3, distanceMeters: 400)
+        var memory = EditorV2EditTargetMemory(exercise: exercise)
+        memory.select(.reps) // Reps is already displayed for a distance-only row.
+        var draft = exercise
+        draft.sets = 4
+
+        let committed = editorV2CommitEditDraft(draft, targetMemory: memory)
+
+        XCTAssertEqual(committed.sets, 4)
+        XCTAssertEqual(committed.distanceMeters, 400)
+        XCTAssertNil(committed.reps)
+    }
+
     func testEditSheetUnchangedTargetDoesNotStampUserProvenance() {
         var exercise = EditorV2Exercise(
             name: "Bench Press",

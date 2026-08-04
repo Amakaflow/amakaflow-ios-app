@@ -34,3 +34,13 @@
   target provenance.
 - The focused XCTest retry again stalled resolving the remote RevenueCat
   package, so no XCTest result is available.
+
+## Review follow-up 2
+
+- Tapping the already-selected TARGET kind now leaves the target dormant for a
+  distance-only row; selection arms a target only when the kind actually
+  changes.
+- Stepper and range mutations also arm only when their clamped value changes.
+- Extracted the sheet commit path into `editorV2CommitEditDraft` and added a
+  regression test that changes sets after a same-kind tap, then verifies the
+  committed draft retains `distanceMeters`.

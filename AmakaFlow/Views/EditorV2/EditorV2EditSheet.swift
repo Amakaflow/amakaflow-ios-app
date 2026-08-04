@@ -87,31 +87,39 @@ struct EditorV2EditTargetMemory: Equatable {
     static let defaultCalories = 15
 
     mutating func setRangeMin(_ value: Int) {
+        let updated = Swift.min(Swift.max(1, value), rangeMax)
+        guard updated != rangeMin else { return }
+        rangeMin = updated
         shouldApplyTarget = true
-        rangeMin = Swift.min(Swift.max(1, value), rangeMax)
     }
 
     mutating func setRangeMax(_ value: Int) {
+        let updated = Swift.max(rangeMin, Swift.min(50, value))
+        guard updated != rangeMax else { return }
+        rangeMax = updated
         shouldApplyTarget = true
-        rangeMax = Swift.max(rangeMin, Swift.min(50, value))
     }
 
     mutating func select(_ targetKind: EditorV2EditTargetKind) {
+        guard targetKind != kind else { return }
         kind = targetKind
         shouldApplyTarget = true
     }
 
     mutating func setReps(_ value: Int) {
+        guard value != reps else { return }
         reps = value
         shouldApplyTarget = true
     }
 
     mutating func setWorkSeconds(_ value: Int) {
+        guard value != workSeconds else { return }
         workSeconds = value
         shouldApplyTarget = true
     }
 
     mutating func setCalories(_ value: Int) {
+        guard value != calories else { return }
         calories = value
         shouldApplyTarget = true
     }
@@ -154,6 +162,20 @@ struct EditorV2EditTargetMemory: Equatable {
         case .open: return .open
         }
     }
+}
+
+func editorV2CommitEditDraft(
+    _ draft: EditorV2Exercise,
+    targetMemory: EditorV2EditTargetMemory
+) -> EditorV2Exercise {
+    var committed = draft
+    var targetMemory = targetMemory
+    targetMemory.apply(to: &committed)
+    // AMA-2368 — open rest must not serialize with timed seconds.
+    if committed.restOpen == true {
+        committed.restSeconds = nil
+    }
+    return committed
 }
 
 struct EditorV2EditSheet: View {
@@ -487,12 +509,6 @@ struct EditorV2EditSheet: View {
     }
 
     private func committedDraft() -> EditorV2Exercise {
-        var committed = draft
-        targetMemory.apply(to: &committed)
-        // AMA-2368 — open rest must not serialize with timed seconds (preserve provenance).
-        if committed.restOpen == true {
-            committed.restSeconds = nil
-        }
-        return committed
+        editorV2CommitEditDraft(draft, targetMemory: targetMemory)
     }
 }
