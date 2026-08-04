@@ -203,6 +203,10 @@ struct SocialImportExercise: Identifiable, Equatable, Codable {
     var repsRange: String?
     var seconds: Int?
     var distanceMeters: Int?
+    /// First-class calorie target, rather than legacy `"N cal"` freeform notes.
+    var calories: Int?
+    /// Unbounded exercise target (`goal: { "kind": "open" }` on the mapper wire).
+    var openGoal: Bool?
     /// Per-exercise rest from ingest (`rest_sec`); client defaults when omitted on straight sets.
     var restSeconds: Int?
     /// Load / tempo / instruction line (e.g. "70 kg", "build to heavy").

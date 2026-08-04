@@ -537,4 +537,50 @@ final class EditorV2Tests: XCTestCase {
             ProvSource.enrichmentDefault
         )
     }
+
+    func testExportBlocksPersistCaloriesAndOpenGoalWireFields() throws {
+        let session = EditorV2Session(
+            title: "Conditioning",
+            exercises: [
+                EditorV2Exercise(name: "SkiErg", calories: 15),
+                EditorV2Exercise(name: "Assault Bike", sets: 3, openGoal: true)
+            ]
+        )
+
+        let exercises = try XCTUnwrap(session.toSocialImportBlocks().first?.exercises)
+        XCTAssertEqual(exercises[0].calories, 15)
+        XCTAssertNil(exercises[0].notes)
+        XCTAssertEqual(exercises[1].openGoal, true)
+
+        let mapped = APIService.mapperBlockObject(
+            from: SocialImportBlock(
+                label: "Main",
+                rounds: 1,
+                exercises: [
+                    exercises[0],
+                    SocialImportExercise(
+                        name: exercises[1].name,
+                        sets: 3,
+                        reps: 10,
+                        repsRange: "8-10",
+                        seconds: 45,
+                        distanceMeters: 400,
+                        calories: 15,
+                        openGoal: true
+                    )
+                ]
+            )
+        )
+        let wireExercises = try XCTUnwrap(mapped["exercises"] as? [[String: Any]])
+
+        XCTAssertEqual(wireExercises[0]["calories"] as? Int, 15)
+        XCTAssertNil(wireExercises[0]["notes"])
+        XCTAssertEqual(wireExercises[1]["goal"] as? [String: String], ["kind": "open"])
+        XCTAssertEqual(wireExercises[1]["sets"] as? Int, 3)
+        XCTAssertNil(wireExercises[1]["reps"])
+        XCTAssertNil(wireExercises[1]["reps_range"])
+        XCTAssertNil(wireExercises[1]["duration_sec"])
+        XCTAssertNil(wireExercises[1]["distance_m"])
+        XCTAssertNil(wireExercises[1]["calories"])
+    }
 }

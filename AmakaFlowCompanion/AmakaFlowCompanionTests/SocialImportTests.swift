@@ -523,6 +523,33 @@ final class SocialImportTests: XCTestCase {
         XCTAssertEqual(exercises?.first?["reps"] as? Int, 10)
     }
 
+    func testDraftDecodeReadsCaloriesAndOpenGoal() throws {
+        let json = """
+        {
+          "title": "Conditioning",
+          "blocks": [
+            {
+              "exercises": [
+                {"name": "SkiErg", "calories": 15},
+                {"name": "Assault Bike", "goal": {"kind": "open"}}
+              ]
+            }
+          ]
+        }
+        """.data(using: .utf8)!
+
+        let draft = try SocialImportDraft.fromIngestJSON(
+            json,
+            platform: .manual,
+            sourceURL: nil,
+            equipmentEmpty: false,
+            equipmentNote: nil
+        )
+
+        XCTAssertEqual(draft.exercises[0].calories, 15)
+        XCTAssertEqual(draft.exercises[1].openGoal, true)
+    }
+
     func testWorkoutSaveRequestPreservesPositiveLoadWithoutUnit() {
         let workout = Workout(
             name: "Load Day",

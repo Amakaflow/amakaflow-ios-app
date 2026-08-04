@@ -123,6 +123,11 @@ extension SocialImportDraft {
             ?? repsString.flatMap { Int($0) == nil ? $0 : nil }
         let seconds = item["duration_sec"] as? Int ?? item["duration_seconds"] as? Int ?? item["seconds"] as? Int
         let distanceMeters = item["distance_m"] as? Int ?? item["distanceMeters"] as? Int
+        let calories = item["calories"] as? Int
+        let goal = item["goal"] as? [String: Any]
+        let openGoal = ((goal?["kind"] as? String)?.lowercased() == "open")
+            || (item["open_goal"] as? Bool)
+            || (item["openGoal"] as? Bool)
         let restSeconds = item["rest_sec"] as? Int ?? item["restSeconds"] as? Int
 
         let focus = parseFocus(from: item)
@@ -139,6 +144,8 @@ extension SocialImportDraft {
             repsRange: repsRange,
             seconds: seconds,
             distanceMeters: distanceMeters,
+            calories: calories,
+            openGoal: openGoal ? true : nil,
             restSeconds: restSeconds,
             load: load ?? instruction,
             focus: focus,

@@ -136,16 +136,23 @@ extension APIService {
 
     static func provenanceExercise(from exercise: SocialImportExercise) -> [String: Any] {
         var object: [String: Any] = ["name": exercise.name]
-        if let seconds = exercise.seconds, seconds > 0 {
-            object["duration_sec"] = seconds
-        } else if let meters = exercise.distanceMeters, meters > 0 {
-            object["distance_m"] = meters
-        } else {
+        if exercise.openGoal == true {
             if let sets = exercise.sets { object["sets"] = sets }
-            if let range = exercise.repsRange?.trimmingCharacters(in: .whitespacesAndNewlines), !range.isEmpty {
-                object["reps_range"] = range
+            object["goal"] = ["kind": "open"]
+        } else {
+            if let seconds = exercise.seconds, seconds > 0 {
+                object["duration_sec"] = seconds
+            } else if let meters = exercise.distanceMeters, meters > 0 {
+                object["distance_m"] = meters
+            } else if let calories = exercise.calories, calories > 0 {
+                object["calories"] = calories
+            } else {
+                if let sets = exercise.sets { object["sets"] = sets }
+                if let range = exercise.repsRange?.trimmingCharacters(in: .whitespacesAndNewlines), !range.isEmpty {
+                    object["reps_range"] = range.replacingOccurrences(of: "–", with: "-")
+                }
+                if let reps = exercise.reps { object["reps"] = reps }
             }
-            if let reps = exercise.reps { object["reps"] = reps }
         }
         if let loadText = exercise.load?.trimmingCharacters(in: .whitespacesAndNewlines), !loadText.isEmpty {
             let parsed = Workout.resolveLegacyLoadAndInstruction(from: loadText)
