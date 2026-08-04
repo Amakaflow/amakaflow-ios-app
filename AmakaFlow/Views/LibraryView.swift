@@ -17,6 +17,9 @@ struct LibraryView: View {
     @State private var pendingDelete: LibraryListEntry?
     @State private var navigationPath: [LibraryDestination] = []
     @StateObject private var watchesVM = OnYourWatchesViewModel()
+    /// AMA-2376: "+ New" collection name prompt.
+    @State private var isPresentingNewCollection = false
+    @State private var newCollectionName = ""
     /// Gates content/empty `.task` so state flips don't double-refresh watches.
     @State private var watchesDidInitialRefresh = false
     /// AMA-2375: Garmin Fix opens the editor directly (not detail → Edit).
@@ -207,21 +210,53 @@ extension LibraryView {
                         .padding(.horizontal, 18)
                         .padding(.top, 8)
 
-                    DDSourceFilterPills(selection: $sourceFilter)
-                        .padding(.horizontal, 18)
-                        .padding(.top, 10)
+                    LibraryPinnedSection(
+                        pinnedWorkouts: pinnedWorkouts,
+                        onSelect: { workoutID in
+                            navigationPath.append(.unifiedWorkout(workoutID: workoutID))
+                        },
+                        onUnpin: { workoutID in
+                            try? viewModel.collectionsStore.setPinned(workoutId: workoutID, isPinned: false)
+                        }
+                    )
+                    .padding(.horizontal, 18)
+                    .padding(.top, 18)
+
+                    LibraryCollectionsGrid(
+                        items: viewModel.collectionsStore.gridModels(workoutsByID: viewModel.workoutsByID),
+                        workoutsByID: viewModel.workoutsByID,
+                        onSelectCollection: { collectionID in
+                            navigationPath.append(.collection(id: collectionID))
+                        },
+                        onNewCollection: {
+                            newCollectionName = ""
+                            isPresentingNewCollection = true
+                        }
+                    )
+                    .padding(.horizontal, 18)
+                    .padding(.top, 22)
 
                     if watchesVM.snapshot.hasAnyWearable {
                         OnYourWatchesSummaryRow(summaryLine: watchesVM.snapshot.librarySummaryLine) {
                             navigationPath.append(.onYourWatches)
                         }
                         .padding(.horizontal, 18)
-                        .padding(.top, 14)
+                        .padding(.top, 22)
                     }
+
+                    Text("All workouts")
+                        .ddDisplayText(19, weight: .heavy)
+                        .foregroundColor(DailyDriver.foreground)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 22)
+
+                    DDSourceFilterPills(selection: $sourceFilter)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 10)
 
                     itemList
                         .padding(.horizontal, 18)
-                        .padding(.top, watchesVM.snapshot.hasAnyWearable ? 10 : 14)
+                        .padding(.top, 10)
                 }
                 .padding(.bottom, 100)
             }
@@ -233,6 +268,29 @@ extension LibraryView {
         .task {
             await refreshWatches()
         }
+        .alert("New Collection", isPresented: $isPresentingNewCollection) {
+            TextField("Collection name", text: $newCollectionName)
+            Button("Cancel", role: .cancel) {
+                newCollectionName = ""
+            }
+            Button("Create") {
+                createCollection()
+            }
+        } message: {
+            Text("Group workouts together, e.g. \u{201C}Hyrox Prep\u{201D} or \u{201C}Push / Pull / Legs\u{201D}.")
+        }
+    }
+
+    private var pinnedWorkouts: [Workout] {
+        viewModel.collectionsStore.pinnedIDs.compactMap { viewModel.workoutsByID[$0] }
+    }
+
+    private func createCollection() {
+        let name = newCollectionName.trimmingCharacters(in: .whitespacesAndNewlines)
+        newCollectionName = ""
+        guard !name.isEmpty else { return }
+        guard let created = try? viewModel.collectionsStore.createCollection(name: name, note: nil) else { return }
+        navigationPath.append(.collection(id: created.id))
     }
 
     private var emptyView: some View {
