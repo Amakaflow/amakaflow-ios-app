@@ -246,6 +246,14 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
     var weightKg: Double?
     var restSeconds: Int?
     var calories: Int?
+    /// An intentionally unbounded target. Enabling it clears all metric targets.
+    var openGoal: Bool {
+        didSet {
+            if openGoal {
+                clearGoalTargets()
+            }
+        }
+    }
     var groupKey: String?
     var swapMessage: String?
     var swapReplacementName: String?
@@ -272,6 +280,7 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
         weightKg: Double? = nil,
         restSeconds: Int? = nil,
         calories: Int? = nil,
+        openGoal: Bool = false,
         groupKey: String? = nil,
         swapMessage: String? = nil,
         swapReplacementName: String? = nil,
@@ -291,6 +300,7 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
         self.weightKg = weightKg
         self.restSeconds = restSeconds
         self.calories = calories
+        self.openGoal = openGoal
         self.groupKey = groupKey
         self.swapMessage = swapMessage
         self.swapReplacementName = swapReplacementName
@@ -299,6 +309,9 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
         self.warmupSets = warmupSets
         self.restOpen = restOpen
         self.structureSource = structureSource
+        if openGoal {
+            clearGoalTargets()
+        }
     }
 
     /// Mono summary under the name (screens-editor2.jsx `e2Sum`).
@@ -388,6 +401,14 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
         }
     }
 
+    private mutating func clearGoalTargets() {
+        reps = nil
+        repsRange = nil
+        durationSeconds = nil
+        distanceMeters = nil
+        calories = nil
+    }
+
     static func formatWeight(_ weightKg: Double) -> String {
         weightKg.truncatingRemainder(dividingBy: 1) == 0
             ? String(Int(weightKg))
@@ -417,19 +438,25 @@ extension PrescriptionFormatter {
             load: load,
             notes: nil,
             restSeconds: exercise.restSeconds,
-            rangeQualifier: exercise.repsRange?.qualifier
+            rangeQualifier: exercise.repsRange?.qualifier,
+            restOpen: exercise.restOpen == true
         )
 
-        let primary = resolvePrimaryMetric(
-            PrescriptionMetricInputs(
-                durationSeconds: exercise.durationSeconds,
-                distanceMeters: exercise.distanceMeters,
-                calories: exercise.calories,
-                plainReps: exercise.reps,
-                repsRange: exercise.repsRange,
-                sets: exercise.sets
+        let primary: PrescriptionPrimary
+        if exercise.openGoal {
+            primary = .open(sets: exercise.sets)
+        } else {
+            primary = resolvePrimaryMetric(
+                PrescriptionMetricInputs(
+                    durationSeconds: exercise.durationSeconds,
+                    distanceMeters: exercise.distanceMeters,
+                    calories: exercise.calories,
+                    plainReps: exercise.reps,
+                    repsRange: exercise.repsRange,
+                    sets: exercise.sets
+                )
             )
-        )
+        }
 
         if case .repsRange(let range, _) = primary, let qualifier = range.qualifier {
             if !secondary.contains(qualifier) {

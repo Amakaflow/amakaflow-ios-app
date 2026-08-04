@@ -405,8 +405,30 @@ final class EditorV2Tests: XCTestCase {
             restSeconds: 60
         )
 
-        XCTAssertEqual(exercise.summaryLine, "3 × 8-10 · 60S REST")
+        XCTAssertEqual(exercise.summaryLine, "3 × 8–10 · 60S REST")
         XCTAssertNotEqual(exercise.summaryLine, "60S REST")
+    }
+
+    func testOpenGoalClearsMutuallyExclusiveTargetsAndFormatsOpenRest() {
+        var exercise = EditorV2Exercise(
+            name: "Assault Bike",
+            sets: 3,
+            reps: 10,
+            repsRange: RepsRange(low: 8, high: 12),
+            durationSeconds: 40,
+            distanceMeters: 400,
+            calories: 15,
+            restOpen: true
+        )
+        exercise.openGoal = true
+
+        XCTAssertTrue(exercise.openGoal)
+        XCTAssertNil(exercise.reps)
+        XCTAssertNil(exercise.repsRange)
+        XCTAssertNil(exercise.durationSeconds)
+        XCTAssertNil(exercise.distanceMeters)
+        XCTAssertNil(exercise.calories)
+        XCTAssertEqual(exercise.summaryLine, "3 × OPEN · OPEN REST")
     }
 
     func testRepRangeExportsThroughSocialImportBlocks() {
@@ -514,5 +536,168 @@ final class EditorV2Tests: XCTestCase {
             exercise.fieldProvenance[WorkoutEnrichmentMutations.restSecKey],
             ProvSource.enrichmentDefault
         )
+    }
+
+    func testExportBlocksPersistCaloriesAndOpenGoalWireFields() throws {
+        let session = EditorV2Session(
+            title: "Conditioning",
+            exercises: [
+                EditorV2Exercise(name: "SkiErg", sets: 3, calories: 15),
+                EditorV2Exercise(name: "Assault Bike", sets: 3, openGoal: true)
+            ]
+        )
+
+        let exercises = try XCTUnwrap(session.toSocialImportBlocks().first?.exercises)
+        XCTAssertEqual(exercises[0].calories, 15)
+        XCTAssertNil(exercises[0].notes)
+        XCTAssertEqual(exercises[1].openGoal, true)
+
+        let mapped = APIService.mapperBlockObject(
+            from: SocialImportBlock(
+                label: "Main",
+                rounds: 1,
+                exercises: [
+                    exercises[0],
+                    SocialImportExercise(
+                        name: exercises[1].name,
+                        sets: 3,
+                        reps: 10,
+                        repsRange: "8-10",
+                        seconds: 45,
+                        distanceMeters: 400,
+                        calories: 15,
+                        openGoal: true
+                    )
+                ]
+            )
+        )
+        let wireExercises = try XCTUnwrap(mapped["exercises"] as? [[String: Any]])
+
+        XCTAssertEqual(wireExercises[0]["calories"] as? Int, 15)
+        XCTAssertEqual(wireExercises[0]["sets"] as? Int, 3)
+        XCTAssertNil(wireExercises[0]["notes"])
+        XCTAssertEqual(wireExercises[1]["goal"] as? [String: String], ["kind": "open"])
+        XCTAssertEqual(wireExercises[1]["sets"] as? Int, 3)
+        XCTAssertNil(wireExercises[1]["reps"])
+        XCTAssertNil(wireExercises[1]["reps_range"])
+        XCTAssertNil(wireExercises[1]["duration_sec"])
+        XCTAssertNil(wireExercises[1]["distance_m"])
+        XCTAssertNil(wireExercises[1]["calories"])
+    }
+
+    // MARK: - AMA-2379 target edit sheet
+
+    func testEditSheetTargetMemoryRetainsValuesAcrossKindSwitches() {
+        var memory = EditorV2EditTargetMemory(
+            exercise: EditorV2Exercise(name: "Bike", sets: 3, reps: 12)
+        )
+        XCTAssertEqual(memory.kind, .reps)
+        XCTAssertEqual(memory.reps, 12)
+        XCTAssertEqual(memory.rangeMin, 8)
+        XCTAssertEqual(memory.rangeMax, 12)
+
+        memory.kind = .timed
+        memory.workSeconds = 70
+        memory.kind = .reps
+        XCTAssertEqual(memory.reps, 12)
+        memory.kind = .timed
+        XCTAssertEqual(memory.workSeconds, 70)
+    }
+
+    func testEditSheetRangeMemoryClampsBothBounds() {
+        var memory = EditorV2EditTargetMemory(
+            exercise: EditorV2Exercise(
+                name: "Squat",
+                repsRange: RepsRange(low: 8, high: 12)
+            )
+        )
+
+        memory.setRangeMin(20)
+        XCTAssertEqual(memory.rangeMin, 12)
+        memory.setRangeMax(4)
+        XCTAssertEqual(memory.rangeMax, 12)
+        memory.setRangeMin(-1)
+        XCTAssertEqual(memory.rangeMin, 1)
+        memory.setRangeMax(99)
+        XCTAssertEqual(memory.rangeMax, 50)
+    }
+
+    func testEditSheetTargetAccessibilityIdentifiersAreStable() {
+        XCTAssertEqual(
+            EditorV2EditTargetKind.allCases.map(\.accessibilityIdentifier),
+            [
+                "af_exsheet_target_reps",
+                "af_exsheet_target_range",
+                "af_exsheet_target_timed",
+                "af_exsheet_target_cals",
+                "af_exsheet_target_open",
+            ]
+        )
+    }
+
+    func testEditSheetOpenCommitClearsAllMetricTargets() {
+        var exercise = EditorV2Exercise(
+            name: "Assault Bike",
+            sets: 3,
+            reps: 10,
+            repsRange: RepsRange(low: 8, high: 12),
+            durationSeconds: 40,
+            distanceMeters: 400,
+            calories: 15
+        )
+        var memory = EditorV2EditTargetMemory(exercise: exercise)
+        memory.kind = .open
+        memory.apply(to: &exercise)
+
+        XCTAssertTrue(exercise.openGoal)
+        XCTAssertNil(exercise.reps)
+        XCTAssertNil(exercise.repsRange)
+        XCTAssertNil(exercise.durationSeconds)
+        XCTAssertNil(exercise.distanceMeters)
+        XCTAssertNil(exercise.calories)
+    }
+
+    func testEditSheetUntouchedDistancePreservesTargetAndProvenance() {
+        var exercise = EditorV2Exercise(
+            name: "Run",
+            sets: 3,
+            distanceMeters: 400,
+            fieldProvenance: ["distance_meters": .inferred]
+        )
+        var memory = EditorV2EditTargetMemory(exercise: exercise)
+        memory.apply(to: &exercise)
+
+        XCTAssertEqual(exercise.distanceMeters, 400)
+        XCTAssertNil(exercise.reps)
+        XCTAssertEqual(exercise.fieldProvenance["distance_meters"], .inferred)
+        XCTAssertNil(exercise.fieldProvenance["reps"])
+    }
+
+    func testEditSheetCommitPreservesDistanceAfterSetsChangeWithoutTargetChange() {
+        let exercise = EditorV2Exercise(name: "Run", sets: 3, distanceMeters: 400)
+        var memory = EditorV2EditTargetMemory(exercise: exercise)
+        memory.select(.reps) // Reps is already displayed for a distance-only row.
+        var draft = exercise
+        draft.sets = 4
+
+        let committed = editorV2CommitEditDraft(draft, targetMemory: memory)
+
+        XCTAssertEqual(committed.sets, 4)
+        XCTAssertEqual(committed.distanceMeters, 400)
+        XCTAssertNil(committed.reps)
+    }
+
+    func testEditSheetUnchangedTargetDoesNotStampUserProvenance() {
+        var exercise = EditorV2Exercise(
+            name: "Bench Press",
+            sets: 3,
+            reps: 10,
+            fieldProvenance: ["reps": .inferred]
+        )
+        var memory = EditorV2EditTargetMemory(exercise: exercise)
+        memory.apply(to: &exercise)
+
+        XCTAssertEqual(exercise.reps, 10)
+        XCTAssertEqual(exercise.fieldProvenance["reps"], .inferred)
     }
 }

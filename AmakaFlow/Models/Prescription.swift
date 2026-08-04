@@ -21,6 +21,7 @@ struct RepsRange: Equatable, Codable, Sendable {
     var qualifier: String?
 
     var display: String { "\(low)-\(high)" }
+    var displayEnDash: String { "\(low)–\(high)" }
 
     static func parse(_ raw: String?) -> RepsRange? {
         guard let raw else { return nil }
@@ -107,6 +108,7 @@ enum PrescriptionPrimary: Equatable, Sendable {
     case calories(Int, sets: Int?)
     case reps(Int, sets: Int?)
     case repsRange(RepsRange, sets: Int?)
+    case open(sets: Int?)
     case none(sets: Int?)
 }
 
@@ -249,7 +251,8 @@ enum PrescriptionFormatter {
         load: ExerciseLoad?,
         notes: String?,
         restSeconds: Int?,
-        rangeQualifier: String?
+        rangeQualifier: String?,
+        restOpen: Bool = false
     ) -> [String] {
         var parts: [String] = []
 
@@ -266,7 +269,9 @@ enum PrescriptionFormatter {
             }
         }
 
-        if let restSeconds {
+        if restOpen {
+            parts.append("OPEN REST")
+        } else if let restSeconds {
             parts.append("\(restSeconds)S REST")
         }
 
@@ -290,7 +295,7 @@ enum PrescriptionFormatter {
     static func primaryLine(_ primary: PrescriptionPrimary) -> String? {
         switch primary {
         case .duration(let seconds, let sets):
-            let metric = seconds >= 60 ? "\(seconds / 60) min" : "\(seconds) sec"
+            let metric = String(format: "%d:%02d", seconds / 60, seconds % 60)
             return prefixedSets(sets, metric: metric)
         case .distance(let meters, let sets):
             let metric = meters >= 1000
@@ -302,7 +307,9 @@ enum PrescriptionFormatter {
         case .reps(let reps, let sets):
             return prefixedSets(sets, metric: "\(reps)")
         case .repsRange(let range, let sets):
-            return prefixedSets(sets, metric: range.display)
+            return prefixedSets(sets, metric: range.displayEnDash)
+        case .open(let sets):
+            return prefixedSets(sets, metric: "OPEN")
         case .none(let sets):
             if let sets { return "\(sets) SETS" }
             return nil

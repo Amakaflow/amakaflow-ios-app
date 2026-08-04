@@ -147,7 +147,7 @@ enum BlockToIntervalConverter {
                 restSec: exercise.restSeconds,
                 followAlongUrl: nil
             )
-        case .none(let sets):
+        case .open(let sets), .none(let sets):
             return .reps(
                 sets: sets,
                 reps: parseReps(exercise.reps),

@@ -9,76 +9,20 @@ import SwiftUI
 
 struct EditorV2EditSheet: View {
     @State private var draft: EditorV2Exercise
-    @State private var rangeText: String
-    @State private var useRangeMode: Bool
+    @State private var targetMemory: EditorV2EditTargetMemory
     var onDone: (EditorV2Exercise) -> Void
 
     init(exercise: EditorV2Exercise, onDone: @escaping (EditorV2Exercise) -> Void) {
         _draft = State(initialValue: exercise)
-        _rangeText = State(initialValue: exercise.repsRange?.display ?? "")
-        _useRangeMode = State(initialValue: exercise.repsRange != nil)
+        _targetMemory = State(initialValue: EditorV2EditTargetMemory(exercise: exercise))
         self.onDone = onDone
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            editorV2SheetTitle(draft.name)
-            LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2),
-                spacing: 8
-            ) {
-                if draft.showsStrengthPrescriptionEditors {
-                    strengthEditors
-                } else {
-                    modalityEditors
-                }
-                if draft.durationSeconds != nil {
-                    EditorV2Stepper(
-                        label: "Time",
-                        value: draft.durationSeconds ?? 0,
-                        unit: "s",
-                        min: 5,
-                        max: 3600,
-                        step: 5
-                    ) { draft.durationSeconds = $0 }
-                }
-                if draft.distanceMeters != nil {
-                    EditorV2Stepper(
-                        label: "Distance",
-                        value: draft.distanceMeters ?? 0,
-                        unit: " m",
-                        min: 10,
-                        max: 5000,
-                        step: 10
-                    ) { draft.distanceMeters = $0 }
-                }
-                if draft.weightKg != nil {
-                    EditorV2Stepper(
-                        label: "Weight",
-                        value: Int(((draft.weightKg ?? 0) * 10).rounded()),
-                        min: 0,
-                        max: 3_000,
-                        step: 5,
-                        valueText: { tenths in
-                            "\(EditorV2Exercise.formatWeight(Double(tenths) / 10)) kg"
-                        },
-                        onChange: { draft.weightKg = Double($0) / 10 }
-                    )
-                }
-                if draft.calories != nil {
-                    EditorV2Stepper(
-                        label: "Calories",
-                        value: draft.calories ?? 0,
-                        unit: " cal",
-                        min: 1,
-                        max: 200,
-                        step: 1
-                    ) { draft.calories = $0 }
-                }
-                if showsRestEditor {
-                    restEditors
-                }
-            }
+            sheetHeading
+            targetEditors
+            if showsRestEditor { restEditors }
             Button {
                 onDone(committedDraft())
             } label: {
@@ -91,7 +35,7 @@ struct EditorV2EditSheet: View {
                     .clipShape(Capsule())
             }
             .buttonStyle(.plain)
-            .accessibilityIdentifier("editor_v2_edit_done")
+            .accessibilityIdentifier("af_exsheet_done")
             Spacer(minLength: 8)
         }
         .padding(.horizontal, 18)
@@ -101,112 +45,42 @@ struct EditorV2EditSheet: View {
     }
 
     @ViewBuilder
-    private var strengthEditors: some View {
-        EditorV2Stepper(
-            label: "Sets",
-            value: draft.sets ?? 0,
-            min: 1,
-            max: 12,
-            valueText: { draft.sets == nil ? "—" : "\($0)" },
-            onChange: { newValue in
-                if draft.sets == nil {
-                    draft.sets = PrescriptionDefaults.defaultSets
-                } else {
-                    draft.sets = newValue
-                }
-                draft.stampUser("sets")
-            }
-        )
-
-        if useRangeMode {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("Rep range")
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .foregroundColor(DailyDriver.foregroundMuted)
-                    Spacer()
-                    Button("Reps") {
-                        useRangeMode = false
-                        draft.repsRange = nil
-                        if draft.reps == nil {
-                            draft.reps = PrescriptionDefaults.defaultReps
-                            draft.stampUser("reps")
-                        }
-                    }
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(DailyDriver.foregroundMuted)
-                }
-                TextField("8-10", text: $rangeText)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .keyboardType(.numbersAndPunctuation)
-                    .padding(12)
-                    .background(DailyDriver.inputBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .foregroundColor(DailyDriver.foreground)
-                    .accessibilityIdentifier("editor_v2_edit_rep_range")
-            }
-            .gridCellColumns(2)
-        } else {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Spacer()
-                    Button("Range") {
-                        // Defer clearing reps + provenance until a valid range commits.
-                        useRangeMode = true
-                        if rangeText.isEmpty { rangeText = "8-10" }
-                    }
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(DailyDriver.foregroundMuted)
-                }
-                EditorV2Stepper(
-                    label: "Reps",
-                    value: draft.reps ?? 0,
-                    min: 1,
-                    max: 50,
-                    valueText: { draft.reps == nil ? "—" : "\($0)" },
-                    onChange: { newValue in
-                        if draft.reps == nil {
-                            draft.reps = PrescriptionDefaults.defaultReps
-                        } else {
-                            draft.reps = newValue
-                        }
-                        draft.stampUser("reps")
-                    }
-                )
-            }
+    private var sheetHeading: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(draft.name)
+                .ddDisplayText(18, weight: .bold)
+                .foregroundColor(DailyDriver.foreground)
+            Text(summaryDraft.summaryLine)
+                .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+                .foregroundColor(DailyDriver.foregroundMuted)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 8)
     }
 
     @ViewBuilder
-    private var modalityEditors: some View {
-        if draft.sets != nil {
-            EditorV2Stepper(label: "Sets", value: draft.sets ?? 0, min: 1, max: 12) {
-                draft.sets = $0
-                draft.stampUser("sets")
+    private var targetEditors: some View {
+        sectionLabel("TARGET")
+        HStack(spacing: 4) {
+            ForEach(EditorV2EditTargetKind.allCases, id: \.self) { kind in
+                targetKindChip(kind)
             }
         }
-        if draft.repsRange != nil {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Rep range")
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundColor(DailyDriver.foregroundMuted)
-                TextField("8-10", text: $rangeText)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .keyboardType(.numbersAndPunctuation)
-                    .padding(12)
-                    .background(DailyDriver.inputBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .foregroundColor(DailyDriver.foreground)
-                    .accessibilityIdentifier("editor_v2_edit_rep_range")
+        proportionalGrid {
+            EditorV2EditSheetStepperCell(
+                configuration: .init(
+                    label: "SETS",
+                    value: draft.sets ?? PrescriptionDefaults.defaultSets,
+                    min: 1,
+                    max: 12,
+                    accessibilityIdentifier: "af_exsheet_sets"
+                )
+            ) { newValue in
+                draft.sets = newValue
+                draft.stampUser("sets")
             }
-            .gridCellColumns(2)
-        } else if draft.reps != nil {
-            EditorV2Stepper(label: "Reps", value: draft.reps ?? 0, min: 1, max: 50) {
-                draft.reps = $0
-                draft.stampUser("reps")
-            }
+        } right: {
+            targetValueCell
         }
     }
 
@@ -214,7 +88,7 @@ struct EditorV2EditSheet: View {
     private var showsRestEditor: Bool {
         draft.restSeconds != nil
             || draft.restOpen == true
-            || draft.showsStrengthPrescriptionEditors
+            || draft.sets != nil
     }
 
     private var isRestOpen: Bool {
@@ -222,43 +96,198 @@ struct EditorV2EditSheet: View {
     }
 
     private var isTimedRest: Bool {
-        draft.restSeconds != nil && !isRestOpen
+        !isRestOpen
     }
 
     @ViewBuilder
     private var restEditors: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("REST")
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
-                .foregroundColor(DailyDriver.foregroundMuted)
-            HStack(spacing: 8) {
+        sectionLabel("REST")
+        proportionalGrid {
+            HStack(spacing: 4) {
                 restModeChip(title: "Open", selected: isRestOpen) {
                     try? draft.setRestIntent(restSeconds: nil, restOpen: true)
                 }
-                .accessibilityIdentifier("editor_v2_edit_rest_open")
+                .accessibilityIdentifier("af_exsheet_rest_open")
                 restModeChip(title: "Timed", selected: isTimedRest) {
                     let seconds = draft.restSeconds ?? PrescriptionDefaults.defaultRestSec
                     try? draft.setRestIntent(restSeconds: seconds, restOpen: false)
                 }
-                .accessibilityIdentifier("editor_v2_edit_rest_timed")
+                .accessibilityIdentifier("af_exsheet_rest_timed")
             }
+        } right: {
             if isTimedRest {
-                EditorV2Stepper(
-                    label: "Duration",
-                    value: draft.restSeconds ?? PrescriptionDefaults.defaultRestSec,
-                    unit: "s",
-                    min: 0,
-                    max: 300,
-                    step: 15,
-                    valueText: { "\($0)s" },
-                    onChange: { newValue in
-                        try? draft.setRestIntent(restSeconds: newValue, restOpen: false)
-                    }
-                )
-                .accessibilityIdentifier("editor_v2_edit_rest_sec")
+                EditorV2EditSheetStepperCell(
+                    configuration: .init(
+                        label: "DURATION",
+                        value: draft.restSeconds ?? PrescriptionDefaults.defaultRestSec,
+                        min: 15,
+                        max: 300,
+                        step: 15,
+                        valueText: formatSecondsWithSuffix,
+                        accessibilityIdentifier: "af_exsheet_rest_duration"
+                    )
+                ) { try? draft.setRestIntent(restSeconds: $0, restOpen: false) }
+            } else {
+                Text("YOU END REST ON THE WATCH — TAP / LAP")
+                    .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                    .foregroundColor(DailyDriver.foregroundDim)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("af_exsheet_rest_open_caption")
             }
         }
-        .gridCellColumns(2)
+    }
+
+    private var targetValueCell: some View {
+        Group {
+            switch targetMemory.kind {
+            case .reps:
+                EditorV2EditSheetStepperCell(
+                    configuration: .init(
+                        label: "REPS",
+                        value: targetMemory.reps,
+                        min: 1,
+                        max: 50,
+                        accessibilityIdentifier: "af_exsheet_reps"
+                    )
+                ) { targetMemory.setReps($0) }
+            case .range:
+                rangeCell
+            case .timed:
+                EditorV2EditSheetStepperCell(
+                    configuration: .init(
+                        label: "WORK",
+                        value: targetMemory.workSeconds,
+                        min: 10,
+                        max: 3_600,
+                        step: 10,
+                        valueText: formatSeconds,
+                        accessibilityIdentifier: "af_exsheet_work"
+                    )
+                ) { targetMemory.setWorkSeconds($0) }
+            case .cals:
+                EditorV2EditSheetStepperCell(
+                    configuration: .init(
+                        label: "CALORIES",
+                        value: targetMemory.calories,
+                        min: 5,
+                        max: 500,
+                        step: 5,
+                        accessibilityIdentifier: "af_exsheet_calories"
+                    )
+                ) { targetMemory.setCalories($0) }
+            case .open:
+                openGoalCell
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var rangeCell: some View {
+        HStack(spacing: 0) {
+            rangeHalf(
+                label: "REPS MIN",
+                value: targetMemory.rangeMin,
+                accessibilityIdentifier: "af_exsheet_range_min"
+            ) { targetMemory.setRangeMin($0) }
+            Rectangle()
+                .fill(DailyDriver.border)
+                .frame(width: 1)
+                .padding(.vertical, 8)
+            rangeHalf(
+                label: "MAX",
+                value: targetMemory.rangeMax,
+                accessibilityIdentifier: "af_exsheet_range_max"
+            ) { targetMemory.setRangeMax($0) }
+        }
+        .padding(.horizontal, 8)
+        .frame(height: 72)
+        .background(DailyDriver.card2)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private var openGoalCell: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("Open goal")
+                .ddDisplayText(14, weight: .bold)
+                .foregroundColor(DailyDriver.amber)
+            Text("NO TARGET — GO TILL READY · END ON TAP")
+                .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                .foregroundColor(DailyDriver.foregroundMuted)
+        }
+        .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
+        .padding(.horizontal, 14)
+        .background(DailyDriver.amber.opacity(0.1))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(DailyDriver.amber.opacity(0.4), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .accessibilityIdentifier("af_exsheet_open_goal")
+    }
+
+    private func targetKindChip(_ kind: EditorV2EditTargetKind) -> some View {
+        Button {
+            targetMemory.select(kind)
+        } label: {
+            Text(kind.title)
+                .font(.system(size: 11.5, weight: .semibold))
+                .foregroundColor(targetMemory.kind == kind ? DailyDriver.ink : DailyDriver.foreground)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(targetMemory.kind == kind ? DailyDriver.foreground : DailyDriver.inputBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(kind.accessibilityIdentifier)
+        .accessibilityAddTraits(targetMemory.kind == kind ? .isSelected : [])
+    }
+}
+
+extension EditorV2EditSheet {
+    private func proportionalGrid<Left: View, Right: View>(
+        @ViewBuilder left: @escaping () -> Left,
+        @ViewBuilder right: @escaping () -> Right
+    ) -> some View {
+        GeometryReader { geometry in
+            let availableWidth = geometry.size.width - 10
+            HStack(spacing: 10) {
+                left()
+                    .frame(width: availableWidth / 2.35)
+                right()
+                    .frame(width: availableWidth * 1.35 / 2.35)
+            }
+        }
+        .frame(height: 72)
+    }
+
+    private func rangeHalf(
+        label: String,
+        value: Int,
+        accessibilityIdentifier: String,
+        onChange: @escaping (Int) -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label)
+                .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                .foregroundColor(DailyDriver.foregroundMuted)
+            HStack(spacing: 2) {
+                Button { onChange(value - 1) } label: {
+                    Text("−").ddDisplayText(16, weight: .bold)
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(DailyDriver.foregroundMuted)
+                Text("\(value)")
+                    .ddDisplayText(16, weight: .heavy)
+                    .foregroundColor(DailyDriver.foreground)
+                    .frame(maxWidth: .infinity)
+                Button { onChange(value + 1) } label: {
+                    Text("＋").ddDisplayText(16, weight: .bold)
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(DailyDriver.foregroundMuted)
+            }
+        }
+        .accessibilityIdentifier(accessibilityIdentifier)
     }
 
     private func restModeChip(
@@ -279,12 +308,29 @@ struct EditorV2EditSheet: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
+    private func sectionLabel(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 9, weight: .medium, design: .monospaced))
+            .foregroundColor(DailyDriver.foregroundMuted)
+            .padding(.bottom, -7)
+    }
+
+    private func formatSeconds(_ seconds: Int) -> String {
+        if seconds < 60 { return "\(seconds)s" }
+        return "\(seconds / 60):" + String(format: "%02d", seconds % 60)
+    }
+
+    private func formatSecondsWithSuffix(_ seconds: Int) -> String {
+        "\(seconds)s"
+    }
+
+    private var summaryDraft: EditorV2Exercise {
+        var summary = draft
+        targetMemory.apply(to: &summary)
+        return summary
+    }
+
     private func committedDraft() -> EditorV2Exercise {
-        draft.commitRepRange(from: rangeText, useRangeMode: useRangeMode)
-        // AMA-2368 — open rest must not serialize with timed seconds (preserve provenance).
-        if draft.restOpen == true {
-            draft.restSeconds = nil
-        }
-        return draft
+        editorV2CommitEditDraft(draft, targetMemory: targetMemory)
     }
 }

@@ -225,7 +225,7 @@ extension PrescriptionFormatter {
                 load: load,
                 target: range.display
             )
-        case .none(let sets):
+        case .open(let sets), .none(let sets):
             return WorkoutSaveInterval(
                 type: "reps",
                 name: name,

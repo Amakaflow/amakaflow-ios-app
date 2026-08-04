@@ -136,17 +136,8 @@ extension APIService {
 
     static func provenanceExercise(from exercise: SocialImportExercise) -> [String: Any] {
         var object: [String: Any] = ["name": exercise.name]
-        if let seconds = exercise.seconds, seconds > 0 {
-            object["duration_sec"] = seconds
-        } else if let meters = exercise.distanceMeters, meters > 0 {
-            object["distance_m"] = meters
-        } else {
-            if let sets = exercise.sets { object["sets"] = sets }
-            if let range = exercise.repsRange?.trimmingCharacters(in: .whitespacesAndNewlines), !range.isEmpty {
-                object["reps_range"] = range
-            }
-            if let reps = exercise.reps { object["reps"] = reps }
-        }
+        if let sets = exercise.sets { object["sets"] = sets }
+        applyExerciseTarget(from: exercise, to: &object)
         if let loadText = exercise.load?.trimmingCharacters(in: .whitespacesAndNewlines), !loadText.isEmpty {
             let parsed = Workout.resolveLegacyLoadAndInstruction(from: loadText)
             if let parsedLoad = parsed.load, parsedLoad.value > 0 {
@@ -168,6 +159,34 @@ extension APIService {
         }
         applyEnrichmentFields(from: exercise, to: &object)
         return object
+    }
+
+    private static func applyExerciseTarget(
+        from exercise: SocialImportExercise,
+        to object: inout [String: Any]
+    ) {
+        if exercise.openGoal == true {
+            object["goal"] = ["kind": "open"]
+            return
+        }
+        if let seconds = exercise.seconds, seconds > 0 {
+            object["duration_sec"] = seconds
+            return
+        }
+        if let meters = exercise.distanceMeters, meters > 0 {
+            object["distance_m"] = meters
+            return
+        }
+        if let calories = exercise.calories, calories > 0 {
+            object["calories"] = calories
+            return
+        }
+        if let range = exercise.repsRange?.trimmingCharacters(in: .whitespacesAndNewlines), !range.isEmpty {
+            object["reps_range"] = range.replacingOccurrences(of: "–", with: "-")
+        }
+        if let reps = exercise.reps {
+            object["reps"] = reps
+        }
     }
 
     /// AMA-2336 declared enrichment fields — identity, warm-up sets, rest intent.
