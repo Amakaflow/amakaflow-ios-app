@@ -126,8 +126,8 @@ extension SocialImportDraft {
         let calories = item["calories"] as? Int
         let goal = item["goal"] as? [String: Any]
         let openGoal = ((goal?["kind"] as? String)?.lowercased() == "open")
-            || (item["open_goal"] as? Bool)
-            || (item["openGoal"] as? Bool)
+            || (item["open_goal"] as? Bool) == true
+            || (item["openGoal"] as? Bool) == true
         let restSeconds = item["rest_sec"] as? Int ?? item["restSeconds"] as? Int
 
         let focus = parseFocus(from: item)
