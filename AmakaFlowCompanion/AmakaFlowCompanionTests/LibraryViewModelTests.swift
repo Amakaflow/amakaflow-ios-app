@@ -308,21 +308,22 @@ final class LibraryViewModelTests: XCTestCase {
     /// Important fix: `LibraryView` reads `viewModel.collectionsStore` directly rather
     /// than observing it, so pin/unpin (or any collections mutation) must be forwarded
     /// through `LibraryViewModel.objectWillChange` or the pinned row never refreshes.
-    func testCollectionsStoreChangesForwardToViewModelObjectWillChange() throws {
+    func testCollectionsStoreChangesForwardToViewModelObjectWillChange() async throws {
         let collectionsDB = try AppDatabase.makeTestDatabase()
         let collectionsStore = LibraryCollectionsStore(repo: WorkoutCollectionsRepository(database: collectionsDB))
         viewModel = LibraryViewModel(apiService: api, collectionsStore: collectionsStore)
-        var publishCount = 0
-        let cancellable = viewModel.objectWillChange.sink { _ in publishCount += 1 }
+
+        let exp = expectation(description: "LibraryViewModel.objectWillChange after pin")
+        exp.assertForOverFulfill = false
+        let cancellable = viewModel.objectWillChange.sink { _ in
+            exp.fulfill()
+        }
         defer { cancellable.cancel() }
 
         try viewModel.collectionsStore.setPinned(workoutId: "w1", isPinned: true)
 
-        XCTAssertGreaterThan(
-            publishCount,
-            0,
-            "LibraryViewModel must republish when collectionsStore changes (e.g. pin/unpin)"
-        )
+        // Relay is delivered on the main queue — await fulfillment (MainActor-safe).
+        await fulfillment(of: [exp], timeout: 1.0)
     }
 
     // MARK: - AMA-2376 prune on load/delete
