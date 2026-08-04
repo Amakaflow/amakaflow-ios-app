@@ -88,10 +88,12 @@ struct CollectionDetailView: View {
                 title: "Add to \(displayName)",
                 workouts: addableWorkouts,
                 onAdd: { ids in
-                    for workoutID in ids {
-                        try? collectionsStore.addMember(collectionId: collectionID, workoutId: workoutID)
+                    do {
+                        try collectionsStore.addMembers(collectionId: collectionID, workoutIds: ids)
+                        isPresentingAddWorkouts = false
+                    } catch {
+                        showToast("Couldn't add workouts — try again")
                     }
-                    isPresentingAddWorkouts = false
                 },
                 onCancel: { isPresentingAddWorkouts = false }
             )
@@ -410,8 +412,12 @@ private extension CollectionDetailView {
     }
 
     func createCollectionAndMove(name: String) {
-        guard let created = try? collectionsStore.createCollection(name: name, note: nil) else { return }
-        moveSelection(to: created.id)
+        do {
+            let created = try collectionsStore.createCollection(name: name, note: nil)
+            moveSelection(to: created.id)
+        } catch {
+            showToast("Couldn't create collection — try again")
+        }
     }
 
     func togglePinForSelection() {

@@ -12,14 +12,24 @@ extension LibraryView {
         viewModel.collectionsStore.pinnedIDs.compactMap { viewModel.workoutsByID[$0] }
     }
 
+    func unpinWorkout(_ workoutID: String) {
+        do {
+            try viewModel.collectionsStore.setPinned(workoutId: workoutID, isPinned: false)
+        } catch {
+            collectionsAlertMessage = "Couldn't unpin workout — try again"
+        }
+    }
+
     func createCollection() {
         let name = newCollectionName.trimmingCharacters(in: .whitespacesAndNewlines)
         newCollectionName = ""
         guard !name.isEmpty else { return }
-        guard let created = try? viewModel.collectionsStore.createCollection(name: name, note: nil) else {
-            return
+        do {
+            let created = try viewModel.collectionsStore.createCollection(name: name, note: nil)
+            navigationPath.append(.collection(id: created.id))
+        } catch {
+            collectionsAlertMessage = "Couldn't create collection — try again"
         }
-        navigationPath.append(.collection(id: created.id))
     }
 }
 
@@ -38,6 +48,21 @@ extension View {
             Button("Create", action: onCreate)
         } message: {
             Text("Group workouts together, e.g. \u{201C}Hyrox Prep\u{201D} or \u{201C}Push / Pull / Legs\u{201D}.")
+        }
+    }
+
+    /// AMA-2376: local collection write failures (create / pin / membership).
+    func libraryCollectionsFailureAlert(message: Binding<String?>) -> some View {
+        alert(
+            "Couldn't update collections",
+            isPresented: Binding(
+                get: { message.wrappedValue != nil },
+                set: { if !$0 { message.wrappedValue = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) { message.wrappedValue = nil }
+        } message: {
+            Text(message.wrappedValue ?? "")
         }
     }
 }

@@ -49,6 +49,9 @@ struct LibraryPinnedSection: View {
                 }
             }
             .accessibilityIdentifier("af_pinned_section")
+            .onChange(of: pinnedWorkouts.isEmpty) { _, isEmpty in
+                if isEmpty { isEditing = false }
+            }
         }
     }
 
@@ -97,6 +100,9 @@ struct LibraryPinnedSection: View {
 
             if isEditing {
                 Button {
+                    if pinnedWorkouts.count <= 1 {
+                        isEditing = false
+                    }
                     onUnpin(workout.id)
                 } label: {
                     Image(systemName: "pin.slash.fill")

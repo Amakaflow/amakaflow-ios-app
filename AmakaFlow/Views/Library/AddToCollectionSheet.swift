@@ -124,12 +124,13 @@ struct AddToCollectionSheet: View {
                 Button {
                     confirmCreate()
                 } label: {
+                    let isDisabled = newCollectionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     Text("Create")
                         .ddDisplayText(12.5, weight: .bold)
-                        .foregroundColor(DailyDriver.ink)
+                        .foregroundColor(isDisabled ? DailyDriver.foregroundDim : DailyDriver.ink)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
-                        .background(DailyDriver.lime)
+                        .background(isDisabled ? DailyDriver.card2 : DailyDriver.lime)
                         .clipShape(Capsule(style: .continuous))
                 }
                 .buttonStyle(.plain)

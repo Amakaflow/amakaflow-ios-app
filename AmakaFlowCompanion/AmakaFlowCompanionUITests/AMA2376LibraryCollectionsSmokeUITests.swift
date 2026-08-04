@@ -56,10 +56,15 @@ final class AMA2376LibraryCollectionsSmokeUITests: XCTestCase {
         attachScreenshot(named: "library-pinned-collections")
 
         // Pinned section is optional (hidden when there are no pins); when present,
-        // it must expose the documented a11y root.
+        // Edit must be available so unpin is reachable.
         let pinnedSection = element("af_pinned_section")
         if pinnedSection.exists {
-            XCTAssertTrue(pinnedSection.isHittable || pinnedSection.exists, "Pinned section should be visible when non-empty")
+            let editButton = element("af_pinned_edit")
+            XCTAssertTrue(
+                editButton.waitForExistence(timeout: 3),
+                "Pinned section should expose Edit when pins exist"
+            )
+            XCTAssertTrue(editButton.isHittable, "Pinned Edit should be tappable")
         }
     }
 

@@ -132,10 +132,18 @@ struct MoveToCollectionSheet: View {
                     confirmCreateAndMove()
                 }
                 .ddDisplayText(12.5, weight: .bold)
-                .foregroundColor(DailyDriver.ink)
+                .foregroundColor(
+                    newCollectionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? DailyDriver.foregroundDim
+                        : DailyDriver.ink
+                )
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .background(DailyDriver.lime)
+                .background(
+                    newCollectionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? DailyDriver.card2
+                        : DailyDriver.lime
+                )
                 .clipShape(Capsule(style: .continuous))
                 .disabled(newCollectionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .accessibilityIdentifier("af_move_to_new_confirm")

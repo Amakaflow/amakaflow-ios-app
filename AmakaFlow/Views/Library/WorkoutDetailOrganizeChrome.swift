@@ -22,6 +22,10 @@ struct WorkoutDetailOrganizeChrome: View {
     @State private var isPresentingAddToCollection = false
     @State private var completions: [WorkoutCompletion] = []
     @State private var didLoadCompletions = false
+    /// Gate chips until the first store reload finishes so Suggest/Social
+    /// preview paths (fresh `LibraryCollectionsStore`) don't flash empty chips.
+    @State private var didLoadCollections = false
+    @State private var writeFailureMessage: String?
 
     init(
         workout: Workout,
@@ -39,8 +43,10 @@ struct WorkoutDetailOrganizeChrome: View {
         VStack(alignment: .leading, spacing: 0) {
             actionRow
 
-            chipsRow
-                .padding(.top, 12)
+            if didLoadCollections {
+                chipsRow
+                    .padding(.top, 12)
+            }
 
             if let lastDoneLine {
                 lastDoneRow(lastDoneLine)
@@ -49,6 +55,7 @@ struct WorkoutDetailOrganizeChrome: View {
         }
         .task {
             try? collectionsStore.reload()
+            didLoadCollections = true
             await loadCompletionsIfNeeded()
         }
         .sheet(isPresented: $isPresentingAddToCollection) {
@@ -61,6 +68,17 @@ struct WorkoutDetailOrganizeChrome: View {
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.hidden)
             .presentationBackground(DailyDriver.backgroundElevated)
+        }
+        .alert(
+            "Couldn't update collections",
+            isPresented: Binding(
+                get: { writeFailureMessage != nil },
+                set: { if !$0 { writeFailureMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) { writeFailureMessage = nil }
+        } message: {
+            Text(writeFailureMessage ?? "")
         }
     }
 }
@@ -235,7 +253,25 @@ private extension WorkoutDetailOrganizeChrome {
     func loadCompletionsIfNeeded() async {
         guard !didLoadCompletions else { return }
         didLoadCompletions = true
-        completions = (try? await apiService.fetchCompletions(limit: 50, offset: 0)) ?? []
+        let pageSize = 50
+        var offset = 0
+        var gathered: [WorkoutCompletion] = []
+        // Paginate until this workout appears or pages are exhausted (LAST DONE
+        // must not hide when the matching completion falls past the first page).
+        while offset < 500 {
+            let page: [WorkoutCompletion]
+            do {
+                page = try await apiService.fetchCompletions(limit: pageSize, offset: offset)
+            } catch {
+                break
+            }
+            gathered.append(contentsOf: page)
+            if page.contains(where: { $0.workoutId == workout.id }) || page.count < pageSize {
+                break
+            }
+            offset += pageSize
+        }
+        completions = gathered
     }
 }
 
@@ -263,23 +299,43 @@ private extension WorkoutDetailOrganizeChrome {
     }
 
     func togglePin() {
-        try? collectionsStore.setPinned(workoutId: workout.id, isPinned: !isPinned)
+        do {
+            try collectionsStore.setPinned(workoutId: workout.id, isPinned: !isPinned)
+        } catch {
+            reportWriteFailure()
+        }
     }
 
     func toggleMembership(collectionId: String, isMember: Bool) {
-        if isMember {
-            try? collectionsStore.addMember(collectionId: collectionId, workoutId: workout.id)
-        } else {
-            try? collectionsStore.removeMember(collectionId: collectionId, workoutId: workout.id)
+        do {
+            if isMember {
+                try collectionsStore.addMember(collectionId: collectionId, workoutId: workout.id)
+            } else {
+                try collectionsStore.removeMember(collectionId: collectionId, workoutId: workout.id)
+            }
+        } catch {
+            reportWriteFailure()
         }
     }
 
     func removeMembership(collectionId: String) {
-        try? collectionsStore.removeMember(collectionId: collectionId, workoutId: workout.id)
+        do {
+            try collectionsStore.removeMember(collectionId: collectionId, workoutId: workout.id)
+        } catch {
+            reportWriteFailure()
+        }
     }
 
     func createCollectionAndAdd(name: String) {
-        guard let created = try? collectionsStore.createCollection(name: name, note: nil) else { return }
-        try? collectionsStore.addMember(collectionId: created.id, workoutId: workout.id)
+        do {
+            let created = try collectionsStore.createCollection(name: name, note: nil)
+            try collectionsStore.addMember(collectionId: created.id, workoutId: workout.id)
+        } catch {
+            writeFailureMessage = "Couldn't create collection — try again"
+        }
+    }
+
+    func reportWriteFailure(_ message: String = "Couldn't update collections — try again") {
+        writeFailureMessage = message
     }
 }

@@ -61,19 +61,26 @@ nonisolated final class WorkoutCollectionsRepository {
 
     func addMember(collectionId: String, workoutId: String) throws {
         try dbQueue.write { database in
-            let alreadyMember = try LocalWorkoutCollectionMember
-                .filter(LocalWorkoutCollectionMember.Columns.collectionId == collectionId
-                    && LocalWorkoutCollectionMember.Columns.workoutId == workoutId)
-                .fetchCount(database) > 0
-            if alreadyMember {
-                return
+            try self.insertMemberIfNeeded(
+                collectionId: collectionId,
+                workoutId: workoutId,
+                database: database
+            )
+            try self.touchCollection(collectionId, database: database)
+        }
+    }
+
+    /// Inserts many members in one write transaction (single `touchCollection`).
+    func addMembers(collectionId: String, workoutIds: [String]) throws {
+        guard !workoutIds.isEmpty else { return }
+        try dbQueue.write { database in
+            for workoutId in workoutIds {
+                try self.insertMemberIfNeeded(
+                    collectionId: collectionId,
+                    workoutId: workoutId,
+                    database: database
+                )
             }
-            let nextPosition = try Int.fetchOne(database, sql: """
-                SELECT COALESCE(MAX(position), 0) + 1 FROM workout_collection_members
-                WHERE collection_id = ?
-                """, arguments: [collectionId]) ?? 1
-            var member = LocalWorkoutCollectionMember(collectionId: collectionId, workoutId: workoutId, position: nextPosition)
-            try member.insert(database)
             try self.touchCollection(collectionId, database: database)
         }
     }
@@ -185,6 +192,30 @@ nonisolated final class WorkoutCollectionsRepository {
             }
             return deleted
         }
+    }
+
+    private func insertMemberIfNeeded(
+        collectionId: String,
+        workoutId: String,
+        database: Database
+    ) throws {
+        let alreadyMember = try LocalWorkoutCollectionMember
+            .filter(LocalWorkoutCollectionMember.Columns.collectionId == collectionId
+                && LocalWorkoutCollectionMember.Columns.workoutId == workoutId)
+            .fetchCount(database) > 0
+        if alreadyMember {
+            return
+        }
+        let nextPosition = try Int.fetchOne(database, sql: """
+            SELECT COALESCE(MAX(position), 0) + 1 FROM workout_collection_members
+            WHERE collection_id = ?
+            """, arguments: [collectionId]) ?? 1
+        var member = LocalWorkoutCollectionMember(
+            collectionId: collectionId,
+            workoutId: workoutId,
+            position: nextPosition
+        )
+        try member.insert(database)
     }
 
     private func touchCollection(_ collectionId: String, database: Database) throws {

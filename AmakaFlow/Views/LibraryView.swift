@@ -19,6 +19,7 @@ struct LibraryView: View {
     @StateObject private var watchesVM = OnYourWatchesViewModel()
     @State var isPresentingNewCollection = false
     @State var newCollectionName = ""
+    @State var collectionsAlertMessage: String?
     /// Gates content/empty `.task` so state flips don't double-refresh watches.
     @State private var watchesDidInitialRefresh = false
     /// AMA-2375: Garmin Fix opens the editor directly (not detail → Edit).
@@ -214,9 +215,7 @@ extension LibraryView {
                         onSelect: { workoutID in
                             navigationPath.append(.unifiedWorkout(workoutID: workoutID))
                         },
-                        onUnpin: { workoutID in
-                            try? viewModel.collectionsStore.setPinned(workoutId: workoutID, isPinned: false)
-                        }
+                        onUnpin: unpinWorkout
                     )
                     .padding(.horizontal, 18)
                     .padding(.top, 18)
@@ -272,6 +271,7 @@ extension LibraryView {
             name: $newCollectionName,
             onCreate: createCollection
         )
+        .libraryCollectionsFailureAlert(message: $collectionsAlertMessage)
     }
 
     private var emptyView: some View {

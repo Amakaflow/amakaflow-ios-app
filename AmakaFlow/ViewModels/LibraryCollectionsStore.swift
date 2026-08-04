@@ -75,6 +75,12 @@ final class LibraryCollectionsStore: ObservableObject {
         try reload()
     }
 
+    /// Batch add — single `reload()` after all inserts (avoids N full store refreshes).
+    func addMembers(collectionId: String, workoutIds: [String]) throws {
+        try repo.addMembers(collectionId: collectionId, workoutIds: workoutIds)
+        try reload()
+    }
+
     func removeMember(collectionId: String, workoutId: String) throws {
         try repo.removeMember(collectionId: collectionId, workoutId: workoutId)
         try reload()

@@ -86,4 +86,13 @@ final class WorkoutCollectionsRepositoryTests: XCTestCase {
         XCTAssertTrue(try repo.memberWorkoutIds(collectionId: from.id).isEmpty)
         XCTAssertEqual(try repo.memberWorkoutIds(collectionId: to.id), ["w1"])
     }
+
+    func testAddMembersBatchesInsertsInSourceOrder() throws {
+        let collection = try repo.createCollection(name: "Hyrox Prep", note: nil)
+        try repo.addMembers(collectionId: collection.id, workoutIds: ["w1", "w2", "w3"])
+        XCTAssertEqual(try repo.memberWorkoutIds(collectionId: collection.id), ["w1", "w2", "w3"])
+        // Idempotent — already-members are skipped without shifting positions.
+        try repo.addMembers(collectionId: collection.id, workoutIds: ["w2", "w4"])
+        XCTAssertEqual(try repo.memberWorkoutIds(collectionId: collection.id), ["w1", "w2", "w3", "w4"])
+    }
 }
