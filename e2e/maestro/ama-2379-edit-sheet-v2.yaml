@@ -1,0 +1,202 @@
+# AMA-2379 visual — Editor V2 focused edit sheet (TARGET family + REST)
+#
+# Validates Range 8–12 → Done row en-dash summary, Open → OPEN summary,
+# REST Open/Timed preserved while switching TARGET kinds, and captures one
+# screenshot per TARGET kind for mockup parity review.
+#
+# Auth: UITEST fixtures (same scaffold as ama-2372 visual flows).
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2379_edit_sheet,email=claude+clerk_test@amakaflow.dev,name=AMA2379 Visual"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn: "Library"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_fab"
+    timeout: 15000
+- tapOn:
+    id: "af_library_fab"
+- extendedWaitUntil:
+    visible:
+      id: "create_workout_sheet"
+    timeout: 10000
+- tapOn:
+    id: "create_door_manual"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "builder_v3_type_picker_screen"
+    timeout: 15000
+- tapOn:
+    id: "builder_v3_type_lift_push"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "editor_v2_screen"
+    timeout: 15000
+- assertVisible: "Bench Press"
+- assertVisible: "Overhead Press"
+- assertVisible: "Triceps Pushdown"
+# ── Step 1: Range 8–12 → Done → row shows en-dash range ──
+- tapOn: "Bench Press"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "af_exsheet_done"
+    timeout: 10000
+- assertVisible:
+    id: "af_exsheet_target_reps"
+- assertVisible:
+    id: "af_exsheet_sets"
+- tapOn:
+    id: "af_exsheet_target_range"
+- assertVisible:
+    id: "af_exsheet_range_min"
+- assertVisible:
+    id: "af_exsheet_range_max"
+- assertVisible: "8"
+- assertVisible: "12"
+- takeScreenshot: docs/ama-2379-visual-evidence/02-target-range
+- tapOn:
+    id: "af_exsheet_done"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "editor_v2_screen"
+    timeout: 10000
+- assertVisible: "3 × 8–12"
+# ── Step 2: Open → Done → row shows OPEN ──
+- tapOn: "Bench Press"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "af_exsheet_done"
+    timeout: 10000
+- tapOn:
+    id: "af_exsheet_target_open"
+- assertVisible:
+    id: "af_exsheet_open_goal"
+- assertVisible: "Open goal"
+- takeScreenshot: docs/ama-2379-visual-evidence/06-target-open
+- tapOn:
+    id: "af_exsheet_done"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "editor_v2_screen"
+    timeout: 10000
+- assertVisible: "3 × OPEN"
+# ── Step 3: REST Open/Timed preserved while changing TARGET ──
+- tapOn: "Bench Press"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "af_exsheet_done"
+    timeout: 10000
+- assertVisible:
+    id: "af_exsheet_rest_timed"
+- tapOn:
+    id: "af_exsheet_rest_open"
+- assertVisible:
+    id: "af_exsheet_rest_open_caption"
+- tapOn:
+    id: "af_exsheet_target_reps"
+- assertVisible:
+    id: "af_exsheet_rest_open_caption"
+- tapOn:
+    id: "af_exsheet_target_timed"
+- assertVisible:
+    id: "af_exsheet_rest_open_caption"
+- tapOn:
+    id: "af_exsheet_target_cals"
+- assertVisible:
+    id: "af_exsheet_rest_open_caption"
+- tapOn:
+    id: "af_exsheet_target_range"
+- assertVisible:
+    id: "af_exsheet_rest_open_caption"
+- tapOn:
+    id: "af_exsheet_target_open"
+- assertVisible:
+    id: "af_exsheet_rest_open_caption"
+- tapOn:
+    id: "af_exsheet_rest_timed"
+- assertVisible:
+    id: "af_exsheet_rest_duration"
+- tapOn:
+    id: "af_exsheet_target_cals"
+- assertVisible:
+    id: "af_exsheet_rest_duration"
+- tapOn:
+    id: "af_exsheet_done"
+- waitForAnimationToEnd:
+    timeout: 2000
+# ── Step 4: five TARGET kind screenshots (unused exercise row) ──
+- tapOn: "Triceps Pushdown"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "af_exsheet_done"
+    timeout: 10000
+- assertVisible:
+    id: "af_exsheet_target_reps"
+- assertVisible:
+    id: "af_exsheet_reps"
+- takeScreenshot: docs/ama-2379-visual-evidence/01-target-reps
+- tapOn:
+    id: "af_exsheet_target_range"
+- assertVisible:
+    id: "af_exsheet_range_min"
+- assertVisible:
+    id: "af_exsheet_range_max"
+- takeScreenshot: docs/ama-2379-visual-evidence/02-target-range-clean
+- tapOn:
+    id: "af_exsheet_target_timed"
+- assertVisible:
+    id: "af_exsheet_work"
+- takeScreenshot: docs/ama-2379-visual-evidence/03-target-timed
+- tapOn:
+    id: "af_exsheet_target_cals"
+- assertVisible:
+    id: "af_exsheet_calories"
+- takeScreenshot: docs/ama-2379-visual-evidence/04-target-cals
+- tapOn:
+    id: "af_exsheet_target_open"
+- assertVisible:
+    id: "af_exsheet_open_goal"
+- takeScreenshot: docs/ama-2379-visual-evidence/05-target-open
+- assertVisible:
+    id: "af_exsheet_sets"
+- assertVisible:
+    id: "af_exsheet_rest_open"
+- assertVisible:
+    id: "af_exsheet_rest_timed"
+- takeScreenshot: docs/ama-2379-visual-evidence/07-sheet-sets-rest-grid
+- tapOn:
+    id: "af_exsheet_done"
+- waitForAnimationToEnd:
+    timeout: 2000
