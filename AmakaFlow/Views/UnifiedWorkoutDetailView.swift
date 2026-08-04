@@ -18,6 +18,10 @@ struct UnifiedWorkoutDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @EnvironmentObject private var workoutsViewModel: WorkoutsViewModel
+    /// AMA-2376 Task 7: shared with `LibraryView`/`LibraryViewModel` when passed
+    /// explicitly so pin/collection state stays in sync across the tab; falls
+    /// back to a fresh local-first store for callers that don't wire one yet.
+    @ObservedObject private var collectionsStore: LibraryCollectionsStore
 
     @State private var showingEditor = false
     @State private var showingWorkoutPlayer = false
@@ -77,6 +81,7 @@ struct UnifiedWorkoutDetailView: View {
 
     init(
         workout: Workout,
+        collectionsStore: LibraryCollectionsStore? = nil,
         garminPairedOverride: Bool? = nil,
         appleWatchReachableOverride: Bool? = nil,
         onEditorDismiss: (() async -> Workout?)? = nil,
@@ -86,6 +91,7 @@ struct UnifiedWorkoutDetailView: View {
         autoStartOnAppear: Bool = false
     ) {
         _displayedWorkout = State(initialValue: workout)
+        _collectionsStore = ObservedObject(wrappedValue: collectionsStore ?? LibraryCollectionsStore())
         self.garminPairedOverride = garminPairedOverride
         self.appleWatchReachableOverride = appleWatchReachableOverride
         self.onEditorDismiss = onEditorDismiss
@@ -395,6 +401,15 @@ struct UnifiedWorkoutDetailView: View {
                     .lineSpacing(4)
                     .padding(.top, 8)
             }
+
+            // AMA-2376 Task 7: Pin/Collect/To watch/Share + collection chips + LAST DONE.
+            WorkoutDetailOrganizeChrome(
+                workout: workout,
+                collectionsStore: collectionsStore
+            ) {
+                Task { await handleStartTapped() }
+            }
+            .padding(.top, 14)
 
             creditRow
                 .padding(.top, 12)

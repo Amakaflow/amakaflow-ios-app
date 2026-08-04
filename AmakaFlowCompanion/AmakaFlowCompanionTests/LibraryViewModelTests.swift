@@ -5,6 +5,7 @@
 //  AMA-2004: Library tab list, filters, empty/error coverage.
 //
 
+import Combine
 import XCTest
 
 @testable import AmakaFlowCompanion
@@ -302,6 +303,136 @@ final class LibraryViewModelTests: XCTestCase {
         XCTAssertEqual(api.lastDeletedWorkoutID, "wo-1")
         XCTAssertEqual(viewModel.state, .empty)
         XCTAssertTrue(viewModel.entries.isEmpty)
+    }
+
+    /// Important fix: `LibraryView` reads `viewModel.collectionsStore` directly rather
+    /// than observing it, so pin/unpin (or any collections mutation) must be forwarded
+    /// through `LibraryViewModel.objectWillChange` or the pinned row never refreshes.
+    func testCollectionsStoreChangesForwardToViewModelObjectWillChange() async throws {
+        let collectionsDB = try AppDatabase.makeTestDatabase()
+        let collectionsStore = LibraryCollectionsStore(repo: WorkoutCollectionsRepository(database: collectionsDB))
+        viewModel = LibraryViewModel(apiService: api, collectionsStore: collectionsStore)
+
+        let exp = expectation(description: "LibraryViewModel.objectWillChange after pin")
+        exp.assertForOverFulfill = false
+        let cancellable = viewModel.objectWillChange.sink { _ in
+            exp.fulfill()
+        }
+        defer { cancellable.cancel() }
+
+        try viewModel.collectionsStore.setPinned(workoutId: "w1", isPinned: true)
+
+        // Relay is delivered on the main queue — await fulfillment (MainActor-safe).
+        await fulfillment(of: [exp], timeout: 1.0)
+    }
+
+    // MARK: - AMA-2376 prune on load/delete
+
+    func testLoadPrunesOrphanCollectionMembersToKnownWorkouts() async throws {
+        let collectionsDB = try AppDatabase.makeTestDatabase()
+        let collectionsRepo = WorkoutCollectionsRepository(database: collectionsDB)
+        let collectionsStore = LibraryCollectionsStore(repo: collectionsRepo)
+        let collection = try collectionsRepo.createCollection(name: "Hyrox Prep", note: nil)
+        try collectionsRepo.addMember(collectionId: collection.id, workoutId: "keep")
+        try collectionsRepo.addMember(collectionId: collection.id, workoutId: "gone")
+        viewModel = LibraryViewModel(apiService: api, collectionsStore: collectionsStore)
+
+        api.listLibraryItemsResult = .success(Components.Schemas.LibraryItemList(items: [], total: 0))
+        api.fetchWorkoutsResult = .success([makeWorkout(id: "keep", name: "Keep")])
+
+        await viewModel.load()
+
+        XCTAssertEqual(try collectionsRepo.memberWorkoutIds(collectionId: collection.id), ["keep"])
+        XCTAssertEqual(try collectionsRepo.uncategorizedWorkoutIds(from: ["keep"]), [])
+    }
+
+    /// Workout-kind knowledge cards open synthetic unified detail, so their IDs must
+    /// survive prune alongside saved workouts. Article/video/plan IDs stay excluded.
+    func testLoadKeepsWorkoutKindKnowledgeIDsWhenPruning() async throws {
+        let collectionsDB = try AppDatabase.makeTestDatabase()
+        let collectionsRepo = WorkoutCollectionsRepository(database: collectionsDB)
+        let collectionsStore = LibraryCollectionsStore(repo: collectionsRepo)
+        let collection = try collectionsRepo.createCollection(name: "Hyrox Prep", note: nil)
+        try collectionsRepo.addMember(collectionId: collection.id, workoutId: "knowledge-workout")
+        try collectionsRepo.addMember(collectionId: collection.id, workoutId: "gone")
+        try collectionsRepo.setPinned(workoutId: "knowledge-workout", isPinned: true)
+        viewModel = LibraryViewModel(apiService: api, collectionsStore: collectionsStore)
+
+        api.listLibraryItemsResult = .success(
+            Components.Schemas.LibraryItemList(
+                items: [
+                    item(id: "knowledge-workout", kind: .workout),
+                    item(id: "knowledge-article", kind: .article),
+                ],
+                total: 2
+            )
+        )
+        api.fetchWorkoutsResult = .success([])
+
+        await viewModel.load()
+
+        XCTAssertEqual(
+            try collectionsRepo.memberWorkoutIds(collectionId: collection.id),
+            ["knowledge-workout"],
+            "Workout-kind knowledge IDs must remain known during orphan prune"
+        )
+        XCTAssertTrue(
+            try collectionsRepo.isPinned(workoutId: "knowledge-workout"),
+            "Pins for workout-kind knowledge cards must survive prune"
+        )
+        XCTAssertFalse(
+            viewModel.knownCollectionWorkoutIDs.contains("knowledge-article"),
+            "Non-workout knowledge IDs must not enter the known collection set"
+        )
+    }
+
+    /// Critical fix: an empty known-workout set on `load()` (e.g. transient/partial
+    /// API response) must NOT wipe every existing membership/pin. Only a non-empty
+    /// known set should trigger `pruneOrphans`.
+    func testLoadWithEmptyKnownWorkoutsDoesNotWipeExistingMemberships() async throws {
+        let collectionsDB = try AppDatabase.makeTestDatabase()
+        let collectionsRepo = WorkoutCollectionsRepository(database: collectionsDB)
+        let collectionsStore = LibraryCollectionsStore(repo: collectionsRepo)
+        let collection = try collectionsRepo.createCollection(name: "Hyrox Prep", note: nil)
+        try collectionsRepo.addMember(collectionId: collection.id, workoutId: "w1")
+        try collectionsRepo.setPinned(workoutId: "w1", isPinned: true)
+        viewModel = LibraryViewModel(apiService: api, collectionsStore: collectionsStore)
+
+        api.listLibraryItemsResult = .success(Components.Schemas.LibraryItemList(items: [], total: 0))
+        api.fetchWorkoutsResult = .success([])
+
+        await viewModel.load()
+
+        XCTAssertEqual(
+            try collectionsRepo.memberWorkoutIds(collectionId: collection.id),
+            ["w1"],
+            "Empty known-workout set on load must not prune existing memberships"
+        )
+        XCTAssertTrue(
+            try collectionsRepo.isPinned(workoutId: "w1"),
+            "Empty known-workout set on load must not clear existing pins"
+        )
+    }
+
+    func testDeleteWorkoutPrunesCollectionMembershipWithRemainingIDs() async throws {
+        let collectionsDB = try AppDatabase.makeTestDatabase()
+        let collectionsRepo = WorkoutCollectionsRepository(database: collectionsDB)
+        let collectionsStore = LibraryCollectionsStore(repo: collectionsRepo)
+        let collection = try collectionsRepo.createCollection(name: "Hyrox Prep", note: nil)
+        try collectionsRepo.addMember(collectionId: collection.id, workoutId: "keep")
+        try collectionsRepo.addMember(collectionId: collection.id, workoutId: "delete-me")
+        viewModel = LibraryViewModel(apiService: api, collectionsStore: collectionsStore)
+
+        let keep = makeWorkout(id: "keep", name: "Keep")
+        let deleteMe = makeWorkout(id: "delete-me", name: "Delete me")
+        api.listLibraryItemsResult = .success(Components.Schemas.LibraryItemList(items: [], total: 0))
+        api.fetchWorkoutsResult = .success([keep, deleteMe])
+        await viewModel.load()
+
+        let deleted = await viewModel.deleteEntry(.workout(deleteMe))
+
+        XCTAssertTrue(deleted)
+        XCTAssertEqual(try collectionsRepo.memberWorkoutIds(collectionId: collection.id), ["keep"])
     }
 
     func testDeleteFailureRestoresEntryAndSurfacesToast() async {

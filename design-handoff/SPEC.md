@@ -37,6 +37,13 @@ plus 2 more doors (voice/scan per jsx). Cancel closes.
 
 ### 3. Library (`dd-library-dark.png`, jsx L459)
 - Header "Library" + small ＋ (also opens Create sheet).
+- **AMA-2376 collections (organize rework):**
+  - Collection detail title: Poppins/`ddDisplayText` **21pt heavy**, centered under the
+    Library ← back / Organize chrome (`CollectionDetailView` header).
+  - Meta line under the title: SF mono **9pt** uppercase (`N SELECTED` / workout count ·
+    duration), dim foreground.
+  - Pinned row label: SF **11pt bold** tracked (`PINNED`); collection grid cards:
+    Poppins **14pt bold** title + mono digit caption.
 - Search field; filter chips: All (lime when active) / Instagram / TikTok / Manual / Coach.
 - Workout cards: 58pt gradient thumbnail w/ type icon, title (15/700), meta line
   ("8 blocks · 45 min · by you"), source chip color-coded (MANUAL gray, INSTAGRAM purple,

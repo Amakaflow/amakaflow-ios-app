@@ -94,6 +94,7 @@ progress bar 3pt.
 |---|---|---|
 | Today (tab 1) | `dd-today-dark.png` | Completed-only diary timeline; week strip; device pill |
 | Library (tab 2) | `dd-library-dark.png` | Search, source filter chips, media cards w/ creator credit |
+| Library collections (AMA-2376) | (rig) `screens-collections.jsx` | Collection detail title **21pt heavy Poppins**; meta **9pt mono**; pinned **11pt**; grid card **14pt** + mono caption — see SPEC §3 |
 | Profile (tab 3) | `dd-profile-dark.png` | Stat tiles, weekday dots, insight banner, week list |
 | Settings | `dd-settings-dark.png` | Grouped disclosure cards w/ colored icon chips |
 | Device detail | `dd-device-dark.png` | Battery hero, queue w/ failed state, per-type toggles |

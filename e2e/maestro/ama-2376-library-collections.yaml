@@ -1,0 +1,198 @@
+# AMA-2376 visual validation — Library collections, organize mode, pin, detail chips
+#
+# Proves: create a named collection → add 2 fixture workouts via "Add
+# workouts" → Organize mode (select both → Move to a brand-new collection)
+# → Pin from Organize in the destination collection → open workout detail
+# (assert Pin + membership chip) → remove the chip.
+#
+# NOTE ON SELECTORS: several AMA-2376 header/toolbar Buttons
+# (af_collection_new, af_collection_organize/done, af_collection_add_workouts,
+# af_organize_move/pin/remove, af_add_to_collection_new/done,
+# af_workout_pick_add, af_detail_collection_chip_*_remove) share the same
+# SwiftUI body as an ancestor container that also carries its own
+# accessibilityIdentifier — on this iOS/XCUITest build that collapses the
+# child's identifier down to the ancestor's, so `id:` lookups for those
+# specific buttons don't resolve. This is a testability-only quirk (the
+# visible text/label is unaffected), so this flow deliberately taps those by
+# `text:` instead of `id:`. Ids that live in their own child View struct
+# (collection cards/rows, member rows, add-to-collection rows, detail action
+# tiles, chip containers) are unaffected and used normally.
+#
+# Auth: UITEST_CLERK_TEST_SESSION + UITEST_SKIP_ONBOARDING + fixtures.
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2376_visual,email=claude+clerk_test@amakaflow.dev,name=AMA2376 Visual"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn:
+    text: "Library"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "library_screen"
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "af_collections_section"
+    timeout: 15000
+- takeScreenshot: docs/ama-2376-visual-evidence/01-library
+
+# --- Create "Hyrox Prep" collection (system alert — no a11y ids on field/buttons) ---
+- tapOn:
+    text: "New"
+- waitForAnimationToEnd:
+    timeout: 1500
+- extendedWaitUntil:
+    visible: "New Collection"
+    timeout: 5000
+- tapOn:
+    text: "Collection name"
+- inputText: "Hyrox Prep"
+- tapOn:
+    text: "Create"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_collection_detail"
+    timeout: 15000
+- assertVisible:
+    text: "Hyrox Prep"
+- assertVisible:
+    text: "No workouts here yet."
+
+# --- Add 2 fixture workouts via "Add workouts" ---
+- tapOn:
+    text: "Add workouts"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "af_workout_pick"
+    timeout: 10000
+- tapOn:
+    id: "af_workout_pick_row_fixture-hiit-001"
+- tapOn:
+    id: "af_workout_pick_row_fixture-strength-001"
+- takeScreenshot: docs/ama-2376-visual-evidence/02-add-workouts
+- tapOn:
+    text: "Add \\(2\\)"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_collection_member_fixture-hiit-001"
+    timeout: 10000
+- assertVisible:
+    id: "af_collection_member_fixture-strength-001"
+
+# --- Organize in "Hyrox Prep": select both, Move to a brand-new "Race Week" ---
+- tapOn:
+    text: "Organize"
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn:
+    id: "af_collection_member_fixture-hiit-001"
+- tapOn:
+    id: "af_collection_member_fixture-strength-001"
+- takeScreenshot: docs/ama-2376-visual-evidence/03-organize-move
+- tapOn:
+    text: "Move to"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "af_move_to_collection_sheet"
+    timeout: 10000
+- tapOn:
+    text: "New collection"
+- tapOn:
+    text: "Collection name"
+- inputText: "Race Week"
+- tapOn:
+    text: "Create"
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible:
+    text: "No workouts here yet."
+- tapOn:
+    text: "Done"
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn:
+    text: "Library"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "af_collections_section"
+    timeout: 10000
+
+# --- Open "Race Week" and Pin from Organize ---
+- tapOn:
+    text: "Race Week"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_collection_detail"
+    timeout: 15000
+- assertVisible:
+    id: "af_collection_member_fixture-hiit-001"
+- assertVisible:
+    id: "af_collection_member_fixture-strength-001"
+- tapOn:
+    text: "Organize"
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn:
+    id: "af_collection_member_fixture-hiit-001"
+- tapOn:
+    text: "Pin"
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn:
+    text: "Done"
+- waitForAnimationToEnd:
+    timeout: 1500
+- takeScreenshot: docs/ama-2376-visual-evidence/04-pinned
+
+# --- Detail chips: open the pinned workout, assert pin/chip, remove one chip ---
+- tapOn:
+    id: "af_collection_member_fixture-hiit-001"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_workout_detail_screen"
+    timeout: 15000
+- assertVisible:
+    id: "af_detail_pin"
+- assertVisible:
+    text: "RACE WEEK"
+- assertVisible:
+    id: "af_detail_collection_add_chip"
+- takeScreenshot: docs/ama-2376-visual-evidence/05-detail
+- tapOn:
+    id: ".*_chip_.*"
+    index: 1
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertNotVisible:
+    text: "RACE WEEK"

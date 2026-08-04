@@ -10,13 +10,16 @@
 import SwiftUI
 
 struct LibraryView: View {
-    @StateObject private var viewModel: LibraryViewModel
+    @StateObject var viewModel: LibraryViewModel
     @Environment(\.openCreateSheet) private var openCreateSheet
     @State private var searchText = ""
     @State private var sourceFilter: DDPlatform = .all
     @State private var pendingDelete: LibraryListEntry?
-    @State private var navigationPath: [LibraryDestination] = []
+    @State var navigationPath: [LibraryDestination] = []
     @StateObject private var watchesVM = OnYourWatchesViewModel()
+    @State var isPresentingNewCollection = false
+    @State var newCollectionName = ""
+    @State var collectionsAlertMessage: String?
     /// Gates content/empty `.task` so state flips don't double-refresh watches.
     @State private var watchesDidInitialRefresh = false
     /// AMA-2375: Garmin Fix opens the editor directly (not detail → Edit).
@@ -207,21 +210,51 @@ extension LibraryView {
                         .padding(.horizontal, 18)
                         .padding(.top, 8)
 
-                    DDSourceFilterPills(selection: $sourceFilter)
-                        .padding(.horizontal, 18)
-                        .padding(.top, 10)
+                    LibraryPinnedSection(
+                        pinnedWorkouts: pinnedWorkouts,
+                        onSelect: { workoutID in
+                            navigationPath.append(.unifiedWorkout(workoutID: workoutID))
+                        },
+                        onUnpin: unpinWorkout
+                    )
+                    .padding(.horizontal, 18)
+                    .padding(.top, 18)
+
+                    LibraryCollectionsGrid(
+                        items: viewModel.collectionsStore.gridModels(workoutsByID: viewModel.workoutsByID),
+                        workoutsByID: viewModel.workoutsByID,
+                        onSelectCollection: { collectionID in
+                            navigationPath.append(.collection(id: collectionID))
+                        },
+                        onNewCollection: {
+                            newCollectionName = ""
+                            isPresentingNewCollection = true
+                        }
+                    )
+                    .padding(.horizontal, 18)
+                    .padding(.top, 22)
 
                     if watchesVM.snapshot.hasAnyWearable {
                         OnYourWatchesSummaryRow(summaryLine: watchesVM.snapshot.librarySummaryLine) {
                             navigationPath.append(.onYourWatches)
                         }
                         .padding(.horizontal, 18)
-                        .padding(.top, 14)
+                        .padding(.top, 22)
                     }
+
+                    Text("All workouts")
+                        .ddDisplayText(19, weight: .heavy)
+                        .foregroundColor(DailyDriver.foreground)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 22)
+
+                    DDSourceFilterPills(selection: $sourceFilter)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 10)
 
                     itemList
                         .padding(.horizontal, 18)
-                        .padding(.top, watchesVM.snapshot.hasAnyWearable ? 10 : 14)
+                        .padding(.top, 10)
                 }
                 .padding(.bottom, 100)
             }
@@ -233,6 +266,12 @@ extension LibraryView {
         .task {
             await refreshWatches()
         }
+        .libraryNewCollectionAlert(
+            isPresented: $isPresentingNewCollection,
+            name: $newCollectionName,
+            onCreate: createCollection
+        )
+        .libraryCollectionsFailureAlert(message: $collectionsAlertMessage)
     }
 
     private var emptyView: some View {
@@ -396,6 +435,7 @@ extension LibraryView {
             if let workout = viewModel.resolveWorkout(for: destination) {
                 UnifiedWorkoutDetailView(
                     workout: workout,
+                    collectionsStore: viewModel.collectionsStore,
                     onEditorDismiss: {
                         await viewModel.load()
                         return viewModel.workout(for: workoutID)
@@ -438,6 +478,14 @@ extension LibraryView {
             )
         case .libraryPick(let target):
             WatchLibraryPickView(target: target) { workoutID in
+                navigationPath.append(.unifiedWorkout(workoutID: workoutID))
+            }
+        case .collection(let collectionID):
+            CollectionDetailView(
+                collectionID: collectionID,
+                collectionsStore: viewModel.collectionsStore,
+                workoutsByID: viewModel.workoutsByID
+            ) { workoutID in
                 navigationPath.append(.unifiedWorkout(workoutID: workoutID))
             }
         }
