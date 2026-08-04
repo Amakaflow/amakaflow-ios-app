@@ -405,6 +405,7 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
         reps = nil
         repsRange = nil
         durationSeconds = nil
+        distanceMeters = nil
         calories = nil
     }
 

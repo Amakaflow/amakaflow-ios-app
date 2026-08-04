@@ -416,6 +416,7 @@ final class EditorV2Tests: XCTestCase {
             reps: 10,
             repsRange: RepsRange(low: 8, high: 12),
             durationSeconds: 40,
+            distanceMeters: 400,
             calories: 15,
             restOpen: true
         )
@@ -425,6 +426,7 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertNil(exercise.reps)
         XCTAssertNil(exercise.repsRange)
         XCTAssertNil(exercise.durationSeconds)
+        XCTAssertNil(exercise.distanceMeters)
         XCTAssertNil(exercise.calories)
         XCTAssertEqual(exercise.summaryLine, "3 × OPEN · OPEN REST")
     }
