@@ -304,6 +304,23 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
         XCTAssertNil(row.reps)
     }
 
+    /// CR: decode strips a stray `value` on open rows so mapper save cannot
+    /// re-emit `{kind: open, value: n}` (backend 422).
+    func testWarmupSetRowOpenDecodeDropsStrayValue() throws {
+        let data = Data(#"{"kind": "open", "value": 5}"#.utf8)
+        let row = try WorkoutEnrichmentJSON.decoder.decode(WarmupSetRow.self, from: data)
+        XCTAssertEqual(row.kind, .open)
+        XCTAssertNil(row.value)
+
+        let encoded = try WorkoutEnrichmentJSON.object(from: row)
+        XCTAssertEqual(encoded["kind"] as? String, "open")
+        XCTAssertNil(encoded["value"])
+
+        let mapperPayload = APIService.warmupSetObject(from: row)
+        XCTAssertEqual(mapperPayload["kind"] as? String, "open")
+        XCTAssertNil(mapperPayload["value"])
+    }
+
     func testWarmupSetRowStillDecodesRepsOnly() throws {
         let data = Data(#"{"reps": 5}"#.utf8)
         let row = try WorkoutEnrichmentJSON.decoder.decode(WarmupSetRow.self, from: data)

@@ -615,12 +615,20 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
             prefs: .defaults
         )
         let editedActivities = [EnrichmentActivityPref(name: "Row 500m", durationSec: 180)]
+        let editedRamps = [
+            PerExerciseRamp(
+                exerciseRef: "Bench Press",
+                enabled: true,
+                sets: [try RampSet(kind: .reps, value: 8)]
+            )
+        ]
 
         let application = try WorkoutEnrichmentPushPlanner.application(
             plan: plan,
             decision: WorkoutEnrichmentPushPlanner.Decision(
                 checkedKinds: [.betweenSetRest],
-                sessionWarmupActivities: editedActivities
+                sessionWarmupActivities: editedActivities,
+                perExerciseRamps: editedRamps
             ),
             prefs: .defaults,
             tombstones: []
@@ -631,6 +639,15 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertEqual(
             application.prefs.sessionWarmup.activities,
             WorkoutPreferences.defaults.sessionWarmup.activities
+        )
+        XCTAssertFalse(application.prefs.exerciseWarmupSets.enabled)
+        XCTAssertEqual(
+            application.prefs.exerciseWarmupSets.perExercise,
+            WorkoutPreferences.defaults.exerciseWarmupSets.perExercise
+        )
+        XCTAssertEqual(
+            application.prefs.exerciseWarmupSets.excludeExerciseKeys,
+            WorkoutPreferences.defaults.exerciseWarmupSets.excludeExerciseKeys
         )
     }
 

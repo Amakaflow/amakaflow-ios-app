@@ -163,7 +163,10 @@ struct WarmupSetRow: Equatable, Codable, Sendable {
         self.reps = reps
         self.kind = kind
         weight = try container.decodeIfPresent(Double.self, forKey: .weight)
-        value = try container.decodeIfPresent(Int.self, forKey: .value)
+        let decodedValue = try container.decodeIfPresent(Int.self, forKey: .value)
+        // Open rows carry no value — mirror `parseList` so a decode → save
+        // round-trip cannot re-emit an invalid `{kind: open, value: n}` pair.
+        value = kind == .open ? nil : decodedValue
         intensityNote = try container.decodeIfPresent(String.self, forKey: .intensityNote)
         structureSource = try container.decodeIfPresent(StructureSource.self, forKey: .structureSource)
             ?? .enrichmentDefault
