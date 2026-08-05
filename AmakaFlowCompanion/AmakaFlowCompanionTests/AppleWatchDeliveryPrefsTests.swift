@@ -243,6 +243,31 @@ final class AppleWatchDeliveryPrefsTests: XCTestCase {
         XCTAssertFalse(sections.flatMap(\.steps).contains { $0.restChip == "REST · YOU END IT" })
     }
 
+    func testEmomRepeatBandsPerStationWithoutWorkingSetLabel() throws {
+        let json = """
+        {
+          "title": "EMOM",
+          "sportType": "traditionalStrengthTraining",
+          "intervals": [
+            {
+              "kind": "repeat",
+              "reps": 4,
+              "intervals": [
+                { "kind": "work", "name": "EMOM · Assault Bike", "seconds": 60 },
+                { "kind": "work", "name": "EMOM · Rower", "seconds": 60 }
+              ]
+            }
+          ]
+        }
+        """.data(using: .utf8)!
+
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+        XCTAssertEqual(sections.count, 2)
+        XCTAssertEqual(sections.map(\.band), ["EMOM · Assault Bike", "EMOM · Rower"])
+        XCTAssertFalse(sections.flatMap(\.steps).contains { $0.title.hasPrefix("Working set") })
+        XCTAssertEqual(sections[0].steps.first?.title, "Work intervals ×4")
+    }
+
     func testMobilityDurationTagIgnoresRepsDetails() throws {
         let json = """
         {

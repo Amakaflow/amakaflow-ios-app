@@ -44,7 +44,7 @@ private enum PreviewSectionBuilder {
     private enum Atom {
         case mobility(title: String, detail: String?)
         case warmupSet(exercise: String, detail: String?)
-        case work(exercise: String, detail: String?, repeatCount: Int)
+        case work(exercise: String, detail: String?, repeatCount: Int, timed: Bool)
         case rest(chip: String)
         case cooldown(detail: String)
     }
@@ -120,7 +120,12 @@ private enum PreviewSectionBuilder {
                 if let sharedRestChip { out.append(.rest(chip: sharedRestChip)) }
             }
         } else {
-            out.append(.work(exercise: exercise, detail: workDetail(for: only), repeatCount: reps))
+            out.append(.work(
+                exercise: exercise,
+                detail: workDetail(for: only),
+                repeatCount: reps,
+                timed: isTimedWork(only)
+            ))
             if let sharedRestChip { out.append(.rest(chip: sharedRestChip)) }
         }
         return out
@@ -138,7 +143,12 @@ private enum PreviewSectionBuilder {
         if isMobilityName(name) {
             return [.mobility(title: name, detail: workDetail(for: step))]
         }
-        return [.work(exercise: exercise, detail: workDetail(for: step), repeatCount: max(repeatCount, 1))]
+        return [.work(
+            exercise: exercise,
+            detail: workDetail(for: step),
+            repeatCount: max(repeatCount, 1),
+            timed: isTimedWork(step)
+        )]
     }
 
     private static func buildSections(from atoms: [Atom]) -> [PreviewSection] {
@@ -149,8 +159,13 @@ private enum PreviewSectionBuilder {
                 accumulator.appendMobility(title: title, detail: detail)
             case .warmupSet(let exercise, let detail):
                 accumulator.appendWarmupSet(exercise: exercise, detail: detail)
-            case .work(let exercise, let detail, let repeatCount):
-                accumulator.appendWork(exercise: exercise, detail: detail, repeatCount: repeatCount)
+            case .work(let exercise, let detail, let repeatCount, let timed):
+                accumulator.appendWork(
+                    exercise: exercise,
+                    detail: detail,
+                    repeatCount: repeatCount,
+                    timed: timed
+                )
             case .rest(let chip):
                 accumulator.setPendingRest(chip)
             case .cooldown(let detail):
@@ -203,6 +218,11 @@ private enum PreviewSectionBuilder {
             return "REST \(seconds)S"
         }
         return "REST · YOU END IT"
+    }
+
+    /// Time-goal work (seconds present, no reps) — EMOM stations, holds, etc.
+    private static func isTimedWork(_ step: WKPlanDTO.Interval.Step) -> Bool {
+        step.seconds != nil && step.reps == nil
     }
 
     /// `nil` reps and `nil` seconds means no fixed target — an open goal
@@ -279,9 +299,10 @@ private struct SectionAccumulator {
         exerciseRows.append(PreviewRow(title: PreviewStep.warmupSetTitle, detail: detail, setCount: 1))
     }
 
-    mutating func appendWork(exercise: String, detail: String?, repeatCount: Int) {
+    mutating func appendWork(exercise: String, detail: String?, repeatCount: Int, timed: Bool) {
         beginExercise(exercise)
-        let title = repeatCount > 1 ? "Working sets ×\(repeatCount)" : "Working set"
+        let noun = timed ? "Work interval" : "Working set"
+        let title = repeatCount > 1 ? "\(noun)s ×\(repeatCount)" : noun
         exerciseRows.append(PreviewRow(title: title, detail: detail, setCount: max(repeatCount, 1)))
     }
 
