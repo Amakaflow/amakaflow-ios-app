@@ -209,6 +209,7 @@ extension LibraryView {
                     DDSearchField(text: $searchText)
                         .padding(.horizontal, 18)
                         .padding(.top, 8)
+                        .accessibilityIdentifier("af_library_search")
 
                     DDSourceFilterPills(selection: $sourceFilter)
                         .padding(.horizontal, 18)

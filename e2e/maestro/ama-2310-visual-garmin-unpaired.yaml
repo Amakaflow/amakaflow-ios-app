@@ -13,7 +13,14 @@ appId: com.myamaka.AmakaFlowCompanion
 - tapOn:
     id: "library_tab"
 - tapOn:
-    id: "af_library_workout_row"
+    id: "af_library_search"
+- inputText: "Strength"
+- extendedWaitUntil:
+    visible:
+      id: "af_library_results"
+    timeout: 10000
+- tapOn:
+    id: "af_library_item_workout:fixture-strength-001"
 - tapOn:
     id: "af_workout_detail_start"
 - assertVisible:

@@ -33,11 +33,15 @@ appId: com.myamaka.AmakaFlowCompanion
     visible:
       id: "af_library_fab"
     timeout: 15000
-- scrollUntilVisible:
-    element:
-      text: "Why zone two still matters"
-    direction: DOWN
-    timeout: 20000
+- tapOn:
+    id: "af_library_search"
+- inputText: "zone"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_results"
+    timeout: 10000
 - assertVisible:
     id: "af_library_item_knowledge:fixture-zone-two-article"
 - takeScreenshot: docs/ama-2298-visual-evidence/01-before-delete
@@ -70,11 +74,18 @@ appId: com.myamaka.AmakaFlowCompanion
     text: "Why zone two still matters"
 - takeScreenshot: docs/ama-2298-visual-evidence/03-after-knowledge-delete
 # Delete a workout import from unified detail
-- scrollUntilVisible:
-    element:
-      text: "HIIT Follow-Along"
-    direction: UP
-    timeout: 20000
+- tapOn:
+    id: "af_library_search"
+- eraseText
+- inputText: "HIIT"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_results"
+    timeout: 10000
+- assertVisible:
+    id: "af_library_item_workout:fixture-hiit-001"
 - tapOn:
     id: "af_library_item_workout:fixture-hiit-001"
 - waitForAnimationToEnd:

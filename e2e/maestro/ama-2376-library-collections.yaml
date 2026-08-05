@@ -50,6 +50,8 @@ appId: com.myamaka.AmakaFlowCompanion
     visible:
       id: "af_collections_section"
     timeout: 15000
+- assertNotVisible:
+    id: "af_library_results"
 - takeScreenshot: docs/ama-2376-visual-evidence/01-library
 
 # --- Create "Hyrox Prep" collection (system alert — no a11y ids on field/buttons) ---
