@@ -171,29 +171,19 @@ struct EditorV2Group: Equatable, Identifiable, Sendable {
 
     var metaLine: String {
         switch type {
-        case .warmup:
-            return "\(config.rounds ?? 2) ROUNDS · EASY"
-        case .cooldown:
-            return "\(config.rounds ?? 1) ROUNDS · EASY"
-        case .circuit:
-            return "\(config.rounds ?? 4) ROUNDS · FOR TIME"
-        case .timedCircuit:
-            return "\(config.rounds ?? 1) ROUNDS · FOR TIME"
-        case .emom:
-            return "\(config.rounds ?? 10) MIN · EVERY MINUTE"
-        case .amrap:
-            return "\(config.capMinutes ?? 10) MIN CAP · MAX ROUNDS"
+        case .warmup: return "\(config.rounds ?? 2) ROUNDS · EASY"
+        case .cooldown: return "\(config.rounds ?? 1) ROUNDS · EASY"
+        case .circuit: return "\(config.rounds ?? 4) ROUNDS · FOR TIME"
+        case .timedCircuit: return "\(config.rounds ?? 1) ROUNDS · FOR TIME"
+        case .emom: return "\(config.rounds ?? 10) MIN · EVERY MINUTE"
+        case .amrap: return "\(config.capMinutes ?? 10) MIN CAP · MAX ROUNDS"
         case .tabata:
             let work = config.workSeconds ?? 20
             let rest = config.restSeconds ?? 10
-            let rounds = config.rounds ?? 8
-            return "\(work)S ON · \(rest)S OFF · ×\(rounds)"
-        case .fortime:
-            return "FOR TIME · \(config.capMinutes ?? 20) MIN CAP"
+            return "\(work)S ON · \(rest)S OFF · ×\(config.rounds ?? 8)"
+        case .fortime: return "FOR TIME · \(config.capMinutes ?? 20) MIN CAP"
         case .superset:
-            let rounds = config.rounds ?? 3
-            let rest = config.restSeconds ?? 60
-            return "\(rounds) ROUNDS · \(Self.restMetaText(rest)) REST"
+            return "\(config.rounds ?? 3) ROUNDS · \(Self.restMetaText(config.restSeconds ?? 60)) REST"
         }
     }
 
