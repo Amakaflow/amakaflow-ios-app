@@ -62,7 +62,12 @@ struct WorkoutEnrichmentPushSheet: View {
             )
         )
         _mobilityActivities = State(initialValue: prefs.sessionWarmup.activities)
-        _cooldownActivities = State(initialValue: prefs.cooldown.activities)
+        // Empty standing cooldown seeds Stretch flow → Treadmill (unchecked).
+        _cooldownActivities = State(
+            initialValue: prefs.cooldown.activities.isEmpty
+                ? WorkoutEnrichmentMutations.defaultCooldownActivities()
+                : prefs.cooldown.activities
+        )
         _perExerciseRamps = State(initialValue: prefs.exerciseWarmupSets.perExercise ?? [])
     }
 
@@ -248,13 +253,12 @@ extension WorkoutEnrichmentPushSheet {
         .padding(.leading, 28)
     }
 
-    /// The rest row shows the live override so the user sees what will be sent.
+    /// Rest-row live override only — other kinds use `liveSummary(for:)`.
     private func detail(for offer: WorkoutEnrichmentPushPlanner.Offer) -> String {
-        guard checkedKinds.contains(.betweenSetRest) else { return offer.detail }
+        guard offer.kind == .betweenSetRest,
+              checkedKinds.contains(.betweenSetRest) else { return offer.detail }
         return WorkoutEnrichmentPushCopy.liveRestDetail(
-            restOpen: restOpen,
-            restSec: restSec,
-            target: target
+            restOpen: restOpen, restSec: restSec, target: target
         )
     }
 
@@ -461,10 +465,25 @@ extension WorkoutEnrichmentPushSheet {
                     target: .apple
                 ),
                 WorkoutEnrichmentPushPlanner.Offer(
+                    kind: .exerciseWarmupSets,
+                    isChecked: true,
+                    wasTombstoned: false,
+                    detail: "2 warm-up sets (8 · 5 reps) on 2 exercises",
+                    candidateExerciseNames: ["Deadlift", "Overhead Press"],
+                    target: .apple
+                ),
+                WorkoutEnrichmentPushPlanner.Offer(
                     kind: .betweenSetRest,
                     isChecked: true,
                     wasTombstoned: false,
                     detail: "Open rest between sets",
+                    target: .apple
+                ),
+                WorkoutEnrichmentPushPlanner.Offer(
+                    kind: .cooldown,
+                    isChecked: false,
+                    wasTombstoned: false,
+                    detail: "Stretch flow · 3:00 → Treadmill · open",
                     target: .apple
                 )
             ],

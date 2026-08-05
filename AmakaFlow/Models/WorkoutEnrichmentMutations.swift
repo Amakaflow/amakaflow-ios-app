@@ -266,6 +266,23 @@ enum WorkoutEnrichmentMutations {
         ].compactMap { $0 }
     }
 
+    /// Seed sequence when standing cooldown prefs have no activities yet
+    /// (design `seCooldownInit` — Stretch flow 3:00 → Treadmill open). Kept off
+    /// the wire until the enhance-sheet toggle is checked.
+    static func defaultCooldownActivities() -> [EnrichmentActivityPref] {
+        [
+            EnrichmentActivityPref(
+                name: "Stretch flow",
+                durationSec: 180,
+                goal: try? ActivityGoal(kind: .time, value: 180)
+            ),
+            EnrichmentActivityPref(
+                name: "Treadmill",
+                goal: try? ActivityGoal(kind: .open, value: nil)
+            )
+        ]
+    }
+
     /// "Apply this ramp to all selected" — copies `sourceSets` onto every
     /// **enabled** ramp's `sets`, leaving disabled ramps untouched. `RampSet`
     /// and `[RampSet]` are value types, so every returned ramp owns its own

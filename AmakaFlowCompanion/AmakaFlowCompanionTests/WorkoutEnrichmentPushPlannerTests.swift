@@ -79,19 +79,51 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertTrue(plan.hasOffers)
         XCTAssertEqual(
             plan.offers.map(\.kind),
-            [.sessionWarmup, .betweenSetRest, .exerciseWarmupSets]
+            [.sessionWarmup, .exerciseWarmupSets, .betweenSetRest, .cooldown]
         )
-        XCTAssertTrue(plan.offers.allSatisfy(\.isChecked))
+        XCTAssertEqual(
+            plan.offers.filter(\.isChecked).map(\.kind),
+            [.sessionWarmup, .exerciseWarmupSets, .betweenSetRest]
+        )
+        XCTAssertEqual(plan.offer(.cooldown)?.isChecked, false)
         XCTAssertTrue(plan.offers.allSatisfy { !$0.wasTombstoned })
     }
 
-    func testCooldownIsNotOfferedWhilePrefsHaveItOff() {
+    /// AMA-2378 polish — Cooldown always appears on the enhance sheet (like
+    /// Rest) so the athlete can opt in; prefs.enabled only controls the
+    /// default check (off → unchecked).
+    func testCooldownIsOfferedUncheckedWhenPrefsHaveItOff() throws {
         let plan = WorkoutEnrichmentPushPlanner.plan(
             blocks: [benchBlock()],
             tombstones: [],
             prefs: .defaults
         )
-        XCTAssertNil(plan.offer(.cooldown))
+        let offer = try XCTUnwrap(plan.offer(.cooldown))
+        XCTAssertEqual(offer.isChecked, false)
+        XCTAssertFalse(offer.detail.isEmpty)
+    }
+
+    /// Leaving the default-unchecked Cooldown alone must not tombstone it
+    /// (same AMA-2347 Rest contract), or enabling Settings later would stay
+    /// suppressed.
+    func testLeavingPrefsDisabledCooldownUncheckedDoesNotTombstone() throws {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock()],
+            tombstones: [],
+            prefs: .defaults
+        )
+        XCTAssertEqual(plan.offer(.cooldown)?.isChecked, false)
+
+        let application = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.sessionWarmup, .betweenSetRest, .exerciseWarmupSets]
+            ),
+            prefs: .defaults,
+            tombstones: []
+        )
+        XCTAssertFalse(application.tombstones.contains(where: { $0.kind == .cooldown }))
+        XCTAssertFalse(application.rejectedTombstones.contains(where: { $0.kind == .cooldown }))
     }
 
     func testPresenceByTypeHidesTheSoftSectionOffers() {
@@ -303,7 +335,8 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
                 benchBlock(
                     blockRestSec: 90,
                     warmupSets: [WarmupSetRow(reps: 8)]
-                )
+                ),
+                cooldownBlock
             ],
             tombstones: [],
             prefs: .defaults
