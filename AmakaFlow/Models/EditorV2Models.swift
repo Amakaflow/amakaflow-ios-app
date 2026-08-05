@@ -113,6 +113,7 @@ enum EditorV2GroupType: String, CaseIterable, Equatable, Sendable {
         case .warmup: return .warmup
         case .cooldown: return .cooldown
         case .sets, .regular: return nil
+        case .timedCircuit, .unknown: return nil
         }
     }
 }

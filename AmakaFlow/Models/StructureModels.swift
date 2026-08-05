@@ -41,6 +41,15 @@ enum StructureBlockType: String, Codable, CaseIterable, Equatable, Sendable {
     case cooldown
     case rounds
     case regular
+    /// Timed circuit (2026-08-05 spec §2.1) — fixed-duration station rotation.
+    case timedCircuit = "timed_circuit"
+    /// Literals this build predates map here (same pattern as StructureSource).
+    case unknown
+
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = StructureBlockType(rawValue: raw) ?? .unknown
+    }
 
     /// Display label for clarify pills (screens-clarify.jsx `DC_TYPES`).
     var displayLabel: String {
@@ -54,6 +63,8 @@ enum StructureBlockType: String, Codable, CaseIterable, Equatable, Sendable {
         case .forTime, .fortime: return "For time"
         case .warmup: return "Warm-up"
         case .cooldown: return "Cool-down"
+        case .timedCircuit: return "Timed circuit"
+        case .unknown: return "Block"
         }
     }
 
@@ -85,6 +96,8 @@ struct StructureExerciseModel: Codable, Equatable, Sendable {
 
 struct StructureBlockModel: Codable, Equatable, Sendable {
     var type: StructureBlockType
+    /// Original wire `type` string when decoded as `.unknown` (not in CodingKeys).
+    var rawType: String?
     var label: String?
     var rounds: Int?
     var restSec: Int?
@@ -103,9 +116,11 @@ struct StructureBlockModel: Codable, Equatable, Sendable {
         rounds: Int? = nil,
         restSec: Int? = nil,
         exercises: [StructureExerciseModel] = [],
-        structureSource: StructureSource = .unknown
+        structureSource: StructureSource = .unknown,
+        rawType: String? = nil
     ) {
         self.type = type
+        self.rawType = rawType
         self.label = label
         self.rounds = rounds
         self.restSec = restSec
@@ -115,17 +130,31 @@ struct StructureBlockModel: Codable, Equatable, Sendable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        type = try container.decodeIfPresent(StructureBlockType.self, forKey: .type) ?? .sets
+        let rawTypeString = try container.decodeIfPresent(String.self, forKey: .type)
+        rawType = rawTypeString
+        type = rawTypeString.map { StructureBlockType(rawValue: $0) ?? .unknown } ?? .sets
         label = try container.decodeIfPresent(String.self, forKey: .label)
         rounds = try container.decodeIfPresent(Int.self, forKey: .rounds)
         restSec = try container.decodeIfPresent(Int.self, forKey: .restSec)
         exercises = try container.decodeIfPresent([StructureExerciseModel].self, forKey: .exercises) ?? []
         structureSource = try container.decodeIfPresent(StructureSource.self, forKey: .structureSource) ?? .unknown
     }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(type == .unknown ? (rawType ?? type.rawValue) : type.rawValue, forKey: .type)
+        try container.encodeIfPresent(label, forKey: .label)
+        try container.encodeIfPresent(rounds, forKey: .rounds)
+        try container.encodeIfPresent(restSec, forKey: .restSec)
+        try container.encode(exercises, forKey: .exercises)
+        try container.encode(structureSource, forKey: .structureSource)
+    }
 }
 
 struct StructureSuggestionModel: Codable, Equatable, Sendable {
     var type: StructureBlockType
+    /// Original wire `type` string when decoded as `.unknown` (not in CodingKeys).
+    var rawType: String?
     var label: String?
     var rounds: Int?
     var restSec: Int?
@@ -148,9 +177,11 @@ struct StructureSuggestionModel: Codable, Equatable, Sendable {
         restSec: Int? = nil,
         exerciseNames: [String] = [],
         exerciseIndices: [Int] = [],
-        structureSource: StructureSource = .inferred
+        structureSource: StructureSource = .inferred,
+        rawType: String? = nil
     ) {
         self.type = type
+        self.rawType = rawType
         self.label = label
         self.rounds = rounds
         self.restSec = restSec
@@ -161,13 +192,26 @@ struct StructureSuggestionModel: Codable, Equatable, Sendable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        type = try container.decode(StructureBlockType.self, forKey: .type)
+        let rawTypeString = try container.decodeIfPresent(String.self, forKey: .type)
+        rawType = rawTypeString
+        type = rawTypeString.map { StructureBlockType(rawValue: $0) ?? .unknown } ?? .sets
         label = try container.decodeIfPresent(String.self, forKey: .label)
         rounds = try container.decodeIfPresent(Int.self, forKey: .rounds)
         restSec = try container.decodeIfPresent(Int.self, forKey: .restSec)
         exerciseNames = try container.decodeIfPresent([String].self, forKey: .exerciseNames) ?? []
         exerciseIndices = try container.decodeIfPresent([Int].self, forKey: .exerciseIndices) ?? []
         structureSource = try container.decodeIfPresent(StructureSource.self, forKey: .structureSource) ?? .inferred
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(type == .unknown ? (rawType ?? type.rawValue) : type.rawValue, forKey: .type)
+        try container.encodeIfPresent(label, forKey: .label)
+        try container.encodeIfPresent(rounds, forKey: .rounds)
+        try container.encodeIfPresent(restSec, forKey: .restSec)
+        try container.encode(exerciseNames, forKey: .exerciseNames)
+        try container.encode(exerciseIndices, forKey: .exerciseIndices)
+        try container.encode(structureSource, forKey: .structureSource)
     }
 }
 

@@ -282,6 +282,28 @@ final class StructureClarifyMatrixTests: XCTestCase {
         }
     }
 
+    // MARK: - StructureBlockType decode tolerance (AMA-2380)
+
+    func testDecodesTimedCircuitBlockType() throws {
+        let json = #"{"type":"timed_circuit","exercises":[],"structureSource":"inferred"}"#
+        let model = try JSONDecoder().decode(StructureBlockModel.self, from: Data(json.utf8))
+        XCTAssertEqual(model.type, .timedCircuit)
+    }
+
+    func testUnknownBlockTypeDecodesToUnknownNotError() throws {
+        let json = #"{"type":"zumba_blast","exercises":[],"structureSource":"inferred"}"#
+        let model = try JSONDecoder().decode(StructureBlockModel.self, from: Data(json.utf8))
+        XCTAssertEqual(model.type, .unknown)
+    }
+
+    func testUnknownBlockTypeRoundTripsRawString() throws {
+        let json = #"{"type":"zumba_blast","exercises":[],"structureSource":"inferred"}"#
+        let model = try JSONDecoder().decode(StructureBlockModel.self, from: Data(json.utf8))
+        let encoded = try JSONEncoder().encode(model)
+        let dict = try JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        XCTAssertEqual(dict?["type"] as? String, "zumba_blast")
+    }
+
     // MARK: - Helpers
 
     /// Mirror `SocialImportViewModel.applyConfirmedStructure` without needing a live VM.
@@ -355,6 +377,11 @@ final class StructureClarifyMatrixTests: XCTestCase {
             return [
                 .init(name: "Move A", reps: 10),
                 .init(name: "Move B", reps: 10)
+            ]
+        case .timedCircuit, .unknown:
+            return [
+                .init(name: "Station A", reps: 10),
+                .init(name: "Station B", reps: 10)
             ]
         }
     }

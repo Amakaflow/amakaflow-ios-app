@@ -170,6 +170,8 @@ struct StructureClarifyGroupCard: View {
         case .amrap: return DailyDriver.orange
         case .tabata: return DailyDriver.red
         case .forTime, .fortime: return DailyDriver.purple
+        case .timedCircuit: return DailyDriver.zoneGreen
+        case .unknown: return Color.white.opacity(0.35)
         }
     }
 }
