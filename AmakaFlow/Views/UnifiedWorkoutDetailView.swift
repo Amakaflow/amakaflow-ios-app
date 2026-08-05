@@ -727,11 +727,15 @@ extension UnifiedWorkoutDetailView {
         return "~\(minutes) MIN"
     }
 
-    /// Whole-workout round count for hero chips (dd-detail-dark: "5 ROUNDS · ~20 MIN").
+    /// Max rounds among work blocks for hero chips (dd-detail-dark: "5 ROUNDS · ~20 MIN").
+    static func heroRoundCount(for workBlocks: [Block]) -> Int {
+        workBlocks.map { max(1, $0.rounds) }.max() ?? 1
+    }
+
     fileprivate var heroRoundCount: Int {
         let workBlocks = workout.blocks.filter { !Self.isWarmupOrCooldown($0) }
         if !workBlocks.isEmpty {
-            let structuredTotal = workBlocks.reduce(0) { $0 + max(1, $1.rounds) }
+            let structuredTotal = Self.heroRoundCount(for: workBlocks)
             if structuredTotal > 1 { return structuredTotal }
         }
         if let parsed = Self.parseRoundCount(from: workout.description) {
