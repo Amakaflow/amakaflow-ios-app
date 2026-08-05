@@ -62,8 +62,7 @@ struct WorkoutEnrichmentPushSheet: View {
             )
         )
         _mobilityActivities = State(initialValue: prefs.sessionWarmup.activities)
-        // Empty standing cooldown still seeds the design default sequence so the
-        // door row + builder open with Stretch flow → Treadmill (unchecked).
+        // Empty standing cooldown seeds Stretch flow → Treadmill (unchecked).
         _cooldownActivities = State(
             initialValue: prefs.cooldown.activities.isEmpty
                 ? WorkoutEnrichmentMutations.defaultCooldownActivities()
@@ -254,13 +253,12 @@ extension WorkoutEnrichmentPushSheet {
         .padding(.leading, 28)
     }
 
-    /// The rest row shows the live override so the user sees what will be sent.
+    /// Rest-row live override only — other kinds use `liveSummary(for:)`.
     private func detail(for offer: WorkoutEnrichmentPushPlanner.Offer) -> String {
-        guard checkedKinds.contains(.betweenSetRest) else { return offer.detail }
+        guard offer.kind == .betweenSetRest,
+              checkedKinds.contains(.betweenSetRest) else { return offer.detail }
         return WorkoutEnrichmentPushCopy.liveRestDetail(
-            restOpen: restOpen,
-            restSec: restSec,
-            target: target
+            restOpen: restOpen, restSec: restSec, target: target
         )
     }
 

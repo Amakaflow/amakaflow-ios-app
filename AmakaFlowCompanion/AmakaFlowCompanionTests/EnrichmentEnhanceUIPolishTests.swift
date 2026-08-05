@@ -45,6 +45,8 @@ final class EnrichmentEnhanceUIPolishTests: XCTestCase {
     func testDefaultCooldownSeedMatchesDesign() {
         let seed = WorkoutEnrichmentMutations.defaultCooldownActivities()
         XCTAssertEqual(seed.map(\.name), ["Stretch flow", "Treadmill"])
+        // activitiesDetail reads durationSec (not only goal.value).
+        XCTAssertEqual(seed[0].durationSec, 180)
         XCTAssertEqual(seed[0].goal?.kind, .time)
         XCTAssertEqual(seed[0].goal?.value, 180)
         XCTAssertEqual(seed[1].goal?.kind, .open)
