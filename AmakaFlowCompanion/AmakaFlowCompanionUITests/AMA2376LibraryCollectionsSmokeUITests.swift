@@ -53,6 +53,32 @@ final class AMA2376LibraryCollectionsSmokeUITests: XCTestCase {
         XCTAssertTrue(newCollectionButton.exists, "'+ New' collection action should be present")
         XCTAssertTrue(newCollectionButton.isHittable, "'+ New' collection action should be tappable")
 
+        // Browse mode: flat Results list must not appear (Approach A).
+        let results = element("af_library_results")
+        XCTAssertFalse(
+            results.exists,
+            "Browse mode must not show Results / flat list when search empty and source All"
+        )
+
+        // Enter filter mode via Manual source pill (pills stay visible under search).
+        let manualPill = element("af_library_kind_workout")
+        XCTAssertTrue(manualPill.waitForExistence(timeout: 5), "Manual source pill should be visible in browse")
+        manualPill.tap()
+
+        XCTAssertTrue(
+            results.waitForExistence(timeout: 5),
+            "Selecting a non-All source must reveal Results"
+        )
+
+        // Return to browse
+        let allPill = element("af_library_kind_all")
+        XCTAssertTrue(allPill.waitForExistence(timeout: 5))
+        allPill.tap()
+        XCTAssertTrue(
+            results.waitForNonExistence(timeout: 2),
+            "Clearing source filter back to All must hide Results"
+        )
+
         attachScreenshot(named: "library-pinned-collections")
 
         // Pinned section is optional (hidden when there are no pins); when present,
@@ -94,6 +120,24 @@ final class AMA2376LibraryCollectionsSmokeUITests: XCTestCase {
         XCTAssertTrue(detail.waitForExistence(timeout: 10), "Creating a collection should navigate to its detail screen")
 
         attachScreenshot(named: "library-new-collection-navigated")
+    }
+
+    func testLibrarySearchRevealsResults() throws {
+        XCTAssertTrue(TestAuthHelper.waitForMainContent(app, timeout: 20))
+        TestAuthHelper.tab(app, "library_tab", label: "Library").tap()
+        XCTAssertTrue(element("library_screen").waitForExistence(timeout: 15))
+
+        XCTAssertFalse(element("af_library_results").exists)
+
+        let search = app.textFields.firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        search.tap()
+        search.typeText("HIIT")
+
+        XCTAssertTrue(
+            element("af_library_results").waitForExistence(timeout: 5),
+            "Non-empty search must reveal Results"
+        )
     }
 
     private func element(_ identifier: String) -> XCUIElement {
