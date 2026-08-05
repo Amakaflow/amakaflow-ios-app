@@ -63,6 +63,7 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
         XCTAssertTrue(prefs.sessionWarmup.enabled)
         XCTAssertEqual(prefs.sessionWarmup.activities.map(\.name), ["Jump Rope"])
         XCTAssertNil(prefs.sessionWarmup.activities.first?.durationSec)
+        XCTAssertNil(prefs.sessionWarmup.activities.first?.goal)
         XCTAssertFalse(prefs.cooldown.enabled)
         XCTAssertTrue(prefs.cooldown.activities.isEmpty)
         XCTAssertTrue(prefs.betweenSetRest.enabled)
@@ -71,6 +72,300 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
         XCTAssertTrue(prefs.exerciseWarmupSets.enabled)
         XCTAssertEqual(prefs.exerciseWarmupSets.defaultSets.map(\.reps), [8, 5])
         XCTAssertTrue(prefs.exerciseWarmupSets.excludeExerciseKeys.isEmpty)
+        // AMA-2378 — untouched defaults stay byte-compatible with v1 (no per-exercise ramps).
+        XCTAssertNil(prefs.exerciseWarmupSets.perExercise)
+    }
+
+    // MARK: - AMA-2378: soft goals (ActivityGoal / SessionActivity.goal)
+
+    func testActivityGoalRoundTripsAllKinds() throws {
+        let cases: [(ActivityGoalKind, Int?)] = [
+            (.time, 300),
+            (.distance, 1000),
+            (.cals, 50),
+            (.open, nil)
+        ]
+        for (kind, value) in cases {
+            let goal = try ActivityGoal(kind: kind, value: value)
+            let data = try WorkoutEnrichmentJSON.encoder.encode(goal)
+            let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            XCTAssertEqual(object["kind"] as? String, kind.rawValue)
+            if let value {
+                XCTAssertEqual(object["value"] as? Int, value)
+            } else {
+                XCTAssertNil(object["value"])
+            }
+            let decoded = try WorkoutEnrichmentJSON.decoder.decode(ActivityGoal.self, from: data)
+            XCTAssertEqual(decoded, goal)
+        }
+    }
+
+    func testActivityGoalTimedDistanceCalsRequireValue() {
+        for kind in [ActivityGoalKind.time, .distance, .cals] {
+            XCTAssertThrowsError(try ActivityGoal(kind: kind, value: nil)) { error in
+                XCTAssertEqual(error as? WorkoutPreferencesValidationError, .activityGoalRequiresValue)
+            }
+            let data = Data("{\"kind\": \"\(kind.rawValue)\"}".utf8)
+            XCTAssertThrowsError(try WorkoutEnrichmentJSON.decoder.decode(ActivityGoal.self, from: data))
+        }
+    }
+
+    func testActivityGoalOpenRejectsValue() {
+        XCTAssertThrowsError(try ActivityGoal(kind: .open, value: 60)) { error in
+            XCTAssertEqual(error as? WorkoutPreferencesValidationError, .activityGoalOpenWithValue)
+        }
+        let data = Data(#"{"kind": "open", "value": 60}"#.utf8)
+        XCTAssertThrowsError(try WorkoutEnrichmentJSON.decoder.decode(ActivityGoal.self, from: data))
+    }
+
+    func testEnrichmentActivityPrefCarriesGoalAndEqualityIncludesIt() throws {
+        let goal = try ActivityGoal(kind: .distance, value: 1000)
+        let withGoal = EnrichmentActivityPref(name: "Row", goal: goal)
+        let withoutGoal = EnrichmentActivityPref(name: "Row")
+        XCTAssertNotEqual(withGoal, withoutGoal)
+
+        let object = try WorkoutEnrichmentJSON.object(from: withGoal)
+        let encodedGoal = try XCTUnwrap(object["goal"] as? [String: Any])
+        XCTAssertEqual(encodedGoal["kind"] as? String, "distance")
+        XCTAssertEqual(encodedGoal["value"] as? Int, 1000)
+        XCTAssertNil(object["duration_sec"])
+
+        let roundTripData = try JSONSerialization.data(withJSONObject: object)
+        let decoded = try WorkoutEnrichmentJSON.decoder.decode(EnrichmentActivityPref.self, from: roundTripData)
+        XCTAssertEqual(decoded.goal, goal)
+    }
+
+    func testEnrichmentActivityBlockCarriesGoalFromPref() throws {
+        let goal = try ActivityGoal(kind: .open, value: nil)
+        let pref = EnrichmentActivityPref(name: "Jump Rope", goal: goal)
+        let activity = EnrichmentActivity(pref: pref)
+        XCTAssertEqual(activity.goal, goal)
+
+        let data = Data(#"{"name": "Row", "duration_sec": 300, "goal": {"kind": "time", "value": 300}}"#.utf8)
+        let decoded = try WorkoutEnrichmentJSON.decoder.decode(EnrichmentActivity.self, from: data)
+        XCTAssertEqual(decoded.goal, try ActivityGoal(kind: .time, value: 300))
+        XCTAssertEqual(decoded.structureSource, .enrichmentDefault)
+    }
+
+    // MARK: - AMA-2378: per-exercise ramps (RampSet / PerExerciseRamp / WarmupSetRow)
+
+    func testRampSetRoundTripsAllKinds() throws {
+        let cases: [(WarmupSetKind, Int?)] = [
+            (.reps, 10),
+            (.time, 30),
+            (.cals, 15),
+            (.open, nil)
+        ]
+        for (kind, value) in cases {
+            let set = try RampSet(kind: kind, value: value, intensityNote: "easy")
+            let data = try WorkoutEnrichmentJSON.encoder.encode(set)
+            let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            XCTAssertEqual(object["kind"] as? String, kind.rawValue)
+            XCTAssertEqual(object["intensity_note"] as? String, "easy")
+            if let value {
+                XCTAssertEqual(object["value"] as? Int, value)
+            } else {
+                XCTAssertNil(object["value"])
+            }
+            let decoded = try WorkoutEnrichmentJSON.decoder.decode(RampSet.self, from: data)
+            XCTAssertEqual(decoded, set)
+        }
+    }
+
+    func testRampSetOpenHasNoValue() throws {
+        let open = try RampSet(kind: .open, value: nil)
+        XCTAssertNil(open.value)
+        XCTAssertThrowsError(try RampSet(kind: .open, value: 5)) { error in
+            XCTAssertEqual(error as? WorkoutPreferencesValidationError, .rampSetOpenWithValue)
+        }
+        XCTAssertThrowsError(try RampSet(kind: .time, value: nil)) { error in
+            XCTAssertEqual(error as? WorkoutPreferencesValidationError, .rampSetRequiresValue)
+        }
+    }
+
+    func testPerExerciseRampRoundTrips() throws {
+        let ramp = PerExerciseRamp(
+            exerciseRef: "wex_abc",
+            enabled: true,
+            sets: [
+                try RampSet(kind: .reps, value: 12),
+                try RampSet(kind: .open, value: nil, intensityNote: "light")
+            ]
+        )
+        let object = try WorkoutEnrichmentJSON.object(from: ramp)
+        XCTAssertEqual(object["exercise_ref"] as? String, "wex_abc")
+        XCTAssertEqual(object["enabled"] as? Bool, true)
+        let sets = try XCTUnwrap(object["sets"] as? [[String: Any]])
+        XCTAssertEqual(sets.count, 2)
+
+        let roundTripData = try JSONSerialization.data(withJSONObject: object)
+        let decoded = try WorkoutEnrichmentJSON.decoder.decode(PerExerciseRamp.self, from: roundTripData)
+        XCTAssertEqual(decoded.exerciseRef, ramp.exerciseRef)
+        XCTAssertEqual(decoded.enabled, ramp.enabled)
+        XCTAssertEqual(decoded.sets, ramp.sets)
+        XCTAssertEqual(decoded, ramp)
+    }
+
+    func testExerciseWarmupSetsPrefsPerExerciseRoundTrip() throws {
+        var prefs = ExerciseWarmupSetsPrefs.defaults
+        prefs.excludeExerciseKeys = ["leg press"]
+        prefs.perExercise = [
+            PerExerciseRamp(
+                exerciseRef: "wex_abc",
+                enabled: true,
+                sets: [try RampSet(kind: .reps, value: 10)]
+            )
+        ]
+        let object = try WorkoutEnrichmentJSON.object(from: prefs)
+        let perExercise = try XCTUnwrap(object["per_exercise"] as? [[String: Any]])
+        XCTAssertEqual(perExercise.count, 1)
+
+        let roundTripData = try JSONSerialization.data(withJSONObject: object)
+        let decoded = try WorkoutEnrichmentJSON.decoder.decode(ExerciseWarmupSetsPrefs.self, from: roundTripData)
+        XCTAssertEqual(decoded.enabled, prefs.enabled)
+        XCTAssertEqual(decoded.defaultSets, prefs.defaultSets)
+        XCTAssertEqual(decoded.excludeExerciseKeys, prefs.excludeExerciseKeys)
+        XCTAssertEqual(decoded.perExercise, prefs.perExercise)
+        XCTAssertEqual(decoded.perExercise?.first?.exerciseRef, "wex_abc")
+        XCTAssertEqual(decoded.perExercise?.first?.enabled, true)
+        XCTAssertEqual(decoded.perExercise?.first?.sets.map(\.kind), [.reps])
+        XCTAssertEqual(decoded.perExercise?.first?.sets.map(\.value), [10])
+
+        // Untouched (no per_exercise key) decodes to nil — v1 shape stays byte-compatible.
+        let legacy = try WorkoutEnrichmentJSON.decoder.decode(
+            ExerciseWarmupSetsPrefs.self,
+            from: Data(#"{"enabled": true, "default_sets": [{"reps": 8}]}"#.utf8)
+        )
+        XCTAssertTrue(legacy.enabled)
+        XCTAssertEqual(legacy.defaultSets.map(\.reps), [8])
+        XCTAssertNil(legacy.perExercise)
+    }
+
+    // MARK: - AMA-2378 Task 5: warm-up pick + ramp editor pure helpers
+
+    /// The seeded default mirrors the backend design spec's own example ramp
+    /// (8·5 reps with `LIGHT · ~40%` / `MODERATE · ~60%` intensity notes).
+    func testDefaultRampSetsMatchesGlobalEightFiveWithIntensityNotes() {
+        let sets = WorkoutEnrichmentMutations.defaultRampSets()
+        XCTAssertEqual(sets.map(\.kind), [.reps, .reps])
+        XCTAssertEqual(sets.map(\.value), [8, 5])
+        XCTAssertEqual(sets.first?.intensityNote, "LIGHT · ~40%")
+        XCTAssertEqual(sets.last?.intensityNote, "MODERATE · ~60%")
+    }
+
+    /// Core isolation guarantee for "Apply this ramp to all selected": every
+    /// enabled ramp receives its own copy of the source sets, disabled ramps
+    /// are untouched, and mutating one exercise's sets afterward never
+    /// reaches through to another's — the pure half of Task 5's apply-to-all.
+    func testApplyRampSetsCopiesThenDiverge() throws {
+        let sourceSets = [
+            try RampSet(kind: .reps, value: 10, intensityNote: "custom"),
+            try RampSet(kind: .open, value: nil)
+        ]
+        var ramps = [
+            PerExerciseRamp(exerciseRef: "deadlift", enabled: true, sets: sourceSets),
+            PerExerciseRamp(exerciseRef: "overhead press", enabled: true, sets: [try RampSet(kind: .reps, value: 3)]),
+            PerExerciseRamp(exerciseRef: "leg press", enabled: false, sets: [try RampSet(kind: .reps, value: 12)])
+        ]
+
+        ramps = WorkoutEnrichmentMutations.applyRampSets(sourceSets, toEnabledRampsIn: ramps)
+
+        XCTAssertEqual(ramps[0].sets, sourceSets)
+        XCTAssertEqual(ramps[1].sets, sourceSets)
+        // Disabled ramp is untouched — apply-to-all only reaches enabled exercises.
+        XCTAssertEqual(ramps[2].sets, [try RampSet(kind: .reps, value: 12)])
+
+        // Diverge: mutating exercise A's copy after the apply must not move B's.
+        ramps[0].sets[0] = try RampSet(kind: .cals, value: 20)
+        XCTAssertEqual(ramps[1].sets, sourceSets, "mutating A's sets must never mutate B's independent copy")
+        XCTAssertNotEqual(ramps[0].sets, ramps[1].sets)
+    }
+
+    /// Applying with no enabled ramps at all is a safe no-op — never crashes,
+    /// never mutates a disabled entry.
+    func testApplyRampSetsNoEnabledRampsIsNoOp() throws {
+        let disabledOnly = [
+            PerExerciseRamp(exerciseRef: "a", enabled: false, sets: [try RampSet(kind: .reps, value: 1)]),
+            PerExerciseRamp(exerciseRef: "b", enabled: false, sets: [])
+        ]
+        let result = WorkoutEnrichmentMutations.applyRampSets(
+            [try RampSet(kind: .reps, value: 9)],
+            toEnabledRampsIn: disabledOnly
+        )
+        XCTAssertEqual(result, disabledOnly)
+    }
+
+    func testWarmupSetRowKindAndValueWithoutReps() throws {
+        let data = Data(#"{"kind": "time", "value": 30, "intensity_note": "hard"}"#.utf8)
+        let row = try WorkoutEnrichmentJSON.decoder.decode(WarmupSetRow.self, from: data)
+        XCTAssertNil(row.reps)
+        XCTAssertEqual(row.kind, .time)
+        XCTAssertEqual(row.value, 30)
+        XCTAssertEqual(row.intensityNote, "hard")
+        XCTAssertEqual(row.structureSource, .enrichmentDefault)
+
+        let object = try WorkoutEnrichmentJSON.object(from: row)
+        XCTAssertNil(object["reps"])
+        XCTAssertEqual(object["kind"] as? String, "time")
+        XCTAssertEqual(object["value"] as? Int, 30)
+    }
+
+    func testWarmupSetRowOpenKindHasNoValue() throws {
+        let data = Data(#"{"kind": "open"}"#.utf8)
+        let row = try WorkoutEnrichmentJSON.decoder.decode(WarmupSetRow.self, from: data)
+        XCTAssertEqual(row.kind, .open)
+        XCTAssertNil(row.value)
+        XCTAssertNil(row.reps)
+    }
+
+    /// CR: decode strips a stray `value` on open rows so mapper save cannot
+    /// re-emit `{kind: open, value: n}` (backend 422).
+    func testWarmupSetRowOpenDecodeDropsStrayValue() throws {
+        let data = Data(#"{"kind": "open", "value": 5}"#.utf8)
+        let row = try WorkoutEnrichmentJSON.decoder.decode(WarmupSetRow.self, from: data)
+        XCTAssertEqual(row.kind, .open)
+        XCTAssertNil(row.value)
+
+        let encoded = try WorkoutEnrichmentJSON.object(from: row)
+        XCTAssertEqual(encoded["kind"] as? String, "open")
+        XCTAssertNil(encoded["value"])
+
+        let mapperPayload = APIService.warmupSetObject(from: row)
+        XCTAssertEqual(mapperPayload["kind"] as? String, "open")
+        XCTAssertNil(mapperPayload["value"])
+    }
+
+    func testWarmupSetRowStillDecodesRepsOnly() throws {
+        let data = Data(#"{"reps": 5}"#.utf8)
+        let row = try WorkoutEnrichmentJSON.decoder.decode(WarmupSetRow.self, from: data)
+        XCTAssertEqual(row.reps, 5)
+        XCTAssertNil(row.kind)
+        XCTAssertEqual(row.structureSource, .enrichmentDefault)
+    }
+
+    func testWarmupSetRowRequiresRepsOrKind() {
+        let data = Data(#"{"weight": 10}"#.utf8)
+        XCTAssertThrowsError(try WorkoutEnrichmentJSON.decoder.decode(WarmupSetRow.self, from: data)) { error in
+            XCTAssertEqual(error as? WorkoutPreferencesValidationError, .warmupSetRowRequiresRepsOrKind)
+        }
+    }
+
+    func testWarmupSetRowParseListHandlesRepsAndKindRows() {
+        let rows = WarmupSetRow.parseList([
+            ["reps": 8],
+            ["kind": "time", "value": 30],
+            ["kind": "open"],
+            ["kind": "open", "value": 5],
+            ["weight": 10]
+        ])
+        XCTAssertEqual(rows?.count, 4)
+        XCTAssertEqual(rows?[0].reps, 8)
+        XCTAssertEqual(rows?[1].kind, .time)
+        XCTAssertEqual(rows?[1].value, 30)
+        XCTAssertEqual(rows?[2].kind, .open)
+        XCTAssertNil(rows?[2].value)
+        XCTAssertEqual(rows?[3].kind, .open)
+        XCTAssertNil(rows?[3].value)
     }
 
     func testPrefsEncodeSnakeCaseKeys() throws {

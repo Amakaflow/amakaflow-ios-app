@@ -5,6 +5,10 @@
 //  AMA-2374 — exercise-named Runna bands for Apple Watch preview
 //  (Mobility prep / Barbell back squat · N SETS). Split from
 //  WorkoutKitPlanStepSummary.swift for SwiftLint file_length / type_body_length.
+//  AMA-2378 — multi-step mobility/cooldown, skipped-ramp captions, and amber
+//  open-goal detail. `SectionAccumulator` below carries most of the new
+//  section-grouping logic at file scope (not nested) to keep
+//  `PreviewSectionBuilder` under SwiftLint's type_body_length.
 //
 
 import Foundation
@@ -18,6 +22,23 @@ extension WorkoutKitPlanStepSummary {
     }
 }
 
+/// One row's worth of preview content before numbering — shared by
+/// `PreviewSectionBuilder`'s flatten pass and `SectionAccumulator`'s grouping
+/// pass. File-scope (not nested) so both can use it without qualification.
+private struct PreviewRow {
+    let title: String
+    let detail: String?
+    var rest: String?
+    let setCount: Int
+
+    init(title: String, detail: String?, rest: String? = nil, setCount: Int = 1) {
+        self.title = title
+        self.detail = detail
+        self.rest = rest
+        self.setCount = setCount
+    }
+}
+
 /// Private builder so `WorkoutKitPlanStepSummary` stays under type_body_length.
 private enum PreviewSectionBuilder {
     private enum Atom {
@@ -26,20 +47,6 @@ private enum PreviewSectionBuilder {
         case work(exercise: String, detail: String?, repeatCount: Int)
         case rest(chip: String)
         case cooldown(detail: String)
-    }
-
-    private struct PreviewRow {
-        let title: String
-        let detail: String?
-        var rest: String?
-        let setCount: Int
-
-        init(title: String, detail: String?, rest: String? = nil, setCount: Int = 1) {
-            self.title = title
-            self.detail = detail
-            self.rest = rest
-            self.setCount = setCount
-        }
     }
 
     /// Shared warm-up prefixes (lowercase). Detection and stripping must agree.
@@ -135,153 +142,22 @@ private enum PreviewSectionBuilder {
     }
 
     private static func buildSections(from atoms: [Atom]) -> [PreviewSection] {
-        var sections: [PreviewSection] = []
-        var number = 1
-        var pendingRest: String?
-        var mobilityRows: [PreviewRow] = []
-        var exerciseName: String?
-        var exerciseRows: [PreviewRow] = []
-
-        func makeSteps(from rows: [PreviewRow]) -> [PreviewStep] {
-            rows.map { row in
-                defer { number += 1 }
-                return PreviewStep(
-                    number: number,
-                    title: row.title,
-                    detail: uppercaseDetail(row.detail),
-                    restChip: row.rest
-                )
-            }
-        }
-
-        func flushMobility() {
-            guard !mobilityRows.isEmpty else { return }
-            attachRest(&mobilityRows, pending: &pendingRest)
-            let rows = mobilityRows
-            mobilityRows = []
-            sections.append(PreviewSection(
-                accent: .mobility,
-                band: "Mobility prep",
-                tag: mobilityDurationTag(from: rows.map(\.detail)),
-                steps: makeSteps(from: rows)
-            ))
-        }
-
-        func flushExercise() {
-            guard let name = exerciseName, !exerciseRows.isEmpty else {
-                exerciseName = nil
-                exerciseRows = []
-                return
-            }
-            attachRest(&exerciseRows, pending: &pendingRest)
-            let rows = exerciseRows
-            let setCount = rows.reduce(0) { $0 + $1.setCount }
-            exerciseName = nil
-            exerciseRows = []
-            sections.append(PreviewSection(
-                accent: .work,
-                band: name,
-                tag: setCount == 1 ? "1 SET" : "\(setCount) SETS",
-                steps: makeSteps(from: rows)
-            ))
-        }
-
-        func beginExercise(_ exercise: String) {
-            flushMobility()
-            if exerciseName != exercise {
-                flushExercise()
-                exerciseName = exercise
-            }
-            attachRest(&exerciseRows, pending: &pendingRest)
-        }
-
+        var accumulator = SectionAccumulator()
         for atom in atoms {
             switch atom {
             case .mobility(let title, let detail):
-                flushExercise()
-                attachRest(&mobilityRows, pending: &pendingRest)
-                mobilityRows.append(PreviewRow(title: title, detail: detail))
-
+                accumulator.appendMobility(title: title, detail: detail)
             case .warmupSet(let exercise, let detail):
-                beginExercise(exercise)
-                exerciseRows.append(PreviewRow(title: "Warm-up set", detail: detail, setCount: 1))
-
+                accumulator.appendWarmupSet(exercise: exercise, detail: detail)
             case .work(let exercise, let detail, let repeatCount):
-                beginExercise(exercise)
-                let title = repeatCount > 1 ? "Working sets ×\(repeatCount)" : "Working set"
-                exerciseRows.append(PreviewRow(title: title, detail: detail, setCount: max(repeatCount, 1)))
-
+                accumulator.appendWork(exercise: exercise, detail: detail, repeatCount: repeatCount)
             case .rest(let chip):
-                pendingRest = chip
-
+                accumulator.setPendingRest(chip)
             case .cooldown(let detail):
-                flushMobility()
-                flushExercise()
-                pendingRest = nil
-                sections.append(PreviewSection(
-                    accent: .cooldown,
-                    band: "Cool-down",
-                    tag: nil,
-                    steps: [PreviewStep(
-                        number: number,
-                        title: "Cool-down",
-                        detail: uppercaseDetail(detail),
-                        restChip: nil
-                    )]
-                ))
-                number += 1
+                accumulator.appendCooldownAtom(detail: detail)
             }
         }
-
-        flushMobility()
-        flushExercise()
-        // Trailing rest with no prior work is dropped (nothing to pin the chip to).
-        return sections
-    }
-
-    private static func attachRest(_ rows: inout [PreviewRow], pending: inout String?) {
-        defer { pending = nil }
-        guard let pending, !rows.isEmpty else { return }
-        rows[rows.count - 1].rest = pending
-    }
-
-    private static func mobilityDurationTag(from details: [String?]) -> String? {
-        var totalSeconds = 0
-        var matched = false
-        for detail in details {
-            guard let detail else { continue }
-            if let minutes = parseMinutes(detail) {
-                totalSeconds += minutes * 60
-                matched = true
-            } else if let seconds = parseSeconds(detail) {
-                totalSeconds += seconds
-                matched = true
-            }
-        }
-        guard matched, totalSeconds > 0 else { return nil }
-        let minutes = max(1, Int((Double(totalSeconds) / 60.0).rounded()))
-        return "~\(minutes) MIN"
-    }
-
-    private static func parseMinutes(_ detail: String) -> Int? {
-        let lower = detail.lowercased()
-        guard lower.contains("min") else { return nil }
-        let digits = lower.prefix(while:) { $0.isNumber || $0 == " " }.filter(\.isNumber)
-        return Int(String(digits))
-    }
-
-    /// Accept only `durationLabel` seconds form (`"120s"`), never `"10 reps"`.
-    private static func parseSeconds(_ detail: String) -> Int? {
-        let lower = detail.lowercased()
-        guard lower.hasSuffix("s") else { return nil }
-        let digits = String(lower.dropLast())
-        guard !digits.isEmpty, digits.allSatisfy(\.isNumber) else { return nil }
-        return Int(digits)
-    }
-
-    private static func uppercaseDetail(_ detail: String?) -> String? {
-        guard let detail, !detail.isEmpty else { return nil }
-        return detail.uppercased()
+        return accumulator.finish()
     }
 
     private static func displayName(for step: WKPlanDTO.Interval.Step) -> String {
@@ -329,18 +205,241 @@ private enum PreviewSectionBuilder {
         return "REST · YOU END IT"
     }
 
+    /// `nil` reps and `nil` seconds means no fixed target — an open goal
+    /// (AMA-2378 `ActivityGoal.kind == .open` / `RampSet.kind == .open`).
+    /// Surfaces as `"Open"` (→ `OPEN` once uppercased) so the preview never
+    /// silently drops the row's detail line.
     private static func workDetail(for step: WKPlanDTO.Interval.Step) -> String? {
         if let reps = step.reps { return "\(reps) reps" }
         if let seconds = step.seconds { return durationLabel(seconds) }
-        return nil
+        return "Open"
     }
 
+    /// The legacy singular warmup/cooldown fields encode an open goal as
+    /// `seconds: 0` (mapper `legacy_interval_models()`) — a real 0s band
+    /// never happens, so 0 unambiguously means open here.
     private static func durationLabel(_ seconds: Int) -> String {
-        guard seconds > 0 else { return "0s" }
+        guard seconds > 0 else { return "Open" }
         if seconds % 60 == 0 {
             let minutes = seconds / 60
             return "\(minutes) min"
         }
         return "\(seconds)s"
     }
+}
+
+/// AMA-2378 — the mapper composes multi-step mobility AND multi-step
+/// cooldown the same way (named soft-activity steps; see
+/// `_compose_soft_activity_blocks` in blocks_to_workoutkit.py), with no
+/// `kind: cooldown` marker on the wire once there's more than one activity.
+/// `hasWorked` disambiguates by position: soft-activity atoms before the
+/// first work exercise are mobility prep; the same atoms after the last work
+/// exercise are cooldown. The dedicated `.cooldown` interval (legacy
+/// single-activity shape) always merges into this same trailing band so
+/// "Cool-down" never splits in two. File-scope (not nested in
+/// `PreviewSectionBuilder`) so it doesn't count against that enum's
+/// SwiftLint type_body_length.
+///
+/// Value type (not a MainActor `class`): default actor isolation makes a
+/// class deinit hop through `swift_task_deinitOnExecutor` and SIGABRT under
+/// XCTest (libmalloc "pointer being freed was not allocated"). Pending-rest
+/// attachment uses a local array copy so we never pass `&self.*` into a
+/// mutating helper (Swift exclusivity).
+private struct SectionAccumulator {
+    private var sections: [PreviewSection] = []
+    private var number = 1
+    private var pendingRest: String?
+    private var mobilityRows: [PreviewRow] = []
+    private var exerciseName: String?
+    private var exerciseRows: [PreviewRow] = []
+    private var cooldownRows: [PreviewRow] = []
+    private var hasWorked = false
+
+    mutating func setPendingRest(_ chip: String) {
+        pendingRest = chip
+    }
+
+    mutating func appendMobility(title: String, detail: String?) {
+        flushExercise()
+        if hasWorked {
+            var rows = cooldownRows
+            attachPendingRest(to: &rows)
+            rows.append(PreviewRow(title: title, detail: detail))
+            cooldownRows = rows
+        } else {
+            var rows = mobilityRows
+            attachPendingRest(to: &rows)
+            rows.append(PreviewRow(title: title, detail: detail))
+            mobilityRows = rows
+        }
+    }
+
+    mutating func appendWarmupSet(exercise: String, detail: String?) {
+        beginExercise(exercise)
+        exerciseRows.append(PreviewRow(title: PreviewStep.warmupSetTitle, detail: detail, setCount: 1))
+    }
+
+    mutating func appendWork(exercise: String, detail: String?, repeatCount: Int) {
+        beginExercise(exercise)
+        let title = repeatCount > 1 ? "Working sets ×\(repeatCount)" : "Working set"
+        exerciseRows.append(PreviewRow(title: title, detail: detail, setCount: max(repeatCount, 1)))
+    }
+
+    /// Legacy single-activity `.cooldown` atom — always merges into
+    /// `cooldownRows` alongside any soft-activity rows already pending.
+    mutating func appendCooldownAtom(detail: String) {
+        flushMobility()
+        flushExercise()
+        pendingRest = nil
+        cooldownRows.append(PreviewRow(title: "Cool-down", detail: detail))
+    }
+
+    /// Trailing rest with no prior work is dropped (nothing to pin the chip to).
+    mutating func finish() -> [PreviewSection] {
+        flushMobility()
+        flushExercise()
+        flushCooldown()
+        return sections
+    }
+
+    private mutating func beginExercise(_ exercise: String) {
+        flushMobility()
+        flushCooldownAsInterstitial()
+        hasWorked = true
+        if exerciseName != exercise {
+            flushExercise()
+            exerciseName = exercise
+        }
+        var rows = exerciseRows
+        attachPendingRest(to: &rows)
+        exerciseRows = rows
+    }
+
+    private mutating func makeSteps(from rows: [PreviewRow]) -> [PreviewStep] {
+        rows.map { row in
+            defer { number += 1 }
+            return PreviewStep(
+                number: number,
+                title: row.title,
+                detail: uppercaseDetail(row.detail),
+                restChip: row.rest
+            )
+        }
+    }
+
+    private mutating func flushMobility() {
+        guard !mobilityRows.isEmpty else { return }
+        var rows = mobilityRows
+        attachPendingRest(to: &rows)
+        mobilityRows = []
+        sections.append(PreviewSection(
+            accent: .mobility,
+            band: "Mobility prep",
+            tag: bandDurationTag(from: rows.map(\.detail)),
+            steps: makeSteps(from: rows)
+        ))
+    }
+
+    private mutating func flushExercise() {
+        guard let name = exerciseName, !exerciseRows.isEmpty else {
+            exerciseName = nil
+            exerciseRows = []
+            return
+        }
+        var rows = exerciseRows
+        attachPendingRest(to: &rows)
+        let setCount = rows.reduce(0) { $0 + $1.setCount }
+        let hasRamp = rows.contains { $0.title == PreviewStep.warmupSetTitle }
+        exerciseName = nil
+        exerciseRows = []
+        sections.append(PreviewSection(
+            accent: .work,
+            band: name,
+            tag: setCount == 1 ? "1 SET" : "\(setCount) SETS",
+            steps: makeSteps(from: rows),
+            caption: hasRamp ? nil : WorkoutEnrichmentPushCopy.noWarmupsYourCall
+        ))
+    }
+
+    /// Flushes rows that looked like a trailing cooldown but turned out to be
+    /// a mid-workout break — more work followed, so relabel as an
+    /// interstitial mobility band instead of dropping them.
+    private mutating func flushCooldownAsInterstitial() {
+        guard !cooldownRows.isEmpty else { return }
+        var rows = cooldownRows
+        attachPendingRest(to: &rows)
+        cooldownRows = []
+        sections.append(PreviewSection(
+            accent: .mobility,
+            band: "Mobility prep",
+            tag: bandDurationTag(from: rows.map(\.detail)),
+            steps: makeSteps(from: rows)
+        ))
+    }
+
+    /// Real, final cooldown flush — always the last section appended because
+    /// it only ever runs at atom-stream end or on the dedicated `.cooldown`
+    /// atom (itself guaranteed last by the mapper). Trailing rest after the
+    /// cool-down band has nothing to pin to — drop it (AMA-2371 contract).
+    private mutating func flushCooldown() {
+        guard !cooldownRows.isEmpty else { return }
+        pendingRest = nil
+        let rows = cooldownRows
+        cooldownRows = []
+        sections.append(PreviewSection(
+            accent: .cooldown,
+            band: "Cool-down",
+            tag: bandDurationTag(from: rows.map(\.detail)),
+            steps: makeSteps(from: rows)
+        ))
+    }
+
+    /// `rows` must be a local copy — never `&self.mobilityRows` etc.
+    private mutating func attachPendingRest(to rows: inout [PreviewRow]) {
+        let chip = pendingRest
+        pendingRest = nil
+        guard let chip, !rows.isEmpty else { return }
+        rows[rows.count - 1].rest = chip
+    }
+}
+
+// MARK: - Shared detail/tag string formatting (file scope, used by both types above)
+
+private func bandDurationTag(from details: [String?]) -> String? {
+    var totalSeconds = 0
+    var matched = false
+    for detail in details {
+        guard let detail else { continue }
+        if let minutes = parseMinutes(detail) {
+            totalSeconds += minutes * 60
+            matched = true
+        } else if let seconds = parseSeconds(detail) {
+            totalSeconds += seconds
+            matched = true
+        }
+    }
+    guard matched, totalSeconds > 0 else { return nil }
+    let minutes = max(1, Int((Double(totalSeconds) / 60.0).rounded()))
+    return "~\(minutes) MIN"
+}
+
+private func parseMinutes(_ detail: String) -> Int? {
+    let lower = detail.lowercased()
+    guard lower.contains("min") else { return nil }
+    let digits = lower.prefix(while:) { $0.isNumber || $0 == " " }.filter(\.isNumber)
+    return Int(String(digits))
+}
+
+/// Accept only `durationLabel` seconds form (`"120s"`), never `"10 reps"`.
+private func parseSeconds(_ detail: String) -> Int? {
+    let lower = detail.lowercased()
+    guard lower.hasSuffix("s") else { return nil }
+    let digits = String(lower.dropLast())
+    guard !digits.isEmpty, digits.allSatisfy(\.isNumber) else { return nil }
+    return Int(digits)
+}
+
+private func uppercaseDetail(_ detail: String?) -> String? {
+    guard let detail, !detail.isEmpty else { return nil }
+    return detail.uppercased()
 }

@@ -26,7 +26,20 @@ enum WorkoutEnrichmentPushPlanner {
         /// Per-exercise tombstones to clear when `exercise_warmup_sets` is applied.
         var tombstonedExerciseIds: [String]
         /// Candidate exercise ids covered by a warm-up-sets offer (reject → tombstone).
+        /// Ids-only subset — exercises without a minted `exercise_id` yet are absent.
         var candidateExerciseIds: [String]
+        /// AMA-2378 v2 — every candidate's display name, in the same order as
+        /// `warmupSetCandidates`. Unlike `candidateExerciseIds` this is not
+        /// filtered to exercises with a minted id: the enhance sheet's live
+        /// `warmupSetsSummaryV2` row needs a name for every candidate, matched
+        /// to a `PerExerciseRamp` by normalized name (id-based matching lands
+        /// once ids are minted ahead of the push in a later task).
+        var candidateExerciseNames: [String]
+        /// AMA-2378 Task 5 — each candidate's declared working-set count
+        /// (`nil` when the ingest draft never declared one), same order as
+        /// `candidateExerciseNames`. Feeds the ramp editor's "→ THEN YOUR K
+        /// WORKING SETS" header meta; unknown stays unknown, never a guess.
+        var candidateWorkingSetCounts: [Int?]
 
         var id: String { kind.rawValue }
 
@@ -38,6 +51,8 @@ enum WorkoutEnrichmentPushPlanner {
             title: String? = nil,
             tombstonedExerciseIds: [String] = [],
             candidateExerciseIds: [String] = [],
+            candidateExerciseNames: [String] = [],
+            candidateWorkingSetCounts: [Int?] = [],
             target: EnrichmentPushTarget = .garmin
         ) {
             self.kind = kind
@@ -47,6 +62,8 @@ enum WorkoutEnrichmentPushPlanner {
             self.detail = detail
             self.tombstonedExerciseIds = tombstonedExerciseIds
             self.candidateExerciseIds = candidateExerciseIds
+            self.candidateExerciseNames = candidateExerciseNames
+            self.candidateWorkingSetCounts = candidateWorkingSetCounts
         }
     }
 
@@ -174,149 +191,17 @@ enum WorkoutEnrichmentPushPlanner {
                             prefs.exerciseWarmupSets.defaultSets,
                             exerciseCount: candidates.count
                         ),
-                        tombstonedExerciseIds: tombstonedIds,
-                        candidateExerciseIds: candidateIds,
-                        target: target
-                    )
+                    tombstonedExerciseIds: tombstonedIds,
+                    candidateExerciseIds: candidateIds,
+                    candidateExerciseNames: candidates.map(\.name),
+                    candidateWorkingSetCounts: candidates.map(\.sets),
+                    target: target
                 )
+            )
             }
         }
 
         return Plan(offers: offers, target: target)
-    }
-
-    // MARK: - Apply
-
-    /// What the user answered on the sheet.
-    struct Decision: Equatable, Sendable {
-        var checkedKinds: Set<EnrichmentKind>
-        /// Rest override for this push. `nil` keeps the prefs value.
-        var restSecOverride: Int?
-        var restOpenOverride: Bool?
-
-        init(
-            checkedKinds: Set<EnrichmentKind>,
-            restSecOverride: Int? = nil,
-            restOpenOverride: Bool? = nil
-        ) {
-            self.checkedKinds = checkedKinds
-            self.restSecOverride = restSecOverride
-            self.restOpenOverride = restOpenOverride
-        }
-    }
-
-    /// Enrich inputs for the decision: unchecked kinds are disabled so enrich
-    /// cannot inject them, rejected offers are tombstoned, and tombstones for
-    /// checked re-opt-in kinds are dropped.
-    struct Application: Equatable, Sendable {
-        var prefs: WorkoutPreferences
-        var tombstones: [EnrichmentTombstone]
-        var clearedTombstones: [EnrichmentTombstone]
-        var rejectedTombstones: [EnrichmentTombstone]
-
-        var appliesAnything: Bool {
-            prefs.sessionWarmup.enabled
-                || prefs.cooldown.enabled
-                || prefs.betweenSetRest.enabled
-                || prefs.exerciseWarmupSets.enabled
-        }
-
-        /// True when the sheet answer must be persisted (enrich and/or tombstones).
-        var needsPersist: Bool {
-            appliesAnything || !rejectedTombstones.isEmpty || !clearedTombstones.isEmpty
-        }
-    }
-
-    static func application(
-        plan: Plan,
-        decision: Decision,
-        prefs: WorkoutPreferences,
-        tombstones: [EnrichmentTombstone]
-    ) throws -> Application {
-        var overridden = prefs
-        let checked = decision.checkedKinds
-
-        overridden.sessionWarmup.enabled = checked.contains(.sessionWarmup)
-        overridden.cooldown.enabled = checked.contains(.cooldown)
-        overridden.betweenSetRest.enabled = checked.contains(.betweenSetRest)
-        overridden.exerciseWarmupSets.enabled = checked.contains(.exerciseWarmupSets)
-
-        if checked.contains(.betweenSetRest),
-           decision.restSecOverride != nil || decision.restOpenOverride != nil {
-            let restOpen = decision.restOpenOverride ?? prefs.betweenSetRest.restOpen
-            let restSec = restOpen ? nil : (decision.restSecOverride ?? prefs.betweenSetRest.restSec)
-            try overridden.betweenSetRest.setRest(restSec: restSec, restOpen: restOpen)
-        }
-
-        var remaining = tombstones
-        let rejected = collectRejectedTombstones(
-            plan: plan,
-            checked: checked,
-            into: &remaining
-        )
-        let cleared = clearReoptInTombstones(
-            plan: plan,
-            checked: checked,
-            into: &remaining
-        )
-
-        return Application(
-            prefs: overridden,
-            tombstones: remaining,
-            clearedTombstones: cleared,
-            rejectedTombstones: rejected
-        )
-    }
-
-    /// AMA-2346/2347 — tombstone only when a **default-checked** offer was turned off.
-    private static func collectRejectedTombstones(
-        plan: Plan,
-        checked: Set<EnrichmentKind>,
-        into remaining: inout [EnrichmentTombstone]
-    ) -> [EnrichmentTombstone] {
-        var rejected: [EnrichmentTombstone] = []
-        for offer in plan.offers where !checked.contains(offer.kind) {
-            guard offer.isChecked else { continue }
-            if offer.kind == .exerciseWarmupSets {
-                for exerciseId in offer.candidateExerciseIds {
-                    let tomb = EnrichmentTombstone(kind: offer.kind, exerciseId: exerciseId)
-                    guard !remaining.contains(tomb) else { continue }
-                    remaining.append(tomb)
-                    rejected.append(tomb)
-                }
-            } else if !WorkoutEnrichmentPresence.isTombstoned(offer.kind, tombstones: remaining) {
-                let tomb = EnrichmentTombstone(kind: offer.kind)
-                remaining.append(tomb)
-                rejected.append(tomb)
-            }
-        }
-        return rejected
-    }
-
-    /// Clear tombstones only for true re-opt-in (offer started unchecked).
-    private static func clearReoptInTombstones(
-        plan: Plan,
-        checked: Set<EnrichmentKind>,
-        into remaining: inout [EnrichmentTombstone]
-    ) -> [EnrichmentTombstone] {
-        var cleared: [EnrichmentTombstone] = []
-        for kind in checked {
-            guard let offer = plan.offer(kind), !offer.isChecked else { continue }
-            if kind == .exerciseWarmupSets {
-                for exerciseId in offer.tombstonedExerciseIds {
-                    cleared.append(EnrichmentTombstone(kind: kind, exerciseId: exerciseId))
-                    WorkoutEnrichmentMutations.clearTombstone(
-                        &remaining,
-                        kind: kind,
-                        exerciseId: exerciseId
-                    )
-                }
-            } else {
-                cleared.append(EnrichmentTombstone(kind: kind))
-                WorkoutEnrichmentMutations.clearTombstone(&remaining, kind: kind)
-            }
-        }
-        return cleared
     }
 
     // MARK: - Presence helpers
@@ -347,10 +232,15 @@ enum WorkoutEnrichmentPushPlanner {
         prefs: ExerciseWarmupSetsPrefs
     ) -> [SocialImportExercise] {
         let excluded = Set(prefs.excludeExerciseKeys.map(ExerciseKeyNormalizer.normalize))
+        var seenNames = Set<String>()
+        // De-dupe by normalized name so the pick screen cannot show two cards
+        // that share one PerExerciseRamp (same exercise across two blocks).
         return blocks.flatMap(\.exercises).filter { exercise in
             guard exercise.sets != nil else { return false }
             guard exercise.warmupSets?.isEmpty ?? true else { return false }
-            return !excluded.contains(ExerciseKeyNormalizer.normalize(exercise.name))
+            let key = ExerciseKeyNormalizer.normalize(exercise.name)
+            guard !excluded.contains(key) else { return false }
+            return seenNames.insert(key).inserted
         }
     }
 }

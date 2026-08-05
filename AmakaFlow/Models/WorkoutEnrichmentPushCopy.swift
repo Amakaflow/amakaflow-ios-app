@@ -148,4 +148,190 @@ enum WorkoutEnrichmentPushCopy {
         guard target == .apple, AppleWatchDeliveryPrefsStore.hasConfigured else { return false }
         return AppleWatchDeliveryPrefsStore.current.restMode == .omit
     }
+
+    // MARK: - AMA-2378 v2 — enhance sheet mono summaries + copy-lock
+    // Design 2026-08-04 `make-it-watch-ready-v2-design.md` §Surfaces 1–5 +
+    // §Validation matrix (copy-lock). Additive: v1 APIs above are untouched.
+
+    /// v2 sheet intro (rows-as-doors) — distinct from v1's `introText`.
+    static let sheetIntroV2 = "Tap a row to shape it — your picks are saved to this workout."
+
+    /// Sequence builder screen header suffix — mobility runs first, cooldown runs last.
+    static let mobilityHeaderSuffix = "RUNS BEFORE THE FIRST LIFT"
+    static let cooldownHeaderSuffix = "RUNS AFTER THE LAST SET"
+
+    /// Enhance-sheet "Cooldown" row summary suffix — shorter than the sequence
+    /// builder's own header suffix (`cooldownHeaderSuffix`); the two are locked
+    /// separately because the design uses different phrasing per surface.
+    static let cooldownRowSummarySuffix = "AFTER THE LAST SET"
+
+    /// Open-target stepper caption (sequence builder + ramp editor).
+    static let openStepperCaption = "NO TARGET — END ON TAP / CROWN"
+
+    /// Per-exercise warm-up pick screen header hint.
+    static let warmupPickHint = "NOT EVERY LIFT NEEDS A RAMP"
+
+    /// Per-exercise pick row caption when that exercise's ramp toggle is off.
+    static let warmupOffCaption = "STRAIGHT TO WORKING SETS"
+
+    /// Per-exercise warm-up pick screen header meta — `N OF M EXERCISES · <hint>`.
+    static func warmupPickHeaderMeta(enabledCount: Int, total: Int) -> String {
+        let noun = total == 1 ? "EXERCISE" : "EXERCISES"
+        return "\(enabledCount) OF \(total) \(noun) · \(warmupPickHint)"
+    }
+
+    /// Ramp editor header meta — `N WARM-UP SETS → THEN YOUR K WORKING SETS`.
+    /// `workingSetCount` is `nil` when the ingest draft never declared one —
+    /// the header reads "YOUR WORKING SETS" rather than inventing a number.
+    static func rampEditorHeaderMeta(setCount: Int, workingSetCount: Int?) -> String {
+        let setsLabel = "\(setCount) WARM-UP SET\(setCount == 1 ? "" : "S")"
+        guard let workingSetCount, workingSetCount > 0 else {
+            return "\(setsLabel) → THEN YOUR WORKING SETS"
+        }
+        let workingLabel = "YOUR \(workingSetCount) WORKING SET\(workingSetCount == 1 ? "" : "S")"
+        return "\(setsLabel) → THEN \(workingLabel)"
+    }
+
+    /// Watch preview band caption — an exercise with no ramp, straight to working sets.
+    static let noWarmupsYourCall = "NO WARM-UPS — YOUR CALL"
+
+    /// Ramp editor inline honesty note — WorkoutKit has no reps-with-load goal
+    /// (AMA-2347); loads never render on the ramp, only intensity `%` notes.
+    static let loadsOffRampNote = "Loads stay off the ramp — the watch shows % notes only."
+
+    static func sequenceHeaderSuffix(for kind: EnrichmentSequenceKind) -> String {
+        switch kind {
+        case .mobility: return mobilityHeaderSuffix
+        case .cooldown: return cooldownHeaderSuffix
+        }
+    }
+
+    // MARK: One-activity goal formatting
+
+    /// `mm:ss` with no unit suffix — the sequence-summary form (`2:00`), distinct
+    /// from the sequence-builder stepper's own `2:00 MIN` display.
+    static func formatMinSec(_ seconds: Int) -> String {
+        let clamped = max(seconds, 0)
+        return "\(clamped / 60):\(String(format: "%02d", clamped % 60))"
+    }
+
+    /// One activity's declared goal, mono caps summary form. Reads `goal` when
+    /// present; else falls back to the v1 `durationSec` projection — `nil` →
+    /// `OPEN`, otherwise the timed label.
+    static func activityGoalLabel(goal: ActivityGoal?, durationSec: Int?) -> String {
+        guard let goal else {
+            guard let durationSec, durationSec > 0 else { return "OPEN" }
+            return formatMinSec(durationSec)
+        }
+        switch goal.kind {
+        case .time: return formatMinSec(goal.value ?? durationSec ?? 0)
+        case .distance: return "\(goal.value ?? 0) M"
+        case .cals: return "\(goal.value ?? 0) CAL"
+        case .open: return "OPEN"
+        }
+    }
+
+    /// `NAME GOAL` — one sequence step's mono label, e.g. `SKI ERG 500 M`.
+    static func activitySummaryLabel(name: String, goal: ActivityGoal?, durationSec: Int?) -> String {
+        "\(name.uppercased()) \(activityGoalLabel(goal: goal, durationSec: durationSec))"
+    }
+
+    // MARK: Duration estimate math (design §Surface 2 — sequence header `~X MIN`)
+
+    /// Per-activity duration estimate in seconds. Time = literal value;
+    /// Distance ≈ value/4 (meters → seconds heuristic); Cals ≈ value×4;
+    /// Open ≈ 90s. Matches the design rig's estimate exactly (not a real pace
+    /// model — good enough for a rough sequence-length readout).
+    static func durationEstimateSeconds(goal: ActivityGoal?, durationSec: Int?) -> Int {
+        guard let goal else { return durationSec ?? 90 }
+        switch goal.kind {
+        case .time: return goal.value ?? durationSec ?? 90
+        case .distance: return (goal.value ?? 0) / 4
+        case .cals: return (goal.value ?? 0) * 4
+        case .open: return 90
+        }
+    }
+
+    static func sequenceDurationEstimateSeconds(_ activities: [EnrichmentActivity]) -> Int {
+        activities.reduce(0) { $0 + durationEstimateSeconds(goal: $1.goal, durationSec: $1.durationSec) }
+    }
+
+    /// Rounded, not ceiling — mirrors the design rig's `Math.round(total / 60)`
+    /// (a 500m + 2:00 sequence totals 245s, which reads `~4 MIN`, not `~5 MIN`).
+    static func sequenceDurationEstimateMinutes(_ activities: [EnrichmentActivity]) -> Int {
+        Int((Double(sequenceDurationEstimateSeconds(activities)) / 60).rounded())
+    }
+
+    // MARK: Sequence summaries (design §Surface 1 rows-as-doors, §Surfaces 2/5 headers)
+
+    /// `NAME GOAL → NAME GOAL · N STEPS[ · suffix]` — the enhance-sheet row
+    /// summary for mobility prep / cooldown. Pass `cooldownRowSummarySuffix`
+    /// for the cooldown row; mobility has no row-level suffix.
+    static func sequenceSummary(_ activities: [EnrichmentActivity], suffix: String? = nil) -> String {
+        guard !activities.isEmpty else { return "NO STEPS ADDED" }
+        let steps = activities
+            .map { activitySummaryLabel(name: $0.name, goal: $0.goal, durationSec: $0.durationSec) }
+            .joined(separator: " → ")
+        let stepsLabel = "\(activities.count) STEP\(activities.count == 1 ? "" : "S")"
+        let base = "\(steps) · \(stepsLabel)"
+        guard let suffix else { return base }
+        return "\(base) · \(suffix)"
+    }
+
+    /// `N STEPS · ~X MIN · <suffix>` — the sequence builder screen's own header meta.
+    static func sequenceHeaderMeta(_ activities: [EnrichmentActivity], kind: EnrichmentSequenceKind) -> String {
+        let stepsLabel = "\(activities.count) STEP\(activities.count == 1 ? "" : "S")"
+        let minutes = sequenceDurationEstimateMinutes(activities)
+        return "\(stepsLabel) · ~\(minutes) MIN · \(sequenceHeaderSuffix(for: kind))"
+    }
+
+    // MARK: Warm-up sets summaries (design §Surface 1 row + §Surface 3 pick screen)
+
+    /// One exercise's warm-up tag for the enhance-sheet "Warm-up sets" row —
+    /// `NAME · CUSTOM RAMP`, `NAME · RAMP + OPEN` (any set in the ramp is
+    /// `.open`), or `NAME SKIPPED` (ramp disabled, absent, or has no sets).
+    static func warmupExerciseTag(name: String, ramp: PerExerciseRamp?) -> String {
+        let upperName = name.uppercased()
+        guard let ramp, ramp.enabled, !ramp.sets.isEmpty else {
+            return "\(upperName) SKIPPED"
+        }
+        let hasOpenSet = ramp.sets.contains { $0.kind == .open }
+        return "\(upperName) · \(hasOpenSet ? "RAMP + OPEN" : "CUSTOM RAMP")"
+    }
+
+    /// Enhance-sheet "Warm-up sets" row summary — joins each exercise's tag
+    /// with ` · `, e.g. `DEADLIFT · CUSTOM RAMP · OVERHEAD PRESS · RAMP + OPEN
+    /// · LEG PRESS SKIPPED`.
+    static func warmupSetsSummaryV2(_ exercises: [(name: String, ramp: PerExerciseRamp?)]) -> String {
+        guard !exercises.isEmpty else { return "NO EXERCISES" }
+        return exercises.map { warmupExerciseTag(name: $0.name, ramp: $0.ramp) }.joined(separator: " · ")
+    }
+
+    /// One ramp set's mono label for the per-exercise pick screen digest
+    /// (`8 REPS`, `1:00 MIN`, `15 CAL`, `OPEN · END ON TAP`).
+    static func rampSetLabel(_ set: RampSet) -> String {
+        switch set.kind {
+        case .reps: return "\(set.value ?? 0) REPS"
+        case .time: return "\(formatMinSec(set.value ?? 0)) MIN"
+        case .cals: return "\(set.value ?? 0) CAL"
+        case .open: return "OPEN · END ON TAP"
+        }
+    }
+
+    /// Per-exercise pick screen ramp digest — `warmupOffCaption` when the ramp
+    /// is off, `DEFAULT RAMP` when on with no declared sets, else the
+    /// set-by-set digest joined with ` → ` (e.g. `8 REPS → 5 REPS`).
+    static func perExerciseRampDigest(_ ramp: PerExerciseRamp?) -> String {
+        guard let ramp, ramp.enabled else { return warmupOffCaption }
+        guard !ramp.sets.isEmpty else { return "DEFAULT RAMP" }
+        return ramp.sets.map(rampSetLabel).joined(separator: " → ")
+    }
+}
+
+/// Mobility prep vs cooldown share one `SequenceScreen` anatomy — only copy
+/// differs (design §Surface 2 / §Surface 5). Distinct from `EnrichmentKind`
+/// (which also covers `betweenSetRest` / `exerciseWarmupSets`, not sequences).
+/// `Hashable` so the enhance sheet can drive `navigationDestination(item:)`.
+enum EnrichmentSequenceKind: String, Hashable, Sendable {
+    case mobility, cooldown
 }

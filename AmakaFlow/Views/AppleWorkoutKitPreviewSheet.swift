@@ -109,7 +109,28 @@ struct AppleWorkoutKitPreviewSheet: View {
 
     private var metaLine: String {
         let stepWord = intervalCount == 1 ? "STEP" : "STEPS"
-        return "NATIVE WORKOUT APP · \(sportLabel) · \(intervalCount) \(stepWord)"
+        var parts = ["NATIVE WORKOUT APP", sportLabel]
+        if !compositionTags.isEmpty {
+            parts.append(compositionTags.joined(separator: " + "))
+        }
+        parts.append("\(intervalCount) \(stepWord)")
+        return parts.joined(separator: " · ")
+    }
+
+    /// AMA-2378 — `PREP` / `RAMPS` / `COOLDOWN` tokens surfaced on the header
+    /// meta line only when this preview's bands actually contain them.
+    private var compositionTags: [String] {
+        var tags: [String] = []
+        if sections.contains(where: { $0.accent == .mobility }) {
+            tags.append("PREP")
+        }
+        if sections.contains(where: \.hasRamp) {
+            tags.append("RAMPS")
+        }
+        if sections.contains(where: { $0.accent == .cooldown }) {
+            tags.append("COOLDOWN")
+        }
+        return tags
     }
 
     private var footer: some View {
@@ -155,6 +176,18 @@ struct AppleWorkoutKitPreviewSheet: View {
                     .stroke(accent.opacity(0.4), lineWidth: 1)
             )
 
+            if let caption = section.caption {
+                Text(caption)
+                    .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                    .tracking(0.3)
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                    .padding(.horizontal, 12)
+                    .padding(.top, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(DailyDriver.card)
+                    .accessibilityIdentifier("af_apple_wk_no_warmups_caption")
+            }
+
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(section.steps.enumerated()), id: \.element.id) { index, step in
                     stepRow(step, showDivider: index > 0)
@@ -193,7 +226,7 @@ struct AppleWorkoutKitPreviewSheet: View {
                         Text(detail)
                             .font(.system(size: 9, weight: .medium, design: .monospaced))
                             .monospacedDigit()
-                            .foregroundColor(DailyDriver.foregroundMuted)
+                            .foregroundColor(step.isOpenGoal ? DailyDriver.amber : DailyDriver.foregroundMuted)
                     }
                 }
 
@@ -202,10 +235,14 @@ struct AppleWorkoutKitPreviewSheet: View {
                 if let restChip = step.restChip {
                     Text(restChip)
                         .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundColor(DailyDriver.foregroundMuted)
+                        .foregroundColor(step.isOpenRest ? DailyDriver.amber : DailyDriver.foregroundMuted)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(DailyDriver.card2)
+                        .background(step.isOpenRest ? DailyDriver.amber.opacity(0.16) : DailyDriver.card2)
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(step.isOpenRest ? DailyDriver.amber.opacity(0.4) : .clear, lineWidth: 1)
+                        )
                         .clipShape(Capsule(style: .continuous))
                         .accessibilityIdentifier("af_apple_wk_rest_chip")
                 }
@@ -252,6 +289,48 @@ private extension PreviewBandAccent {
         workoutName: "Test Apple workout",
         meta: .fallback,
         intervalCount: 6,
+        sections: WorkoutKitPlanStepSummary.sections(from: json),
+        sportLabel: WorkoutKitSportLabel.label(from: json),
+        prefsSummary: nil,
+        onConfirm: {},
+        onCancel: {}
+    )
+    .presentationDetents([.large])
+}
+
+#Preview("Multi-step mobility + skipped ramp + open goal + cooldown last") {
+    // AMA-2378 Task 7 — two named mobility activities (multi-step prep), an
+    // exercise with no warm-up rows (skipped ramp → amber-free caption), an
+    // open-goal working set (amber "OPEN"), open rest (amber chip), and two
+    // named cooldown activities composed the same way as mobility (no
+    // `kind: cooldown` marker) that must still land in a trailing Cool-down
+    // band, never mixed into "Mobility prep".
+    let json = Data("""
+    {
+      "title": "Watch-ready v2 preview",
+      "sportType": "traditionalStrengthTraining",
+      "intervals": [
+        { "kind": "work", "name": "Jump Rope", "seconds": 120 },
+        { "kind": "work", "name": "World's Greatest Stretch", "reps": 5 },
+        {
+          "kind": "repeat",
+          "reps": 3,
+          "intervals": [
+            { "kind": "work", "name": "Barbell back squat", "reps": 10 },
+            { "kind": "rest" }
+          ]
+        },
+        { "kind": "work", "name": "Overhead Press" },
+        { "kind": "rest" },
+        { "kind": "work", "name": "Foam Roll" },
+        { "kind": "work", "name": "Jump Rope", "seconds": 180 }
+      ]
+    }
+    """.utf8)
+    return AppleWorkoutKitPreviewSheet(
+        workoutName: "Watch-ready v2 preview",
+        meta: .fallback,
+        intervalCount: 7,
         sections: WorkoutKitPlanStepSummary.sections(from: json),
         sportLabel: WorkoutKitSportLabel.label(from: json),
         prefsSummary: nil,

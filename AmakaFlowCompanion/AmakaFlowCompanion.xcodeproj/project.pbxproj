@@ -186,6 +186,8 @@
 		AMA2360PREFTESTBLD /* AppleWatchDeliveryPrefsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2360PREFTESTREF /* AppleWatchDeliveryPrefsTests.swift */; };
 		AMA2316PREFTESTBLD /* GarminWatchDisplayPrefsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2316PREFTESTREF /* GarminWatchDisplayPrefsTests.swift */; };
 		AMA2336MDLBLD001 /* WorkoutEnrichmentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336MDLREF001 /* WorkoutEnrichmentModels.swift */; };
+		AMA2378V2MDLBLD001 /* WorkoutEnrichmentV2Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2378V2MDLREF001 /* WorkoutEnrichmentV2Models.swift */; };
+		AMA2378PLNAPBLD001 /* WorkoutEnrichmentPushPlanner+Application.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2378PLNAPREF001 /* WorkoutEnrichmentPushPlanner+Application.swift */; };
 		AMA2363MUTBLD001 /* WorkoutEnrichmentMutations.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2363MUTREF001 /* WorkoutEnrichmentMutations.swift */; };
 		AMA2336APIBLD001 /* WorkoutEnrichmentAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336APIREF001 /* WorkoutEnrichmentAPI.swift */; };
 		AMA2336TESTBLD /* WorkoutEnrichmentModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336TESTREF /* WorkoutEnrichmentModelsTests.swift */; };
@@ -213,6 +215,9 @@
 		AMA2336COORDBLD001 /* WorkoutEnrichmentPushCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336COORDREF001 /* WorkoutEnrichmentPushCoordinator.swift */; };
 		AMA2336PREFVBLD001 /* WorkoutEnrichmentPrefsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336PREFVREF001 /* WorkoutEnrichmentPrefsSheet.swift */; };
 		AMA2336PUSHVBLD001 /* WorkoutEnrichmentPushSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336PUSHVREF001 /* WorkoutEnrichmentPushSheet.swift */; };
+		AMA2378SEQVBLD001 /* EnrichmentSequenceScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2378SEQVREF001 /* EnrichmentSequenceScreen.swift */; };
+		AMA2378WPICKBLD001 /* EnrichmentWarmupPickScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2378WPICKREF001 /* EnrichmentWarmupPickScreen.swift */; };
+		AMA2378RAMPVBLD001 /* EnrichmentRampEditorScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2378RAMPVREF001 /* EnrichmentRampEditorScreen.swift */; };
 		AMA2336PLANTESTBLD /* WorkoutEnrichmentPushPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336PLANTESTREF /* WorkoutEnrichmentPushPlannerTests.swift */; };
 		AMA2317COPYBLD001 /* GarminLifecycleCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2317COPYREF001 /* GarminLifecycleCopy.swift */; };
 		AMA2317TELEBLD001 /* GarminHandoffTelemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2317TELEREF001 /* GarminHandoffTelemetry.swift */; };
@@ -859,6 +864,8 @@
 		AMA2316SHEETREF01 /* GarminWatchDisplayPrefsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchDisplayPrefsSheet.swift; path = ../AmakaFlow/Views/GarminWatchDisplayPrefsSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2316PREFTESTREF /* GarminWatchDisplayPrefsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchDisplayPrefsTests.swift; path = AmakaFlowCompanionTests/GarminWatchDisplayPrefsTests.swift; sourceTree = "<group>"; };
 		AMA2336MDLREF001 /* WorkoutEnrichmentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentModels.swift; path = ../AmakaFlow/Models/WorkoutEnrichmentModels.swift; sourceTree = SOURCE_ROOT; };
+		AMA2378V2MDLREF001 /* WorkoutEnrichmentV2Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentV2Models.swift; path = ../AmakaFlow/Models/WorkoutEnrichmentV2Models.swift; sourceTree = SOURCE_ROOT; };
+		AMA2378PLNAPREF001 /* WorkoutEnrichmentPushPlanner+Application.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutEnrichmentPushPlanner+Application.swift"; path = "../AmakaFlow/Models/WorkoutEnrichmentPushPlanner+Application.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2363MUTREF001 /* WorkoutEnrichmentMutations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentMutations.swift; path = ../AmakaFlow/Models/WorkoutEnrichmentMutations.swift; sourceTree = SOURCE_ROOT; };
 		AMA2336APIREF001 /* WorkoutEnrichmentAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentAPI.swift; path = ../AmakaFlow/Models/WorkoutEnrichmentAPI.swift; sourceTree = SOURCE_ROOT; };
 		AMA2362COPYREF001 /* WorkoutEnrichmentPushCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentPushCopy.swift; path = ../AmakaFlow/Models/WorkoutEnrichmentPushCopy.swift; sourceTree = SOURCE_ROOT; };
@@ -872,6 +879,9 @@
 		AMA2336COORDREF001 /* WorkoutEnrichmentPushCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentPushCoordinator.swift; path = ../AmakaFlow/Services/WorkoutEnrichmentPushCoordinator.swift; sourceTree = SOURCE_ROOT; };
 		AMA2336PREFVREF001 /* WorkoutEnrichmentPrefsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentPrefsSheet.swift; path = ../AmakaFlow/Views/WorkoutEnrichmentPrefsSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2336PUSHVREF001 /* WorkoutEnrichmentPushSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentPushSheet.swift; path = ../AmakaFlow/Views/Components/WorkoutEnrichmentPushSheet.swift; sourceTree = SOURCE_ROOT; };
+		AMA2378SEQVREF001 /* EnrichmentSequenceScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EnrichmentSequenceScreen.swift; path = ../AmakaFlow/Views/Components/EnrichmentSequenceScreen.swift; sourceTree = SOURCE_ROOT; };
+		AMA2378WPICKREF001 /* EnrichmentWarmupPickScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EnrichmentWarmupPickScreen.swift; path = ../AmakaFlow/Views/Components/EnrichmentWarmupPickScreen.swift; sourceTree = SOURCE_ROOT; };
+		AMA2378RAMPVREF001 /* EnrichmentRampEditorScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EnrichmentRampEditorScreen.swift; path = ../AmakaFlow/Views/Components/EnrichmentRampEditorScreen.swift; sourceTree = SOURCE_ROOT; };
 		AMA2336TESTREF /* WorkoutEnrichmentModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentModelsTests.swift; path = AmakaFlowCompanionTests/WorkoutEnrichmentModelsTests.swift; sourceTree = "<group>"; };
 		AMA2336PLANTESTREF /* WorkoutEnrichmentPushPlannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentPushPlannerTests.swift; path = AmakaFlowCompanionTests/WorkoutEnrichmentPushPlannerTests.swift; sourceTree = "<group>"; };
 		AMA2317COPYREF001 /* GarminLifecycleCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminLifecycleCopy.swift; path = ../AmakaFlow/Models/GarminLifecycleCopy.swift; sourceTree = SOURCE_ROOT; };
@@ -1608,6 +1618,8 @@
 				AMA2360PREFREF001 /* AppleWatchDeliveryPrefs.swift */,
 				AMA2316PREFREF001 /* GarminWatchDisplayPrefs.swift */,
 				AMA2336MDLREF001 /* WorkoutEnrichmentModels.swift */,
+				AMA2378V2MDLREF001 /* WorkoutEnrichmentV2Models.swift */,
+				AMA2378PLNAPREF001 /* WorkoutEnrichmentPushPlanner+Application.swift */,
 				AMA2363MUTREF001 /* WorkoutEnrichmentMutations.swift */,
 				AMA2336APIREF001 /* WorkoutEnrichmentAPI.swift */,
 				AMA2362COPYREF001 /* WorkoutEnrichmentPushCopy.swift */,
@@ -1619,6 +1631,9 @@
 				AMA2336COORDREF001 /* WorkoutEnrichmentPushCoordinator.swift */,
 				AMA2336PREFVREF001 /* WorkoutEnrichmentPrefsSheet.swift */,
 				AMA2336PUSHVREF001 /* WorkoutEnrichmentPushSheet.swift */,
+				AMA2378SEQVREF001 /* EnrichmentSequenceScreen.swift */,
+				AMA2378WPICKREF001 /* EnrichmentWarmupPickScreen.swift */,
+				AMA2378RAMPVREF001 /* EnrichmentRampEditorScreen.swift */,
 				AMA2317COPYREF001 /* GarminLifecycleCopy.swift */,
 				AMA2311PDEFREF001 /* PrescriptionDefaults.swift */,
 				BL0CK2INT3RVAL00001 /* BlockToIntervalConverter.swift */,
@@ -2704,6 +2719,8 @@
 				AMA2360PREFBLD001 /* AppleWatchDeliveryPrefs.swift in Sources */,
 				AMA2316PREFBLD001 /* GarminWatchDisplayPrefs.swift in Sources */,
 				AMA2336MDLBLD001 /* WorkoutEnrichmentModels.swift in Sources */,
+				AMA2378V2MDLBLD001 /* WorkoutEnrichmentV2Models.swift in Sources */,
+				AMA2378PLNAPBLD001 /* WorkoutEnrichmentPushPlanner+Application.swift in Sources */,
 				AMA2363MUTBLD001 /* WorkoutEnrichmentMutations.swift in Sources */,
 				AMA2336APIBLD001 /* WorkoutEnrichmentAPI.swift in Sources */,
 				AMA2362COPYBLD001 /* WorkoutEnrichmentPushCopy.swift in Sources */,
@@ -2730,6 +2747,9 @@
 				AMA2336COORDBLD001 /* WorkoutEnrichmentPushCoordinator.swift in Sources */,
 				AMA2336PREFVBLD001 /* WorkoutEnrichmentPrefsSheet.swift in Sources */,
 				AMA2336PUSHVBLD001 /* WorkoutEnrichmentPushSheet.swift in Sources */,
+				AMA2378SEQVBLD001 /* EnrichmentSequenceScreen.swift in Sources */,
+				AMA2378WPICKBLD001 /* EnrichmentWarmupPickScreen.swift in Sources */,
+				AMA2378RAMPVBLD001 /* EnrichmentRampEditorScreen.swift in Sources */,
 				AMA2317COPYBLD001 /* GarminLifecycleCopy.swift in Sources */,
 				AMA2317TELEBLD001 /* GarminHandoffTelemetry.swift in Sources */,
 				AMA2360SHEETBLD01 /* AppleWatchDeliveryPrefsSheet.swift in Sources */,
