@@ -142,7 +142,7 @@ private enum PreviewSectionBuilder {
     }
 
     private static func buildSections(from atoms: [Atom]) -> [PreviewSection] {
-        let accumulator = SectionAccumulator()
+        var accumulator = SectionAccumulator()
         for atom in atoms {
             switch atom {
             case .mobility(let title, let detail):
@@ -239,8 +239,14 @@ private enum PreviewSectionBuilder {
 /// "Cool-down" never splits in two. File-scope (not nested in
 /// `PreviewSectionBuilder`) so it doesn't count against that enum's
 /// SwiftLint type_body_length.
-private final class SectionAccumulator {
-    private(set) var sections: [PreviewSection] = []
+///
+/// Value type (not a MainActor `class`): default actor isolation makes a
+/// class deinit hop through `swift_task_deinitOnExecutor` and SIGABRT under
+/// XCTest (libmalloc "pointer being freed was not allocated"). Pending-rest
+/// attachment uses a local array copy so we never pass `&self.*` into a
+/// mutating helper (Swift exclusivity).
+private struct SectionAccumulator {
+    private var sections: [PreviewSection] = []
     private var number = 1
     private var pendingRest: String?
     private var mobilityRows: [PreviewRow] = []
@@ -249,27 +255,31 @@ private final class SectionAccumulator {
     private var cooldownRows: [PreviewRow] = []
     private var hasWorked = false
 
-    func setPendingRest(_ chip: String) {
+    mutating func setPendingRest(_ chip: String) {
         pendingRest = chip
     }
 
-    func appendMobility(title: String, detail: String?) {
+    mutating func appendMobility(title: String, detail: String?) {
         flushExercise()
         if hasWorked {
-            attachPendingRest(&cooldownRows)
-            cooldownRows.append(PreviewRow(title: title, detail: detail))
+            var rows = cooldownRows
+            attachPendingRest(to: &rows)
+            rows.append(PreviewRow(title: title, detail: detail))
+            cooldownRows = rows
         } else {
-            attachPendingRest(&mobilityRows)
-            mobilityRows.append(PreviewRow(title: title, detail: detail))
+            var rows = mobilityRows
+            attachPendingRest(to: &rows)
+            rows.append(PreviewRow(title: title, detail: detail))
+            mobilityRows = rows
         }
     }
 
-    func appendWarmupSet(exercise: String, detail: String?) {
+    mutating func appendWarmupSet(exercise: String, detail: String?) {
         beginExercise(exercise)
         exerciseRows.append(PreviewRow(title: PreviewStep.warmupSetTitle, detail: detail, setCount: 1))
     }
 
-    func appendWork(exercise: String, detail: String?, repeatCount: Int) {
+    mutating func appendWork(exercise: String, detail: String?, repeatCount: Int) {
         beginExercise(exercise)
         let title = repeatCount > 1 ? "Working sets ×\(repeatCount)" : "Working set"
         exerciseRows.append(PreviewRow(title: title, detail: detail, setCount: max(repeatCount, 1)))
@@ -277,7 +287,7 @@ private final class SectionAccumulator {
 
     /// Legacy single-activity `.cooldown` atom — always merges into
     /// `cooldownRows` alongside any soft-activity rows already pending.
-    func appendCooldownAtom(detail: String) {
+    mutating func appendCooldownAtom(detail: String) {
         flushMobility()
         flushExercise()
         pendingRest = nil
@@ -285,14 +295,14 @@ private final class SectionAccumulator {
     }
 
     /// Trailing rest with no prior work is dropped (nothing to pin the chip to).
-    func finish() -> [PreviewSection] {
+    mutating func finish() -> [PreviewSection] {
         flushMobility()
         flushExercise()
         flushCooldown()
         return sections
     }
 
-    private func beginExercise(_ exercise: String) {
+    private mutating func beginExercise(_ exercise: String) {
         flushMobility()
         flushCooldownAsInterstitial()
         hasWorked = true
@@ -300,10 +310,12 @@ private final class SectionAccumulator {
             flushExercise()
             exerciseName = exercise
         }
-        attachPendingRest(&exerciseRows)
+        var rows = exerciseRows
+        attachPendingRest(to: &rows)
+        exerciseRows = rows
     }
 
-    private func makeSteps(from rows: [PreviewRow]) -> [PreviewStep] {
+    private mutating func makeSteps(from rows: [PreviewRow]) -> [PreviewStep] {
         rows.map { row in
             defer { number += 1 }
             return PreviewStep(
@@ -315,10 +327,10 @@ private final class SectionAccumulator {
         }
     }
 
-    private func flushMobility() {
+    private mutating func flushMobility() {
         guard !mobilityRows.isEmpty else { return }
-        attachPendingRest(&mobilityRows)
-        let rows = mobilityRows
+        var rows = mobilityRows
+        attachPendingRest(to: &rows)
         mobilityRows = []
         sections.append(PreviewSection(
             accent: .mobility,
@@ -328,14 +340,14 @@ private final class SectionAccumulator {
         ))
     }
 
-    private func flushExercise() {
+    private mutating func flushExercise() {
         guard let name = exerciseName, !exerciseRows.isEmpty else {
             exerciseName = nil
             exerciseRows = []
             return
         }
-        attachPendingRest(&exerciseRows)
-        let rows = exerciseRows
+        var rows = exerciseRows
+        attachPendingRest(to: &rows)
         let setCount = rows.reduce(0) { $0 + $1.setCount }
         let hasRamp = rows.contains { $0.title == PreviewStep.warmupSetTitle }
         exerciseName = nil
@@ -352,10 +364,10 @@ private final class SectionAccumulator {
     /// Flushes rows that looked like a trailing cooldown but turned out to be
     /// a mid-workout break — more work followed, so relabel as an
     /// interstitial mobility band instead of dropping them.
-    private func flushCooldownAsInterstitial() {
+    private mutating func flushCooldownAsInterstitial() {
         guard !cooldownRows.isEmpty else { return }
-        attachPendingRest(&cooldownRows)
-        let rows = cooldownRows
+        var rows = cooldownRows
+        attachPendingRest(to: &rows)
         cooldownRows = []
         sections.append(PreviewSection(
             accent: .mobility,
@@ -367,10 +379,11 @@ private final class SectionAccumulator {
 
     /// Real, final cooldown flush — always the last section appended because
     /// it only ever runs at atom-stream end or on the dedicated `.cooldown`
-    /// atom (itself guaranteed last by the mapper).
-    private func flushCooldown() {
+    /// atom (itself guaranteed last by the mapper). Trailing rest after the
+    /// cool-down band has nothing to pin to — drop it (AMA-2371 contract).
+    private mutating func flushCooldown() {
         guard !cooldownRows.isEmpty else { return }
-        attachPendingRest(&cooldownRows)
+        pendingRest = nil
         let rows = cooldownRows
         cooldownRows = []
         sections.append(PreviewSection(
@@ -381,10 +394,12 @@ private final class SectionAccumulator {
         ))
     }
 
-    private func attachPendingRest(_ rows: inout [PreviewRow]) {
-        defer { pendingRest = nil }
-        guard let pendingRest, !rows.isEmpty else { return }
-        rows[rows.count - 1].rest = pendingRest
+    /// `rows` must be a local copy — never `&self.mobilityRows` etc.
+    private mutating func attachPendingRest(to rows: inout [PreviewRow]) {
+        let chip = pendingRest
+        pendingRest = nil
+        guard let chip, !rows.isEmpty else { return }
+        rows[rows.count - 1].rest = chip
     }
 }
 
