@@ -36,6 +36,14 @@ struct PreviewStep: Equatable, Identifiable {
             && lhs.detail == rhs.detail
             && lhs.restChip == rhs.restChip
     }
+
+    /// AMA-2378 — no fixed target (reps/time/distance/cals); athlete ends on
+    /// tap/Crown. Detail reads the locked `"OPEN"` string set by the section
+    /// builder — amber-flag it instead of the usual muted detail styling.
+    var isOpenGoal: Bool { detail == "OPEN" }
+
+    /// AMA-2378 — untimed/open rest between sets ("REST · YOU END IT" chip).
+    var isOpenRest: Bool { restChip == "REST · YOU END IT" }
 }
 
 /// A banded group of steps for the preview sheet.
@@ -49,6 +57,18 @@ struct PreviewSection: Equatable, Identifiable {
     /// Right-side tag, e.g. "~2 MIN" or "5 SETS".
     let tag: String?
     let steps: [PreviewStep]
+    /// AMA-2378 — exercise bands with no warm-up-set row surface
+    /// `WorkoutEnrichmentPushCopy.noWarmupsYourCall`; `nil` for bands that
+    /// don't apply (mobility / cooldown / exercises with a ramp).
+    let caption: String?
+
+    init(accent: PreviewBandAccent, band: String, tag: String?, steps: [PreviewStep], caption: String? = nil) {
+        self.accent = accent
+        self.band = band
+        self.tag = tag
+        self.steps = steps
+        self.caption = caption
+    }
 
     /// AMA-2371 compatibility — older call sites keyed off `kind`.
     var kind: PreviewBandAccent { accent }
@@ -58,6 +78,7 @@ struct PreviewSection: Equatable, Identifiable {
             && lhs.band == rhs.band
             && lhs.tag == rhs.tag
             && lhs.steps == rhs.steps
+            && lhs.caption == rhs.caption
     }
 }
 
