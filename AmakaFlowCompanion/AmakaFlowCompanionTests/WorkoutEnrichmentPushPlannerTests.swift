@@ -609,10 +609,21 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
     /// activities/ramps — the decision can still carry them, but they must
     /// not be applied while the kind is unchecked.
     func testApplyToggleOffDoesNotRequireClearingActivitiesInDecision() throws {
+        var standing = WorkoutPreferences.defaults
+        standing.sessionWarmup.activities = [EnrichmentActivityPref(name: "Ski Erg", durationSec: 120)]
+        standing.exerciseWarmupSets.excludeExerciseKeys = ["leg press"]
+        standing.exerciseWarmupSets.perExercise = [
+            PerExerciseRamp(
+                exerciseRef: "Deadlift",
+                enabled: true,
+                sets: [try RampSet(kind: .reps, value: 5)]
+            )
+        ]
+
         let plan = WorkoutEnrichmentPushPlanner.plan(
             blocks: [benchBlock()],
             tombstones: [],
-            prefs: .defaults
+            prefs: standing
         )
         let editedActivities = [EnrichmentActivityPref(name: "Row 500m", durationSec: 180)]
         let editedRamps = [
@@ -630,24 +641,18 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
                 sessionWarmupActivities: editedActivities,
                 perExerciseRamps: editedRamps
             ),
-            prefs: .defaults,
+            prefs: standing,
             tombstones: []
         )
 
         XCTAssertFalse(application.prefs.sessionWarmup.enabled)
-        // Unchecked kind → the override is ignored, standing activities remain.
-        XCTAssertEqual(
-            application.prefs.sessionWarmup.activities,
-            WorkoutPreferences.defaults.sessionWarmup.activities
-        )
+        // Unchecked kind → the override is ignored, standing values remain.
+        XCTAssertEqual(application.prefs.sessionWarmup.activities, standing.sessionWarmup.activities)
         XCTAssertFalse(application.prefs.exerciseWarmupSets.enabled)
-        XCTAssertEqual(
-            application.prefs.exerciseWarmupSets.perExercise,
-            WorkoutPreferences.defaults.exerciseWarmupSets.perExercise
-        )
+        XCTAssertEqual(application.prefs.exerciseWarmupSets.perExercise, standing.exerciseWarmupSets.perExercise)
         XCTAssertEqual(
             application.prefs.exerciseWarmupSets.excludeExerciseKeys,
-            WorkoutPreferences.defaults.exerciseWarmupSets.excludeExerciseKeys
+            standing.exerciseWarmupSets.excludeExerciseKeys
         )
     }
 
@@ -677,6 +682,9 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
             application.prefs.exerciseWarmupSets.excludeExerciseKeys,
             WorkoutPreferences.defaults.exerciseWarmupSets.excludeExerciseKeys
         )
+        let encoded = try WorkoutEnrichmentJSON.object(from: application.prefs)
+        let warmupSets = try XCTUnwrap(encoded["exercise_warmup_sets"] as? [String: Any])
+        XCTAssertNil(warmupSets["per_exercise"])
     }
 
     // MARK: - Coordinator apply (AMA-2346)

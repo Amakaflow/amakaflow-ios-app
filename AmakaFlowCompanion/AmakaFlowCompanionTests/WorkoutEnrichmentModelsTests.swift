@@ -208,8 +208,13 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
 
     func testExerciseWarmupSetsPrefsPerExerciseRoundTrip() throws {
         var prefs = ExerciseWarmupSetsPrefs.defaults
+        prefs.excludeExerciseKeys = ["leg press"]
         prefs.perExercise = [
-            PerExerciseRamp(exerciseRef: "wex_abc", sets: [try RampSet(kind: .reps, value: 10)])
+            PerExerciseRamp(
+                exerciseRef: "wex_abc",
+                enabled: true,
+                sets: [try RampSet(kind: .reps, value: 10)]
+            )
         ]
         let object = try WorkoutEnrichmentJSON.object(from: prefs)
         let perExercise = try XCTUnwrap(object["per_exercise"] as? [[String: Any]])
@@ -217,13 +222,22 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
 
         let roundTripData = try JSONSerialization.data(withJSONObject: object)
         let decoded = try WorkoutEnrichmentJSON.decoder.decode(ExerciseWarmupSetsPrefs.self, from: roundTripData)
+        XCTAssertEqual(decoded.enabled, prefs.enabled)
+        XCTAssertEqual(decoded.defaultSets, prefs.defaultSets)
+        XCTAssertEqual(decoded.excludeExerciseKeys, prefs.excludeExerciseKeys)
+        XCTAssertEqual(decoded.perExercise, prefs.perExercise)
         XCTAssertEqual(decoded.perExercise?.first?.exerciseRef, "wex_abc")
+        XCTAssertEqual(decoded.perExercise?.first?.enabled, true)
+        XCTAssertEqual(decoded.perExercise?.first?.sets.map(\.kind), [.reps])
+        XCTAssertEqual(decoded.perExercise?.first?.sets.map(\.value), [10])
 
         // Untouched (no per_exercise key) decodes to nil — v1 shape stays byte-compatible.
         let legacy = try WorkoutEnrichmentJSON.decoder.decode(
             ExerciseWarmupSetsPrefs.self,
             from: Data(#"{"enabled": true, "default_sets": [{"reps": 8}]}"#.utf8)
         )
+        XCTAssertTrue(legacy.enabled)
+        XCTAssertEqual(legacy.defaultSets.map(\.reps), [8])
         XCTAssertNil(legacy.perExercise)
     }
 
@@ -341,14 +355,17 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
             ["reps": 8],
             ["kind": "time", "value": 30],
             ["kind": "open"],
+            ["kind": "open", "value": 5],
             ["weight": 10]
         ])
-        XCTAssertEqual(rows?.count, 3)
+        XCTAssertEqual(rows?.count, 4)
         XCTAssertEqual(rows?[0].reps, 8)
         XCTAssertEqual(rows?[1].kind, .time)
         XCTAssertEqual(rows?[1].value, 30)
         XCTAssertEqual(rows?[2].kind, .open)
         XCTAssertNil(rows?[2].value)
+        XCTAssertEqual(rows?[3].kind, .open)
+        XCTAssertNil(rows?[3].value)
     }
 
     func testPrefsEncodeSnakeCaseKeys() throws {
