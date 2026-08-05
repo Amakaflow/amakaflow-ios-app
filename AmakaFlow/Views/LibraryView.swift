@@ -210,6 +210,10 @@ extension LibraryView {
                         .padding(.horizontal, 18)
                         .padding(.top, 8)
 
+                    DDSourceFilterPills(selection: $sourceFilter)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 10)
+
                     LibraryPinnedSection(
                         pinnedWorkouts: pinnedWorkouts,
                         onSelect: { workoutID in
@@ -242,19 +246,24 @@ extension LibraryView {
                         .padding(.top, 22)
                     }
 
-                    Text("All workouts")
-                        .ddDisplayText(19, weight: .heavy)
-                        .foregroundColor(DailyDriver.foreground)
-                        .padding(.horizontal, 18)
-                        .padding(.top, 22)
+                    if hasLocalFilters {
+                        Text("Results")
+                            .ddDisplayText(19, weight: .heavy)
+                            .foregroundColor(DailyDriver.foreground)
+                            .padding(.horizontal, 18)
+                            .padding(.top, 22)
+                            .accessibilityIdentifier("af_library_results")
 
-                    DDSourceFilterPills(selection: $sourceFilter)
-                        .padding(.horizontal, 18)
-                        .padding(.top, 10)
-
-                    itemList
-                        .padding(.horizontal, 18)
-                        .padding(.top, 10)
+                        if filteredEntries.isEmpty {
+                            ddNoMatchesMessage
+                                .padding(.horizontal, 18)
+                                .padding(.top, 10)
+                        } else {
+                            itemList
+                                .padding(.horizontal, 18)
+                                .padding(.top, 10)
+                        }
+                    }
                 }
                 .padding(.bottom, 100)
             }
