@@ -19,11 +19,17 @@ Never point an agent at the raw Claude Design export — it contains dead design
 | `reference/` | `screens-daily-driver.jsx` + `tokens.css` + `ui.jsx` — exact prototype source | Court of last resort for any ambiguous value |
 | `reference/screens-clarify.jsx` | "Check the structure" intervene step (AMA-2305) — exact prototype source | Reference implementation incl. all states + copy |
 | `reference/screens-editor2.jsx` | Editor v2 + creation + format-first (AMA-2307) — exact prototype source | Reference implementation incl. all sheets + reorder mode |
+| `MOTION.md` | DD Motion v1 (AMA-2383): tokens, build-reveal engine, DD Toast — CSS→SwiftUI | Motion decisions made once, not per-view |
+| `reference/screens-motion.jsx` | Build reveal engine + watch/import/AI scripts — exact prototype source | The write-in choreography, replayable in rig |
+| `reference/screens-toast.jsx` | DD Toast host + variants (success/device/undo/push-morph) | One confirmation voice everywhere |
 | `screenshots/rig-*.png` | Multi-state rigs: clarify (3 states), editor v2 vs old (5 states), creation (3 states) | Ground truth for the 2026-07-20 screens |
 
 Cursor enforcement: `.cursor/rules/design-fidelity.mdc` (auto-attaches on View files).
 
 ## Active work queue (2026-07-20) — read this first, Cursor
+
+**2026-08-05 — AMA-2383 DD Motion v1**: implement `MOTION.md` (build reveal on watch preview / reel import / AI draft + DD Toast replacing the legacy bottom toast). Watch the live rigs linked in MOTION.md before writing any animation code.
+
 
 Decision of record: `amakaflow-docs/decisions/ADR-017-structure-intervene-and-calm-editor.md`
 (merged; includes schema, ground truth for reel `DMqEsenN6Dl`, utterance→patch examples).
