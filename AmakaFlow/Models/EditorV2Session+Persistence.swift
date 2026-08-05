@@ -75,7 +75,7 @@ extension EditorV2Session {
                 flushFlat()
                 let restSec: Int? = {
                     switch group.type {
-                    case .superset, .circuit, .warmup, .cooldown:
+                    case .superset, .circuit, .timedCircuit, .warmup, .cooldown:
                         return group.config.restSeconds
                     case .tabata:
                         return group.config.restSeconds

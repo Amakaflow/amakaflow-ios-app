@@ -31,9 +31,10 @@ enum BlockToIntervalConverter {
             isCooldown: isCooldown
         )
 
-        // Multi-round superset / circuit / amrap → wrap in repeat
+        // Multi-round superset / circuit / timed_circuit / amrap → wrap in repeat
         let isMultiRound = block.structure == .superset
             || block.structure == .circuit
+            || block.structure == .timedCircuit
             || block.structure == .amrap
         if isMultiRound && block.rounds > 1 {
             var roundIntervals = exerciseIntervals

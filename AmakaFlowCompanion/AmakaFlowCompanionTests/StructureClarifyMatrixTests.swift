@@ -284,6 +284,10 @@ final class StructureClarifyMatrixTests: XCTestCase {
 
     // MARK: - StructureBlockType decode tolerance (AMA-2380)
 
+    func testBlockStructureDecodesTimedCircuit() {
+        XCTAssertEqual(BlockStructure(rawValue: "timed_circuit"), .timedCircuit)
+    }
+
     func testDecodesTimedCircuitBlockType() throws {
         let json = #"{"type":"timed_circuit","exercises":[],"structureSource":"inferred"}"#
         let model = try JSONDecoder().decode(StructureBlockModel.self, from: Data(json.utf8))

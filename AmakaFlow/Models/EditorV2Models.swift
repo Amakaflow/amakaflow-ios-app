@@ -11,6 +11,7 @@ import SwiftUI
 enum EditorV2GroupType: String, CaseIterable, Equatable, Sendable {
     case superset
     case circuit
+    case timedCircuit
     case emom
     case amrap
     case tabata
@@ -33,6 +34,7 @@ enum EditorV2GroupType: String, CaseIterable, Equatable, Sendable {
         switch self {
         case .superset: return "Superset"
         case .circuit: return "Circuit"
+        case .timedCircuit: return "Timed circuit"
         case .emom: return "EMOM"
         case .amrap: return "AMRAP"
         case .tabata: return "Tabata"
@@ -51,6 +53,7 @@ enum EditorV2GroupType: String, CaseIterable, Equatable, Sendable {
         switch self {
         case .superset: return .superset
         case .circuit: return .circuit
+        case .timedCircuit: return .timedCircuit
         case .emom: return .emom
         case .amrap: return .amrap
         case .tabata: return .tabata
@@ -64,6 +67,7 @@ enum EditorV2GroupType: String, CaseIterable, Equatable, Sendable {
         switch self {
         case .superset: return .superset
         case .circuit: return .circuit
+        case .timedCircuit: return .timedCircuit
         case .emom: return .emom
         case .amrap: return .amrap
         case .tabata: return .tabata
@@ -78,6 +82,7 @@ enum EditorV2GroupType: String, CaseIterable, Equatable, Sendable {
         switch self {
         case .superset: return EditorV2GroupConfig(rounds: 3, restSeconds: 60)
         case .circuit: return EditorV2GroupConfig(rounds: 4)
+        case .timedCircuit: return EditorV2GroupConfig(rounds: 1)
         case .emom: return EditorV2GroupConfig(rounds: 10)
         case .amrap: return EditorV2GroupConfig(capMinutes: 10)
         case .tabata: return EditorV2GroupConfig(rounds: 8, restSeconds: 10, workSeconds: 20)
@@ -91,6 +96,7 @@ enum EditorV2GroupType: String, CaseIterable, Equatable, Sendable {
         switch kind {
         case .superset: return .superset
         case .circuit, .rounds: return .circuit
+        case .timedCircuit: return .timedCircuit
         case .emom: return .emom
         case .amrap: return .amrap
         case .tabata: return .tabata
@@ -106,6 +112,7 @@ enum EditorV2GroupType: String, CaseIterable, Equatable, Sendable {
         switch type.canonical {
         case .superset: return .superset
         case .circuit, .rounds: return .circuit
+        case .timedCircuit: return .timedCircuit
         case .emom: return .emom
         case .amrap: return .amrap
         case .tabata: return .tabata
@@ -113,7 +120,7 @@ enum EditorV2GroupType: String, CaseIterable, Equatable, Sendable {
         case .warmup: return .warmup
         case .cooldown: return .cooldown
         case .sets, .regular: return nil
-        case .timedCircuit, .unknown: return nil
+        case .unknown: return nil
         }
     }
 }
@@ -171,6 +178,8 @@ struct EditorV2Group: Equatable, Identifiable, Sendable {
             return "\(config.rounds ?? 1) ROUNDS · EASY"
         case .circuit:
             return "\(config.rounds ?? 4) ROUNDS · FOR TIME"
+        case .timedCircuit:
+            return "\(config.rounds ?? 1) ROUNDS · FOR TIME"
         case .emom:
             return "\(config.rounds ?? 10) MIN · EVERY MINUTE"
         case .amrap:
@@ -210,7 +219,7 @@ struct EditorV2Group: Equatable, Identifiable, Sendable {
                 EditorV2StepperSpec(label: "Rest s", key: .restSeconds, min: 0, max: 120, step: 5),
                 EditorV2StepperSpec(label: "Rounds", key: .rounds, min: 1, max: 20, step: 1)
             ]
-        case .circuit, .warmup, .cooldown:
+        case .circuit, .timedCircuit, .warmup, .cooldown:
             return [EditorV2StepperSpec(label: "Rounds", key: .rounds, min: 1, max: 20, step: 1)]
         case .superset:
             return [

@@ -92,7 +92,7 @@ struct BlockSectionView: View {
         switch block.structure {
         case .straight: return .green
         case .superset: return .blue
-        case .circuit: return .orange
+        case .circuit, .timedCircuit: return .orange
         case .amrap: return .red
         case .emom: return .purple
         case .tabata: return .pink
