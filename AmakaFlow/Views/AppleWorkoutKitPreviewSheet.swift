@@ -124,9 +124,7 @@ struct AppleWorkoutKitPreviewSheet: View {
         if sections.contains(where: { $0.accent == .mobility }) {
             tags.append("PREP")
         }
-        if sections.contains(where: { section in
-            section.accent == .work && section.steps.contains { $0.title == "Warm-up set" }
-        }) {
+        if sections.contains(where: \.hasRamp) {
             tags.append("RAMPS")
         }
         if sections.contains(where: { $0.accent == .cooldown }) {

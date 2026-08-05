@@ -24,10 +24,11 @@ struct EnrichmentRampEditorScreen: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var applyToAll = false
+    @State private var didSeed = false
 
-    /// Builder card left rail for non-open sets — same `SE.gray` the sequence
-    /// builder uses (screens-enhance2.jsx); Open sets get the amber rail below.
-    private static let railColor = Color(hex: "8890A0")
+    /// Builder card left rail for non-open sets — mobility band token (same as
+    /// sequence builder / watch preview prep accent).
+    private static let railColor = DailyDriver.mobilityBand
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -68,6 +69,7 @@ struct EnrichmentRampEditorScreen: View {
         .navigationTitle("\(exerciseName) ramp")
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("af_ramp_editor_screen")
+        .onAppear(perform: seedIfNeeded)
     }
 }
 
@@ -234,22 +236,40 @@ private extension EnrichmentRampEditorScreen {
 private extension EnrichmentRampEditorScreen {
     var rampKey: String { ExerciseKeyNormalizer.normalize(exerciseName) }
 
+    /// Always reflects stored state. Call `seedIfNeeded` on appear so the
+    /// unseeded path never rebuilds fresh `RampSet` UUIDs every render.
     var ramp: PerExerciseRamp {
         ramps.first { ExerciseKeyNormalizer.normalize($0.exerciseRef) == rampKey }
-            ?? PerExerciseRamp(
-                exerciseRef: exerciseName,
-                enabled: true,
-                sets: WorkoutEnrichmentMutations.defaultRampSets()
-            )
+            ?? PerExerciseRamp(exerciseRef: exerciseName, enabled: true, sets: [])
     }
 
-    /// Writes through to the matching `ramps` entry, minting one (using the
-    /// synthesized fallback above) if the pick screen somehow never seeded it.
+    /// Mints the entry once so `RampSet.id` stays stable across renders.
+    func seedIfNeeded() {
+        guard !didSeed else { return }
+        didSeed = true
+        guard !ramps.contains(where: {
+            ExerciseKeyNormalizer.normalize($0.exerciseRef) == rampKey
+        }) else {
+            return
+        }
+        ramps.append(PerExerciseRamp(
+            exerciseRef: exerciseName,
+            enabled: true,
+            sets: WorkoutEnrichmentMutations.defaultRampSets()
+        ))
+    }
+
+    /// Writes through to the matching `ramps` entry, minting one if somehow
+    /// never seeded (pick screen / onAppear always seed first).
     func mutateRamp(_ mutate: (inout PerExerciseRamp) -> Void) {
         if let index = ramps.firstIndex(where: { ExerciseKeyNormalizer.normalize($0.exerciseRef) == rampKey }) {
             mutate(&ramps[index])
         } else {
-            var fresh = ramp
+            var fresh = PerExerciseRamp(
+                exerciseRef: exerciseName,
+                enabled: true,
+                sets: WorkoutEnrichmentMutations.defaultRampSets()
+            )
             mutate(&fresh)
             ramps.append(fresh)
         }

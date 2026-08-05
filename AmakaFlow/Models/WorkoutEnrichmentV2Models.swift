@@ -18,7 +18,7 @@ enum ActivityGoalKind: String, Codable, CaseIterable, Equatable, Sendable {
 /// the time-only shape it grew from. Mirrors backend `ActivityGoal` exactly:
 /// `open` must carry no `value`; every other kind requires one.
 struct ActivityGoal: Equatable, Codable, Sendable {
-    var kind: ActivityGoalKind
+    private(set) var kind: ActivityGoalKind
     private(set) var value: Int?
 
     enum CodingKeys: String, CodingKey {
@@ -49,7 +49,7 @@ enum WarmupSetKind: String, Codable, CaseIterable, Equatable, Sendable {
 /// `id` is UI-only (stable ForEach identity) and never encoded.
 struct RampSet: Identifiable, Equatable, Codable, Sendable {
     var id: UUID
-    var kind: WarmupSetKind
+    private(set) var kind: WarmupSetKind
     private(set) var value: Int?
     var intensityNote: String?
 

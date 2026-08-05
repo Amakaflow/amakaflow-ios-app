@@ -137,15 +137,17 @@ extension WorkoutEnrichmentPushPlanner {
         prefs.perExercise = ramps
 
         let configuredKeys = Set(ramps.map { ExerciseKeyNormalizer.normalize($0.exerciseRef) })
-        let disabledNames = ramps.filter { !$0.enabled }.map(\.exerciseRef)
-        let candidateNames = plan.offer(.exerciseWarmupSets)?.candidateExerciseNames ?? []
-        let skippedNames = candidateNames.filter {
-            !configuredKeys.contains(ExerciseKeyNormalizer.normalize($0))
+        let disabledKeys = ramps.filter { !$0.enabled }.map {
+            ExerciseKeyNormalizer.normalize($0.exerciseRef)
         }
+        let candidateNames = plan.offer(.exerciseWarmupSets)?.candidateExerciseNames ?? []
+        let skippedKeys = candidateNames
+            .map(ExerciseKeyNormalizer.normalize)
+            .filter { !configuredKeys.contains($0) }
 
-        var excludeKeys = Set(prefs.excludeExerciseKeys)
-        excludeKeys.formUnion(disabledNames)
-        excludeKeys.formUnion(skippedNames)
+        var excludeKeys = Set(prefs.excludeExerciseKeys.map(ExerciseKeyNormalizer.normalize))
+        excludeKeys.formUnion(disabledKeys)
+        excludeKeys.formUnion(skippedKeys)
         prefs.excludeExerciseKeys = excludeKeys.sorted()
     }
 

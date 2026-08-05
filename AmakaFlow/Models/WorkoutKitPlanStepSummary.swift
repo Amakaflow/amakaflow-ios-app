@@ -30,6 +30,10 @@ struct PreviewStep: Equatable, Identifiable {
     let detail: String?
     let restChip: String?
 
+    /// Shared title for enrichment-owned warm-up-set rows — keep all
+    /// `hasRamp` / `RAMPS` checks on this constant, never a bare literal.
+    static let warmupSetTitle = "Warm-up set"
+
     static func == (lhs: PreviewStep, rhs: PreviewStep) -> Bool {
         lhs.number == rhs.number
             && lhs.title == rhs.title
@@ -72,6 +76,11 @@ struct PreviewSection: Equatable, Identifiable {
 
     /// AMA-2371 compatibility — older call sites keyed off `kind`.
     var kind: PreviewBandAccent { accent }
+
+    /// True when this work band includes an enrichment warm-up-set row.
+    var hasRamp: Bool {
+        accent == .work && steps.contains { $0.title == PreviewStep.warmupSetTitle }
+    }
 
     static func == (lhs: PreviewSection, rhs: PreviewSection) -> Bool {
         lhs.accent == rhs.accent

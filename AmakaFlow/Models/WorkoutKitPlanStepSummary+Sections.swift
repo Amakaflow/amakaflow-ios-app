@@ -266,7 +266,7 @@ private final class SectionAccumulator {
 
     func appendWarmupSet(exercise: String, detail: String?) {
         beginExercise(exercise)
-        exerciseRows.append(PreviewRow(title: "Warm-up set", detail: detail, setCount: 1))
+        exerciseRows.append(PreviewRow(title: PreviewStep.warmupSetTitle, detail: detail, setCount: 1))
     }
 
     func appendWork(exercise: String, detail: String?, repeatCount: Int) {
@@ -337,7 +337,7 @@ private final class SectionAccumulator {
         attachPendingRest(&exerciseRows)
         let rows = exerciseRows
         let setCount = rows.reduce(0) { $0 + $1.setCount }
-        let hasRamp = rows.contains { $0.title == "Warm-up set" }
+        let hasRamp = rows.contains { $0.title == PreviewStep.warmupSetTitle }
         exerciseName = nil
         exerciseRows = []
         sections.append(PreviewSection(

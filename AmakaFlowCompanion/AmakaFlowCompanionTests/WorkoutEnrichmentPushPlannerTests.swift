@@ -571,7 +571,9 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         // Barbell Row was never configured in the pick screen ("skipped") —
         // it must be excluded rather than silently falling back to the
         // global default_sets scheme.
-        XCTAssertTrue(application.prefs.exerciseWarmupSets.excludeExerciseKeys.contains("Barbell Row"))
+        XCTAssertTrue(application.prefs.exerciseWarmupSets.excludeExerciseKeys.contains("barbell row"))
+        XCTAssertFalse(application.prefs.exerciseWarmupSets.excludeExerciseKeys.contains("bench press"))
+        XCTAssertFalse(application.prefs.exerciseWarmupSets.excludeExerciseKeys.contains("Barbell Row"))
         XCTAssertFalse(application.prefs.exerciseWarmupSets.excludeExerciseKeys.contains("Bench Press"))
     }
 
@@ -600,7 +602,7 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         )
 
         XCTAssertEqual(application.prefs.exerciseWarmupSets.perExercise, [disabledRamp])
-        XCTAssertTrue(application.prefs.exerciseWarmupSets.excludeExerciseKeys.contains("Bench Press"))
+        XCTAssertTrue(application.prefs.exerciseWarmupSets.excludeExerciseKeys.contains("bench press"))
     }
 
     /// Toggling a door off never requires the sheet to clear its local

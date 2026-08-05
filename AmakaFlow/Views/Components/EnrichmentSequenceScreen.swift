@@ -29,7 +29,7 @@ struct EnrichmentSequenceScreen: View {
     /// Builder card left rail — `SE.gray` in the prototype (screens-enhance2.jsx),
     /// used for both mobility and cooldown; the blue/gray split only applies to
     /// the watch-preview bands (§Surface 6), not this builder.
-    private static let stepRailColor = Color(hex: "8890A0")
+    private static let stepRailColor = DailyDriver.mobilityBand
 
     private var title: String {
         WorkoutEnrichmentPushCopy.offerTitle(

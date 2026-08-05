@@ -232,10 +232,15 @@ enum WorkoutEnrichmentPushPlanner {
         prefs: ExerciseWarmupSetsPrefs
     ) -> [SocialImportExercise] {
         let excluded = Set(prefs.excludeExerciseKeys.map(ExerciseKeyNormalizer.normalize))
+        var seenNames = Set<String>()
+        // De-dupe by normalized name so the pick screen cannot show two cards
+        // that share one PerExerciseRamp (same exercise across two blocks).
         return blocks.flatMap(\.exercises).filter { exercise in
             guard exercise.sets != nil else { return false }
             guard exercise.warmupSets?.isEmpty ?? true else { return false }
-            return !excluded.contains(ExerciseKeyNormalizer.normalize(exercise.name))
+            let key = ExerciseKeyNormalizer.normalize(exercise.name)
+            guard !excluded.contains(key) else { return false }
+            return seenNames.insert(key).inserted
         }
     }
 }

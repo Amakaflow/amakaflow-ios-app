@@ -177,7 +177,8 @@ struct WarmupSetRow: Equatable, Codable, Sendable {
             let source = (item["structure_source"] as? String)
                 .flatMap(StructureSource.init(rawValue:)) ?? .enrichmentDefault
             let kind = (item["kind"] as? String).flatMap(WarmupSetKind.init(rawValue:))
-            let value = item["value"] as? Int
+            // Open goals must not carry a value — strip it so save round-trips stay valid.
+            let value = kind == .open ? nil : (item["value"] as? Int)
             let intensityNote = item["intensity_note"] as? String
             guard let reps = item["reps"] as? Int else {
                 guard let kind else { return nil }

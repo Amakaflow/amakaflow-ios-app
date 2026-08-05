@@ -127,8 +127,15 @@ struct EditorV2ExerciseCard: View {
 
     private var warmupSetsSummary: String {
         exercise.warmupSets.map { row in
-            row.reps.map(String.init) ?? row.kind?.rawValue ?? "—"
-        }.joined(separator: " · ") + " REPS"
+            if let kind = row.kind,
+               let set = try? RampSet(kind: kind, value: kind == .open ? nil : (row.value ?? row.reps)) {
+                return WorkoutEnrichmentPushCopy.rampSetLabel(set)
+            }
+            if let reps = row.reps {
+                return "\(reps) REPS"
+            }
+            return "—"
+        }.joined(separator: " · ")
     }
 }
 
