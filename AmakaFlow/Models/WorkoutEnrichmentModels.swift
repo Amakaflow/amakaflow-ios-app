@@ -154,7 +154,9 @@ enum WarmupSetKind: String, Codable, CaseIterable, Equatable, Sendable {
 
 /// One prescribed set inside a `PerExerciseRamp` (backend `RampSet`).
 /// `open` must carry no `value`; every other kind requires one.
-struct RampSet: Equatable, Codable, Sendable {
+/// `id` is UI-only (stable ForEach identity) and never encoded.
+struct RampSet: Identifiable, Equatable, Codable, Sendable {
+    var id: UUID
     var kind: WarmupSetKind
     private(set) var value: Int?
     var intensityNote: String?
@@ -164,7 +166,8 @@ struct RampSet: Equatable, Codable, Sendable {
         case intensityNote = "intensity_note"
     }
 
-    init(kind: WarmupSetKind, value: Int?, intensityNote: String? = nil) throws {
+    init(kind: WarmupSetKind, value: Int?, intensityNote: String? = nil, id: UUID = UUID()) throws {
+        self.id = id
         self.kind = kind
         self.value = try WorkoutEnrichmentMutations.validatedRampSet(kind: kind, value: value)
         self.intensityNote = intensityNote
@@ -176,6 +179,10 @@ struct RampSet: Equatable, Codable, Sendable {
         let value = try container.decodeIfPresent(Int.self, forKey: .value)
         let intensityNote = try container.decodeIfPresent(String.self, forKey: .intensityNote)
         try self.init(kind: kind, value: value, intensityNote: intensityNote)
+    }
+
+    static func == (lhs: RampSet, rhs: RampSet) -> Bool {
+        lhs.kind == rhs.kind && lhs.value == rhs.value && lhs.intensityNote == rhs.intensityNote
     }
 }
 

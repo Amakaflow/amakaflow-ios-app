@@ -40,7 +40,7 @@ struct EnrichmentRampEditorScreen: View {
                             .foregroundColor(DailyDriver.foregroundDim)
                             .accessibilityIdentifier("af_ramp_editor_empty")
                     } else {
-                        ForEach(Array(ramp.sets.enumerated()), id: \.offset) { index, _ in
+                        ForEach(Array(ramp.sets.enumerated()), id: \.element.id) { index, _ in
                             setCard(index: index)
                         }
                     }
@@ -279,8 +279,13 @@ private extension EnrichmentRampEditorScreen {
     func setKind(_ kind: WarmupSetKind, at index: Int) {
         mutateRamp { rampValue in
             guard rampValue.sets.indices.contains(index) else { return }
-            let note = rampValue.sets[index].intensityNote
-            guard let updated = try? RampSet(kind: kind, value: Self.defaultValue(for: kind), intensityNote: note) else {
+            let current = rampValue.sets[index]
+            guard let updated = try? RampSet(
+                kind: kind,
+                value: Self.defaultValue(for: kind),
+                intensityNote: current.intensityNote,
+                id: current.id
+            ) else {
                 return
             }
             rampValue.sets[index] = updated
@@ -294,7 +299,12 @@ private extension EnrichmentRampEditorScreen {
             guard current.kind != .open else { return }
             let stepped = (current.value ?? 0) + direction * Self.stepAmount(for: current.kind)
             let clamped = max(Self.floorValue(for: current.kind), stepped)
-            guard let updated = try? RampSet(kind: current.kind, value: clamped, intensityNote: current.intensityNote) else {
+            guard let updated = try? RampSet(
+                kind: current.kind,
+                value: clamped,
+                intensityNote: current.intensityNote,
+                id: current.id
+            ) else {
                 return
             }
             rampValue.sets[index] = updated

@@ -343,6 +343,11 @@ extension WorkoutEnrichmentPushSheet {
                 suffix: WorkoutEnrichmentPushCopy.cooldownRowSummarySuffix
             )
         case .exerciseWarmupSets:
+            // Untouched door (no pick edits) still applies v1 global 8·5 —
+            // don't render every candidate as SKIPPED.
+            guard !perExerciseRamps.isEmpty else {
+                return offer(for: .exerciseWarmupSets)?.detail ?? "NO EXERCISES"
+            }
             return WorkoutEnrichmentPushCopy.warmupSetsSummaryV2(warmupExercisesForSummary)
         case .betweenSetRest:
             return offer(for: kind)?.detail ?? ""
