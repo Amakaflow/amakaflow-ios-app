@@ -21,9 +21,15 @@ struct EnrichmentSequenceScreen: View {
 
     /// Design §Surface 2 — "combine several into an ordered sequence" chip
     /// registry. Fixed list per the design's open question (not yet fed from
-    /// exercise-db conditioning entries).
-    private static let activityRegistry = [
-        "Ski erg", "Assault bike", "Jump rope", "Rower", "Treadmill", "Stretch flow"
+    /// exercise-db conditioning entries). Icons match `SE_ACTIVITIES` in
+    /// `screens-enhance2.jsx` (run / bike / bolt / heart).
+    private static let activityRegistry: [(name: String, icon: String)] = [
+        ("Ski erg", "figure.run"),
+        ("Assault bike", "bicycle"),
+        ("Jump rope", "bolt.fill"),
+        ("Rower", "figure.rower"),
+        ("Treadmill", "figure.run"),
+        ("Stretch flow", "heart.fill")
     ]
 
     /// Builder card left rail — `SE.gray` in the prototype (screens-enhance2.jsx),
@@ -190,20 +196,26 @@ private extension EnrichmentSequenceScreen {
                 .padding(.top, Theme.Spacing.sm)
 
             EditorV2FlowWrap {
-                ForEach(Self.activityRegistry, id: \.self) { name in
+                ForEach(Self.activityRegistry, id: \.name) { entry in
                     Button {
-                        addStep(named: name)
+                        addStep(named: entry.name)
                     } label: {
-                        Text(name)
-                            .ddDisplayText(12, weight: .semibold)
-                            .foregroundColor(DailyDriver.foreground)
-                            .padding(.horizontal, 13)
-                            .padding(.vertical, 8)
-                            .background(Capsule().fill(DailyDriver.card))
-                            .overlay(Capsule().stroke(DailyDriver.border, lineWidth: 1))
+                        HStack(spacing: 6) {
+                            Image(systemName: entry.icon)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(DailyDriver.foregroundMuted)
+                            Text(entry.name)
+                                .ddDisplayText(12, weight: .semibold)
+                                .foregroundColor(DailyDriver.foreground)
+                        }
+                        .padding(.horizontal, 13)
+                        .padding(.vertical, 8)
+                        .background(Capsule().fill(DailyDriver.card))
+                        .overlay(Capsule().stroke(DailyDriver.border, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
-                    .accessibilityIdentifier("af_seq_add_\(activityChipSlug(name))")
+                    .accessibilityIdentifier("af_seq_add_\(activityChipSlug(entry.name))")
+                    .accessibilityLabel("Add \(entry.name)")
                 }
             }
         }

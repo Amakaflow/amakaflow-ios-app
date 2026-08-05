@@ -42,6 +42,13 @@ struct EnrichmentWarmupPickScreen: View {
                         ForEach(Array(exercises.enumerated()), id: \.offset) { index, name in
                             exerciseCard(index: index, name: name)
                         }
+                        Text("Ramps are saved per exercise on this workout — change one without touching the others.")
+                            .font(.system(size: 10.5))
+                            .foregroundColor(DailyDriver.foregroundDim)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, Theme.Spacing.xs)
+                            .accessibilityIdentifier("af_warmup_pick_footer_hint")
                     }
                 }
                 .padding(.horizontal, Theme.Spacing.lg)
@@ -52,7 +59,7 @@ struct EnrichmentWarmupPickScreen: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(DailyDriver.screenBackground.ignoresSafeArea())
         .overlay(alignment: .bottom) {
-            DDEditorSaveBar(title: "Save") { dismiss() }
+            DDEditorSaveBar(title: "Save warm-ups") { dismiss() }
                 .accessibilityIdentifier("af_warmup_pick_save")
         }
         .navigationDestination(item: $editingExercise) { name in
@@ -102,42 +109,46 @@ private extension EnrichmentWarmupPickScreen {
     func exerciseCard(index: Int, name: String) -> some View {
         let currentRamp = ramp(for: name)
         let isOn = currentRamp?.enabled ?? false
-        return VStack(alignment: .leading, spacing: 8) {
+        return VStack(alignment: .leading, spacing: 10) {
             Toggle(isOn: toggleBinding(for: name)) {
-                Text(name)
-                    .ddDisplayText(14, weight: .bold)
-                    .foregroundColor(DailyDriver.foreground)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(name)
+                        .ddDisplayText(14.5, weight: .bold)
+                        .foregroundColor(DailyDriver.foreground)
+                    Text(WorkoutEnrichmentPushCopy.perExerciseRampDigest(currentRamp))
+                        .font(Theme.Typography.mono)
+                        .foregroundColor(isOn ? DailyDriver.foregroundMuted : DailyDriver.foregroundDim)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("af_enhance_warmup_ex_digest_\(index)")
+                }
             }
             .tint(DailyDriver.lime)
             .accessibilityIdentifier("af_enhance_warmup_ex_\(index)")
             .accessibilityLabel(WorkoutEnrichmentPushCopy.warmupExerciseTag(name: name, ramp: currentRamp))
             .accessibilityAddTraits(isOn ? [.isSelected] : [])
 
-            HStack(alignment: .top, spacing: 8) {
-                Text(WorkoutEnrichmentPushCopy.perExerciseRampDigest(currentRamp))
-                    .font(Theme.Typography.mono)
-                    .foregroundColor(isOn ? DailyDriver.foregroundMuted : DailyDriver.foregroundDim)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("af_enhance_warmup_ex_digest_\(index)")
-
-                Spacer(minLength: 0)
-
-                if isOn {
-                    Button {
-                        editingExercise = name
-                    } label: {
-                        Text("Edit ramp ›")
-                            .ddDisplayText(11.5, weight: .bold)
-                            .foregroundColor(DailyDriver.lime)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("af_enhance_warmup_ex_edit_\(index)")
-                    .accessibilityHint("Opens the \(name) ramp editor")
+            if isOn {
+                // Full-width pill — design Surface 3 (`screens-enhance2.jsx`); the
+                // prior trailing text link was too small to tap reliably.
+                Button {
+                    editingExercise = name
+                } label: {
+                    Text("Edit ramp ›")
+                        .ddDisplayText(12.5, weight: .bold)
+                        .foregroundColor(DailyDriver.foreground)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 11)
+                        .background(Capsule().fill(DailyDriver.card2))
+                        .contentShape(Capsule())
                 }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_enhance_warmup_ex_edit_\(index)")
+                .accessibilityHint("Opens the \(name) ramp editor")
+                .accessibilityAddTraits(.isButton)
             }
         }
-        .padding(.horizontal, 15)
+        .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .background(DailyDriver.card)
         .overlay(

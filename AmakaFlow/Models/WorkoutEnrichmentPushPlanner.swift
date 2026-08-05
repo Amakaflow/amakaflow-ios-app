@@ -90,10 +90,12 @@ enum WorkoutEnrichmentPushPlanner {
 
     /// Offer rows for a workout about to be pushed.
     ///
-    /// Soft kinds (mobility / cooldown / warm-up sets) are offered when missing
-    /// and enabled in prefs. **Between-set rest** is always offered when missing
-    /// so Garmin Lap/timed Rest can be added on this push even if Settings has
-    /// the standing offer off (starts unchecked). Tombstoned kinds start unchecked.
+    /// Soft kinds (mobility / warm-up sets) are offered when missing and
+    /// enabled in prefs. **Between-set rest** and **cooldown** are always
+    /// offered when missing so the enhance sheet can opt in on this push even
+    /// if Settings has the standing offer off (starts unchecked). Sheet row
+    /// order matches design Surface 1: Mobility → Warm-up sets → Rest →
+    /// Cooldown. Tombstoned kinds start unchecked.
     static func plan(
         blocks: [SocialImportBlock],
         tombstones: [EnrichmentTombstone],
@@ -116,49 +118,6 @@ enum WorkoutEnrichmentPushPlanner {
                     wasTombstoned: tombstoned,
                     detail: WorkoutEnrichmentPushCopy.activitiesDetail(
                         prefs.sessionWarmup.activities,
-                        target: target
-                    ),
-                    target: target
-                )
-            )
-        }
-
-        if prefs.cooldown.enabled,
-           !prefs.cooldown.activities.isEmpty,
-           !WorkoutEnrichmentPresence.hasCooldownBlock(in: blocks) {
-            let tombstoned = WorkoutEnrichmentPresence.isTombstoned(.cooldown, tombstones: tombstones)
-            offers.append(
-                Offer(
-                    kind: .cooldown,
-                    isChecked: !tombstoned,
-                    wasTombstoned: tombstoned,
-                    detail: WorkoutEnrichmentPushCopy.activitiesDetail(
-                        prefs.cooldown.activities,
-                        target: target
-                    ),
-                    target: target
-                )
-            )
-        }
-
-        // Always offer Rest when the workout has no rest intent — Garmin FIT
-        // needs `rest_open` / `rest_sec` on blocks. Prefs.enabled only controls
-        // the default check (off → show unchecked so this push can still opt in).
-        // Apple delivery `rest_mode=omit` skips the offer (AMA-2362 / CodeRabbit).
-        if !hasBlockRestIntent(in: blocks),
-           !WorkoutEnrichmentPushCopy.shouldSkipRestOffer(target: target) {
-            let tombstoned = WorkoutEnrichmentPresence.isTombstoned(
-                .betweenSetRest,
-                tombstones: tombstones
-            )
-            let prefsWantRest = prefs.betweenSetRest.enabled
-            offers.append(
-                Offer(
-                    kind: .betweenSetRest,
-                    isChecked: prefsWantRest && !tombstoned,
-                    wasTombstoned: tombstoned,
-                    detail: WorkoutEnrichmentPushCopy.restDetail(
-                        prefs.betweenSetRest,
                         target: target
                     ),
                     target: target
@@ -191,14 +150,63 @@ enum WorkoutEnrichmentPushPlanner {
                             prefs.exerciseWarmupSets.defaultSets,
                             exerciseCount: candidates.count
                         ),
-                    tombstonedExerciseIds: tombstonedIds,
-                    candidateExerciseIds: candidateIds,
-                    candidateExerciseNames: candidates.map(\.name),
-                    candidateWorkingSetCounts: candidates.map(\.sets),
+                        tombstonedExerciseIds: tombstonedIds,
+                        candidateExerciseIds: candidateIds,
+                        candidateExerciseNames: candidates.map(\.name),
+                        candidateWorkingSetCounts: candidates.map(\.sets),
+                        target: target
+                    )
+                )
+            }
+        }
+
+        // Always offer Rest when the workout has no rest intent — Garmin FIT
+        // needs `rest_open` / `rest_sec` on blocks. Prefs.enabled only controls
+        // the default check (off → show unchecked so this push can still opt in).
+        // Apple delivery `rest_mode=omit` skips the offer (AMA-2362 / CodeRabbit).
+        if !hasBlockRestIntent(in: blocks),
+           !WorkoutEnrichmentPushCopy.shouldSkipRestOffer(target: target) {
+            let tombstoned = WorkoutEnrichmentPresence.isTombstoned(
+                .betweenSetRest,
+                tombstones: tombstones
+            )
+            let prefsWantRest = prefs.betweenSetRest.enabled
+            offers.append(
+                Offer(
+                    kind: .betweenSetRest,
+                    isChecked: prefsWantRest && !tombstoned,
+                    wasTombstoned: tombstoned,
+                    detail: WorkoutEnrichmentPushCopy.restDetail(
+                        prefs.betweenSetRest,
+                        target: target
+                    ),
                     target: target
                 )
             )
-            }
+        }
+
+        // Always offer Cooldown when missing — same opt-in pattern as Rest
+        // (design Surface 5: optional, default OFF). Empty standing activities
+        // still get a row; detail uses the design seed so the door summary is
+        // never blank before the user opens the builder.
+        if !WorkoutEnrichmentPresence.hasCooldownBlock(in: blocks) {
+            let tombstoned = WorkoutEnrichmentPresence.isTombstoned(.cooldown, tombstones: tombstones)
+            let prefsWantCooldown = prefs.cooldown.enabled
+            let activities = prefs.cooldown.activities.isEmpty
+                ? WorkoutEnrichmentMutations.defaultCooldownActivities()
+                : prefs.cooldown.activities
+            offers.append(
+                Offer(
+                    kind: .cooldown,
+                    isChecked: prefsWantCooldown && !tombstoned,
+                    wasTombstoned: tombstoned,
+                    detail: WorkoutEnrichmentPushCopy.activitiesDetail(
+                        activities,
+                        target: target
+                    ),
+                    target: target
+                )
+            )
         }
 
         return Plan(offers: offers, target: target)

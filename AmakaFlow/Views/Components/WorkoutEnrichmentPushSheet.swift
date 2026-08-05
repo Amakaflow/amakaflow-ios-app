@@ -62,7 +62,13 @@ struct WorkoutEnrichmentPushSheet: View {
             )
         )
         _mobilityActivities = State(initialValue: prefs.sessionWarmup.activities)
-        _cooldownActivities = State(initialValue: prefs.cooldown.activities)
+        // Empty standing cooldown still seeds the design default sequence so the
+        // door row + builder open with Stretch flow → Treadmill (unchecked).
+        _cooldownActivities = State(
+            initialValue: prefs.cooldown.activities.isEmpty
+                ? WorkoutEnrichmentMutations.defaultCooldownActivities()
+                : prefs.cooldown.activities
+        )
         _perExerciseRamps = State(initialValue: prefs.exerciseWarmupSets.perExercise ?? [])
     }
 
@@ -461,10 +467,25 @@ extension WorkoutEnrichmentPushSheet {
                     target: .apple
                 ),
                 WorkoutEnrichmentPushPlanner.Offer(
+                    kind: .exerciseWarmupSets,
+                    isChecked: true,
+                    wasTombstoned: false,
+                    detail: "2 warm-up sets (8 · 5 reps) on 2 exercises",
+                    candidateExerciseNames: ["Deadlift", "Overhead Press"],
+                    target: .apple
+                ),
+                WorkoutEnrichmentPushPlanner.Offer(
                     kind: .betweenSetRest,
                     isChecked: true,
                     wasTombstoned: false,
                     detail: "Open rest between sets",
+                    target: .apple
+                ),
+                WorkoutEnrichmentPushPlanner.Offer(
+                    kind: .cooldown,
+                    isChecked: false,
+                    wasTombstoned: false,
+                    detail: "Stretch flow · 3:00 → Treadmill · open",
                     target: .apple
                 )
             ],
