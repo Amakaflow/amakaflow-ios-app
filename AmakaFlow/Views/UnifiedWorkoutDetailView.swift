@@ -1304,10 +1304,10 @@ extension UnifiedWorkoutDetailView {
                 meta: meta
             )
             handoffStatus = result.message
-            let ok = result.kind.isTerminalAppleSentCardSuccess
-            sentCardTarget = ok ? .apple : nil
+            let didSendToAppleWatch = result.kind.isTerminalAppleSentCardSuccess
+            sentCardTarget = didSendToAppleWatch ? .apple : nil
             lastAppleHandoffShowsManagePlans = result.showsManageScheduledPlans
-            if ok {
+            if didSendToAppleWatch {
                 let steps = (try? WorkoutKitSync.default.parse(from: planJSON).intervals.count) ?? 0
                 DDToastCenter.shared.resolve(
                     id: toastId,

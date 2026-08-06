@@ -131,7 +131,7 @@ struct StructureClarifyView: View {
 
     private func presentSavedToast() {
         let name = draft?.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let title = (name?.isEmpty == false) ? name! : "Workout"
+        let title = name.flatMap { $0.isEmpty ? nil : $0 } ?? "Workout"
         // Import drafts often omit duration — skip the minutes slot rather than invent one.
         let preview = draft?.toPreviewWorkout()
         let minutes = (preview?.duration ?? 0) / 60

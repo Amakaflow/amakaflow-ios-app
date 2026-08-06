@@ -7,6 +7,8 @@
 //  Reference: design-handoff/reference/screens-motion.jsx (SMBuildScreen)
 //
 
+// swiftlint:disable file_length
+
 import Combine
 import SwiftUI
 import UIKit
@@ -131,6 +133,7 @@ final class BuildRevealController: ObservableObject {
 
     private(set) var config: BuildRevealConfig
     private var scriptTask: Task<Void, Never>?
+    private var settleTask: Task<Void, Never>?
     private var reduceMotion: Bool = false
 
     init(config: BuildRevealConfig) {
@@ -154,7 +157,7 @@ final class BuildRevealController: ObservableObject {
 
     /// Replace beats (e.g. when wiring a live workout) and reset.
     func updateConfig(_ config: BuildRevealConfig) {
-        scriptTask?.cancel()
+        cancelPlayback()
         self.config = config
         visibleCount = 0
         isDone = false
@@ -163,9 +166,9 @@ final class BuildRevealController: ObservableObject {
     /// Scripted playback with theatrical cap. Skips entirely under Reduce Motion /
     /// VoiceOver (full content immediately).
     func playScripted(reduceMotion: Bool, voiceOverRunning: Bool? = nil) {
-        let vo = voiceOverRunning ?? UIAccessibility.isVoiceOverRunning
-        self.reduceMotion = reduceMotion || vo
-        scriptTask?.cancel()
+        let voiceOverActive = voiceOverRunning ?? UIAccessibility.isVoiceOverRunning
+        self.reduceMotion = reduceMotion || voiceOverActive
+        cancelPlayback()
         runID += 1
         let thisRun = runID
 
@@ -183,10 +186,12 @@ final class BuildRevealController: ObservableObject {
         scriptTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: UInt64(MotionTokens.buildKick * 1_000_000_000))
             guard !Task.isCancelled, runID == thisRun else { return }
-            for i in 1...max(total, 1) where total > 0 {
+            for beatIndex in 1...max(total, 1) where total > 0 {
                 guard !Task.isCancelled, runID == thisRun else { return }
-                visibleCount = i
-                if i < total {
+                withAnimation(MotionTokens.easeOutQuart(duration: MotionTokens.base)) {
+                    visibleCount = beatIndex
+                }
+                if beatIndex < total {
                     try? await Task.sleep(nanoseconds: UInt64(stagger * 1_000_000_000))
                 }
             }
@@ -202,10 +207,16 @@ final class BuildRevealController: ObservableObject {
             isDone = true
             return
         }
-        visibleCount += 1
+        withAnimation(MotionTokens.easeOutQuart(duration: MotionTokens.base)) {
+            visibleCount += 1
+        }
         if visibleCount >= config.beats.count {
-            Task { @MainActor in
+            settleTask?.cancel()
+            runID += 1
+            let thisRun = runID
+            settleTask = Task { @MainActor in
                 try? await Task.sleep(nanoseconds: UInt64(MotionTokens.buildDoneSettle * 1_000_000_000))
+                guard !Task.isCancelled, runID == thisRun else { return }
                 isDone = true
             }
         }
@@ -225,6 +236,13 @@ final class BuildRevealController: ObservableObject {
     func replay(reduceMotion: Bool) {
         playScripted(reduceMotion: reduceMotion)
     }
+
+    private func cancelPlayback() {
+        scriptTask?.cancel()
+        scriptTask = nil
+        settleTask?.cancel()
+        settleTask = nil
+    }
 }
 
 // MARK: - Assembled render tree
@@ -237,7 +255,7 @@ enum BuildRevealElement: Identifiable, Equatable {
 
     var id: UUID {
         switch self {
-        case .credit(let b), .pills(let b), .bullet(let b): return b.id
+        case .credit(let beat), .pills(let beat), .bullet(let beat): return beat.id
         case .band(let band, _): return band.id
         }
     }
@@ -433,8 +451,7 @@ struct BuildRevealView: View {
                     .padding(.vertical, 4)
                     .background(DailyDriver.card2)
                     .clipShape(Capsule())
-                    .scaleEffect(1)
-                    .animation(MotionTokens.spring.delay(Double(index) * 0.07), value: controller.visibleCount)
+                    .modifier(PopOnAppear(delay: Double(index) * 0.07, reduceMotion: reduceMotion))
             }
         }
         .padding(.bottom, 10)
@@ -496,8 +513,7 @@ struct BuildRevealView: View {
                 .frame(width: 22, height: 22)
                 .background(DailyDriver.lime)
                 .clipShape(Circle())
-                .scaleEffect(1)
-                .animation(MotionTokens.spring, value: row.id)
+                .modifier(PopOnAppear(delay: 0, reduceMotion: reduceMotion))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.name ?? "")
@@ -530,19 +546,22 @@ struct BuildRevealView: View {
     }
 
     private var ctaButton: some View {
-        Button(action: {
-            guard controller.isDone else { return }
-            onCTA()
-        }) {
-            Text(controller.isDone ? controller.config.cta : controller.config.building)
-                .ddDisplayText(14, weight: .bold)
-                .foregroundColor(controller.isDone ? DailyDriver.ink : DailyDriver.foregroundMuted)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(controller.isDone ? DailyDriver.lime : DailyDriver.card2)
-                .clipShape(Capsule())
-                .opacity(controller.isDone ? 1 : 0.55)
-        }
+        Button(
+            action: {
+                guard controller.isDone else { return }
+                onCTA()
+            },
+            label: {
+                Text(controller.isDone ? controller.config.cta : controller.config.building)
+                    .ddDisplayText(14, weight: .bold)
+                    .foregroundColor(controller.isDone ? DailyDriver.ink : DailyDriver.foregroundMuted)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(controller.isDone ? DailyDriver.lime : DailyDriver.card2)
+                    .clipShape(Capsule())
+                    .opacity(controller.isDone ? 1 : 0.55)
+            }
+        )
         .buttonStyle(.plain)
         .disabled(!controller.isDone)
         .animation(MotionTokens.easeOutQuart(duration: MotionTokens.ctaColorSettle), value: controller.isDone)
@@ -552,16 +571,36 @@ struct BuildRevealView: View {
     }
 }
 
+private struct PopOnAppear: ViewModifier {
+    let delay: Double
+    let reduceMotion: Bool
+    @State private var didPop = false
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(reduceMotion || didPop ? 1 : 0.55)
+            .onAppear {
+                guard !reduceMotion else {
+                    didPop = true
+                    return
+                }
+                withAnimation(MotionTokens.spring.delay(delay)) {
+                    didPop = true
+                }
+            }
+    }
+}
+
 private struct BuildCaret: View {
-    @State private var on = true
+    @State private var caretVisible = true
     var body: some View {
         Text("▍")
             .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
             .foregroundColor(DailyDriver.lime)
-            .opacity(on ? 1 : 0)
+            .opacity(caretVisible ? 1 : 0)
             .onAppear {
                 withAnimation(.linear(duration: 0.7).repeatForever(autoreverses: true)) {
-                    on.toggle()
+                    caretVisible.toggle()
                 }
             }
     }
@@ -708,9 +747,10 @@ enum BuildRevealScripts {
         )
     }
 
-    /// Create-with-AI draft — WHY THIS bullets before blocks. Scripted fallback
-    /// when the response arrives whole (no SSE yet); call sites may also
-    /// `revealNext` per chunk when streaming lands.
+    // Create-with-AI draft — WHY THIS bullets before blocks. Scripted fallback
+    // when the response arrives whole (no SSE yet); call sites may also
+    // `revealNext` per chunk when streaming lands.
+    // swiftlint:disable:next function_parameter_count
     static func aiFromDraft(
         title: String,
         whyThis: [String],
@@ -790,6 +830,7 @@ enum BuildRevealScripts {
         return nil
     }
 
+    // swiftlint:disable:next cyclomatic_complexity
     private static func intervalRows(_ interval: WorkoutInterval) -> [BuildBeat] {
         switch interval {
         case .warmup(let seconds, let target):

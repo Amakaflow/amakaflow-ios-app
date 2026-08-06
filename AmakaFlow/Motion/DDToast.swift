@@ -131,7 +131,16 @@ final class DDToastCenter: ObservableObject {
             announceIfNeeded(current)
             return
         }
-        // Not currently showing — present as a fresh resolved toast.
+        if let index = queue.firstIndex(where: { $0.id == id && $0.pending }) {
+            var queued = queue[index]
+            queued.kind = kind
+            queued.text = text
+            queued.sub = sub
+            queued.pending = false
+            queue[index] = queued
+            return
+        }
+        // Not currently showing / queued — present as a fresh resolved toast.
         present(DDToastEvent(kind: kind, text: text, sub: sub, pending: false))
     }
 
@@ -238,22 +247,22 @@ struct DDToastHost: View {
         }
         return .asymmetric(
             insertion: .modifier(
-                active: ToastOffsetOpacity(y: MotionTokens.toastInOffsetY, opacity: 0),
-                identity: ToastOffsetOpacity(y: 0, opacity: 1)
+                active: ToastOffsetOpacity(offsetY: MotionTokens.toastInOffsetY, opacity: 0),
+                identity: ToastOffsetOpacity(offsetY: 0, opacity: 1)
             ),
             removal: .modifier(
-                active: ToastOffsetOpacity(y: MotionTokens.toastOutOffsetY, opacity: 0),
-                identity: ToastOffsetOpacity(y: 0, opacity: 1)
+                active: ToastOffsetOpacity(offsetY: MotionTokens.toastOutOffsetY, opacity: 0),
+                identity: ToastOffsetOpacity(offsetY: 0, opacity: 1)
             )
         )
     }
 }
 
 private struct ToastOffsetOpacity: ViewModifier {
-    let y: CGFloat
+    let offsetY: CGFloat
     let opacity: Double
     func body(content: Content) -> some View {
-        content.offset(y: y).opacity(opacity)
+        content.offset(y: offsetY).opacity(opacity)
     }
 }
 
@@ -280,11 +289,14 @@ struct DDToastCapsule: View {
             .frame(minWidth: 0, maxWidth: 220, alignment: .leading)
 
             if let action = toast.action, !toast.pending {
-                Button(action: { onAction?() }) {
-                    Text(action)
-                        .ddDisplayText(12, weight: .bold)
-                        .foregroundColor(DailyDriver.amber)
-                }
+                Button(
+                    action: { onAction?() },
+                    label: {
+                        Text(action)
+                            .ddDisplayText(12, weight: .bold)
+                            .foregroundColor(DailyDriver.amber)
+                    }
+                )
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("dd_toast_action")
             }
@@ -299,7 +311,7 @@ struct DDToastCapsule: View {
         .clipShape(Capsule())
         .shadow(color: .black.opacity(0.5), radius: 17, y: 12)
         .padding(.horizontal, 16)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: toast.action == nil || toast.pending ? .combine : .contain)
         .accessibilityAddTraits(.isStaticText)
     }
 
