@@ -133,6 +133,7 @@ enum WorkoutLibraryDetailStore {
         switch type?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
         case "superset": return .superset
         case "circuit", "rounds", "warmup": return .circuit
+        case "timed_circuit": return .timedCircuit
         case "for-time", "fortime": return .circuit
         case "amrap": return .amrap
         case "emom": return .emom

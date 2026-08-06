@@ -794,7 +794,7 @@ enum DDWorkoutDisplayGrouping {
         }
 
         switch block.structure {
-        case .amrap, .circuit, .emom, .tabata:
+        case .amrap, .circuit, .timedCircuit, .emom, .tabata:
             if block.rounds > 1 {
                 return "Round 1–\(block.rounds)"
             }

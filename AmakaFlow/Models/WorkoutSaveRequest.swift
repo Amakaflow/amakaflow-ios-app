@@ -109,6 +109,8 @@ struct WorkoutSaveRequest: Codable {
         switch block.structure {
         case .circuit:
             return StructureBlockType.circuit.rawValue
+        case .timedCircuit:
+            return StructureBlockType.timedCircuit.rawValue
         case .superset:
             return StructureBlockType.superset.rawValue
         case .amrap:

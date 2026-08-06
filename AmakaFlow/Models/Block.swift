@@ -2,6 +2,7 @@ import Foundation
 
 enum BlockStructure: String, Codable, CaseIterable {
     case straight, superset, circuit, amrap, emom, tabata
+    case timedCircuit = "timed_circuit"
 
     var displayName: String {
         switch self {
@@ -11,6 +12,7 @@ enum BlockStructure: String, Codable, CaseIterable {
         case .amrap: return "AMRAP"
         case .emom: return "EMOM"
         case .tabata: return "Tabata"
+        case .timedCircuit: return "Timed Circuit"
         }
     }
 }

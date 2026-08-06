@@ -18,6 +18,7 @@ enum DDEditorMode: Equatable {
 
 enum DDEditorStructureKind: String, CaseIterable, Identifiable {
     case circuit
+    case timedCircuit = "timed_circuit"
     case emom
     case amrap
     case tabata
@@ -33,6 +34,7 @@ enum DDEditorStructureKind: String, CaseIterable, Identifiable {
     var label: String {
         switch self {
         case .circuit: return "Circuit"
+        case .timedCircuit: return "Timed circuit"
         case .emom: return "EMOM"
         case .amrap: return "AMRAP"
         case .tabata: return "Tabata"
@@ -47,7 +49,7 @@ enum DDEditorStructureKind: String, CaseIterable, Identifiable {
 
     var emoji: String {
         switch self {
-        case .circuit, .rounds: return "🟢"
+        case .circuit, .timedCircuit, .rounds: return "🟢"
         case .emom: return "🔵"
         case .amrap: return "🟠"
         case .tabata: return "🔴"
@@ -60,7 +62,7 @@ enum DDEditorStructureKind: String, CaseIterable, Identifiable {
 
     var accentColor: Color {
         switch self {
-        case .circuit, .rounds: return Color(hex: "4AD97F")
+        case .circuit, .timedCircuit, .rounds: return Color(hex: "4AD97F")
         case .emom: return DailyDriver.blue
         case .amrap: return DailyDriver.orange
         case .tabata: return DailyDriver.red
@@ -74,6 +76,7 @@ enum DDEditorStructureKind: String, CaseIterable, Identifiable {
     static func from(blockStructure: BlockStructure) -> DDEditorStructureKind {
         switch blockStructure {
         case .circuit: return .circuit
+        case .timedCircuit: return .timedCircuit
         case .emom: return .emom
         case .amrap: return .amrap
         case .tabata: return .tabata
