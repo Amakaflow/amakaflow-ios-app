@@ -33,14 +33,7 @@ extension EditorV2View {
 
     func showToast(_ message: String) {
         // AMA-2383 — DD Toast at app root replaces the legacy bottom capsule.
-        toastMessage = nil
         DDToastCenter.shared.success(message)
-    }
-
-    @ViewBuilder
-    var toastOverlay: some View {
-        // Legacy bottom overlay retired (AMA-2383). Root `DDToastHost` owns confirmations.
-        EmptyView()
     }
 
     func menuSheet(_ exercise: EditorV2Exercise) -> some View {

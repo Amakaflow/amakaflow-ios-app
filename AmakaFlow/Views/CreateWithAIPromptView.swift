@@ -14,7 +14,6 @@ struct CreateWithAIPromptView: View {
     @State private var durationMinutes: Int?
     @State private var attached = Set<CreateWithAIContextChip>()
     @State private var isShowingSuggestion = false
-    @State private var toastMessage: String?
     /// Prevents Edit-ask return from re-running discovery and silently
     /// re-attaching chips the user already detached.
     @State private var hasLoadedContext = false
@@ -102,20 +101,6 @@ struct CreateWithAIPromptView: View {
         }
         .preferredColorScheme(.dark)
         .task { await loadAvailableContext() }
-        .overlay(alignment: .bottom) {
-            if let toastMessage {
-                Text(toastMessage)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(DailyDriver.foreground)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 11)
-                    .background(DailyDriver.backgroundElevated)
-                    .overlay(Capsule().stroke(DailyDriver.borderStrong, lineWidth: 1))
-                    .clipShape(Capsule())
-                    .padding(.bottom, 20)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-        }
     }
 
     private var header: some View {
@@ -263,15 +248,9 @@ struct CreateWithAIPromptView: View {
     }
 
     private func showMicUnavailable() {
-        withAnimation {
-            toastMessage = "Voice input isn’t available yet — type your ask for now."
-        }
-        Task {
-            try? await Task.sleep(nanoseconds: 2_500_000_000)
-            await MainActor.run {
-                withAnimation { toastMessage = nil }
-            }
-        }
+        DDToastCenter.shared.success(
+            "Voice input isn’t available yet — type your ask for now."
+        )
     }
 }
 

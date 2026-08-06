@@ -84,6 +84,11 @@ final class DDToastCenter: ObservableObject {
         present(DDToastEvent(kind: .success, text: text, sub: sub))
     }
 
+    /// Convenience: error / failure confirmation.
+    func error(_ text: String, sub: String? = nil) {
+        present(DDToastEvent(kind: .error, text: text, sub: sub))
+    }
+
     /// Convenience: device confirmation (Garmin / Apple Watch).
     func device(_ text: String, sub: String? = nil) {
         present(DDToastEvent(kind: .device, text: text, sub: sub))

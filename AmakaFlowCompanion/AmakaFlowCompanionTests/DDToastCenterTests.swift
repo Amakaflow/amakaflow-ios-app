@@ -61,6 +61,12 @@ final class DDToastCenterTests: XCTestCase {
         XCTAssertTrue(tapped)
     }
 
+    func testErrorKind() {
+        center.error("Couldn't save — try again")
+        XCTAssertEqual(center.current?.kind, .error)
+        XCTAssertEqual(center.current?.text, "Couldn't save — try again")
+    }
+
     func testProgressTotalCountsRowsAndBulletsOnly() {
         let config = BuildRevealConfig(
             title: "T",

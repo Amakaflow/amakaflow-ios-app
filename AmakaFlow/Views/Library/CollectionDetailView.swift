@@ -21,8 +21,6 @@ struct CollectionDetailView: View {
     @State private var selectedIDs: Set<String> = []
     @State private var isPresentingMoveSheet = false
     @State private var isPresentingAddWorkouts = false
-    @State private var toastMessage: String?
-    @State private var toastTask: Task<Void, Never>?
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -64,13 +62,6 @@ struct CollectionDetailView: View {
             if isOrganizing {
                 organizeBar
             }
-
-            if let toastMessage {
-                toastView(toastMessage)
-                    .padding(.horizontal, 18)
-                    .padding(.bottom, isOrganizing ? 86 : 20)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
         }
         .navigationBarHidden(true)
         .sheet(isPresented: $isPresentingMoveSheet) {
@@ -92,7 +83,7 @@ struct CollectionDetailView: View {
                         try collectionsStore.addMembers(collectionId: collectionID, workoutIds: ids)
                         isPresentingAddWorkouts = false
                     } catch {
-                        showToast("Couldn't add workouts — try again")
+                        showToast("Couldn't add workouts — try again", isError: true)
                     }
                 },
                 onCancel: { isPresentingAddWorkouts = false }
@@ -352,34 +343,13 @@ private extension CollectionDetailView {
 // MARK: - Toast
 
 private extension CollectionDetailView {
-    func toastView(_ message: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(DailyDriver.lime)
-            Text(message)
-                .font(.system(size: 12.5, weight: .semibold))
-                .foregroundColor(DailyDriver.foreground)
-                .fixedSize(horizontal: false, vertical: true)
+    func showToast(_ message: String, isError: Bool = false) {
+        // AMA-2383 — DD Toast at app root replaces the legacy bottom capsule.
+        if isError {
+            DDToastCenter.shared.error(message)
+        } else {
+            DDToastCenter.shared.success(message)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DailyDriver.backgroundElevated)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(DailyDriver.border, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .accessibilityIdentifier("af_collection_toast")
-    }
-
-    func showToast(_ message: String) {
-        // AMA-2383 — route through DD Toast (top capsule). Keep local
-        // toastMessage briefly for any in-view callers still reading it,
-        // but the visible confirmation is the root host.
-        toastTask?.cancel()
-        toastMessage = nil
-        DDToastCenter.shared.success(message)
     }
 }
 
@@ -415,7 +385,7 @@ private extension CollectionDetailView {
             let created = try collectionsStore.createCollection(name: name, note: nil)
             moveSelection(to: created.id)
         } catch {
-            showToast("Couldn't create collection — try again")
+            showToast("Couldn't create collection — try again", isError: true)
         }
     }
 
