@@ -503,6 +503,65 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         )
     }
 
+    func testConfirmScheduleSerializesConcurrentSameTitleConfirms() async {
+        let saver = MockWorkoutKitSaver()
+        let replacer = MockIncompleteScheduleReplacer(matchingRows: [])
+        let planJSON = StubWorkoutKitPlanProvider.strengthFixture(title: "Race Title")
+        let meta = WorkoutKitPlanMeta(fromMapperJSON: planJSON)
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(saver),
+            incompleteScheduleReplacer: .injected(replacer)
+        )
+
+        var resumeFirstFind: CheckedContinuation<Void, Never>?
+        var findEntryCount = 0
+        replacer.findSuspend = {
+            findEntryCount += 1
+            // Only the first find parks; later finds proceed so the second confirm can finish.
+            if findEntryCount == 1 {
+                await withCheckedContinuation { continuation in
+                    resumeFirstFind = continuation
+                }
+            }
+        }
+
+        async let first = service.confirmSchedule(
+            workoutName: "Race Title",
+            planJSON: planJSON,
+            meta: meta
+        )
+
+        // Wait until the first confirm owns the gate and is parked in find.
+        for _ in 0..<200 where resumeFirstFind == nil {
+            await Task.yield()
+            try? await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertNotNil(resumeFirstFind, "first confirm should suspend inside find")
+
+        async let second = service.confirmSchedule(
+            workoutName: "Race Title",
+            planJSON: planJSON,
+            meta: meta
+        )
+
+        // Give the second task time to race; gate must keep it out of find/save.
+        try? await Task.sleep(nanoseconds: 80_000_000)
+        XCTAssertEqual(findEntryCount, 1)
+        XCTAssertEqual(replacer.findCallTitles, ["Race Title"])
+        XCTAssertEqual(saver.saveCallCount, 0, "second confirm must not save while first holds the gate")
+
+        resumeFirstFind?.resume()
+        resumeFirstFind = nil
+
+        let results = await (first, second)
+        XCTAssertEqual(results.0.kind, .savedToFitness)
+        XCTAssertEqual(results.1.kind, .savedToFitness)
+        XCTAssertEqual(findEntryCount, 2)
+        XCTAssertEqual(replacer.findCallTitles, ["Race Title", "Race Title"])
+        XCTAssertEqual(saver.saveCallCount, 2)
+    }
+
     func testConfirmScheduleSurfacesReplacementLookupFailure() async {
         let saver = MockWorkoutKitSaver()
         let replacer = MockIncompleteScheduleReplacer(
@@ -732,6 +791,8 @@ private final class MockIncompleteScheduleReplacer: IncompleteScheduleReplacing,
     private(set) var removedRows: [WorkoutScheduleRow] = []
     var matchingRows: [WorkoutScheduleRow]
     var findError: Error?
+    /// Optional await inserted at the start of find — used to prove gate serialization.
+    var findSuspend: (() async -> Void)?
 
     init(matchingRows: [WorkoutScheduleRow] = [], findError: Error? = nil) {
         self.matchingRows = matchingRows
@@ -742,6 +803,9 @@ private final class MockIncompleteScheduleReplacer: IncompleteScheduleReplacing,
 
     func findIncompletePlans(titled title: String) async throws -> [WorkoutScheduleRow] {
         findCallTitles.append(title)
+        if let findSuspend {
+            await findSuspend()
+        }
         if let findError { throw findError }
         let needle = title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return matchingRows.filter {
