@@ -166,17 +166,15 @@ struct DDLibraryHeaderAddButton: View {
 struct DDSearchField: View {
     @Binding var text: String
     var placeholder: String = "Search workouts, creators…"
+    /// Applied to the `TextField` (not the chrome) so XCTest/Maestro can type reliably.
+    var accessibilityIdentifier: String? = nil
 
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(DailyDriver.foregroundDim)
-            TextField(placeholder, text: $text)
-                .font(Theme.Typography.body)
-                .foregroundColor(DailyDriver.foreground)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
+            textField
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 11)
@@ -186,6 +184,20 @@ struct DDSearchField: View {
                 .stroke(DailyDriver.border, lineWidth: 1)
         )
         .clipShape(Capsule(style: .continuous))
+    }
+
+    @ViewBuilder
+    private var textField: some View {
+        let field = TextField(placeholder, text: $text)
+            .font(Theme.Typography.body)
+            .foregroundColor(DailyDriver.foreground)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+        if let accessibilityIdentifier {
+            field.accessibilityIdentifier(accessibilityIdentifier)
+        } else {
+            field
+        }
     }
 }
 

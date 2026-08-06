@@ -55,8 +55,8 @@ final class AMA2376LibraryCollectionsSmokeUITests: XCTestCase {
 
         // Browse mode: flat Results list must not appear (Approach A).
         let results = element("af_library_results")
-        XCTAssertFalse(
-            results.exists,
+        XCTAssertTrue(
+            results.waitForNonExistence(timeout: 5),
             "Browse mode must not show Results / flat list when search empty and source All"
         )
 
@@ -128,10 +128,13 @@ final class AMA2376LibraryCollectionsSmokeUITests: XCTestCase {
         XCTAssertTrue(element("library_screen").waitForExistence(timeout: 15))
 
         let results = element("af_library_results")
-        XCTAssertFalse(results.exists)
+        XCTAssertTrue(
+            results.waitForNonExistence(timeout: 5),
+            "Browse mode must not show Results before search"
+        )
 
-        let search = app.textFields.firstMatch
-        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        let search = element("af_library_search")
+        XCTAssertTrue(search.waitForExistence(timeout: 5), "Library search field should be present")
         search.tap()
         search.typeText("HIIT")
 

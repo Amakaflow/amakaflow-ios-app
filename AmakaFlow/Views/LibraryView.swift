@@ -206,10 +206,9 @@ extension LibraryView {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    DDSearchField(text: $searchText)
+                    DDSearchField(text: $searchText, accessibilityIdentifier: "af_library_search")
                         .padding(.horizontal, 18)
                         .padding(.top, 8)
-                        .accessibilityIdentifier("af_library_search")
 
                     DDSourceFilterPills(selection: $sourceFilter)
                         .padding(.horizontal, 18)
@@ -306,7 +305,7 @@ extension LibraryView {
                     }
 
                     if hasLocalFilters {
-                        DDSearchField(text: $searchText)
+                        DDSearchField(text: $searchText, accessibilityIdentifier: "af_library_search")
                         DDSourceFilterPills(selection: $sourceFilter)
                     }
 
