@@ -1028,7 +1028,8 @@ extension UnifiedWorkoutDetailView {
                 guard startFlowSheet == .start else { return }
                 startFlowSheet = nil
                 handoffStatus = GarminLifecycleCopy.handoffQueueing
-                await performGarminPush(gymTitle: gym.title, statusNote: nil)
+                let toastId = DDToastCenter.shared.beginPending(text: DDToastCopy.sendingToGarmin)
+                await performGarminPush(gymTitle: gym.title, statusNote: nil, toastId: toastId)
             }
         case .apple:
             // AMA-2360: same enrichment offer as Garmin, then mapper compose with
@@ -1079,7 +1080,8 @@ extension UnifiedWorkoutDetailView {
             if outcome.applied, let refreshed = await onEditorDismiss?() {
                 displayedWorkout = refreshed
             }
-            await performGarminPush(gymTitle: gymTitle, statusNote: outcome.note)
+            let toastId = DDToastCenter.shared.beginPending(text: DDToastCopy.sendingToGarmin)
+            await performGarminPush(gymTitle: gymTitle, statusNote: outcome.note, toastId: toastId)
         }
     }
 
@@ -1137,19 +1139,37 @@ extension UnifiedWorkoutDetailView {
 
     fileprivate func pushToGarmin(gymTitle: String, statusNote: String?) {
         handoffStatus = GarminLifecycleCopy.handoffQueueing
+        // AMA-2383 — push morph: never claim success before the API returns.
+        let toastId = DDToastCenter.shared.beginPending(text: DDToastCopy.sendingToGarmin)
         Task {
-            await performGarminPush(gymTitle: gymTitle, statusNote: statusNote)
+            await performGarminPush(gymTitle: gymTitle, statusNote: statusNote, toastId: toastId)
         }
     }
 
-    private func performGarminPush(gymTitle: String, statusNote: String?) async {
+    private func performGarminPush(gymTitle: String, statusNote: String?, toastId: UUID) async {
         pendingGarminGymTitle = nil
         let result = await GarminStartHandoffService().push(
             workoutId: workout.id,
             gymTitle: gymTitle
         )
         handoffStatus = [statusNote, result.message].compactMap { $0 }.joined(separator: " ")
-        sentCardTarget = result.kind.telemetryOutcome.isTerminalGarminSentCardSuccess ? .garmin : nil
+        let didSend = result.kind.telemetryOutcome.isTerminalGarminSentCardSuccess
+        sentCardTarget = didSend ? .garmin : nil
+        if didSend {
+            DDToastCenter.shared.resolve(
+                id: toastId,
+                kind: .device,
+                text: DDToastCopy.sentToGarmin,
+                sub: DDToastCopy.garminWidgetSub
+            )
+        } else {
+            DDToastCenter.shared.resolve(
+                id: toastId,
+                kind: .error,
+                text: "Couldn't send to Garmin",
+                sub: result.message.uppercased()
+            )
+        }
         guard result.kind != .failed else { return }
         await requestGarminOpen()
     }
@@ -1270,6 +1290,8 @@ extension UnifiedWorkoutDetailView {
         appleEnrichmentReset = nil
         sentCardTarget = nil
         handoffStatus = "Scheduling in Workout…"
+        // AMA-2383 — schedule morph (spinner → device toast on resolve).
+        let toastId = DDToastCenter.shared.beginPending(text: DDToastCopy.scheduling)
         Task {
             defer { isAppleHandoffInFlight = false }
             let service = AppleStartHandoffService(
@@ -1282,8 +1304,25 @@ extension UnifiedWorkoutDetailView {
                 meta: meta
             )
             handoffStatus = result.message
-            sentCardTarget = result.kind.isTerminalAppleSentCardSuccess ? .apple : nil
+            let ok = result.kind.isTerminalAppleSentCardSuccess
+            sentCardTarget = ok ? .apple : nil
             lastAppleHandoffShowsManagePlans = result.showsManageScheduledPlans
+            if ok {
+                let steps = (try? WorkoutKitSync.default.parse(from: planJSON).intervals.count) ?? 0
+                DDToastCenter.shared.resolve(
+                    id: toastId,
+                    kind: .device,
+                    text: DDToastCopy.onAppleWatch,
+                    sub: DDToastCopy.appleWatchSub(steps: steps, slotsFree: max(0, 50 - steps))
+                )
+            } else {
+                DDToastCenter.shared.resolve(
+                    id: toastId,
+                    kind: .error,
+                    text: "Couldn't schedule on watch",
+                    sub: result.message.uppercased()
+                )
+            }
         }
     }
 

@@ -56,8 +56,78 @@ struct CreateWithAIDraftView: View {
     }
 
     @State private var pendingCommit: PendingCommit?
+    /// AMA-2383 — DRAFTING write-in (scripted fallback when response arrives whole).
+    @StateObject private var draftingReveal: BuildRevealController
+    @State private var draftingRevealDone = false
+
+    init(
+        viewModel: SuggestWorkoutViewModel,
+        workout: Workout,
+        onEditAsk: @escaping () -> Void,
+        onWorkoutStarted: @escaping () -> Void,
+        persistError: Binding<CTAError?>,
+        retryPersist: Binding<(() -> Void)?>,
+        showingUnifiedStart: Binding<Bool>,
+        unifiedStartWorkout: Binding<Workout?>
+    ) {
+        self.viewModel = viewModel
+        self.workout = workout
+        self.onEditAsk = onEditAsk
+        self.onWorkoutStarted = onWorkoutStarted
+        self._persistError = persistError
+        self._retryPersist = retryPersist
+        self._showingUnifiedStart = showingUnifiedStart
+        self._unifiedStartWorkout = unifiedStartWorkout
+
+        let why = CreateWithAIDraftPresentation.whyThisBullets(
+            whyThis: viewModel.whyThis,
+            description: workout.description
+        )
+        let minutes = max(1, workout.duration / 60)
+        let pills = [
+            "~\(minutes) MIN",
+            workout.sport.displayName.uppercased(),
+            "\(viewModel.draftMainBlocks.count) EXERCISES"
+        ]
+        _draftingReveal = StateObject(
+            wrappedValue: BuildRevealController(
+                config: BuildRevealScripts.aiFromDraft(
+                    title: workout.name,
+                    whyThis: why,
+                    warmUp: viewModel.draftWarmUp,
+                    mainBlocks: viewModel.draftMainBlocks,
+                    cooldown: viewModel.draftCooldown,
+                    metaPills: pills
+                )
+            )
+        )
+    }
 
     var body: some View {
+        Group {
+            if draftingRevealDone {
+                draftContent
+            } else {
+                // Scripted DRAFTING reveal; CTA unlocks the refine/save draft.
+                // When SSE lands, call sites can drive `draftingReveal.revealNext`
+                // instead of `playScripted`.
+                VStack(alignment: .leading, spacing: 0) {
+                    draftNav
+                        .padding(.horizontal, Theme.Spacing.lg)
+                        .padding(.top, Theme.Spacing.md)
+                    BuildRevealView(controller: draftingReveal, onCTA: {
+                        draftingRevealDone = true
+                    })
+                    .padding(.horizontal, Theme.Spacing.lg)
+                    .padding(.bottom, 24)
+                }
+                .accessibilityIdentifier("create_with_ai_drafting_reveal")
+            }
+        }
+        .accessibilityIdentifier("create_with_ai_draft_root")
+    }
+
+    private var draftContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 draftNav
@@ -86,7 +156,6 @@ struct CreateWithAIDraftView: View {
             .padding(.top, Theme.Spacing.md)
             .padding(.bottom, 40)
         }
-        .accessibilityIdentifier("create_with_ai_draft_root")
     }
 
     private var draftNav: some View {

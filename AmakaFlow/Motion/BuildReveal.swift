@@ -641,4 +641,188 @@ enum BuildRevealScripts {
             beats: beats
         )
     }
+
+    /// Reel/social import — credit first, then pills, then one band per block.
+    /// Amber SWAP chips when equipment is empty and the row looks barbell/sled-bound.
+    static func importFromDraft(_ draft: SocialImportDraft) -> BuildRevealConfig {
+        var beats: [BuildBeat] = []
+
+        if let prov = draft.postProvenance {
+            let name = prov.creatorDisplay
+            let stripped = name.trimmingCharacters(in: CharacterSet(charactersIn: "@"))
+            let initial = String(stripped.prefix(1)).lowercased()
+            beats.append(.credit(
+                initial: initial.isEmpty ? "?" : initial,
+                name: name,
+                sub: "REEL CAPTION + VIDEO PARSED",
+                background: DailyDriver.purple
+            ))
+        }
+
+        var pills = ["FROM \(draft.platform.displayName.uppercased())"]
+        let exerciseCount = draft.blocks.reduce(0) { $0 + $1.exercises.count }
+        if exerciseCount > 0 {
+            pills.append("\(exerciseCount) EXERCISES")
+        }
+        if draft.blocks.contains(where: { $0.rounds > 1 }) {
+            let rounds = draft.blocks.map(\.rounds).max() ?? 1
+            pills.append("\(rounds) ROUNDS")
+        }
+        beats.append(.pills(pills))
+
+        for block in draft.blocks {
+            let label = (block.label?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap { $0.isEmpty ? nil : $0 }
+                ?? block.type?.uppercased()
+                ?? "BLOCK"
+            let tag: String = {
+                if block.rounds > 1 { return "\(block.rounds) ROUNDS" }
+                return "\(block.exercises.count) MOVES"
+            }()
+            let color: Color = {
+                switch block.enrichmentKind {
+                case "session_warmup": return DailyDriver.mobilityBand
+                case "cooldown": return DailyDriver.blue
+                default: return DailyDriver.orange
+                }
+            }()
+            beats.append(.band(label, tag: tag, color: color))
+            for exercise in block.exercises {
+                let chip = swapChip(for: exercise, equipmentEmpty: draft.equipmentEmpty)
+                beats.append(.row(
+                    exercise.name,
+                    detail: exerciseDetail(exercise),
+                    chip: chip,
+                    chipAmber: chip != nil,
+                    open: exercise.openGoal == true
+                ))
+            }
+        }
+
+        return BuildRevealConfig(
+            title: draft.title,
+            verb: importVerb,
+            doneNote: importDoneNote,
+            cta: importCTA,
+            building: importBuilding,
+            beats: beats
+        )
+    }
+
+    /// Create-with-AI draft — WHY THIS bullets before blocks. Scripted fallback
+    /// when the response arrives whole (no SSE yet); call sites may also
+    /// `revealNext` per chunk when streaming lands.
+    static func aiFromDraft(
+        title: String,
+        whyThis: [String],
+        warmUp: WorkoutInterval?,
+        mainBlocks: [WorkoutInterval],
+        cooldown: WorkoutInterval?,
+        metaPills: [String]
+    ) -> BuildRevealConfig {
+        var beats: [BuildBeat] = []
+        if !metaPills.isEmpty {
+            beats.append(.pills(metaPills))
+        }
+        for bullet in whyThis.prefix(3) {
+            beats.append(.bullet(bullet))
+        }
+        if let warmUp {
+            beats.append(.band("Warm-up", tag: "~5 MIN", color: DailyDriver.mobilityBand))
+            beats.append(contentsOf: intervalRows(warmUp))
+        }
+        if !mainBlocks.isEmpty {
+            beats.append(.band(
+                title.isEmpty ? "Session" : title,
+                tag: "\(mainBlocks.count) EXERCISES",
+                color: DailyDriver.lime
+            ))
+            for interval in mainBlocks {
+                beats.append(contentsOf: intervalRows(interval))
+            }
+        }
+        if let cooldown {
+            beats.append(.band("Cooldown", tag: "AFTER", color: DailyDriver.blue))
+            beats.append(contentsOf: intervalRows(cooldown))
+        }
+        return BuildRevealConfig(
+            title: title,
+            verb: aiVerb,
+            doneNote: aiDoneNote,
+            cta: aiCTA,
+            building: aiBuilding,
+            beats: beats
+        )
+    }
+
+    // MARK: - Helpers
+
+    private static func exerciseDetail(_ exercise: SocialImportExercise) -> String {
+        var parts: [String] = []
+        if let sets = exercise.sets, let reps = exercise.reps {
+            parts.append("\(sets) × \(reps)")
+        } else if let sets = exercise.sets, let range = exercise.repsRange, !range.isEmpty {
+            parts.append("\(sets) × \(range)")
+        } else if let reps = exercise.reps {
+            parts.append("\(reps) REPS")
+        } else if let seconds = exercise.seconds {
+            parts.append(String(format: "%d:%02d MIN", seconds / 60, seconds % 60))
+        } else if exercise.openGoal == true {
+            parts.append("OPEN")
+        }
+        if let load = exercise.load?.trimmingCharacters(in: .whitespacesAndNewlines), !load.isEmpty {
+            parts.append(load.uppercased())
+        }
+        return parts.isEmpty ? "FROM THE REEL" : parts.joined(separator: " · ")
+    }
+
+    private static func swapChip(for exercise: SocialImportExercise, equipmentEmpty: Bool) -> String? {
+        guard equipmentEmpty else { return nil }
+        let name = exercise.name.lowercased()
+        if name.contains("barbell") || name.contains("bb ") {
+            return "SWAP? NO BARBELL"
+        }
+        if name.contains("sled") {
+            return "SWAP? NO SLED"
+        }
+        if name.contains("cable") {
+            return "SWAP? NO CABLES"
+        }
+        return nil
+    }
+
+    private static func intervalRows(_ interval: WorkoutInterval) -> [BuildBeat] {
+        switch interval {
+        case .warmup(let seconds, let target):
+            return [.row(target ?? "Warm-up", detail: "\(seconds)S · LIGHT")]
+        case .cooldown(let seconds, let target):
+            return [.row(target ?? "Cooldown", detail: "\(seconds)S · EASY")]
+        case .time(let seconds, let target):
+            return [.row(target ?? "Timed", detail: "\(seconds)S")]
+        case .reps(let sets, let reps, let name, let load, let restSec, _):
+            var detail = sets.map { "\($0) × \(reps)" } ?? "\(reps) REPS"
+            if let load, !load.isEmpty { detail += " · \(load.uppercased())" }
+            let chip = restSec.map { "REST \($0)S" }
+            return [.row(name, detail: detail, chip: chip)]
+        case .distance(let meters, let target):
+            return [.row(target ?? "Distance", detail: "\(meters) M")]
+        case .repeat(let count, let intervals):
+            var rows: [BuildBeat] = []
+            for nested in intervals {
+                rows.append(contentsOf: intervalRows(nested))
+            }
+            guard count > 1, let first = rows.first else { return rows }
+            return [
+                .row(
+                    first.name ?? "Set",
+                    detail: [first.detail, "×\(count)"].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "),
+                    chip: first.chip
+                )
+            ] + Array(rows.dropFirst())
+        case .rest(let seconds):
+            if let seconds {
+                return [.row("Rest", detail: "\(seconds)S")]
+            }
+            return [.row("Rest", detail: "OPEN", open: true)]
+        }
+    }
 }
