@@ -111,7 +111,7 @@ enum BuilderV3ExerciseLibrary {
     static let strengthMuscleChips: [(label: String, key: String)] = [
         ("Chest", "chest"), ("Lats", "lats"), ("Shoulders", "shoulders"),
         ("Quads", "quadriceps"), ("Hamstrings", "hamstrings"), ("Glutes", "glutes"),
-        ("Biceps", "biceps"), ("Triceps", "triceps"), ("Core", "core")
+        ("Biceps", "biceps"), ("Triceps", "triceps"), ("Core", "abs")
     ]
 
     static let cardioEquipmentChips: [(label: String, key: String)] = [

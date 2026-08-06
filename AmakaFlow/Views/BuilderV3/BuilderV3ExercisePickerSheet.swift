@@ -34,7 +34,11 @@ struct BuilderV3ExercisePickerSheet: View {
     @State private var searchResults: [BuilderV3ExerciseItem] = []
     @State private var fetchMode: BuilderV3ExerciseFetchMode?
     @State private var isLoading = false
+    @State private var isLoadingNextPage = false
+    @State private var canLoadMore = false
+    @State private var nextOffset = 0
     private let searchClient = BuilderV3ExerciseSearchClient()
+    private static let browsePageSize = 40
 
     private var trimmedQuery: String {
         query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -228,7 +232,19 @@ struct BuilderV3ExercisePickerSheet: View {
                     } else {
                         ForEach(filteredItems) { item in
                             exerciseRow(item)
+                                .onAppear {
+                                    guard item.id == filteredItems.last?.id else { return }
+                                    Task { await loadNextPage() }
+                                }
                             Divider().background(DailyDriver.border)
+                        }
+
+                        if isLoadingNextPage {
+                            ProgressView()
+                                .tint(DailyDriver.lime)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .accessibilityIdentifier("builder_v3_exercise_loading_more")
                         }
 
                         if filteredItems.isEmpty, trimmedQuery.isEmpty {
@@ -419,6 +435,9 @@ struct BuilderV3ExercisePickerSheet: View {
 
         fetchMode = nil
         isLoading = true
+        isLoadingNextPage = false
+        canLoadMore = false
+        nextOffset = 0
         let result: BuilderV3ExerciseFetchResult
         if !trimmedQuery.isEmpty {
             result = await searchClient.search(query: trimmedQuery)
@@ -427,7 +446,7 @@ struct BuilderV3ExercisePickerSheet: View {
                 category: selectedCategory.queryValue,
                 muscle: selectedCategory == .strength ? muscleFilter : nil,
                 equipment: selectedCategory == .cardio ? equipmentFilter : nil,
-                limit: 40,
+                limit: Self.browsePageSize,
                 offset: 0
             )
         } else {
@@ -437,7 +456,50 @@ struct BuilderV3ExercisePickerSheet: View {
         guard !Task.isCancelled, requestedKey == loadKey else { return }
         searchResults = result.items
         fetchMode = result.mode
+        canLoadMore = (
+            trimmedQuery.isEmpty
+                && result.mode == .live
+                && result.items.count == Self.browsePageSize
+        )
+        nextOffset = result.items.count
         isLoading = false
+    }
+
+    private func loadNextPage() async {
+        guard
+            tab == .all,
+            trimmedQuery.isEmpty,
+            let selectedCategory,
+            fetchMode == .live,
+            canLoadMore,
+            !isLoadingNextPage
+        else {
+            return
+        }
+
+        let requestedKey = loadKey
+        let requestedOffset = nextOffset
+        isLoadingNextPage = true
+        defer { isLoadingNextPage = false }
+
+        let result = await searchClient.list(
+            category: selectedCategory.queryValue,
+            muscle: selectedCategory == .strength ? muscleFilter : nil,
+            equipment: selectedCategory == .cardio ? equipmentFilter : nil,
+            limit: Self.browsePageSize,
+            offset: requestedOffset
+        )
+        guard !Task.isCancelled, requestedKey == loadKey else { return }
+        guard result.mode == .live else {
+            fetchMode = .mock
+            canLoadMore = false
+            return
+        }
+
+        let existingIDs = Set(searchResults.map(\.id))
+        searchResults.append(contentsOf: result.items.filter { !existingIDs.contains($0.id) })
+        nextOffset = requestedOffset + result.items.count
+        canLoadMore = result.items.count == Self.browsePageSize
     }
 }
 

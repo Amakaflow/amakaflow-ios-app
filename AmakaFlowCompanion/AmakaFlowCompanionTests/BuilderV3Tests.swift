@@ -311,6 +311,11 @@ final class BuilderV3Tests: XCTestCase {
         XCTAssertEqual(BuilderV3BrowseCategory.plyometrics.queryValue, "plyometric")
     }
 
+    func testCoreStrengthChipUsesCatalogAbsKey() {
+        let coreChip = BuilderV3ExerciseLibrary.strengthMuscleChips.first { $0.label == "Core" }
+        XCTAssertEqual(coreChip?.key, "abs")
+    }
+
     func testDemoCatalogHasStableIdsAndRequiredCardio() {
         XCTAssertEqual(Set(BuilderV3ExerciseLibrary.demo.map(\.id)).count, BuilderV3ExerciseLibrary.demo.count)
         XCTAssertFalse(BuilderV3ExerciseLibrary.demo.contains { UUID(uuidString: $0.id) != nil })
@@ -370,7 +375,7 @@ final class BuilderV3Tests: XCTestCase {
             XCTAssertEqual(query["muscle"], "quadriceps")
             XCTAssertNil(query["equipment"])
             XCTAssertEqual(query["limit"], "40")
-            XCTAssertEqual(query["offset"], "0")
+            XCTAssertEqual(query["offset"], "40")
             let response = HTTPURLResponse(
                 url: request.url!,
                 statusCode: 200,
@@ -389,7 +394,7 @@ final class BuilderV3Tests: XCTestCase {
             muscle: "quadriceps",
             equipment: nil,
             limit: 40,
-            offset: 0
+            offset: 40
         )
 
         XCTAssertEqual(result.mode, .live)
