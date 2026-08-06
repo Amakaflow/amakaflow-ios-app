@@ -24,7 +24,6 @@ struct EditorV2View: View {
 
     @State var session: EditorV2Session
     @State var isReorderMode = false
-    @State var toastMessage: String?
     @State var menuExerciseID: String?
     @State var editExerciseID: String?
     @State var configGroupKey: String?
@@ -134,7 +133,6 @@ struct EditorV2View: View {
         }
         .preferredColorScheme(.dark)
         .overlay(alignment: .top) { accessibilityMarkers }
-        .overlay(alignment: .bottom) { toastOverlay }
         .onChange(of: saveModel.didSave) { _, saved in
             if saved {
                 onSaved?()
@@ -143,7 +141,7 @@ struct EditorV2View: View {
         }
         .onChange(of: saveModel.errorMessage) { _, message in
             if let message, !message.isEmpty {
-                showToast(message)
+                DDToastCenter.shared.error(message)
             }
         }
         .sheet(item: menuExerciseBinding, content: menuSheet)

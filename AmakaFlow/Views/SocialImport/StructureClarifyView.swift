@@ -122,10 +122,34 @@ struct StructureClarifyView: View {
         }
         .onChange(of: viewModel.phase) { _, phase in
             if case .saved = phase {
+                presentSavedToast()
                 onSaved?()
             }
         }
         .accessibilityIdentifier("structure_clarify_screen")
+    }
+
+    private func presentSavedToast() {
+        let name = draft?.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let title = name.flatMap { $0.isEmpty ? nil : $0 } ?? "Workout"
+        // Import drafts often omit duration — skip the minutes slot rather than invent one.
+        let preview = draft?.toPreviewWorkout()
+        let minutes = (preview?.duration ?? 0) / 60
+        if minutes > 0 {
+            DDToastCenter.shared.success(
+                DDToastCopy.savedToLibrary,
+                sub: DDToastCopy.savedSub(
+                    workoutName: title,
+                    minutes: minutes,
+                    collection: "Uncategorized"
+                )
+            )
+        } else {
+            DDToastCenter.shared.success(
+                DDToastCopy.savedToLibrary,
+                sub: "\(title.uppercased()) · IN UNCATEGORIZED"
+            )
+        }
     }
 
     // MARK: - Header

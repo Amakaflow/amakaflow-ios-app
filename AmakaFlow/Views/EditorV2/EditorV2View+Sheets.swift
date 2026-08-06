@@ -32,27 +32,8 @@ extension EditorV2View {
     }
 
     func showToast(_ message: String) {
-        withAnimation { toastMessage = message }
-    }
-
-    @ViewBuilder
-    var toastOverlay: some View {
-        if let toastMessage {
-            Text(toastMessage)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(DailyDriver.foreground)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(DailyDriver.backgroundElevated)
-                .clipShape(Capsule())
-                .padding(.bottom, 88)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .onAppear {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        withAnimation { self.toastMessage = nil }
-                    }
-                }
-        }
+        // AMA-2383 — DD Toast at app root replaces the legacy bottom capsule.
+        DDToastCenter.shared.success(message)
     }
 
     func menuSheet(_ exercise: EditorV2Exercise) -> some View {

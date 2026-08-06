@@ -6,6 +6,8 @@
 //  Daily Driver chrome: pill URL input, processing animation, bottom-sheet layout.
 //
 
+// swiftlint:disable file_length
+
 import PhotosUI
 import SwiftUI
 
@@ -25,6 +27,9 @@ struct SocialImportFlowView: View {
     @State private var plainText: String = ""
     @State private var didApplyInitialURL = false
     @State private var processingStep = 0
+    /// AMA-2383 — PARSING build reveal before StructureClarify.
+    @State private var parsingController: BuildRevealController?
+    @State private var parsingRevealDone = false
 
     private let importSteps = [
         "Fetching your link…",
@@ -60,6 +65,10 @@ struct SocialImportFlowView: View {
         .onAppear { applyInitialURLIfNeeded() }
         .task(id: viewModel.phase) {
             await animateImportStepsWhileImporting()
+            prepareParsingRevealIfNeeded()
+        }
+        .onChange(of: viewModel.draft?.title) { _, _ in
+            prepareParsingRevealIfNeeded()
         }
     }
 
@@ -184,17 +193,42 @@ struct SocialImportFlowView: View {
 
     @ViewBuilder
     private var clarifySheet: some View {
-        StructureClarifyView(
-            viewModel: viewModel,
-            onBack: {
-                viewModel.reset()
-            },
-            onSaved: {
-                onSaved?()
-                dismiss()
+        // AMA-2383: PARSING write-in plays once, then CTA → Check the structure.
+        if !parsingRevealDone, let controller = parsingController {
+            DDBottomSheetChrome(title: viewModel.draft?.title ?? "Import") {
+                BuildRevealView(controller: controller) {
+                    parsingRevealDone = true
+                }
+                .padding(.top, 4)
             }
+            .accessibilityIdentifier("social_import_parsing_reveal")
+        } else {
+            StructureClarifyView(
+                viewModel: viewModel,
+                onBack: {
+                    parsingController = nil
+                    parsingRevealDone = false
+                    viewModel.reset()
+                },
+                onSaved: {
+                    onSaved?()
+                    dismiss()
+                }
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private func prepareParsingRevealIfNeeded() {
+        guard parsingController == nil, let draft = viewModel.draft else { return }
+        switch viewModel.phase {
+        case .clarify, .saving: break
+        default: return
+        }
+        parsingRevealDone = false
+        parsingController = BuildRevealController(
+            config: BuildRevealScripts.importFromDraft(draft)
         )
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     @ViewBuilder
@@ -266,6 +300,8 @@ struct SocialImportFlowView: View {
 
     private func startImport() {
         processingStep = 0
+        parsingController = nil
+        parsingRevealDone = false
         Task {
             switch mode {
             case .url(let hint):
@@ -301,6 +337,8 @@ struct ImageImportView: View {
     @StateObject private var viewModel = SocialImportViewModel()
     @State private var pickerItem: PhotosPickerItem?
     @State private var processingStep = 0
+    @State private var parsingController: BuildRevealController?
+    @State private var parsingRevealDone = false
 
     private let importSteps = [
         "Reading your screenshot…",
@@ -320,14 +358,27 @@ struct ImageImportView: View {
                     )
                 }
             case .clarify, .saving:
-                StructureClarifyView(
-                    viewModel: viewModel,
-                    onBack: { viewModel.reset() },
-                    onSaved: {
-                        onSaved?()
-                        dismiss()
+                if !parsingRevealDone, let controller = parsingController {
+                    DDBottomSheetChrome(title: viewModel.draft?.title ?? "Import") {
+                        BuildRevealView(controller: controller) {
+                            parsingRevealDone = true
+                        }
                     }
-                )
+                    .accessibilityIdentifier("image_import_parsing_reveal")
+                } else {
+                    StructureClarifyView(
+                        viewModel: viewModel,
+                        onBack: {
+                            parsingController = nil
+                            parsingRevealDone = false
+                            viewModel.reset()
+                        },
+                        onSaved: {
+                            onSaved?()
+                            dismiss()
+                        }
+                    )
+                }
             case .preview, .saved:
                 if let draft = viewModel.draft {
                     SocialImportDetailPreviewView(
@@ -375,7 +426,23 @@ struct ImageImportView: View {
         }
         .task(id: viewModel.phase) {
             await animateImportStepsWhileImporting()
+            prepareParsingRevealIfNeeded()
         }
+        .onChange(of: viewModel.draft?.title) { _, _ in
+            prepareParsingRevealIfNeeded()
+        }
+    }
+
+    private func prepareParsingRevealIfNeeded() {
+        guard parsingController == nil, let draft = viewModel.draft else { return }
+        switch viewModel.phase {
+        case .clarify, .saving: break
+        default: return
+        }
+        parsingRevealDone = false
+        parsingController = BuildRevealController(
+            config: BuildRevealScripts.importFromDraft(draft)
+        )
     }
 
     private var pickerSheet: some View {
@@ -422,6 +489,8 @@ struct ImageImportView: View {
     private func loadAndImport(_ item: PhotosPickerItem?) async {
         guard let item else { return }
         processingStep = 0
+        parsingController = nil
+        parsingRevealDone = false
         do {
             guard let data = try await item.loadTransferable(type: Data.self) else {
                 viewModel.phase = .failed(.parse(message: "Couldn't read that photo. Try another screenshot."))

@@ -18,7 +18,6 @@ struct DDEditorLegacyView: View {
     @State private var title: String
     @State private var blocks: [DDEditorBlockDraft]
     @State private var blockPickerOpen: Bool
-    @State private var toastMessage: String?
     @State private var exerciseEditTarget: DDExerciseEditTarget?
 
     init(mode: DDEditorMode = .new, workout: Workout? = nil, onBackfillSaved: (() -> Void)? = nil) {
@@ -69,24 +68,6 @@ struct DDEditorLegacyView: View {
                 .font(.system(size: 1))
                 .opacity(0.01)
                 .accessibilityIdentifier("workout_editor_screen")
-        }
-        .overlay(alignment: .bottom) {
-            if let toastMessage {
-                Text(toastMessage)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(DailyDriver.foreground)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(DailyDriver.backgroundElevated)
-                    .clipShape(Capsule())
-                    .padding(.bottom, 88)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                            withAnimation { self.toastMessage = nil }
-                        }
-                    }
-            }
         }
         .onChange(of: saveModel.didSave) { _, saved in
             if saved { dismiss() }
@@ -275,7 +256,7 @@ struct DDEditorLegacyView: View {
                 blocks: blocks
             )
             onBackfillSaved?()
-            toastMessage = "Weights saved to Monday's log"
+            DDToastCenter.shared.success("Weights saved to Monday's log")
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { dismiss() }
             return
         }

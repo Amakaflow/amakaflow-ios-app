@@ -1,0 +1,62 @@
+# AMA-2383 — fixture test account: import URL → Check the structure → Save → DD Toast
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2383_toast_save,email=claude+clerk_test@amakaflow.dev,name=AMA2383 Toast"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn: "Library"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_fab"
+    timeout: 15000
+- tapOn:
+    id: "af_library_fab"
+- extendedWaitUntil:
+    visible:
+      id: "create_workout_sheet"
+    timeout: 10000
+- tapOn: "Import from URL"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "Import workout"
+    timeout: 10000
+- tapOn: "Paste"
+- waitForAnimationToEnd:
+    timeout: 1000
+- tapOn: "Import workout"
+# PARSING reveal CTA, then Check the structure
+- extendedWaitUntil:
+    visible: "Check the structure"
+    timeout: 30000
+- tapOn: "Check the structure"
+- extendedWaitUntil:
+    visible: "Looks right — Save"
+    timeout: 15000
+- takeScreenshot: docs/ama-2383-dogfood/06-structure-clarify-before-save
+- scrollUntilVisible:
+    element:
+      text: "Looks right — Save"
+    direction: DOWN
+    timeout: 10000
+- tapOn: "Looks right — Save"
+- extendedWaitUntil:
+    visible: "Saved to Library"
+    timeout: 10000
+- takeScreenshot: docs/ama-2383-dogfood/07-dd-toast-structure-save
+- assertVisible: "Saved to Library"

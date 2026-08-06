@@ -1,0 +1,156 @@
+# AMA-2383 dogfood — build reveal + DD Toast (Simulator)
+#
+# What we're testing: watch COMPOSING lands CTA; AI DRAFTING reveal appears;
+# Save to Library shows root DD Toast (`dd_toast`). Fixtures only — no live SSE.
+#
+# Library browse is collections-primary (AMA-2382): open Uncategorized, not
+# search → flat Results (search path is flaky with keyboard autocorrect).
+appId: com.myamaka.AmakaFlowCompanion
+---
+# ── 1) Watch preview: build reveal → Schedule CTA ──────────────────────────
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2383_motion,email=claude+clerk_test@amakaflow.dev,name=AMA2383 Motion"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+      UITEST_GARMIN_PAIRED: "true"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn: "Library"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_collections_section"
+    timeout: 15000
+- tapOn:
+    id: "af_collection_card_uncategorized"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_collection_detail"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "af_collection_member_fixture-emom-001"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "af_collection_member_fixture-emom-001"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "Manual EMOM Strength"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: "Start"
+    timeout: 10000
+- tapOn: "Start"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_start_sheet"
+    timeout: 10000
+- tapOn:
+    id: "af_start_device_apple"
+- waitForAnimationToEnd:
+    timeout: 4000
+- extendedWaitUntil:
+    visible:
+      id: "af_enrichment_push_sheet"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      text: "Add .*& send"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    text: "Add .*& send"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_apple_wk_preview_sheet"
+    timeout: 45000
+- takeScreenshot: docs/ama-2383-dogfood/01-watch-mid-or-landed
+- extendedWaitUntil:
+    visible: "Schedule on the watch"
+    timeout: 8000
+- assertVisible:
+    id: "af_apple_wk_preview_confirm"
+- takeScreenshot: docs/ama-2383-dogfood/02-watch-cta-landed
+---
+# ── 2) Create-with-AI: DRAFTING reveal → Save → DD Toast ───────────────────
+- launchApp:
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2383_ai,email=claude+clerk_test@amakaflow.dev,name=AMA2383 AI"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn: "Library"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_fab"
+    timeout: 15000
+- tapOn:
+    id: "af_library_fab"
+- extendedWaitUntil:
+    visible:
+      id: "create_workout_sheet"
+    timeout: 10000
+- tapOn: "Create with AI"
+- extendedWaitUntil:
+    visible:
+      id: "create_with_ai_prompt_field"
+    timeout: 10000
+- tapOn:
+    id: "create_with_ai_prompt_field"
+- inputText: "A 45 minute upper body strength session"
+- pressKey: Enter
+- tapOn:
+    id: "create_with_ai_draft_it"
+- extendedWaitUntil:
+    visible:
+      id: "create_with_ai_drafting_reveal"
+    timeout: 15000
+- takeScreenshot: docs/ama-2383-dogfood/03-ai-drafting-reveal
+- extendedWaitUntil:
+    visible:
+      id: "create_with_ai_save"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "create_with_ai_save"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "create_with_ai_save"
+- extendedWaitUntil:
+    visible:
+      id: "dd_toast"
+    timeout: 10000
+- takeScreenshot: docs/ama-2383-dogfood/04-dd-toast-after-save
+- assertVisible:
+    id: "dd_toast"

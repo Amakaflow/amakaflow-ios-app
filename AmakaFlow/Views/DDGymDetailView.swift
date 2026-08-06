@@ -22,7 +22,6 @@ private struct DDGymEquipmentSeed {
 struct DDGymDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var isShared = true
-    @State private var toastMessage: String?
 
     private var usesHandoffFixture: Bool { DDHandoffFixtures.isEnabled }
 
@@ -81,70 +80,55 @@ struct DDGymDetailView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    backButton
-                        .padding(.horizontal, 18)
-                        .padding(.top, 10)
-
-                    VStack(alignment: .leading, spacing: 0) {
-                        headerRow
-                            .padding(.top, 8)
-
-                        sharedGymCard
-                            .padding(.top, 14)
-
-                        Button {
-                            DDActiveGymStore.save(id: gymId, name: gymName)
-                            if usesHandoffFixture {
-                                toastMessage = "Now the active gym — builder + swaps adapt to it"
-                            } else {
-                                toastMessage = "Active gym saved locally — sync coming soon"
-                            }
-                        } label: {
-                            Text("Set as active gym")
-                                .ddDisplayText(14.5, weight: .bold)
-                                .foregroundColor(DailyDriver.ink)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .background(DailyDriver.lime)
-                                .clipShape(Capsule(style: .continuous))
-                                .ddLimeGlow()
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.top, 12)
-                        .accessibilityIdentifier("dd_gym_set_active")
-
-                        equipmentSection(title: "FREE WEIGHTS", items: $freeWeights)
-                        equipmentSection(title: "MACHINES", items: $machines)
-                        equipmentSection(title: "CARDIO & CONDITIONING", items: $cardio)
-                    }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                backButton
                     .padding(.horizontal, 18)
-                    .padding(.bottom, 100)
-                }
-            }
-            .background(DailyDriver.screenBackground.ignoresSafeArea())
-            .navigationBarHidden(true)
-            .preferredColorScheme(.dark)
+                    .padding(.top, 10)
 
-            if let toastMessage {
-                Text(toastMessage)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(DailyDriver.foreground)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(DailyDriver.backgroundElevated)
-                    .clipShape(Capsule())
-                    .padding(.bottom, 24)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                            withAnimation { self.toastMessage = nil }
+                VStack(alignment: .leading, spacing: 0) {
+                    headerRow
+                        .padding(.top, 8)
+
+                    sharedGymCard
+                        .padding(.top, 14)
+
+                    Button {
+                        DDActiveGymStore.save(id: gymId, name: gymName)
+                        if usesHandoffFixture {
+                            DDToastCenter.shared.success(
+                                "Now the active gym — builder + swaps adapt to it"
+                            )
+                        } else {
+                            DDToastCenter.shared.success(
+                                "Active gym saved locally — sync coming soon"
+                            )
                         }
+                    } label: {
+                        Text("Set as active gym")
+                            .ddDisplayText(14.5, weight: .bold)
+                            .foregroundColor(DailyDriver.ink)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(DailyDriver.lime)
+                            .clipShape(Capsule(style: .continuous))
+                            .ddLimeGlow()
                     }
+                    .buttonStyle(.plain)
+                    .padding(.top, 12)
+                    .accessibilityIdentifier("dd_gym_set_active")
+
+                    equipmentSection(title: "FREE WEIGHTS", items: $freeWeights)
+                    equipmentSection(title: "MACHINES", items: $machines)
+                    equipmentSection(title: "CARDIO & CONDITIONING", items: $cardio)
+                }
+                .padding(.horizontal, 18)
+                .padding(.bottom, 100)
             }
         }
+        .background(DailyDriver.screenBackground.ignoresSafeArea())
+        .navigationBarHidden(true)
+        .preferredColorScheme(.dark)
         .accessibilityIdentifier("dd_gym_detail_screen")
     }
 

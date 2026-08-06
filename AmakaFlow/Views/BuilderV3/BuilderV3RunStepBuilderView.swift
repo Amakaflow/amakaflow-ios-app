@@ -18,7 +18,6 @@ struct BuilderV3RunStepBuilderView: View {
     @StateObject private var saveModel = WorkoutEditorViewModel()
     @State private var session: BuilderV3RunSession
     @State private var showChangeTypeConfirm = false
-    @State private var toastMessage: String?
 
     init(
         seed: BuilderV3TypeSeed,
@@ -58,7 +57,6 @@ struct BuilderV3RunStepBuilderView: View {
         }
         .preferredColorScheme(.dark)
         .accessibilityIdentifier("builder_v3_run_builder_screen")
-        .overlay(alignment: .bottom) { toastOverlay }
         .onChange(of: saveModel.didSave) { _, saved in
             if saved {
                 dismiss()
@@ -66,7 +64,9 @@ struct BuilderV3RunStepBuilderView: View {
             }
         }
         .onChange(of: saveModel.errorMessage) { _, message in
-            if let message, !message.isEmpty { showToast(message) }
+            if let message, !message.isEmpty {
+                DDToastCenter.shared.error(message)
+            }
         }
         .alert("Change workout type?", isPresented: $showChangeTypeConfirm) {
             Button("Keep editing", role: .cancel) {}
@@ -155,29 +155,6 @@ struct BuilderV3RunStepBuilderView: View {
             onChangeType()
         } else {
             showChangeTypeConfirm = true
-        }
-    }
-
-    private func showToast(_ message: String) {
-        withAnimation { toastMessage = message }
-    }
-
-    @ViewBuilder
-    private var toastOverlay: some View {
-        if let toastMessage {
-            Text(toastMessage)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(DailyDriver.foreground)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(DailyDriver.backgroundElevated)
-                .clipShape(Capsule())
-                .padding(.bottom, 88)
-                .onAppear {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        withAnimation { self.toastMessage = nil }
-                    }
-                }
         }
     }
 
