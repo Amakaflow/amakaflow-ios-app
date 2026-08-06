@@ -49,8 +49,12 @@ if echo "$CHANGED" | grep -E -q '(\.xcodeproj/|Package\.swift|Package\.resolved|
 fi
 
 # Check for iOS source changes
+# App code lives under AmakaFlow/ (shared with the Companion target). The
+# Companion-only tree under AmakaFlowCompanion/AmakaFlowCompanion/ is legacy /
+# thin; both must trigger iOS unit tests (AMA-2382: AmakaFlow/-only PRs were
+# incorrectly returning NONE and skipping the required ios-tests job).
 IOS_CHANGED=false
-if echo "$CHANGED" | grep -E -q '^AmakaFlowCompanion/(AmakaFlowCompanion|AmakaFlowCompanionTests)/.*\.swift$'; then
+if echo "$CHANGED" | grep -E -q '^(AmakaFlow/|AmakaFlowCompanion/(AmakaFlowCompanion|AmakaFlowCompanionTests)/).*\.swift$'; then
   IOS_CHANGED=true
 fi
 
@@ -72,7 +76,7 @@ TEST_PATTERNS=()
 # iOS source -> iOS test mapping
 while IFS= read -r f; do
   # Only map main sources (not test files themselves)
-  if [[ "$f" =~ ^AmakaFlowCompanion/AmakaFlowCompanion/.*\.swift$ ]]; then
+  if [[ "$f" =~ ^AmakaFlowCompanion/AmakaFlowCompanion/.*\.swift$ ]] || [[ "$f" =~ ^AmakaFlow/.*\.swift$ ]]; then
     # Extract filename without path and extension
     filename=$(basename "$f" .swift)
 
