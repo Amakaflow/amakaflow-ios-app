@@ -127,7 +127,8 @@ final class AMA2376LibraryCollectionsSmokeUITests: XCTestCase {
         TestAuthHelper.tab(app, "library_tab", label: "Library").tap()
         XCTAssertTrue(element("library_screen").waitForExistence(timeout: 15))
 
-        XCTAssertFalse(element("af_library_results").exists)
+        let results = element("af_library_results")
+        XCTAssertFalse(results.exists)
 
         let search = app.textFields.firstMatch
         XCTAssertTrue(search.waitForExistence(timeout: 5))
@@ -135,8 +136,20 @@ final class AMA2376LibraryCollectionsSmokeUITests: XCTestCase {
         search.typeText("HIIT")
 
         XCTAssertTrue(
-            element("af_library_results").waitForExistence(timeout: 5),
+            results.waitForExistence(timeout: 5),
             "Non-empty search must reveal Results"
+        )
+
+        // Clearing the query must return to browse (hide Results).
+        search.tap()
+        if let value = search.value as? String, !value.isEmpty {
+            let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: value.count)
+            search.typeText(deleteString)
+        }
+
+        XCTAssertTrue(
+            results.waitForNonExistence(timeout: 5),
+            "Clearing search must hide Results"
         )
     }
 
