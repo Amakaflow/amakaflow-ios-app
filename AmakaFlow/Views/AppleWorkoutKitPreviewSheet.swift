@@ -10,6 +10,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct AppleWorkoutKitPreviewSheet: View {
     let workoutName: String
@@ -25,47 +26,165 @@ struct AppleWorkoutKitPreviewSheet: View {
     let onConfirm: () -> Void
     let onCancel: () -> Void
 
+    /// AMA-2383 — scripted "it writes itself" reveal (local data, ≤2s cap).
+    @StateObject private var reveal: BuildRevealController
+
+    init(
+        workoutName: String,
+        meta: WorkoutKitPlanMeta,
+        intervalCount: Int,
+        sections: [PreviewSection],
+        sportLabel: String,
+        prefsSummary: String?,
+        onConfirm: @escaping () -> Void,
+        onCancel: @escaping () -> Void
+    ) {
+        self.workoutName = workoutName
+        self.meta = meta
+        self.intervalCount = intervalCount
+        self.sections = sections
+        self.sportLabel = sportLabel
+        self.prefsSummary = prefsSummary
+        self.onConfirm = onConfirm
+        self.onCancel = onCancel
+        _reveal = StateObject(
+            wrappedValue: BuildRevealController(
+                config: BuildRevealScripts.watchPreview(sections: sections)
+            )
+        )
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             sheetTitle
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    header
+            VStack(alignment: .leading, spacing: 16) {
+                header
 
-                    VStack(alignment: .leading, spacing: 10) {
-                        ForEach(sections) { section in
-                            sectionCard(section)
+                // AMA-2383: build reveal owns the step list + CTA choreography.
+                // Banded cards below still render for revealed beats so AMA-2374
+                // visual parity (rest chips, open-goal amber) is preserved.
+                buildStatus
+
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 10) {
+                            ForEach(revealedSections) { section in
+                                sectionCard(section)
+                                    .id(section.id)
+                            }
+                            Color.clear.frame(height: 1).id("wk_preview_bottom")
+                        }
+                        .accessibilityIdentifier("af_apple_wk_step_list")
+                        .padding(.bottom, 8)
+
+                        footer
+
+                        Button(action: {
+                            guard reveal.isDone else { return }
+                            onConfirm()
+                        }) {
+                            Text(reveal.isDone ? BuildRevealScripts.watchCTA : BuildRevealScripts.watchBuilding)
+                        }
+                        .buttonStyle(AFPrimaryButtonStyle(size: .lg))
+                        .disabled(!reveal.isDone)
+                        .opacity(reveal.isDone ? 1 : 0.55)
+                        .animation(
+                            MotionTokens.easeOutQuart(duration: MotionTokens.ctaColorSettle),
+                            value: reveal.isDone
+                        )
+                        .accessibilityIdentifier("af_apple_wk_preview_confirm")
+
+                        Button(action: onCancel) {
+                            Text("Back")
+                                .ddDisplayText(12.5, weight: .bold)
+                                .foregroundColor(DailyDriver.foregroundMuted)
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 4)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("af_apple_wk_preview_back")
+                    }
+                    .onChange(of: reveal.visibleCount) { _, _ in
+                        withAnimation(MotionTokens.easeOutQuart(duration: MotionTokens.fast)) {
+                            proxy.scrollTo("wk_preview_bottom", anchor: .bottom)
                         }
                     }
-                    .accessibilityIdentifier("af_apple_wk_step_list")
-
-                    footer
-
-                    Button(action: onConfirm) {
-                        Text("Schedule on the watch")
-                    }
-                    .buttonStyle(AFPrimaryButtonStyle(size: .lg))
-                    .accessibilityIdentifier("af_apple_wk_preview_confirm")
-
-                    Button(action: onCancel) {
-                        Text("Back")
-                            .ddDisplayText(12.5, weight: .bold)
-                            .foregroundColor(DailyDriver.foregroundMuted)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 4)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("af_apple_wk_preview_back")
                 }
-                .padding(.horizontal, 18)
-                .padding(.top, 8)
-                .padding(.bottom, 24)
             }
+            .padding(.horizontal, 18)
+            .padding(.top, 8)
+            .padding(.bottom, 24)
         }
         .background(DailyDriver.screenBackground)
         .preferredColorScheme(.dark)
         .accessibilityIdentifier("af_apple_wk_preview_sheet")
+        .onAppear {
+            reveal.playScripted(reduceMotion: UIAccessibility.isReduceMotionEnabled)
+        }
+    }
+
+    /// Sections clipped to beats the controller has revealed so far.
+    private var revealedSections: [PreviewSection] {
+        let shown = reveal.shownBeats
+        var out: [PreviewSection] = []
+        var currentBand: PreviewSection?
+        var currentSteps: [PreviewStep] = []
+
+        func flush() {
+            guard let band = currentBand else { return }
+            out.append(
+                PreviewSection(
+                    accent: band.accent,
+                    band: band.band,
+                    tag: band.tag,
+                    steps: currentSteps,
+                    caption: band.caption
+                )
+            )
+            currentBand = nil
+            currentSteps = []
+        }
+
+        for beat in shown {
+            switch beat.kind {
+            case .band:
+                flush()
+                if let match = sections.first(where: { $0.band == beat.label }) {
+                    currentBand = match
+                    currentSteps = []
+                }
+            case .row:
+                if let band = currentBand,
+                   let step = band.steps.first(where: {
+                       $0.title == beat.name && $0.detail == (beat.detail?.isEmpty == true ? nil : beat.detail)
+                   }) ?? band.steps.first(where: { $0.title == beat.name }) {
+                    // Avoid duplicating the same step if detail matching is fuzzy.
+                    if !currentSteps.contains(where: { $0.number == step.number }) {
+                        currentSteps.append(step)
+                    }
+                }
+            default:
+                break
+            }
+        }
+        flush()
+        return out
+    }
+
+    private var buildStatus: some View {
+        HStack(spacing: 0) {
+            Text(reveal.statusLine)
+                .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                .foregroundColor(reveal.isDone ? DailyDriver.lime : DailyDriver.foregroundDim)
+            if !reveal.isDone {
+                Text("▍")
+                    .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                    .foregroundColor(DailyDriver.lime)
+                    .opacity(0.9)
+            }
+        }
+        .accessibilityIdentifier("af_apple_wk_build_status")
     }
 
     private var sheetTitle: some View {

@@ -300,6 +300,15 @@ struct CreateWithAIDraftView: View {
                 retry: { saveToLibrary() },
                 onSuccess: { saved in
                     workoutsViewModel.acceptSuggestedWorkout(saved)
+                    let minutes = max(1, saved.duration / 60)
+                    DDToastCenter.shared.success(
+                        DDToastCopy.savedToLibrary,
+                        sub: DDToastCopy.savedSub(
+                            workoutName: saved.name,
+                            minutes: minutes,
+                            collection: "Uncategorized"
+                        )
+                    )
                     onWorkoutStarted()
                     viewModel.reset()
                     dismiss()

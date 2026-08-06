@@ -282,6 +282,8 @@ struct AmakaFlowCompanionApp: App {
             .environmentObject(authViewModel)
             .environmentObject(deepLinkManager)
             .environmentObject(subscriptionAccess)
+            // AMA-2383 — single DD Toast host at app root (queue of one).
+            .ddToastHost()
             .task {
                 await subscriptionAccess.refresh()
                 // Wire up ViewModel for AppDelegate silent push handler (AMA-567)

@@ -374,13 +374,12 @@ private extension CollectionDetailView {
     }
 
     func showToast(_ message: String) {
+        // AMA-2383 — route through DD Toast (top capsule). Keep local
+        // toastMessage briefly for any in-view callers still reading it,
+        // but the visible confirmation is the root host.
         toastTask?.cancel()
-        withAnimation(.easeOut(duration: 0.2)) { toastMessage = message }
-        toastTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 2_500_000_000)
-            guard !Task.isCancelled else { return }
-            withAnimation(.easeOut(duration: 0.2)) { toastMessage = nil }
-        }
+        toastMessage = nil
+        DDToastCenter.shared.success(message)
     }
 }
 
