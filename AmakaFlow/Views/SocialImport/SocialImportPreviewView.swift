@@ -50,6 +50,24 @@ struct SocialImportPreviewView: View {
         }
         .onChange(of: viewModel.phase) { _, newPhase in
             if case .saved = newPhase {
+                let name = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                let title = name.isEmpty ? "Workout" : name
+                let minutes = draft.toPreviewWorkout().duration / 60
+                if minutes > 0 {
+                    DDToastCenter.shared.success(
+                        DDToastCopy.savedToLibrary,
+                        sub: DDToastCopy.savedSub(
+                            workoutName: title,
+                            minutes: minutes,
+                            collection: "Uncategorized"
+                        )
+                    )
+                } else {
+                    DDToastCenter.shared.success(
+                        DDToastCopy.savedToLibrary,
+                        sub: "\(title.uppercased()) · IN UNCATEGORIZED"
+                    )
+                }
                 onSaved?()
             }
         }
