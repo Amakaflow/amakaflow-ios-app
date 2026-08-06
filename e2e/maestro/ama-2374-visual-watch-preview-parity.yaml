@@ -33,13 +33,17 @@ appId: com.myamaka.AmakaFlowCompanion
     visible:
       id: "af_library_fab"
     timeout: 15000
-- scrollUntilVisible:
-    element:
-      text: "Manual EMOM Strength"
-    direction: DOWN
-    timeout: 15000
 - tapOn:
-    text: "Manual EMOM Strength"
+    id: "af_library_search"
+- inputText: "Manual EMOM Strength"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_results"
+    timeout: 10000
+- tapOn:
+    id: "af_library_item_workout:fixture-emom-001"
 - waitForAnimationToEnd:
     timeout: 3000
 - extendedWaitUntil:

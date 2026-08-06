@@ -5,7 +5,7 @@ Captured on iPhone 17 Pro Max Simulator (iOS 26.1) via Maestro:
 
 | File | Screen |
 | --- | --- |
-| `01-library.png` | Library home — Collections grid (`+ New`) + Uncategorized + All workouts |
+| `01-library.png` | Library home — Collections grid (`+ New`) + Uncategorized + On your watches (flat Results only when filtering; screenshot may be stale until re-captured) |
 | `02-add-workouts.png` | Collection → "Add workouts" picker, 2 fixtures selected |
 | `03-organize-move.png` | Organize mode, multi-select, Move to / Pin / Remove bar |
 | `04-pinned.png` | Destination collection after move, pinned row (pin glyph) |
@@ -88,10 +88,11 @@ detail action tiles) resolve correctly and are used normally.
 ## Watch door preserved
 
 The AMA-2375 "On your watches" row/door (`af_library_watch_door` /
-`af_library_on_your_watches_row`) is untouched by this work and still renders
-correctly above "All workouts" on the Library screen — see `01-library.png`.
-Not re-tested end-to-end here (out of scope for this task); confirmed present
-and visually unchanged.
+`af_library_on_your_watches_row`) is untouched by this work. It renders above
+Results when filtering; otherwise Collections sit above On your watches with no
+flat list. `01-library.png` may be stale until re-captured. Not re-tested
+end-to-end here (out of scope for this task); confirmed present and visually
+unchanged.
 
 ## Fixture notes
 

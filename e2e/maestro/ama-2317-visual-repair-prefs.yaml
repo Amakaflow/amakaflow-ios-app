@@ -30,10 +30,23 @@ appId: com.myamaka.AmakaFlowCompanion
       id: "af_tabbar"
     timeout: 60000
 - tapOn: "Library"
+- waitForAnimationToEnd:
+    timeout: 3000
 - extendedWaitUntil:
-    visible: "Strength Block W1D1"
+    visible:
+      id: "library_screen"
     timeout: 15000
-- tapOn: "Strength Block W1D1"
+- tapOn:
+    id: "af_library_search"
+- inputText: "Strength"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_results"
+    timeout: 10000
+- tapOn:
+    id: "af_library_item_workout:fixture-strength-001"
 - extendedWaitUntil:
     visible: "Start"
     timeout: 15000

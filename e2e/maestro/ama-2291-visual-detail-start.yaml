@@ -31,7 +31,16 @@ appId: com.myamaka.AmakaFlowCompanion
     timeout: 15000
 # Open Instagram-sourced fixture (HIIT Follow-Along)
 - tapOn:
-    text: "HIIT Follow-Along"
+    id: "af_library_search"
+- inputText: "HIIT Follow-Along"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_results"
+    timeout: 10000
+- tapOn:
+    id: "af_library_item_workout:fixture-hiit-001"
 - waitForAnimationToEnd:
     timeout: 3000
 - extendedWaitUntil:
@@ -93,13 +102,18 @@ appId: com.myamaka.AmakaFlowCompanion
 - waitForAnimationToEnd:
     timeout: 2000
 # Open Manual-sourced fixture
-- scrollUntilVisible:
-    element:
-      text: "Manual EMOM Strength"
-    direction: DOWN
-    timeout: 15000
 - tapOn:
-    text: "Manual EMOM Strength"
+    id: "af_library_search"
+- eraseText
+- inputText: "Manual EMOM Strength"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_results"
+    timeout: 10000
+- tapOn:
+    id: "af_library_item_workout:fixture-emom-001"
 - waitForAnimationToEnd:
     timeout: 3000
 - extendedWaitUntil:
