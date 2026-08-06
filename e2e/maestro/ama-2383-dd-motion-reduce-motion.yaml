@@ -1,0 +1,58 @@
+# AMA-2383 — Reduce Motion dogfood (run after enabling Reduce Motion on sim)
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2383_rm,email=claude+clerk_test@amakaflow.dev,name=AMA2383 RM"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+      UITEST_GARMIN_PAIRED: "true"
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn: "Library"
+- extendedWaitUntil:
+    visible:
+      id: "af_collection_card_uncategorized"
+    timeout: 15000
+- tapOn:
+    id: "af_collection_card_uncategorized"
+- extendedWaitUntil:
+    visible:
+      id: "af_collection_member_fixture-emom-001"
+    timeout: 15000
+- tapOn:
+    id: "af_collection_member_fixture-emom-001"
+- extendedWaitUntil:
+    visible: "Start"
+    timeout: 15000
+- tapOn: "Start"
+- extendedWaitUntil:
+    visible:
+      id: "af_start_sheet"
+    timeout: 10000
+- tapOn:
+    id: "af_start_device_apple"
+- extendedWaitUntil:
+    visible:
+      id: "af_enrichment_push_sheet"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      text: "Add .*& send"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    text: "Add .*& send"
+- extendedWaitUntil:
+    visible: "Schedule on the watch"
+    timeout: 15000
+- takeScreenshot: docs/ama-2383-dogfood/05-watch-cta-reduce-motion
+- assertVisible:
+    id: "af_apple_wk_preview_confirm"

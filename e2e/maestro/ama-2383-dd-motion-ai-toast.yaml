@@ -1,0 +1,63 @@
+# AMA-2383 — AI DRAFTING reveal + DD Toast on save
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_MODE: "1"
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2383_ai,email=claude+clerk_test@amakaflow.dev,name=AMA2383 AI"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn: "Library"
+- extendedWaitUntil:
+    visible:
+      id: "af_library_fab"
+    timeout: 15000
+- tapOn:
+    id: "af_library_fab"
+- extendedWaitUntil:
+    visible:
+      id: "create_workout_sheet"
+    timeout: 10000
+- tapOn: "Create with AI"
+- extendedWaitUntil:
+    visible:
+      id: "create_with_ai_prompt_field"
+    timeout: 10000
+- tapOn:
+    id: "create_with_ai_prompt_field"
+- inputText: "A 45 minute upper body strength session"
+- hideKeyboard:
+    optional: true
+- tapOn:
+    id: "create_with_ai_draft_it"
+- extendedWaitUntil:
+    visible:
+      id: "create_with_ai_draft_root"
+    timeout: 45000
+- takeScreenshot: docs/ama-2383-dogfood/03-ai-drafting-reveal
+- extendedWaitUntil:
+    visible:
+      id: "create_with_ai_save"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "create_with_ai_save"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "create_with_ai_save"
+- extendedWaitUntil:
+    visible:
+      id: "dd_toast"
+    timeout: 10000
+- takeScreenshot: docs/ama-2383-dogfood/04b-dd-toast-ai-save
+- assertVisible:
+    id: "dd_toast"
