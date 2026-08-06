@@ -78,6 +78,7 @@ final class GarminDeliveryLabViewModel: ObservableObject {
 
         let result = await GarminStartHandoffService(apiService: api).push(
             workoutId: wid,
+            workoutName: gymTitle,
             gymTitle: gymTitle
         )
         if result.kind == .failed {

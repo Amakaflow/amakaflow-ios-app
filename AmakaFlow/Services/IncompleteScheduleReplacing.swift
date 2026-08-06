@@ -25,11 +25,11 @@ final class LiveIncompleteScheduleReplacer: IncompleteScheduleReplacing, @unchec
     private let scheduler = LiveWorkoutKitScheduler()
 
     func findIncompletePlans(titled title: String) async throws -> [WorkoutScheduleRow] {
-        let needle = Self.normalizedTitle(title)
+        let needle = WatchWorkoutTitlePolicy.normalized(title)
         guard !needle.isEmpty else { return [] }
         let rows = try await scheduler.fetchScheduledRows()
         return rows.filter { row in
-            !row.isComplete && Self.normalizedTitle(row.title) == needle
+            !row.isComplete && WatchWorkoutTitlePolicy.isSameScheduledTitle(row.title, title)
         }
     }
 
@@ -40,7 +40,7 @@ final class LiveIncompleteScheduleReplacer: IncompleteScheduleReplacing, @unchec
     }
 
     static func normalizedTitle(_ title: String) -> String {
-        title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        WatchWorkoutTitlePolicy.normalized(title)
     }
 }
 #endif

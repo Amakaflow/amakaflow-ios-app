@@ -154,7 +154,7 @@ final class GarminStartHandoffRecordingTests: XCTestCase {
             handoffStore: store
         )
 
-        let result = await service.push(workoutId: "wk-1", gymTitle: "Home")
+        let result = await service.push(workoutId: "wk-1", workoutName: "Engine EMOM", gymTitle: "Home")
 
         XCTAssertNotEqual(result.kind, .failed)
         XCTAssertEqual(store.record?.isInFlight, false)
@@ -170,7 +170,7 @@ final class GarminStartHandoffRecordingTests: XCTestCase {
             handoffStore: store
         )
 
-        let result = await service.push(workoutId: "wk-1", gymTitle: "Home")
+        let result = await service.push(workoutId: "wk-1", workoutName: "Engine EMOM", gymTitle: "Home")
 
         XCTAssertEqual(result.kind, .failed)
         XCTAssertEqual(store.record?.outcome, .failed)

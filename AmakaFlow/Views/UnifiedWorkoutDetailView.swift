@@ -1150,6 +1150,7 @@ extension UnifiedWorkoutDetailView {
         pendingGarminGymTitle = nil
         let result = await GarminStartHandoffService().push(
             workoutId: workout.id,
+            workoutName: workout.name,
             gymTitle: gymTitle
         )
         handoffStatus = [statusNote, result.message].compactMap { $0 }.joined(separator: " ")

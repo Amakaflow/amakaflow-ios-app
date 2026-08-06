@@ -477,6 +477,32 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         XCTAssertEqual(saver.saveCallCount, 1)
     }
 
+    func testConfirmScheduleAllowsIntentionalCopyAlongsideOriginal() async {
+        let saver = MockWorkoutKitSaver()
+        // Finder only returns exact-title matches — a "(1)" copy must not wipe the original.
+        let replacer = MockIncompleteScheduleReplacer(matchingRows: [])
+        let planJSON = StubWorkoutKitPlanProvider.strengthFixture(title: "Testing Apple 2 (1)")
+        let meta = WorkoutKitPlanMeta(fromMapperJSON: planJSON)
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(saver),
+            incompleteScheduleReplacer: .injected(replacer)
+        )
+        let result = await service.confirmSchedule(
+            workoutName: "Testing Apple 2 (1)",
+            planJSON: planJSON,
+            meta: meta
+        )
+        XCTAssertEqual(result.kind, .savedToFitness)
+        XCTAssertEqual(replacer.findCallTitles, ["Testing Apple 2 (1)"])
+        XCTAssertTrue(replacer.removedRows.isEmpty)
+        XCTAssertEqual(saver.saveCallCount, 1)
+        XCTAssertTrue(WatchWorkoutTitlePolicy.isIntentionalCopy("Testing Apple 2 (1)"))
+        XCTAssertFalse(
+            WatchWorkoutTitlePolicy.isSameScheduledTitle("Testing Apple 2", "Testing Apple 2 (1)")
+        )
+    }
+
     func testConfirmScheduleSurfacesReplacementLookupFailure() async {
         let saver = MockWorkoutKitSaver()
         let replacer = MockIncompleteScheduleReplacer(

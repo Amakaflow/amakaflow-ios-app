@@ -48,6 +48,7 @@ struct OnYourWatchesView: View {
                             .foregroundColor(DailyDriver.foregroundDim)
                             .lineSpacing(2)
                             .padding(.top, 4)
+                            .padding(.bottom, 24)
                             .padding(.horizontal, 4)
                     }
                     .padding(.horizontal, 18)
@@ -57,6 +58,7 @@ struct OnYourWatchesView: View {
             }
         }
         .navigationBarHidden(true)
+        .ddSuppressFloatingChrome()
         .task {
             guard !didLoad else { return }
             didLoad = true

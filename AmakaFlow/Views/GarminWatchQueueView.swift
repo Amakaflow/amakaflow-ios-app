@@ -73,11 +73,12 @@ struct GarminWatchQueueView: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal, 12)
-                .padding(.bottom, 12)
+                .padding(.bottom, 28)
                 .accessibilityIdentifier("af_garmin_queue_push_from_library")
             }
         }
         .navigationBarHidden(true)
+        .ddSuppressFloatingChrome()
         .task {
             guard !didLoad else { return }
             didLoad = true

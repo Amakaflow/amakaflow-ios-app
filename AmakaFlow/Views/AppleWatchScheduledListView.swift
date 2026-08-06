@@ -70,10 +70,11 @@ struct AppleWatchScheduledListView: View {
                 Spacer()
                 footerCTA
                     .padding(.horizontal, 12)
-                    .padding(.bottom, 12)
+                    .padding(.bottom, 28)
             }
         }
         .navigationBarHidden(true)
+        .ddSuppressFloatingChrome()
         .task {
             guard !didLoad else { return }
             didLoad = true
