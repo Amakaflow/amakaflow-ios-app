@@ -167,7 +167,7 @@ struct DDSearchField: View {
     @Binding var text: String
     var placeholder: String = "Search workouts, creators…"
     /// Applied to the `TextField` (not the chrome) so XCTest/Maestro can type reliably.
-    var accessibilityIdentifier: String? = nil
+    var accessibilityIdentifier: String?
 
     var body: some View {
         HStack(spacing: 10) {
