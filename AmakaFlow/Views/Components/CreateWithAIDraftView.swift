@@ -37,6 +37,7 @@ struct CreateWithAICancelledView: View {
     }
 }
 
+// swiftlint:disable:next type_body_length
 struct CreateWithAIDraftView: View {
     @ObservedObject var viewModel: SuggestWorkoutViewModel
     @EnvironmentObject var workoutsViewModel: WorkoutsViewModel
@@ -115,9 +116,9 @@ struct CreateWithAIDraftView: View {
                     draftNav
                         .padding(.horizontal, Theme.Spacing.lg)
                         .padding(.top, Theme.Spacing.md)
-                    BuildRevealView(controller: draftingReveal, onCTA: {
+                    BuildRevealView(controller: draftingReveal) {
                         draftingRevealDone = true
-                    })
+                    }
                     .padding(.horizontal, Theme.Spacing.lg)
                     .padding(.bottom, 24)
                 }

@@ -6,6 +6,8 @@
 //  Daily Driver chrome: pill URL input, processing animation, bottom-sheet layout.
 //
 
+// swiftlint:disable file_length
+
 import PhotosUI
 import SwiftUI
 
@@ -194,9 +196,9 @@ struct SocialImportFlowView: View {
         // AMA-2383: PARSING write-in plays once, then CTA → Check the structure.
         if !parsingRevealDone, let controller = parsingController {
             DDBottomSheetChrome(title: viewModel.draft?.title ?? "Import") {
-                BuildRevealView(controller: controller, onCTA: {
+                BuildRevealView(controller: controller) {
                     parsingRevealDone = true
-                })
+                }
                 .padding(.top, 4)
             }
             .accessibilityIdentifier("social_import_parsing_reveal")
@@ -358,9 +360,9 @@ struct ImageImportView: View {
             case .clarify, .saving:
                 if !parsingRevealDone, let controller = parsingController {
                     DDBottomSheetChrome(title: viewModel.draft?.title ?? "Import") {
-                        BuildRevealView(controller: controller, onCTA: {
+                        BuildRevealView(controller: controller) {
                             parsingRevealDone = true
-                        })
+                        }
                     }
                     .accessibilityIdentifier("image_import_parsing_reveal")
                 } else {

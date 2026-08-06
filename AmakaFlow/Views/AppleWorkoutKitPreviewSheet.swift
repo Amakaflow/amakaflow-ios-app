@@ -12,6 +12,7 @@
 import SwiftUI
 import UIKit
 
+// swiftlint:disable:next type_body_length
 struct AppleWorkoutKitPreviewSheet: View {
     let workoutName: String
     let meta: WorkoutKitPlanMeta
@@ -80,12 +81,15 @@ struct AppleWorkoutKitPreviewSheet: View {
 
                         footer
 
-                        Button(action: {
-                            guard reveal.isDone else { return }
-                            onConfirm()
-                        }) {
-                            Text(reveal.isDone ? BuildRevealScripts.watchCTA : BuildRevealScripts.watchBuilding)
-                        }
+                        Button(
+                            action: {
+                                guard reveal.isDone else { return }
+                                onConfirm()
+                            },
+                            label: {
+                                Text(reveal.isDone ? BuildRevealScripts.watchCTA : BuildRevealScripts.watchBuilding)
+                            }
+                        )
                         .buttonStyle(AFPrimaryButtonStyle(size: .lg))
                         .disabled(!reveal.isDone)
                         .opacity(reveal.isDone ? 1 : 0.55)
