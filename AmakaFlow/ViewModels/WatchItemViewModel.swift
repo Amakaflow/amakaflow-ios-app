@@ -28,6 +28,8 @@ final class WatchItemViewModel: ObservableObject {
 
     private let replacer: any WatchItemReplacing
     private let toast: DDToastCenter
+    /// Replace is demo-only until live Apple/Garmin seams land.
+    let isReplaceAvailable: Bool
 
     var isApple: Bool { device.isApple }
     var changeCount: Int { tracker.changeCount }
@@ -89,6 +91,7 @@ final class WatchItemViewModel: ObservableObject {
         applePlanID: String? = nil,
         appleDateComponents: DateComponents? = nil,
         garminState: GarminQueueItemState? = nil,
+        isReplaceAvailable: Bool? = nil,
         replacer: (any WatchItemReplacing)? = nil,
         toast: DDToastCenter? = nil
     ) {
@@ -103,6 +106,11 @@ final class WatchItemViewModel: ObservableObject {
         self.garminState = garminState
         self.tracker = WatchItemChangeTracker(baseline: baseline, config: config)
         self.replacer = replacer ?? WatchItemReplaceCoordinator()
+        #if DEBUG
+        self.isReplaceAvailable = isReplaceAvailable ?? OnYourWatchesDemoSupport.isEnabled
+        #else
+        self.isReplaceAvailable = isReplaceAvailable ?? false
+        #endif
         self.toast = toast ?? DDToastCenter.shared
     }
 
@@ -153,7 +161,7 @@ final class WatchItemViewModel: ObservableObject {
         return WatchItemCopy.replaceCTA(changeCount: changeCount)
     }
 
-    var canReplace: Bool { hasChanges && !isReplacing }
+    var canReplace: Bool { isReplaceAvailable && hasChanges && !isReplacing }
 
     func replace() async {
         guard canReplace else { return }
@@ -180,6 +188,8 @@ final class WatchItemViewModel: ObservableObject {
                 kind: .device,
                 text: WatchItemCopy.toastSuccess(isApple: isApple)
             )
+        case .failure(.cancelled):
+            toast.dismissCurrent()
         case .failure(let error):
             let message = error.errorDescription ?? "Replace failed"
             lastError = message
@@ -297,8 +307,8 @@ final class WatchItemViewModel: ObservableObject {
     }
 
     func summary(for row: WatchItemReadinessRow) -> String {
-        let on = tracker.draft.isEnabled(row)
-        guard on else { return "OFF" }
+        let isEnabled = tracker.draft.isEnabled(row)
+        guard isEnabled else { return "OFF" }
         switch row {
         case .mobility:
             return WorkoutEnrichmentPushCopy.sequenceSummary(

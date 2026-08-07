@@ -24,11 +24,13 @@ struct AppleWatchScheduledListView: View {
     init(
         viewModel: WorkoutScheduleViewModel? = nil,
         calendar: Calendar = .current,
-        onScheduleFromLibrary: (() -> Void)? = nil
+        onScheduleFromLibrary: (() -> Void)? = nil,
+        onOpenWorkoutFromWatchItem: ((String) -> Void)? = nil
     ) {
         _viewModel = StateObject(wrappedValue: viewModel ?? Self.defaultViewModel())
         self.calendar = calendar
         self.onScheduleFromLibrary = onScheduleFromLibrary
+        self.onOpenWorkoutFromWatchItem = onOpenWorkoutFromWatchItem
     }
 
     private static func defaultViewModel() -> WorkoutScheduleViewModel {

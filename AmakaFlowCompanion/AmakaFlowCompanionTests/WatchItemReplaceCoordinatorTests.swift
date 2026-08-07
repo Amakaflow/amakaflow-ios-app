@@ -69,4 +69,29 @@ final class WatchItemReplaceCoordinatorTests: XCTestCase {
         }
         XCTAssertTrue(error.errorDescription?.contains("not wired") == true)
     }
+
+    func testDemoReplaceCancellationDoesNotSucceed() async {
+        let coordinator = WatchItemReplaceCoordinator(
+            delayNanoseconds: 5_000_000_000,
+            shouldFail: false,
+            isDemo: true
+        )
+        let task = Task {
+            await coordinator.replace(
+                WatchItemReplaceRequest(
+                    device: .apple,
+                    workoutID: "demo-cancel",
+                    title: "Push day",
+                    applePlanID: "demo-cancel",
+                    appleDateComponents: nil
+                )
+            )
+        }
+        task.cancel()
+        let result = await task.value
+        guard case .failure(let error) = result else {
+            return XCTFail("expected cancellation failure, got \(String(describing: result))")
+        }
+        XCTAssertEqual(error, .cancelled)
+    }
 }

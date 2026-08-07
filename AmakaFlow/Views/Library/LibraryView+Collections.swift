@@ -70,9 +70,14 @@ extension LibraryView {
         case .onYourWatches:
             OnYourWatchesView(viewModel: watchesVM)
         case .appleScheduled:
-            AppleWatchScheduledListView {
-                navigationPath.append(.libraryPick(.appleSchedule))
-            }
+            AppleWatchScheduledListView(
+                onScheduleFromLibrary: {
+                    navigationPath.append(.libraryPick(.appleSchedule))
+                },
+                onOpenWorkoutFromWatchItem: { workoutID in
+                    navigationPath.append(.unifiedWorkout(workoutID: workoutID))
+                }
+            )
         case .garminQueue:
             GarminWatchQueueView(
                 onPushFromLibrary: {
@@ -80,6 +85,9 @@ extension LibraryView {
                 },
                 onFix: { item in
                     garminFixWorkoutID = item.workoutID
+                },
+                onOpenWorkoutFromWatchItem: { workoutID in
+                    navigationPath.append(.unifiedWorkout(workoutID: workoutID))
                 }
             )
         case .libraryPick(let target):

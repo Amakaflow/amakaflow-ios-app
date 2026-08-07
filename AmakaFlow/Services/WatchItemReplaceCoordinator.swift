@@ -72,16 +72,23 @@ struct WatchItemReplaceCoordinator: WatchItemReplacing {
     func replace(_ request: WatchItemReplaceRequest) async -> Result<Void, WatchItemReplaceError> {
         if isDemo {
             if delayNanoseconds > 0 {
-                try? await Task.sleep(nanoseconds: delayNanoseconds)
+                do {
+                    try await Task.sleep(nanoseconds: delayNanoseconds)
+                } catch is CancellationError {
+                    return .failure(.cancelled)
+                } catch {
+                    return .failure(.underlying(error.localizedDescription))
+                }
             }
+            if Task.isCancelled { return .failure(.cancelled) }
             if shouldFail {
                 return .failure(.underlying("Demo replace failed (UITEST_WATCHITEM_REPLACE_FAIL)."))
             }
             return .success(())
         }
 
-        // Live path lands in Task 4; until then surface an honest error so we
-        // never claim success without WorkoutKit / Garmin work.
+        // Live Apple same-slot / Garmin id-stable replace is a follow-up.
+        // Sheet CTA is demo-gated so users never hit this path in product UI.
         return .failure(.underlying("Live replace is not wired yet — enable AMA2375_DEMO for Simulator."))
     }
 }

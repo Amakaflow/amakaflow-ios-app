@@ -73,16 +73,18 @@ struct WatchItemSheet: View {
                 restRow
                 doorRow(.cooldown, title: WatchItemCopy.cooldownTitle)
 
-                replaceCTA
-                    .padding(.top, 10)
+                if viewModel.isReplaceAvailable {
+                    replaceCTA
+                        .padding(.top, 10)
 
-                Text(WatchItemCopy.replaceNote(isApple: viewModel.isApple))
-                    .font(.system(size: 10.5))
-                    .foregroundColor(DailyDriver.foregroundDim)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 8)
-                    .padding(.horizontal, 4)
+                    Text(WatchItemCopy.replaceNote(isApple: viewModel.isApple))
+                        .font(.system(size: 10.5))
+                        .foregroundColor(DailyDriver.foregroundDim)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 8)
+                        .padding(.horizontal, 4)
+                }
 
                 footer
                     .padding(.top, 14)
@@ -187,6 +189,7 @@ struct WatchItemSheet: View {
                 set: { viewModel.setEnabled(row, $0) }
             ))
             .labelsHidden()
+            .accessibilityLabel(title)
             .tint(DailyDriver.lime)
             .disabled(viewModel.isReplacing)
             .accessibilityIdentifier("af_watchitem_row_\(row.rawValue)_toggle")
@@ -222,6 +225,7 @@ struct WatchItemSheet: View {
                     set: { viewModel.setEnabled(.rest, $0) }
                 ))
                 .labelsHidden()
+                .accessibilityLabel(WatchItemCopy.restTitle)
                 .tint(DailyDriver.lime)
                 .disabled(viewModel.isReplacing)
                 .accessibilityIdentifier("af_watchitem_row_rest_toggle")
