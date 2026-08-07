@@ -4,7 +4,7 @@
 //
 //  Shared rules for Apple schedule + Garmin queue titles:
 //  same display name is one slot; intentional copies end with " (N)".
-// CI: keep this file in the PR path filter so Actions re-runs after outages.
+// CI retrigger after Actions recovery.
 //
 
 import Foundation
