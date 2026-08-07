@@ -22,11 +22,15 @@ Never point an agent at the raw Claude Design export — it contains dead design
 | `MOTION.md` | DD Motion v1 (AMA-2383): tokens, build-reveal engine, DD Toast — CSS→SwiftUI | Motion decisions made once, not per-view |
 | `reference/screens-motion.jsx` | Build reveal engine + watch/import/AI scripts — exact prototype source | The write-in choreography, replayable in rig |
 | `reference/screens-toast.jsx` | DD Toast host + variants (success/device/undo/push-morph) | One confirmation voice everywhere |
+| `WATCHITEM.md` | Watch item sheet (AMA-2386): tap watch row → edit readiness → replace on watch | Build order + replace orchestration decided once |
+| `reference/screens-watchitem.jsx` | Watch item sheet — exact prototype source (4 states) | Anatomy, exact copy strings, CTA gating |
 | `screenshots/rig-*.png` | Multi-state rigs: clarify (3 states), editor v2 vs old (5 states), creation (3 states) | Ground truth for the 2026-07-20 screens |
 
 Cursor enforcement: `.cursor/rules/design-fidelity.mdc` (auto-attaches on View files).
 
 ## Active work queue (2026-07-20) — read this first, Cursor
+
+**2026-08-07 — AMA-2386 Watch item sheet**: implement `WATCHITEM.md` (tap On-your-watches row → readiness sheet → change-gated Replace). Reuse the AMA-2378 configurators + enrichment store — do not fork them. Note the Maestro sheet-a11y blocker in the validation gate.
 
 **2026-08-05 — AMA-2383 DD Motion v1**: implement `MOTION.md` (build reveal on watch preview / reel import / AI draft + DD Toast replacing the legacy bottom toast). Watch the live rigs linked in MOTION.md before writing any animation code.
 
