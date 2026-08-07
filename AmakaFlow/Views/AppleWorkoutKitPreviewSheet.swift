@@ -62,9 +62,9 @@ struct AppleWorkoutKitPreviewSheet: View {
             VStack(alignment: .leading, spacing: 16) {
                 header
 
-                // AMA-2383: build reveal owns the step list + CTA choreography.
-                // Banded cards below still render for revealed beats so AMA-2374
-                // visual parity (rest chips, open-goal amber) is preserved.
+                // AMA-2383: build reveal owns the step list choreography.
+                // AMA-2385: pin CTA outside ScrollView (match BuildRevealView) so
+                // Schedule stays visible when the composed plan is tall.
                 buildStatus
 
                 ScrollViewReader { proxy in
@@ -78,36 +78,6 @@ struct AppleWorkoutKitPreviewSheet: View {
                         }
                         .accessibilityIdentifier("af_apple_wk_step_list")
                         .padding(.bottom, 8)
-
-                        footer
-
-                        Button(
-                            action: {
-                                guard reveal.isDone else { return }
-                                onConfirm()
-                            },
-                            label: {
-                                Text(reveal.isDone ? BuildRevealScripts.watchCTA : BuildRevealScripts.watchBuilding)
-                            }
-                        )
-                        .buttonStyle(AFPrimaryButtonStyle(size: .lg))
-                        .disabled(!reveal.isDone)
-                        .opacity(reveal.isDone ? 1 : 0.55)
-                        .animation(
-                            MotionTokens.easeOutQuart(duration: MotionTokens.ctaColorSettle),
-                            value: reveal.isDone
-                        )
-                        .accessibilityIdentifier("af_apple_wk_preview_confirm")
-
-                        Button(action: onCancel) {
-                            Text("Back")
-                                .ddDisplayText(12.5, weight: .bold)
-                                .foregroundColor(DailyDriver.foregroundMuted)
-                                .frame(maxWidth: .infinity)
-                                .padding(.top, 4)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("af_apple_wk_preview_back")
                     }
                     .onChange(of: reveal.visibleCount) { _, _ in
                         withAnimation(MotionTokens.easeOutQuart(duration: MotionTokens.fast)) {
@@ -115,6 +85,36 @@ struct AppleWorkoutKitPreviewSheet: View {
                         }
                     }
                 }
+
+                footer
+
+                Button(
+                    action: {
+                        guard reveal.isDone else { return }
+                        onConfirm()
+                    },
+                    label: {
+                        Text(reveal.isDone ? BuildRevealScripts.watchCTA : BuildRevealScripts.watchBuilding)
+                    }
+                )
+                .buttonStyle(AFPrimaryButtonStyle(size: .lg))
+                .disabled(!reveal.isDone)
+                .opacity(reveal.isDone ? 1 : 0.55)
+                .animation(
+                    MotionTokens.easeOutQuart(duration: MotionTokens.ctaColorSettle),
+                    value: reveal.isDone
+                )
+                .accessibilityIdentifier("af_apple_wk_preview_confirm")
+
+                Button(action: onCancel) {
+                    Text("Back")
+                        .ddDisplayText(12.5, weight: .bold)
+                        .foregroundColor(DailyDriver.foregroundMuted)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 4)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_apple_wk_preview_back")
             }
             .padding(.horizontal, 18)
             .padding(.top, 8)

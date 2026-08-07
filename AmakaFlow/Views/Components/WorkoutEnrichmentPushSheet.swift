@@ -1,16 +1,5 @@
-//
-//  WorkoutEnrichmentPushSheet.swift
-//  AmakaFlow
-//
-//  AMA-2336 — the offer shown before a Garmin push when a workout is missing
-//  something the user has asked for (spec §5).
-//  AMA-2362 — Apple Start uses Open-rest copy + open default (not Garmin Lap).
-//  AMA-2371 — Peloton-style toggle rows + live "Add N & send" (redesign 2026-08-02).
-//  AMA-2378 — v2 rows-as-doors: mobility/cooldown/warm-up-sets rows show a live
-//  mono summary and open a configurator; between-set rest keeps its v1 inline
-//  anatomy. Toggles retain local config when switched off (design 2026-08-04
-//  `make-it-watch-ready-v2-design.md` §Surface 1).
-//
+// AMA-2336/2362/2371/2378 — watch-ready enrichment offers before push.
+// AMA-2385 — pin Confirm/Skip outside ScrollView so Rest expand keeps CTA visible.
 
 import SwiftUI
 
@@ -24,11 +13,7 @@ struct WorkoutEnrichmentPushSheet: View {
     @State private var checkedKinds: Set<EnrichmentKind>
     @State private var restSec: Int
     @State private var restOpen: Bool
-
-    /// v2 door state — local edits, seeded from standing prefs when the sheet
-    /// is created and retained even while the row's toggle is off (design
-    /// §Surface 1 "retained-config toggles"). Task 4/5 fill in the screens
-    /// that actually mutate these; Task 3 only wires the round-trip.
+    /// v2 door state — seeded from prefs; retained while toggle is off.
     @State private var mobilityActivities: [EnrichmentActivityPref]
     @State private var cooldownActivities: [EnrichmentActivityPref]
     @State private var perExerciseRamps: [PerExerciseRamp]
@@ -120,6 +105,7 @@ extension WorkoutEnrichmentPushSheet {
             .padding(.horizontal, 18)
             .padding(.top, 12)
 
+            // AMA-2385: pin CTAs below scroll so Rest expand can't bury them.
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(WorkoutEnrichmentPushCopy.sheetIntroV2)
@@ -134,28 +120,33 @@ extension WorkoutEnrichmentPushSheet {
                         .font(.system(size: 10))
                         .foregroundColor(DailyDriver.foregroundDim)
                         .padding(.top, 2)
-
-                    Button {
-                        onConfirm(decision)
-                    } label: {
-                        Text(WorkoutEnrichmentPushCopy.primaryCTA(checkedCount: checkedKinds.count))
-                    }
-                    .buttonStyle(AFPrimaryButtonStyle(size: .lg))
-                    .accessibilityIdentifier("af_enrichment_push_confirm")
-
-                    Button(action: onSkip) {
-                        Text(WorkoutEnrichmentPushCopy.sendAsIsCTA)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(DailyDriver.foregroundDim)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("af_enrichment_push_skip")
                 }
                 .padding(.horizontal, 18)
                 .padding(.top, 10)
-                .padding(.bottom, 24)
+                .padding(.bottom, 12)
             }
+
+            VStack(spacing: 10) {
+                Button {
+                    onConfirm(decision)
+                } label: {
+                    Text(WorkoutEnrichmentPushCopy.primaryCTA(checkedCount: checkedKinds.count))
+                }
+                .buttonStyle(AFPrimaryButtonStyle(size: .lg))
+                .accessibilityIdentifier("af_enrichment_push_confirm")
+
+                Button(action: onSkip) {
+                    Text(WorkoutEnrichmentPushCopy.sendAsIsCTA)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(DailyDriver.foregroundDim)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_enrichment_push_skip")
+            }
+            .padding(.horizontal, 18)
+            .padding(.top, 4)
+            .padding(.bottom, 24)
         }
         .background(DailyDriver.screenBackground)
         .navigationBarHidden(true)

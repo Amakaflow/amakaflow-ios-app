@@ -204,7 +204,8 @@ struct UnifiedWorkoutDetailView: View {
                         lastAppleHandoffShowsManagePlans = false
                     }
                 )
-                .presentationDetents([.large, .medium])
+                // AMA-2385 — full height so pinned Schedule CTA + tall step list coexist.
+                .presentationDetents([.large])
                 .presentationDragIndicator(.hidden)
                 .presentationBackground(DailyDriver.screenBackground)
             case .enrichment(let prepared):
@@ -235,7 +236,8 @@ struct UnifiedWorkoutDetailView: View {
                         enrichmentContinuesToApple = false
                     }
                 )
-                .presentationDetents([.large, .medium])
+                // AMA-2385 — full height keeps Confirm visible when Rest expands.
+                .presentationDetents([.large])
                 .presentationDragIndicator(.hidden)
                 .presentationBackground(DailyDriver.screenBackground)
             }
