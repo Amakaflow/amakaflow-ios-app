@@ -84,6 +84,20 @@ enum ActualsCopy {
         }
     }
 
+    // MARK: - Map-to-plan (screens-actuals.jsx SYMapScreen)
+
+    static let mapAskTitle = "Which workout was this?"
+    static let mapAskBody =
+        "Mapping attaches this run to the plan it was — nothing is duplicated, and Progress counts it once."
+    static let mapBestMatchesHeader = "BEST MATCHES — SAME DAY, SAME SHAPE"
+    static let mapSearchAllCTA = "Search all workouts…"
+    static let mapKeepAsIsCTA = "It was just a run — keep as is"
+    static let mapKeepAsIsAccessibilityID = "af_actuals_map_keep_as_is"
+
+    static func mapCandidateAccessibilityID(_ index: Int) -> String {
+        "af_actuals_map_candidate_\(index)"
+    }
+
     // MARK: - Apple Health primer (screens-actuals3.jsx SYAppleFlowScreen)
 
     static let appleHealthTitle = "Apple Health"

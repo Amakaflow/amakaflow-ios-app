@@ -9,7 +9,8 @@ Task 3: code complete — primer + HealthKit connector + deny→Settings; arm64 
 Task 4: code complete — OAuth scope UI + stub auth
 Task 5: code complete — linked badge, DD Toast, honest sync counter banner
 Task 6: code complete — merge classifier + ask card + merged detail
-Task 7–10: pending
+Task 7: code complete — plan matcher + map-to-plan screen
+Task 8–10: pending
 
 **Env note (2026-08-07):** `simctl install` / `xcodebuild test` hang after package resolve / codesign UITests. Restart CoreSimulator + fresh device still hung on boot. Arm64 object files for Tasks 1–3 exist under `/tmp/ama-2387-dd`.
 

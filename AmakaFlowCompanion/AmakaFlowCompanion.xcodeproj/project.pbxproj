@@ -235,6 +235,9 @@
 		AMA2387ASKBLD /* ActualsMergeAskCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387ASKREF /* ActualsMergeAskCard.swift */; };
 		AMA2387MRGDBLD /* ActualsMergedDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387MRGDREF /* ActualsMergedDetailView.swift */; };
 		AMA2387MRGTBLD /* ActualsMergeClassifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387MRGTREF /* ActualsMergeClassifierTests.swift */; };
+		AMA2387MAPSBLD /* ActualsPlanMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387MAPSREF /* ActualsPlanMatcher.swift */; };
+		AMA2387MAPVBLD /* ActualsMapToPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387MAPVREF /* ActualsMapToPlanView.swift */; };
+		AMA2387MAPTBLD /* ActualsPlanMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387MAPTREF /* ActualsPlanMatcherTests.swift */; };
 		WATCHTITLEBLD /* WatchWorkoutTitlePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = WATCHTITLEREF /* WatchWorkoutTitlePolicy.swift */; };
 		AMA2375MODLBLD /* OnYourWatchesModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375MODLREF /* OnYourWatchesModels.swift */; };
 		AMA2375QSTRBLD /* GarminWatchQueueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375QSTRREF /* GarminWatchQueueStore.swift */; };
@@ -917,6 +920,9 @@
 		AMA2387ASKREF /* ActualsMergeAskCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsMergeAskCard.swift; path = ../AmakaFlow/Views/Components/ActualsMergeAskCard.swift; sourceTree = SOURCE_ROOT; };
 		AMA2387MRGDREF /* ActualsMergedDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsMergedDetailView.swift; path = ../AmakaFlow/Views/ActualsMergedDetailView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2387MRGTREF /* ActualsMergeClassifierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsMergeClassifierTests.swift; path = AmakaFlowCompanionTests/ActualsMergeClassifierTests.swift; sourceTree = "<group>"; };
+		AMA2387MAPSREF /* ActualsPlanMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsPlanMatcher.swift; path = ../AmakaFlow/Services/ActualsPlanMatcher.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387MAPVREF /* ActualsMapToPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsMapToPlanView.swift; path = ../AmakaFlow/Views/ActualsMapToPlanView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387MAPTREF /* ActualsPlanMatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsPlanMatcherTests.swift; path = AmakaFlowCompanionTests/ActualsPlanMatcherTests.swift; sourceTree = "<group>"; };
 		WATCHTITLEREF /* WatchWorkoutTitlePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchWorkoutTitlePolicy.swift; path = ../AmakaFlow/Models/WatchWorkoutTitlePolicy.swift; sourceTree = SOURCE_ROOT; };
 		AMA2375MODLREF /* OnYourWatchesModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnYourWatchesModels.swift; path = ../AmakaFlow/Models/OnYourWatchesModels.swift; sourceTree = SOURCE_ROOT; };
 		AMA2375QSTRREF /* GarminWatchQueueStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchQueueStore.swift; path = ../AmakaFlow/Services/GarminWatchQueueStore.swift; sourceTree = SOURCE_ROOT; };
@@ -1537,6 +1543,7 @@
 				AMA2387HKREF /* ActualsHealthKitConnecting.swift */,
 				AMA2387AUTHREF /* ActualsProviderAuthProviding.swift */,
 				AMA2387MRGCLREF /* ActualsMergeClassifier.swift */,
+				AMA2387MAPSREF /* ActualsPlanMatcher.swift */,
 				AMA2375COPYREF /* OnYourWatchesCopy.swift */,
 				AMA2386COPYREF /* WatchItemCopy.swift */,
 				AMA2386TRCKREF /* WatchItemChangeTracker.swift */,
@@ -1723,6 +1730,7 @@
 				AMA2387PRIMREF /* ActualsAppleHealthPrimerView.swift */,
 				AMA2387OAUTHREF /* ActualsOAuthScopeView.swift */,
 				AMA2387MRGDREF /* ActualsMergedDetailView.swift */,
+				AMA2387MAPVREF /* ActualsMapToPlanView.swift */,
 				AMA2378SEQVREF001 /* EnrichmentSequenceScreen.swift */,
 				AMA2378WPICKREF001 /* EnrichmentWarmupPickScreen.swift */,
 				AMA2378RAMPVREF001 /* EnrichmentRampEditorScreen.swift */,
@@ -2114,6 +2122,7 @@
 				AMA2387AUTHTREF /* ActualsProviderAuthTests.swift */,
 				AMA2387SYNCTREF /* ActualsSyncProgressTests.swift */,
 				AMA2387MRGTREF /* ActualsMergeClassifierTests.swift */,
+				AMA2387MAPTREF /* ActualsPlanMatcherTests.swift */,
 				AMA2376TESTREF /* WorkoutCollectionsRepositoryTests.swift */,
 				AMA2376CPTESTREF /* CollectionPresentationTests.swift */,
 				AMA2376STORTREF /* LibraryCollectionsStoreTests.swift */,
@@ -2851,6 +2860,7 @@
 				AMA2387HKBLD /* ActualsHealthKitConnecting.swift in Sources */,
 				AMA2387AUTHBLD /* ActualsProviderAuthProviding.swift in Sources */,
 				AMA2387MRGCLBLD /* ActualsMergeClassifier.swift in Sources */,
+				AMA2387MAPSBLD /* ActualsPlanMatcher.swift in Sources */,
 				AMA2387TEACHBLD /* ActualsTeachCard.swift in Sources */,
 				AMA2387BANBLD /* ActualsSyncCounterBanner.swift in Sources */,
 				AMA2387ASKBLD /* ActualsMergeAskCard.swift in Sources */,
@@ -2858,6 +2868,7 @@
 				AMA2387PRIMBLD /* ActualsAppleHealthPrimerView.swift in Sources */,
 				AMA2387OAUTHBLD /* ActualsOAuthScopeView.swift in Sources */,
 				AMA2387MRGDBLD /* ActualsMergedDetailView.swift in Sources */,
+				AMA2387MAPVBLD /* ActualsMapToPlanView.swift in Sources */,
 				WATCHTITLEBLD /* WatchWorkoutTitlePolicy.swift in Sources */,
 				AMA2375MODLBLD /* OnYourWatchesModels.swift in Sources */,
 				AMA2375QSTRBLD /* GarminWatchQueueStore.swift in Sources */,
@@ -3056,6 +3067,7 @@
 				AMA2387AUTHTBLD /* ActualsProviderAuthTests.swift in Sources */,
 				AMA2387SYNCTBLD /* ActualsSyncProgressTests.swift in Sources */,
 				AMA2387MRGTBLD /* ActualsMergeClassifierTests.swift in Sources */,
+				AMA2387MAPTBLD /* ActualsPlanMatcherTests.swift in Sources */,
 				AMA2376TESTBLD /* WorkoutCollectionsRepositoryTests.swift in Sources */,
 				AMA2376CPTESTBLD /* CollectionPresentationTests.swift in Sources */,
 				AMA2376STORTBLD /* LibraryCollectionsStoreTests.swift in Sources */,
