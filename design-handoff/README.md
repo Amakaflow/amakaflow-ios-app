@@ -24,11 +24,15 @@ Never point an agent at the raw Claude Design export — it contains dead design
 | `reference/screens-toast.jsx` | DD Toast host + variants (success/device/undo/push-morph) | One confirmation voice everywhere |
 | `WATCHITEM.md` | Watch item sheet (AMA-2386): tap watch row → edit readiness → replace on watch | Build order + replace orchestration decided once |
 | `reference/screens-watchitem.jsx` | Watch item sheet — exact prototype source (4 states) | Anatomy, exact copy strings, CTA gating |
+| `ACTUALS.md` | Completed-workout sync & actuals (AMA-2387): connect Apple/Garmin/Strava → merge → map → fill in planned-vs-done | Merge/provenance + gating decided once |
+| `reference/screens-actuals*.jsx` | Sync & actuals — exact prototype source (SY/SY2/SY3, 11 panels) | Anatomy, exact copy, merge/ask/split states |
 | `screenshots/rig-*.png` | Multi-state rigs: clarify (3 states), editor v2 vs old (5 states), creation (3 states) | Ground truth for the 2026-07-20 screens |
 
 Cursor enforcement: `.cursor/rules/design-fidelity.mdc` (auto-attaches on View files).
 
 ## Active work queue (2026-07-20) — read this first, Cursor
+
+**2026-08-07 — AMA-2387 Completed sync & actuals**: implement `ACTUALS.md` (connect sources → dedupe/merge with provenance → map-to-plan → fill-in actuals → verified feeding editor ghosts). Backend endpoints land separately — stub behind a protocol; honest-progress + read-only copy rules are hard requirements.
 
 **2026-08-07 — AMA-2386 Watch item sheet**: implement `WATCHITEM.md` (tap On-your-watches row → readiness sheet → change-gated Replace). Reuse the AMA-2378 configurators + enrichment store — do not fork them. Note the Maestro sheet-a11y blocker in the validation gate.
 
