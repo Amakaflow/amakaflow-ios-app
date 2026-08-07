@@ -304,4 +304,203 @@ final class BuilderV3Tests: XCTestCase {
             BuilderV3ExerciseLibrary.demo.count
         )
     }
+
+    func testBrowseCategoryUsesPinnedWireValues() {
+        XCTAssertEqual(BuilderV3BrowseCategory.strength.queryValue, "strength")
+        XCTAssertEqual(BuilderV3BrowseCategory.cardio.queryValue, "cardio")
+        XCTAssertEqual(BuilderV3BrowseCategory.plyometrics.queryValue, "plyometric")
+    }
+
+    func testCoreStrengthChipUsesCatalogAbsKey() {
+        let coreChip = BuilderV3ExerciseLibrary.strengthMuscleChips.first { $0.label == "Core" }
+        XCTAssertEqual(coreChip?.key, "abs")
+    }
+
+    func testDemoCatalogHasStableIdsAndRequiredCardio() {
+        XCTAssertEqual(Set(BuilderV3ExerciseLibrary.demo.map(\.id)).count, BuilderV3ExerciseLibrary.demo.count)
+        XCTAssertFalse(BuilderV3ExerciseLibrary.demo.contains { UUID(uuidString: $0.id) != nil })
+        XCTAssertTrue(BuilderV3ExerciseLibrary.demo.contains { $0.name == "Ski Erg" })
+        XCTAssertTrue(BuilderV3ExerciseLibrary.demo.contains { $0.name == "Treadmill Run" })
+    }
+
+    func testLiveEmptySearchDoesNotFallBackToFixture() async {
+        MockURLProtocol.reset()
+        MockURLProtocol.setResponse(
+            data: #"{"results":[],"count":0,"query":"no-match"}"#.data(using: .utf8)!
+        )
+        let client = BuilderV3ExerciseSearchClient(
+            apiService: APIService(session: MockURLProtocol.mockSession()),
+            useFixtures: false
+        )
+
+        let result = await client.search(query: "no-match", limit: 30)
+
+        XCTAssertEqual(result.mode, .live)
+        XCTAssertTrue(result.items.isEmpty)
+        MockURLProtocol.reset()
+    }
+
+    func testUpstreamFailureUsesMockFixtureWithCardio() async {
+        MockURLProtocol.reset()
+        MockURLProtocol.setError(MockNetworkError.noConnection)
+        let client = BuilderV3ExerciseSearchClient(
+            apiService: APIService(session: MockURLProtocol.mockSession()),
+            useFixtures: false
+        )
+
+        let result = await client.list(
+            category: "cardio",
+            muscle: nil,
+            equipment: nil,
+            limit: 40,
+            offset: 0
+        )
+
+        XCTAssertEqual(result.mode, .mock)
+        XCTAssertTrue(result.items.contains { $0.name == "Ski Erg" })
+        MockURLProtocol.reset()
+    }
+
+    func testLiveListDropsRowsWithoutStableId() async {
+        MockURLProtocol.reset()
+        MockURLProtocol.setResponse(
+            data: #"""
+            {
+              "exercises": [
+                {"name": "No Id Row", "primaryMuscles": ["chest"], "equipment": ["barbell"]},
+                {"id": "bench-press", "name": "Bench Press", "primaryMuscles": ["chest"], "equipment": ["barbell"]},
+                {"id": "  ", "name": "Blank Id", "primaryMuscles": ["chest"]}
+              ],
+              "count": 3
+            }
+            """#.data(using: .utf8)!
+        )
+        let client = BuilderV3ExerciseSearchClient(
+            apiService: APIService(session: MockURLProtocol.mockSession()),
+            useFixtures: false
+        )
+
+        let result = await client.list(
+            category: "strength",
+            muscle: nil,
+            equipment: nil,
+            limit: 40,
+            offset: 0
+        )
+
+        XCTAssertEqual(result.mode, .live)
+        XCTAssertEqual(result.items.map(\.id), ["bench-press"])
+        XCTAssertEqual(result.items.map(\.name), ["Bench Press"])
+        XCTAssertEqual(result.receivedRowCount, 3)
+        MockURLProtocol.reset()
+    }
+
+    func testLiveListPaginationUsesReceivedRowCountWhenIdsDropped() async {
+        MockURLProtocol.reset()
+        let pageSize = BuilderV3ExercisePickerSheet.browsePageSize
+        var offsets: [String] = []
+        MockURLProtocol.requestHandler = { request in
+            let components = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)
+            let offset = components?.queryItems?.first(where: { $0.name == "offset" })?.value ?? "missing"
+            offsets.append(offset)
+            let rows: [[String: Any]]
+            if offset == "0" {
+                rows = (0..<pageSize).map { index in
+                    if index == 0 {
+                        return ["name": "Missing Id", "primaryMuscles": ["chest"]]
+                    }
+                    return [
+                        "id": "ex-\(index)",
+                        "name": "Exercise \(index)",
+                        "primaryMuscles": ["chest"]
+                    ]
+                }
+            } else {
+                rows = [[
+                    "id": "ex-page-2",
+                    "name": "Page Two",
+                    "primaryMuscles": ["chest"]
+                ]]
+            }
+            let payload: [String: Any] = ["exercises": rows, "count": rows.count]
+            let data = try! JSONSerialization.data(withJSONObject: payload)
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: nil
+            )!
+            return (response, data)
+        }
+
+        let client = BuilderV3ExerciseSearchClient(
+            apiService: APIService(session: MockURLProtocol.mockSession()),
+            useFixtures: false
+        )
+
+        let first = await client.list(
+            category: "strength",
+            muscle: nil,
+            equipment: nil,
+            limit: pageSize,
+            offset: 0
+        )
+        XCTAssertEqual(first.mode, .live)
+        XCTAssertEqual(first.receivedRowCount, pageSize)
+        XCTAssertEqual(first.items.count, pageSize - 1)
+        XCTAssertTrue(first.receivedRowCount == pageSize)
+
+        let second = await client.list(
+            category: "strength",
+            muscle: nil,
+            equipment: nil,
+            limit: pageSize,
+            offset: first.receivedRowCount
+        )
+        XCTAssertEqual(second.mode, .live)
+        XCTAssertEqual(second.items.map(\.id), ["ex-page-2"])
+        XCTAssertEqual(offsets, ["0", String(pageSize)])
+        MockURLProtocol.reset()
+    }
+
+    func testListSendsCategoryAndChipQueryParameters() async {
+        MockURLProtocol.reset()
+        MockURLProtocol.requestHandler = { request in
+            let components = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)
+            let query = Dictionary(
+                uniqueKeysWithValues: (components?.queryItems ?? []).compactMap { item in
+                    item.value.map { (item.name, $0) }
+                }
+            )
+            XCTAssertEqual(request.url?.path, "/v1/exercises")
+            XCTAssertEqual(query["category"], "strength")
+            XCTAssertEqual(query["muscle"], "quadriceps")
+            XCTAssertNil(query["equipment"])
+            XCTAssertEqual(query["limit"], "40")
+            XCTAssertEqual(query["offset"], "40")
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: nil
+            )!
+            return (response, #"{"exercises":[],"count":0}"#.data(using: .utf8)!)
+        }
+        let client = BuilderV3ExerciseSearchClient(
+            apiService: APIService(session: MockURLProtocol.mockSession()),
+            useFixtures: false
+        )
+
+        let result = await client.list(
+            category: "strength",
+            muscle: "quadriceps",
+            equipment: nil,
+            limit: 40,
+            offset: 40
+        )
+
+        XCTAssertEqual(result.mode, .live)
+        XCTAssertTrue(result.items.isEmpty)
+        MockURLProtocol.reset()
+    }
 }
