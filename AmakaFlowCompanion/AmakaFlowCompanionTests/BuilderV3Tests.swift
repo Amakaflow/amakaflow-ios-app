@@ -361,6 +361,39 @@ final class BuilderV3Tests: XCTestCase {
         MockURLProtocol.reset()
     }
 
+    func testLiveListDropsRowsWithoutStableId() async {
+        MockURLProtocol.reset()
+        MockURLProtocol.setResponse(
+            data: #"""
+            {
+              "exercises": [
+                {"name": "No Id Row", "primaryMuscles": ["chest"], "equipment": ["barbell"]},
+                {"id": "bench-press", "name": "Bench Press", "primaryMuscles": ["chest"], "equipment": ["barbell"]},
+                {"id": "  ", "name": "Blank Id", "primaryMuscles": ["chest"]}
+              ],
+              "count": 3
+            }
+            """#.data(using: .utf8)!
+        )
+        let client = BuilderV3ExerciseSearchClient(
+            apiService: APIService(session: MockURLProtocol.mockSession()),
+            useFixtures: false
+        )
+
+        let result = await client.list(
+            category: "strength",
+            muscle: nil,
+            equipment: nil,
+            limit: 40,
+            offset: 0
+        )
+
+        XCTAssertEqual(result.mode, .live)
+        XCTAssertEqual(result.items.map(\.id), ["bench-press"])
+        XCTAssertEqual(result.items.map(\.name), ["Bench Press"])
+        MockURLProtocol.reset()
+    }
+
     func testListSendsCategoryAndChipQueryParameters() async {
         MockURLProtocol.reset()
         MockURLProtocol.requestHandler = { request in

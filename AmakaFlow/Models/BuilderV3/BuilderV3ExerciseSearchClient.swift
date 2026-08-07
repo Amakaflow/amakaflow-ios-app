@@ -79,7 +79,7 @@ struct BuilderV3ExerciseSearchClient {
                 decoder: APIService.makeGeneratedDecoder()
             )
             return BuilderV3ExerciseFetchResult(
-                items: response.results.map { Self.mapRow($0) },
+                items: response.results.compactMap { Self.mapRow($0) },
                 mode: .live
             )
         } catch {
@@ -128,7 +128,7 @@ struct BuilderV3ExerciseSearchClient {
                 decoder: APIService.makeGeneratedDecoder()
             )
             return BuilderV3ExerciseFetchResult(
-                items: response.exercises.map { Self.mapRow($0) },
+                items: response.exercises.compactMap { Self.mapRow($0) },
                 mode: .live
             )
         } catch {
@@ -140,7 +140,11 @@ struct BuilderV3ExerciseSearchClient {
         BuilderV3ExerciseLibrary.demo.filter { BuilderV3ExerciseLibrary.matches($0, query: query) }
     }
 
-    private static func mapRow(_ row: BuilderV3ExerciseSearchRow) -> BuilderV3ExerciseItem {
+    /// Rows without a stable catalog `id` are dropped — UUID fallbacks break pagination dedupe.
+    private static func mapRow(_ row: BuilderV3ExerciseSearchRow) -> BuilderV3ExerciseItem? {
+        guard let id = row.id?.trimmingCharacters(in: .whitespacesAndNewlines), !id.isEmpty else {
+            return nil
+        }
         let muscle = row.primaryMuscles?.first
             ?? row.secondaryMuscles?.first
             ?? row.category
@@ -149,7 +153,7 @@ struct BuilderV3ExerciseSearchClient {
         let equipmentLabel = equipmentKey.map(BuilderV3ExerciseLibrary.equipmentFilterLabel)
             ?? "Bodyweight"
         return BuilderV3ExerciseItem(
-            id: row.id ?? UUID().uuidString,
+            id: id,
             name: row.name,
             muscle: muscle,
             equipmentKey: equipmentKey,
