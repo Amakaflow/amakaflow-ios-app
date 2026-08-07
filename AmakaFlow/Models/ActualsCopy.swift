@@ -55,6 +55,35 @@ enum ActualsCopy {
     static let syncPullingSub = "PULLING YOUR LAST 30 DAYS…"
     static let syncCounterAccessibilityID = "af_actuals_sync_counter"
 
+    // MARK: - Merge ask / merged detail (screens-actuals2.jsx)
+
+    static let mergeAskTitle = "Same session?"
+    static let mergeAskBody =
+        "These two overlap — started close together, similar distance. We don't merge without you when it's not certain."
+    static let mergeAskConfirmCTA = "Merge — it's one session"
+    static let mergeAskKeepBothCTA = "Keep both"
+    static let mergeAskFooter =
+        "CERTAIN DUPLICATES (SAME WINDOW ± 2 MIN, SAME SHAPE) MERGE AUTOMATICALLY — YOU'LL SEE “MERGED · N SOURCES” ON THE CARD."
+    static let mergeAskAccessibilityID = "af_actuals_merge_ask"
+    static let mergeAskMergeAccessibilityID = "af_actuals_merge_ask_merge"
+    static let mergeAskKeepAccessibilityID = "af_actuals_merge_ask_keep"
+
+    static let mergedHeadline = "One session, three recordings"
+    static let mergedBody =
+        "Apple Watch, Garmin and Strava all caught this. We merged them — it counts once, and each stat comes from whoever measured it best."
+    static let mergedRecordingsHeader = "THE THREE RECORDINGS — WHAT EACH CONTRIBUTED"
+    static let mergedSplitCTA = "Not the same? Split"
+    static let mergedFillInCTA = "Fill in actuals ›"
+    static let mergedSplitAccessibilityID = "af_actuals_merged_split"
+
+    static func recordingRoleLabel(_ role: ActualsRecordingRole, detail: String) -> String {
+        switch role {
+        case .primary: return "PRIMARY · \(detail)"
+        case .attached: return "ATTACHED · \(detail)"
+        case .hidden: return "DUPLICATE · HIDDEN — NOTHING COUNTED TWICE"
+        }
+    }
+
     // MARK: - Apple Health primer (screens-actuals3.jsx SYAppleFlowScreen)
 
     static let appleHealthTitle = "Apple Health"
