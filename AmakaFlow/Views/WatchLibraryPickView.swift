@@ -103,6 +103,7 @@ struct WatchLibraryPickView: View {
             }
         }
         .navigationBarHidden(true)
+        .ddSuppressFloatingChrome()
         .task { await viewModel.load() }
         .accessibilityIdentifier("af_watch_library_pick")
     }

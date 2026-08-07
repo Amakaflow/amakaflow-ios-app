@@ -311,6 +311,22 @@ final class AppleStartHandoffService {
 
     /// Schedule a previously prepared mapper plan JSON.
     func confirmSchedule(workoutName: String, planJSON: Data, meta: WorkoutKitPlanMeta) async -> AppleStartHandoffResult {
+        // Serialize confirms so a double-tap cannot race two saves before
+        // same-title incomplete replacement runs (stacked duplicates).
+        await AppleScheduleConfirmGate.shared.run {
+            await self.confirmScheduleUnlocked(
+                workoutName: workoutName,
+                planJSON: planJSON,
+                meta: meta
+            )
+        }
+    }
+
+    private func confirmScheduleUnlocked(
+        workoutName: String,
+        planJSON: Data,
+        meta: WorkoutKitPlanMeta
+    ) async -> AppleStartHandoffResult {
         guard let workoutKitSaver else {
             return AppleStartHandoffResult(
                 kind: .blocked,
@@ -318,7 +334,8 @@ final class AppleStartHandoffService {
             )
         }
         do {
-            // AMA-2367 — discover replacements first; remove only after a successful save.
+            // Same display name → replace incomplete plans. Intentional copies
+            // (`Name (1)`) only match that exact title, so they can coexist.
             var replacements: [WorkoutScheduleRow] = []
             if let incompleteScheduleReplacer {
                 replacements = try await incompleteScheduleReplacer.findIncompletePlans(
@@ -370,5 +387,30 @@ final class AppleStartHandoffService {
             planJSON: planJSON,
             meta: meta
         )
+    }
+}
+
+/// Serializes Apple WorkoutKit schedule confirms on the main actor.
+/// MainActor alone is not enough — concurrent Tasks interleave at `await` points.
+@MainActor
+final class AppleScheduleConfirmGate {
+    static let shared = AppleScheduleConfirmGate()
+    private var isBusy = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func run<T>(_ operation: () async -> T) async -> T {
+        while isBusy {
+            await withCheckedContinuation { continuation in
+                waiters.append(continuation)
+            }
+        }
+        isBusy = true
+        defer {
+            isBusy = false
+            if !waiters.isEmpty {
+                waiters.removeFirst().resume()
+            }
+        }
+        return await operation()
     }
 }

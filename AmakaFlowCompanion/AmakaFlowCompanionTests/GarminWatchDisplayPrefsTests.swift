@@ -133,7 +133,7 @@ final class GarminStartHandoffPrefsTests: XCTestCase {
             Components.Schemas.WatchResendResult(deliveryIds: ["d1"], success: true)
         )
         let service = GarminStartHandoffService(apiService: api, forceFailureCode: { nil })
-        _ = await service.push(workoutId: "wk-1", gymTitle: "Gym")
+        _ = await service.push(workoutId: "wk-1", workoutName: "Lab workout", gymTitle: "Gym")
         XCTAssertTrue(api.pushWatchDeliveryCalled)
         XCTAssertEqual(api.lastPushWatchDeliveryPrefs?.exerciseEnd, .timedHoldsOnly)
         XCTAssertEqual(api.lastPushWatchDeliveryPrefs?.restMode, .omit)

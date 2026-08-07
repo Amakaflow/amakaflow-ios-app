@@ -63,27 +63,27 @@ enum GarminStartHandoffCopy {
         }
     }
 
-    static func successMessage(state: Components.Schemas.WatchDeliveryState?, gymTitle: String) -> GarminStartHandoffResult {
+    static func successMessage(state: Components.Schemas.WatchDeliveryState?, workoutName: String) -> GarminStartHandoffResult {
         switch state {
         case .confirmedOnDevice:
             return GarminStartHandoffResult(
                 kind: .readyOnWatch,
-                message: "Ready on watch — open native player (\(gymTitle))."
+                message: "Ready on watch — open native player (\(workoutName))."
             )
         case .fetchedByWidget:
             return GarminStartHandoffResult(
                 kind: .readyOnWatch,
-                message: "Loaded on watch — confirm in CIQ widget to start (\(gymTitle))."
+                message: "Loaded on watch — confirm in CIQ widget to start (\(workoutName))."
             )
         case .pushed:
             return GarminStartHandoffResult(
                 kind: .sent,
-                message: "Sent to Garmin — open AmakaFlow CIQ widget to download (\(gymTitle))."
+                message: "Sent to Garmin — open AmakaFlow CIQ widget to download (\(workoutName))."
             )
         case .generated, .failed, .none:
             return GarminStartHandoffResult(
                 kind: .queued,
-                message: "Queued for Garmin — open CIQ widget when prompt appears (\(gymTitle))."
+                message: "Queued for Garmin — open CIQ widget when prompt appears (\(workoutName))."
             )
         }
     }
@@ -162,7 +162,7 @@ final class GarminStartHandoffService {
         }
     }
 
-    func push(workoutId: String, gymTitle: String) async -> GarminStartHandoffResult {
+    func push(workoutId: String, workoutName: String, gymTitle: String) async -> GarminStartHandoffResult {
         if let forced = forceFailureCode?() {
             return finish(
                 workoutId: workoutId,
@@ -173,6 +173,9 @@ final class GarminStartHandoffService {
             )
         }
 
+        let displayTitle = workoutName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? gymTitle
+            : workoutName
         let prefs = GarminWatchDisplayPrefsStore.current
         handoffStore.begin(workoutId: workoutId, gymTitle: gymTitle)
         GarminHandoffTelemetry.pushStarted(
@@ -196,17 +199,20 @@ final class GarminStartHandoffService {
                 )
             }
 
-            // Best-effort status enrich; push success alone is enough for queued/sent UX.
-            GarminWatchQueueStore.shared.recordPush(workoutID: workoutId, title: gymTitle)
+            // Queue row title is the workout name — never the gym profile.
+            GarminWatchQueueStore.shared.recordPush(
+                workoutID: workoutId,
+                title: displayTitle
+            )
             if let status = try? await apiService.watchDeliveryStatus(workoutId: workoutId) {
                 return finish(
                     workoutId: workoutId,
-                    result: GarminStartHandoffCopy.successMessage(state: status.state, gymTitle: gymTitle)
+                    result: GarminStartHandoffCopy.successMessage(state: status.state, workoutName: displayTitle)
                 )
             }
             return finish(
                 workoutId: workoutId,
-                result: GarminStartHandoffCopy.successMessage(state: .pushed, gymTitle: gymTitle)
+                result: GarminStartHandoffCopy.successMessage(state: .pushed, workoutName: displayTitle)
             )
         } catch {
             let code = GarminStartHandoffCopy.failureCode(fromAPIError: error)

@@ -63,12 +63,18 @@ final class GarminStartHandoffCopyTests: XCTestCase {
     }
 
     func testSuccessMessageForPushedIsNotStub() {
-        let result = GarminStartHandoffCopy.successMessage(state: .pushed, gymTitle: "Home gym")
+        let result = GarminStartHandoffCopy.successMessage(state: .pushed, workoutName: "Engine EMOM")
         XCTAssertEqual(result.kind, .sent)
         XCTAssertTrue(result.message.localizedCaseInsensitiveContains("sent"))
-        XCTAssertTrue(result.message.contains("Home gym"))
+        XCTAssertTrue(result.message.contains("Engine EMOM"))
+        XCTAssertFalse(result.message.localizedCaseInsensitiveContains("Home gym"))
         XCTAssertFalse(result.message.localizedCaseInsensitiveContains("AMA-2286"))
         XCTAssertFalse(result.message.localizedCaseInsensitiveContains("stub"))
+    }
+
+    func testSuccessMessageUsesWorkoutNameNotGym() {
+        let result = GarminStartHandoffCopy.successMessage(state: .pushed, workoutName: "For time x 5")
+        XCTAssertTrue(result.message.contains("For time x 5"))
     }
 }
 
@@ -101,7 +107,7 @@ final class GarminStartHandoffServiceTests: XCTestCase {
         )
 
         let service = GarminStartHandoffService(apiService: api, forceFailureCode: { nil })
-        let result = await service.push(workoutId: "wk-strength", gymTitle: "Home gym")
+        let result = await service.push(workoutId: "wk-strength", workoutName: "Strength A", gymTitle: "Home gym")
 
         XCTAssertTrue(api.pushWatchDeliveryCalled)
         XCTAssertEqual(api.lastPushWatchDeliveryWorkoutId, "wk-strength")
@@ -109,6 +115,8 @@ final class GarminStartHandoffServiceTests: XCTestCase {
         XCTAssertEqual(api.lastWatchDeliveryWorkoutId, "wk-strength")
         XCTAssertEqual(result.kind, .sent)
         XCTAssertFalse(result.message.localizedCaseInsensitiveContains("stub"))
+        XCTAssertTrue(result.message.contains("Strength A"))
+        XCTAssertFalse(result.message.localizedCaseInsensitiveContains("Home gym"))
         XCTAssertTrue(result.message.localizedCaseInsensitiveContains("garmin")
             || result.message.localizedCaseInsensitiveContains("sent"))
     }
@@ -118,7 +126,7 @@ final class GarminStartHandoffServiceTests: XCTestCase {
             apiService: api,
             forceFailureCode: { .notPaired }
         )
-        let result = await service.push(workoutId: "wk-1", gymTitle: "Home gym")
+        let result = await service.push(workoutId: "wk-1", workoutName: "Engine EMOM", gymTitle: "Home gym")
 
         XCTAssertFalse(api.pushWatchDeliveryCalled)
         XCTAssertEqual(result.kind, .failed)
@@ -131,7 +139,7 @@ final class GarminStartHandoffServiceTests: XCTestCase {
         )
 
         let service = GarminStartHandoffService(apiService: api, forceFailureCode: { nil })
-        let result = await service.push(workoutId: "wk-empty", gymTitle: "Home gym")
+        let result = await service.push(workoutId: "wk-empty", workoutName: "Empty", gymTitle: "Home gym")
 
         XCTAssertEqual(result.kind, .failed)
         XCTAssertTrue(result.message.localizedCaseInsensitiveContains("exercise"))

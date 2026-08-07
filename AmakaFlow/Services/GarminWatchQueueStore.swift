@@ -47,6 +47,12 @@ final class GarminWatchQueueStore: GarminWatchQueueStoring, @unchecked Sendable 
         defer { lock.unlock() }
         var items = loadUnlocked()
         items.removeAll { $0.workoutID == workoutID }
+        // Same display name → one queue slot unless the title is an intentional copy.
+        if !WatchWorkoutTitlePolicy.isIntentionalCopy(title) {
+            items.removeAll {
+                WatchWorkoutTitlePolicy.isSameScheduledTitle($0.title, title)
+            }
+        }
         items.insert(
             GarminWatchQueueEntry(workoutID: workoutID, title: title, updatedAt: Date()),
             at: 0
