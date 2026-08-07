@@ -70,13 +70,13 @@ struct AppleWatchScheduledListView: View {
                 }
                 listBody
             }
-
-            VStack {
-                Spacer()
-                footerCTA
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 28)
-            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            footerCTA
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
+                .background(DailyDriver.screenBackground.opacity(0.001))
         }
         .navigationBarHidden(true)
         .ddSuppressFloatingChrome()
@@ -244,7 +244,7 @@ struct AppleWatchScheduledListView: View {
             }
             .padding(.horizontal, 18)
             .padding(.top, 12)
-            .padding(.bottom, 150)
+            .padding(.bottom, 24)
         }
         .refreshable { await viewModel.refresh(mode: .manual) }
     }
@@ -259,6 +259,7 @@ struct AppleWatchScheduledListView: View {
                     watchItemRow = row
                 } label: {
                     rowCardContent(row)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
