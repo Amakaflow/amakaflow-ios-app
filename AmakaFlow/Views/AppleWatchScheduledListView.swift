@@ -15,7 +15,9 @@ struct AppleWatchScheduledListView: View {
     @State private var showRemoveAllConfirm = false
     @State private var moveTarget: WorkoutScheduleRow?
     @State private var moveDate = Date()
+    @State private var watchItemRow: WorkoutScheduleRow?
     var onScheduleFromLibrary: (() -> Void)?
+    var onOpenWorkoutFromWatchItem: ((String) -> Void)?
 
     private let calendar: Calendar
 
@@ -82,6 +84,33 @@ struct AppleWatchScheduledListView: View {
         }
         .sheet(item: $moveTarget) { row in
             moveSheet(for: row)
+        }
+        .sheet(item: $watchItemRow) { row in
+            WatchItemSheet(
+                viewModel: WatchItemViewModel.apple(row: row, calendar: calendar),
+                onRemove: {
+                    let target = row
+                    watchItemRow = nil
+                    Task {
+                        await viewModel.delete(row: target)
+                        DDToastCenter.shared.undo(
+                            DDToastCopy.removedFromWatch,
+                            sub: DDToastCopy.libraryUntouched
+                        ) {}
+                    }
+                },
+                onOpenWorkout: {
+                    watchItemRow = nil
+                    onOpenWorkoutFromWatchItem?(row.id.planID)
+                },
+                onSeeSteps: {
+                    // Task 5: read-only preview. Toast placeholder for now.
+                    DDToastCenter.shared.device("Opens the read-only step preview — not the editor")
+                }
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(DailyDriver.screenBackground)
         }
         .confirmationDialog(
             OnYourWatchesCopy.appleRemoveAllTitle,
@@ -216,6 +245,22 @@ struct AppleWatchScheduledListView: View {
     }
 
     private func rowCard(_ row: WorkoutScheduleRow) -> some View {
+        Group {
+            if viewModel.isEditing {
+                rowCardContent(row)
+            } else {
+                Button {
+                    watchItemRow = row
+                } label: {
+                    rowCardContent(row)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .accessibilityIdentifier("af_apple_scheduled_row_\(row.id.planID)")
+    }
+
+    private func rowCardContent(_ row: WorkoutScheduleRow) -> some View {
         HStack(spacing: 11) {
             if viewModel.isEditing {
                 Button {
@@ -273,7 +318,6 @@ struct AppleWatchScheduledListView: View {
                 .stroke(DailyDriver.border, lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .accessibilityIdentifier("af_apple_scheduled_row_\(row.id.planID)")
     }
 
     private var footerCTA: some View {

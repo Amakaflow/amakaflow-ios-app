@@ -10,17 +10,21 @@ import SwiftUI
 struct GarminWatchQueueView: View {
     @StateObject private var viewModel: GarminWatchQueueViewModel
     @State private var didLoad = false
+    @State private var watchItem: GarminQueueItem?
     var onPushFromLibrary: (() -> Void)?
     var onFix: ((GarminQueueItem) -> Void)?
+    var onOpenWorkoutFromWatchItem: ((String) -> Void)?
 
     init(
         viewModel: GarminWatchQueueViewModel? = nil,
         onPushFromLibrary: (() -> Void)? = nil,
-        onFix: ((GarminQueueItem) -> Void)? = nil
+        onFix: ((GarminQueueItem) -> Void)? = nil,
+        onOpenWorkoutFromWatchItem: ((String) -> Void)? = nil
     ) {
         _viewModel = StateObject(wrappedValue: viewModel ?? GarminWatchQueueViewModel())
         self.onPushFromLibrary = onPushFromLibrary
         self.onFix = onFix
+        self.onOpenWorkoutFromWatchItem = onOpenWorkoutFromWatchItem
     }
 
     var body: some View {
@@ -84,6 +88,32 @@ struct GarminWatchQueueView: View {
             didLoad = true
             await viewModel.refresh()
         }
+        .sheet(item: $watchItem) { item in
+            WatchItemSheet(
+                viewModel: WatchItemViewModel.garmin(item: item),
+                onRemove: {
+                    let target = item
+                    watchItem = nil
+                    Task {
+                        await viewModel.remove(item: target)
+                        DDToastCenter.shared.undo(
+                            DDToastCopy.removedFromWatch,
+                            sub: DDToastCopy.libraryUntouched
+                        ) {}
+                    }
+                },
+                onOpenWorkout: {
+                    watchItem = nil
+                    onOpenWorkoutFromWatchItem?(item.workoutID)
+                },
+                onSeeSteps: {
+                    DDToastCenter.shared.device("Opens the read-only step preview — not the editor")
+                }
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(DailyDriver.screenBackground)
+        }
     }
 
     private var header: some View {
@@ -110,52 +140,26 @@ struct GarminWatchQueueView: View {
 
     private func queueRow(_ item: GarminQueueItem) -> some View {
         HStack(spacing: 12) {
-            statusIcon(for: item.state)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(item.title)
-                    .ddDisplayText(13.5, weight: .bold)
-                    .foregroundColor(DailyDriver.foreground)
-                    .lineLimit(1)
-                Text(item.statusLine)
-                    .font(.system(size: 8.5, weight: .medium, design: .monospaced))
-                    .foregroundColor(statusColor(for: item.state))
-                    .lineLimit(2)
-            }
-
-            Spacer(minLength: 0)
-
             if item.state == .failed {
-                HStack(spacing: 8) {
-                    Button {
-                        onFix?(item)
-                    } label: {
-                        Text(OnYourWatchesCopy.garminFix)
-                            .ddDisplayText(12, weight: .bold)
-                            .foregroundColor(DailyDriver.amber)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .background(DailyDriver.card2)
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("af_garmin_queue_fix_\(item.id)")
-
-                    Button {
-                        Task { await viewModel.remove(item: item) }
-                    } label: {
-                        Text(OnYourWatchesCopy.garminRemove)
-                            .ddDisplayText(12, weight: .bold)
-                            .foregroundColor(DailyDriver.foregroundMuted)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .background(DailyDriver.card2)
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("af_garmin_queue_remove_\(item.id)")
-                }
+                statusIcon(for: item.state)
+                titleBlock(item)
+                Spacer(minLength: 0)
+                failedActions(item)
             } else {
+                Button {
+                    watchItem = item
+                } label: {
+                    HStack(spacing: 12) {
+                        statusIcon(for: item.state)
+                        titleBlock(item)
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(DailyDriver.foregroundDim)
+                    }
+                }
+                .buttonStyle(.plain)
+
                 Button {
                     Task { await viewModel.remove(item: item) }
                 } label: {
@@ -185,6 +189,51 @@ struct GarminWatchQueueView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .accessibilityIdentifier("af_garmin_queue_row_\(item.id)")
+    }
+
+    private func titleBlock(_ item: GarminQueueItem) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(item.title)
+                .ddDisplayText(13.5, weight: .bold)
+                .foregroundColor(DailyDriver.foreground)
+                .lineLimit(1)
+            Text(item.statusLine)
+                .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                .foregroundColor(statusColor(for: item.state))
+                .lineLimit(2)
+        }
+    }
+
+    private func failedActions(_ item: GarminQueueItem) -> some View {
+        HStack(spacing: 8) {
+            Button {
+                onFix?(item)
+            } label: {
+                Text(OnYourWatchesCopy.garminFix)
+                    .ddDisplayText(12, weight: .bold)
+                    .foregroundColor(DailyDriver.amber)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(DailyDriver.card2)
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("af_garmin_queue_fix_\(item.id)")
+
+            Button {
+                Task { await viewModel.remove(item: item) }
+            } label: {
+                Text(OnYourWatchesCopy.garminRemove)
+                    .ddDisplayText(12, weight: .bold)
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(DailyDriver.card2)
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("af_garmin_queue_remove_\(item.id)")
+        }
     }
 
     private func statusIcon(for state: GarminQueueItemState) -> some View {
