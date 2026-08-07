@@ -106,7 +106,11 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
             Spacer(minLength: 8)
 
             if connected {
-                Text(ActualsCopy.connectedBadge)
+                Text(
+                    store.isFreshlyLinked(provider)
+                        ? ActualsCopy.linkedJustNowBadge
+                        : ActualsCopy.connectedBadge
+                )
                     .font(.system(size: 9, design: .monospaced))
                     .foregroundColor(DailyDriver.lime)
                     .fixedSize()

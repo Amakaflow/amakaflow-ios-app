@@ -38,6 +38,9 @@ final class ActualsSourceConnectionStore: ObservableObject, ActualsSourceConnect
 
     @Published private(set) var connectedProviders: Set<ActualsSourceProvider>
 
+    /// Providers linked in this process — drives `LINKED ✓ JUST NOW` badge.
+    @Published private(set) var freshlyLinkedProviders: Set<ActualsSourceProvider> = []
+
     var hasAnySourceConnected: Bool { !connectedProviders.isEmpty }
 
     private(set) var hasEverConnected: Bool
@@ -55,8 +58,13 @@ final class ActualsSourceConnectionStore: ObservableObject, ActualsSourceConnect
         connectedProviders.contains(provider)
     }
 
+    func isFreshlyLinked(_ provider: ActualsSourceProvider) -> Bool {
+        freshlyLinkedProviders.contains(provider)
+    }
+
     func markConnected(_ provider: ActualsSourceProvider) {
         connectedProviders.insert(provider)
+        freshlyLinkedProviders.insert(provider)
         hasEverConnected = true
         defaults.set(true, forKey: Keys.everConnected)
         persistConnected()
@@ -64,7 +72,12 @@ final class ActualsSourceConnectionStore: ObservableObject, ActualsSourceConnect
 
     func markDisconnected(_ provider: ActualsSourceProvider) {
         connectedProviders.remove(provider)
+        freshlyLinkedProviders.remove(provider)
         persistConnected()
+    }
+
+    func clearFreshLink(_ provider: ActualsSourceProvider) {
+        freshlyLinkedProviders.remove(provider)
     }
 
     private func persistConnected() {

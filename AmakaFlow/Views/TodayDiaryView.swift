@@ -13,6 +13,7 @@ struct TodayDiaryView: View {
     @StateObject private var historyViewModel = ActivityHistoryViewModel()
     @ObservedObject private var watchConnectivity = WatchConnectivityManager.shared
     @StateObject private var actualsSources = ActualsSourceConnectionStore()
+    @StateObject private var actualsSyncProgress = ActualsSyncProgressStore()
     @State private var selectedCompletionId: String?
     @State private var scrubberSelectedIndex = 0
     @State private var showConnectSources = false
@@ -53,6 +54,11 @@ struct TodayDiaryView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
+                        if let progress = actualsSyncProgress.progress, progress.shouldShowBanner {
+                            ActualsSyncCounterBanner(progress: progress)
+                                .padding(.bottom, 12)
+                        }
+
                         if historyViewModel.isLoading && historyViewModel.completions.isEmpty {
                             loadingState
                         } else if showsActualsTeachCard {

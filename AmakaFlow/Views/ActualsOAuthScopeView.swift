@@ -175,6 +175,9 @@ struct ActualsOAuthScopeView<Store: ActualsSourceConnecting>: View where Store: 
             // Stub today; real ASWebAuthenticationSession + BFF later.
             let outcome = await auth.authorize(provider)
             ActualsProviderAuthAction.apply(outcome: outcome, provider: provider, store: store)
+            if outcome == .success {
+                ActualsLinkFeedback.announceLinked(provider)
+            }
             isWorking = false
             onFinished()
             dismiss()

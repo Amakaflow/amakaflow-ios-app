@@ -134,6 +134,9 @@ struct ActualsAppleHealthPrimerView<Store: ActualsSourceConnecting>: View where 
                 store: store,
                 openSettings: { healthKit.openHealthSettings() }
             )
+            if outcome == .granted {
+                ActualsLinkFeedback.announceLinked(.appleHealth)
+            }
             isRequesting = false
             switch outcome {
             case .granted, .denied:

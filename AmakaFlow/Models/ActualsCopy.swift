@@ -46,7 +46,14 @@ enum ActualsCopy {
     }
 
     static let connectedBadge = "CONNECTED ✓"
+    /// Freshly linked this session (screens-actuals3.jsx SYLinkedScreen).
+    static let linkedJustNowBadge = "LINKED ✓ JUST NOW"
     static let connectButton = "Connect"
+
+    // MARK: - Sync / backfill (ACTUALS.md §5)
+
+    static let syncPullingSub = "PULLING YOUR LAST 30 DAYS…"
+    static let syncCounterAccessibilityID = "af_actuals_sync_counter"
 
     // MARK: - Apple Health primer (screens-actuals3.jsx SYAppleFlowScreen)
 
