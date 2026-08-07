@@ -39,7 +39,19 @@ enum BuilderV3ExerciseFetchMode: Equatable, Sendable {
 
 struct BuilderV3ExerciseFetchResult: Equatable, Sendable {
     var items: [BuilderV3ExerciseItem]
+    /// Server rows before ID filtering — pagination must advance by this count.
+    var receivedRowCount: Int
     var mode: BuilderV3ExerciseFetchMode
+
+    init(
+        items: [BuilderV3ExerciseItem],
+        receivedRowCount: Int? = nil,
+        mode: BuilderV3ExerciseFetchMode
+    ) {
+        self.items = items
+        self.receivedRowCount = receivedRowCount ?? items.count
+        self.mode = mode
+    }
 }
 
 struct BuilderV3ExerciseSearchClient {
@@ -78,8 +90,10 @@ struct BuilderV3ExerciseSearchClient {
                 decode: BuilderV3ExerciseSearchResponse.self,
                 decoder: APIService.makeGeneratedDecoder()
             )
+            let rows = response.results
             return BuilderV3ExerciseFetchResult(
-                items: response.results.compactMap { Self.mapRow($0) },
+                items: rows.compactMap { Self.mapRow($0) },
+                receivedRowCount: rows.count,
                 mode: .live
             )
         } catch {
@@ -127,8 +141,10 @@ struct BuilderV3ExerciseSearchClient {
                 decode: BuilderV3ExerciseListResponse.self,
                 decoder: APIService.makeGeneratedDecoder()
             )
+            let rows = response.exercises
             return BuilderV3ExerciseFetchResult(
-                items: response.exercises.compactMap { Self.mapRow($0) },
+                items: rows.compactMap { Self.mapRow($0) },
+                receivedRowCount: rows.count,
                 mode: .live
             )
         } catch {

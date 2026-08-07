@@ -120,22 +120,23 @@ enum BuilderV3ExerciseLibrary {
         ("Bike", "stationary_bike"), ("Stairs", "stair_climber")
     ]
 
+    private static let equipmentLabels: [String: String] = [
+        "barbell": "Barbell",
+        "dumbbells": "Dumbbells",
+        "kettlebells": "Kettlebell",
+        "cable": "Cable",
+        "machine": "Machine",
+        "bodyweight": "Bodyweight",
+        "ski_erg": "Ski Erg",
+        "treadmill": "Treadmill",
+        "rowing_machine": "Rower",
+        "assault_bike": "Assault bike",
+        "stationary_bike": "Stationary bike",
+        "stair_climber": "Stair climber",
+    ]
+
     nonisolated static func equipmentFilterLabel(_ key: String) -> String {
-        switch key {
-        case "barbell": return "Barbell"
-        case "dumbbells": return "Dumbbells"
-        case "kettlebells": return "Kettlebell"
-        case "cable": return "Cable"
-        case "machine": return "Machine"
-        case "bodyweight": return "Bodyweight"
-        case "ski_erg": return "Ski Erg"
-        case "treadmill": return "Treadmill"
-        case "rowing_machine": return "Rower"
-        case "assault_bike": return "Assault bike"
-        case "stationary_bike": return "Stationary bike"
-        case "stair_climber": return "Stair climber"
-        default: return key.capitalized
-        }
+        equipmentLabels[key] ?? key.capitalized
     }
 
     static func fixtureItems(category: String, muscle: String?, equipment: String?) -> [BuilderV3ExerciseItem] {

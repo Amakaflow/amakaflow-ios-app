@@ -253,9 +253,9 @@ extension BuilderV3ExercisePickerSheet {
         canLoadMore = (
             trimmedQuery.isEmpty
                 && result.mode == .live
-                && result.items.count == Self.browsePageSize
+                && result.receivedRowCount == Self.browsePageSize
         )
-        nextOffset = result.items.count
+        nextOffset = result.receivedRowCount
         isLoading = false
     }
 
@@ -292,8 +292,8 @@ extension BuilderV3ExercisePickerSheet {
 
         let existingIDs = Set(searchResults.map(\.id))
         searchResults.append(contentsOf: result.items.filter { !existingIDs.contains($0.id) })
-        nextOffset = requestedOffset + result.items.count
-        canLoadMore = result.items.count == Self.browsePageSize
+        nextOffset = requestedOffset + result.receivedRowCount
+        canLoadMore = result.receivedRowCount == Self.browsePageSize
     }
 }
 

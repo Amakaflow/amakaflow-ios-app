@@ -391,6 +391,75 @@ final class BuilderV3Tests: XCTestCase {
         XCTAssertEqual(result.mode, .live)
         XCTAssertEqual(result.items.map(\.id), ["bench-press"])
         XCTAssertEqual(result.items.map(\.name), ["Bench Press"])
+        XCTAssertEqual(result.receivedRowCount, 3)
+        MockURLProtocol.reset()
+    }
+
+    func testLiveListPaginationUsesReceivedRowCountWhenIdsDropped() async {
+        MockURLProtocol.reset()
+        let pageSize = BuilderV3ExercisePickerSheet.browsePageSize
+        var offsets: [String] = []
+        MockURLProtocol.requestHandler = { request in
+            let components = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)
+            let offset = components?.queryItems?.first(where: { $0.name == "offset" })?.value ?? "missing"
+            offsets.append(offset)
+            let rows: [[String: Any]]
+            if offset == "0" {
+                rows = (0..<pageSize).map { index in
+                    if index == 0 {
+                        return ["name": "Missing Id", "primaryMuscles": ["chest"]]
+                    }
+                    return [
+                        "id": "ex-\(index)",
+                        "name": "Exercise \(index)",
+                        "primaryMuscles": ["chest"]
+                    ]
+                }
+            } else {
+                rows = [[
+                    "id": "ex-page-2",
+                    "name": "Page Two",
+                    "primaryMuscles": ["chest"]
+                ]]
+            }
+            let payload: [String: Any] = ["exercises": rows, "count": rows.count]
+            let data = try! JSONSerialization.data(withJSONObject: payload)
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: nil
+            )!
+            return (response, data)
+        }
+
+        let client = BuilderV3ExerciseSearchClient(
+            apiService: APIService(session: MockURLProtocol.mockSession()),
+            useFixtures: false
+        )
+
+        let first = await client.list(
+            category: "strength",
+            muscle: nil,
+            equipment: nil,
+            limit: pageSize,
+            offset: 0
+        )
+        XCTAssertEqual(first.mode, .live)
+        XCTAssertEqual(first.receivedRowCount, pageSize)
+        XCTAssertEqual(first.items.count, pageSize - 1)
+        XCTAssertTrue(first.receivedRowCount == pageSize)
+
+        let second = await client.list(
+            category: "strength",
+            muscle: nil,
+            equipment: nil,
+            limit: pageSize,
+            offset: first.receivedRowCount
+        )
+        XCTAssertEqual(second.mode, .live)
+        XCTAssertEqual(second.items.map(\.id), ["ex-page-2"])
+        XCTAssertEqual(offsets, ["0", String(pageSize)])
         MockURLProtocol.reset()
     }
 
