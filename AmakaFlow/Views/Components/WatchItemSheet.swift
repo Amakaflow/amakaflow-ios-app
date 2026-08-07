@@ -88,11 +88,13 @@ struct WatchItemSheet: View {
 
                 footer
                     .padding(.top, 14)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 28)
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .scrollBounceBehavior(.basedOnSize)
         .background(DailyDriver.screenBackground.ignoresSafeArea())
     }
 
