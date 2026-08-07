@@ -1,4 +1,26 @@
-# WATCHITEM.md — Watch item sheet: edit readiness & replace (AMA-2386)
+# WATCHITEM.md — Watch item sheet: edit readiness & replace (AMA-2386 → **v2: AMA-2388**)
+
+## ⚡ v2 — FIX FIRST (AMA-2388, 2026-08-07) — this supersedes the sheet-body build order below
+
+> Ticket (root causes + full validation): [AMA-2388](https://linear.app/amakaflow/issue/AMA-2388/watch-item-sheet-v2-fix-pr-539-defects-layout-lost-edits-demo-gated)
+> Spec of record: `amakaflow-docs/docs/superpowers/specs/2026-08-07-watch-item-sheet-v2-fix-design.md` (PR #67)
+> Reference source: `reference/screens-watchitem2.jsx` (WJ) · Ground truth: `screenshots/rig-watchitem2-states.jpg`
+> Live rig (panel 1: toggle Cooldown → CTA lights; tap "See the 9 steps"): https://claude.ai/design/p/2ff39626-7f9e-440a-8182-7b19aa44227f?file=hifi%2Frig-watchitem2.html
+
+The v1 sheet shipped in PR #539 fails dogfood. Four verified root causes — fix ALL of them, do not band-aid:
+
+1. **`FlowWrappingHStack` doesn't wrap** (`WatchItemSheet.swift`) → pills + See-steps cram one row. Replace the whole snapshot zone with the v2 **ON THE WATCH NOW card**: mono label, real wrapping pill flow, divider, full-width lime `See the N steps` row. Title = one line, `lineLimit(1)` + ellipsis.
+2. **Edits vanish** — `WatchItemViewModel` seeds from `demoConfig`, not the shared AMA-2378 enrichment store. Seed from the workout's REAL prefs + real exercise names; configurator saves persist to the store (survive dismiss, visible in the pre-send sheet, both directions). Demo data only in previews/tests.
+3. **Replace CTA hidden behind `AMA2375_DEMO`** (`isReplaceAvailable`). The pinned action bar renders ALWAYS: `No changes yet` (dim) → `Replace on watch · N changes` (lime+glow) → `Updating on watch…` → `Up to date ✓`, with the apply-note strings from the JSX ("Saved here — the watch still has the old copy until you replace. Same slot, nothing extra."). Demo flags may stub the replace BACKEND, never remove UI.
+4. **Open workout dead-ends** — Apple passes WorkoutKit `planID` into `.unifiedWorkout(workoutID:)` → "Workout unavailable". Persist the source `workoutID` alongside `planID` at schedule time (backfill by title-match); footer becomes the dashed **FROM YOUR LIBRARY** row naming the workout; unlinked → `NOT LINKED TO A LIBRARY WORKOUT`, no navigation. **See steps** is a toast placeholder — build the read-only delivered-steps overlay (band sections + numbered rows, watermark `DELIVERED COPY · READ-ONLY — EDITS BELOW DON'T CHANGE THIS UNTIL YOU REPLACE`) from the AMA-2371 preview data.
+
+Rows changed vs delivered get an amber `EDITED` capsule + amber summary + amber-tinted border; pills never change until a CONFIRMED replace (then `· UPDATED JUST NOW`). New a11y IDs: `af_watchitem_onwatch_card` · `af_watchitem_steps_overlay` · `af_watchitem_row_<row>_edited` · `af_watchitem_library_row` · `af_watchitem_apply_note`. Validation gate lives in the ticket — the on-device repro to pass is David's exact dogfood path: edit Mobility → Save sequence → EDITED chip + `Replace on watch · 1 change` → replace → toast morph → pills update; Open workout renders the real detail. Note #540 already opens the sheet at large detent.
+
+Replace orchestration, toast rules, remove flow, and the Maestro sheet-a11y caveat below are unchanged — the v1 sections stay as the reference for those.
+
+---
+
+# v1 (AMA-2386) — superseded sheet-body layout; orchestration rules still current
 
 > Ticket (full spec + validation): [AMA-2386](https://linear.app/amakaflow/issue/AMA-2386/watch-item-sheet-tap-a-scheduledqueued-workout-to-edit-watch-readiness)
 > Spec of record: `amakaflow-docs/docs/superpowers/specs/2026-08-07-watch-item-sheet-design.md` (PR #65)
