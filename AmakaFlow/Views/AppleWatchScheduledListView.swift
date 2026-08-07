@@ -16,6 +16,7 @@ struct AppleWatchScheduledListView: View {
     @State private var moveTarget: WorkoutScheduleRow?
     @State private var moveDate = Date()
     @State private var watchItemRow: WorkoutScheduleRow?
+    @State private var watchItemDetent: PresentationDetent = .large
     var onScheduleFromLibrary: (() -> Void)?
     var onOpenWorkoutFromWatchItem: ((String) -> Void)?
 
@@ -69,13 +70,13 @@ struct AppleWatchScheduledListView: View {
                 }
                 listBody
             }
-
-            VStack {
-                Spacer()
-                footerCTA
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 28)
-            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            footerCTA
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
+                .background(DailyDriver.screenBackground.opacity(0.001))
         }
         .navigationBarHidden(true)
         .ddSuppressFloatingChrome()
@@ -110,7 +111,9 @@ struct AppleWatchScheduledListView: View {
                     DDToastCenter.shared.device("Opens the read-only step preview — not the editor")
                 }
             )
-            .presentationDetents([.medium, .large])
+            // Same as Make it watch-ready: open large so readiness rows +
+            // nested configurators aren't clipped in a medium detent.
+            .presentationDetents([.large, .medium], selection: $watchItemDetent)
             .presentationDragIndicator(.visible)
             .presentationBackground(DailyDriver.screenBackground)
         }
@@ -241,7 +244,7 @@ struct AppleWatchScheduledListView: View {
             }
             .padding(.horizontal, 18)
             .padding(.top, 12)
-            .padding(.bottom, 150)
+            .padding(.bottom, 24)
         }
         .refreshable { await viewModel.refresh(mode: .manual) }
     }
@@ -252,9 +255,11 @@ struct AppleWatchScheduledListView: View {
                 rowCardContent(row)
             } else {
                 Button {
+                    watchItemDetent = .large
                     watchItemRow = row
                 } label: {
                     rowCardContent(row)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }

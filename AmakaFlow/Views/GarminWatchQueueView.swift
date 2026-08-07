@@ -11,6 +11,7 @@ struct GarminWatchQueueView: View {
     @StateObject private var viewModel: GarminWatchQueueViewModel
     @State private var didLoad = false
     @State private var watchItem: GarminQueueItem?
+    @State private var watchItemDetent: PresentationDetent = .large
     var onPushFromLibrary: (() -> Void)?
     var onFix: ((GarminQueueItem) -> Void)?
     var onOpenWorkoutFromWatchItem: ((String) -> Void)?
@@ -56,30 +57,30 @@ struct GarminWatchQueueView: View {
                     }
                     .padding(.horizontal, 18)
                     .padding(.top, 12)
-                    .padding(.bottom, 150)
+                    .padding(.bottom, 24)
                 }
                 .refreshable { await viewModel.refresh() }
             }
-
-            VStack {
-                Spacer()
-                Button {
-                    onPushFromLibrary?()
-                } label: {
-                    Text(OnYourWatchesCopy.garminPushCTA)
-                        .ddDisplayText(14.5, weight: .bold)
-                        .foregroundColor(DailyDriver.ink)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 15)
-                        .background(DailyDriver.lime)
-                        .clipShape(Capsule())
-                        .ddLimeGlow()
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 28)
-                .accessibilityIdentifier("af_garmin_queue_push_from_library")
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            Button {
+                onPushFromLibrary?()
+            } label: {
+                Text(OnYourWatchesCopy.garminPushCTA)
+                    .ddDisplayText(14.5, weight: .bold)
+                    .foregroundColor(DailyDriver.ink)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 15)
+                    .background(DailyDriver.lime)
+                    .clipShape(Capsule())
+                    .ddLimeGlow()
             }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .padding(.bottom, 12)
+            .background(DailyDriver.screenBackground.opacity(0.001))
+            .accessibilityIdentifier("af_garmin_queue_push_from_library")
         }
         .navigationBarHidden(true)
         .ddSuppressFloatingChrome()
@@ -110,7 +111,9 @@ struct GarminWatchQueueView: View {
                     DDToastCenter.shared.device("Opens the read-only step preview — not the editor")
                 }
             )
-            .presentationDetents([.medium, .large])
+            // Same as Make it watch-ready: open large so readiness rows +
+            // nested configurators aren't clipped in a medium detent.
+            .presentationDetents([.large, .medium], selection: $watchItemDetent)
             .presentationDragIndicator(.visible)
             .presentationBackground(DailyDriver.screenBackground)
         }
@@ -147,6 +150,7 @@ struct GarminWatchQueueView: View {
                 failedActions(item)
             } else {
                 Button {
+                    watchItemDetent = .large
                     watchItem = item
                 } label: {
                     HStack(spacing: 12) {
@@ -157,6 +161,7 @@ struct GarminWatchQueueView: View {
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(DailyDriver.foregroundDim)
                     }
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
 
