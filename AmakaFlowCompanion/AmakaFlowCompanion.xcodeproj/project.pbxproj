@@ -206,6 +206,14 @@
 		AMA2374SECTSBLD01 /* WorkoutKitPlanStepSummary+Sections.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2374SECTSREF01 /* WorkoutKitPlanStepSummary+Sections.swift */; };
 		AMA2374DDBANDBLD1 /* DailyDriverTheme+WatchBands.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2374DDBANDREF1 /* DailyDriverTheme+WatchBands.swift */; };
 		AMA2375COPYBLD /* OnYourWatchesCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375COPYREF /* OnYourWatchesCopy.swift */; };
+		AMA2386COPYBLD /* WatchItemCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2386COPYREF /* WatchItemCopy.swift */; };
+		AMA2386TRCKBLD /* WatchItemChangeTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2386TRCKREF /* WatchItemChangeTracker.swift */; };
+		AMA2386REPLBLD /* WatchItemReplaceCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2386REPLREF /* WatchItemReplaceCoordinator.swift */; };
+		AMA2386VMBLD /* WatchItemViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2386VMREF /* WatchItemViewModel.swift */; };
+		AMA2386SHEETBLD /* WatchItemSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2386SHEETREF /* WatchItemSheet.swift */; };
+		AMA2386COPYTBLD /* WatchItemCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2386COPYTREF /* WatchItemCopyTests.swift */; };
+		AMA2386TRCKTBLD /* WatchItemChangeTrackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2386TRCKTREF /* WatchItemChangeTrackerTests.swift */; };
+		AMA2386REPLTBLD /* WatchItemReplaceCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2386REPLTREF /* WatchItemReplaceCoordinatorTests.swift */; };
 		WATCHTITLEBLD /* WatchWorkoutTitlePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = WATCHTITLEREF /* WatchWorkoutTitlePolicy.swift */; };
 		AMA2375MODLBLD /* OnYourWatchesModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375MODLREF /* OnYourWatchesModels.swift */; };
 		AMA2375QSTRBLD /* GarminWatchQueueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375QSTRREF /* GarminWatchQueueStore.swift */; };
@@ -859,6 +867,14 @@
 		AMA2374SECTSREF01 /* WorkoutKitPlanStepSummary+Sections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutKitPlanStepSummary+Sections.swift"; path = "../AmakaFlow/Models/WorkoutKitPlanStepSummary+Sections.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2374DDBANDREF1 /* DailyDriverTheme+WatchBands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "DailyDriverTheme+WatchBands.swift"; path = "../AmakaFlow/DailyDriverTheme+WatchBands.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2375COPYREF /* OnYourWatchesCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnYourWatchesCopy.swift; path = ../AmakaFlow/Models/OnYourWatchesCopy.swift; sourceTree = SOURCE_ROOT; };
+		AMA2386COPYREF /* WatchItemCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemCopy.swift; path = ../AmakaFlow/Models/WatchItemCopy.swift; sourceTree = SOURCE_ROOT; };
+		AMA2386TRCKREF /* WatchItemChangeTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemChangeTracker.swift; path = ../AmakaFlow/Models/WatchItemChangeTracker.swift; sourceTree = SOURCE_ROOT; };
+		AMA2386REPLREF /* WatchItemReplaceCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemReplaceCoordinator.swift; path = ../AmakaFlow/Services/WatchItemReplaceCoordinator.swift; sourceTree = SOURCE_ROOT; };
+		AMA2386VMREF /* WatchItemViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemViewModel.swift; path = ../AmakaFlow/ViewModels/WatchItemViewModel.swift; sourceTree = SOURCE_ROOT; };
+		AMA2386SHEETREF /* WatchItemSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemSheet.swift; path = ../AmakaFlow/Views/Components/WatchItemSheet.swift; sourceTree = SOURCE_ROOT; };
+		AMA2386COPYTREF /* WatchItemCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemCopyTests.swift; path = AmakaFlowCompanionTests/WatchItemCopyTests.swift; sourceTree = "<group>"; };
+		AMA2386TRCKTREF /* WatchItemChangeTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemChangeTrackerTests.swift; path = AmakaFlowCompanionTests/WatchItemChangeTrackerTests.swift; sourceTree = "<group>"; };
+		AMA2386REPLTREF /* WatchItemReplaceCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemReplaceCoordinatorTests.swift; path = AmakaFlowCompanionTests/WatchItemReplaceCoordinatorTests.swift; sourceTree = "<group>"; };
 		WATCHTITLEREF /* WatchWorkoutTitlePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchWorkoutTitlePolicy.swift; path = ../AmakaFlow/Models/WatchWorkoutTitlePolicy.swift; sourceTree = SOURCE_ROOT; };
 		AMA2375MODLREF /* OnYourWatchesModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnYourWatchesModels.swift; path = ../AmakaFlow/Models/OnYourWatchesModels.swift; sourceTree = SOURCE_ROOT; };
 		AMA2375QSTRREF /* GarminWatchQueueStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchQueueStore.swift; path = ../AmakaFlow/Services/GarminWatchQueueStore.swift; sourceTree = SOURCE_ROOT; };
@@ -1474,7 +1490,10 @@
 				AMA2330SCHMANREF /* WorkoutKitScheduleManaging.swift */,
 				AMA2375QSTRREF /* GarminWatchQueueStore.swift */,
 				AMA2375DEMOREF /* OnYourWatchesDemoSupport.swift */,
+				AMA2386REPLREF /* WatchItemReplaceCoordinator.swift */,
 				AMA2375COPYREF /* OnYourWatchesCopy.swift */,
+				AMA2386COPYREF /* WatchItemCopy.swift */,
+				AMA2386TRCKREF /* WatchItemChangeTracker.swift */,
 				WATCHTITLEREF /* WatchWorkoutTitlePolicy.swift */,
 				AMA2375MODLREF /* OnYourWatchesModels.swift */,
 				AMA2367REPLREF /* IncompleteScheduleReplacing.swift */,
@@ -1647,6 +1666,7 @@
 				AMA2336COORDREF001 /* WorkoutEnrichmentPushCoordinator.swift */,
 				AMA2336PREFVREF001 /* WorkoutEnrichmentPrefsSheet.swift */,
 				AMA2336PUSHVREF001 /* WorkoutEnrichmentPushSheet.swift */,
+				AMA2386SHEETREF /* WatchItemSheet.swift */,
 				AMA2378SEQVREF001 /* EnrichmentSequenceScreen.swift */,
 				AMA2378WPICKREF001 /* EnrichmentWarmupPickScreen.swift */,
 				AMA2378RAMPVREF001 /* EnrichmentRampEditorScreen.swift */,
@@ -1904,6 +1924,7 @@
 				AMA2028WDVM00000000A /* WatchDeliveryViewModel.swift */,
 				AMA2330SCHVMREF /* WorkoutScheduleViewModel.swift */,
 				AMA2375OYVMREF /* OnYourWatchesViewModel.swift */,
+				AMA2386VMREF /* WatchItemViewModel.swift */,
 				AMA2375GQVMREF /* GarminWatchQueueViewModel.swift */,
 				V01C300600000000000000 /* VoiceWorkoutView.swift */,
 				V01C300700000000000000 /* VoiceRecordingView.swift */,
@@ -2027,6 +2048,9 @@
 				AMA2351METATESTREF /* WorkoutKitPlanMetaTests.swift */,
 				AMA2330SCHVMTESTREF /* WorkoutScheduleViewModelTests.swift */,
 				AMA2375OYWTREF /* OnYourWatchesViewModelTests.swift */,
+				AMA2386COPYTREF /* WatchItemCopyTests.swift */,
+				AMA2386TRCKTREF /* WatchItemChangeTrackerTests.swift */,
+				AMA2386REPLTREF /* WatchItemReplaceCoordinatorTests.swift */,
 				AMA2376TESTREF /* WorkoutCollectionsRepositoryTests.swift */,
 				AMA2376CPTESTREF /* CollectionPresentationTests.swift */,
 				AMA2376STORTREF /* LibraryCollectionsStoreTests.swift */,
@@ -2752,6 +2776,11 @@
 				AMA2374SECTSBLD01 /* WorkoutKitPlanStepSummary+Sections.swift in Sources */,
 				AMA2374DDBANDBLD1 /* DailyDriverTheme+WatchBands.swift in Sources */,
 				AMA2375COPYBLD /* OnYourWatchesCopy.swift in Sources */,
+				AMA2386COPYBLD /* WatchItemCopy.swift in Sources */,
+				AMA2386TRCKBLD /* WatchItemChangeTracker.swift in Sources */,
+				AMA2386REPLBLD /* WatchItemReplaceCoordinator.swift in Sources */,
+				AMA2386VMBLD /* WatchItemViewModel.swift in Sources */,
+				AMA2386SHEETBLD /* WatchItemSheet.swift in Sources */,
 				WATCHTITLEBLD /* WatchWorkoutTitlePolicy.swift in Sources */,
 				AMA2375MODLBLD /* OnYourWatchesModels.swift in Sources */,
 				AMA2375QSTRBLD /* GarminWatchQueueStore.swift in Sources */,
@@ -2940,6 +2969,9 @@
 				AMA2351METATESTBLD /* WorkoutKitPlanMetaTests.swift in Sources */,
 				AMA2330SCHVMTESTBUILD /* WorkoutScheduleViewModelTests.swift in Sources */,
 				AMA2375OYWTBLD /* OnYourWatchesViewModelTests.swift in Sources */,
+				AMA2386COPYTBLD /* WatchItemCopyTests.swift in Sources */,
+				AMA2386TRCKTBLD /* WatchItemChangeTrackerTests.swift in Sources */,
+				AMA2386REPLTBLD /* WatchItemReplaceCoordinatorTests.swift in Sources */,
 				AMA2376TESTBLD /* WorkoutCollectionsRepositoryTests.swift in Sources */,
 				AMA2376CPTESTBLD /* CollectionPresentationTests.swift in Sources */,
 				AMA2376STORTBLD /* LibraryCollectionsStoreTests.swift in Sources */,
