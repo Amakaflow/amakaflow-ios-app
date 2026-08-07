@@ -132,7 +132,7 @@ enum BuilderV3ExerciseLibrary {
         "rowing_machine": "Rower",
         "assault_bike": "Assault bike",
         "stationary_bike": "Stationary bike",
-        "stair_climber": "Stair climber",
+        "stair_climber": "Stair climber"
     ]
 
     nonisolated static func equipmentFilterLabel(_ key: String) -> String {
