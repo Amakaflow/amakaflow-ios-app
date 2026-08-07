@@ -30,7 +30,9 @@ Cursor enforcement: `.cursor/rules/design-fidelity.mdc` (auto-attaches on View f
 
 ## Active work queue (2026-07-20) — read this first, Cursor
 
-**2026-08-07 — AMA-2386 Watch item sheet**: implement `WATCHITEM.md` (tap On-your-watches row → readiness sheet → change-gated Replace). Reuse the AMA-2378 configurators + enrichment store — do not fork them. Note the Maestro sheet-a11y blocker in the validation gate.
+**2026-08-07 — AMA-2388 Watch item sheet v2 (FIX — do this before anything else on the sheet)**: PR #539's sheet fails dogfood — non-wrapping pill row, demo-store edits that vanish, Replace CTA hidden behind `AMA2375_DEMO`, Open-workout dead end, See-steps placeholder. Implement the v2 section at the top of `WATCHITEM.md`: one real store (AMA-2378 prefs), always-rendered pinned CTA, ON-THE-WATCH card + read-only steps overlay, planID→workout mapping. Reference `reference/screens-watchitem2.jsx` + `screenshots/rig-watchitem2-states.jpg`.
+
+**2026-08-07 — AMA-2386 Watch item sheet**: shipped in #539/#540; superseded by AMA-2388 above for the sheet body. Orchestration/toast rules in `WATCHITEM.md` v1 sections remain the reference.
 
 **2026-08-05 — AMA-2383 DD Motion v1**: implement `MOTION.md` (build reveal on watch preview / reel import / AI draft + DD Toast replacing the legacy bottom toast). Watch the live rigs linked in MOTION.md before writing any animation code.
 
