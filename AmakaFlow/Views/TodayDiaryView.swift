@@ -12,8 +12,10 @@ import SwiftUI
 struct TodayDiaryView: View {
     @StateObject private var historyViewModel = ActivityHistoryViewModel()
     @ObservedObject private var watchConnectivity = WatchConnectivityManager.shared
+    @StateObject private var actualsSources = ActualsSourceConnectionStore()
     @State private var selectedCompletionId: String?
     @State private var scrubberSelectedIndex = 0
+    @State private var showConnectSources = false
 
     private var today: Date { Date() }
 
@@ -33,6 +35,13 @@ struct TodayDiaryView: View {
         watchConnectivity.isWatchReachable || watchConnectivity.isWatchAppInstalled
     }
 
+    private var showsActualsTeachCard: Bool {
+        ActualsTeachCardVisibility.shouldShow(
+            hasEverConnected: actualsSources.hasEverConnected,
+            todayEmpty: todaysCompletions.isEmpty
+        )
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -46,6 +55,11 @@ struct TodayDiaryView: View {
                     VStack(alignment: .leading, spacing: 0) {
                         if historyViewModel.isLoading && historyViewModel.completions.isEmpty {
                             loadingState
+                        } else if showsActualsTeachCard {
+                            ActualsTeachCard {
+                                showConnectSources = true
+                            }
+                            .padding(.top, 12)
                         } else if todaysCompletions.isEmpty {
                             emptyDiaryState
                         } else {
@@ -71,6 +85,9 @@ struct TodayDiaryView: View {
             }
             .sheet(item: $selectedCompletionId) { completionId in
                 DDActivityDetailView(completionId: completionId)
+            }
+            .navigationDestination(isPresented: $showConnectSources) {
+                ActualsConnectSourcesView(store: actualsSources)
             }
             .overlay(alignment: .top) {
                 Text(" ")
