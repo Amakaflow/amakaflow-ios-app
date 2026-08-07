@@ -120,6 +120,8 @@ extension WorkoutEnrichmentPushSheet {
             .padding(.horizontal, 18)
             .padding(.top, 12)
 
+            // AMA-2385: pin Confirm / Send as-is below the scroll so expanded
+            // Rest (Open/Timed) cannot push the primary CTA off-screen.
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(WorkoutEnrichmentPushCopy.sheetIntroV2)
@@ -134,28 +136,33 @@ extension WorkoutEnrichmentPushSheet {
                         .font(.system(size: 10))
                         .foregroundColor(DailyDriver.foregroundDim)
                         .padding(.top, 2)
-
-                    Button {
-                        onConfirm(decision)
-                    } label: {
-                        Text(WorkoutEnrichmentPushCopy.primaryCTA(checkedCount: checkedKinds.count))
-                    }
-                    .buttonStyle(AFPrimaryButtonStyle(size: .lg))
-                    .accessibilityIdentifier("af_enrichment_push_confirm")
-
-                    Button(action: onSkip) {
-                        Text(WorkoutEnrichmentPushCopy.sendAsIsCTA)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(DailyDriver.foregroundDim)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("af_enrichment_push_skip")
                 }
                 .padding(.horizontal, 18)
                 .padding(.top, 10)
-                .padding(.bottom, 24)
+                .padding(.bottom, 12)
             }
+
+            VStack(spacing: 10) {
+                Button {
+                    onConfirm(decision)
+                } label: {
+                    Text(WorkoutEnrichmentPushCopy.primaryCTA(checkedCount: checkedKinds.count))
+                }
+                .buttonStyle(AFPrimaryButtonStyle(size: .lg))
+                .accessibilityIdentifier("af_enrichment_push_confirm")
+
+                Button(action: onSkip) {
+                    Text(WorkoutEnrichmentPushCopy.sendAsIsCTA)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(DailyDriver.foregroundDim)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_enrichment_push_skip")
+            }
+            .padding(.horizontal, 18)
+            .padding(.top, 4)
+            .padding(.bottom, 24)
         }
         .background(DailyDriver.screenBackground)
         .navigationBarHidden(true)
