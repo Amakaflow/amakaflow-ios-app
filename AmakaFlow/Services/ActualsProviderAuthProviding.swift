@@ -11,6 +11,8 @@ import Foundation
 enum ActualsProviderAuthOutcome: Equatable {
     case success
     case cancelled
+    /// Authorize failed or OAuth is unavailable — stay on the scope screen.
+    case failed
 }
 
 protocol ActualsProviderAuthProviding: AnyObject {
@@ -31,7 +33,7 @@ enum ActualsProviderAuthAction {
         switch outcome {
         case .success:
             store.markConnected(provider)
-        case .cancelled:
+        case .cancelled, .failed:
             break
         }
     }
@@ -40,7 +42,7 @@ enum ActualsProviderAuthAction {
 // MARK: - Stub (no network — UI drives cancel/authorize)
 
 /// Stub auth used until the mobile-BFF OAuth endpoints exist.
-/// Authorize button → `.success` (no network). Cancel never calls this.
+/// DEBUG Authorize → `.success` for dogfood. Release → `.failed` (never fake a link).
 @MainActor
 final class StubActualsProviderAuth: ActualsProviderAuthProviding {
     /// Test override — when set, consumed once on the next `authorize`.
@@ -52,7 +54,11 @@ final class StubActualsProviderAuth: ActualsProviderAuthProviding {
             self.nextOutcome = nil
             return nextOutcome
         }
+        #if DEBUG
         return .success
+        #else
+        return .failed
+        #endif
     }
 }
 

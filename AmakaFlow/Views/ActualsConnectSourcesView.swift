@@ -8,9 +8,6 @@
 
 import SwiftUI
 
-/// Strava brand red — the one non-lime Connect CTA (design-handoff/reference/screens-actuals.jsx).
-private let stravaBrandColor = Color(hex: "FC4C02")
-
 struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Store: ObservableObject {
     @ObservedObject var store: Store
     var onConnect: (ActualsSourceProvider) -> Void
@@ -55,10 +52,18 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
         .preferredColorScheme(.dark)
         .ddSuppressFloatingChrome()
         .navigationDestination(isPresented: $showAppleHealthPrimer) {
-            ActualsAppleHealthPrimerView(store: store, healthKit: healthKit)
+            ActualsAppleHealthPrimerView(store: store, healthKit: healthKit) {
+                onConnect(.appleHealth)
+            }
         }
         .navigationDestination(item: $oauthProvider) { provider in
-            ActualsOAuthScopeView(provider: provider, store: store, auth: providerAuth)
+            ActualsOAuthScopeView(
+                provider: provider,
+                store: store,
+                auth: providerAuth
+            ) {
+                onConnect(provider)
+            }
         }
     }
 
@@ -154,13 +159,13 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
         switch provider {
         case .appleHealth: return DailyDriver.card2
         case .garmin: return DailyDriver.blue
-        case .strava: return stravaBrandColor
+        case .strava: return DailyDriver.stravaBrand
         }
     }
 
     /// Connect CTA background — Strava keeps its brand red; other sources use lime.
     private func connectButtonBackground(for provider: ActualsSourceProvider) -> Color {
-        provider == .strava ? stravaBrandColor : DailyDriver.lime
+        provider == .strava ? DailyDriver.stravaBrand : DailyDriver.lime
     }
 
     private func connectTapped(_ provider: ActualsSourceProvider) {

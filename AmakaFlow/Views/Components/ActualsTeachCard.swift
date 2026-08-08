@@ -40,7 +40,7 @@ struct ActualsTeachCard: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 16)
-                .accessibilityIdentifier("af_actuals_connect_cta")
+                .accessibilityIdentifier(ActualsCopy.teachCTAAccessibilityID)
 
                 Text(ActualsCopy.teachTrustLine)
                     .font(.system(size: 8, design: .monospaced))

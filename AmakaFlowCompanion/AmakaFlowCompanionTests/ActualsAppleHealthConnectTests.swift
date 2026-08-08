@@ -45,7 +45,7 @@ final class ActualsAppleHealthConnectTests: XCTestCase {
         XCTAssertEqual(ActualsCopy.appleHealthReadTypes[0].title, "Workouts")
         XCTAssertEqual(ActualsCopy.appleHealthReadTypes[0].why, "THE SESSIONS THEMSELVES")
         XCTAssertEqual(ActualsCopy.appleHealthReadTypes[1].title, "Heart rate")
-        XCTAssertEqual(ActualsCopy.appleHealthReadTypes[1].why, "EFFORT — FEEDS RPE SUGGESTIONS")
+        XCTAssertEqual(ActualsCopy.appleHealthReadTypes[1].why, "EFFORT — SHOWN ON YOUR SESSION CARDS")
         XCTAssertEqual(ActualsCopy.appleHealthReadTypes[2].title, "Active energy")
         XCTAssertEqual(ActualsCopy.appleHealthReadTypes[2].why, "CALORIES ON YOUR CARDS")
     }
@@ -71,6 +71,24 @@ final class ActualsAppleHealthConnectTests: XCTestCase {
         XCTAssertEqual(outcome, .granted)
         XCTAssertTrue(store.isConnected(.appleHealth))
         XCTAssertFalse(healthKit.didOpenHealthSettings)
+    }
+
+    // MARK: - Prompt completed → stay disconnected
+
+    func testPromptCompletedDoesNotMarkConnected() async {
+        let store = ActualsSourceConnectionStore(defaults: defaults)
+        let healthKit = MockActualsHealthKitConnector(connectOutcomes: [.promptCompleted])
+
+        let outcome = await healthKit.connect()
+        ActualsAppleHealthConnectAction.apply(
+            outcome: outcome,
+            store: store,
+            openSettings: { healthKit.openHealthSettings() }
+        )
+
+        XCTAssertEqual(outcome, .promptCompleted)
+        XCTAssertFalse(store.isConnected(.appleHealth))
+        XCTAssertEqual(healthKit.authorizationState, .promptCompleted)
     }
 
     // MARK: - Deny → stay disconnected

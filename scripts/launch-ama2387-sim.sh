@@ -24,7 +24,7 @@ fi
 # Ensure dedicated sim still exists; recreate if deleted.
 if ! xcrun simctl list devices available | grep -q "$SIM_UDID"; then
   echo "[ama2387] $SIM_NAME ($SIM_UDID) missing — recreating…"
-  RUNTIME=$(xcrun simctl list runtimes | grep -oE 'com\.apple\.CoreSimulator\.SimRuntime\.iOS-[0-9-]+' | head -1)
+  RUNTIME=$(xcrun simctl list runtimes | grep -oE 'com\.apple\.CoreSimulator\.SimRuntime\.iOS-[0-9-]+' | sort -V | tail -1)
   SIM_UDID=$(xcrun simctl create "$SIM_NAME" \
     com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max \
     "$RUNTIME")
@@ -34,6 +34,7 @@ fi
 echo "[ama2387] target sim: $SIM_NAME ($SIM_UDID)"
 echo "[ama2387] booting (leaving other sims alone)…"
 xcrun simctl boot "$SIM_UDID" 2>/dev/null || true
+xcrun simctl bootstatus "$SIM_UDID" -b
 open -a Simulator --args -CurrentDeviceUDID "$SIM_UDID"
 
 if [[ "$NO_BUILD" != "1" ]]; then

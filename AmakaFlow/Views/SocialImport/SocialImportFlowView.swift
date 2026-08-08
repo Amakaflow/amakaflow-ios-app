@@ -342,6 +342,7 @@ struct ImageImportView: View {
     @State private var processingStep = 0
     @State private var parsingController: BuildRevealController?
     @State private var parsingRevealDone = false
+    @State private var didCompleteActualsCapture = false
 
     private var isActualsCapture: Bool { onCaptureComplete != nil }
 
@@ -526,6 +527,8 @@ struct ImageImportView: View {
     }
 
     private func completeActualsCapture(from draft: SocialImportDraft) {
+        guard !didCompleteActualsCapture else { return }
+        didCompleteActualsCapture = true
         guard let onCaptureComplete else {
             onSaved?()
             dismiss()

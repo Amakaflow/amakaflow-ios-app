@@ -314,7 +314,7 @@ struct ActualsFillInView: View {
                 }
             } catch {
                 DDToastCenter.shared.error(
-                    "Couldn't save session",
+                    ActualsCopy.fillInSaveFailedTitle,
                     sub: viewModel.lastSaveError
                 )
             }

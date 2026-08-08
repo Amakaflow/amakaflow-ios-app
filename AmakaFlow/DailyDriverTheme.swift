@@ -37,6 +37,8 @@ enum DailyDriver {
     static let orange = Color(hex: "F4A24A")
     static let purple = Color(hex: "C58AF4")
     static let red = Color(hex: "F4564A")
+    /// Strava brand orange-red (Actuals Connect / provider chips).
+    static let stravaBrand = Color(hex: "FC4C02")
     static let tabBarBackground = Color(red: 16 / 255, green: 16 / 255, blue: 18 / 255).opacity(0.96)
 
     /// Player dock — dd-player-dark.png

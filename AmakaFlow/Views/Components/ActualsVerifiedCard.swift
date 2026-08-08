@@ -56,6 +56,10 @@ extension ExerciseActual {
     }
 
     var planDelta: ExerciseActualPlanDelta {
+        // Sets/reps changes must win over a near-zero weight delta.
+        if actualSets != planned.sets || actualReps != planned.reps {
+            return ExerciseActualPlanDelta(label: ActualsCopy.verifiedAdjustedDelta, isAsPlanned: false)
+        }
         if let plannedKg = planned.weightKg, let actualKg = actualWeightKg {
             let delta = actualKg - plannedKg
             if abs(delta) < 0.05 {
@@ -71,13 +75,8 @@ extension ExerciseActual {
                 isAsPlanned: false
             )
         }
-        if actualSets == planned.sets,
-           actualReps == planned.reps,
-           actualWeightKg == planned.weightKg {
+        if actualWeightKg == planned.weightKg {
             return ExerciseActualPlanDelta(label: ActualsCopy.verifiedAsPlannedDelta, isAsPlanned: true)
-        }
-        if actualSets != planned.sets || actualReps != planned.reps {
-            return ExerciseActualPlanDelta(label: ActualsCopy.verifiedAdjustedDelta, isAsPlanned: false)
         }
         return ExerciseActualPlanDelta(label: ActualsCopy.verifiedAsPlannedDelta, isAsPlanned: true)
     }

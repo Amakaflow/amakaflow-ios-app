@@ -26,7 +26,20 @@ final class ActualsMergeClassifierTests: XCTestCase {
         XCTAssertEqual(ActualsMergeClassifier.classify(a, b), .certain)
     }
 
-    func testCertainWhenExternalRefsMatch() {
+    func testCertainWhenExternalRefsMatchAndShapeAgrees() {
+        let a = recording(
+            id: "s1", provider: .strava, device: .phone,
+            start: base, duration: 1800, distance: 5000, externalRef: "act-99", richness: 2
+        )
+        let b = recording(
+            id: "g1", provider: .garmin, device: .watch,
+            start: base.addingTimeInterval(60), duration: 1780, distance: 4980,
+            externalRef: "act-99", richness: 4
+        )
+        XCTAssertEqual(ActualsMergeClassifier.classify(a, b), .certain)
+    }
+
+    func testNotCertainWhenExternalRefsMatchButFarApart() {
         let a = recording(
             id: "s1", provider: .strava, device: .phone,
             start: base, duration: 1800, externalRef: "act-99", richness: 2
@@ -36,8 +49,20 @@ final class ActualsMergeClassifierTests: XCTestCase {
             start: base.addingTimeInterval(600), duration: 900,
             externalRef: "act-99", richness: 4
         )
-        // Far apart in time — external ref still forces certain.
-        XCTAssertEqual(ActualsMergeClassifier.classify(a, b), .certain)
+        // External ref alone must not force certain without time/shape.
+        XCTAssertNotEqual(ActualsMergeClassifier.classify(a, b), .certain)
+    }
+
+    func testNotCertainWhenStartCloseButShapeDisagrees() {
+        let a = recording(
+            id: "aw", provider: .appleHealth, device: .watch,
+            start: base, duration: 3600, distance: 8000, richness: 5
+        )
+        let b = recording(
+            id: "g", provider: .garmin, device: .watch,
+            start: base.addingTimeInterval(60), duration: 900, distance: 1000, richness: 4
+        )
+        XCTAssertNotEqual(ActualsMergeClassifier.classify(a, b), .certain)
     }
 
     // MARK: - Uncertain

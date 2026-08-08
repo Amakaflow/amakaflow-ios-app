@@ -19,9 +19,22 @@ struct ActualsMapToPlanView: View {
     var onCaptureMatched: (ActualsCaptureDraft, _ alsoSavedToLibrary: Bool) -> Void = { _, _ in }
 
     @Environment(\.dismiss) private var dismiss
-    @State private var showCaptureBuilder = false
-    @State private var showCapturePhoto = false
-    @State private var matchSaveDraft: ActualsCaptureDraft?
+    /// Single cover state so builder/photo → match-save never races two presentations.
+    @State private var capturePresentation: CapturePresentation?
+
+    private enum CapturePresentation: Identifiable, Equatable {
+        case builder
+        case photo
+        case matchSave(ActualsCaptureDraft)
+
+        var id: String {
+            switch self {
+            case .builder: return "builder"
+            case .photo: return "photo"
+            case .matchSave(let draft): return "match-\(draft.id)"
+            }
+        }
+    }
 
     var body: some View {
         ScrollView {
@@ -80,39 +93,32 @@ struct ActualsMapToPlanView: View {
         .background(DailyDriver.screenBackground.ignoresSafeArea())
         .preferredColorScheme(.dark)
         .ddSuppressFloatingChrome()
-        // Item/isPresented covers always have `activity` in scope — no empty if-let.
-        .fullScreenCover(isPresented: $showCaptureBuilder) {
-            BuilderV3EntryView(actualsActivity: activity) { draft in
-                showCaptureBuilder = false
-                // Let the builder cover dismiss, then present match-save.
-                DispatchQueue.main.async {
-                    matchSaveDraft = draft
+        .fullScreenCover(item: $capturePresentation) { presentation in
+            switch presentation {
+            case .builder:
+                BuilderV3EntryView(actualsActivity: activity) { draft in
+                    capturePresentation = .matchSave(draft)
                 }
-            }
-            .background(DailyDriver.screenBackground.ignoresSafeArea())
-            .ddSuppressFloatingChrome()
-        }
-        .fullScreenCover(isPresented: $showCapturePhoto) {
-            ImageImportView(actualsActivity: activity) { draft in
-                showCapturePhoto = false
-                DispatchQueue.main.async {
-                    matchSaveDraft = draft
+                .background(DailyDriver.screenBackground.ignoresSafeArea())
+                .ddSuppressFloatingChrome()
+            case .photo:
+                ImageImportView(actualsActivity: activity) { draft in
+                    capturePresentation = .matchSave(draft)
                 }
+                .background(DailyDriver.screenBackground.ignoresSafeArea())
+                .ddSuppressFloatingChrome()
+            case .matchSave(let draft):
+                ActualsMatchSaveView(
+                    activity: activity,
+                    draft: draft
+                ) { finalDraft, alsoLibrary in
+                    capturePresentation = nil
+                    onCaptureMatched(finalDraft, alsoLibrary)
+                    dismiss()
+                }
+                .background(DailyDriver.screenBackground.ignoresSafeArea())
+                .ddSuppressFloatingChrome()
             }
-            .background(DailyDriver.screenBackground.ignoresSafeArea())
-            .ddSuppressFloatingChrome()
-        }
-        .fullScreenCover(item: $matchSaveDraft) { draft in
-            ActualsMatchSaveView(
-                activity: activity,
-                draft: draft
-            ) { finalDraft, alsoLibrary in
-                matchSaveDraft = nil
-                onCaptureMatched(finalDraft, alsoLibrary)
-                dismiss()
-            }
-            .background(DailyDriver.screenBackground.ignoresSafeArea())
-            .ddSuppressFloatingChrome()
         }
     }
 
@@ -136,7 +142,7 @@ struct ActualsMapToPlanView: View {
                     systemName: activity.type == .strength ? "dumbbell.fill" : "figure.run",
                     background: activity.type == .strength
                         ? DailyDriver.blue
-                        : Color(hex: "FC4C02"),
+                        : DailyDriver.stravaBrand,
                     size: 34
                 )
                 VStack(alignment: .leading, spacing: 3) {
@@ -243,7 +249,7 @@ struct ActualsMapToPlanView: View {
                 title: ActualsCopy.mapCaptureBuildTitle,
                 subtitle: ActualsCopy.mapCaptureBuildSub
             ) {
-                showCaptureBuilder = true
+                capturePresentation = .builder
             }
             .accessibilityIdentifier(ActualsCopy.mapCaptureBuildAccessibilityID)
 
@@ -253,7 +259,7 @@ struct ActualsMapToPlanView: View {
                 title: ActualsCopy.mapCapturePhotoTitle,
                 subtitle: ActualsCopy.mapCapturePhotoSub
             ) {
-                showCapturePhoto = true
+                capturePresentation = .photo
             }
             .accessibilityIdentifier(ActualsCopy.mapCapturePhotoAccessibilityID)
         }

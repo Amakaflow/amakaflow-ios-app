@@ -32,7 +32,10 @@ final class ActualsFillInViewModel: ObservableObject {
 
     /// All rows confirmed and RPE chosen — only then may we set `verified`.
     var canSave: Bool {
-        unconfirmedCount == 0 && session.rpe != nil && !session.exercises.isEmpty
+        guard unconfirmedCount == 0, !session.exercises.isEmpty, let rpe = session.rpe else {
+            return false
+        }
+        return (1...10).contains(rpe)
     }
 
     var saveCTATitle: String {

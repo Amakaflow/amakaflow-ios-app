@@ -50,6 +50,20 @@ final class ActualsVerifiedGhostTests: XCTestCase {
         XCTAssertTrue(rdl.planDelta.isAsPlanned)
     }
 
+    func testSetsChangeWithSameLoadIsAdjusted() {
+        let squat = ExerciseActual(
+            id: "back_squat",
+            name: "Back squat",
+            planned: ExerciseActualPlanned(sets: 4, reps: 8, weightKg: 85),
+            confirmation: .adjusted,
+            actualSets: 3,
+            actualReps: 8,
+            actualWeightKg: 85
+        )
+        XCTAssertEqual(squat.planDelta.label, ActualsCopy.verifiedAdjustedDelta)
+        XCTAssertFalse(squat.planDelta.isAsPlanned)
+    }
+
     func testVerifiedRowsMatchHandoffSample() {
         var session = ActualsFillInSession.lowerBodyPosteriorSample()
         session.exercises[0].confirmation = .adjusted

@@ -217,11 +217,18 @@ enum DDEditorSeed {
     /// AMA-2387: optional last-actual lookup for editor ghosts (defaults to shared GRDB).
     static var ghostLookup: ActualsGhostLookingUp = ActualsRepository()
 
-    static func initialState(mode: DDEditorMode, workout: Workout?) -> (title: String, blocks: [DDEditorBlockDraft]) {
+    static func initialState(
+        mode: DDEditorMode,
+        workout: Workout?,
+        ghostLookup overrideLookup: ActualsGhostLookingUp? = nil
+    ) -> (title: String, blocks: [DDEditorBlockDraft]) {
         var seeded = seedWithoutGhosts(mode: mode, workout: workout)
         // Ghosts only apply when opening a planned workout (edit) or the backfill demo seed.
         if mode == .edit || mode == .backfill {
-            ActualsGhostFeed.applyGhosts(to: &seeded.blocks, lookup: ghostLookup)
+            ActualsGhostFeed.applyGhosts(
+                to: &seeded.blocks,
+                lookup: overrideLookup ?? ghostLookup
+            )
         }
         return seeded
     }

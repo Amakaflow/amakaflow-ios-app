@@ -29,7 +29,13 @@ struct ActualsDogfoodHubView: View {
         let defaults = UserDefaults(suiteName: suite) ?? .standard
         _sourceStore = StateObject(wrappedValue: ActualsSourceConnectionStore(defaults: defaults))
         // Ephemeral in-memory DB for this session's fill-in / ghosts.
-        let database = (try? AppDatabase.makeTestDatabase()) ?? AppDatabase.shared
+        let database: AppDatabase
+        do {
+            database = try AppDatabase.makeTestDatabase()
+        } catch {
+            assertionFailure("Dogfood test DB failed: \(error)")
+            database = .shared
+        }
         repository = ActualsRepository(database: database)
     }
 
@@ -219,9 +225,11 @@ struct ActualsDogfoodHubView: View {
     }
 
     private var editorGhostDemo: some View {
-        let previous = DDEditorSeed.ghostLookup
-        _ = { DDEditorSeed.ghostLookup = repository }()
-        let seed = DDEditorSeed.initialState(mode: .backfill, workout: nil)
+        let seed = DDEditorSeed.initialState(
+            mode: .backfill,
+            workout: nil,
+            ghostLookup: repository
+        )
         return ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Editor ghosts")
@@ -252,7 +260,6 @@ struct ActualsDogfoodHubView: View {
                 }
             }
             .padding(18)
-            .onDisappear { DDEditorSeed.ghostLookup = previous }
         }
         .background(DailyDriver.screenBackground.ignoresSafeArea())
         .ddSuppressFloatingChrome()
@@ -271,7 +278,12 @@ struct ActualsDogfoodHubView: View {
         if route == .fillIn || route == .editorGhosts {
             prepareFillIn()
             if route == .editorGhosts {
-                Task { try? seedVerifiedForGhosts() }
+                do {
+                    try seedVerifiedForGhosts()
+                } catch {
+                    statusLine = "Ghost seed failed: \(error.localizedDescription)"
+                    return
+                }
             }
         }
         path.append(route)

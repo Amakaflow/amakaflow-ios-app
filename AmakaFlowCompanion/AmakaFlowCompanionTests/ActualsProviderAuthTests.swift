@@ -36,7 +36,13 @@ final class ActualsProviderAuthTests: XCTestCase {
         XCTAssertEqual(scopes[2].title, "Upload or edit your activities")
         XCTAssertTrue(scopes[2].subtitle.contains("NOT REQUESTED"))
         XCTAssertFalse(
-            scopes.contains(where: { $0.title.lowercased().contains("write") && $0.granted }),
+            scopes.contains(where: {
+                let title = $0.title.lowercased()
+                let uploadSemantics = title.contains("write")
+                    || title.contains("upload")
+                    || title.contains("edit")
+                return uploadSemantics && $0.granted
+            }),
             "Must never request activity:write / upload"
         )
     }
