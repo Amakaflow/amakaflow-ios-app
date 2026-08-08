@@ -24,11 +24,15 @@ Never point an agent at the raw Claude Design export — it contains dead design
 | `reference/screens-toast.jsx` | DD Toast host + variants (success/device/undo/push-morph) | One confirmation voice everywhere |
 | `WATCHITEM.md` | Watch item sheet (AMA-2386): tap watch row → edit readiness → replace on watch | Build order + replace orchestration decided once |
 | `reference/screens-watchitem.jsx` | Watch item sheet — exact prototype source (4 states) | Anatomy, exact copy strings, CTA gating |
+| `FRIENDS.md` | Friends & sharing v1 (AMA-2389): Share-tile send, ＋ From-friends receive, Settings manage, dedupe | Placement + silent-negative + snapshot rules decided once |
+| `reference/screens-friends*.jsx` | Friends flows + placement ports — exact prototype source (FR/FR2, 8 panels) | Anatomy, exact copy, dup-card states |
 | `screenshots/rig-*.png` | Multi-state rigs: clarify (3 states), editor v2 vs old (5 states), creation (3 states) | Ground truth for the 2026-07-20 screens |
 
 Cursor enforcement: `.cursor/rules/design-fidelity.mdc` (auto-attaches on View files).
 
 ## Active work queue (2026-07-20) — read this first, Cursor
+
+**2026-08-08 — AMA-2389 Friends & workout sharing v1**: implement `FRIENDS.md` — send via the workout screen's EXISTING Share tile (sheet w/ Send-to-a-friend + system share), receive via a new From-friends row in the ＋ Add-workout sheet, manage via a Friends row in Settings, dedupe on save (lineage/fingerprint → flag, don't decide). Backend seams behind a protocol; build into the shipped screens, never invent surfaces.
 
 **2026-08-07 — AMA-2386 Watch item sheet**: implement `WATCHITEM.md` (tap On-your-watches row → readiness sheet → change-gated Replace). Reuse the AMA-2378 configurators + enrichment store — do not fork them. Note the Maestro sheet-a11y blocker in the validation gate.
 
