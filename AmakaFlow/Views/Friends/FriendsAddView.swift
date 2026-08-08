@@ -12,6 +12,8 @@ struct FriendsAddView: View {
     @State private var query = ""
     @State private var results: [FriendProfile] = []
     @State private var toastNote: String?
+    @State private var inviteURL: URL?
+    @State private var searchTask: Task<Void, Never>?
 
     var body: some View {
         ScrollView {
@@ -55,10 +57,16 @@ struct FriendsAddView: View {
         .background(DailyDriver.screenBackground.ignoresSafeArea())
         .navigationTitle("Friends")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await store.reload() }
+        .task {
+            await store.reload()
+            inviteURL = try? await store.inviteURL()
+        }
         .onChange(of: query) { _, newValue in
-            Task {
-                results = await store.searchUsers(query: newValue)
+            searchTask?.cancel()
+            searchTask = Task {
+                let matches = await store.searchUsers(query: newValue)
+                guard !Task.isCancelled else { return }
+                results = matches
             }
         }
         .overlay(alignment: .bottom) {
@@ -137,34 +145,45 @@ struct FriendsAddView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
+    @ViewBuilder
     private var inviteLinkCard: some View {
-        let url = store.inviteURL()
-        return ShareLink(item: url) {
-            HStack(spacing: 11) {
-                Image(systemName: "link")
-                    .foregroundColor(DailyDriver.lime)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Share your invite link")
-                        .ddDisplayText(12.5, weight: .bold)
-                        .foregroundColor(DailyDriver.foreground)
-                    Text("\(url.host?.uppercased() ?? "AMAKAFLOW.COM")\(url.path.uppercased()) · \(FriendsCopy.inviteLinkHint)")
-                        .font(.system(size: 8, weight: .medium, design: .monospaced))
-                        .foregroundColor(DailyDriver.foregroundDim)
-                        .lineLimit(2)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "square.and.arrow.up")
-                    .foregroundColor(DailyDriver.foregroundDim)
+        if let inviteURL {
+            ShareLink(item: inviteURL) {
+                inviteLinkLabel(
+                    hostPath: "\(inviteURL.host?.uppercased() ?? "AMAKAFLOW.COM")\(inviteURL.path.uppercased())"
+                )
             }
-            .padding(13)
-            .background(DailyDriver.card)
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(DailyDriver.border, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .accessibilityIdentifier("af_friends_invite_link")
+        } else {
+            inviteLinkLabel(hostPath: "HANDLE REQUIRED · SET YOUR HANDLE TO INVITE")
+                .accessibilityIdentifier("af_friends_invite_link")
         }
-        .accessibilityIdentifier("af_friends_invite_link")
+    }
+
+    private func inviteLinkLabel(hostPath: String) -> some View {
+        HStack(spacing: 11) {
+            Image(systemName: "link")
+                .foregroundColor(DailyDriver.lime)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Share your invite link")
+                    .ddDisplayText(12.5, weight: .bold)
+                    .foregroundColor(DailyDriver.foreground)
+                Text("\(hostPath) · \(FriendsCopy.inviteLinkHint)")
+                    .font(.system(size: 8, weight: .medium, design: .monospaced))
+                    .foregroundColor(DailyDriver.foregroundDim)
+                    .lineLimit(2)
+            }
+            Spacer(minLength: 0)
+            Image(systemName: "square.and.arrow.up")
+                .foregroundColor(DailyDriver.foregroundDim)
+        }
+        .padding(13)
+        .background(DailyDriver.card)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(DailyDriver.border, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func incomingRequestRow(_ request: Friendship) -> some View {
@@ -180,8 +199,12 @@ struct FriendsAddView: View {
             Spacer(minLength: 0)
             Button {
                 Task {
-                    try? await store.accept(request)
-                    flash("\(request.peer.displayName.split(separator: " ").first ?? "") added — you can swap workouts now")
+                    do {
+                        try await store.accept(request)
+                        flash("\(request.peer.displayName.split(separator: " ").first ?? "") added — you can swap workouts now")
+                    } catch {
+                        flash(error.localizedDescription)
+                    }
                 }
             } label: {
                 Text("Accept")
@@ -196,7 +219,13 @@ struct FriendsAddView: View {
             .accessibilityIdentifier("af_friends_request_accept")
 
             Button {
-                Task { try? await store.decline(request) }
+                Task {
+                    do {
+                        try await store.decline(request)
+                    } catch {
+                        flash(error.localizedDescription)
+                    }
+                }
             } label: {
                 Text("Decline")
                     .ddDisplayText(11.5, weight: .bold)
@@ -226,7 +255,13 @@ struct FriendsAddView: View {
             }
             Spacer(minLength: 0)
             Button {
-                Task { try? await store.cancel(request) }
+                Task {
+                    do {
+                        try await store.cancel(request)
+                    } catch {
+                        flash(error.localizedDescription)
+                    }
+                }
             } label: {
                 Text("Cancel")
                     .ddDisplayText(11.5, weight: .bold)

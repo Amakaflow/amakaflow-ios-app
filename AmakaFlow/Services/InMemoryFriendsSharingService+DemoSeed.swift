@@ -18,10 +18,11 @@ nonisolated enum InMemoryFriendsDemoSeed {
         currentUserId: String,
         seedDemo: Bool
     ) -> Payload {
-        let directory = demoDirectory()
+        // Release / seedDemo:false must not expose fictional searchable profiles.
         guard seedDemo else {
-            return Payload(directory: directory, friendships: [], shares: [])
+            return Payload(directory: [], friendships: [], shares: [])
         }
+        let directory = demoDirectory()
         return Payload(
             directory: directory,
             friendships: demoFriendships(currentUserId: currentUserId, directory: directory),

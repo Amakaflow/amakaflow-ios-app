@@ -64,4 +64,3 @@ appId: com.myamaka.AmakaFlowCompanion
     visible: "Saved to Library"
     timeout: 15000
 - takeScreenshot: docs/ama-2389-dogfood/03-save-toast
-- assertVisible: "Saved to Library"

@@ -15,6 +15,7 @@ nonisolated protocol WorkoutLineageStoring: Sendable {
 }
 
 nonisolated final class UserDefaultsWorkoutLineageStore: WorkoutLineageStoring, @unchecked Sendable {
+    private let lock = NSLock()
     private let defaults: UserDefaults
     private let lineageKey = "ama2389.workout.lineage"
     private let fingerprintKey = "ama2389.workout.fingerprint"
@@ -24,20 +25,24 @@ nonisolated final class UserDefaultsWorkoutLineageStore: WorkoutLineageStoring, 
     }
 
     func lineageId(forWorkoutId workoutId: String) -> String? {
-        dictionary(for: lineageKey)[workoutId]
+        lock.lock(); defer { lock.unlock() }
+        return dictionary(for: lineageKey)[workoutId]
     }
 
     func setLineageId(_ lineageId: String, forWorkoutId workoutId: String) {
+        lock.lock(); defer { lock.unlock() }
         var map = dictionary(for: lineageKey)
         map[workoutId] = lineageId
         defaults.set(map, forKey: lineageKey)
     }
 
     func fingerprint(forWorkoutId workoutId: String) -> String? {
-        dictionary(for: fingerprintKey)[workoutId]
+        lock.lock(); defer { lock.unlock() }
+        return dictionary(for: fingerprintKey)[workoutId]
     }
 
     func setFingerprint(_ fingerprint: String, forWorkoutId workoutId: String) {
+        lock.lock(); defer { lock.unlock() }
         var map = dictionary(for: fingerprintKey)
         map[workoutId] = fingerprint
         defaults.set(map, forKey: fingerprintKey)

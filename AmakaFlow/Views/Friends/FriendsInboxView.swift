@@ -12,6 +12,8 @@ struct FriendsInboxView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selectedShare: WorkoutShare?
     @State private var library: [Workout] = []
+    @State private var libraryLoadFailed = false
+    @State private var actionError: String?
 
     private let api: APIServiceProviding
 
@@ -26,6 +28,9 @@ struct FriendsInboxView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 9) {
+                if libraryLoadFailed {
+                    libraryErrorBanner
+                }
                 if store.incomingShares.isEmpty {
                     Text("Nothing waiting — friends' workouts land here.")
                         .font(.system(size: 13))
@@ -48,21 +53,78 @@ struct FriendsInboxView: View {
                 Button("Close") { dismiss() }
             }
         }
-        .task {
-            await store.reload()
-            library = (try? await api.fetchWorkouts()) ?? []
-        }
+        .task { await loadLibrary() }
         .sheet(item: $selectedShare) { share in
             NavigationStack {
                 ReceivedShareDetailView(
                     share: share,
                     store: store,
                     library: library,
+                    libraryReady: !libraryLoadFailed,
                     onSaved: { dismiss() },
-                    onOpenExisting: { _ in dismiss() }
+                    onOpenExisting: { workoutId in
+                        selectedShare = nil
+                        dismiss()
+                        NotificationCenter.default.post(
+                            name: .libraryOpenWorkout,
+                            object: nil,
+                            userInfo: ["workoutId": workoutId]
+                        )
+                    }
                 )
             }
             .presentationDetents(friendsSheetDetents)
+        }
+        .alert("Couldn't update", isPresented: Binding(
+            get: { actionError != nil },
+            set: { if !$0 { actionError = nil } }
+        )) {
+            Button("OK", role: .cancel) { actionError = nil }
+        } message: {
+            Text(actionError ?? "")
+        }
+    }
+
+    private var libraryErrorBanner: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Couldn't load your library")
+                .ddDisplayText(13, weight: .bold)
+            Text("Duplicate checks need your library. Retry before saving.")
+                .font(.system(size: 12))
+                .foregroundColor(DailyDriver.foregroundMuted)
+            Button {
+                Task { await loadLibrary() }
+            } label: {
+                Text("Retry")
+                    .ddDisplayText(12, weight: .bold)
+                    .foregroundColor(DailyDriver.ink)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(DailyDriver.lime)
+                    .clipShape(Capsule(style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("af_recv_library_retry")
+        }
+        .padding(13)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DailyDriver.amber.opacity(0.2))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(DailyDriver.amber.opacity(0.55), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private func loadLibrary() async {
+        await store.reload()
+        do {
+            library = try await api.fetchWorkouts()
+            libraryLoadFailed = false
+        } catch {
+            library = []
+            libraryLoadFailed = true
+            actionError = error.localizedDescription
         }
     }
 
@@ -108,7 +170,13 @@ struct FriendsInboxView: View {
                     .accessibilityIdentifier("af_recv_look")
 
                     Button {
-                        Task { try? await store.dismissShare(share) }
+                        Task {
+                            do {
+                                try await store.dismissShare(share)
+                            } catch {
+                                actionError = error.localizedDescription
+                            }
+                        }
                     } label: {
                         Text("Not for me")
                             .ddDisplayText(12, weight: .bold)
@@ -123,7 +191,7 @@ struct FriendsInboxView: View {
                             .clipShape(Capsule(style: .continuous))
                     }
                     .buttonStyle(.plain)
-                    .accessibilityIdentifier("af_recv_dismiss")
+                    .accessibilityIdentifier("af_recv_dismiss_\(share.id)")
                 }
                 .padding(.top, 10)
             }

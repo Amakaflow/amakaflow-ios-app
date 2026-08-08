@@ -32,6 +32,8 @@ enum CreateFlowPresentation: Identifiable, Equatable {
 
 extension Notification.Name {
     static let libraryContentDidChange = Notification.Name("libraryContentDidChange")
+    /// AMA-2389: open an existing library workout after “Open yours” from a friend share.
+    static let libraryOpenWorkout = Notification.Name("libraryOpenWorkout")
 }
 
 enum OpenCreateSheetKey: EnvironmentKey {

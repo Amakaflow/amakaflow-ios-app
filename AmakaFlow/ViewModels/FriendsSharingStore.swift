@@ -29,7 +29,9 @@ final class FriendsSharingStore: ObservableObject {
         #if DEBUG
         self.service = service ?? InMemoryFriendsSharingService()
         #else
-        // Until BFF lands, keep the local seam so UI isn't blocked.
+        // AMA-2389 v1: BFF friendship/share client is not wired yet. Release keeps the
+        // protocol seam with an empty in-memory store (no demo directory) so UI ships;
+        // cross-account sharing lands with the BFF implementation of FriendsSharingProviding.
         self.service = service ?? InMemoryFriendsSharingService(seedDemo: false)
         #endif
         self.lineageStore = lineageStore ?? UserDefaultsWorkoutLineageStore()
@@ -64,12 +66,15 @@ final class FriendsSharingStore: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         do {
-            async let friends = service.listFriendships()
-            async let shares = service.listIncomingShares()
-            async let count = service.unhandledShareCount()
-            friendships = try await friends
-            incomingShares = try await shares
-            unhandledShareCount = try await count
+            async let friendsTask = service.listFriendships()
+            async let sharesTask = service.listIncomingShares()
+            async let countTask = service.unhandledShareCount()
+            let friends = try await friendsTask
+            let shares = try await sharesTask
+            let count = try await countTask
+            friendships = friends
+            incomingShares = shares
+            unhandledShareCount = count
         } catch {
             lastErrorMessage = error.localizedDescription
         }
@@ -104,18 +109,9 @@ final class FriendsSharingStore: ObservableObject {
         await reload()
     }
 
-    func inviteURL(handle: String? = nil) -> URL {
-        let resolved: String
-        if let handle, !handle.isEmpty {
-            resolved = handle
-        } else if let email = PairingService.shared.userProfile?.email,
-                  let local = email.split(separator: "@").first,
-                  !local.isEmpty {
-            resolved = String(local).lowercased()
-        } else {
-            resolved = "you"
-        }
-        return service.inviteLink(forHandle: resolved)
+    /// Public invite URL from the account handle only — never derived from email.
+    func inviteURL() async throws -> URL {
+        try await service.inviteLink()
     }
 
     func send(

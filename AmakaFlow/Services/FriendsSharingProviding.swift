@@ -14,6 +14,7 @@ nonisolated enum FriendsSharingError: LocalizedError, Equatable {
     case alreadyPending
     case cannotFriendSelf
     case handleUnavailable
+    case inviteHandleMissing
     case emptySelection
     case shareFailed(String)
     case saveFailed(String)
@@ -25,6 +26,7 @@ nonisolated enum FriendsSharingError: LocalizedError, Equatable {
         case .alreadyPending: return "Request already pending."
         case .cannotFriendSelf: return "That's you."
         case .handleUnavailable: return "That handle isn't available."
+        case .inviteHandleMissing: return "Set a handle before sharing an invite link."
         case .emptySelection: return "Pick a friend."
         case .shareFailed(let message): return message
         case .saveFailed(let message): return message
@@ -44,7 +46,8 @@ nonisolated protocol FriendshipProviding: Sendable {
     func cancelRequest(id: String) async throws
     /// Silent — peer is not notified.
     func removeFriend(id: String) async throws
-    func inviteLink(forHandle handle: String) -> URL
+    /// Account-handle invite URL. Async/throwing so a BFF client can mint tokens.
+    func inviteLink() async throws -> URL
 }
 
 /// Workout share lifecycle. Shares carry an immutable snapshot + lineageId.

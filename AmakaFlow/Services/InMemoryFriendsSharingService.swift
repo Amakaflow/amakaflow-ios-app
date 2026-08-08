@@ -99,7 +99,10 @@ nonisolated final class InMemoryFriendsSharingService: FriendsSharingProviding, 
 
     func acceptRequest(id: String) async throws -> Friendship {
         lock.lock(); defer { lock.unlock() }
-        guard let index = friendships.firstIndex(where: { $0.id == id }) else {
+        // Mutual-accept: only the addressee can accept an incoming pending request.
+        guard let index = friendships.firstIndex(where: {
+            $0.id == id && !$0.isOutgoing && $0.status == .pending
+        }) else {
             throw FriendsSharingError.notFound
         }
         friendships[index].status = .accepted
@@ -136,15 +139,17 @@ nonisolated final class InMemoryFriendsSharingService: FriendsSharingProviding, 
         silentNegativeEventCount += 1
     }
 
-    func inviteLink(forHandle handle: String) -> URL {
-        let cleaned = handle.trimmingCharacters(in: .whitespacesAndNewlines)
+    func inviteLink() async throws -> URL {
+        let cleaned = currentHandle.trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "^@", with: "", options: .regularExpression)
             .lowercased()
+        guard !cleaned.isEmpty else { throw FriendsSharingError.inviteHandleMissing }
         var components = URLComponents()
         components.scheme = "https"
         components.host = "amakaflow.com"
         components.path = "/add/\(cleaned)"
-        return components.url ?? URL(fileURLWithPath: "/")
+        guard let url = components.url else { throw FriendsSharingError.inviteHandleMissing }
+        return url
     }
 
     // MARK: WorkoutShareProviding
@@ -242,8 +247,9 @@ nonisolated final class InMemoryFriendsSharingService: FriendsSharingProviding, 
         shares[index].savedWorkoutId = workoutId
     }
 
-    // MARK: Test helpers
+    // MARK: Test helpers (DEBUG only — must not ship mutation hooks in Release)
 
+    #if DEBUG
     func silentNegativeCount() -> Int {
         lock.lock(); defer { lock.unlock() }
         return silentNegativeEventCount
@@ -259,4 +265,5 @@ nonisolated final class InMemoryFriendsSharingService: FriendsSharingProviding, 
         lock.lock(); defer { lock.unlock() }
         shares.append(share)
     }
+    #endif
 }

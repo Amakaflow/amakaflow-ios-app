@@ -61,4 +61,4 @@ appId: com.myamaka.AmakaFlowCompanion
 - assertVisible:
     id: "af_friends_invite_link"
 - assertVisible: "REQUESTS"
-- takeScreenshot: docs/ama-2389-dogfood/09-friends-list
+- takeScreenshot: docs/ama-2389-dogfood/09-friends-add

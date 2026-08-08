@@ -399,6 +399,7 @@
 		AMA2376ORGCHRBLD /* WorkoutDetailOrganizeChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2376ORGCHRREF /* WorkoutDetailOrganizeChrome.swift */; };
 		AMA2292TODAYVIEW0000B /* TodayDiaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2292TODAYVIEW0000A /* TodayDiaryView.swift */; };
 		AMA2292PROFILEHUB00B /* ProfileHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2292PROFILEHUB00A /* ProfileHubView.swift */; };
+		AMA2389PROFPREBLD /* ProfileHubView+Presentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389PROFPREREF /* ProfileHubView+Presentation.swift */; };
 		AMA2292DDTHEME0000B /* DailyDriverTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2292DDTHEME0000A /* DailyDriverTheme.swift */; };
 		AMA2292DDSCREENS00B /* DailyDriverScreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2292DDSCREENS00A /* DailyDriverScreens.swift */; };
 		AMA2293DDCOMP0000B /* DailyDriverComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2293DDCOMP0000A /* DailyDriverComponents.swift */; };
@@ -1101,6 +1102,7 @@
 		AMA2376ORGCHRREF /* WorkoutDetailOrganizeChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutDetailOrganizeChrome.swift; path = ../AmakaFlow/Views/Library/WorkoutDetailOrganizeChrome.swift; sourceTree = SOURCE_ROOT; };
 		AMA2292TODAYVIEW0000A /* TodayDiaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TodayDiaryView.swift; path = ../AmakaFlow/Views/TodayDiaryView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2292PROFILEHUB00A /* ProfileHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ProfileHubView.swift; path = ../AmakaFlow/Views/ProfileHubView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2389PROFPREREF /* ProfileHubView+Presentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "ProfileHubView+Presentation.swift"; path = "../AmakaFlow/Views/ProfileHubView+Presentation.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2292DDTHEME0000A /* DailyDriverTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DailyDriverTheme.swift; path = ../AmakaFlow/DailyDriverTheme.swift; sourceTree = SOURCE_ROOT; };
 		AMA2292DDSCREENS00A /* DailyDriverScreens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DailyDriverScreens.swift; path = ../AmakaFlow/DailyDriverScreens.swift; sourceTree = SOURCE_ROOT; };
 		AMA2293DDCOMP0000A /* DailyDriverComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DailyDriverComponents.swift; path = ../AmakaFlow/DailyDriverComponents.swift; sourceTree = SOURCE_ROOT; };
@@ -1637,6 +1639,7 @@
 				AMA2376ORGCHRREF /* WorkoutDetailOrganizeChrome.swift */,
 				AMA2292TODAYVIEW0000A /* TodayDiaryView.swift */,
 				AMA2292PROFILEHUB00A /* ProfileHubView.swift */,
+				AMA2389PROFPREREF /* ProfileHubView+Presentation.swift */,
 				AMA2292DDCREATE00A /* CreateWorkoutSheet.swift */,
 				AMA2389UICREF /* FriendsUIComponents.swift */,
 				AMA2389LSTREF /* FriendsListView.swift */,
@@ -2687,6 +2690,7 @@
 				AMA2376ORGCHRBLD /* WorkoutDetailOrganizeChrome.swift in Sources */,
 				AMA2292TODAYVIEW0000B /* TodayDiaryView.swift in Sources */,
 				AMA2292PROFILEHUB00B /* ProfileHubView.swift in Sources */,
+				AMA2389PROFPREBLD /* ProfileHubView+Presentation.swift in Sources */,
 				AMA2292DDTHEME0000B /* DailyDriverTheme.swift in Sources */,
 				AMA2292DDSCREENS00B /* DailyDriverScreens.swift in Sources */,
 				AMA2293DDCOMP0000B /* DailyDriverComponents.swift in Sources */,

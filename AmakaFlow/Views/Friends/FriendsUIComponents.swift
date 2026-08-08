@@ -73,3 +73,107 @@ func friendAccentColor(_ raw: String) -> Color {
     default: return DailyDriver.blue
     }
 }
+
+struct FriendRemoveConfirmPanel: View {
+    let displayName: String
+    let a11yHandle: String
+    let onConfirm: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(FriendsCopy.removeConfirm(displayName: displayName))
+                .font(.system(size: 12))
+                .foregroundColor(DailyDriver.foreground)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 8) {
+                Button(action: onConfirm) {
+                    Text("Remove")
+                        .ddDisplayText(12.5, weight: .bold)
+                        .foregroundColor(DailyDriver.foreground)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(DailyDriver.destructive)
+                        .clipShape(Capsule(style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_friends_remove_confirm_\(a11yHandle)")
+
+                Button(action: onCancel) {
+                    Text("Cancel")
+                        .ddDisplayText(12.5, weight: .bold)
+                        .foregroundColor(DailyDriver.foreground)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(DailyDriver.card2)
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(DailyDriver.borderStrong, lineWidth: 1)
+                        )
+                        .clipShape(Capsule(style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(12)
+        .background(DailyDriver.destructive.opacity(0.12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(DailyDriver.destructive.opacity(0.55), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.horizontal, 12)
+        .padding(.bottom, 12)
+    }
+}
+
+/// AMA-2389: Profile hub Friends entry row (under week dots).
+struct ProfileFriendsEntryRow: View {
+    let friendCount: Int
+    let waitingCount: Int
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                DDIconChip(
+                    systemName: "person.2.fill",
+                    background: DailyDriver.purple,
+                    size: 38
+                )
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Friends")
+                        .ddDisplayText(15, weight: .bold)
+                        .foregroundColor(DailyDriver.foreground)
+                    Text(
+                        FriendsCopy.profileEntrySubtitle(
+                            friendCount: friendCount,
+                            waitingCount: waitingCount
+                        )
+                    )
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                    .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                FriendsWaitingBadge(
+                    badgeValue: waitingCount,
+                    accessibilityId: "af_profile_friends_badge"
+                )
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(DailyDriver.foregroundDim)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 13)
+            .background(DailyDriver.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(DailyDriver.border, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("af_profile_friends_row")
+    }
+}

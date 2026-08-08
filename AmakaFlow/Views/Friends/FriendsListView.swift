@@ -13,6 +13,7 @@ struct FriendsListView: View {
     @State private var pendingRemoveId: String?
     @State private var showInbox = false
     @State private var showAdd = false
+    @State private var actionError: String?
 
     var body: some View {
         ScrollView {
@@ -85,6 +86,14 @@ struct FriendsListView: View {
             }
             .presentationDetents(friendsSheetDetents)
             .presentationDragIndicator(.visible)
+        }
+        .alert("Couldn't update", isPresented: Binding(
+            get: { actionError != nil },
+            set: { if !$0 { actionError = nil } }
+        )) {
+            Button("OK", role: .cancel) { actionError = nil }
+        } message: {
+            Text(actionError ?? "")
         }
     }
 
@@ -197,59 +206,26 @@ struct FriendsListView: View {
             .padding(.vertical, 12)
 
             if isPendingRemove {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(FriendsCopy.removeConfirm(displayName: friendship.peer.displayName))
-                        .font(.system(size: 12))
-                        .foregroundColor(DailyDriver.foreground)
-                        .fixedSize(horizontal: false, vertical: true)
-                    HStack(spacing: 8) {
-                        Button {
-                            Task {
-                                try? await store.remove(friendship)
+                FriendRemoveConfirmPanel(
+                    displayName: friendship.peer.displayName,
+                    a11yHandle: a11yHandle,
+                    onConfirm: {
+                        Task {
+                            do {
+                                try await store.remove(friendship)
                                 pendingRemoveId = nil
                                 if store.acceptedFriends.isEmpty {
                                     isEditing = false
                                 }
+                            } catch {
+                                actionError = error.localizedDescription
                             }
-                        } label: {
-                            Text("Remove")
-                                .ddDisplayText(12.5, weight: .bold)
-                                .foregroundColor(DailyDriver.foreground)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 10)
-                                .background(DailyDriver.destructive)
-                                .clipShape(Capsule(style: .continuous))
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("af_friends_remove_confirm_\(a11yHandle)")
-
-                        Button {
-                            withAnimation { pendingRemoveId = nil }
-                        } label: {
-                            Text("Cancel")
-                                .ddDisplayText(12.5, weight: .bold)
-                                .foregroundColor(DailyDriver.foreground)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 10)
-                                .background(DailyDriver.card2)
-                                .overlay(
-                                    Capsule(style: .continuous)
-                                        .stroke(DailyDriver.borderStrong, lineWidth: 1)
-                                )
-                                .clipShape(Capsule(style: .continuous))
-                        }
-                        .buttonStyle(.plain)
+                    },
+                    onCancel: {
+                        withAnimation { pendingRemoveId = nil }
                     }
-                }
-                .padding(12)
-                .background(DailyDriver.destructive.opacity(0.12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(DailyDriver.destructive.opacity(0.55), lineWidth: 1)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .padding(.horizontal, 12)
-                .padding(.bottom, 12)
             }
         }
         .background(DailyDriver.card)

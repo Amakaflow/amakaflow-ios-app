@@ -55,15 +55,29 @@ final class FriendsSharingTests: XCTestCase {
         XCTAssertEqual(accepted.status, .accepted)
     }
 
+    func testAcceptRejectsOutgoingPendingRequest() async throws {
+        let service = InMemoryFriendsSharingService(seedDemo: true)
+        let outgoing = try await service.listFriendships().first {
+            $0.isOutgoing && $0.status == .pending
+        }
+        let id = try XCTUnwrap(outgoing).id
+        do {
+            _ = try await service.acceptRequest(id: id)
+            XCTFail("Expected accept of outgoing request to fail")
+        } catch FriendsSharingError.notFound {
+            // Expected — only incoming pending may be accepted.
+        }
+    }
+
     // MARK: Snapshot immutability
 
     func testShareCarriesSnapshotCopyNotLiveLink() async throws {
-        let service = InMemoryFriendsSharingService(seedDemo: false)
-        // Seed an accepted friend manually via request+accept path with directory peers.
-        // Use demo service for peer directory, then send.
-        let demo = InMemoryFriendsSharingService(seedDemo: true)
-        let friends = try await demo.listFriendships().filter { $0.status == .accepted }
-        XCTAssertFalse(friends.isEmpty)
+        let sender = InMemoryFriendsSharingService(
+            currentUserId: "me",
+            seedDemo: true
+        )
+        let friends = try await sender.listFriendships().filter { $0.status == .accepted }
+        let peer = try XCTUnwrap(friends.first?.peer)
 
         var snapshot = WorkoutShareSnapshot(
             name: "Original",
@@ -76,49 +90,42 @@ final class FriendsSharingTests: XCTestCase {
             blocks: nil,
             lineageId: "lineage-a"
         )
-        let created = try await demo.sendShares(
+        let created = try await sender.sendShares(
             snapshot: snapshot,
-            toFriendIds: [friends[0].peer.id],
+            toFriendIds: [peer.id],
             note: "hi"
         )
-        XCTAssertEqual(created.count, 1)
+        let sent = try XCTUnwrap(created.first)
+        XCTAssertEqual(sent.snapshot.name, "Original")
 
-        // Mutating the local snapshot struct must not change the stored share.
+        // Mutating the caller's local snapshot must not change the stored share copy.
         snapshot.name = "Mutated locally"
-        let listed = try await demo.listIncomingShares()
-        // Outgoing shares are stored with toUserId = peer; listIncoming filters to me.
-        // Verify via injected path:
-        await demo.injectShare(
+        XCTAssertEqual(sent.snapshot.name, "Original")
+
+        // Peer inbox sees the frozen name (separate service instance simulating the friend).
+        let peerInbox = InMemoryFriendsSharingService(
+            currentUserId: peer.id,
+            currentHandle: peer.handle,
+            currentDisplayName: peer.displayName,
+            seedDemo: false
+        )
+        peerInbox.injectShare(
             WorkoutShare(
-                id: "imm-1",
-                fromUserId: friends[0].peer.id,
-                toUserId: "me",
-                fromDisplayName: friends[0].peer.displayName,
-                fromHandle: friends[0].peer.handle,
-                snapshot: WorkoutShareSnapshot(
-                    name: "Frozen",
-                    sport: "strength",
-                    source: "manual",
-                    sourceUrl: nil,
-                    description: nil,
-                    creatorName: nil,
-                    intervals: snapshot.intervals,
-                    blocks: nil,
-                    lineageId: "lineage-frozen"
-                ),
-                note: nil,
+                id: sent.id,
+                fromUserId: "me",
+                toUserId: peer.id,
+                fromDisplayName: "David A.",
+                fromHandle: "david",
+                snapshot: sent.snapshot,
+                note: "hi",
                 status: .sent,
-                createdAt: Date(),
+                createdAt: sent.createdAt,
                 savedWorkoutId: nil
             )
         )
-        await demo.mutateSnapshotName(shareId: "imm-1", name: "Still frozen after mutate API")
-        let inbox = try await demo.listIncomingShares()
-        let frozen = try XCTUnwrap(inbox.first { $0.id == "imm-1" })
-        XCTAssertEqual(frozen.snapshot.name, "Still frozen after mutate API")
-        // Receiver edits would be a different Workout after save — share stays a copy.
-        _ = service
-        _ = listed
+        let listed = try await peerInbox.listIncomingShares()
+        let received = try XCTUnwrap(listed.first { $0.id == sent.id })
+        XCTAssertEqual(received.snapshot.name, "Original")
     }
 
     // MARK: Dedupe matrix

@@ -37,20 +37,20 @@ appId: com.myamaka.AmakaFlowCompanion
 - extendedWaitUntil:
     visible: "Look inside"
     timeout: 10000
-# Clear the two non-dup demos so only HIIT remixed remains.
+# Dismiss non-dup demos by stable share ids (order-independent).
 - tapOn:
-    text: "Not for me"
-    index: 0
+    id: "af_recv_dismiss_share-marcus-1"
 - waitForAnimationToEnd:
     timeout: 1500
 - tapOn:
-    text: "Not for me"
-    index: 0
+    id: "af_recv_dismiss_share-tomas-1"
 - waitForAnimationToEnd:
     timeout: 1500
 - extendedWaitUntil:
     visible: "HIIT remixed"
     timeout: 10000
+- tapOn:
+    id: "af_recv_row_share-dup-hiit"
 - tapOn: "Look inside"
 - waitForAnimationToEnd:
     timeout: 3000

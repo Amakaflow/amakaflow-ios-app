@@ -11,6 +11,8 @@ struct ReceivedShareDetailView: View {
     let share: WorkoutShare
     @ObservedObject var store: FriendsSharingStore
     let library: [Workout]
+    /// False when library fetch failed — block saves that depend on dedupe.
+    var libraryReady: Bool = true
     var onSaved: () -> Void
     var onOpenExisting: (String) -> Void
 
@@ -24,6 +26,7 @@ struct ReceivedShareDetailView: View {
         share: WorkoutShare,
         store: FriendsSharingStore,
         library: [Workout],
+        libraryReady: Bool = true,
         onSaved: @escaping () -> Void,
         onOpenExisting: @escaping (String) -> Void,
         api: APIServiceProviding = AppDependencies.current.apiService
@@ -31,6 +34,7 @@ struct ReceivedShareDetailView: View {
         self.share = share
         self.store = store
         self.library = library
+        self.libraryReady = libraryReady
         self.onSaved = onSaved
         self.onOpenExisting = onOpenExisting
         self.api = api
@@ -66,9 +70,14 @@ struct ReceivedShareDetailView: View {
             }
         }
         .task {
-            try? await store.markSeen(share)
+            do {
+                try await store.markSeen(share)
+            } catch {
+                // Non-fatal: badge may stay until next successful open/reload.
+                errorMessage = error.localizedDescription
+            }
         }
-        .alert("Couldn't save", isPresented: Binding(
+        .alert("Something went wrong", isPresented: Binding(
             get: { errorMessage != nil },
             set: { if !$0 { errorMessage = nil } }
         )) {
@@ -124,7 +133,7 @@ struct ReceivedShareDetailView: View {
                 Button {
                     Task { await save(copyAnyway: true) }
                 } label: {
-                    Text("Save copy anyway")
+                    Text(isSaving ? "Saving…" : "Save copy anyway")
                         .ddDisplayText(12, weight: .bold)
                         .foregroundColor(DailyDriver.ink)
                         .frame(maxWidth: .infinity)
@@ -133,13 +142,11 @@ struct ReceivedShareDetailView: View {
                         .clipShape(Capsule(style: .continuous))
                 }
                 .buttonStyle(.plain)
+                .disabled(isSaving || !libraryReady)
                 .accessibilityIdentifier("af_recv_dup_copy")
             }
             Button {
-                Task {
-                    try? await store.dismissShare(share)
-                    dismiss()
-                }
+                Task { await dismissShare() }
             } label: {
                 Text("Not for me")
                     .font(.system(size: 12, weight: .semibold))
@@ -147,6 +154,7 @@ struct ReceivedShareDetailView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.plain)
+            .disabled(isSaving)
         }
         .padding(14)
         .background(DailyDriver.amber)
@@ -197,12 +205,17 @@ struct ReceivedShareDetailView: View {
                 .clipShape(Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
-        .disabled(isSaving || (dedupe != .none))
-        .opacity(dedupe != .none ? 0.45 : 1)
+        .disabled(isSaving || dedupe != .none || !libraryReady)
+        .opacity(dedupe != .none || !libraryReady ? 0.45 : 1)
         .accessibilityIdentifier("af_recv_save")
     }
 
     private func save(copyAnyway: Bool) async {
+        guard !isSaving else { return }
+        guard libraryReady else {
+            errorMessage = "Couldn't load your library — retry from the inbox."
+            return
+        }
         isSaving = true
         defer { isSaving = false }
         let toastId = DDToastCenter.shared.beginPending(text: "Saving…")
@@ -230,6 +243,15 @@ struct ReceivedShareDetailView: View {
                 text: "Couldn't save",
                 sub: error.localizedDescription
             )
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func dismissShare() async {
+        do {
+            try await store.dismissShare(share)
+            dismiss()
+        } catch {
             errorMessage = error.localizedDescription
         }
     }

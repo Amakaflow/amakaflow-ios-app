@@ -168,6 +168,15 @@ struct LibraryView: View {
             if note.object as AnyObject? === viewModel { return }
             Task { await viewModel.load() }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .libraryOpenWorkout)) { note in
+            guard let workoutId = note.userInfo?["workoutId"] as? String, !workoutId.isEmpty else {
+                return
+            }
+            // Avoid stacking the same destination if already open.
+            if navigationPath.last != .unifiedWorkout(workoutID: workoutId) {
+                navigationPath.append(.unifiedWorkout(workoutID: workoutId))
+            }
+        }
         .accessibilityIdentifier("library_screen")
     }
 }
