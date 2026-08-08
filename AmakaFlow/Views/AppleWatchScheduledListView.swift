@@ -19,17 +19,21 @@ struct AppleWatchScheduledListView: View {
     @State private var watchItemDetent: PresentationDetent = .large
     var onScheduleFromLibrary: (() -> Void)?
     var onOpenWorkoutFromWatchItem: ((String) -> Void)?
+    /// Library titles for planID→workoutID backfill (AMA-2388).
+    var libraryWorkouts: [(id: String, title: String)] = []
 
     private let calendar: Calendar
 
     init(
         viewModel: WorkoutScheduleViewModel? = nil,
         calendar: Calendar = .current,
+        libraryWorkouts: [(id: String, title: String)] = [],
         onScheduleFromLibrary: (() -> Void)? = nil,
         onOpenWorkoutFromWatchItem: ((String) -> Void)? = nil
     ) {
         _viewModel = StateObject(wrappedValue: viewModel ?? Self.defaultViewModel())
         self.calendar = calendar
+        self.libraryWorkouts = libraryWorkouts
         self.onScheduleFromLibrary = onScheduleFromLibrary
         self.onOpenWorkoutFromWatchItem = onOpenWorkoutFromWatchItem
     }
@@ -89,11 +93,17 @@ struct AppleWatchScheduledListView: View {
             moveSheet(for: row)
         }
         .sheet(item: $watchItemRow) { row in
+            let watchItemViewModel = WatchItemViewModel.apple(
+                row: row,
+                calendar: calendar,
+                library: libraryWorkouts
+            )
             WatchItemSheet(
-                viewModel: WatchItemViewModel.apple(row: row, calendar: calendar),
+                viewModel: watchItemViewModel,
                 onRemove: {
                     let target = row
                     watchItemRow = nil
+                    AppleScheduledWorkoutLinkStore.shared.remove(planID: target.id.planID)
                     Task {
                         await viewModel.delete(row: target)
                         DDToastCenter.shared.undo(
@@ -104,11 +114,9 @@ struct AppleWatchScheduledListView: View {
                 },
                 onOpenWorkout: {
                     watchItemRow = nil
-                    onOpenWorkoutFromWatchItem?(row.id.planID)
-                },
-                onSeeSteps: {
-                    // Task 5: read-only preview. Toast placeholder for now.
-                    DDToastCenter.shared.device("Opens the read-only step preview — not the editor")
+                    if let linked = watchItemViewModel.libraryWorkoutID {
+                        onOpenWorkoutFromWatchItem?(linked)
+                    }
                 }
             )
             // Same as Make it watch-ready: open large so readiness rows +

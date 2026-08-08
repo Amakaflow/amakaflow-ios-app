@@ -2,7 +2,8 @@
 //  WatchItemViewModel.swift
 //  AmakaFlow
 //
-//  AMA-2386: sheet state — readiness draft, AMA-2378 configurators, replace + toast.
+//  AMA-2386 / AMA-2388: sheet state — readiness draft, AMA-2378 configurators,
+//  always-visible replace CTA, shared store seed/persist, library link.
 //
 
 import Combine
@@ -12,28 +13,42 @@ import SwiftUI
 @MainActor
 final class WatchItemViewModel: ObservableObject {
     let device: WatchItemDevice
+    /// Library workout id when linked; may equal planID only in legacy/demo.
     let workoutID: String
     let title: String
     let stateLine: String
-    let snapshotPills: [String]
     let applePlanID: String?
     let appleDateComponents: DateComponents?
     let garminState: GarminQueueItemState?
-    /// Warm-up pick candidates (demo names until live workout blocks are wired).
     let warmupExerciseNames: [String]
+    /// Linked Library workout title for the FROM YOUR LIBRARY row; nil = unlinked.
+    let libraryWorkoutTitle: String?
+    let libraryWorkoutID: String?
 
     @Published private(set) var tracker: WatchItemChangeTracker
+    @Published private(set) var snapshotPills: [String]
     @Published private(set) var isReplacing = false
+    @Published private(set) var justReplaced = false
+    @Published private(set) var stepSections: [PreviewSection]
     @Published var lastError: String?
+    @Published var showingStepsOverlay = false
 
     private let replacer: any WatchItemReplacing
     private let toast: DDToastCenter
-    /// Replace is demo-only until live Apple/Garmin seams land.
-    let isReplaceAvailable: Bool
+    private let readinessStore: any WatchItemReadinessStoring
+    private let prefsPersister: WatchItemPrefsPersisting?
 
     var isApple: Bool { device.isApple }
     var changeCount: Int { tracker.changeCount }
     var hasChanges: Bool { tracker.hasChanges }
+    var isLinkedToLibrary: Bool { libraryWorkoutID != nil }
+
+    /// Prefer delivered preview row count (includes WORK); never parse pill copy.
+    var stepCount: Int {
+        let fromSections = stepSections.reduce(0) { $0 + $1.steps.count }
+        if fromSections > 0 { return fromSections }
+        return 1
+    }
 
     var mobilityEnabled: Bool { tracker.draft.mobilityEnabled }
     var warmupsEnabled: Bool { tracker.draft.warmupsEnabled }
@@ -73,6 +88,8 @@ final class WatchItemViewModel: ObservableObject {
         var next = tracker
         next.updateConfig(body)
         tracker = next
+        justReplaced = false
+        persistDraft()
     }
 
     var enrichmentTarget: EnrichmentPushTarget {
@@ -87,13 +104,19 @@ final class WatchItemViewModel: ObservableObject {
         snapshotPills: [String],
         baseline: WatchItemReadinessState,
         config: WatchItemConfigState,
+        draft: WatchItemReadinessState? = nil,
+        draftConfig: WatchItemConfigState? = nil,
         warmupExerciseNames: [String] = [],
         applePlanID: String? = nil,
         appleDateComponents: DateComponents? = nil,
         garminState: GarminQueueItemState? = nil,
-        isReplaceAvailable: Bool? = nil,
+        libraryWorkoutID: String? = nil,
+        libraryWorkoutTitle: String? = nil,
+        stepSections: [PreviewSection] = [],
         replacer: (any WatchItemReplacing)? = nil,
-        toast: DDToastCenter? = nil
+        toast: DDToastCenter? = nil,
+        readinessStore: (any WatchItemReadinessStoring)? = nil,
+        prefsPersister: WatchItemPrefsPersisting? = nil
     ) {
         self.device = device
         self.workoutID = workoutID
@@ -104,14 +127,23 @@ final class WatchItemViewModel: ObservableObject {
         self.applePlanID = applePlanID
         self.appleDateComponents = appleDateComponents
         self.garminState = garminState
-        self.tracker = WatchItemChangeTracker(baseline: baseline, config: config)
+        self.libraryWorkoutID = libraryWorkoutID
+        self.libraryWorkoutTitle = libraryWorkoutTitle ?? (libraryWorkoutID != nil ? title : nil)
+        self.stepSections = stepSections
+        var tracker = WatchItemChangeTracker(baseline: baseline, config: config)
+        if let draft, let draftConfig {
+            tracker = WatchItemChangeTracker(
+                baseline: baseline,
+                config: config,
+                draft: draft,
+                draftConfig: draftConfig
+            )
+        }
+        self.tracker = tracker
         self.replacer = replacer ?? WatchItemReplaceCoordinator()
-        #if DEBUG
-        self.isReplaceAvailable = isReplaceAvailable ?? OnYourWatchesDemoSupport.isEnabled
-        #else
-        self.isReplaceAvailable = isReplaceAvailable ?? false
-        #endif
         self.toast = toast ?? DDToastCenter.shared
+        self.readinessStore = readinessStore ?? WatchItemReadinessStore.shared
+        self.prefsPersister = prefsPersister
     }
 
     func setEnabled(_ row: WatchItemReadinessRow, _ enabled: Bool) {
@@ -119,6 +151,12 @@ final class WatchItemViewModel: ObservableObject {
         var next = tracker
         next.setEnabled(row, enabled)
         tracker = next
+        justReplaced = false
+        persistDraft()
+    }
+
+    func isEdited(_ row: WatchItemReadinessRow) -> Bool {
+        tracker.isChanged(row)
     }
 
     func mobilityBinding() -> Binding<[EnrichmentActivityPref]> {
@@ -158,10 +196,20 @@ final class WatchItemViewModel: ObservableObject {
 
     func replaceCTATitle() -> String {
         if isReplacing { return WatchItemCopy.ctaUpdating }
+        if justReplaced && !hasChanges { return WatchItemCopy.ctaUpToDate }
         return WatchItemCopy.replaceCTA(changeCount: changeCount)
     }
 
-    var canReplace: Bool { isReplaceAvailable && hasChanges && !isReplacing }
+    /// CTA is always in the view — never demo-gated (AMA-2388).
+    var canReplace: Bool { hasChanges && !isReplacing }
+
+    var applyNote: String {
+        WatchItemCopy.applyNote(hasChanges: hasChanges, isUpToDate: justReplaced && !hasChanges)
+    }
+
+    var onWatchLabel: String {
+        justReplaced ? WatchItemCopy.onWatchUpdated : WatchItemCopy.onWatchNow
+    }
 
     func replace() async {
         guard canReplace else { return }
@@ -171,7 +219,7 @@ final class WatchItemViewModel: ObservableObject {
 
         let request = WatchItemReplaceRequest(
             device: device,
-            workoutID: workoutID,
+            workoutID: libraryWorkoutID ?? workoutID,
             title: title,
             applePlanID: applePlanID,
             appleDateComponents: appleDateComponents
@@ -183,6 +231,22 @@ final class WatchItemViewModel: ObservableObject {
             var next = tracker
             next.markSucceeded()
             tracker = next
+            justReplaced = true
+            // Rebuild delivered preview from the new draft so stepCount / overlay
+            // match what was just pushed (not the pre-replace snapshot).
+            stepSections = Self.sectionsReflectingDelivered(
+                readiness: tracker.draft,
+                config: tracker.draftConfig,
+                priorSections: stepSections
+            )
+            snapshotPills = Self.pills(
+                from: tracker.draft,
+                config: tracker.draftConfig,
+                isApple: isApple,
+                title: title,
+                deliveredStepTotal: stepCount
+            )
+            persistDeliveredAndDraft()
             toast.resolve(
                 id: toastId,
                 kind: .device,
@@ -198,112 +262,37 @@ final class WatchItemViewModel: ObservableObject {
         isReplacing = false
     }
 
-    // MARK: - Factories
+    // MARK: - Persistence
 
-    static func apple(row: WorkoutScheduleRow, calendar: Calendar = .current) -> WatchItemViewModel {
-        let when = Self.appleStateLine(for: row, calendar: calendar)
-        return WatchItemViewModel(
-            device: .apple,
-            workoutID: row.id.planID,
-            title: row.title,
-            stateLine: when,
-            snapshotPills: Self.demoPills(isApple: true, title: row.title),
-            baseline: WatchItemReadinessState(
-                mobilityEnabled: true,
-                warmupsEnabled: true,
-                restEnabled: true,
-                cooldownEnabled: false
-            ),
-            config: Self.demoConfig(isApple: true, title: row.title),
-            warmupExerciseNames: Self.demoWarmupNames(for: row.title),
-            applePlanID: row.id.planID,
-            appleDateComponents: row.dateComponents
+    private var storeKey: String {
+        libraryWorkoutID ?? workoutID
+    }
+
+    private func persistDraft() {
+        let key = storeKey
+        guard !key.isEmpty else { return }
+        let snap = WatchItemReadinessSnapshot(
+            readiness: tracker.draft,
+            config: tracker.draftConfig,
+            snapshotPills: snapshotPills,
+            updatedAt: Date()
         )
+        readinessStore.saveDraft(workoutID: key, snapshot: snap)
+        prefsPersister?.persist(snapshot: snap)
     }
 
-    static func garmin(item: GarminQueueItem) -> WatchItemViewModel {
-        WatchItemViewModel(
-            device: .garmin,
-            workoutID: item.workoutID,
-            title: item.title,
-            stateLine: item.statusLine,
-            snapshotPills: Self.demoPills(isApple: false, title: item.title),
-            baseline: WatchItemReadinessState(
-                mobilityEnabled: false,
-                warmupsEnabled: false,
-                restEnabled: true,
-                cooldownEnabled: false
-            ),
-            config: Self.demoConfig(isApple: false, title: item.title),
-            warmupExerciseNames: Self.demoWarmupNames(for: item.title),
-            garminState: item.state
+    private func persistDeliveredAndDraft() {
+        let key = storeKey
+        guard !key.isEmpty else { return }
+        let snap = WatchItemReadinessSnapshot(
+            readiness: tracker.draft,
+            config: tracker.draftConfig,
+            snapshotPills: snapshotPills,
+            updatedAt: Date()
         )
-    }
-
-    private static func appleStateLine(for row: WorkoutScheduleRow, calendar: Calendar) -> String {
-        guard let date = row.scheduledAt else {
-            return "SCHEDULED · UNSCHEDULED · WORKOUT APP"
-        }
-        let day: String
-        if calendar.isDateInToday(date) {
-            day = "TODAY"
-        } else if calendar.isDateInTomorrow(date) {
-            day = "TOMORROW"
-        } else {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "EEE"
-            day = formatter.string(from: date).uppercased()
-        }
-        let time = DateFormatter.localizedString(from: date, dateStyle: .none, timeStyle: .short)
-        return "SCHEDULED · \(day) · \(time) · WORKOUT APP"
-    }
-
-    private static func demoPills(isApple: Bool, title: String) -> [String] {
-        let isEMOM = title.uppercased().contains("EMOM")
-        if isApple {
-            return ["9 STEPS", "MOBILITY ×2", "RAMPS ×1", "OPEN REST"]
-        }
-        if isEMOM {
-            return ["4 STEPS", "EMOM 10 MIN", "NO PREP", "LAP REST"]
-        }
-        return ["6 STEPS", "MOBILITY ×1", "NO RAMPS", "OPEN REST"]
-    }
-
-    private static func demoWarmupNames(for title: String) -> [String] {
-        if title.uppercased().contains("EMOM") {
-            return ["Power Clean", "Push Press"]
-        }
-        return ["Bench Press", "Back Squat", "Romanian Deadlift"]
-    }
-
-    private static func demoConfig(isApple: Bool, title: String) -> WatchItemConfigState {
-        let mobility: [EnrichmentActivityPref] = [
-            EnrichmentActivityPref(
-                name: "Ski erg",
-                goal: try? ActivityGoal(kind: .distance, value: 500)
-            ),
-            EnrichmentActivityPref(
-                name: "Jump rope",
-                durationSec: 120,
-                goal: try? ActivityGoal(kind: .time, value: 120)
-            )
-        ]
-        let cooldown = WorkoutEnrichmentMutations.defaultCooldownActivities()
-        let names = demoWarmupNames(for: title)
-        let ramps: [PerExerciseRamp] = names.prefix(1).map { name in
-            PerExerciseRamp(
-                exerciseRef: name,
-                enabled: true,
-                sets: WorkoutEnrichmentMutations.defaultRampSets()
-            )
-        }
-        return WatchItemConfigState(
-            mobilityActivities: mobility,
-            cooldownActivities: cooldown,
-            perExerciseRamps: ramps,
-            restOpen: true,
-            restSec: 60
-        )
+        readinessStore.saveDelivered(workoutID: key, snapshot: snap)
+        readinessStore.saveDraft(workoutID: key, snapshot: snap)
+        prefsPersister?.persist(snapshot: snap)
     }
 
     func summary(for row: WatchItemReadinessRow) -> String {

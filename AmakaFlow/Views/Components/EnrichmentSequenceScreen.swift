@@ -79,7 +79,15 @@ struct EnrichmentSequenceScreen: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(DailyDriver.screenBackground.ignoresSafeArea())
         .overlay(alignment: .bottom) {
-            DDEditorSaveBar(title: saveLabel) { dismiss() }
+            DDEditorSaveBar(title: saveLabel) {
+                // AMA-2388 — confirm save while the watch-item sheet is up
+                // (root toast host sits under the sheet presentation).
+                DDToastCenter.shared.success(
+                    WatchItemCopy.toastSaved(kind: kind),
+                    sub: WatchItemCopy.toastSavedSub
+                )
+                dismiss()
+            }
                 .accessibilityIdentifier("af_seq_save")
         }
         .preferredColorScheme(.dark)

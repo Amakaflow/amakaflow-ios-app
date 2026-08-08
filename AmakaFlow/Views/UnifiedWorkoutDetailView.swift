@@ -196,7 +196,8 @@ struct UnifiedWorkoutDetailView: View {
                         confirmAppleWorkoutKitSchedule(
                             workoutName: name,
                             meta: meta,
-                            planJSON: planJSON
+                            planJSON: planJSON,
+                            libraryWorkoutID: workout.id
                         )
                     },
                     onCancel: {
@@ -1285,7 +1286,8 @@ extension UnifiedWorkoutDetailView {
     fileprivate func confirmAppleWorkoutKitSchedule(
         workoutName: String,
         meta: WorkoutKitPlanMeta,
-        planJSON: Data
+        planJSON: Data,
+        libraryWorkoutID: String
     ) {
         guard !isAppleHandoffInFlight else { return }
         isAppleHandoffInFlight = true
@@ -1304,7 +1306,8 @@ extension UnifiedWorkoutDetailView {
             let result = await service.confirmSchedule(
                 workoutName: workoutName,
                 planJSON: planJSON,
-                meta: meta
+                meta: meta,
+                libraryWorkoutID: libraryWorkoutID
             )
             handoffStatus = result.message
             let didSendToAppleWatch = result.kind.isTerminalAppleSentCardSuccess
