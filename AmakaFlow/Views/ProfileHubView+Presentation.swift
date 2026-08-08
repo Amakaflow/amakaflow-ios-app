@@ -30,7 +30,8 @@ extension WorkoutCompletion {
         if hasPositiveDistance, let distanceMeters {
             return String(format: "%.1f", Double(distanceMeters) / 1000.0)
         }
-        let minutes = durationSeconds / 60
+        // Match profileMetaLine — never show 0 for a completed sub-minute session.
+        let minutes = max(1, durationSeconds / 60)
         return "\(minutes)"
     }
 
