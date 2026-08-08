@@ -2,29 +2,21 @@
 //  WorkoutKitPlanStepSummary+Sections.swift
 //  AmakaFlow
 //
-//  AMA-2374 — exercise-named Runna bands for Apple Watch preview
-//  (Mobility prep / Barbell back squat · N SETS). Split from
-//  WorkoutKitPlanStepSummary.swift for SwiftLint file_length / type_body_length.
-//  AMA-2378 — multi-step mobility/cooldown, skipped-ramp captions, and amber
-//  open-goal detail. `SectionAccumulator` below carries most of the new
-//  section-grouping logic at file scope (not nested) to keep
-//  `PreviewSectionBuilder` under SwiftLint's type_body_length.
+//  AMA-2374/2378/2390 — banded Apple Watch preview sections (Mobility /
+//  exercise · N SETS / Circuit · N ROUNDS). Split for SwiftLint file_length.
 //
 
 import Foundation
 import WorkoutKitSync
 
 extension WorkoutKitPlanStepSummary {
-    /// Banded preview sections matching `SDWatchSteps`: Mobility prep / exercise · N SETS.
-    /// Rest chips attach to the preceding work row (right side), never as dump lines.
+    /// Banded preview sections matching `SDWatchSteps`. Rest chips pin to the prior work row.
     static func sections(from planJSON: Data) -> [PreviewSection] {
         PreviewSectionBuilder.sections(from: planJSON)
     }
 }
 
-/// One row's worth of preview content before numbering — shared by
-/// `PreviewSectionBuilder`'s flatten pass and `SectionAccumulator`'s grouping
-/// pass. File-scope (not nested) so both can use it without qualification.
+/// Preview content before numbering — shared by flatten + grouping passes.
 private struct PreviewRow {
     let title: String
     let detail: String?
@@ -269,23 +261,8 @@ private enum PreviewSectionBuilder {
     }
 }
 
-/// AMA-2378 — the mapper composes multi-step mobility AND multi-step
-/// cooldown the same way (named soft-activity steps; see
-/// `_compose_soft_activity_blocks` in blocks_to_workoutkit.py), with no
-/// `kind: cooldown` marker on the wire once there's more than one activity.
-/// `hasWorked` disambiguates by position: soft-activity atoms before the
-/// first work exercise are mobility prep; the same atoms after the last work
-/// exercise are cooldown. The dedicated `.cooldown` interval (legacy
-/// single-activity shape) always merges into this same trailing band so
-/// "Cool-down" never splits in two. File-scope (not nested in
-/// `PreviewSectionBuilder`) so it doesn't count against that enum's
-/// SwiftLint type_body_length.
-///
-/// Value type (not a MainActor `class`): default actor isolation makes a
-/// class deinit hop through `swift_task_deinitOnExecutor` and SIGABRT under
-/// XCTest (libmalloc "pointer being freed was not allocated"). Pending-rest
-/// attachment uses a local array copy so we never pass `&self.*` into a
-/// mutating helper (Swift exclusivity).
+/// AMA-2378 grouping: soft-activity before first work → mobility; after last
+/// work → cooldown. Value type (not MainActor class) for XCTest deinit safety.
 private struct SectionAccumulator {
     private var sections: [PreviewSection] = []
     private var number = 1
@@ -327,7 +304,7 @@ private struct SectionAccumulator {
         exerciseRows.append(PreviewRow(title: title, detail: detail, setCount: max(repeatCount, 1)))
     }
 
-    /// One Circuit/Repeat band: stations once, outer iterations as ROUNDS (Library parity).
+    /// Circuit band: stations once, outer iterations as ROUNDS (Library parity).
     mutating func appendCircuit(reps: Int, stations: [(exercise: String, detail: String?)]) {
         flushMobility()
         flushExercise()
