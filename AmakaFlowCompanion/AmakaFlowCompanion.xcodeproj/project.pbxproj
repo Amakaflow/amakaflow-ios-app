@@ -205,6 +205,7 @@
 		AMA2360STEPSBLD01 /* WorkoutKitPlanStepSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2360STEPSREF01 /* WorkoutKitPlanStepSummary.swift */; };
 		AMA2374SECTSBLD01 /* WorkoutKitPlanStepSummary+Sections.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2374SECTSREF01 /* WorkoutKitPlanStepSummary+Sections.swift */; };
 		AMA2374DDBANDBLD1 /* DailyDriverTheme+WatchBands.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2374DDBANDREF1 /* DailyDriverTheme+WatchBands.swift */; };
+		AMA2387BRANDBLD1 /* DailyDriverTheme+BrandAccents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387BRANDREF1 /* DailyDriverTheme+BrandAccents.swift */; };
 		AMA2375COPYBLD /* OnYourWatchesCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375COPYREF /* OnYourWatchesCopy.swift */; };
 		AMA2386COPYBLD /* WatchItemCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2386COPYREF /* WatchItemCopy.swift */; };
 		AMA2386TRCKBLD /* WatchItemChangeTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2386TRCKREF /* WatchItemChangeTracker.swift */; };
