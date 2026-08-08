@@ -205,6 +205,8 @@
 		AMA2360STEPSBLD01 /* WorkoutKitPlanStepSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2360STEPSREF01 /* WorkoutKitPlanStepSummary.swift */; };
 		AMA2374SECTSBLD01 /* WorkoutKitPlanStepSummary+Sections.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2374SECTSREF01 /* WorkoutKitPlanStepSummary+Sections.swift */; };
 		AMA2374DDBANDBLD1 /* DailyDriverTheme+WatchBands.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2374DDBANDREF1 /* DailyDriverTheme+WatchBands.swift */; };
+		AMA2389DOORBLD /* DailyDriverTheme+DoorRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389DOORREF /* DailyDriverTheme+DoorRow.swift */; };
+		AMA2389TABBLD /* DailyDriverTheme+TabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389TABREF /* DailyDriverTheme+TabBar.swift */; };
 		AMA2375COPYBLD /* OnYourWatchesCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375COPYREF /* OnYourWatchesCopy.swift */; };
 		AMA2386COPYBLD /* WatchItemCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2386COPYREF /* WatchItemCopy.swift */; };
 		AMA2386TRCKBLD /* WatchItemChangeTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2386TRCKREF /* WatchItemChangeTracker.swift */; };
@@ -212,6 +214,7 @@
 		AMA2389MDLBLD /* FriendsSharingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389MDLREF /* FriendsSharingModels.swift */; };
 		AMA2389PRVBLD /* FriendsSharingProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389PRVREF /* FriendsSharingProviding.swift */; };
 		AMA2389MEMBLD /* InMemoryFriendsSharingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389MEMREF /* InMemoryFriendsSharingService.swift */; };
+		AMA2389SEEDBLD /* InMemoryFriendsSharingService+DemoSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389SEEDREF /* InMemoryFriendsSharingService+DemoSeed.swift */; };
 		AMA2389LINBLD /* WorkoutLineageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389LINREF /* WorkoutLineageStore.swift */; };
 		AMA2389STOBLD /* FriendsSharingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389STOREF /* FriendsSharingStore.swift */; };
 		AMA2389UICBLD /* FriendsUIComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389UICREF /* FriendsUIComponents.swift */; };
@@ -888,6 +891,8 @@
 		AMA2360STEPSREF01 /* WorkoutKitPlanStepSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutKitPlanStepSummary.swift; path = ../AmakaFlow/Models/WorkoutKitPlanStepSummary.swift; sourceTree = SOURCE_ROOT; };
 		AMA2374SECTSREF01 /* WorkoutKitPlanStepSummary+Sections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutKitPlanStepSummary+Sections.swift"; path = "../AmakaFlow/Models/WorkoutKitPlanStepSummary+Sections.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2374DDBANDREF1 /* DailyDriverTheme+WatchBands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "DailyDriverTheme+WatchBands.swift"; path = "../AmakaFlow/DailyDriverTheme+WatchBands.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2389DOORREF /* DailyDriverTheme+DoorRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "DailyDriverTheme+DoorRow.swift"; path = "../AmakaFlow/DailyDriverTheme+DoorRow.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2389TABREF /* DailyDriverTheme+TabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "DailyDriverTheme+TabBar.swift"; path = "../AmakaFlow/DailyDriverTheme+TabBar.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2375COPYREF /* OnYourWatchesCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnYourWatchesCopy.swift; path = ../AmakaFlow/Models/OnYourWatchesCopy.swift; sourceTree = SOURCE_ROOT; };
 		AMA2386COPYREF /* WatchItemCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemCopy.swift; path = ../AmakaFlow/Models/WatchItemCopy.swift; sourceTree = SOURCE_ROOT; };
 		AMA2386TRCKREF /* WatchItemChangeTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemChangeTracker.swift; path = ../AmakaFlow/Models/WatchItemChangeTracker.swift; sourceTree = SOURCE_ROOT; };
@@ -895,6 +900,7 @@
 		AMA2389MDLREF /* FriendsSharingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FriendsSharingModels.swift; path = ../AmakaFlow/Models/FriendsSharingModels.swift; sourceTree = SOURCE_ROOT; };
 		AMA2389PRVREF /* FriendsSharingProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FriendsSharingProviding.swift; path = ../AmakaFlow/Services/FriendsSharingProviding.swift; sourceTree = SOURCE_ROOT; };
 		AMA2389MEMREF /* InMemoryFriendsSharingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = InMemoryFriendsSharingService.swift; path = ../AmakaFlow/Services/InMemoryFriendsSharingService.swift; sourceTree = SOURCE_ROOT; };
+		AMA2389SEEDREF /* InMemoryFriendsSharingService+DemoSeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "InMemoryFriendsSharingService+DemoSeed.swift"; path = "../AmakaFlow/Services/InMemoryFriendsSharingService+DemoSeed.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2389LINREF /* WorkoutLineageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutLineageStore.swift; path = ../AmakaFlow/Services/WorkoutLineageStore.swift; sourceTree = SOURCE_ROOT; };
 		AMA2389STOREF /* FriendsSharingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FriendsSharingStore.swift; path = ../AmakaFlow/ViewModels/FriendsSharingStore.swift; sourceTree = SOURCE_ROOT; };
 		AMA2389UICREF /* FriendsUIComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FriendsUIComponents.swift; path = ../AmakaFlow/Views/Friends/FriendsUIComponents.swift; sourceTree = SOURCE_ROOT; };
@@ -1539,6 +1545,7 @@
 				AMA2386REPLREF /* WatchItemReplaceCoordinator.swift */,
 				AMA2389PRVREF /* FriendsSharingProviding.swift */,
 				AMA2389MEMREF /* InMemoryFriendsSharingService.swift */,
+				AMA2389SEEDREF /* InMemoryFriendsSharingService+DemoSeed.swift */,
 				AMA2389LINREF /* WorkoutLineageStore.swift */,
 				AMA2375COPYREF /* OnYourWatchesCopy.swift */,
 				AMA2386COPYREF /* WatchItemCopy.swift */,
@@ -1736,6 +1743,8 @@
 				F84E226E2ED0D55600459747 /* Theme.swift */,
 				AMA2292DDTHEME0000A /* DailyDriverTheme.swift */,
 				AMA2374DDBANDREF1 /* DailyDriverTheme+WatchBands.swift */,
+				AMA2389DOORREF /* DailyDriverTheme+DoorRow.swift */,
+				AMA2389TABREF /* DailyDriverTheme+TabBar.swift */,
 				AMA2292DDSCREENS00A /* DailyDriverScreens.swift */,
 				AMA2293DDCOMP0000A /* DailyDriverComponents.swift */,
 				F84E21762ED0B0C800459747 /* AmakaFlowCompanion */,
@@ -2839,6 +2848,8 @@
 				AMA2360STEPSBLD01 /* WorkoutKitPlanStepSummary.swift in Sources */,
 				AMA2374SECTSBLD01 /* WorkoutKitPlanStepSummary+Sections.swift in Sources */,
 				AMA2374DDBANDBLD1 /* DailyDriverTheme+WatchBands.swift in Sources */,
+				AMA2389DOORBLD /* DailyDriverTheme+DoorRow.swift in Sources */,
+				AMA2389TABBLD /* DailyDriverTheme+TabBar.swift in Sources */,
 				AMA2375COPYBLD /* OnYourWatchesCopy.swift in Sources */,
 				AMA2386COPYBLD /* WatchItemCopy.swift in Sources */,
 				AMA2386TRCKBLD /* WatchItemChangeTracker.swift in Sources */,
@@ -2846,6 +2857,7 @@
 				AMA2389MDLBLD /* FriendsSharingModels.swift in Sources */,
 				AMA2389PRVBLD /* FriendsSharingProviding.swift in Sources */,
 				AMA2389MEMBLD /* InMemoryFriendsSharingService.swift in Sources */,
+				AMA2389SEEDBLD /* InMemoryFriendsSharingService+DemoSeed.swift in Sources */,
 				AMA2389LINBLD /* WorkoutLineageStore.swift in Sources */,
 				AMA2389STOBLD /* FriendsSharingStore.swift in Sources */,
 				AMA2389UICBLD /* FriendsUIComponents.swift in Sources */,

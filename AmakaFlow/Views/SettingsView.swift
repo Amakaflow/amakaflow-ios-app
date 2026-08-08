@@ -486,7 +486,7 @@ struct SettingsView: View {
                 ) {
                     HStack(spacing: 8) {
                         FriendsWaitingBadge(
-                            count: friendsStore.unhandledShareCount,
+                            badgeValue: friendsStore.unhandledShareCount,
                             accessibilityId: "af_friends_settings_row_badge"
                         )
                         Image(systemName: "chevron.right")

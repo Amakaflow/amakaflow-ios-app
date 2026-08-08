@@ -77,7 +77,7 @@ struct CreateWorkoutSheet: View {
                     dismissThen { onSelect(.fromFriends) }
                 } trailing: {
                     FriendsWaitingBadge(
-                        count: friendsStore.unhandledShareCount,
+                        badgeValue: friendsStore.unhandledShareCount,
                         accessibilityId: "af_add_from_friends_badge"
                     )
                 }

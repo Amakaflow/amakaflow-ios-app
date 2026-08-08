@@ -137,7 +137,14 @@ final class FriendsSharingTests: XCTestCase {
         )
         let match = WorkoutShareDedupe.match(
             snapshot: snapshot,
-            against: [(id: "w1", title: "Different title", lineageId: "src:reel-1", fingerprint: "x")]
+            against: [
+                LibraryDedupeEntry(
+                    id: "w1",
+                    title: "Different title",
+                    lineageId: "src:reel-1",
+                    fingerprint: "x"
+                )
+            ]
         )
         guard case .strong(let id, _) = match else {
             return XCTFail("expected lineage strong match")
@@ -157,10 +164,17 @@ final class FriendsSharingTests: XCTestCase {
             blocks: nil,
             lineageId: "unique-a"
         )
-        let fp = WorkoutShareDedupe.fingerprint(from: snapshot)
+        let fingerprint = WorkoutShareDedupe.fingerprint(from: snapshot)
         let match = WorkoutShareDedupe.match(
             snapshot: snapshot,
-            against: [(id: "w2", title: "Lower body", lineageId: "other", fingerprint: fp)]
+            against: [
+                LibraryDedupeEntry(
+                    id: "w2",
+                    title: "Lower body",
+                    lineageId: "other",
+                    fingerprint: fingerprint
+                )
+            ]
         )
         guard case .strong(let id, _) = match else {
             return XCTFail("expected fingerprint strong match")
@@ -188,7 +202,14 @@ final class FriendsSharingTests: XCTestCase {
         )
         let match = WorkoutShareDedupe.match(
             snapshot: snapshot,
-            against: [(id: "w3", title: "Lower body", lineageId: "other", fingerprint: "totally-different")]
+            against: [
+                LibraryDedupeEntry(
+                    id: "w3",
+                    title: "Lower body",
+                    lineageId: "other",
+                    fingerprint: "totally-different"
+                )
+            ]
         )
         XCTAssertEqual(match, .none)
     }

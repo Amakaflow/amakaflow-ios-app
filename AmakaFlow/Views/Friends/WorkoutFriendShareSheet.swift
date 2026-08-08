@@ -138,9 +138,9 @@ struct WorkoutFriendShareSheet: View {
     }
 
     private func friendSelectRow(_ friendship: Friendship) -> some View {
-        let on = selectedFriendIds.contains(friendship.peer.id)
+        let isSelected = selectedFriendIds.contains(friendship.peer.id)
         return Button {
-            if on {
+            if isSelected {
                 selectedFriendIds.remove(friendship.peer.id)
             } else {
                 selectedFriendIds.insert(friendship.peer.id)
@@ -160,7 +160,7 @@ struct WorkoutFriendShareSheet: View {
                     Circle()
                         .stroke(DailyDriver.borderStrong, lineWidth: 1.5)
                         .frame(width: 19, height: 19)
-                    if on {
+                    if isSelected {
                         Circle()
                             .fill(DailyDriver.lime)
                             .frame(width: 19, height: 19)

@@ -6,8 +6,8 @@
 //  and friends / inbox screens.
 //
 
-import Foundation
 import Combine
+import Foundation
 
 @MainActor
 final class FriendsSharingStore: ObservableObject {
@@ -163,16 +163,20 @@ final class FriendsSharingStore: ObservableObject {
         for share: WorkoutShare,
         library: [Workout]
     ) -> WorkoutShareDedupeMatch {
-        let indexed: [(id: String, title: String, lineageId: String?, fingerprint: String)] =
-            library.map { workout in
-                let lineage = lineageStore.lineageId(forWorkoutId: workout.id)
-                    ?? WorkoutShareLineage.seed(from: workout)
-                let fp = lineageStore.fingerprint(forWorkoutId: workout.id)
-                    ?? WorkoutShareDedupe.fingerprint(
-                        from: WorkoutShareLineage.snapshot(from: workout)
-                    )
-                return (workout.id, workout.name, lineage, fp)
-            }
+        let indexed: [LibraryDedupeEntry] = library.map { workout in
+            let lineage = lineageStore.lineageId(forWorkoutId: workout.id)
+                ?? WorkoutShareLineage.seed(from: workout)
+            let fingerprint = lineageStore.fingerprint(forWorkoutId: workout.id)
+                ?? WorkoutShareDedupe.fingerprint(
+                    from: WorkoutShareLineage.snapshot(from: workout)
+                )
+            return LibraryDedupeEntry(
+                id: workout.id,
+                title: workout.name,
+                lineageId: lineage,
+                fingerprint: fingerprint
+            )
+        }
         return WorkoutShareDedupe.match(snapshot: share.snapshot, against: indexed)
     }
 }

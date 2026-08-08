@@ -119,7 +119,7 @@ struct FriendsListView: View {
                         .foregroundColor(DailyDriver.foregroundMuted)
                 }
                 Spacer(minLength: 0)
-                FriendsWaitingBadge(count: store.unhandledShareCount, accessibilityId: "af_friends_inbox_badge")
+                FriendsWaitingBadge(badgeValue: store.unhandledShareCount, accessibilityId: "af_friends_inbox_badge")
             }
             .padding(13)
             .background(DailyDriver.lime.opacity(0.10))

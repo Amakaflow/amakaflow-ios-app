@@ -46,12 +46,12 @@ struct FriendAvatarChip: View {
 }
 
 struct FriendsWaitingBadge: View {
-    let count: Int
+    let badgeValue: Int
     var accessibilityId: String
 
     var body: some View {
-        if count > 0 {
-            Text("\(count)")
+        if badgeValue >= 1 {
+            Text("\(badgeValue)")
                 .font(.system(size: 11, weight: .heavy))
                 .foregroundColor(DailyDriver.ink)
                 .padding(.horizontal, 7)

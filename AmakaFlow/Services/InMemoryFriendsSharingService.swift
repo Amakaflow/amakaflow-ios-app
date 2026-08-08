@@ -31,149 +31,13 @@ nonisolated final class InMemoryFriendsSharingService: FriendsSharingProviding, 
         self.currentUserId = currentUserId
         self.currentHandle = currentHandle
         self.currentDisplayName = currentDisplayName
-
-        let marcus = FriendProfile(
-            id: "u-marcus",
-            displayName: "Marcus O.",
-            handle: "marcus_lifts",
-            accentRaw: "blue"
+        let seed = InMemoryFriendsDemoSeed.make(
+            currentUserId: currentUserId,
+            seedDemo: seedDemo
         )
-        let priya = FriendProfile(
-            id: "u-priya",
-            displayName: "Priya S.",
-            handle: "priya.runs",
-            accentRaw: "purple"
-        )
-        let tomas = FriendProfile(
-            id: "u-tomas",
-            displayName: "Tomás R.",
-            handle: "tomas_engine",
-            accentRaw: "amber"
-        )
-        let jonas = FriendProfile(
-            id: "u-jonas",
-            displayName: "Jonas K.",
-            handle: "jonas.k",
-            accentRaw: "blue"
-        )
-        let sara = FriendProfile(
-            id: "u-sara",
-            displayName: "Sara B.",
-            handle: "sara.b",
-            accentRaw: "amber"
-        )
-
-        self.directory = [marcus, priya, tomas, jonas, sara]
-
-        if seedDemo {
-            self.friendships = [
-                Friendship(
-                    id: "f-marcus",
-                    requesterId: currentUserId,
-                    addresseeId: marcus.id,
-                    status: .accepted,
-                    createdAt: Date().addingTimeInterval(-86400 * 14),
-                    peer: marcus,
-                    isOutgoing: true
-                ),
-                Friendship(
-                    id: "f-priya",
-                    requesterId: currentUserId,
-                    addresseeId: priya.id,
-                    status: .accepted,
-                    createdAt: Date().addingTimeInterval(-86400 * 3),
-                    peer: priya,
-                    isOutgoing: true
-                ),
-                Friendship(
-                    id: "f-tomas",
-                    requesterId: tomas.id,
-                    addresseeId: currentUserId,
-                    status: .accepted,
-                    createdAt: Date().addingTimeInterval(-86400 * 10),
-                    peer: tomas,
-                    isOutgoing: false
-                ),
-                Friendship(
-                    id: "f-jonas",
-                    requesterId: jonas.id,
-                    addresseeId: currentUserId,
-                    status: .pending,
-                    createdAt: Date().addingTimeInterval(-3600),
-                    peer: jonas,
-                    isOutgoing: false
-                ),
-                Friendship(
-                    id: "f-sara",
-                    requesterId: currentUserId,
-                    addresseeId: sara.id,
-                    status: .pending,
-                    createdAt: Date().addingTimeInterval(-7200),
-                    peer: sara,
-                    isOutgoing: true
-                )
-            ]
-
-            let posterior = WorkoutShareSnapshot(
-                name: "Lower body — posterior",
-                sport: "strength",
-                source: "manual",
-                sourceUrl: nil,
-                description: nil,
-                creatorName: marcus.displayName,
-                intervals: [
-                    WorkoutSaveInterval(type: "reps", name: "RDL", sets: 3, reps: 5),
-                    WorkoutSaveInterval(type: "reps", name: "Hip thrust", sets: 3, reps: 8),
-                    WorkoutSaveInterval(type: "reps", name: "Hamstring curl", sets: 3, reps: 10)
-                ],
-                blocks: nil,
-                lineageId: "src:demo-posterior"
-            )
-            let engine = WorkoutShareSnapshot(
-                name: "Engine EMOM",
-                sport: "conditioning",
-                source: "instagram",
-                sourceUrl: "https://www.instagram.com/reel/DMqEsenN6Dl/",
-                description: nil,
-                creatorName: tomas.displayName,
-                intervals: [
-                    WorkoutSaveInterval(type: "time", name: "Bike", seconds: 40),
-                    WorkoutSaveInterval(type: "reps", name: "Burpee", sets: 1, reps: 8)
-                ],
-                blocks: nil,
-                lineageId: "src:https://www.instagram.com/reel/dmqesenn6dl/"
-            )
-
-            self.shares = [
-                WorkoutShare(
-                    id: "share-marcus-1",
-                    fromUserId: marcus.id,
-                    toUserId: currentUserId,
-                    fromDisplayName: marcus.displayName,
-                    fromHandle: marcus.handle,
-                    snapshot: posterior,
-                    note: "the posterior day I promised",
-                    status: .sent,
-                    createdAt: Date().addingTimeInterval(-1800),
-                    savedWorkoutId: nil
-                ),
-                WorkoutShare(
-                    id: "share-tomas-1",
-                    fromUserId: tomas.id,
-                    toUserId: currentUserId,
-                    fromDisplayName: tomas.displayName,
-                    fromHandle: tomas.handle,
-                    snapshot: engine,
-                    note: nil,
-                    status: .sent,
-                    createdAt: Date().addingTimeInterval(-900),
-                    savedWorkoutId: nil
-                )
-            ]
-        } else {
-            self.friendships = []
-            self.shares = []
-        }
+        self.directory = seed.directory
+        self.friendships = seed.friendships
+        self.shares = seed.shares
     }
 
     // MARK: FriendshipProviding
@@ -185,16 +49,16 @@ nonisolated final class InMemoryFriendsSharingService: FriendsSharingProviding, 
 
     func searchUsers(query: String) async throws -> [FriendProfile] {
         lock.lock(); defer { lock.unlock() }
-        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "^@", with: "", options: .regularExpression)
             .lowercased()
-        guard !q.isEmpty else { return [] }
+        guard !normalizedQuery.isEmpty else { return [] }
         let friendIds = Set(friendships.filter { $0.status == .accepted }.map(\.peer.id))
         return directory.filter { profile in
             profile.id != currentUserId
                 && !friendIds.contains(profile.id)
-                && (profile.handleNormalized.contains(q)
-                    || profile.displayName.lowercased().contains(q))
+                && (profile.handleNormalized.contains(normalizedQuery)
+                    || profile.displayName.lowercased().contains(normalizedQuery))
         }
     }
 
@@ -254,7 +118,9 @@ nonisolated final class InMemoryFriendsSharingService: FriendsSharingProviding, 
 
     func cancelRequest(id: String) async throws {
         lock.lock(); defer { lock.unlock() }
-        guard let index = friendships.firstIndex(where: { $0.id == id && $0.isOutgoing && $0.status == .pending }) else {
+        guard let index = friendships.firstIndex(where: {
+            $0.id == id && $0.isOutgoing && $0.status == .pending
+        }) else {
             throw FriendsSharingError.notFound
         }
         friendships.remove(at: index)
@@ -274,7 +140,11 @@ nonisolated final class InMemoryFriendsSharingService: FriendsSharingProviding, 
         let cleaned = handle.trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "^@", with: "", options: .regularExpression)
             .lowercased()
-        return URL(string: "https://amakaflow.com/add/\(cleaned)")!
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "amakaflow.com"
+        components.path = "/add/\(cleaned)"
+        return components.url ?? URL(fileURLWithPath: "/")
     }
 
     // MARK: WorkoutShareProviding

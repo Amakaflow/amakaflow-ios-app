@@ -139,6 +139,14 @@ nonisolated enum WorkoutShareDedupeMatch: Equatable, Sendable {
     case strong(existingWorkoutId: String, existingTitle: String)
 }
 
+/// Library row used for share dedupe (avoids large tuples for SwiftLint).
+nonisolated struct LibraryDedupeEntry: Equatable, Sendable {
+    let id: String
+    let title: String
+    let lineageId: String?
+    let fingerprint: String
+}
+
 nonisolated enum WorkoutShareDedupe {
     static func normalizeTitle(_ title: String) -> String {
         title
@@ -184,7 +192,7 @@ nonisolated enum WorkoutShareDedupe {
 
     static func match(
         snapshot: WorkoutShareSnapshot,
-        against library: [(id: String, title: String, lineageId: String?, fingerprint: String)]
+        against library: [LibraryDedupeEntry]
     ) -> WorkoutShareDedupeMatch {
         for item in library {
             if let lineage = item.lineageId, !lineage.isEmpty, lineage == snapshot.lineageId {
@@ -193,9 +201,9 @@ nonisolated enum WorkoutShareDedupe {
         }
 
         let title = normalizeTitle(snapshot.name)
-        let fp = fingerprint(from: snapshot)
+        let snapshotFingerprint = fingerprint(from: snapshot)
         for item in library {
-            if normalizeTitle(item.title) == title, item.fingerprint == fp {
+            if normalizeTitle(item.title) == title, item.fingerprint == snapshotFingerprint {
                 return .strong(existingWorkoutId: item.id, existingTitle: item.title)
             }
         }
