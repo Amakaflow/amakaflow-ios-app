@@ -23,7 +23,8 @@ struct WatchItemDeliveredStepsOverlay: View {
 
                 VStack(spacing: 0) {
                     Capsule()
-                        .fill(Color.white.opacity(0.22))
+                        // tokens.css `.af-sheet-handle` → `--border-str` (dark)
+                        .fill(DailyDriver.borderStrong)
                         .frame(width: 36, height: 4)
                         .padding(.top, 10)
                         .accessibilityHidden(true)
@@ -37,6 +38,7 @@ struct WatchItemDeliveredStepsOverlay: View {
                             .ddDisplayText(12, weight: .bold)
                             .foregroundColor(DailyDriver.foregroundMuted)
                             .buttonStyle(.plain)
+                            .accessibilityIdentifier("af_watchitem_steps_close")
                     }
                     .padding(.horizontal, 18)
                     .padding(.top, 10)
@@ -61,9 +63,12 @@ struct WatchItemDeliveredStepsOverlay: View {
                 .frame(maxHeight: geo.size.height * 0.86)
                 .background(DailyDriver.playerDockBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .accessibilityAddTraits(.isModal)
             }
         }
+        // Modal for the whole overlay (panel + scrim), not only the panel.
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isModal)
+        .accessibilityLabel(WatchItemCopy.stepsOverlayTitle(count: stepCount))
         .accessibilityIdentifier("af_watchitem_steps_overlay")
     }
 

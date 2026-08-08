@@ -95,4 +95,38 @@ final class WatchItemReadinessStoreTests: XCTestCase {
         XCTAssertNil(store.loadDraft(workoutID: "plan-1"))
         XCTAssertNil(store.loadDelivered(workoutID: "plan-1"))
     }
+
+    func testMigratePreservesExistingDestinationSnapshots() {
+        let planSnap = WatchItemReadinessSnapshot(
+            readiness: WatchItemReadinessState(
+                mobilityEnabled: true,
+                warmupsEnabled: true,
+                restEnabled: true,
+                cooldownEnabled: true
+            ),
+            config: WatchItemConfigState(
+                mobilityActivities: [],
+                cooldownActivities: [],
+                perExerciseRamps: [],
+                restOpen: true,
+                restSec: 60
+            ),
+            snapshotPills: ["PLAN STEPS"],
+            updatedAt: Date()
+        )
+        var librarySnap = planSnap
+        librarySnap.snapshotPills = ["LIBRARY STEPS"]
+        librarySnap.readiness.cooldownEnabled = false
+        store.saveDraft(workoutID: "plan-1", snapshot: planSnap)
+        store.saveDelivered(workoutID: "plan-1", snapshot: planSnap)
+        store.saveDraft(workoutID: "w-9", snapshot: librarySnap)
+        store.saveDelivered(workoutID: "w-9", snapshot: librarySnap)
+
+        store.migrate(from: "plan-1", to: "w-9")
+
+        XCTAssertEqual(store.loadDraft(workoutID: "w-9")?.snapshotPills, ["LIBRARY STEPS"])
+        XCTAssertEqual(store.loadDelivered(workoutID: "w-9")?.readiness.cooldownEnabled, false)
+        XCTAssertNil(store.loadDraft(workoutID: "plan-1"))
+        XCTAssertNil(store.loadDelivered(workoutID: "plan-1"))
+    }
 }

@@ -235,8 +235,9 @@ extension WatchItemViewModel {
             pills.append("MOBILITY ×\(count)")
         }
         if readiness.warmupsEnabled {
-            let count = config.perExerciseRamps.filter(\.enabled).count
-            if count > 0 {
+            let enabledRamps = config.perExerciseRamps.filter(\.enabled)
+            if !enabledRamps.isEmpty {
+                let count = enabledRamps.count
                 enrichmentSteps += count * 3
                 pills.append("RAMPS ×\(count)")
             } else if title.uppercased().contains("EMOM"), !isApple {
@@ -253,7 +254,89 @@ extension WatchItemViewModel {
             pills.append("COOLDOWN ×\(count)")
         }
         let total = deliveredStepTotal ?? max(enrichmentSteps, 1)
-        pills.insert("\(max(total, 1)) STEPS", at: 0)
+        pills.insert(WatchItemCopy.stepsPill(count: total), at: 0)
         return pills
+    }
+
+    /// Rebuild the read-only preview from the newly delivered draft while
+    /// preserving prior WORK bands (exercise rows the enrichment draft doesn't own).
+    static func sectionsReflectingDelivered(
+        readiness: WatchItemReadinessState,
+        config: WatchItemConfigState,
+        priorSections: [PreviewSection]
+    ) -> [PreviewSection] {
+        var sections: [PreviewSection] = []
+        var nextNumber = 1
+
+        func numberedSteps(from titles: [(title: String, detail: String?)]) -> [PreviewStep] {
+            titles.map { item in
+                let step = PreviewStep(
+                    number: nextNumber,
+                    title: item.title,
+                    detail: item.detail,
+                    restChip: nil
+                )
+                nextNumber += 1
+                return step
+            }
+        }
+
+        if readiness.mobilityEnabled {
+            let names = config.mobilityActivities.map(\.name)
+            let labels = names.isEmpty ? ["Mobility"] : names
+            sections.append(
+                PreviewSection(
+                    accent: .mobility,
+                    band: "MOBILITY",
+                    tag: nil,
+                    steps: numberedSteps(from: labels.map { ($0, nil) })
+                )
+            )
+        }
+
+        if readiness.warmupsEnabled {
+            let enabledRamps = config.perExerciseRamps.filter(\.enabled)
+            for ramp in enabledRamps {
+                let details = ["~40%", "~60%", "~80%"]
+                sections.append(
+                    PreviewSection(
+                        accent: .work,
+                        band: "WARM-UP · \(ramp.exerciseRef.uppercased())",
+                        tag: nil,
+                        steps: numberedSteps(from: details.map { (PreviewStep.warmupSetTitle, $0) })
+                    )
+                )
+            }
+        }
+
+        let workBands = priorSections.filter {
+            $0.accent == .work && !$0.band.uppercased().contains("WARM")
+        }
+        for band in workBands {
+            sections.append(
+                PreviewSection(
+                    accent: .work,
+                    band: band.band,
+                    tag: band.tag,
+                    steps: numberedSteps(from: band.steps.map { ($0.title, $0.detail) }),
+                    caption: band.caption
+                )
+            )
+        }
+
+        if readiness.cooldownEnabled {
+            let names = config.cooldownActivities.map(\.name)
+            let labels = names.isEmpty ? ["Cooldown"] : names
+            sections.append(
+                PreviewSection(
+                    accent: .cooldown,
+                    band: "COOLDOWN",
+                    tag: nil,
+                    steps: numberedSteps(from: labels.map { ($0, nil) })
+                )
+            )
+        }
+
+        return sections.isEmpty ? priorSections : sections
     }
 }

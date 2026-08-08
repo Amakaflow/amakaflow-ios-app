@@ -87,7 +87,10 @@ final class WatchItemViewModelCTATests: XCTestCase {
         XCTAssertTrue(vm.applyNote.contains("exact copy"))
         XCTAssertTrue(vm.justReplaced)
         XCTAssertNil(vm.lastError)
-        XCTAssertEqual(vm.snapshotPills.first, "1 STEPS")
+        // Cooldown was toggled on → delivered preview rebuilds (WORK + COOLDOWN).
+        XCTAssertEqual(vm.snapshotPills.first, WatchItemCopy.stepsPill(count: vm.stepCount))
+        XCTAssertGreaterThanOrEqual(vm.stepCount, 2)
+        XCTAssertTrue(vm.stepSections.contains { $0.accent == .cooldown })
     }
 
     func testReplaceFailureSetsErrorAndKeepsPending() async {

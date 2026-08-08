@@ -232,6 +232,13 @@ final class WatchItemViewModel: ObservableObject {
             next.markSucceeded()
             tracker = next
             justReplaced = true
+            // Rebuild delivered preview from the new draft so stepCount / overlay
+            // match what was just pushed (not the pre-replace snapshot).
+            stepSections = Self.sectionsReflectingDelivered(
+                readiness: tracker.draft,
+                config: tracker.draftConfig,
+                priorSections: stepSections
+            )
             snapshotPills = Self.pills(
                 from: tracker.draft,
                 config: tracker.draftConfig,

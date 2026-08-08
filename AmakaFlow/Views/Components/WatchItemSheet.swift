@@ -38,6 +38,7 @@ struct WatchItemSheet: View {
             ZStack {
                 sheetChrome
                     .accessibilityHidden(viewModel.showingStepsOverlay)
+                    .allowsHitTesting(!viewModel.showingStepsOverlay)
                 if viewModel.showingStepsOverlay {
                     WatchItemDeliveredStepsOverlay(
                         stepCount: viewModel.stepCount,
@@ -53,6 +54,8 @@ struct WatchItemSheet: View {
                         .ddDisplayText(15, weight: .bold)
                         .foregroundColor(DailyDriver.lime)
                         .accessibilityIdentifier("af_watchitem_done")
+                        .accessibilityHidden(viewModel.showingStepsOverlay)
+                        .disabled(viewModel.showingStepsOverlay)
                 }
             }
             .navigationDestination(item: $route) { route in
