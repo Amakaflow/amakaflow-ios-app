@@ -367,7 +367,12 @@ final class AppleStartHandoffService {
                 await incompleteScheduleReplacer.remove(rows: replacements)
             }
             if let libraryWorkoutID {
-                await recordPlanLink(workoutName: workoutName, libraryWorkoutID: libraryWorkoutID)
+                let excluded = Set(replacements.map(\.id.planID))
+                await recordPlanLink(
+                    workoutName: workoutName,
+                    libraryWorkoutID: libraryWorkoutID,
+                    excludedPlanIDs: excluded
+                )
             }
             return AppleStartHandoffCopy.scheduledInWorkoutMessage(
                 workoutName: workoutName,
@@ -387,11 +392,18 @@ final class AppleStartHandoffService {
     }
 
     /// After a successful schedule, bind the new WorkoutKit planID to the Library workout.
-    private func recordPlanLink(workoutName: String, libraryWorkoutID: String) async {
+    /// Excludes plan IDs we intended to replace so a failed/no-op removal cannot
+    /// bind the Library id to a stale leftover row.
+    private func recordPlanLink(
+        workoutName: String,
+        libraryWorkoutID: String,
+        excludedPlanIDs: Set<String>
+    ) async {
         guard let incompleteScheduleReplacer else { return }
-        guard let rows = try? await incompleteScheduleReplacer.findIncompletePlans(titled: workoutName),
-              let newest = rows.first
+        guard let rows = try? await incompleteScheduleReplacer.findIncompletePlans(titled: workoutName)
         else { return }
+        let candidates = rows.filter { !excludedPlanIDs.contains($0.id.planID) }
+        guard let newest = candidates.first else { return }
         AppleScheduledWorkoutLinkStore.shared.record(
             planID: newest.id.planID,
             workoutID: libraryWorkoutID,

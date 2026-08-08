@@ -16,8 +16,9 @@ struct WatchItemDeliveredStepsOverlay: View {
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .bottom) {
-                Color.black.opacity(0.55)
+                DailyDriver.screenBackground.opacity(0.72)
                     .ignoresSafeArea()
+                    .accessibilityHidden(true)
                     .onTapGesture(perform: onClose)
 
                 VStack(spacing: 0) {
@@ -25,6 +26,7 @@ struct WatchItemDeliveredStepsOverlay: View {
                         .fill(Color.white.opacity(0.22))
                         .frame(width: 36, height: 4)
                         .padding(.top, 10)
+                        .accessibilityHidden(true)
 
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(WatchItemCopy.stepsOverlayTitle(count: stepCount))
@@ -57,8 +59,9 @@ struct WatchItemDeliveredStepsOverlay: View {
                     }
                 }
                 .frame(maxHeight: geo.size.height * 0.86)
-                .background(Color(red: 0.063, green: 0.067, blue: 0.078))
+                .background(DailyDriver.playerDockBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .accessibilityAddTraits(.isModal)
             }
         }
         .accessibilityIdentifier("af_watchitem_steps_overlay")
@@ -114,7 +117,7 @@ struct WatchItemDeliveredStepsOverlay: View {
 
     private func bandColor(_ accent: PreviewBandAccent) -> Color {
         switch accent {
-        case .mobility: return Color(red: 0.35, green: 0.72, blue: 0.96)
+        case .mobility: return DailyDriver.blue
         case .work: return DailyDriver.lime
         case .cooldown: return DailyDriver.amber
         }

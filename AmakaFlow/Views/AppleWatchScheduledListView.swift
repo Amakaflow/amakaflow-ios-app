@@ -93,13 +93,13 @@ struct AppleWatchScheduledListView: View {
             moveSheet(for: row)
         }
         .sheet(item: $watchItemRow) { row in
-            let vm = WatchItemViewModel.apple(
+            let watchItemViewModel = WatchItemViewModel.apple(
                 row: row,
                 calendar: calendar,
                 library: libraryWorkouts
             )
             WatchItemSheet(
-                viewModel: vm,
+                viewModel: watchItemViewModel,
                 onRemove: {
                     let target = row
                     watchItemRow = nil
@@ -114,7 +114,7 @@ struct AppleWatchScheduledListView: View {
                 },
                 onOpenWorkout: {
                     watchItemRow = nil
-                    if let linked = vm.libraryWorkoutID {
+                    if let linked = watchItemViewModel.libraryWorkoutID {
                         onOpenWorkoutFromWatchItem?(linked)
                     }
                 }

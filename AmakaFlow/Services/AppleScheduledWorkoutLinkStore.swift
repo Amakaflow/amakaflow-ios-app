@@ -73,12 +73,18 @@ final class AppleScheduledWorkoutLinkStore: AppleScheduledWorkoutLinkStoring, @u
     }
 
     /// Prefer exact planID hit; else title-match against Library (backfill).
+    /// When `library` is non-empty, reject (and drop) links to deleted workouts.
     func resolve(
         planID: String,
         title: String,
         library: [(id: String, title: String)]
     ) -> String? {
-        if let hit = workoutID(forPlanID: planID) { return hit }
+        if let hit = workoutID(forPlanID: planID) {
+            if library.isEmpty || library.contains(where: { $0.id == hit }) {
+                return hit
+            }
+            remove(planID: planID)
+        }
         let matches = library.filter {
             WatchWorkoutTitlePolicy.isSameScheduledTitle($0.title, title)
         }

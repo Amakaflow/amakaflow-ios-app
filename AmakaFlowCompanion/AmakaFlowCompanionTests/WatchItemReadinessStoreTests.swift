@@ -68,4 +68,31 @@ final class WatchItemReadinessStoreTests: XCTestCase {
         XCTAssertEqual(store.loadDelivered(workoutID: "w-1")?.readiness.cooldownEnabled, false)
         XCTAssertEqual(store.loadDraft(workoutID: "w-1")?.readiness.cooldownEnabled, true)
     }
+
+    func testMigrateCopiesPlanKeyedSnapshotsOntoLibraryID() {
+        let snap = WatchItemReadinessSnapshot(
+            readiness: WatchItemReadinessState(
+                mobilityEnabled: true,
+                warmupsEnabled: true,
+                restEnabled: true,
+                cooldownEnabled: true
+            ),
+            config: WatchItemConfigState(
+                mobilityActivities: [],
+                cooldownActivities: [],
+                perExerciseRamps: [],
+                restOpen: true,
+                restSec: 60
+            ),
+            snapshotPills: ["9 STEPS"],
+            updatedAt: Date()
+        )
+        store.saveDraft(workoutID: "plan-1", snapshot: snap)
+        store.saveDelivered(workoutID: "plan-1", snapshot: snap)
+        store.migrate(from: "plan-1", to: "w-9")
+        XCTAssertEqual(store.loadDraft(workoutID: "w-9")?.readiness.cooldownEnabled, true)
+        XCTAssertEqual(store.loadDelivered(workoutID: "w-9")?.snapshotPills, ["9 STEPS"])
+        XCTAssertNil(store.loadDraft(workoutID: "plan-1"))
+        XCTAssertNil(store.loadDelivered(workoutID: "plan-1"))
+    }
 }

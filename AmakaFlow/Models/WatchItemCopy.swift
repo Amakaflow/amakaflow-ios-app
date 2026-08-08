@@ -55,11 +55,13 @@ enum WatchItemCopy {
     static let garminRestLap = "LAP TO ADVANCE"
 
     static func seeSteps(count: Int) -> String {
-        "See the \(count) steps"
+        let unit = count == 1 ? "step" : "steps"
+        return "See the \(count) \(unit)"
     }
 
     static func stepsOverlayTitle(count: Int) -> String {
-        "On the watch — \(count) steps"
+        let unit = count == 1 ? "step" : "steps"
+        return "On the watch — \(count) \(unit)"
     }
 
     static func libraryRowTitle(workoutName: String) -> String {

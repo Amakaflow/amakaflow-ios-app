@@ -43,4 +43,21 @@ final class AppleScheduledWorkoutLinkStoreTests: XCTestCase {
         let resolved = store.resolve(planID: "p", title: "Engine EMOM (1)", library: library)
         XCTAssertNil(resolved)
     }
+
+    func testStaleLinkDroppedWhenWorkoutMissingFromLibrary() {
+        store.record(planID: "plan-1", workoutID: "deleted", title: "Gone")
+        let resolved = store.resolve(
+            planID: "plan-1",
+            title: "Gone",
+            library: [("w-2", "Other")]
+        )
+        XCTAssertNil(resolved)
+        XCTAssertNil(store.workoutID(forPlanID: "plan-1"))
+    }
+
+    func testEmptyLibraryKeepsExistingLink() {
+        store.record(planID: "plan-1", workoutID: "w-1", title: "Full Body")
+        let resolved = store.resolve(planID: "plan-1", title: "Full Body", library: [])
+        XCTAssertEqual(resolved, "w-1")
+    }
 }

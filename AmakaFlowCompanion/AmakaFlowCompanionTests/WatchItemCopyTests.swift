@@ -30,6 +30,9 @@ final class WatchItemCopyTests: XCTestCase {
 
     func testSeeStepsAndLibrary() {
         XCTAssertEqual(WatchItemCopy.seeSteps(count: 9), "See the 9 steps")
+        XCTAssertEqual(WatchItemCopy.seeSteps(count: 1), "See the 1 step")
+        XCTAssertEqual(WatchItemCopy.stepsOverlayTitle(count: 9), "On the watch — 9 steps")
+        XCTAssertEqual(WatchItemCopy.stepsOverlayTitle(count: 1), "On the watch — 1 step")
         XCTAssertEqual(
             WatchItemCopy.libraryRowTitle(workoutName: "Full Body"),
             "Full Body — open workout ›"

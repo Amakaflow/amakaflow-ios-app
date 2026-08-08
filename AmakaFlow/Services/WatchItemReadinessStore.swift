@@ -21,6 +21,8 @@ protocol WatchItemReadinessStoring: Sendable {
     func saveDraft(workoutID: String, snapshot: WatchItemReadinessSnapshot)
     func saveDelivered(workoutID: String, snapshot: WatchItemReadinessSnapshot)
     func clear(workoutID: String)
+    /// Copy plan-keyed snapshots onto a Library workout id when a link appears.
+    func migrate(from oldID: String, to newID: String)
 }
 
 /// UserDefaults-backed draft/delivered pairs keyed by Library workoutID.
@@ -57,6 +59,17 @@ final class WatchItemReadinessStore: WatchItemReadinessStoring, @unchecked Senda
         defer { lock.unlock() }
         defaults.removeObject(forKey: Self.draftKeyPrefix + workoutID)
         defaults.removeObject(forKey: Self.deliveredKeyPrefix + workoutID)
+    }
+
+    func migrate(from oldID: String, to newID: String) {
+        guard oldID != newID, !oldID.isEmpty, !newID.isEmpty else { return }
+        if loadDraft(workoutID: newID) == nil, let draft = loadDraft(workoutID: oldID) {
+            saveDraft(workoutID: newID, snapshot: draft)
+        }
+        if loadDelivered(workoutID: newID) == nil, let delivered = loadDelivered(workoutID: oldID) {
+            saveDelivered(workoutID: newID, snapshot: delivered)
+        }
+        clear(workoutID: oldID)
     }
 
     private func load(prefix: String, workoutID: String) -> WatchItemReadinessSnapshot? {

@@ -37,12 +37,14 @@ struct WatchItemSheet: View {
         NavigationStack {
             ZStack {
                 sheetChrome
+                    .accessibilityHidden(viewModel.showingStepsOverlay)
                 if viewModel.showingStepsOverlay {
                     WatchItemDeliveredStepsOverlay(
                         stepCount: viewModel.stepCount,
-                        sections: viewModel.stepSections,
-                        onClose: { viewModel.showingStepsOverlay = false }
-                    )
+                        sections: viewModel.stepSections
+                    ) {
+                        viewModel.showingStepsOverlay = false
+                    }
                 }
             }
             .toolbar {
@@ -82,7 +84,7 @@ struct WatchItemSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     header
-                    onWatchCard
+                    WatchItemOnWatchCard(viewModel: viewModel)
                     Text(WatchItemCopy.sectionLabel)
                         .font(.system(size: 8.5, weight: .medium, design: .monospaced))
                         .foregroundColor(DailyDriver.foregroundDim)
@@ -95,7 +97,7 @@ struct WatchItemSheet: View {
                     restRow
                     doorRow(.cooldown, title: WatchItemCopy.cooldownTitle)
 
-                    libraryRow
+                    WatchItemLibraryRow(viewModel: viewModel, onOpenWorkout: onOpenWorkout)
                         .padding(.top, 4)
                         .padding(.bottom, 12)
                 }
@@ -105,7 +107,7 @@ struct WatchItemSheet: View {
             }
             .scrollBounceBehavior(.basedOnSize)
 
-            pinnedActionBar
+            WatchItemPinnedActionBar(viewModel: viewModel, onRemove: onRemove)
         }
         .background(DailyDriver.screenBackground.ignoresSafeArea())
     }
@@ -114,7 +116,7 @@ struct WatchItemSheet: View {
         HStack(spacing: 11) {
             ZStack {
                 Circle()
-                    .fill(viewModel.isApple ? DailyDriver.card2 : Color(red: 0.35, green: 0.72, blue: 0.96))
+                    .fill(viewModel.isApple ? DailyDriver.card2 : DailyDriver.blue)
                     .frame(width: 34, height: 34)
                 Image(systemName: "applewatch")
                     .font(.system(size: 14, weight: .semibold))
@@ -140,62 +142,6 @@ struct WatchItemSheet: View {
         if viewModel.isApple { return DailyDriver.foregroundDim }
         if viewModel.garminState == .waiting { return DailyDriver.amber }
         return DailyDriver.lime
-    }
-
-    private var onWatchCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 7) {
-                Text(viewModel.onWatchLabel)
-                    .font(.system(size: 7.5, weight: .medium, design: .monospaced))
-                    .foregroundColor(DailyDriver.foregroundDim)
-                FlowLayout(spacing: 6) {
-                    ForEach(viewModel.snapshotPills, id: \.self) { pill in
-                        Text(pill)
-                            .font(.system(size: 8, weight: .semibold, design: .monospaced))
-                            .foregroundColor(DailyDriver.foregroundMuted)
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 4)
-                            .background(DailyDriver.card2)
-                            .clipShape(Capsule())
-                    }
-                }
-            }
-            .padding(.horizontal, 13)
-            .padding(.top, 10)
-            .padding(.bottom, 9)
-
-            Button {
-                viewModel.showingStepsOverlay = true
-            } label: {
-                HStack {
-                    Text(WatchItemCopy.seeSteps(count: viewModel.stepCount))
-                        .ddDisplayText(12.5, weight: .bold)
-                        .foregroundColor(DailyDriver.lime)
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(DailyDriver.lime)
-                }
-                .padding(.horizontal, 13)
-                .padding(.vertical, 10)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("af_watchitem_see_steps")
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(DailyDriver.border)
-                    .frame(height: 1)
-            }
-        }
-        .background(DailyDriver.card)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(DailyDriver.border, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .padding(.top, 12)
-        .accessibilityIdentifier("af_watchitem_onwatch_card")
     }
 
     private func doorRow(_ row: WatchItemReadinessRow, title: String) -> some View {
@@ -343,118 +289,6 @@ struct WatchItemSheet: View {
         case .cooldown: return .sequence(.cooldown)
         case .warmups: return .warmupPick
         case .rest: return nil
-        }
-    }
-
-    private var libraryRow: some View {
-        Group {
-            if viewModel.isLinkedToLibrary, let name = viewModel.libraryWorkoutTitle {
-                Button {
-                    onOpenWorkout?()
-                } label: {
-                    libraryRowContent(
-                        title: WatchItemCopy.libraryRowTitle(workoutName: name),
-                        muted: false
-                    )
-                }
-                .buttonStyle(.plain)
-            } else {
-                libraryRowContent(title: WatchItemCopy.notLinked, muted: true)
-            }
-        }
-        .accessibilityIdentifier("af_watchitem_library_row")
-    }
-
-    private func libraryRowContent(title: String, muted: Bool) -> some View {
-        HStack(spacing: 11) {
-            Image(systemName: "doc.text")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(DailyDriver.foregroundDim)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(WatchItemCopy.fromYourLibrary)
-                    .font(.system(size: 7.5, weight: .medium, design: .monospaced))
-                    .foregroundColor(DailyDriver.foregroundDim)
-                Text(title)
-                    .ddDisplayText(12.5, weight: .bold)
-                    .foregroundColor(muted ? DailyDriver.foregroundDim : DailyDriver.foreground)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 13)
-        .padding(.vertical, 10)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                .foregroundColor(DailyDriver.border)
-        )
-    }
-
-    private var pinnedActionBar: some View {
-        VStack(spacing: 0) {
-            Rectangle()
-                .fill(DailyDriver.border)
-                .frame(height: 1)
-            VStack(spacing: 0) {
-                Button {
-                    Task { await viewModel.replace() }
-                } label: {
-                    Text(viewModel.replaceCTATitle())
-                        .ddDisplayText(14, weight: .bold)
-                        .foregroundColor(
-                            viewModel.canReplace || viewModel.isReplacing
-                                ? DailyDriver.ink
-                                : DailyDriver.foregroundDim
-                        )
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 13)
-                        .background(
-                            viewModel.canReplace || viewModel.isReplacing
-                                ? DailyDriver.lime
-                                : DailyDriver.card2
-                        )
-                        .clipShape(Capsule())
-                        .modifier(ReplaceGlow(active: viewModel.canReplace))
-                        .opacity(viewModel.isReplacing ? 0.75 : 1)
-                }
-                .buttonStyle(.plain)
-                .disabled(!viewModel.canReplace)
-                .accessibilityIdentifier("af_watchitem_replace")
-
-                Text(viewModel.applyNote)
-                    .font(.system(size: 9.5))
-                    .foregroundColor(DailyDriver.foregroundDim)
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 7)
-                    .accessibilityIdentifier("af_watchitem_apply_note")
-
-                Button {
-                    onRemove?()
-                } label: {
-                    Text(WatchItemCopy.removeFromWatch)
-                        .ddDisplayText(12, weight: .bold)
-                        .foregroundColor(DailyDriver.red)
-                }
-                .buttonStyle(.plain)
-                .padding(.top, 9)
-                .accessibilityIdentifier("af_watchitem_remove")
-            }
-            .padding(.horizontal, 18)
-            .padding(.top, 10)
-            .padding(.bottom, 14)
-            .background(Color.black.opacity(0.92))
-        }
-    }
-}
-
-private struct ReplaceGlow: ViewModifier {
-    let active: Bool
-    func body(content: Content) -> some View {
-        if active {
-            content.ddLimeGlow()
-        } else {
-            content
         }
     }
 }
