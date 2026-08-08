@@ -176,7 +176,7 @@ struct WorkoutFriendShareSheet: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(
-                        on ? DailyDriver.lime.opacity(0.55) : DailyDriver.border,
+                        isSelected ? DailyDriver.lime.opacity(0.55) : DailyDriver.border,
                         lineWidth: 1
                     )
             )
