@@ -126,6 +126,13 @@ nonisolated enum FriendsCopy {
         return "FRIEND · SWAP WORKOUTS"
     }
 
+    /// Stable a11y / Maestro token — dots break Maestro `id` regex matching.
+    static func a11yHandleToken(_ handleNormalized: String) -> String {
+        handleNormalized
+            .replacingOccurrences(of: ".", with: "_")
+            .replacingOccurrences(of: "-", with: "_")
+    }
+
     static let saveSnapshotRule =
         "Saving makes it yours — your edits never change their copy."
 

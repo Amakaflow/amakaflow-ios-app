@@ -157,6 +157,7 @@ struct FriendsListView: View {
     @ViewBuilder
     private func friendManageCard(_ friendship: Friendship) -> some View {
         let isPendingRemove = pendingRemoveId == friendship.id
+        let a11yHandle = FriendsCopy.a11yHandleToken(friendship.peer.handleNormalized)
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .center, spacing: 11) {
                 if isEditing {
@@ -170,9 +171,9 @@ struct FriendsListView: View {
                             .foregroundColor(DailyDriver.destructive)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityIdentifier(
-                        "af_friends_remove_toggle_\(friendship.peer.handleNormalized)"
-                    )
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Remove \(friendship.peer.displayName)")
+                    .accessibilityIdentifier("af_friends_remove_toggle_\(a11yHandle)")
                 }
 
                 FriendAvatarChip(
@@ -220,9 +221,7 @@ struct FriendsListView: View {
                                 .clipShape(Capsule(style: .continuous))
                         }
                         .buttonStyle(.plain)
-                        .accessibilityIdentifier(
-                            "af_friends_remove_confirm_\(friendship.peer.handleNormalized)"
-                        )
+                        .accessibilityIdentifier("af_friends_remove_confirm_\(a11yHandle)")
 
                         Button {
                             withAnimation { pendingRemoveId = nil }
@@ -262,7 +261,9 @@ struct FriendsListView: View {
                 )
         )
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .accessibilityIdentifier("af_friends_row_\(friendship.peer.handleNormalized)")
+        // Keep children (edit/− buttons) queryable by Maestro — don't collapse the card.
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("af_friends_row_\(a11yHandle)")
     }
 }
 

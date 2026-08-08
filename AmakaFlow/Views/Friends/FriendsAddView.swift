@@ -124,7 +124,9 @@ struct FriendsAddView: View {
                     .clipShape(Capsule(style: .continuous))
             }
             .buttonStyle(.plain)
-            .accessibilityIdentifier("af_friends_request_\(profile.handleNormalized)")
+            .accessibilityIdentifier(
+                "af_friends_request_\(FriendsCopy.a11yHandleToken(profile.handleNormalized))"
+            )
         }
         .padding(13)
         .background(DailyDriver.card)

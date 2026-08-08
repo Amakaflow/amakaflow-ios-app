@@ -46,7 +46,9 @@ appId: com.myamaka.AmakaFlowCompanion
 - waitForAnimationToEnd:
     timeout: 1500
 - assertVisible:
-    id: "af_friends_remove_toggle_priya.runs"
+    id: "af_friends_done"
+- assertVisible:
+    id: "af_friends_remove_toggle_priya_runs"
 - tapOn:
     id: "af_friends_add"
 - waitForAnimationToEnd:
