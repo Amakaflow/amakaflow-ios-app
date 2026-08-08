@@ -8,8 +8,19 @@
 import XCTest
 @testable import AmakaFlowCompanion
 
-@MainActor
 final class ActualsVerifiedGhostTests: XCTestCase {
+    private var db: AppDatabase!
+    private var repo: ActualsRepository!
+
+    override func setUp() async throws {
+        db = try AppDatabase.makeTestDatabase()
+        repo = ActualsRepository(database: db)
+    }
+
+    override func tearDown() async throws {
+        repo = nil
+        db = nil
+    }
 
     // MARK: - Deltas
 
@@ -118,8 +129,6 @@ final class ActualsVerifiedGhostTests: XCTestCase {
     }
 
     func testRepositoryLatestActualFromVerifiedSession() throws {
-        let db = try AppDatabase.makeTestDatabase()
-        let repo = ActualsRepository(database: db)
         var session = ActualsFillInSession.lowerBodyPosteriorSample(id: "ghost_sess")
         session.exercises[0].confirmation = .adjusted
         session.exercises[0].actualWeightKg = 90

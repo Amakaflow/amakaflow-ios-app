@@ -73,6 +73,9 @@ final class ActualsTodayDemoFeed: ObservableObject {
         }
     }
 
+    /// Avoid MainActor-isolated deinit + TaskLocal teardown crash under XCTest (Swift 6).
+    nonisolated deinit {}
+
     /// Launch flag: skip empty teach and land populated Actuals Today immediately.
     static var shouldAutoActivate: Bool {
         #if DEBUG

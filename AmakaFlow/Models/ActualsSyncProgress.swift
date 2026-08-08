@@ -33,6 +33,9 @@ struct ActualsSyncProgress: Equatable {
 final class ActualsSyncProgressStore: ObservableObject {
     @Published private(set) var progress: ActualsSyncProgress?
 
+    /// Avoid MainActor-isolated deinit + TaskLocal teardown crash under XCTest (Swift 6).
+    nonisolated deinit {}
+
     /// Start a backfill only when the provider reports a real session total.
     func beginBackfill(total: Int) {
         guard total > 0 else { return }

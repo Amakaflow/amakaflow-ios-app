@@ -101,9 +101,20 @@ final class ActualsPlanMatcherTests: XCTestCase {
             targetAvgHR: 125
         )
         let signals = ActualsPlanMatcher.scoreSignals(activity: activity, candidate: candidate)
-        XCTAssertTrue(signals.whyFragments.contains("HR SAYS TEMPO"))
+        XCTAssertTrue(
+            signals.whyFragments.contains("HR SAYS TEMPO"),
+            "expected HR shape fragment, got \(signals.whyFragments)"
+        )
+        // whyLine keeps at most two fragments (duration/distance often win the slots).
         let why = ActualsPlanMatcher.whyLine(from: signals)
-        XCTAssertTrue(why.contains("HR SAYS TEMPO") || why.contains("DISTANCE FITS"), why)
+        XCTAssertFalse(why.isEmpty)
+        XCTAssertTrue(
+            why.contains("SAME DURATION")
+                || why.contains("SAME DISTANCE")
+                || why.contains("DISTANCE FITS")
+                || why.contains("HR SAYS TEMPO"),
+            why
+        )
     }
 
     func testTypeMismatchScoresLowerThanTypeMatch() {

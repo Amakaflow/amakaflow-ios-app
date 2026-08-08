@@ -22,6 +22,9 @@ final class ActualsFillInViewModel: ObservableObject {
         self.repository = repository
     }
 
+    /// Avoid MainActor-isolated deinit + TaskLocal teardown crash under XCTest (Swift 6).
+    nonisolated deinit {}
+
     var confirmedCount: Int { session.confirmedCount }
     var unconfirmedCount: Int { session.unconfirmedCount }
     var rpe: Int? { session.rpe }

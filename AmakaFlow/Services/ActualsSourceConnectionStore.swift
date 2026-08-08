@@ -56,6 +56,9 @@ final class ActualsSourceConnectionStore: ObservableObject, ActualsSourceConnect
         hasEverConnected = defaults.bool(forKey: Keys.everConnected) || !connected.isEmpty
     }
 
+    /// Avoid MainActor-isolated deinit + TaskLocal teardown crash under XCTest (Swift 6).
+    nonisolated deinit {}
+
     func isConnected(_ provider: ActualsSourceProvider) -> Bool {
         connectedProviders.contains(provider)
     }
