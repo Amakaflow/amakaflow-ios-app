@@ -310,14 +310,22 @@ final class AppleStartHandoffService {
     }
 
     /// Schedule a previously prepared mapper plan JSON.
-    func confirmSchedule(workoutName: String, planJSON: Data, meta: WorkoutKitPlanMeta) async -> AppleStartHandoffResult {
+    /// - Parameter libraryWorkoutID: AmakaFlow Library id — persisted beside the
+    ///   WorkoutKit planID so Watch Item Open workout never routes a plan UUID.
+    func confirmSchedule(
+        workoutName: String,
+        planJSON: Data,
+        meta: WorkoutKitPlanMeta,
+        libraryWorkoutID: String? = nil
+    ) async -> AppleStartHandoffResult {
         // Serialize confirms so a double-tap cannot race two saves before
         // same-title incomplete replacement runs (stacked duplicates).
         await AppleScheduleConfirmGate.shared.run {
             await self.confirmScheduleUnlocked(
                 workoutName: workoutName,
                 planJSON: planJSON,
-                meta: meta
+                meta: meta,
+                libraryWorkoutID: libraryWorkoutID
             )
         }
     }
@@ -325,7 +333,8 @@ final class AppleStartHandoffService {
     private func confirmScheduleUnlocked(
         workoutName: String,
         planJSON: Data,
-        meta: WorkoutKitPlanMeta
+        meta: WorkoutKitPlanMeta,
+        libraryWorkoutID: String?
     ) async -> AppleStartHandoffResult {
         guard let workoutKitSaver else {
             return AppleStartHandoffResult(
@@ -357,6 +366,9 @@ final class AppleStartHandoffService {
             if let incompleteScheduleReplacer, !replacements.isEmpty {
                 await incompleteScheduleReplacer.remove(rows: replacements)
             }
+            if let libraryWorkoutID {
+                await recordPlanLink(workoutName: workoutName, libraryWorkoutID: libraryWorkoutID)
+            }
             return AppleStartHandoffCopy.scheduledInWorkoutMessage(
                 workoutName: workoutName,
                 pairing: pairingReader.pairingReadForCopy(),
@@ -374,6 +386,19 @@ final class AppleStartHandoffService {
         }
     }
 
+    /// After a successful schedule, bind the new WorkoutKit planID to the Library workout.
+    private func recordPlanLink(workoutName: String, libraryWorkoutID: String) async {
+        guard let incompleteScheduleReplacer else { return }
+        guard let rows = try? await incompleteScheduleReplacer.findIncompletePlans(titled: workoutName),
+              let newest = rows.first
+        else { return }
+        AppleScheduledWorkoutLinkStore.shared.record(
+            planID: newest.id.planID,
+            workoutID: libraryWorkoutID,
+            title: workoutName
+        )
+    }
+
     /// One-shot compose + schedule (tests / callers that skip the preview sheet).
     func handoff(workout: Workout) async -> AppleStartHandoffResult {
         let prepared = await prepare(workout: workout)
@@ -385,7 +410,8 @@ final class AppleStartHandoffService {
         return await confirmSchedule(
             workoutName: workout.name,
             planJSON: planJSON,
-            meta: meta
+            meta: meta,
+            libraryWorkoutID: workout.id
         )
     }
 }

@@ -16,7 +16,7 @@ enum WatchItemReadinessRow: String, CaseIterable, Hashable, Sendable {
     case cooldown
 }
 
-struct WatchItemReadinessState: Equatable, Sendable {
+struct WatchItemReadinessState: Equatable, Codable, Sendable {
     var mobilityEnabled: Bool
     var warmupsEnabled: Bool
     var restEnabled: Bool
@@ -42,7 +42,7 @@ struct WatchItemReadinessState: Equatable, Sendable {
 }
 
 /// Local readiness configurator state (same shapes as AMA-2378 enhance sheet).
-struct WatchItemConfigState: Equatable, Sendable {
+struct WatchItemConfigState: Equatable, Codable, Sendable {
     var mobilityActivities: [EnrichmentActivityPref]
     var cooldownActivities: [EnrichmentActivityPref]
     var perExerciseRamps: [PerExerciseRamp]
@@ -61,6 +61,19 @@ struct WatchItemChangeTracker: Equatable, Sendable {
         self.draft = baseline
         self.baselineConfig = config
         self.draftConfig = config
+    }
+
+    /// AMA-2388: seed draft from the shared store while keeping delivered baseline.
+    init(
+        baseline: WatchItemReadinessState,
+        config: WatchItemConfigState,
+        draft: WatchItemReadinessState,
+        draftConfig: WatchItemConfigState
+    ) {
+        self.baseline = baseline
+        self.draft = draft
+        self.baselineConfig = config
+        self.draftConfig = draftConfig
     }
 
     var changeCount: Int {
