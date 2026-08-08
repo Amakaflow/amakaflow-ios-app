@@ -1,0 +1,69 @@
+# AMA-2389 — From friends → dismiss others → HIIT lineage dup → Open yours
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2389_dup,email=claude+clerk_test@amakaflow.dev,name=AMA2389 Dup"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn:
+    text: "Library"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_fab"
+    timeout: 15000
+- tapOn:
+    id: "af_library_fab"
+- extendedWaitUntil:
+    visible: "From friends"
+    timeout: 10000
+- tapOn: "From friends"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "Look inside"
+    timeout: 10000
+# Clear the two non-dup demos so only HIIT remixed remains.
+- tapOn:
+    text: "Not for me"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn:
+    text: "Not for me"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1500
+- extendedWaitUntil:
+    visible: "HIIT remixed"
+    timeout: 10000
+- tapOn: "Look inside"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "You already have this one"
+    timeout: 15000
+- assertVisible: "Open yours ›"
+- takeScreenshot: docs/ama-2389-dogfood/06-dedupe-card
+- tapOn: "Open yours ›"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 15000
+- takeScreenshot: docs/ama-2389-dogfood/07-after-open-yours

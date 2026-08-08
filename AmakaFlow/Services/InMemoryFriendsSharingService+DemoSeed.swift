@@ -164,6 +164,22 @@ nonisolated enum InMemoryFriendsDemoSeed {
             lineageId: "src:https://www.instagram.com/reel/dmqesenn6dl/"
         )
 
+        // Matches fixture-hiit-001 lineage (`src:` + lowercased source_url) so
+        // UITEST_USE_FIXTURES dogfood / Maestro can hit the amber dup card.
+        let hiitDup = WorkoutShareSnapshot(
+            name: "HIIT remixed",
+            sport: "cardio",
+            source: "instagram",
+            sourceUrl: "https://www.instagram.com/amakaflow",
+            description: nil,
+            creatorName: marcus.displayName,
+            intervals: [
+                WorkoutSaveInterval(type: "reps", name: "Jumping Jacks", sets: 1, reps: 20)
+            ],
+            blocks: nil,
+            lineageId: "src:https://www.instagram.com/amakaflow"
+        )
+
         return [
             WorkoutShare(
                 id: "share-marcus-1",
@@ -187,6 +203,19 @@ nonisolated enum InMemoryFriendsDemoSeed {
                 note: nil,
                 status: .sent,
                 createdAt: Date().addingTimeInterval(-900),
+                savedWorkoutId: nil
+            ),
+            WorkoutShare(
+                id: "share-dup-hiit",
+                fromUserId: marcus.id,
+                toUserId: currentUserId,
+                fromDisplayName: marcus.displayName,
+                fromHandle: marcus.handle,
+                snapshot: hiitDup,
+                note: "same lineage as your HIIT fixture",
+                status: .sent,
+                // Older than the other demos so inbox "Look inside" index 0 is a clean save.
+                createdAt: Date().addingTimeInterval(-2400),
                 savedWorkoutId: nil
             )
         ]

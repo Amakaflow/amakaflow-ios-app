@@ -1,0 +1,60 @@
+# AMA-2389 — Profile → Settings → Friends list (demo seed)
+# Child a11y ids under DDSettingsGroup/DDDoorRow often collapse — prefer text.
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2389_settings,email=claude+clerk_test@amakaflow.dev,name=AMA2389 Settings"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn:
+    text: "Profile"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_profile_settings_entry"
+    timeout: 15000
+- tapOn:
+    id: "af_profile_settings_entry"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "Settings"
+    timeout: 10000
+- extendedWaitUntil:
+    visible: "Friends"
+    timeout: 15000
+- takeScreenshot: docs/ama-2389-dogfood/08-settings-friends
+- tapOn: "Friends"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "af_friends_settings_row"
+    timeout: 10000
+- tapOn:
+    id: "af_friends_settings_row"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_friends_list"
+    timeout: 15000
+- assertVisible:
+    id: "af_friends_inbox_teaser"
+- assertVisible: "Marcus O."
+- assertVisible: "Priya S."
+- takeScreenshot: docs/ama-2389-dogfood/09-friends-list
