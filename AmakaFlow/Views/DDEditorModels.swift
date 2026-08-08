@@ -214,7 +214,22 @@ enum DDEditorFormatting {
 }
 
 enum DDEditorSeed {
+    /// AMA-2387: optional last-actual lookup for editor ghosts (defaults to shared GRDB).
+    static var ghostLookup: ActualsGhostLookingUp = ActualsRepository()
+
     static func initialState(mode: DDEditorMode, workout: Workout?) -> (title: String, blocks: [DDEditorBlockDraft]) {
+        var seeded = seedWithoutGhosts(mode: mode, workout: workout)
+        // Ghosts only apply when opening a planned workout (edit) or the backfill demo seed.
+        if mode == .edit || mode == .backfill {
+            ActualsGhostFeed.applyGhosts(to: &seeded.blocks, lookup: ghostLookup)
+        }
+        return seeded
+    }
+
+    private static func seedWithoutGhosts(
+        mode: DDEditorMode,
+        workout: Workout?
+    ) -> (title: String, blocks: [DDEditorBlockDraft]) {
         switch mode {
         case .new:
             return ("", [])
@@ -228,9 +243,9 @@ enum DDEditorSeed {
                         rounds: 3,
                         restBetweenRoundsSeconds: 120,
                         exercises: [
-                            DDEditorExerciseDraft(name: "Back squat", sets: 3, reps: 5, weightKg: 85, restSeconds: 120, showsLastTime: true),
-                            DDEditorExerciseDraft(name: "Romanian deadlift", sets: 3, reps: 8, weightKg: 70, restSeconds: 120, showsLastTime: true),
-                            DDEditorExerciseDraft(name: "Split squat", sets: 2, reps: 10, weightKg: 20, restSeconds: 60, showsLastTime: true)
+                            DDEditorExerciseDraft(name: "Back squat", sets: 3, reps: 5, weightKg: 85, restSeconds: 120),
+                            DDEditorExerciseDraft(name: "Romanian deadlift", sets: 3, reps: 8, weightKg: 70, restSeconds: 120),
+                            DDEditorExerciseDraft(name: "Split squat", sets: 2, reps: 10, weightKg: 20, restSeconds: 60)
                         ]
                     )
                 ]
