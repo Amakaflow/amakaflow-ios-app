@@ -9,7 +9,6 @@ import SwiftUI
 
 struct FriendsAddView: View {
     @ObservedObject var store: FriendsSharingStore
-    @Environment(\.dismiss) private var dismiss
     @State private var query = ""
     @State private var results: [FriendProfile] = []
     @State private var toastNote: String?
@@ -17,6 +16,11 @@ struct FriendsAddView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
+                Text("Add a friend")
+                    .ddDisplayText(26, weight: .heavy)
+                    .foregroundColor(DailyDriver.foreground)
+                    .padding(.top, 4)
+
                 searchField
                 ForEach(results) { profile in
                     searchResultRow(profile)
@@ -25,7 +29,7 @@ struct FriendsAddView: View {
                 Text("NOT ON AMAKAFLOW YET?")
                     .font(.system(size: 8.5, weight: .medium, design: .monospaced))
                     .foregroundColor(DailyDriver.foregroundDim)
-                    .padding(.top, 4)
+                    .padding(.top, 8)
 
                 inviteLinkCard
 
@@ -33,7 +37,7 @@ struct FriendsAddView: View {
                     Text("REQUESTS")
                         .font(.system(size: 8.5, weight: .medium, design: .monospaced))
                         .foregroundColor(DailyDriver.foregroundDim)
-                        .padding(.top, 4)
+                        .padding(.top, 8)
                     ForEach(store.incomingRequests) { request in
                         incomingRequestRow(request)
                     }
@@ -49,13 +53,8 @@ struct FriendsAddView: View {
             .padding(.vertical, 12)
         }
         .background(DailyDriver.screenBackground.ignoresSafeArea())
-        .navigationTitle("Add a friend")
-        .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Close") { dismiss() }
-            }
-        }
+        .navigationTitle("Friends")
+        .navigationBarTitleDisplayMode(.inline)
         .task { await store.reload() }
         .onChange(of: query) { _, newValue in
             Task {
@@ -81,7 +80,7 @@ struct FriendsAddView: View {
         HStack(spacing: 9) {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(DailyDriver.foregroundDim)
-            TextField("Search @handle", text: $query)
+            TextField("Search by name or @handle", text: $query)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .font(.system(size: 13))

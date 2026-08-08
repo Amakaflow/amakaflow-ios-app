@@ -26,9 +26,9 @@ xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID" \
 cat <<EOF
 
 Manual run-through (demo friends already seeded):
-  1. Profile → Friends accordion → Friends list (Marcus / Priya / Tomás + requests)
+  1. Profile → Friends row (under week dots) → Edit/− remove / + Add friend / requests
   2. Library → open HIIT Follow-Along → Share → pick Marcus → Send (toast)
   3. Library FAB → From friends → Look inside → Save (or HIIT remixed → dup card)
-  4. Confirm badges on Settings Friends + ＋ From friends decrement after dismiss/save
+  4. Confirm badges on Profile Friends + ＋ From friends decrement after dismiss/save
 
 EOF

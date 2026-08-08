@@ -11,6 +11,8 @@ enum ProfileHubRoute: Hashable {
     case settings
     case history
     case coach
+    /// AMA-2389: Friends management (add / remove / requests).
+    case friends
 }
 
 struct ProfileHubView: View {
@@ -20,6 +22,7 @@ struct ProfileHubView: View {
     @EnvironmentObject private var pairingService: PairingService
     @AppStorage(DefaultsKey.userDisplayName.rawValue) private var displayNameOverride: String = ""
     @StateObject private var historyViewModel = ActivityHistoryViewModel()
+    @ObservedObject private var friendsStore = FriendsSharingStore.shared
     @State private var weekExpanded = false
     @State private var showingBackfill = false
     @AppStorage("dd_profile_backfill_completed") private var backfillCompleted = false
@@ -78,7 +81,10 @@ struct ProfileHubView: View {
                 .padding(.bottom, 120)
             }
             .background(DailyDriver.screenBackground.ignoresSafeArea())
-            .navigationBarHidden(true)
+            // Keep title for pushed screens' back label ("< Profile") while hiding chrome on the hub.
+            .navigationTitle("Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
             .preferredColorScheme(.dark)
             .navigationDestination(for: ProfileHubRoute.self) { route in
                 switch route {
@@ -94,10 +100,13 @@ struct ProfileHubView: View {
                                 .opacity(0.01)
                                 .accessibilityIdentifier("coach_screen")
                         }
+                case .friends:
+                    FriendsListView(store: friendsStore)
                 }
             }
             .task {
                 await historyViewModel.loadCompletions()
+                await friendsStore.reload()
             }
             .overlay(alignment: .top) {
                 Text(" ")
@@ -150,6 +159,10 @@ struct ProfileHubView: View {
             weekDots
                 .padding(.top, 12)
 
+            // AMA-2389 mockup: Friends management lives on Profile (not only Settings).
+            friendsEntryRow
+                .padding(.top, 14)
+
             if !backfillCompleted {
                 DDInsightBanner(
                     title: "Monday's strength needs weights",
@@ -164,6 +177,52 @@ struct ProfileHubView: View {
                 .padding(.top, 20)
         }
         .padding(.horizontal, 18)
+    }
+
+    private var friendsEntryRow: some View {
+        Button {
+            path.append(ProfileHubRoute.friends)
+        } label: {
+            HStack(spacing: 12) {
+                DDIconChip(
+                    systemName: "person.2.fill",
+                    background: DailyDriver.purple,
+                    size: 38
+                )
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Friends")
+                        .ddDisplayText(15, weight: .bold)
+                        .foregroundColor(DailyDriver.foreground)
+                    Text(
+                        FriendsCopy.profileEntrySubtitle(
+                            friendCount: friendsStore.acceptedFriends.count,
+                            waitingCount: friendsStore.unhandledShareCount
+                        )
+                    )
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                    .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                FriendsWaitingBadge(
+                    badgeValue: friendsStore.unhandledShareCount,
+                    accessibilityId: "af_profile_friends_badge"
+                )
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(DailyDriver.foregroundDim)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 13)
+            .background(DailyDriver.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(DailyDriver.border, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("af_profile_friends_row")
     }
 
     private var identityRow: some View {

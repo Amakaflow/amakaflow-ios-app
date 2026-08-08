@@ -97,8 +97,34 @@ nonisolated enum FriendsCopy {
     static let privacyContractMono =
         "FRIENDS CAN SEND YOU WORKOUTS — THEY CAN'T SEE YOUR HISTORY, STATS OR GYM. REMOVE ANYONE ANY TIME; THEY AREN'T NOTIFIED."
 
+    /// List footer when friends exist (mockup manage screen).
+    static let privacyRemovingSilentMono =
+        "FRIENDS CAN SEND YOU WORKOUTS — THEY CAN'T SEE YOUR HISTORY, STATS OR GYM. REMOVING IS SILENT."
+
     static let snapshotHonesty =
         "They get a copy — your original stays yours; their edits don't touch it."
+
+    static func removeConfirm(displayName: String) -> String {
+        let first = displayName.split(separator: " ").first.map(String.init) ?? displayName
+        return "Remove \(first)? They won't be notified. Workouts you saved from them stay yours. You can add them again any time."
+    }
+
+    static func profileEntrySubtitle(friendCount: Int, waitingCount: Int) -> String {
+        let friendsPart = friendCount == 1 ? "1 FRIEND" : "\(friendCount) FRIENDS"
+        if waitingCount >= 1 {
+            let waitingPart = waitingCount == 1 ? "1 WORKOUT WAITING" : "\(waitingCount) WORKOUTS WAITING"
+            return "\(friendsPart) · \(waitingPart)"
+        }
+        return "\(friendsPart) · SWAP WORKOUTS"
+    }
+
+    static func friendRowMeta(createdAt: Date, now: Date = Date()) -> String {
+        let weekAgo = now.addingTimeInterval(-86400 * 7)
+        if createdAt >= weekAgo {
+            return "ADDED THIS WEEK"
+        }
+        return "FRIEND · SWAP WORKOUTS"
+    }
 
     static let saveSnapshotRule =
         "Saving makes it yours — your edits never change their copy."

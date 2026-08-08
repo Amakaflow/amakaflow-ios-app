@@ -8,8 +8,10 @@
 import SwiftUI
 
 struct FriendsPrivacyNote: View {
+    var text: String = FriendsCopy.privacyContractMono
+
     var body: some View {
-        Text(FriendsCopy.privacyContractMono)
+        Text(text)
             .font(.system(size: 8, weight: .medium, design: .monospaced))
             .foregroundColor(DailyDriver.foregroundDim)
             .lineSpacing(3)
