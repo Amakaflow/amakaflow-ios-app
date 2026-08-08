@@ -81,7 +81,7 @@ struct WorkoutFriendShareSheet: View {
             Button {
                 Task { await send() }
             } label: {
-                Text(FriendsCopy.sendCTA(count: selectedCount))
+                Text(FriendsCopy.sendCTA(selectedFriendCount: selectedCount))
                     .ddDisplayText(13.5, weight: .bold)
                     .foregroundColor(canSend ? DailyDriver.ink : DailyDriver.foregroundDim)
                     .frame(maxWidth: .infinity)

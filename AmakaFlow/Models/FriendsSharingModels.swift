@@ -109,9 +109,11 @@ nonisolated enum FriendsCopy {
 
     static let inviteLinkHint = "ADDS YOU BOTH WHEN THEY JOIN"
 
-    static func sendCTA(count: Int) -> String {
-        guard count > 0 else { return "Pick a friend" }
-        return count == 1 ? "Send to 1 friend" : "Send to \(count) friends"
+    static func sendCTA(selectedFriendCount: Int) -> String {
+        guard selectedFriendCount >= 1 else { return "Pick a friend" }
+        return selectedFriendCount == 1
+            ? "Send to 1 friend"
+            : "Send to \(selectedFriendCount) friends"
     }
 
     static func copySuffix(fromName: String) -> String {

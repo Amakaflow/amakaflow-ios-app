@@ -216,9 +216,9 @@ final class FriendsSharingTests: XCTestCase {
 
     func testCopySuffix() {
         XCTAssertEqual(FriendsCopy.copySuffix(fromName: "Marcus O."), " (from Marcus)")
-        XCTAssertEqual(FriendsCopy.sendCTA(count: 0), "Pick a friend")
-        XCTAssertEqual(FriendsCopy.sendCTA(count: 1), "Send to 1 friend")
-        XCTAssertEqual(FriendsCopy.sendCTA(count: 2), "Send to 2 friends")
+        XCTAssertEqual(FriendsCopy.sendCTA(selectedFriendCount: 0), "Pick a friend")
+        XCTAssertEqual(FriendsCopy.sendCTA(selectedFriendCount: 1), "Send to 1 friend")
+        XCTAssertEqual(FriendsCopy.sendCTA(selectedFriendCount: 2), "Send to 2 friends")
     }
 
     // MARK: Badge decrement
