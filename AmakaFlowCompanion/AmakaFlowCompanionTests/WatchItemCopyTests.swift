@@ -35,6 +35,7 @@ final class WatchItemCopyTests: XCTestCase {
         XCTAssertEqual(WatchItemCopy.stepsOverlayTitle(count: 1), "On the watch — 1 step")
         XCTAssertEqual(WatchItemCopy.stepsPill(count: 9), "9 STEPS")
         XCTAssertEqual(WatchItemCopy.stepsPill(count: 1), "1 STEP")
+        XCTAssertEqual(WatchItemCopy.stepsPill(count: 0), "1 STEP")
         XCTAssertEqual(
             WatchItemCopy.libraryRowTitle(workoutName: "Full Body"),
             "Full Body — open workout ›"

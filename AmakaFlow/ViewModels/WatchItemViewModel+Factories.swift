@@ -268,13 +268,15 @@ extension WatchItemViewModel {
         var sections: [PreviewSection] = []
         var nextNumber = 1
 
-        func numberedSteps(from titles: [(title: String, detail: String?)]) -> [PreviewStep] {
-            titles.map { item in
+        func numberedSteps(
+            from items: [(title: String, detail: String?, restChip: String?)]
+        ) -> [PreviewStep] {
+            items.map { item in
                 let step = PreviewStep(
                     number: nextNumber,
                     title: item.title,
                     detail: item.detail,
-                    restChip: nil
+                    restChip: item.restChip
                 )
                 nextNumber += 1
                 return step
@@ -289,7 +291,7 @@ extension WatchItemViewModel {
                     accent: .mobility,
                     band: "MOBILITY",
                     tag: nil,
-                    steps: numberedSteps(from: labels.map { ($0, nil) })
+                    steps: numberedSteps(from: labels.map { ($0, nil, nil) })
                 )
             )
         }
@@ -303,7 +305,7 @@ extension WatchItemViewModel {
                         accent: .work,
                         band: "WARM-UP · \(ramp.exerciseRef.uppercased())",
                         tag: nil,
-                        steps: numberedSteps(from: details.map { (PreviewStep.warmupSetTitle, $0) })
+                        steps: numberedSteps(from: details.map { (PreviewStep.warmupSetTitle, $0, nil) })
                     )
                 )
             }
@@ -318,7 +320,7 @@ extension WatchItemViewModel {
                     accent: .work,
                     band: band.band,
                     tag: band.tag,
-                    steps: numberedSteps(from: band.steps.map { ($0.title, $0.detail) }),
+                    steps: numberedSteps(from: band.steps.map { ($0.title, $0.detail, $0.restChip) }),
                     caption: band.caption
                 )
             )
@@ -332,7 +334,7 @@ extension WatchItemViewModel {
                     accent: .cooldown,
                     band: "COOLDOWN",
                     tag: nil,
-                    steps: numberedSteps(from: labels.map { ($0, nil) })
+                    steps: numberedSteps(from: labels.map { ($0, nil, nil) })
                 )
             )
         }

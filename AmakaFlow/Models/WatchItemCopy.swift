@@ -66,8 +66,9 @@ enum WatchItemCopy {
 
     /// Uppercase ON THE WATCH pill (`1 STEP` / `9 STEPS`).
     static func stepsPill(count: Int) -> String {
-        let unit = count == 1 ? "STEP" : "STEPS"
-        return "\(max(count, 1)) \(unit)"
+        let normalized = max(count, 1)
+        let unit = normalized == 1 ? "STEP" : "STEPS"
+        return "\(normalized) \(unit)"
     }
 
     static func libraryRowTitle(workoutName: String) -> String {
