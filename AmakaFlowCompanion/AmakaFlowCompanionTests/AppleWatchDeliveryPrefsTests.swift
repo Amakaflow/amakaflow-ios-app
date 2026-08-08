@@ -268,6 +268,74 @@ final class AppleWatchDeliveryPrefsTests: XCTestCase {
         XCTAssertEqual(sections[0].steps.first?.title, "Work intervals ×4")
     }
 
+    /// AMA-2390 — distance stations inside a multi-step circuit keep meters in detail
+    /// (not the open-goal fallback).
+    func testDistanceCircuitStationPreservesMetersDetail() throws {
+        let json = """
+        {
+          "title": "Row ski circuit",
+          "sportType": "traditionalStrengthTraining",
+          "intervals": [
+            {
+              "kind": "repeat",
+              "reps": 4,
+              "intervals": [
+                { "kind": "distance", "name": "Rowing Machine", "meters": 500 },
+                { "kind": "work", "name": "Ski Erg", "seconds": 60 }
+              ]
+            }
+          ]
+        }
+        """.data(using: .utf8)!
+
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+        XCTAssertEqual(sections.count, 1)
+        XCTAssertEqual(sections[0].band, "Circuit")
+        XCTAssertEqual(sections[0].tag, "4 ROUNDS")
+        XCTAssertEqual(sections[0].steps.map(\.title), ["Rowing Machine", "Ski Erg"])
+        XCTAssertEqual(sections[0].steps[0].detail, "500M")
+        XCTAssertNotEqual(sections[0].steps[0].detail, "OPEN")
+        XCTAssertEqual(sections[0].steps[1].detail, "1 MIN")
+    }
+
+    /// AMA-2390 — multi-station circuit keeps outer iterations as ROUNDS (Library /
+    /// Apple Workout Repeat×N parity), not one "N SETS" band per station.
+    func testCircuitRepeatBandsAsRoundsNotPerStationSets() throws {
+        let json = """
+        {
+          "title": "Bike ski row",
+          "sportType": "traditionalStrengthTraining",
+          "intervals": [
+            {
+              "kind": "repeat",
+              "reps": 8,
+              "intervals": [
+                { "kind": "work", "name": "Assault Bike", "seconds": 180 },
+                { "kind": "work", "name": "Ski Erg", "seconds": 180 },
+                { "kind": "work", "name": "Rowing Machine", "seconds": 180 },
+                { "kind": "work", "name": "Spin / Indoor Bike", "seconds": 180 }
+              ]
+            }
+          ]
+        }
+        """.data(using: .utf8)!
+
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+        XCTAssertEqual(sections.count, 1, "Circuit must be one band, not four")
+        XCTAssertEqual(sections[0].band, "Circuit")
+        XCTAssertEqual(sections[0].tag, "8 ROUNDS")
+        XCTAssertEqual(
+            sections[0].steps.map(\.title),
+            ["Assault Bike", "Ski Erg", "Rowing Machine", "Spin / Indoor Bike"]
+        )
+        XCTAssertEqual(sections[0].steps.map(\.detail), ["3 MIN", "3 MIN", "3 MIN", "3 MIN"])
+        XCTAssertFalse(
+            sections.flatMap(\.steps).contains { $0.title.localizedCaseInsensitiveContains("Work interval") },
+            "Must not fan rounds into per-station Work intervals ×8"
+        )
+        XCTAssertFalse(sections.contains { $0.tag?.contains("SETS") == true })
+    }
+
     func testMobilityDurationTagIgnoresRepsDetails() throws {
         let json = """
         {
