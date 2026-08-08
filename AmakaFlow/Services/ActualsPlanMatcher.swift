@@ -8,7 +8,7 @@
 
 import Foundation
 
-enum ActualsWorkoutType: String, Equatable, Codable {
+enum ActualsWorkoutType: String, Equatable, Codable, Hashable {
     case run
     case ride
     case strength
@@ -16,7 +16,7 @@ enum ActualsWorkoutType: String, Equatable, Codable {
 }
 
 /// A finished activity that is not yet attached to a planned workout.
-struct ActualsUnmappedActivity: Equatable {
+struct ActualsUnmappedActivity: Equatable, Hashable {
     let title: String
     let provider: ActualsSourceProvider
     let startDate: Date

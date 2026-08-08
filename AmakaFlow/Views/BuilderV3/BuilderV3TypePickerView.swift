@@ -12,6 +12,10 @@ import SwiftUI
 struct BuilderV3TypePickerView: View {
     @Environment(\.dismiss) private var dismiss
     var onSelect: (BuilderV3TypeSeed) -> Void
+    /// AMA-2387 Map v2 — override title when capturing actuals for a finished session.
+    var title: String = "What are you building?"
+    var subhead: String = "Pick a shape and we set the structure — or start blank and let it emerge."
+    var sessionBanner: DDStatusBanner.Style?
 
     @State private var query = ""
 
@@ -36,6 +40,11 @@ struct BuilderV3TypePickerView: View {
             DailyDriver.screenBackground.ignoresSafeArea()
             VStack(spacing: 0) {
                 header
+                if let sessionBanner {
+                    DDStatusBanner(style: sessionBanner)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 8)
+                }
                 searchField
                     .padding(.horizontal, 18)
                     .padding(.top, 10)
@@ -61,10 +70,10 @@ struct BuilderV3TypePickerView: View {
     private var header: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("What are you building?")
+                Text(title)
                     .ddDisplayText(22, weight: .heavy)
                     .foregroundColor(DailyDriver.foreground)
-                Text("Pick a shape and we set the structure — or start blank and let it emerge.")
+                Text(subhead)
                     .font(.system(size: 12.5))
                     .foregroundColor(DailyDriver.foregroundMuted)
                     .fixedSize(horizontal: false, vertical: true)

@@ -13,9 +13,10 @@ struct ActualsFillInView: View {
     var onBack: (() -> Void)?
     /// When true, successful save presents the verified payoff screen.
     var presentsVerifiedOnSave: Bool = true
+    /// When false (and not presenting verified here), parent owns navigation after save.
+    var dismissOnSave: Bool = true
 
     @Environment(\.dismiss) private var dismiss
-    @State private var showVerified = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -56,7 +57,10 @@ struct ActualsFillInView: View {
         .background(DailyDriver.screenBackground.ignoresSafeArea())
         .preferredColorScheme(.dark)
         .ddSuppressFloatingChrome()
-        .fullScreenCover(isPresented: $showVerified) {
+        .fullScreenCover(isPresented: Binding(
+            get: { presentsVerifiedOnSave && viewModel.showVerifiedPayoff },
+            set: { viewModel.showVerifiedPayoff = $0 }
+        )) {
             ActualsVerifiedView(session: viewModel.session)
         }
     }
@@ -294,15 +298,25 @@ struct ActualsFillInView: View {
         return Button {
             do {
                 if try viewModel.save() {
-                    onSaved(viewModel.session)
+                    DDToastCenter.shared.success(
+                        ActualsCopy.fillInSavedToast,
+                        sub: ActualsCopy.fillInSavedToastSub
+                    )
+                    // Present verified first (state lives on the VM so parent
+                    // refresh from onSaved cannot drop the payoff).
                     if presentsVerifiedOnSave {
-                        showVerified = true
-                    } else {
+                        viewModel.showVerifiedPayoff = true
+                    }
+                    onSaved(viewModel.session)
+                    if !presentsVerifiedOnSave, dismissOnSave {
                         dismiss()
                     }
                 }
             } catch {
-                // lastSaveError already set on the view model
+                DDToastCenter.shared.error(
+                    "Couldn't save session",
+                    sub: viewModel.lastSaveError
+                )
             }
         } label: {
             Text(viewModel.saveCTATitle)

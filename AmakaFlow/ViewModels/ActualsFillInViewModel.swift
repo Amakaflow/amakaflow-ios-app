@@ -12,6 +12,8 @@ import Foundation
 final class ActualsFillInViewModel: ObservableObject {
     @Published private(set) var session: ActualsFillInSession
     @Published private(set) var lastSaveError: String?
+    /// Survives view recreation so the verified payoff can present after save.
+    @Published var showVerifiedPayoff = false
 
     private let repository: ActualsRepository
 
@@ -104,6 +106,7 @@ final class ActualsFillInViewModel: ObservableObject {
             return true
         } catch {
             session.verified = false
+            showVerifiedPayoff = false
             lastSaveError = error.localizedDescription
             throw error
         }

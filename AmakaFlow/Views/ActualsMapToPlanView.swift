@@ -2,7 +2,9 @@
 //  ActualsMapToPlanView.swift
 //  AmakaFlow
 //
-//  AMA-2387: unmatched activity → "Which workout was this?" (screens-actuals.jsx).
+//  AMA-2387: unmatched activity → "Which workout was this?" + Map v2 capture.
+//  Builder / photo / match-save are presented here (item-based covers) so the
+//  first tap never lands on an empty fullScreenCover.
 //
 
 import SwiftUI
@@ -13,8 +15,13 @@ struct ActualsMapToPlanView: View {
     var onSelect: (ActualsPlanMatch) -> Void
     var onKeepAsIs: () -> Void
     var onSearchAll: () -> Void = {}
+    /// Build/photo → match-save completed. Parent updates Today + pops Map.
+    var onCaptureMatched: (ActualsCaptureDraft, _ alsoSavedToLibrary: Bool) -> Void = { _, _ in }
 
     @Environment(\.dismiss) private var dismiss
+    @State private var showCaptureBuilder = false
+    @State private var showCapturePhoto = false
+    @State private var matchSaveDraft: ActualsCaptureDraft?
 
     var body: some View {
         ScrollView {
@@ -28,10 +35,13 @@ struct ActualsMapToPlanView: View {
                 askCallout
                     .padding(.top, 12)
 
-                Text(ActualsCopy.mapBestMatchesHeader)
+                captureSection
+                    .padding(.top, 14)
+
+                Text(matches.isEmpty ? ActualsCopy.mapOrMatchHeader : ActualsCopy.mapBestMatchesHeader)
                     .font(.system(size: 8.5, design: .monospaced))
                     .foregroundColor(DailyDriver.foregroundDim)
-                    .padding(.top, 14)
+                    .padding(.top, 16)
                     .padding(.bottom, 8)
 
                 ForEach(Array(matches.enumerated()), id: \.element.id) { index, match in
@@ -52,7 +62,7 @@ struct ActualsMapToPlanView: View {
                     onKeepAsIs()
                     dismiss()
                 }) {
-                    Text(ActualsCopy.mapKeepAsIsCTA)
+                    Text(ActualsCopy.mapKeepAsNamedCTA(title: activity.title))
                         .ddDisplayText(12, weight: .bold)
                         .foregroundColor(DailyDriver.foregroundDim)
                         .frame(maxWidth: .infinity)
@@ -67,6 +77,47 @@ struct ActualsMapToPlanView: View {
         .background(DailyDriver.screenBackground.ignoresSafeArea())
         .preferredColorScheme(.dark)
         .ddSuppressFloatingChrome()
+        // Item/isPresented covers always have `activity` in scope — no empty if-let.
+        .fullScreenCover(isPresented: $showCaptureBuilder) {
+            BuilderV3EntryView(
+                actualsActivity: activity,
+                onCaptureComplete: { draft in
+                    showCaptureBuilder = false
+                    // Let the builder cover dismiss, then present match-save.
+                    DispatchQueue.main.async {
+                        matchSaveDraft = draft
+                    }
+                }
+            )
+            .background(DailyDriver.screenBackground.ignoresSafeArea())
+            .ddSuppressFloatingChrome()
+        }
+        .fullScreenCover(isPresented: $showCapturePhoto) {
+            ImageImportView(
+                actualsActivity: activity,
+                onCaptureComplete: { draft in
+                    showCapturePhoto = false
+                    DispatchQueue.main.async {
+                        matchSaveDraft = draft
+                    }
+                }
+            )
+            .background(DailyDriver.screenBackground.ignoresSafeArea())
+            .ddSuppressFloatingChrome()
+        }
+        .fullScreenCover(item: $matchSaveDraft) { draft in
+            ActualsMatchSaveView(
+                activity: activity,
+                draft: draft,
+                onComplete: { finalDraft, alsoLibrary in
+                    matchSaveDraft = nil
+                    onCaptureMatched(finalDraft, alsoLibrary)
+                    dismiss()
+                }
+            )
+            .background(DailyDriver.screenBackground.ignoresSafeArea())
+            .ddSuppressFloatingChrome()
+        }
     }
 
     // MARK: - Header
@@ -86,8 +137,10 @@ struct ActualsMapToPlanView: View {
 
             HStack(spacing: 12) {
                 DDIconChip(
-                    systemName: "figure.run",
-                    background: Color(hex: "FC4C02"),
+                    systemName: activity.type == .strength ? "dumbbell.fill" : "figure.run",
+                    background: activity.type == .strength
+                        ? DailyDriver.blue
+                        : Color(hex: "FC4C02"),
                     size: 34
                 )
                 VStack(alignment: .leading, spacing: 3) {
@@ -104,21 +157,26 @@ struct ActualsMapToPlanView: View {
 
     private var activityMeta: String {
         let formatter = DateFormatter()
+        formatter.dateFormat = "EEE"
+        let weekday = formatter.string(from: activity.startDate).uppercased()
         formatter.dateFormat = "HH:mm"
         let start = formatter.string(from: activity.startDate)
         let end = formatter.string(from: activity.endDate)
         let source = ActualsCopy.sourceDisplayName(activity.provider).uppercased()
-        return "\(start) – \(end) · FROM \(source)"
+        return "\(weekday) · \(start) – \(end) · FROM \(source)"
     }
 
     // MARK: - Stats
 
     private var statsGrid: some View {
         HStack(spacing: 8) {
-            statCell(value: distanceLabel, unit: "KM")
-            statCell(value: "\(max(1, Int((activity.durationSeconds / 60).rounded())))", unit: "MIN")
+            statCell(
+                value: "\(max(1, Int((activity.durationSeconds / 60).rounded())))",
+                unit: "MIN"
+            )
             statCell(value: caloriesLabel, unit: "CAL")
             statCell(value: hrLabel, unit: "BPM")
+            statCell(value: movesLabel, unit: "MOVES")
         }
     }
 
@@ -141,11 +199,6 @@ struct ActualsMapToPlanView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
-    private var distanceLabel: String {
-        guard let meters = activity.distanceMeters else { return "—" }
-        return String(format: "%.1f", meters / 1000)
-    }
-
     private var caloriesLabel: String {
         guard let cal = activity.calories else { return "—" }
         return "\(Int(cal.rounded()))"
@@ -156,14 +209,16 @@ struct ActualsMapToPlanView: View {
         return "\(Int(hr.rounded()))"
     }
 
-    // MARK: - Ask + candidates
+    private var movesLabel: String { "—" }
+
+    // MARK: - Ask + capture + candidates
 
     private var askCallout: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(ActualsCopy.mapAskTitle)
                 .ddDisplayText(13, weight: .bold)
                 .foregroundColor(DailyDriver.foreground)
-            Text(ActualsCopy.mapAskBody)
+            Text(matches.isEmpty ? ActualsCopy.mapAskBodyNoMatch : ActualsCopy.mapAskBody)
                 .font(.system(size: 11))
                 .foregroundColor(DailyDriver.foregroundMuted)
                 .lineSpacing(2)
@@ -178,6 +233,34 @@ struct ActualsMapToPlanView: View {
                 .stroke(DailyDriver.amber.opacity(0.4), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private var captureSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(ActualsCopy.mapCaptureSectionHeader)
+                .font(.system(size: 8.5, design: .monospaced))
+                .foregroundColor(DailyDriver.foregroundDim)
+
+            DDDoorRow(
+                icon: "square.and.pencil",
+                iconBackground: DailyDriver.card2,
+                title: ActualsCopy.mapCaptureBuildTitle,
+                subtitle: ActualsCopy.mapCaptureBuildSub
+            ) {
+                showCaptureBuilder = true
+            }
+            .accessibilityIdentifier(ActualsCopy.mapCaptureBuildAccessibilityID)
+
+            DDDoorRow(
+                icon: "camera.fill",
+                iconBackground: DailyDriver.purple,
+                title: ActualsCopy.mapCapturePhotoTitle,
+                subtitle: ActualsCopy.mapCapturePhotoSub
+            ) {
+                showCapturePhoto = true
+            }
+            .accessibilityIdentifier(ActualsCopy.mapCapturePhotoAccessibilityID)
+        }
     }
 
     private func candidateRow(_ match: ActualsPlanMatch, index: Int) -> some View {
@@ -198,14 +281,16 @@ struct ActualsMapToPlanView: View {
                     Text(match.candidate.sourceLabel)
                         .font(.system(size: 8, design: .monospaced))
                         .foregroundColor(DailyDriver.foregroundDim)
+                        .lineLimit(1)
                     Text(match.whyLine)
                         .font(.system(size: 8, design: .monospaced))
-                        .foregroundColor(match.isBest ? DailyDriver.lime : DailyDriver.amber)
+                        .foregroundColor(DailyDriver.foregroundDim)
+                        .lineLimit(1)
                 }
-                Spacer(minLength: 0)
+                Spacer(minLength: 8)
                 Image(systemName: "link")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(DailyDriver.foregroundDim)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(match.isBest ? DailyDriver.lime : DailyDriver.foregroundDim)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
@@ -225,29 +310,24 @@ struct ActualsMapToPlanView: View {
 }
 
 #if DEBUG
-#Preview("Map to plan") {
+#Preview("Map to plan v2") {
     let start = Date()
     let activity = ActualsUnmappedActivity(
-        title: "Lunch Run",
-        provider: .strava,
+        title: "Gym session",
+        provider: .garmin,
         startDate: start,
-        durationSeconds: 59 * 60,
-        distanceMeters: 8200,
-        calories: 677,
-        avgHR: 143,
-        type: .run
+        durationSeconds: 44 * 60,
+        distanceMeters: nil,
+        calories: 486,
+        avgHR: 151,
+        type: .strength
     )
     let candidates = [
         ActualsPlanCandidate(
-            id: "1", title: "Tempo 40/20s", sourceLabel: "STRYD · 12:50 TODAY",
+            id: "1", title: "Lower body — posterior", sourceLabel: "MY WORKOUTS",
             scheduledStart: start.addingTimeInterval(-180),
-            durationSeconds: 55 * 60, distanceMeters: 8000,
-            type: .run, targetAvgHR: 145
-        ),
-        ActualsPlanCandidate(
-            id: "2", title: "Zone 2 base run", sourceLabel: "MY WORKOUTS",
-            scheduledStart: nil, durationSeconds: 60 * 60,
-            distanceMeters: 8500, type: .run, targetAvgHR: 125
+            durationSeconds: 48 * 60, distanceMeters: nil,
+            type: .strength, targetAvgHR: nil
         ),
     ]
     let matches = ActualsPlanMatcher.rank(activity: activity, candidates: candidates)

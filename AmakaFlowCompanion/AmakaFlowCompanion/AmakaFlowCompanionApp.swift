@@ -207,7 +207,9 @@ struct AmakaFlowCompanionApp: App {
     @ViewBuilder
     private var rootContent: some View {
         #if DEBUG
-        if UITestEnvironment.shared.showCreateWithAIGeneratingHost {
+        if UITestEnvironment.shared.showActualsDogfoodHost {
+            ActualsDogfoodHubView()
+        } else if UITestEnvironment.shared.showCreateWithAIGeneratingHost {
             CreateWithAIGeneratingHostView()
         } else {
             productionRootContent

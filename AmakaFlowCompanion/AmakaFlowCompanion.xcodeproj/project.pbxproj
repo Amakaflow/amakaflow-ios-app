@@ -248,6 +248,10 @@
 		AMA2387VERCBLD /* ActualsVerifiedCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387VERCREF /* ActualsVerifiedCard.swift */; };
 		AMA2387VERVBLD /* ActualsVerifiedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387VERVREF /* ActualsVerifiedView.swift */; };
 		AMA2387VERGTBLD /* ActualsVerifiedGhostTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387VERGTREF /* ActualsVerifiedGhostTests.swift */; };
+		AMA2387DOGFOODBLD /* ActualsDogfoodHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387DOGFOODREF /* ActualsDogfoodHubView.swift */; };
+		AMA2387TODAYDEMBLD /* ActualsTodayDemoFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387TODAYDEMREF /* ActualsTodayDemoFeed.swift */; };
+		AMA2387CAPDRAFTBLD /* ActualsCaptureDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387CAPDRAFTREF /* ActualsCaptureDraft.swift */; };
+		AMA2387MATCHSAVEBLD /* ActualsMatchSaveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387MATCHSAVEREF /* ActualsMatchSaveView.swift */; };
 		WATCHTITLEBLD /* WatchWorkoutTitlePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = WATCHTITLEREF /* WatchWorkoutTitlePolicy.swift */; };
 		AMA2375MODLBLD /* OnYourWatchesModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375MODLREF /* OnYourWatchesModels.swift */; };
 		AMA2375QSTRBLD /* GarminWatchQueueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375QSTRREF /* GarminWatchQueueStore.swift */; };
@@ -943,6 +947,10 @@
 		AMA2387VERCREF /* ActualsVerifiedCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsVerifiedCard.swift; path = ../AmakaFlow/Views/Components/ActualsVerifiedCard.swift; sourceTree = SOURCE_ROOT; };
 		AMA2387VERVREF /* ActualsVerifiedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsVerifiedView.swift; path = ../AmakaFlow/Views/ActualsVerifiedView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2387VERGTREF /* ActualsVerifiedGhostTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsVerifiedGhostTests.swift; path = AmakaFlowCompanionTests/ActualsVerifiedGhostTests.swift; sourceTree = "<group>"; };
+		AMA2387DOGFOODREF /* ActualsDogfoodHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsDogfoodHubView.swift; path = ../AmakaFlow/Views/ActualsDogfoodHubView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387TODAYDEMREF /* ActualsTodayDemoFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsTodayDemoFeed.swift; path = ../AmakaFlow/Services/ActualsTodayDemoFeed.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387CAPDRAFTREF /* ActualsCaptureDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsCaptureDraft.swift; path = ../AmakaFlow/Models/ActualsCaptureDraft.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387MATCHSAVEREF /* ActualsMatchSaveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsMatchSaveView.swift; path = ../AmakaFlow/Views/ActualsMatchSaveView.swift; sourceTree = SOURCE_ROOT; };
 		WATCHTITLEREF /* WatchWorkoutTitlePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchWorkoutTitlePolicy.swift; path = ../AmakaFlow/Models/WatchWorkoutTitlePolicy.swift; sourceTree = SOURCE_ROOT; };
 		AMA2375MODLREF /* OnYourWatchesModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnYourWatchesModels.swift; path = ../AmakaFlow/Models/OnYourWatchesModels.swift; sourceTree = SOURCE_ROOT; };
 		AMA2375QSTRREF /* GarminWatchQueueStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchQueueStore.swift; path = ../AmakaFlow/Services/GarminWatchQueueStore.swift; sourceTree = SOURCE_ROOT; };
@@ -1565,6 +1573,8 @@
 				AMA2387MRGCLREF /* ActualsMergeClassifier.swift */,
 				AMA2387MAPSREF /* ActualsPlanMatcher.swift */,
 				AMA2387GHOSTREF /* ActualsGhostFeed.swift */,
+				AMA2387TODAYDEMREF /* ActualsTodayDemoFeed.swift */,
+				AMA2387CAPDRAFTREF /* ActualsCaptureDraft.swift */,
 				AMA2375COPYREF /* OnYourWatchesCopy.swift */,
 				AMA2386COPYREF /* WatchItemCopy.swift */,
 				AMA2386TRCKREF /* WatchItemChangeTracker.swift */,
@@ -1759,6 +1769,8 @@
 				AMA2387FILLVMREF /* ActualsFillInViewModel.swift */,
 				AMA2387VERCREF /* ActualsVerifiedCard.swift */,
 				AMA2387VERVREF /* ActualsVerifiedView.swift */,
+				AMA2387DOGFOODREF /* ActualsDogfoodHubView.swift */,
+				AMA2387MATCHSAVEREF /* ActualsMatchSaveView.swift */,
 				AMA2378SEQVREF001 /* EnrichmentSequenceScreen.swift */,
 				AMA2378WPICKREF001 /* EnrichmentWarmupPickScreen.swift */,
 				AMA2378RAMPVREF001 /* EnrichmentRampEditorScreen.swift */,
@@ -2894,6 +2906,9 @@
 				AMA2387MRGCLBLD /* ActualsMergeClassifier.swift in Sources */,
 				AMA2387MAPSBLD /* ActualsPlanMatcher.swift in Sources */,
 				AMA2387GHOSTBLD /* ActualsGhostFeed.swift in Sources */,
+				AMA2387TODAYDEMBLD /* ActualsTodayDemoFeed.swift in Sources */,
+				AMA2387CAPDRAFTBLD /* ActualsCaptureDraft.swift in Sources */,
+				AMA2387MATCHSAVEBLD /* ActualsMatchSaveView.swift in Sources */,
 				AMA2387TEACHBLD /* ActualsTeachCard.swift in Sources */,
 				AMA2387BANBLD /* ActualsSyncCounterBanner.swift in Sources */,
 				AMA2387ASKBLD /* ActualsMergeAskCard.swift in Sources */,
@@ -2907,6 +2922,7 @@
 				AMA2387FILLVBLD /* ActualsFillInView.swift in Sources */,
 				AMA2387VERCBLD /* ActualsVerifiedCard.swift in Sources */,
 				AMA2387VERVBLD /* ActualsVerifiedView.swift in Sources */,
+				AMA2387DOGFOODBLD /* ActualsDogfoodHubView.swift in Sources */,
 				WATCHTITLEBLD /* WatchWorkoutTitlePolicy.swift in Sources */,
 				AMA2375MODLBLD /* OnYourWatchesModels.swift in Sources */,
 				AMA2375QSTRBLD /* GarminWatchQueueStore.swift in Sources */,

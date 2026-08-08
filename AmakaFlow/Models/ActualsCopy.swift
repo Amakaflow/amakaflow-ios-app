@@ -84,18 +84,72 @@ enum ActualsCopy {
         }
     }
 
-    // MARK: - Map-to-plan (screens-actuals.jsx SYMapScreen)
+    // MARK: - Map-to-plan (screens-actuals.jsx SYMapScreen + Map v2 capture)
 
     static let mapAskTitle = "Which workout was this?"
     static let mapAskBody =
         "Mapping attaches this run to the plan it was — nothing is duplicated, and Progress counts it once."
+    static let mapAskBodyNoMatch =
+        "Nothing in your library looks close enough — build what you did, or match a workout below."
+    static let mapCaptureSectionHeader = "NOT IN YOUR LIBRARY — CAPTURE IT"
+    static let mapCaptureBuildTitle = "Build what you did"
+    static let mapCaptureBuildSub = "SAME BUILDER · SAVES AS THIS SESSION'S ACTUALS"
+    static let mapCapturePhotoTitle = "From a photo"
+    static let mapCapturePhotoSub = "CLASS WHITEBOARD → DRAFT → MATCH"
+    static let mapOrMatchHeader = "OR MATCH A LIBRARY WORKOUT"
     static let mapBestMatchesHeader = "BEST MATCHES — SAME DAY, SAME SHAPE"
     static let mapSearchAllCTA = "Search all workouts…"
     static let mapKeepAsIsCTA = "It was just a run — keep as is"
     static let mapKeepAsIsAccessibilityID = "af_actuals_map_keep_as_is"
+    static let mapCaptureBuildAccessibilityID = "af_actuals_map_capture_build"
+    static let mapCapturePhotoAccessibilityID = "af_actuals_map_capture_photo"
 
     static func mapCandidateAccessibilityID(_ index: Int) -> String {
         "af_actuals_map_candidate_\(index)"
+    }
+
+    static func mapKeepAsNamedCTA(title: String) -> String {
+        "Keep as '\(title)' — no detail needed"
+    }
+
+    // MARK: - Capture builder / photo (Map v2)
+
+    static let captureBuilderTitle = "What did the class do?"
+    static let captureBuilderSubhead =
+        "Pick a shape and we set the structure — or start blank and let it emerge."
+    static let captureBuilderDoneCTA = "Done — save it"
+    static let captureBannerTitle = "FILLING IN WHAT YOU DID"
+    static let capturePhotoTitle = "From a photo"
+    static let capturePhotoChooseTitle = "Choose photo"
+    static let capturePhotoChooseSub = "Class whiteboard → editable draft"
+    static let capturePhotoHonesty =
+        "We send the image to the import service — you can edit the result before saving."
+
+    // MARK: - Match-save (Map v2)
+
+    static let matchSaveTitle = "Save — this is what you did"
+    static let matchSaveYouBuilt = "YOU BUILT"
+    static let matchSaveNameLabel = "SESSION NAME"
+    static let matchSaveNamePlaceholder = "Name this session"
+    static let matchSaveNameRequired = "Give this session a name"
+    static let matchSaveNameFieldID = "af_actuals_match_save_name"
+    static let captureNameRequiredToast = "Name this workout first"
+    static let matchSaveBody =
+        "THIS BECOMES THE SESSION'S DETAIL — DEVICE METRICS + YOUR BLOCKS, COUNTED ONCE. RPE COMES NEXT, THEN IT'S VERIFIED."
+    static let matchSaveLibraryTitle = "Also save to Library"
+    static let matchSaveLibrarySub = "DO IT AGAIN ANY TIME · SEND IT TO A WATCH · SOURCE: BUILT BY YOU"
+    static let matchSaveLibraryOffNote = "Logs the session only — nothing added to your Library."
+    static let matchSaveCTAWithLibrary = "Save session + add to Library"
+    static let matchSaveCTASessionOnly = "Save session"
+    static let matchSaveFooter = "Next: how hard was it? (RPE) — then the session shows Verified ✓"
+    static let matchSaveToastMatched = "Session matched"
+    static let matchSaveToastMatchedSub = "Attached to this finished session — counted once"
+    static let matchSaveAccessibilityID = "af_actuals_match_save"
+    static let matchSaveLibraryToggleID = "af_actuals_match_save_library"
+    static let matchSaveCTAAccessibilityID = "af_actuals_match_save_cta"
+
+    static func captureBannerLine(for activity: ActualsUnmappedActivity) -> String {
+        ActualsCaptureContext.bannerDetail(for: activity)
     }
 
     // MARK: - Fill-in actuals (screens-actuals.jsx SYActualsScreen)
@@ -109,8 +163,11 @@ enum ActualsCopy {
     static let fillInFooterNote =
         "Actuals update your history — next time this plan shows what you really lifted, not what was written."
     static let fillInAllAsPlannedToast = "All confirmed as planned — adjust any if needed"
+    static let fillInSavedToast = "Session verified"
+    static let fillInSavedToastSub = "Actuals saved — ghosts update next time"
     static let fillInAllAsPlannedAccessibilityID = "af_actuals_all_asplanned"
     static let fillInSaveAccessibilityID = "af_actuals_save"
+    static let verifiedTimelineCTA = "Verified ✓"
 
     static func fillInRPEAccessibilityID(_ value: Int) -> String {
         "af_actuals_rpe_\(value)"
