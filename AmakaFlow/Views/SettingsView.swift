@@ -137,6 +137,8 @@ struct SettingsView: View {
     @State private var showingTelegramSetup = false
     @State private var showingPaywall = false
     @State private var connectedTelegramId: Int?
+    /// AMA-2389: badge parity with ＋ From friends row.
+    @ObservedObject private var friendsStore = FriendsSharingStore.shared
     @EnvironmentObject private var garminConnectivity: GarminConnectManager
     @EnvironmentObject private var pairingService: PairingService
     @EnvironmentObject private var workoutsViewModel: WorkoutsViewModel
@@ -149,6 +151,7 @@ struct SettingsView: View {
                 ddMyGymsSection
                 ddConnectedWearablesSection
                 ddConnectedAppsSection
+                ddFriendsSection
                 ddHandoffAppSection
                 ddAccountDataSection
             }
@@ -159,6 +162,7 @@ struct SettingsView: View {
             .background(DailyDriver.screenBackground.ignoresSafeArea())
             .navigationBarHidden(true)
             .preferredColorScheme(.dark)
+            .task { await friendsStore.reload() }
             .alert("Sign Out", isPresented: $accountViewModel.showSignOutAlert) {
                 Button("Cancel", role: .cancel) {}
                 Button("Sign Out", role: .destructive) {
@@ -455,6 +459,44 @@ struct SettingsView: View {
                     showingTelegramSetup = true
                 }
             }
+        }
+    }
+
+    /// AMA-2389: Friends row in Settings accordion (manage door).
+    private var ddFriendsSection: some View {
+        SettingsSectionCard(
+            title: "Friends",
+            subtitle: friendsStore.unhandledShareCount > 0
+                ? "\(friendsStore.unhandledShareCount) workouts waiting"
+                : "\(friendsStore.acceptedFriends.count) friends · swap workouts",
+            icon: "person.2.fill",
+            iconBackground: DailyDriver.lime,
+            rowCount: 1
+        ) {
+            NavigationLink {
+                FriendsListView(store: friendsStore)
+            } label: {
+                DDSettingsRow(
+                    icon: "person.2.fill",
+                    iconBackground: DailyDriver.lime,
+                    title: "Friends",
+                    detail: friendsStore.unhandledShareCount > 0
+                        ? FriendsCopy.fromFriendsSubtitle(names: friendsStore.senderNamesForBadge)
+                        : "Add · requests · privacy"
+                ) {
+                    HStack(spacing: 8) {
+                        FriendsWaitingBadge(
+                            count: friendsStore.unhandledShareCount,
+                            accessibilityId: "af_friends_settings_row_badge"
+                        )
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(DailyDriver.foregroundDim)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("af_friends_settings_row")
         }
     }
 

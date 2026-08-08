@@ -114,13 +114,32 @@ struct DDIconChip: View {
 
 // MARK: - Door row (Create sheet)
 
-struct DDDoorRow: View {
+struct DDDoorRow<Trailing: View>: View {
     let icon: String
     let iconBackground: Color
     var iconForeground: Color = .white
     let title: String
     let subtitle: String
     let action: () -> Void
+    @ViewBuilder var trailing: () -> Trailing
+
+    init(
+        icon: String,
+        iconBackground: Color,
+        iconForeground: Color = .white,
+        title: String,
+        subtitle: String,
+        action: @escaping () -> Void,
+        @ViewBuilder trailing: @escaping () -> Trailing = { EmptyView() }
+    ) {
+        self.icon = icon
+        self.iconBackground = iconBackground
+        self.iconForeground = iconForeground
+        self.title = title
+        self.subtitle = subtitle
+        self.action = action
+        self.trailing = trailing
+    }
 
     var body: some View {
         Button(action: action) {
@@ -144,6 +163,7 @@ struct DDDoorRow: View {
                 }
 
                 Spacer(minLength: 0)
+                trailing()
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)

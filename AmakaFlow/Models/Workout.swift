@@ -146,6 +146,8 @@ enum WorkoutSource: String, Codable {
     case image
     case ai
     case coach
+    /// AMA-2389: saved from a friend share (snapshot copy).
+    case friend
     case amaka
     case other
 
@@ -181,7 +183,8 @@ struct WorkoutSourceProvenance: Equatable {
             "garmin": "Garmin",
             "runna": "Runna",
             "stryd": "Stryd",
-            "gym_class": "Gym Class"
+            "gym_class": "Gym Class",
+            "friend": "Friend"
         ]
         guard let label = labels[normalized] else { return nil }
         return WorkoutSourceProvenance(rawValue: normalized, label: label)

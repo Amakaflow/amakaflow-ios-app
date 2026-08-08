@@ -908,6 +908,10 @@ extension UnifiedWorkoutDetailView {
         if workout.source == .coach {
             return String(coachDisplayName.prefix(1)).uppercased()
         }
+        if workout.source == .friend {
+            let name = resolvedCreatorName ?? "F"
+            return String(name.prefix(1)).uppercased()
+        }
         if WorkoutSourceProvenance.isExternal(resolvedSourceKey) {
             return String(creatorHandle.prefix(1)).lowercased()
         }
@@ -925,6 +929,7 @@ extension UnifiedWorkoutDetailView {
         case "youtube": return DailyDriver.red
         case "manual", "gym_manual_sync": return DailyDriver.lime
         case "coach": return DailyDriver.orange
+        case "friend": return DailyDriver.blue
         default: return DailyDriver.lime
         }
     }
@@ -944,6 +949,12 @@ extension UnifiedWorkoutDetailView {
         }
         if workout.source == .coach {
             return coachDisplayName
+        }
+        if workout.source == .friend {
+            if let creator = resolvedCreatorName, !creator.isEmpty {
+                return FriendsCopy.attribution(fromName: creator)
+            }
+            return "From a friend"
         }
         if WorkoutSourceProvenance.isExternal(resolvedSourceKey) {
             if let creator = resolvedCreatorName {
@@ -970,6 +981,9 @@ extension UnifiedWorkoutDetailView {
                 return "Shared with you · \(date)"
             }
             return "Shared with you"
+        }
+        if workout.source == .friend {
+            return "Snapshot copy · yours to edit"
         }
         if WorkoutSourceProvenance.isExternal(resolvedSourceKey) {
             return "Workout by"

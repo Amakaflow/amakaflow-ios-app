@@ -84,7 +84,7 @@ enum DDPlatform: String, CaseIterable, Identifiable {
         case .coach: return .coach
         case .ai, .smartPlanner, .amaka, .suggestionAccepted: return .ai
         case .manual, .gymManualSync, .template, .trainingProgram, .connectedCalendar,
-             .garmin, .runna, .stryd, .gymClass, .youtube, .image, .other:
+             .garmin, .runna, .stryd, .gymClass, .youtube, .image, .friend, .other:
             return .manual
         }
     }
@@ -574,6 +574,12 @@ enum DDLibraryPresentation {
             return "Coach"
         case .manual, .gymManualSync:
             return "you"
+        case .friend:
+            if let name = workout.creatorName?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !name.isEmpty {
+                return name
+            }
+            return "a friend"
         default:
             if let url = workout.sourceUrl, let host = URL(string: url)?.host {
                 return host.replacingOccurrences(of: "www.", with: "")
