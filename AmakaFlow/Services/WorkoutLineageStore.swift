@@ -7,14 +7,14 @@
 
 import Foundation
 
-protocol WorkoutLineageStoring: Sendable {
+nonisolated protocol WorkoutLineageStoring: Sendable {
     func lineageId(forWorkoutId workoutId: String) -> String?
     func setLineageId(_ lineageId: String, forWorkoutId workoutId: String)
     func fingerprint(forWorkoutId workoutId: String) -> String?
     func setFingerprint(_ fingerprint: String, forWorkoutId workoutId: String)
 }
 
-final class UserDefaultsWorkoutLineageStore: WorkoutLineageStoring, @unchecked Sendable {
+nonisolated final class UserDefaultsWorkoutLineageStore: WorkoutLineageStoring, @unchecked Sendable {
     private let defaults: UserDefaults
     private let lineageKey = "ama2389.workout.lineage"
     private let fingerprintKey = "ama2389.workout.fingerprint"

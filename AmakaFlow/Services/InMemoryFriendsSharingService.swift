@@ -8,7 +8,10 @@
 
 import Foundation
 
-actor InMemoryFriendsSharingService: FriendsSharingProviding {
+/// Local seam until BFF lands. `nonisolated` so tests / actors can use it under
+/// the app's default MainActor isolation.
+nonisolated final class InMemoryFriendsSharingService: FriendsSharingProviding, @unchecked Sendable {
+    private let lock = NSLock()
     private let currentUserId: String
     private let currentHandle: String
     private let currentDisplayName: String
@@ -17,7 +20,7 @@ actor InMemoryFriendsSharingService: FriendsSharingProviding {
     private var friendships: [Friendship]
     private var shares: [WorkoutShare]
     /// Tracks silent removals so we never emit notify events (testable).
-    private(set) var silentNegativeEventCount: Int = 0
+    private var silentNegativeEventCount: Int = 0
 
     init(
         currentUserId: String = "me",
@@ -176,10 +179,12 @@ actor InMemoryFriendsSharingService: FriendsSharingProviding {
     // MARK: FriendshipProviding
 
     func listFriendships() async throws -> [Friendship] {
-        friendships.sorted { $0.createdAt > $1.createdAt }
+        lock.lock(); defer { lock.unlock() }
+        return friendships.sorted { $0.createdAt > $1.createdAt }
     }
 
     func searchUsers(query: String) async throws -> [FriendProfile] {
+        lock.lock(); defer { lock.unlock() }
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "^@", with: "", options: .regularExpression)
             .lowercased()
@@ -194,6 +199,7 @@ actor InMemoryFriendsSharingService: FriendsSharingProviding {
     }
 
     func requestFriend(handle: String) async throws -> Friendship {
+        lock.lock(); defer { lock.unlock() }
         let normalized = handle.trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "^@", with: "", options: .regularExpression)
             .lowercased()
@@ -228,6 +234,7 @@ actor InMemoryFriendsSharingService: FriendsSharingProviding {
     }
 
     func acceptRequest(id: String) async throws -> Friendship {
+        lock.lock(); defer { lock.unlock() }
         guard let index = friendships.firstIndex(where: { $0.id == id }) else {
             throw FriendsSharingError.notFound
         }
@@ -236,6 +243,7 @@ actor InMemoryFriendsSharingService: FriendsSharingProviding {
     }
 
     func declineRequest(id: String) async throws {
+        lock.lock(); defer { lock.unlock() }
         guard let index = friendships.firstIndex(where: { $0.id == id && !$0.isOutgoing }) else {
             throw FriendsSharingError.notFound
         }
@@ -245,6 +253,7 @@ actor InMemoryFriendsSharingService: FriendsSharingProviding {
     }
 
     func cancelRequest(id: String) async throws {
+        lock.lock(); defer { lock.unlock() }
         guard let index = friendships.firstIndex(where: { $0.id == id && $0.isOutgoing && $0.status == .pending }) else {
             throw FriendsSharingError.notFound
         }
@@ -253,6 +262,7 @@ actor InMemoryFriendsSharingService: FriendsSharingProviding {
     }
 
     func removeFriend(id: String) async throws {
+        lock.lock(); defer { lock.unlock() }
         guard let index = friendships.firstIndex(where: { $0.id == id && $0.status == .accepted }) else {
             throw FriendsSharingError.notFound
         }
@@ -260,7 +270,7 @@ actor InMemoryFriendsSharingService: FriendsSharingProviding {
         silentNegativeEventCount += 1
     }
 
-    nonisolated func inviteLink(forHandle handle: String) -> URL {
+    func inviteLink(forHandle handle: String) -> URL {
         let cleaned = handle.trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "^@", with: "", options: .regularExpression)
             .lowercased()
@@ -270,13 +280,15 @@ actor InMemoryFriendsSharingService: FriendsSharingProviding {
     // MARK: WorkoutShareProviding
 
     func listIncomingShares() async throws -> [WorkoutShare] {
-        shares
+        lock.lock(); defer { lock.unlock() }
+        return shares
             .filter { $0.toUserId == currentUserId }
             .sorted { $0.createdAt > $1.createdAt }
     }
 
     func unhandledShareCount() async throws -> Int {
-        shares.filter { $0.toUserId == currentUserId && $0.isUnhandled }.count
+        lock.lock(); defer { lock.unlock() }
+        return shares.filter { $0.toUserId == currentUserId && $0.isUnhandled }.count
     }
 
     func sendShares(
@@ -284,6 +296,7 @@ actor InMemoryFriendsSharingService: FriendsSharingProviding {
         toFriendIds: [String],
         note: String?
     ) async throws -> [WorkoutShare] {
+        lock.lock(); defer { lock.unlock() }
         guard !toFriendIds.isEmpty else { throw FriendsSharingError.emptySelection }
         var created: [WorkoutShare] = []
         for friendId in toFriendIds {
@@ -313,6 +326,7 @@ actor InMemoryFriendsSharingService: FriendsSharingProviding {
     }
 
     func markSeen(id: String) async throws {
+        lock.lock(); defer { lock.unlock() }
         guard let index = shares.firstIndex(where: { $0.id == id }) else {
             throw FriendsSharingError.notFound
         }
@@ -322,6 +336,7 @@ actor InMemoryFriendsSharingService: FriendsSharingProviding {
     }
 
     func dismiss(id: String) async throws {
+        lock.lock(); defer { lock.unlock() }
         guard let index = shares.firstIndex(where: { $0.id == id }) else {
             throw FriendsSharingError.notFound
         }
@@ -330,6 +345,7 @@ actor InMemoryFriendsSharingService: FriendsSharingProviding {
     }
 
     func saveRequest(id: String, titleOverride: String?) async throws -> WorkoutSaveRequest {
+        lock.lock(); defer { lock.unlock() }
         guard let share = shares.first(where: { $0.id == id }) else {
             throw FriendsSharingError.notFound
         }
@@ -348,6 +364,7 @@ actor InMemoryFriendsSharingService: FriendsSharingProviding {
     }
 
     func markSaved(id: String, workoutId: String) async throws {
+        lock.lock(); defer { lock.unlock() }
         guard let index = shares.firstIndex(where: { $0.id == id }) else {
             throw FriendsSharingError.notFound
         }
@@ -357,14 +374,19 @@ actor InMemoryFriendsSharingService: FriendsSharingProviding {
 
     // MARK: Test helpers
 
-    func silentNegativeCount() -> Int { silentNegativeEventCount }
+    func silentNegativeCount() -> Int {
+        lock.lock(); defer { lock.unlock() }
+        return silentNegativeEventCount
+    }
 
     func mutateSnapshotName(shareId: String, name: String) {
+        lock.lock(); defer { lock.unlock() }
         guard let index = shares.firstIndex(where: { $0.id == shareId }) else { return }
         shares[index].snapshot.name = name
     }
 
     func injectShare(_ share: WorkoutShare) {
+        lock.lock(); defer { lock.unlock() }
         shares.append(share)
     }
 }

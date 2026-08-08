@@ -8,7 +8,7 @@
 
 import Foundation
 
-enum FriendsSharingError: LocalizedError, Equatable {
+nonisolated enum FriendsSharingError: LocalizedError, Equatable {
     case notFound
     case alreadyFriends
     case alreadyPending
@@ -33,7 +33,7 @@ enum FriendsSharingError: LocalizedError, Equatable {
 }
 
 /// Friendship lifecycle. Decline / cancel / remove are SILENT (no notify event).
-protocol FriendshipProviding: Sendable {
+nonisolated protocol FriendshipProviding: Sendable {
     func listFriendships() async throws -> [Friendship]
     func searchUsers(query: String) async throws -> [FriendProfile]
     func requestFriend(handle: String) async throws -> Friendship
@@ -48,7 +48,7 @@ protocol FriendshipProviding: Sendable {
 }
 
 /// Workout share lifecycle. Shares carry an immutable snapshot + lineageId.
-protocol WorkoutShareProviding: Sendable {
+nonisolated protocol WorkoutShareProviding: Sendable {
     func listIncomingShares() async throws -> [WorkoutShare]
     func unhandledShareCount() async throws -> Int
     func sendShares(
@@ -65,4 +65,4 @@ protocol WorkoutShareProviding: Sendable {
     func markSaved(id: String, workoutId: String) async throws
 }
 
-protocol FriendsSharingProviding: FriendshipProviding, WorkoutShareProviding {}
+nonisolated protocol FriendsSharingProviding: FriendshipProviding, WorkoutShareProviding {}

@@ -10,7 +10,7 @@ import Foundation
 
 // MARK: - Friend identity
 
-struct FriendProfile: Identifiable, Equatable, Hashable, Codable, Sendable {
+nonisolated struct FriendProfile: Identifiable, Equatable, Hashable, Codable, Sendable {
     let id: String
     var displayName: String
     var handle: String
@@ -29,12 +29,12 @@ struct FriendProfile: Identifiable, Equatable, Hashable, Codable, Sendable {
     }
 }
 
-enum FriendshipStatus: String, Codable, Sendable, Equatable {
+nonisolated enum FriendshipStatus: String, Codable, Sendable, Equatable {
     case pending
     case accepted
 }
 
-struct Friendship: Identifiable, Equatable, Codable, Sendable {
+nonisolated struct Friendship: Identifiable, Equatable, Codable, Sendable {
     let id: String
     let requesterId: String
     let addresseeId: String
@@ -49,7 +49,7 @@ struct Friendship: Identifiable, Equatable, Codable, Sendable {
 // MARK: - Workout share snapshot (immutable copy)
 
 /// Frozen workout payload carried on a share. Edits never cross either direction.
-struct WorkoutShareSnapshot: Equatable, Codable, Sendable {
+nonisolated struct WorkoutShareSnapshot: Equatable, Codable, Sendable {
     var name: String
     var sport: String
     var source: String?
@@ -62,14 +62,14 @@ struct WorkoutShareSnapshot: Equatable, Codable, Sendable {
     var lineageId: String
 }
 
-enum WorkoutShareStatus: String, Codable, Sendable, Equatable {
+nonisolated enum WorkoutShareStatus: String, Codable, Sendable, Equatable {
     case sent
     case seen
     case saved
     case dismissed
 }
 
-struct WorkoutShare: Identifiable, Equatable, Codable, Sendable {
+nonisolated struct WorkoutShare: Identifiable, Equatable, Codable, Sendable {
     let id: String
     let fromUserId: String
     let toUserId: String
@@ -90,7 +90,7 @@ struct WorkoutShare: Identifiable, Equatable, Codable, Sendable {
 
 // MARK: - Copy / privacy (verbatim from design)
 
-enum FriendsCopy {
+nonisolated enum FriendsCopy {
     static let privacyContract =
         "Friends can send you workouts — they can't see your history, stats or gym. Remove anyone any time; they aren't notified."
 
@@ -133,13 +133,13 @@ enum FriendsCopy {
 
 // MARK: - Dedupe
 
-enum WorkoutShareDedupeMatch: Equatable, Sendable {
+nonisolated enum WorkoutShareDedupeMatch: Equatable, Sendable {
     case none
     /// Same lineageId or same normalized title + structure fingerprint.
     case strong(existingWorkoutId: String, existingTitle: String)
 }
 
-enum WorkoutShareDedupe {
+nonisolated enum WorkoutShareDedupe {
     static func normalizeTitle(_ title: String) -> String {
         title
             .lowercased()
@@ -212,7 +212,7 @@ enum WorkoutShareDedupe {
     }
 }
 
-enum WorkoutShareLineage {
+nonisolated enum WorkoutShareLineage {
     /// Seed lineage from origin source URL / id, else workout id.
     static func seed(from workout: Workout) -> String {
         if let url = workout.sourceUrl?.trimmingCharacters(in: .whitespacesAndNewlines),
