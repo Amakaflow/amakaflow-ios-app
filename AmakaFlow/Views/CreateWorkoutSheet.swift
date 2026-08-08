@@ -13,10 +13,13 @@ enum CreateWorkoutDoor: Equatable {
     case screenshot
     case speak
     case manual
+    /// AMA-2389: receive shared workouts from friends.
+    case fromFriends
 }
 
 struct CreateWorkoutSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var friendsStore = FriendsSharingStore.shared
     var onSelect: (CreateWorkoutDoor) -> Void
 
     var body: some View {
@@ -64,10 +67,27 @@ struct CreateWorkoutSheet: View {
                 }
                 .accessibilityIdentifier("create_door_manual")
 
+                // AMA-2389: after Build from scratch (placement table).
+                DDDoorRow(
+                    icon: "person.2.fill",
+                    iconBackground: DailyDriver.blue,
+                    title: "From friends",
+                    subtitle: FriendsCopy.fromFriendsSubtitle(names: friendsStore.senderNamesForBadge)
+                ) {
+                    dismissThen { onSelect(.fromFriends) }
+                } trailing: {
+                    FriendsWaitingBadge(
+                        badgeValue: friendsStore.unhandledShareCount,
+                        accessibilityId: "af_add_from_friends_badge"
+                    )
+                }
+                .accessibilityIdentifier("af_add_from_friends")
+
                 speakComingSoonFooter
             }
         }
         .accessibilityIdentifier("create_workout_sheet")
+        .task { await friendsStore.reload() }
     }
 
     private var speakComingSoonFooter: some View {

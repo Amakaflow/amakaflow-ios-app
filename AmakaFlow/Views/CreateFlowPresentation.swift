@@ -51,16 +51,26 @@ struct CreateFlowSheetsModifier: ViewModifier {
     var onLibraryReload: () -> Void
 
     @State private var speakUnavailableAlert = false
+    /// AMA-2389: From friends inbox (sheet, not a new top-level surface).
+    @State private var showFriendsInbox = false
+    @ObservedObject private var friendsStore = FriendsSharingStore.shared
 
     func body(content: Content) -> some View {
         content
-            .ddBottomSheet(isPresented: $showCreateSheet, detents: [.medium]) {
+            .ddBottomSheet(isPresented: $showCreateSheet, detents: createSheetDetents) {
                 CreateWorkoutSheet(onSelect: openDoor)
             }
             .alert("Voice import not available yet", isPresented: $speakUnavailableAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text("Use Import from URL or Build from scratch for now.")
+            }
+            .sheet(isPresented: $showFriendsInbox) {
+                NavigationStack {
+                    FriendsInboxView(store: friendsStore)
+                }
+                .presentationDetents(friendsSheetDetents)
+                .presentationDragIndicator(.visible)
             }
             .fullScreenCover(item: $activeFlow) { flow in
                 switch flow {
@@ -91,6 +101,17 @@ struct CreateFlowSheetsModifier: ViewModifier {
             }
     }
 
+    private var createSheetDetents: Set<PresentationDetent> {
+        // AMA-2389: sheet a11y — large under UITEST (iOS 26.1 medium gap).
+        #if DEBUG
+        if UITestEnvironment.isTruthy("UITEST_USE_FIXTURES")
+            || UITestEnvironment.isTruthy("UITEST_SKIP_ONBOARDING") {
+            return [.large, .medium]
+        }
+        #endif
+        return [.medium]
+    }
+
     private func openDoor(_ door: CreateWorkoutDoor) {
         switch door {
         case .createWithAI:
@@ -103,6 +124,8 @@ struct CreateFlowSheetsModifier: ViewModifier {
             activeFlow = .manualEditor
         case .speak:
             speakUnavailableAlert = true
+        case .fromFriends:
+            showFriendsInbox = true
         }
     }
 }

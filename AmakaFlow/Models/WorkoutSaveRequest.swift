@@ -8,7 +8,7 @@
 import Foundation
 
 /// Represents a single interval in a workout save request
-struct WorkoutSaveInterval: Codable {
+struct WorkoutSaveInterval: Codable, Equatable {
     var type: String  // "reps", "time", "warmup", "cooldown", "distance", "rest"
     var name: String?
     var sets: Int?
