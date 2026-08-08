@@ -29,12 +29,12 @@ struct ActualsDogfoodHubView: View {
         let defaults = UserDefaults(suiteName: suite) ?? .standard
         _sourceStore = StateObject(wrappedValue: ActualsSourceConnectionStore(defaults: defaults))
         // Ephemeral in-memory DB for this session's fill-in / ghosts.
+        // Never fall back to AppDatabase.shared — seeding would pollute the user DB.
         let database: AppDatabase
         do {
             database = try AppDatabase.makeTestDatabase()
         } catch {
-            assertionFailure("Dogfood test DB failed: \(error)")
-            database = .shared
+            preconditionFailure("Dogfood test DB failed: \(error)")
         }
         repository = ActualsRepository(database: database)
     }

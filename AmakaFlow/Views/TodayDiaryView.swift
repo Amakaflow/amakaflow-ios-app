@@ -357,6 +357,10 @@ struct TodayDiaryView: View {
         if let provider = card.session?.primaryRecording?.provider {
             return ActualsCopy.sourceDisplayName(provider)
         }
+        // Verified cards rewrite sourceLabel to "Verified · RPE N" — use stored provider.
+        if let provider = card.sourceProvider {
+            return ActualsCopy.sourceDisplayName(provider)
+        }
         // "Synced from Garmin" / "Matched · Garmin" → last token after · or from.
         let label = card.sourceLabel
         if let range = label.range(of: "· ") {

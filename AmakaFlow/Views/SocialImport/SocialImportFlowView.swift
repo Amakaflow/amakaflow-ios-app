@@ -551,7 +551,8 @@ struct ImageImportView: View {
                 blocks: request.blocks
             )
         )
-        dismiss()
+        // Parent Map cover transitions .photo → .matchSave; dismissing here tears it down.
+        // See ActualsPhotoCaptureHandoff.shouldDismissImporter(hasCaptureCompleteHandler:).
     }
 
     private func loadAndImport(_ item: PhotosPickerItem?) async {

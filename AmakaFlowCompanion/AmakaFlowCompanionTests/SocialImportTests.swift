@@ -1268,4 +1268,17 @@ final class SocialImportNetworkProbeTests: XCTestCase {
         let message = mapped?.userMessage ?? ""
         XCTAssertTrue(message.contains("−1005") || message.contains("-1005"), message)
     }
+
+    // MARK: - Actuals photo capture handoff (Map cover)
+
+    func testActualsPhotoCaptureHandoffDoesNotDismissWhenParentOwnsCover() {
+        XCTAssertFalse(
+            ActualsPhotoCaptureHandoff.shouldDismissImporter(hasCaptureCompleteHandler: true),
+            "Parent Map transitions .photo → .matchSave; importer dismiss would close the cover"
+        )
+        XCTAssertTrue(
+            ActualsPhotoCaptureHandoff.shouldDismissImporter(hasCaptureCompleteHandler: false),
+            "Standalone import still dismisses after completion"
+        )
+    }
 }

@@ -162,4 +162,29 @@ final class ActualsVerifiedGhostTests: XCTestCase {
         XCTAssertEqual(ActualsGhostFeed.exerciseKey(forName: "Back squat"), "back_squat")
         XCTAssertEqual(ActualsGhostFeed.exerciseKey(forName: "Romanian deadlift"), "romanian_deadlift")
     }
+
+    func testMarkingVerifiedPreservesSourceProvider() {
+        var fill = ActualsFillInSession.lowerBodyPosteriorSample(id: "provider_card")
+        fill.rpe = 8
+        let card = ActualsTodayDemoCard(
+            id: fill.id,
+            kind: .fillInDebt,
+            timeLabel: "07:52",
+            title: fill.title,
+            stats: [("clock", "48m")],
+            sourceLabel: "Apple Watch session",
+            sourceProvider: .appleHealth,
+            session: nil,
+            activity: nil,
+            fillInSession: fill
+        )
+        let verified = card.markingVerified(with: fill)
+        XCTAssertEqual(verified.kind, .verified)
+        XCTAssertEqual(verified.sourceProvider, .appleHealth)
+        XCTAssertEqual(verified.sourceLabel, "Verified · RPE 8")
+        XCTAssertEqual(
+            ActualsCopy.sourceDisplayName(verified.sourceProvider ?? .garmin),
+            "Apple Health"
+        )
+    }
 }

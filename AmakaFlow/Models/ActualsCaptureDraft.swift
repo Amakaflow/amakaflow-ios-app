@@ -7,6 +7,15 @@
 
 import Foundation
 
+/// Handoff policy when photo import completes inside a parent-owned cover stack.
+enum ActualsPhotoCaptureHandoff {
+    /// When the parent supplies `onCaptureComplete`, it owns the next presentation —
+    /// the importer must not call `dismiss()` or the Map `fullScreenCover` closes.
+    static func shouldDismissImporter(hasCaptureCompleteHandler: Bool) -> Bool {
+        !hasCaptureCompleteHandler
+    }
+}
+
 /// Local capture result — not yet verified; match-save decides Library + attach.
 struct ActualsCaptureDraft: Identifiable, Equatable {
     /// Default Builder title before the athlete names the session.

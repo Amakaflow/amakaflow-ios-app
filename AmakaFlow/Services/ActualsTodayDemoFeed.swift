@@ -25,6 +25,8 @@ struct ActualsTodayDemoCard: Identifiable, Equatable {
     let title: String
     let stats: [(icon: String, value: String)]
     let sourceLabel: String
+    /// Originating provider — preserved across verified rewrite of `sourceLabel`.
+    let sourceProvider: ActualsSourceProvider?
     let session: ActualsSession?
     let activity: ActualsUnmappedActivity?
     let fillInSession: ActualsFillInSession?
@@ -41,6 +43,7 @@ struct ActualsTodayDemoCard: Identifiable, Equatable {
             title: title,
             stats: stats,
             sourceLabel: "Verified · RPE \(saved.rpe ?? 0)",
+            sourceProvider: sourceProvider,
             session: session,
             activity: nil,
             fillInSession: saved
@@ -308,6 +311,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
             title: title,
             stats: stats,
             sourceLabel: sourceLabel,
+            sourceProvider: activity?.provider ?? .garmin,
             session: nil,
             activity: activity,
             fillInSession: fillSession
@@ -344,6 +348,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
             title: recording.title,
             stats: stats,
             sourceLabel: "Synced from \(ActualsCopy.sourceDisplayName(recording.provider))",
+            sourceProvider: recording.provider,
             session: nil,
             activity: activity,
             fillInSession: nil
@@ -393,6 +398,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 ("heart.fill", "148")
             ],
             sourceLabel: session.mergeBadge,
+            sourceProvider: session.primaryRecording?.provider ?? .appleHealth,
             session: session,
             activity: nil,
             fillInSession: nil
@@ -426,6 +432,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 ("heart.fill", "151")
             ],
             sourceLabel: "Synced from Garmin",
+            sourceProvider: activity.provider,
             session: nil,
             activity: activity,
             fillInSession: nil
@@ -446,6 +453,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 ("dumbbell.fill", "4 moves")
             ],
             sourceLabel: "Apple Watch session",
+            sourceProvider: .appleHealth,
             session: nil,
             activity: nil,
             fillInSession: session

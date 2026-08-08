@@ -149,4 +149,32 @@ final class ActualsAppleHealthConnectTests: XCTestCase {
         live.openHealthSettings()
         XCTAssertEqual(opened.first?.absoluteString, UIApplication.openSettingsURLString)
     }
+
+    // MARK: - Second connect after promptCompleted → Settings
+
+    func testSecondConnectAfterPromptCompletedNeedsSettingsAndStaysDisconnected() async {
+        defaults.set(
+            ActualsHealthKitReadAuthorizationState.promptCompleted.rawValue,
+            forKey: "ama2387.actuals.appleHealth.authState"
+        )
+        var opened: [URL] = []
+        let live = LiveActualsHealthKitConnector(
+            defaults: defaults,
+            openURL: { opened.append($0) }
+        )
+        XCTAssertEqual(live.authorizationState, .promptCompleted)
+
+        let store = ActualsSourceConnectionStore(defaults: defaults)
+        let outcome = await live.connect()
+        ActualsAppleHealthConnectAction.apply(
+            outcome: outcome,
+            store: store,
+            openSettings: { live.openHealthSettings() }
+        )
+
+        XCTAssertEqual(outcome, .needsSettings)
+        XCTAssertFalse(store.isConnected(.appleHealth))
+        XCTAssertEqual(live.authorizationState, .promptCompleted)
+        XCTAssertEqual(opened.first?.absoluteString, UIApplication.openSettingsURLString)
+    }
 }

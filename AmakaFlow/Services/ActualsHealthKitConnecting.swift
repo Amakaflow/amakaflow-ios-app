@@ -103,8 +103,9 @@ final class LiveActualsHealthKitConnector: ActualsHealthKitConnecting {
         case .denied:
             return .needsSettings
         case .promptCompleted:
-            // Already prompted — still no read-status API; stay disconnected.
-            return .promptCompleted
+            // Already prompted with no read evidence — route retry to Settings
+            // (iOS will not re-show the HealthKit sheet). Stay disconnected.
+            return .needsSettings
         case .notDetermined:
             break
         }

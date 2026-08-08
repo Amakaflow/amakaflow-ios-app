@@ -24,7 +24,19 @@ fi
 # Ensure dedicated sim still exists; recreate if deleted.
 if ! xcrun simctl list devices available | grep -q "$SIM_UDID"; then
   echo "[ama2387] $SIM_NAME ($SIM_UDID) missing — recreating…"
-  RUNTIME=$(xcrun simctl list runtimes | grep -oE 'com\.apple\.CoreSimulator\.SimRuntime\.iOS-[0-9-]+' | sort -V | tail -1)
+  RUNTIME=$(
+    xcrun simctl list runtimes |
+      awk '/com\.apple\.CoreSimulator\.SimRuntime\.iOS-/ && $0 !~ /unavailable/ {
+        match($0, /com\.apple\.CoreSimulator\.SimRuntime\.iOS-[0-9-]+/)
+        print substr($0, RSTART, RLENGTH)
+      }' |
+      sort -V |
+      tail -1
+  )
+  if [[ -z "$RUNTIME" ]]; then
+    echo "[ama2387] ERROR: no available iOS simulator runtime found" >&2
+    exit 1
+  fi
   SIM_UDID=$(xcrun simctl create "$SIM_NAME" \
     com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max \
     "$RUNTIME")

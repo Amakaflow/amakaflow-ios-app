@@ -171,8 +171,9 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
     private func connectTapped(_ provider: ActualsSourceProvider) {
         switch provider {
         case .appleHealth:
-            // Retry after Don't Allow: iOS never re-prompts — jump straight to Settings.
-            if healthKit.authorizationState == .denied {
+            // Retry after Don't Allow / prompt-with-no-evidence: iOS never re-prompts.
+            if healthKit.authorizationState == .denied
+                || healthKit.authorizationState == .promptCompleted {
                 healthKit.openHealthSettings()
             } else {
                 showAppleHealthPrimer = true
