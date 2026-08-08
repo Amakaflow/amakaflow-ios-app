@@ -71,6 +71,7 @@ extension LibraryView {
             OnYourWatchesView(viewModel: watchesVM)
         case .appleScheduled:
             AppleWatchScheduledListView(
+                libraryWorkouts: viewModel.allWorkouts.map { ($0.id, $0.name) },
                 onScheduleFromLibrary: {
                     navigationPath.append(.libraryPick(.appleSchedule))
                 },

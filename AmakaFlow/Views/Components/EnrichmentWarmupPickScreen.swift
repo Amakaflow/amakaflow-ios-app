@@ -59,7 +59,13 @@ struct EnrichmentWarmupPickScreen: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(DailyDriver.screenBackground.ignoresSafeArea())
         .overlay(alignment: .bottom) {
-            DDEditorSaveBar(title: "Save warm-ups") { dismiss() }
+            DDEditorSaveBar(title: "Save warm-ups") {
+                DDToastCenter.shared.success(
+                    WatchItemCopy.toastWarmupsSaved,
+                    sub: WatchItemCopy.toastSavedSub
+                )
+                dismiss()
+            }
                 .accessibilityIdentifier("af_warmup_pick_save")
         }
         .navigationDestination(item: $editingExercise) { name in

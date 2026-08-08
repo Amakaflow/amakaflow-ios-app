@@ -106,9 +106,6 @@ struct GarminWatchQueueView: View {
                 onOpenWorkout: {
                     watchItem = nil
                     onOpenWorkoutFromWatchItem?(item.workoutID)
-                },
-                onSeeSteps: {
-                    DDToastCenter.shared.device("Opens the read-only step preview — not the editor")
                 }
             )
             // Same as Make it watch-ready: open large so readiness rows +

@@ -183,6 +183,17 @@ createOpen: bool, toast: string|null, detailId, activityId }` — Today, Profile
 Device all react to it (logged RPE adds the run to Profile's week list; backfill kills
 the insight banner and adds a lifting session).
 
+### Watch Item — delivered steps overlay (AMA-2388)
+
+Read-only peek from the ON THE WATCH card’s **See the N step(s)** control
+(`WATCHITEM.md`, `reference/screens-watchitem.jsx`, `screenshots/rig-watchitem-states.jpg`).
+
+- Modal overlay (not a nested sheet): scrim + bottom panel; Close / tap-scrim dismiss.
+- Title: `On the watch — N step(s)`; mono watermark that this is the **delivered** copy.
+- Sections match AMA-2371 preview bands (mobility / warm-up / work / cooldown) — no Schedule CTA.
+- VoiceOver: overlay is modal; sheet chrome is hidden while open.
+- Accessibility id: `af_watchitem_steps_overlay`.
+
 ## Known prototype bugs (do NOT replicate)
 
 - Light-theme Profile: stat values invisible (white-on-white) — see `dd-profile-light.png`.
