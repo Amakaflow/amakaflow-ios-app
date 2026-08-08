@@ -109,7 +109,10 @@ final class AppleScheduledWorkoutLinkStore: AppleScheduledWorkoutLinkStoring, @u
     func workoutID(forPlanID planID: String) -> String? {
         lock.lock()
         defer { lock.unlock() }
-        return loadUnlocked().first { $0.planID == planID }?.workoutID
+        guard let id = loadUnlocked().first(where: { $0.planID == planID })?.workoutID,
+              !id.isEmpty
+        else { return nil }
+        return id
     }
 
     func planJSON(forPlanID planID: String) -> Data? {
@@ -119,7 +122,8 @@ final class AppleScheduledWorkoutLinkStore: AppleScheduledWorkoutLinkStoring, @u
     }
 
     /// Prefer exact planID hit; else title-match against Library (backfill).
-    /// When `library` is non-empty, reject (and drop) links to deleted workouts.
+    /// When `library` is non-empty, reject stale Library bindings but keep
+    /// cached planJSON so Watch Item can still render delivered sections.
     func resolve(
         planID: String,
         title: String,
@@ -129,7 +133,7 @@ final class AppleScheduledWorkoutLinkStore: AppleScheduledWorkoutLinkStoring, @u
             if library.isEmpty || library.contains(where: { $0.id == hit }) {
                 return hit
             }
-            remove(planID: planID)
+            dropLibraryLinkPreservingPlanJSON(planID: planID, title: title)
         }
         let matches = library.filter {
             WatchWorkoutTitlePolicy.isSameScheduledTitle($0.title, title)
@@ -137,6 +141,28 @@ final class AppleScheduledWorkoutLinkStore: AppleScheduledWorkoutLinkStoring, @u
         guard matches.count == 1, let only = matches.first else { return nil }
         record(planID: planID, workoutID: only.id, title: title, planJSON: planJSON(forPlanID: planID))
         return only.id
+    }
+
+    /// Clears the Library workout binding while retaining planJSON (AMA-2390).
+    private func dropLibraryLinkPreservingPlanJSON(planID: String, title: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        var items = loadUnlocked()
+        guard let existing = items.first(where: { $0.planID == planID }) else { return }
+        items.removeAll { $0.planID == planID }
+        if let planJSON = existing.planJSON, !planJSON.isEmpty {
+            items.insert(
+                AppleScheduledWorkoutLink(
+                    planID: planID,
+                    workoutID: "",
+                    title: title,
+                    updatedAt: Date(),
+                    planJSON: planJSON
+                ),
+                at: 0
+            )
+        }
+        saveUnlocked(items)
     }
 
     func remove(planID: String) {

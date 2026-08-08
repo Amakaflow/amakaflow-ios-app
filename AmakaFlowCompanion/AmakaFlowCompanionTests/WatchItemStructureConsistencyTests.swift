@@ -198,4 +198,72 @@ final class WatchItemStructureConsistencyTests: XCTestCase {
         )
         XCTAssertTrue(sections.isEmpty)
     }
+
+    /// Library workout deleted after schedule — cached planJSON still drives sections.
+    func testAppleFactoryKeepsPlanJSONWhenLibraryWorkoutDeleted() {
+        let planJSON = bikeSkiRowPlanJSON
+        linkStore.record(
+            planID: "plan-bike",
+            workoutID: "lib-deleted",
+            title: "Bike ski row",
+            planJSON: planJSON
+        )
+        let vm = WatchItemViewModel.apple(
+            row: scheduleRow(),
+            linkStore: linkStore,
+            readinessStore: readinessStore,
+            library: [("lib-other", "Different workout")],
+            prefs: .defaults
+        )
+        XCTAssertNil(vm.libraryWorkoutID)
+        XCTAssertEqual(linkStore.planJSON(forPlanID: "plan-bike"), planJSON)
+        XCTAssertEqual(vm.stepSections.count, 1)
+        XCTAssertEqual(vm.stepSections[0].band, "Circuit")
+        XCTAssertEqual(vm.stepSections[0].tag, "8 ROUNDS")
+        XCTAssertEqual(vm.stepCount, 4)
+        XCTAssertFalse(vm.stepSections.flatMap(\.steps).contains { $0.title.contains("Bench") })
+    }
+
+    /// Prior demo delivered snapshot must not stick as production baseline/pills.
+    func testProductionMigratesStaleDemoDeliveredSnapshot() {
+        let demo = WatchItemViewModel.demoConfig(isApple: true, title: "Bike ski row")
+        readinessStore.saveDelivered(
+            workoutID: "lib-bike",
+            snapshot: WatchItemReadinessSnapshot(
+                readiness: WatchItemReadinessState(
+                    mobilityEnabled: true,
+                    warmupsEnabled: true,
+                    restEnabled: true,
+                    cooldownEnabled: false
+                ),
+                config: demo,
+                snapshotPills: WatchItemViewModel.demoPills(isApple: true, title: "Bike ski row"),
+                updatedAt: Date()
+            )
+        )
+        let seeded = WatchItemViewModel.seed(
+            storeKey: "lib-bike",
+            title: "Bike ski row",
+            isApple: true,
+            prefs: .defaults,
+            readinessStore: readinessStore,
+            deliveredStepTotal: 4
+        )
+        let prefsConfig = WatchItemViewModel.config(from: .defaults)
+        let prefsReadiness = WatchItemViewModel.readiness(from: .defaults)
+        XCTAssertEqual(seeded.baselineConfig, prefsConfig)
+        XCTAssertEqual(seeded.baseline, prefsReadiness)
+        XCTAssertEqual(seeded.draftConfig, prefsConfig)
+        XCTAssertEqual(seeded.draft, prefsReadiness)
+        XCTAssertNotEqual(seeded.baselineConfig, demo)
+        XCTAssertEqual(seeded.pills.first, WatchItemCopy.stepsPill(count: 4))
+        XCTAssertNotEqual(
+            seeded.pills,
+            WatchItemViewModel.demoPills(isApple: true, title: "Bike ski row")
+        )
+        let persisted = readinessStore.loadDelivered(workoutID: "lib-bike")
+        XCTAssertEqual(persisted?.config, prefsConfig)
+        XCTAssertEqual(persisted?.readiness, prefsReadiness)
+        XCTAssertEqual(persisted?.snapshotPills.first, WatchItemCopy.stepsPill(count: 4))
+    }
 }

@@ -31,6 +31,9 @@ extension WatchItemViewModel {
     ) -> WatchItemViewModel {
         let when = appleStateLine(for: row, calendar: calendar)
         let planKey = row.id.planID
+        // Capture plan JSON before resolve — stale Library links drop the binding
+        // and must not erase the cached payload needed for Watch Item sections.
+        let cachedPlanJSON = linkStore.planJSON(forPlanID: planKey)
         let linkedID = linkStore.resolve(planID: planKey, title: row.title, library: library)
         if let linkedID {
             readinessStore.migrate(from: planKey, to: linkedID)
@@ -40,7 +43,7 @@ extension WatchItemViewModel {
         let storeKey = linkedID ?? planKey
         let sections = resolvedStepSections(
             stepSections: stepSections,
-            planJSON: linkStore.planJSON(forPlanID: planKey),
+            planJSON: cachedPlanJSON ?? linkStore.planJSON(forPlanID: planKey),
             title: row.title
         )
         let seeded = seed(
@@ -158,14 +161,21 @@ extension WatchItemViewModel {
                 )
                 : defaultsReadiness)
 
-        let delivered = readinessStore.loadDelivered(workoutID: storeKey)
+        var delivered = readinessStore.loadDelivered(workoutID: storeKey)
         var draftSnap = readinessStore.loadDraft(workoutID: storeKey)
+
+        // Production: discard delivered snapshots stamped by prior demo behavior.
+        var replacedStaleDemoDelivered = false
+        if !useDemo, let snap = delivered, isStaleDemoSnapshot(snap, title: title, isApple: isApple) {
+            delivered = nil
+            replacedStaleDemoDelivered = true
+        }
 
         let baseline = delivered?.readiness ?? fallbackReadiness
         let baselineConfig = delivered?.config ?? fallbackConfig
 
         // Stale demo draft vs authentic baseline → ghost EDITED. Drop it.
-        if let snap = draftSnap, isStaleDemoDraft(snap, title: title, isApple: isApple) {
+        if let snap = draftSnap, isStaleDemoSnapshot(snap, title: title, isApple: isApple) {
             let baselineIsAuthentic = delivered != nil || prefs != nil || !useDemo
             if baselineIsAuthentic, snap.config != baselineConfig || snap.readiness != baseline {
                 draftSnap = nil
@@ -206,8 +216,8 @@ extension WatchItemViewModel {
             }
         }
 
-        // Persist only authentic baselines (prefs or prior delivered) — never demo.
-        if delivered == nil, prefs != nil {
+        // Persist authentic baselines — replace stale demo delivered, or seed from prefs.
+        if replacedStaleDemoDelivered || (delivered == nil && prefs != nil) {
             readinessStore.saveDelivered(
                 workoutID: storeKey,
                 snapshot: WatchItemReadinessSnapshot(
@@ -218,7 +228,7 @@ extension WatchItemViewModel {
                 )
             )
         }
-        if draftSnap == nil, prefs != nil {
+        if draftSnap == nil, prefs != nil || replacedStaleDemoDelivered {
             readinessStore.saveDraft(
                 workoutID: storeKey,
                 snapshot: WatchItemReadinessSnapshot(
@@ -241,12 +251,21 @@ extension WatchItemViewModel {
     }
 
     /// Demo config used only as a dogfood placeholder — never a real edit.
-    static func isStaleDemoDraft(
+    static func isStaleDemoSnapshot(
         _ snap: WatchItemReadinessSnapshot,
         title: String,
         isApple: Bool
     ) -> Bool {
         snap.config == demoConfig(isApple: isApple, title: title)
+    }
+
+    /// Backward-compatible alias for draft-only call sites / tests.
+    static func isStaleDemoDraft(
+        _ snap: WatchItemReadinessSnapshot,
+        title: String,
+        isApple: Bool
+    ) -> Bool {
+        isStaleDemoSnapshot(snap, title: title, isApple: isApple)
     }
 
     /// Work-band exercise names for ramp pickers (Circuit stations or band titles).

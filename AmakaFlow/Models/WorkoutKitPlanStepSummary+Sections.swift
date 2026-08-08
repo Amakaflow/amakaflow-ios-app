@@ -238,13 +238,16 @@ private enum PreviewSectionBuilder {
         step.seconds != nil && step.reps == nil
     }
 
-    /// `nil` reps and `nil` seconds means no fixed target — an open goal
+    /// `nil` reps / seconds / meters means no fixed target — an open goal
     /// (AMA-2378 `ActivityGoal.kind == .open` / `RampSet.kind == .open`).
     /// Surfaces as `"Open"` (→ `OPEN` once uppercased) so the preview never
     /// silently drops the row's detail line.
     private static func workDetail(for step: WKPlanDTO.Interval.Step) -> String? {
         if let reps = step.reps { return "\(reps) reps" }
         if let seconds = step.seconds { return durationLabel(seconds) }
+        if let meters = step.meters, meters > 0 {
+            return WorkoutHelpers.formatDistance(meters: Int(meters.rounded()))
+        }
         return "Open"
     }
 

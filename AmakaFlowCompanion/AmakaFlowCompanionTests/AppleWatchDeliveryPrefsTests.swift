@@ -268,6 +268,36 @@ final class AppleWatchDeliveryPrefsTests: XCTestCase {
         XCTAssertEqual(sections[0].steps.first?.title, "Work intervals ×4")
     }
 
+    /// AMA-2390 — distance stations inside a multi-step circuit keep meters in detail
+    /// (not the open-goal fallback).
+    func testDistanceCircuitStationPreservesMetersDetail() throws {
+        let json = """
+        {
+          "title": "Row ski circuit",
+          "sportType": "traditionalStrengthTraining",
+          "intervals": [
+            {
+              "kind": "repeat",
+              "reps": 4,
+              "intervals": [
+                { "kind": "distance", "name": "Rowing Machine", "meters": 500 },
+                { "kind": "work", "name": "Ski Erg", "seconds": 60 }
+              ]
+            }
+          ]
+        }
+        """.data(using: .utf8)!
+
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+        XCTAssertEqual(sections.count, 1)
+        XCTAssertEqual(sections[0].band, "Circuit")
+        XCTAssertEqual(sections[0].tag, "4 ROUNDS")
+        XCTAssertEqual(sections[0].steps.map(\.title), ["Rowing Machine", "Ski Erg"])
+        XCTAssertEqual(sections[0].steps[0].detail, "500M")
+        XCTAssertNotEqual(sections[0].steps[0].detail, "OPEN")
+        XCTAssertEqual(sections[0].steps[1].detail, "1 MIN")
+    }
+
     /// AMA-2390 — multi-station circuit keeps outer iterations as ROUNDS (Library /
     /// Apple Workout Repeat×N parity), not one "N SETS" band per station.
     func testCircuitRepeatBandsAsRoundsNotPerStationSets() throws {
