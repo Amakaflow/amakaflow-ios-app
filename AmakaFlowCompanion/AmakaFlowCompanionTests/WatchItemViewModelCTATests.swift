@@ -19,13 +19,26 @@ private struct StubWatchItemReplacer: WatchItemReplacing {
 @MainActor
 final class WatchItemViewModelCTATests: XCTestCase {
     private var readinessStore: WatchItemReadinessStore!
-    private let suiteName = "ama2388.cta.tests"
+    private var toast: DDToastCenter!
+    private var suiteName: String!
 
     override func setUp() {
         super.setUp()
+        suiteName = "ama2388.cta.tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         readinessStore = WatchItemReadinessStore(defaults: defaults)
+        toast = DDToastCenter()
+    }
+
+    override func tearDown() {
+        if let suiteName {
+            UserDefaults(suiteName: suiteName)?.removePersistentDomain(forName: suiteName)
+        }
+        readinessStore = nil
+        toast = nil
+        suiteName = nil
+        super.tearDown()
     }
 
     private func makeVM(
@@ -65,17 +78,20 @@ final class WatchItemViewModelCTATests: XCTestCase {
                 )
             ],
             replacer: replacer,
+            toast: toast,
             readinessStore: readinessStore,
             prefsPersister: nil
         )
     }
 
-    func testCTAAvailableWithoutDemoFlag() {
+    func testCTAAvailableWithoutDemoFlag() async {
         let vm = makeVM()
         XCTAssertFalse(vm.canReplace)
+        XCTAssertEqual(vm.changeCount, 0)
         vm.setEnabled(.cooldown, true)
+        XCTAssertEqual(vm.changeCount, 1)
         XCTAssertTrue(vm.canReplace)
-        XCTAssertEqual(vm.replaceCTATitle(), "Replace on watch · 1 change")
+        XCTAssertEqual(vm.replaceCTATitle(), WatchItemCopy.replaceCTA(changeCount: 1))
         XCTAssertTrue(vm.applyNote.contains("Saved here"))
     }
 
@@ -102,7 +118,7 @@ final class WatchItemViewModelCTATests: XCTestCase {
         XCTAssertEqual(vm.lastError, "boom")
         XCTAssertFalse(vm.justReplaced)
         XCTAssertTrue(vm.canReplace)
-        XCTAssertEqual(vm.replaceCTATitle(), "Replace on watch · 1 change")
+        XCTAssertEqual(vm.replaceCTATitle(), WatchItemCopy.replaceCTA(changeCount: 1))
     }
 
     func testTrackerDraftSeedCountsAsEdited() {
