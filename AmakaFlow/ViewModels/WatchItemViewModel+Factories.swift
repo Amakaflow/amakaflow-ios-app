@@ -268,19 +268,15 @@ extension WatchItemViewModel {
         var sections: [PreviewSection] = []
         var nextNumber = 1
 
-        func numberedSteps(
-            from items: [(title: String, detail: String?, restChip: String?)]
-        ) -> [PreviewStep] {
-            items.map { item in
-                let step = PreviewStep(
-                    number: nextNumber,
-                    title: item.title,
-                    detail: item.detail,
-                    restChip: item.restChip
-                )
-                nextNumber += 1
-                return step
-            }
+        func appendNumbered(_ title: String, detail: String? = nil, restChip: String? = nil) -> PreviewStep {
+            let step = PreviewStep(
+                number: nextNumber,
+                title: title,
+                detail: detail,
+                restChip: restChip
+            )
+            nextNumber += 1
+            return step
         }
 
         if readiness.mobilityEnabled {
@@ -291,7 +287,7 @@ extension WatchItemViewModel {
                     accent: .mobility,
                     band: "MOBILITY",
                     tag: nil,
-                    steps: numberedSteps(from: labels.map { ($0, nil, nil) })
+                    steps: labels.map { appendNumbered($0) }
                 )
             )
         }
@@ -305,7 +301,7 @@ extension WatchItemViewModel {
                         accent: .work,
                         band: "WARM-UP · \(ramp.exerciseRef.uppercased())",
                         tag: nil,
-                        steps: numberedSteps(from: details.map { (PreviewStep.warmupSetTitle, $0, nil) })
+                        steps: details.map { appendNumbered(PreviewStep.warmupSetTitle, detail: $0) }
                     )
                 )
             }
@@ -320,7 +316,9 @@ extension WatchItemViewModel {
                     accent: .work,
                     band: band.band,
                     tag: band.tag,
-                    steps: numberedSteps(from: band.steps.map { ($0.title, $0.detail, $0.restChip) }),
+                    steps: band.steps.map {
+                        appendNumbered($0.title, detail: $0.detail, restChip: $0.restChip)
+                    },
                     caption: band.caption
                 )
             )
@@ -334,7 +332,7 @@ extension WatchItemViewModel {
                     accent: .cooldown,
                     band: "COOLDOWN",
                     tag: nil,
-                    steps: numberedSteps(from: labels.map { ($0, nil, nil) })
+                    steps: labels.map { appendNumbered($0) }
                 )
             )
         }
