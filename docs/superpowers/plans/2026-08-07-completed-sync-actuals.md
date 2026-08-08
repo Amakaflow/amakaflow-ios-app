@@ -208,6 +208,6 @@
 - Optional: `docs/ama-2387-visual-evidence/` screenshots vs rig
 - Linear comment with validation gate status
 
-- [ ] **Step 1: Simulator pass teach → connect → stub OAuth → merge ask → fill-in → verified**
-- [ ] **Step 2: Note remaining live HealthKit/OAuth items behind protocols**
-- [ ] **Step 3: Open implementation PR (base `main`)**
+- [x] **Step 1: Simulator pass teach → connect → stub OAuth → merge ask → fill-in → verified** — checklist in `docs/ama-2387-visual-evidence/VALIDATION.md`; live sim blocked (CoreSimulator hang); TEST BUILD SUCCEEDED Tasks 8–9
+- [x] **Step 2: Note remaining live HealthKit/OAuth items behind protocols** — see VALIDATION.md
+- [x] **Step 3: Open implementation PR (base `main`)**
