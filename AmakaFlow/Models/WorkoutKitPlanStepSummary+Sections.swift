@@ -2,29 +2,21 @@
 //  WorkoutKitPlanStepSummary+Sections.swift
 //  AmakaFlow
 //
-//  AMA-2374 — exercise-named Runna bands for Apple Watch preview
-//  (Mobility prep / Barbell back squat · N SETS). Split from
-//  WorkoutKitPlanStepSummary.swift for SwiftLint file_length / type_body_length.
-//  AMA-2378 — multi-step mobility/cooldown, skipped-ramp captions, and amber
-//  open-goal detail. `SectionAccumulator` below carries most of the new
-//  section-grouping logic at file scope (not nested) to keep
-//  `PreviewSectionBuilder` under SwiftLint's type_body_length.
+//  AMA-2374/2378/2390 — banded Apple Watch preview sections (Mobility /
+//  exercise · N SETS / Circuit · N ROUNDS). Split for SwiftLint file_length.
 //
 
 import Foundation
 import WorkoutKitSync
 
 extension WorkoutKitPlanStepSummary {
-    /// Banded preview sections matching `SDWatchSteps`: Mobility prep / exercise · N SETS.
-    /// Rest chips attach to the preceding work row (right side), never as dump lines.
+    /// Banded preview sections matching `SDWatchSteps`. Rest chips pin to the prior work row.
     static func sections(from planJSON: Data) -> [PreviewSection] {
         PreviewSectionBuilder.sections(from: planJSON)
     }
 }
 
-/// One row's worth of preview content before numbering — shared by
-/// `PreviewSectionBuilder`'s flatten pass and `SectionAccumulator`'s grouping
-/// pass. File-scope (not nested) so both can use it without qualification.
+/// Preview content before numbering — shared by flatten + grouping passes.
 private struct PreviewRow {
     let title: String
     let detail: String?
@@ -45,6 +37,8 @@ private enum PreviewSectionBuilder {
         case mobility(title: String, detail: String?)
         case warmupSet(exercise: String, detail: String?)
         case work(exercise: String, detail: String?, repeatCount: Int, timed: Bool)
+        /// Multi-station circuit/superset: one band, N rounds, stations listed once.
+        case circuit(reps: Int, stations: [(exercise: String, detail: String?)])
         case rest(chip: String)
         case cooldown(detail: String)
     }
@@ -90,15 +84,32 @@ private enum PreviewSectionBuilder {
             )
         }
 
-        var out: [Atom] = []
-        for step in steps {
-            if isRest(step) {
-                out.append(.rest(chip: restChipLabel(for: step)))
-                continue
+        // EMOM keeps per-station "Work intervals ×N" bands (mapper names "EMOM · …").
+        // Circuit/superset must keep outer iterations as ROUNDS, not fan into SETS.
+        if isEmomRepeat(workSteps) {
+            var out: [Atom] = []
+            for step in steps {
+                if isRest(step) {
+                    out.append(.rest(chip: restChipLabel(for: step)))
+                    continue
+                }
+                out.append(contentsOf: flattenStep(step, repeatCount: reps))
             }
-            out.append(contentsOf: flattenStep(step, repeatCount: reps))
+            return out
+        }
+
+        let stations: [(exercise: String, detail: String?)] = workSteps.map { step in
+            (displayName(for: step), workDetail(for: step))
+        }
+        var out: [Atom] = [.circuit(reps: reps, stations: stations)]
+        if let sharedRestChip {
+            out.append(.rest(chip: sharedRestChip))
         }
         return out
+    }
+
+    private static func isEmomRepeat(_ workSteps: [WKPlanDTO.Interval.Step]) -> Bool {
+        workSteps.contains { displayName(for: $0).uppercased().contains("EMOM") }
     }
 
     private static func flattenSingleRepeatWork(
@@ -166,6 +177,8 @@ private enum PreviewSectionBuilder {
                     repeatCount: repeatCount,
                     timed: timed
                 )
+            case .circuit(let reps, let stations):
+                accumulator.appendCircuit(reps: reps, stations: stations)
             case .rest(let chip):
                 accumulator.setPendingRest(chip)
             case .cooldown(let detail):
@@ -225,13 +238,16 @@ private enum PreviewSectionBuilder {
         step.seconds != nil && step.reps == nil
     }
 
-    /// `nil` reps and `nil` seconds means no fixed target — an open goal
+    /// `nil` reps / seconds / meters means no fixed target — an open goal
     /// (AMA-2378 `ActivityGoal.kind == .open` / `RampSet.kind == .open`).
     /// Surfaces as `"Open"` (→ `OPEN` once uppercased) so the preview never
     /// silently drops the row's detail line.
     private static func workDetail(for step: WKPlanDTO.Interval.Step) -> String? {
         if let reps = step.reps { return "\(reps) reps" }
         if let seconds = step.seconds { return durationLabel(seconds) }
+        if let meters = step.meters, meters > 0 {
+            return WorkoutHelpers.formatDistance(meters: Int(meters.rounded()))
+        }
         return "Open"
     }
 
@@ -248,23 +264,8 @@ private enum PreviewSectionBuilder {
     }
 }
 
-/// AMA-2378 — the mapper composes multi-step mobility AND multi-step
-/// cooldown the same way (named soft-activity steps; see
-/// `_compose_soft_activity_blocks` in blocks_to_workoutkit.py), with no
-/// `kind: cooldown` marker on the wire once there's more than one activity.
-/// `hasWorked` disambiguates by position: soft-activity atoms before the
-/// first work exercise are mobility prep; the same atoms after the last work
-/// exercise are cooldown. The dedicated `.cooldown` interval (legacy
-/// single-activity shape) always merges into this same trailing band so
-/// "Cool-down" never splits in two. File-scope (not nested in
-/// `PreviewSectionBuilder`) so it doesn't count against that enum's
-/// SwiftLint type_body_length.
-///
-/// Value type (not a MainActor `class`): default actor isolation makes a
-/// class deinit hop through `swift_task_deinitOnExecutor` and SIGABRT under
-/// XCTest (libmalloc "pointer being freed was not allocated"). Pending-rest
-/// attachment uses a local array copy so we never pass `&self.*` into a
-/// mutating helper (Swift exclusivity).
+/// AMA-2378 grouping: soft-activity before first work → mobility; after last
+/// work → cooldown. Value type (not MainActor class) for XCTest deinit safety.
 private struct SectionAccumulator {
     private var sections: [PreviewSection] = []
     private var number = 1
@@ -304,6 +305,24 @@ private struct SectionAccumulator {
         let noun = timed ? "Work interval" : "Working set"
         let title = repeatCount > 1 ? "\(noun)s ×\(repeatCount)" : noun
         exerciseRows.append(PreviewRow(title: title, detail: detail, setCount: max(repeatCount, 1)))
+    }
+
+    /// Circuit band: stations once, outer iterations as ROUNDS (Library parity).
+    mutating func appendCircuit(reps: Int, stations: [(exercise: String, detail: String?)]) {
+        flushMobility()
+        flushExercise()
+        flushCooldownAsInterstitial()
+        hasWorked = true
+        pendingRest = nil
+        let rows = stations.map { PreviewRow(title: $0.exercise, detail: $0.detail, setCount: 1) }
+        let tag = reps == 1 ? "1 ROUND" : "\(reps) ROUNDS"
+        sections.append(PreviewSection(
+            accent: .work,
+            band: "Circuit",
+            tag: tag,
+            steps: makeSteps(from: rows),
+            caption: nil
+        ))
     }
 
     /// Legacy single-activity `.cooldown` atom — always merges into
