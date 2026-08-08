@@ -196,9 +196,9 @@
 - Deltas: `+N KG VS PLAN` / `AS PLANNED`
 - Ghost: last actual when present else prescription
 
-- [ ] **Step 1: Failing ghost + delta tests**
-- [ ] **Step 2: Implement + wire**
-- [ ] **Step 3: Run tests; commit**
+- [x] **Step 1: Failing ghost + delta tests**
+- [x] **Step 2: Implement + wire**
+- [x] **Step 3: Run tests; commit** — TEST BUILD SUCCEEDED; XCTest hang on CoreSimulator
 
 ---
 

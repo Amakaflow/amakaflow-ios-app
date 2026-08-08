@@ -143,3 +143,30 @@ final class ActualsRepository: @unchecked Sendable {
         }
     }
 }
+
+extension ActualsRepository: ActualsGhostLookingUp {
+    func latestActual(exerciseKey: String) throws -> ActualsGhostActual? {
+        let nameGuess = exerciseKey.replacingOccurrences(of: "_", with: " ")
+        return try dbQueue.read { database in
+            let row = try Row.fetchOne(
+                database,
+                sql: """
+                SELECT r.actual_sets, r.actual_reps, r.actual_weight_kg
+                FROM actuals_exercise_rows r
+                INNER JOIN actuals_sessions s ON s.id = r.session_id
+                WHERE s.verified = 1
+                  AND (r.exercise_key = ? OR lower(r.name) = lower(?))
+                ORDER BY s.saved_at DESC
+                LIMIT 1
+                """,
+                arguments: [exerciseKey, nameGuess]
+            )
+            guard let row else { return nil }
+            return ActualsGhostActual(
+                sets: row["actual_sets"],
+                reps: row["actual_reps"],
+                weightKg: row["actual_weight_kg"]
+            )
+        }
+    }
+}

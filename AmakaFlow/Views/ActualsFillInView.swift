@@ -9,10 +9,13 @@ import SwiftUI
 
 struct ActualsFillInView: View {
     @ObservedObject var viewModel: ActualsFillInViewModel
-    var onSaved: () -> Void = {}
+    var onSaved: (ActualsFillInSession) -> Void = { _ in }
     var onBack: (() -> Void)?
+    /// When true, successful save presents the verified payoff screen.
+    var presentsVerifiedOnSave: Bool = true
 
     @Environment(\.dismiss) private var dismiss
+    @State private var showVerified = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -53,6 +56,9 @@ struct ActualsFillInView: View {
         .background(DailyDriver.screenBackground.ignoresSafeArea())
         .preferredColorScheme(.dark)
         .ddSuppressFloatingChrome()
+        .fullScreenCover(isPresented: $showVerified) {
+            ActualsVerifiedView(session: viewModel.session)
+        }
     }
 
     // MARK: - Header
@@ -288,8 +294,12 @@ struct ActualsFillInView: View {
         return Button {
             do {
                 if try viewModel.save() {
-                    onSaved()
-                    dismiss()
+                    onSaved(viewModel.session)
+                    if presentsVerifiedOnSave {
+                        showVerified = true
+                    } else {
+                        dismiss()
+                    }
                 }
             } catch {
                 // lastSaveError already set on the view model

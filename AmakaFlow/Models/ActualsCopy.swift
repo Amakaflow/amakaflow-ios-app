@@ -125,6 +125,17 @@ enum ActualsCopy {
         return "PLANNED \(kgText)"
     }
 
+    // MARK: - Verified + ghost feed (screens-actuals.jsx SYVerifiedScreen)
+
+    static let verifiedHeadline = "Verified session"
+    static let verifiedVsPlanHeader = "WHAT YOU DID · VS PLAN"
+    static let verifiedAsPlannedDelta = "AS PLANNED"
+    static let verifiedAdjustedDelta = "ADJUSTED"
+    static let verifiedGhostFooter =
+        "Next time you run this plan, the editor ghosts show your real last time."
+    static let verifiedCalloutAccessibilityID = "af_actuals_verified_callout"
+    static let verifiedCardAccessibilityID = "af_actuals_verified_card"
+
     // MARK: - Apple Health primer (screens-actuals3.jsx SYAppleFlowScreen)
 
     static let appleHealthTitle = "Apple Health"
