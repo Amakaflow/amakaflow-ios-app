@@ -20,8 +20,14 @@ extension WorkoutCompletion {
         return DailyDriver.blue
     }
 
+    /// Prefer distance only when positive so value + unit stay aligned.
+    private var hasPositiveDistance: Bool {
+        if let distanceMeters, distanceMeters > 0 { return true }
+        return false
+    }
+
     var profileBigValue: String {
-        if let distanceMeters, distanceMeters > 0 {
+        if hasPositiveDistance, let distanceMeters {
             return String(format: "%.1f", Double(distanceMeters) / 1000.0)
         }
         let minutes = durationSeconds / 60
@@ -29,7 +35,7 @@ extension WorkoutCompletion {
     }
 
     var profileUnitLabel: String {
-        distanceMeters != nil ? "KM" : "MIN"
+        hasPositiveDistance ? "KM" : "MIN"
     }
 
     var profileMetaLine: String {
