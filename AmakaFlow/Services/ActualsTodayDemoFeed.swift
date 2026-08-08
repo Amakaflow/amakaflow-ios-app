@@ -7,6 +7,8 @@
 //  Activate after Connect, or launch with AMA2387_TODAY_DEMO=true.
 //
 
+// swiftlint:disable file_length
+
 import Combine
 import Foundation
 
@@ -43,7 +45,9 @@ struct ActualsTodayDemoCard: Identifiable, Equatable {
             title: title,
             stats: stats,
             sourceLabel: "Verified · RPE \(saved.rpe ?? 0)",
-            sourceProvider: sourceProvider,
+            sourceProvider: sourceProvider
+                ?? activity?.provider
+                ?? session?.primaryRecording?.provider,
             session: session,
             activity: nil,
             fillInSession: saved

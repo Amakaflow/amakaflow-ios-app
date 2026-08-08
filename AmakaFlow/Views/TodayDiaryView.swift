@@ -351,23 +351,11 @@ struct TodayDiaryView: View {
     }
 
     private func sourceDisplayName(for card: ActualsTodayDemoCard) -> String {
-        if let provider = card.activity?.provider {
+        // Prefer the stored provider — verified cards rewrite sourceLabel to "Verified · RPE N".
+        if let provider = card.sourceProvider
+            ?? card.activity?.provider
+            ?? card.session?.primaryRecording?.provider {
             return ActualsCopy.sourceDisplayName(provider)
-        }
-        if let provider = card.session?.primaryRecording?.provider {
-            return ActualsCopy.sourceDisplayName(provider)
-        }
-        // Verified cards rewrite sourceLabel to "Verified · RPE N" — use stored provider.
-        if let provider = card.sourceProvider {
-            return ActualsCopy.sourceDisplayName(provider)
-        }
-        // "Synced from Garmin" / "Matched · Garmin" → last token after · or from.
-        let label = card.sourceLabel
-        if let range = label.range(of: "· ") {
-            return String(label[range.upperBound...]).trimmingCharacters(in: .whitespaces)
-        }
-        if let range = label.range(of: "from ", options: .caseInsensitive) {
-            return String(label[range.upperBound...]).trimmingCharacters(in: .whitespaces)
         }
         return ActualsCopy.sourceDisplayName(.appleHealth)
     }

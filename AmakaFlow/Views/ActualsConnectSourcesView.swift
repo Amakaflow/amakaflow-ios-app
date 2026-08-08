@@ -26,7 +26,8 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
         self.store = store
         self.healthKit = healthKit ?? LiveActualsHealthKitConnector()
         self.providerAuth = providerAuth ?? StubActualsProviderAuth()
-        self.onConnect = onConnect ?? { [store] provider in store.markConnected(provider) }
+        // Children already markConnected on grant/success — default is parent UI only.
+        self.onConnect = onConnect ?? { _ in }
     }
 
     var body: some View {

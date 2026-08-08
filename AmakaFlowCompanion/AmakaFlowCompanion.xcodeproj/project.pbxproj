@@ -916,6 +916,7 @@
 		AMA2360STEPSREF01 /* WorkoutKitPlanStepSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutKitPlanStepSummary.swift; path = ../AmakaFlow/Models/WorkoutKitPlanStepSummary.swift; sourceTree = SOURCE_ROOT; };
 		AMA2374SECTSREF01 /* WorkoutKitPlanStepSummary+Sections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutKitPlanStepSummary+Sections.swift"; path = "../AmakaFlow/Models/WorkoutKitPlanStepSummary+Sections.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2374DDBANDREF1 /* DailyDriverTheme+WatchBands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "DailyDriverTheme+WatchBands.swift"; path = "../AmakaFlow/DailyDriverTheme+WatchBands.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2387BRANDREF1 /* DailyDriverTheme+BrandAccents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "DailyDriverTheme+BrandAccents.swift"; path = "../AmakaFlow/DailyDriverTheme+BrandAccents.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2375COPYREF /* OnYourWatchesCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnYourWatchesCopy.swift; path = ../AmakaFlow/Models/OnYourWatchesCopy.swift; sourceTree = SOURCE_ROOT; };
 		AMA2386COPYREF /* WatchItemCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemCopy.swift; path = ../AmakaFlow/Models/WatchItemCopy.swift; sourceTree = SOURCE_ROOT; };
 		AMA2386TRCKREF /* WatchItemChangeTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemChangeTracker.swift; path = ../AmakaFlow/Models/WatchItemChangeTracker.swift; sourceTree = SOURCE_ROOT; };
@@ -1808,6 +1809,7 @@
 				F84E226E2ED0D55600459747 /* Theme.swift */,
 				AMA2292DDTHEME0000A /* DailyDriverTheme.swift */,
 				AMA2374DDBANDREF1 /* DailyDriverTheme+WatchBands.swift */,
+				AMA2387BRANDREF1 /* DailyDriverTheme+BrandAccents.swift */,
 				AMA2292DDSCREENS00A /* DailyDriverScreens.swift */,
 				AMA2293DDCOMP0000A /* DailyDriverComponents.swift */,
 				F84E21762ED0B0C800459747 /* AmakaFlowCompanion */,
@@ -2923,6 +2925,7 @@
 				AMA2360STEPSBLD01 /* WorkoutKitPlanStepSummary.swift in Sources */,
 				AMA2374SECTSBLD01 /* WorkoutKitPlanStepSummary+Sections.swift in Sources */,
 				AMA2374DDBANDBLD1 /* DailyDriverTheme+WatchBands.swift in Sources */,
+				AMA2387BRANDBLD1 /* DailyDriverTheme+BrandAccents.swift in Sources */,
 				AMA2375COPYBLD /* OnYourWatchesCopy.swift in Sources */,
 				AMA2386COPYBLD /* WatchItemCopy.swift in Sources */,
 				AMA2386TRCKBLD /* WatchItemChangeTracker.swift in Sources */,
