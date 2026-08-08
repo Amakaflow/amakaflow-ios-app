@@ -90,8 +90,10 @@ final class ActualsProviderAuthTests: XCTestCase {
     func testStubNextOutcomeOverrideCancel() async {
         let stub = StubActualsProviderAuth()
         stub.nextOutcome = .cancelled
-        XCTAssertEqual(await stub.authorize(.strava), .cancelled)
+        let cancelled = await stub.authorize(.strava)
+        XCTAssertEqual(cancelled, .cancelled)
         // Consumed — next call returns default success.
-        XCTAssertEqual(await stub.authorize(.strava), .success)
+        let success = await stub.authorize(.strava)
+        XCTAssertEqual(success, .success)
     }
 }

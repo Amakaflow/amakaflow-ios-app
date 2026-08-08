@@ -189,6 +189,28 @@ struct ActualsMergedDetailView: View {
 }
 
 #if DEBUG
+private struct MergedDetailFillInPreviewHost: View {
+    let session: ActualsSession
+    @State private var showFillIn = false
+
+    var body: some View {
+        ActualsMergedDetailView(
+            session: session,
+            onSplit: { _ in },
+            onFillIn: { showFillIn = true }
+        )
+        .fullScreenCover(isPresented: $showFillIn) {
+            let repo = ActualsRepository(database: try! AppDatabase.makeTestDatabase())
+            ActualsFillInView(
+                viewModel: ActualsFillInViewModel(
+                    session: ActualsFillInSession.lowerBodyPosteriorSample(),
+                    repository: repo
+                )
+            )
+        }
+    }
+}
+
 #Preview("Merged detail") {
     let session = ActualsMergeClassifier.merge([
         ActualsSourceRecording(
@@ -207,6 +229,6 @@ struct ActualsMergedDetailView: View {
             durationSeconds: 44 * 60, streamRichness: 2
         ),
     ])
-    ActualsMergedDetailView(session: session, onSplit: { _ in })
+    MergedDetailFillInPreviewHost(session: session)
 }
 #endif

@@ -23,6 +23,8 @@ protocol ActualsSourceConnecting: AnyObject {
     var hasAnySourceConnected: Bool { get }
     var hasEverConnected: Bool { get }
     func isConnected(_ provider: ActualsSourceProvider) -> Bool
+    /// True when linked in this process (drives `LINKED ✓ JUST NOW`).
+    func isFreshlyLinked(_ provider: ActualsSourceProvider) -> Bool
     func markConnected(_ provider: ActualsSourceProvider)
     func markDisconnected(_ provider: ActualsSourceProvider)
 }

@@ -177,9 +177,9 @@
 - a11y: `af_actuals_row_<exercise>`, `_asplanned`, `_adjust`, `af_actuals_all_asplanned`, `af_actuals_rpe_<n>`, `af_actuals_save`
 - `verified` set only on successful save with all rows + RPE
 
-- [ ] **Step 1: Failing VM + repo tests**
-- [ ] **Step 2: Implement fill-in + GRDB**
-- [ ] **Step 3: Run tests; commit**
+- [x] **Step 1: Failing VM + repo tests**
+- [x] **Step 2: Implement fill-in + GRDB**
+- [x] **Step 3: Run tests; commit** — arm64 .o compiled; XCTest blocked (CoreSimulator hang)
 
 ---
 

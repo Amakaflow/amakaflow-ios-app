@@ -98,6 +98,33 @@ enum ActualsCopy {
         "af_actuals_map_candidate_\(index)"
     }
 
+    // MARK: - Fill-in actuals (screens-actuals.jsx SYActualsScreen)
+
+    static let fillInTitle = "What you actually did"
+    static let fillInBackLabel = "Activity"
+    static let fillInAllAsPlannedCTA = "✓ All as planned"
+    static let fillInAsPlannedSegment = "✓ As planned"
+    static let fillInAdjustSegment = "Adjust"
+    static let fillInRPEHeader = "HOW HARD WAS IT? · RPE"
+    static let fillInFooterNote =
+        "Actuals update your history — next time this plan shows what you really lifted, not what was written."
+    static let fillInAllAsPlannedToast = "All confirmed as planned — adjust any if needed"
+    static let fillInAllAsPlannedAccessibilityID = "af_actuals_all_asplanned"
+    static let fillInSaveAccessibilityID = "af_actuals_save"
+
+    static func fillInRPEAccessibilityID(_ value: Int) -> String {
+        "af_actuals_rpe_\(value)"
+    }
+
+    static func fillInPlannedLine(_ planned: ExerciseActualPlanned) -> String {
+        "PLANNED · \(planned.displayLine)"
+    }
+
+    static func fillInPlannedGhostKg(_ kg: Double) -> String {
+        let kgText = kg == floor(kg) ? "\(Int(kg))" : String(format: "%.1f", kg)
+        return "PLANNED \(kgText)"
+    }
+
     // MARK: - Apple Health primer (screens-actuals3.jsx SYAppleFlowScreen)
 
     static let appleHealthTitle = "Apple Health"
