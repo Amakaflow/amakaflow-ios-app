@@ -4,6 +4,8 @@
 //
 //  AMA-2388: map WorkoutKit planID → Library workoutID so Open workout /
 //  enrichment seed never route a plan UUID into `.unifiedWorkout`.
+//  AMA-2390: cache scheduled planJSON so Watch Item steps match the preview
+//  / Apple Workout app structure (not demo placeholders).
 //
 
 import Foundation
@@ -13,12 +15,42 @@ struct AppleScheduledWorkoutLink: Codable, Hashable, Sendable {
     var workoutID: String
     var title: String
     var updatedAt: Date
+    /// Mapper plan JSON delivered at schedule time — powers Watch Item steps.
+    var planJSON: Data?
+
+    enum CodingKeys: String, CodingKey {
+        case planID, workoutID, title, updatedAt, planJSON
+    }
+
+    init(
+        planID: String,
+        workoutID: String,
+        title: String,
+        updatedAt: Date,
+        planJSON: Data? = nil
+    ) {
+        self.planID = planID
+        self.workoutID = workoutID
+        self.title = title
+        self.updatedAt = updatedAt
+        self.planJSON = planJSON
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        planID = try container.decode(String.self, forKey: .planID)
+        workoutID = try container.decode(String.self, forKey: .workoutID)
+        title = try container.decode(String.self, forKey: .title)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        planJSON = try container.decodeIfPresent(Data.self, forKey: .planJSON)
+    }
 }
 
 protocol AppleScheduledWorkoutLinkStoring: Sendable {
     func load() -> [AppleScheduledWorkoutLink]
-    func record(planID: String, workoutID: String, title: String)
+    func record(planID: String, workoutID: String, title: String, planJSON: Data?)
     func workoutID(forPlanID planID: String) -> String?
+    func planJSON(forPlanID planID: String) -> Data?
     func resolve(
         planID: String,
         title: String,
@@ -26,6 +58,12 @@ protocol AppleScheduledWorkoutLinkStoring: Sendable {
     ) -> String?
     func remove(planID: String)
     func clear()
+}
+
+extension AppleScheduledWorkoutLinkStoring {
+    func record(planID: String, workoutID: String, title: String) {
+        record(planID: planID, workoutID: workoutID, title: title, planJSON: nil)
+    }
 }
 
 /// UserDefaults-backed planID → workoutID index (Garmin queue store pattern).
@@ -46,17 +84,19 @@ final class AppleScheduledWorkoutLinkStore: AppleScheduledWorkoutLinkStoring, @u
         return loadUnlocked().sorted { $0.updatedAt > $1.updatedAt }
     }
 
-    func record(planID: String, workoutID: String, title: String) {
+    func record(planID: String, workoutID: String, title: String, planJSON: Data? = nil) {
         lock.lock()
         defer { lock.unlock() }
         var items = loadUnlocked()
+        let priorJSON = items.first { $0.planID == planID }?.planJSON
         items.removeAll { $0.planID == planID }
         items.insert(
             AppleScheduledWorkoutLink(
                 planID: planID,
                 workoutID: workoutID,
                 title: title,
-                updatedAt: Date()
+                updatedAt: Date(),
+                planJSON: planJSON ?? priorJSON
             ),
             at: 0
         )
@@ -70,6 +110,12 @@ final class AppleScheduledWorkoutLinkStore: AppleScheduledWorkoutLinkStoring, @u
         lock.lock()
         defer { lock.unlock() }
         return loadUnlocked().first { $0.planID == planID }?.workoutID
+    }
+
+    func planJSON(forPlanID planID: String) -> Data? {
+        lock.lock()
+        defer { lock.unlock() }
+        return loadUnlocked().first { $0.planID == planID }?.planJSON
     }
 
     /// Prefer exact planID hit; else title-match against Library (backfill).
@@ -89,7 +135,7 @@ final class AppleScheduledWorkoutLinkStore: AppleScheduledWorkoutLinkStoring, @u
             WatchWorkoutTitlePolicy.isSameScheduledTitle($0.title, title)
         }
         guard matches.count == 1, let only = matches.first else { return nil }
-        record(planID: planID, workoutID: only.id, title: title)
+        record(planID: planID, workoutID: only.id, title: title, planJSON: planJSON(forPlanID: planID))
         return only.id
     }
 

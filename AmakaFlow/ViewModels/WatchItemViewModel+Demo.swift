@@ -2,9 +2,9 @@
 //  WatchItemViewModel+Demo.swift
 //  AmakaFlow
 //
-//  AMA-2388: demo / dogfood placeholders for Watch Item when prefs + store
-//  have not seeded a real baseline yet. Kept out of the main VM file for
-//  SwiftLint file_length.
+//  AMA-2388 / AMA-2390: demo placeholders for Watch Item — ONLY when
+//  `OnYourWatchesDemoSupport.isEnabled`. Production uses cached planJSON +
+//  WorkoutPreferences.defaults (never Bench/Squat hardcode).
 //
 
 import Foundation

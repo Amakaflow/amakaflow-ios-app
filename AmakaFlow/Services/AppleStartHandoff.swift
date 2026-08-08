@@ -371,6 +371,7 @@ final class AppleStartHandoffService {
                 await recordPlanLink(
                     workoutName: workoutName,
                     libraryWorkoutID: libraryWorkoutID,
+                    planJSON: planJSON,
                     excludedPlanIDs: excluded
                 )
             }
@@ -397,6 +398,7 @@ final class AppleStartHandoffService {
     private func recordPlanLink(
         workoutName: String,
         libraryWorkoutID: String,
+        planJSON: Data,
         excludedPlanIDs: Set<String>
     ) async {
         guard let incompleteScheduleReplacer else { return }
@@ -407,7 +409,8 @@ final class AppleStartHandoffService {
         AppleScheduledWorkoutLinkStore.shared.record(
             planID: newest.id.planID,
             workoutID: libraryWorkoutID,
-            title: workoutName
+            title: workoutName,
+            planJSON: planJSON
         )
     }
 

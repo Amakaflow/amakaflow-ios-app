@@ -60,4 +60,12 @@ final class AppleScheduledWorkoutLinkStoreTests: XCTestCase {
         let resolved = store.resolve(planID: "plan-1", title: "Full Body", library: [])
         XCTAssertEqual(resolved, "w-1")
     }
+
+    func testRecordCachesPlanJSONAndPreservesOnTitleOnlyUpdate() {
+        let json = Data(#"{"title":"Bike ski row","intervals":[]}"#.utf8)
+        store.record(planID: "plan-1", workoutID: "w-1", title: "Bike ski row", planJSON: json)
+        XCTAssertEqual(store.planJSON(forPlanID: "plan-1"), json)
+        store.record(planID: "plan-1", workoutID: "w-1", title: "Bike ski row")
+        XCTAssertEqual(store.planJSON(forPlanID: "plan-1"), json)
+    }
 }

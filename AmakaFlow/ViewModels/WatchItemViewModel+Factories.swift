@@ -3,6 +3,8 @@
 //  AmakaFlow
 //
 //  AMA-2388: Apple/Garmin factories, store seed, and pill derivation.
+//  AMA-2390: production never falls back to demo steps/pills; draft without a
+//  store snapshot mirrors the delivered baseline (no ghost EDITED).
 //
 
 import Foundation
@@ -36,14 +38,19 @@ extension WatchItemViewModel {
         let linkedTitle = linkedID.flatMap { id in library.first { $0.id == id }?.title }
             ?? (linkedID != nil ? row.title : nil)
         let storeKey = linkedID ?? planKey
-        let sections = stepSections.isEmpty ? demoStepSections(title: row.title) : stepSections
+        let sections = resolvedStepSections(
+            stepSections: stepSections,
+            planJSON: linkStore.planJSON(forPlanID: planKey),
+            title: row.title
+        )
         let seeded = seed(
             storeKey: storeKey,
             title: row.title,
             isApple: true,
             prefs: prefs,
             readinessStore: readinessStore,
-            deliveredStepTotal: sections.reduce(0) { $0 + $1.steps.count }
+            deliveredStepTotal: sections.reduce(0) { $0 + $1.steps.count },
+            stepSections: sections
         )
         return WatchItemViewModel(
             device: .apple,
@@ -72,14 +79,19 @@ extension WatchItemViewModel {
         prefs: WorkoutPreferences? = nil,
         stepSections: [PreviewSection] = []
     ) -> WatchItemViewModel {
-        let sections = stepSections.isEmpty ? demoStepSections(title: item.title) : stepSections
+        let sections = resolvedStepSections(
+            stepSections: stepSections,
+            planJSON: nil,
+            title: item.title
+        )
         let seeded = seed(
             storeKey: item.workoutID,
             title: item.title,
             isApple: false,
             prefs: prefs,
             readinessStore: readinessStore,
-            deliveredStepTotal: sections.reduce(0) { $0 + $1.steps.count }
+            deliveredStepTotal: sections.reduce(0) { $0 + $1.steps.count },
+            stepSections: sections
         )
         return WatchItemViewModel(
             device: .garmin,
@@ -101,6 +113,21 @@ extension WatchItemViewModel {
         )
     }
 
+    /// Prefer caller sections, else cached planJSON, else demo only when dogfood flag is on.
+    static func resolvedStepSections(
+        stepSections: [PreviewSection],
+        planJSON: Data?,
+        title: String
+    ) -> [PreviewSection] {
+        if !stepSections.isEmpty { return stepSections }
+        if let planJSON, !planJSON.isEmpty {
+            let fromPlan = WorkoutKitPlanStepSummary.sections(from: planJSON)
+            if !fromPlan.isEmpty { return fromPlan }
+        }
+        guard OnYourWatchesDemoSupport.isEnabled else { return [] }
+        return demoStepSections(title: title)
+    }
+
     /// Seed in-memory state from store + prefs. Demo placeholders are display-only
     /// until real prefs or a Replace-delivered snapshot exists — never stamp demo
     /// as the durable delivered baseline.
@@ -110,28 +137,49 @@ extension WatchItemViewModel {
         isApple: Bool,
         prefs: WorkoutPreferences?,
         readinessStore: any WatchItemReadinessStoring,
-        deliveredStepTotal: Int? = nil
+        deliveredStepTotal: Int? = nil,
+        stepSections: [PreviewSection] = []
     ) -> Seed {
-        let fromPrefs = prefs.map { config(from: $0) }
-        let fallbackConfig = fromPrefs ?? demoConfig(isApple: isApple, title: title)
-        let fallbackReadiness = prefs.map { readiness(from: $0) }
-            ?? WatchItemReadinessState(
-                mobilityEnabled: isApple,
-                warmupsEnabled: isApple,
-                restEnabled: true,
-                cooldownEnabled: false
-            )
+        let useDemo = OnYourWatchesDemoSupport.isEnabled
+        let fromPrefsConfig = prefs.map { config(from: $0) }
+        let fromPrefsReadiness = prefs.map { readiness(from: $0) }
+        let defaultsConfig = config(from: .defaults)
+        let defaultsReadiness = readiness(from: .defaults)
+
+        let fallbackConfig = fromPrefsConfig
+            ?? (useDemo ? demoConfig(isApple: isApple, title: title) : defaultsConfig)
+        let fallbackReadiness = fromPrefsReadiness
+            ?? (useDemo
+                ? WatchItemReadinessState(
+                    mobilityEnabled: isApple,
+                    warmupsEnabled: isApple,
+                    restEnabled: true,
+                    cooldownEnabled: false
+                )
+                : defaultsReadiness)
+
         let delivered = readinessStore.loadDelivered(workoutID: storeKey)
-        let draftSnap = readinessStore.loadDraft(workoutID: storeKey)
+        var draftSnap = readinessStore.loadDraft(workoutID: storeKey)
 
         let baseline = delivered?.readiness ?? fallbackReadiness
         let baselineConfig = delivered?.config ?? fallbackConfig
-        let draft = draftSnap?.readiness ?? fallbackReadiness
-        let draftConfig = draftSnap?.config ?? fallbackConfig
+
+        // Stale demo draft vs authentic baseline → ghost EDITED. Drop it.
+        if let snap = draftSnap, isStaleDemoDraft(snap, title: title, isApple: isApple) {
+            let baselineIsAuthentic = delivered != nil || prefs != nil || !useDemo
+            if baselineIsAuthentic, snap.config != baselineConfig || snap.readiness != baseline {
+                draftSnap = nil
+            }
+        }
+
+        // No draft snapshot → mirror delivered/fallback baseline (never a divergent demo).
+        let draft = draftSnap?.readiness ?? baseline
+        let draftConfig = draftSnap?.config ?? baselineConfig
+
         let pills: [String]
-        if let deliveredPills = delivered?.snapshotPills {
+        if let deliveredPills = delivered?.snapshotPills, !deliveredPills.isEmpty {
             pills = deliveredPills
-        } else if prefs != nil {
+        } else if prefs != nil || delivered != nil || !useDemo {
             pills = Self.pills(
                 from: baseline,
                 config: baselineConfig,
@@ -142,8 +190,21 @@ extension WatchItemViewModel {
         } else {
             pills = demoPills(isApple: isApple, title: title)
         }
-        let warmupNames = draftConfig.perExerciseRamps.map(\.exerciseRef)
-        let names = warmupNames.isEmpty ? demoWarmupNames(for: title) : warmupNames
+
+        let rampNames = draftConfig.perExerciseRamps.map(\.exerciseRef)
+        let names: [String]
+        if !rampNames.isEmpty {
+            names = rampNames
+        } else {
+            let fromSections = workExerciseNames(from: stepSections)
+            if !fromSections.isEmpty {
+                names = fromSections
+            } else if useDemo {
+                names = demoWarmupNames(for: title)
+            } else {
+                names = []
+            }
+        }
 
         // Persist only authentic baselines (prefs or prior delivered) — never demo.
         if delivered == nil, prefs != nil {
@@ -177,6 +238,27 @@ extension WatchItemViewModel {
             pills: pills,
             warmupNames: names
         )
+    }
+
+    /// Demo config used only as a dogfood placeholder — never a real edit.
+    static func isStaleDemoDraft(
+        _ snap: WatchItemReadinessSnapshot,
+        title: String,
+        isApple: Bool
+    ) -> Bool {
+        snap.config == demoConfig(isApple: isApple, title: title)
+    }
+
+    /// Work-band exercise names for ramp pickers (Circuit stations or band titles).
+    static func workExerciseNames(from sections: [PreviewSection]) -> [String] {
+        sections
+            .filter { $0.accent == .work && !$0.band.uppercased().contains("WARM") }
+            .flatMap { section -> [String] in
+                if section.band.caseInsensitiveCompare("Circuit") == .orderedSame {
+                    return section.steps.map(\.title)
+                }
+                return [section.band]
+            }
     }
 
     static func readiness(from prefs: WorkoutPreferences) -> WatchItemReadinessState {

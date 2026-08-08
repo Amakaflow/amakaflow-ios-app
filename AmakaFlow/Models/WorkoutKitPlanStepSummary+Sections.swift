@@ -45,6 +45,8 @@ private enum PreviewSectionBuilder {
         case mobility(title: String, detail: String?)
         case warmupSet(exercise: String, detail: String?)
         case work(exercise: String, detail: String?, repeatCount: Int, timed: Bool)
+        /// Multi-station circuit/superset: one band, N rounds, stations listed once.
+        case circuit(reps: Int, stations: [(exercise: String, detail: String?)])
         case rest(chip: String)
         case cooldown(detail: String)
     }
@@ -90,15 +92,32 @@ private enum PreviewSectionBuilder {
             )
         }
 
-        var out: [Atom] = []
-        for step in steps {
-            if isRest(step) {
-                out.append(.rest(chip: restChipLabel(for: step)))
-                continue
+        // EMOM keeps per-station "Work intervals ×N" bands (mapper names "EMOM · …").
+        // Circuit/superset must keep outer iterations as ROUNDS, not fan into SETS.
+        if isEmomRepeat(workSteps) {
+            var out: [Atom] = []
+            for step in steps {
+                if isRest(step) {
+                    out.append(.rest(chip: restChipLabel(for: step)))
+                    continue
+                }
+                out.append(contentsOf: flattenStep(step, repeatCount: reps))
             }
-            out.append(contentsOf: flattenStep(step, repeatCount: reps))
+            return out
+        }
+
+        let stations: [(exercise: String, detail: String?)] = workSteps.map { step in
+            (displayName(for: step), workDetail(for: step))
+        }
+        var out: [Atom] = [.circuit(reps: reps, stations: stations)]
+        if let sharedRestChip {
+            out.append(.rest(chip: sharedRestChip))
         }
         return out
+    }
+
+    private static func isEmomRepeat(_ workSteps: [WKPlanDTO.Interval.Step]) -> Bool {
+        workSteps.contains { displayName(for: $0).uppercased().contains("EMOM") }
     }
 
     private static func flattenSingleRepeatWork(
@@ -166,6 +185,8 @@ private enum PreviewSectionBuilder {
                     repeatCount: repeatCount,
                     timed: timed
                 )
+            case .circuit(let reps, let stations):
+                accumulator.appendCircuit(reps: reps, stations: stations)
             case .rest(let chip):
                 accumulator.setPendingRest(chip)
             case .cooldown(let detail):
@@ -304,6 +325,24 @@ private struct SectionAccumulator {
         let noun = timed ? "Work interval" : "Working set"
         let title = repeatCount > 1 ? "\(noun)s ×\(repeatCount)" : noun
         exerciseRows.append(PreviewRow(title: title, detail: detail, setCount: max(repeatCount, 1)))
+    }
+
+    /// One Circuit/Repeat band: stations once, outer iterations as ROUNDS (Library parity).
+    mutating func appendCircuit(reps: Int, stations: [(exercise: String, detail: String?)]) {
+        flushMobility()
+        flushExercise()
+        flushCooldownAsInterstitial()
+        hasWorked = true
+        pendingRest = nil
+        let rows = stations.map { PreviewRow(title: $0.exercise, detail: $0.detail, setCount: 1) }
+        let tag = reps == 1 ? "1 ROUND" : "\(reps) ROUNDS"
+        sections.append(PreviewSection(
+            accent: .work,
+            band: "Circuit",
+            tag: tag,
+            steps: makeSteps(from: rows),
+            caption: nil
+        ))
     }
 
     /// Legacy single-activity `.cooldown` atom — always merges into
